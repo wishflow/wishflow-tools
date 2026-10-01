@@ -2,6 +2,19 @@
 
 WishFlow Tools 中的头像编辑应用，部署在 `/duolingo-avatar/`。前端由 Vite 构建为静态文件；AI 生成接口继续使用现有 Cloudflare Worker。
 
+## 线上地址
+
+目前没有绑定自定义域名，应用使用平台提供的默认域名：
+
+| 内容 | 地址 |
+| --- | --- |
+| 导航站（Cloudflare Pages） | [https://wishflow-tools.pages.dev/](https://wishflow-tools.pages.dev/) |
+| 编辑器（Cloudflare Pages） | [https://wishflow-tools.pages.dev/duolingo-avatar/](https://wishflow-tools.pages.dev/duolingo-avatar/) |
+| 编辑器（GitHub Pages 镜像） | [https://wishflow.github.io/wishflow-tools/duolingo-avatar/](https://wishflow.github.io/wishflow-tools/duolingo-avatar/) |
+| AI API（Cloudflare Worker） | [https://duolingo-avator-creator.wei-shi-ws.workers.dev/](https://duolingo-avator-creator.wei-shi-ws.workers.dev/) |
+
+旧版单应用入口仍保留作回退：[https://duolingo-avator-creator.pages.dev/](https://duolingo-avator-creator.pages.dev/)。
+
 ## 本地开发
 
 从仓库根目录执行：

@@ -8,6 +8,18 @@ WishFlow 的小工具与实验项目集合。每个应用放在 `apps/` 下独�
 | --- | --- | --- |
 | Duolingo Avatar Editor | `/duolingo-avatar/` | 创建和编辑 Duolingo 风格头像；前端静态发布，AI 能力由现有 Cloudflare Worker 提供 |
 
+## 线上地址
+
+目前没有绑定自定义域名。公开入口使用 Cloudflare Pages、GitHub Pages 和 Workers 提供的默认域名：
+
+| 内容 | Cloudflare Pages（主入口） | GitHub Pages（镜像） |
+| --- | --- | --- |
+| WishFlow Tools 导航站 | [wishflow-tools.pages.dev](https://wishflow-tools.pages.dev/) | [wishflow.github.io/wishflow-tools](https://wishflow.github.io/wishflow-tools/) |
+| Duolingo Avatar Editor | [wishflow-tools.pages.dev/duolingo-avatar](https://wishflow-tools.pages.dev/duolingo-avatar/) | [wishflow.github.io/wishflow-tools/duolingo-avatar](https://wishflow.github.io/wishflow-tools/duolingo-avatar/) |
+| AI API（Cloudflare Worker） | [duolingo-avator-creator.wei-shi-ws.workers.dev](https://duolingo-avator-creator.wei-shi-ws.workers.dev/) | — |
+
+旧版头像编辑器仍保留在 [duolingo-avator-creator.pages.dev](https://duolingo-avator-creator.pages.dev/) 作为回退入口；它不是新的导航站地址。部署细节见 [`apps/duolingo-avatar/docs/deployment-plan.md`](apps/duolingo-avatar/docs/deployment-plan.md)。
+
 ## 本地开发
 
 ```bash

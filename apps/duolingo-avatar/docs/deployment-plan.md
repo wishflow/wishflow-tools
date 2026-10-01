@@ -2,14 +2,17 @@
 
 ## 1. 当前架构
 
-项目采用“统一导航静态站 + 应用子路径 + Cloudflare Worker API”的发布架构。GitHub Pages 和 Cloudflare Pages 发布同一份静态产物，不为每个应用新增 Pages 项目或 Worker。
+项目采用“统一导航静态站 + 应用子路径 + Cloudflare Worker API”的发布架构。GitHub Pages 和 Cloudflare Pages 发布同一份静态产物，不为每个应用新增 Pages 项目或 Worker。目前尚未绑定自定义域名，以下为当前线上地址；静态主入口使用 Cloudflare Pages，GitHub Pages 提供同内容镜像。
 
-| 端 | 平台 | URL | 职责 |
+| 内容 | 平台 | URL | 职责 |
 | --- | --- | --- | --- |
-| 导航入口 | GitHub Pages | `https://wishflow.github.io/wishflow-tools/` | 应用目录 |
-| 头像前端 A | GitHub Pages | `https://wishflow.github.io/wishflow-tools/duolingo-avatar/` | 静态编辑器 |
-| 导航与头像前端 B | Cloudflare Pages | `https://wishflow-tools.pages.dev/` | 同一静态产物的 Cloudflare 镜像；编辑器位于 `/duolingo-avatar/` |
+| WishFlow Tools 导航站（主入口） | Cloudflare Pages | `https://wishflow-tools.pages.dev/` | 应用目录 |
+| Duolingo Avatar Editor | Cloudflare Pages | `https://wishflow-tools.pages.dev/duolingo-avatar/` | 静态编辑器 |
+| WishFlow Tools 导航站（镜像） | GitHub Pages | `https://wishflow.github.io/wishflow-tools/` | 与主入口相同的静态站 |
+| Duolingo Avatar Editor（镜像） | GitHub Pages | `https://wishflow.github.io/wishflow-tools/duolingo-avatar/` | 与主入口相同的静态编辑器 |
 | 后端 API | Cloudflare Worker | `https://duolingo-avator-creator.wei-shi-ws.workers.dev/` | 配置读取、Turnstile 校验、Workers AI 代理 |
+
+旧版单应用回退入口仍保留在 `https://duolingo-avator-creator.pages.dev/`，不作为导航站主入口。
 
 一次 `push master` 的发布链路：
 
