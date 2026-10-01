@@ -2,12 +2,13 @@
 
 ## 1. 当前架构
 
-项目采用“双静态前端 + Cloudflare Worker API”的三端发布架构。
+项目采用“统一导航静态站 + 应用子路径 + Cloudflare Worker API”的发布架构。GitHub Pages 和 Cloudflare Pages 发布同一份静态产物，不为每个应用新增 Pages 项目或 Worker。
 
 | 端 | 平台 | URL | 职责 |
 | --- | --- | --- | --- |
-| 前端 A | GitHub Pages | `https://wishflow.github.io/duolingo-avator-creator/` | 主公开入口 |
-| 前端 B | Cloudflare Pages | `https://duolingo-avator-creator.pages.dev/` | 同一静态产物的 Cloudflare 镜像 |
+| 导航入口 | GitHub Pages | `https://wishflow.github.io/wishflow-tools/` | 应用目录 |
+| 头像前端 A | GitHub Pages | `https://wishflow.github.io/wishflow-tools/duolingo-avatar/` | 静态编辑器 |
+| 导航与头像前端 B | Cloudflare Pages | `https://wishflow-tools.pages.dev/` | 同一静态产物的 Cloudflare 镜像；编辑器位于 `/duolingo-avatar/` |
 | 后端 API | Cloudflare Worker | `https://duolingo-avator-creator.wei-shi-ws.workers.dev/` | 配置读取、Turnstile 校验、Workers AI 代理 |
 
 一次 `push master` 的发布链路：
@@ -20,9 +21,9 @@ flowchart TD
   C -- 是 --> D[validate-cloudflare-config]
   D --> E{AI binding 和 Turnstile secrets 存在?}
   E -- 否 --> X
-  E -- 是 --> G[Deploy GitHub Pages]
-  E -- 是 --> P[Deploy Cloudflare Pages]
-  E -- 是 --> W[Deploy Cloudflare Worker]
+  E -- 是 --> W[Deploy existing Cloudflare Worker]
+  W --> G[Deploy GitHub Pages]
+  W --> P[Deploy Cloudflare Pages]
 ```
 
 关键原则：
@@ -190,6 +191,7 @@ Turnstile widget 只允许公网双前端：
 | --- |
 | `wishflow.github.io` |
 | `duolingo-avator-creator.pages.dev` |
+| `wishflow-tools.pages.dev` |
 
 Worker secrets：
 
@@ -289,7 +291,8 @@ http://127.0.0.1:8787/api/config
 
 | 检查项 | 预期 |
 | --- | --- |
-| 根路径 | 打开头像编辑器 |
+| 根路径 | 打开 WishFlow Tools 导航页 |
+| `/duolingo-avatar/` | 打开头像编辑器 |
 | 静态资源 | `.riv`、JSON、manifest、icon、SVG 均为 200 |
 | 移动端 | 预览固定在上方，底部四按钮可用 |
 | Generate | 未配置时禁用并提示；配置后显示 Turnstile |

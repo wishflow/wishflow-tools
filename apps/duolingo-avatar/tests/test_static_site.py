@@ -18,9 +18,11 @@ from urllib.parse import urlparse
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = PROJECT_DIR.parents[1]
 ASSETS_DIR = PROJECT_DIR / "assets"
-SITE_DIR = PROJECT_DIR / "_site"
-INDEX_PATH = SITE_DIR / "index.html"
+SITE_DIR = REPO_ROOT / "_site"
+APP_SITE_DIR = SITE_DIR / "duolingo-avatar"
+INDEX_PATH = APP_SITE_DIR / "index.html"
 
 REQUIRED_SOURCE_ASSETS = [
     "avatar_builder_config.json",
@@ -41,7 +43,6 @@ REQUIRED_SOURCE_ASSETS = [
 
 REQUIRED_SITE_FILES = [
     "index.html",
-    ".nojekyll",
     "avatar_explorer.html",
     "avatar_builder_config.json",
     "avatar_semantic_catalog.json",
@@ -85,7 +86,7 @@ def normalize_reference(ref):
 def run_site_build():
     result = subprocess.run(
         ["npm", "run", "build:site"],
-        cwd=PROJECT_DIR,
+        cwd=REPO_ROOT,
         text=True,
         capture_output=True,
         check=False,
@@ -94,7 +95,7 @@ def run_site_build():
 
 
 def read_site_file(rel):
-    path = SITE_DIR / rel
+    path = APP_SITE_DIR / rel
     assert path.exists(), f"Missing built file: {rel}"
     return path.read_text(encoding="utf-8")
 
@@ -112,11 +113,14 @@ def assert_required_source_assets_exist():
 
 
 def assert_pages_publish_shape():
+    assert (SITE_DIR / "index.html").exists(), "Navigation page missing from Pages artifact"
+    hub_html = (SITE_DIR / "index.html").read_text(encoding="utf-8")
+    assert 'href="./duolingo-avatar/"' in hub_html, "Navigation page is missing the avatar editor link"
     for rel in REQUIRED_SITE_FILES:
-        assert (SITE_DIR / rel).exists(), f"Pages artifact missing: {rel}"
-    assert any((SITE_DIR / "assets").glob("*.js")), "Vite JS bundle missing"
-    assert any((SITE_DIR / "assets").glob("*.css")), "Vite CSS bundle missing"
-    assert any((SITE_DIR / "assets").glob("*.wasm")), "Local Rive WASM bundle missing"
+        assert (APP_SITE_DIR / rel).exists(), f"Avatar app artifact missing: {rel}"
+    assert any((APP_SITE_DIR / "assets").glob("*.js")), "Vite JS bundle missing"
+    assert any((APP_SITE_DIR / "assets").glob("*.css")), "Vite CSS bundle missing"
+    assert any((APP_SITE_DIR / "assets").glob("*.wasm")), "Local Rive WASM bundle missing"
 
 
 def assert_local_references_exist():
@@ -135,7 +139,7 @@ def assert_local_references_exist():
         rel = normalize_reference(ref)
         if not rel:
             continue
-        base_dir = (SITE_DIR / html_rel).parent
+        base_dir = (APP_SITE_DIR / html_rel).parent
         if not (base_dir / rel).exists():
             missing.append(f"{html_rel} {source}: {ref}")
 
@@ -149,19 +153,19 @@ def assert_manifest_icon_references_exist():
         src = icon.get("src")
         if src and is_local_reference(src):
             rel = normalize_reference(src)
-            if rel and not (SITE_DIR / rel).exists():
+            if rel and not (APP_SITE_DIR / rel).exists():
                 missing.append(src)
     assert not missing, "Missing manifest icon references:\n" + "\n".join(missing)
 
 
 def assert_no_unpkg_rive_runtime():
     offenders = []
-    for path in [INDEX_PATH, *SITE_DIR.glob("assets/*.js"), SITE_DIR / "avatar_explorer.html"]:
+    for path in [INDEX_PATH, *APP_SITE_DIR.glob("assets/*.js"), APP_SITE_DIR / "avatar_explorer.html"]:
         if not path.exists():
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         if "unpkg.com/@rive-app/canvas" in text:
-            offenders.append(str(path.relative_to(SITE_DIR)))
+            offenders.append(str(path.relative_to(APP_SITE_DIR)))
     assert not offenders, "Built site still references unpkg Rive runtime: " + ", ".join(offenders)
 
 

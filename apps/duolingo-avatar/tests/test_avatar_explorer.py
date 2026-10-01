@@ -27,7 +27,8 @@ except ImportError:
 
 # === CONFIG ============================================================
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-SITE_DIR = PROJECT_DIR / "_site"
+REPO_ROOT = PROJECT_DIR.parents[1]
+SITE_DIR = REPO_ROOT / "_site"
 CHROME_EXEC = None
 CHROME_USER_DATA = "/tmp/chrome-test-profile"
 TEST_TIMEOUT = 30  # seconds per test
@@ -43,7 +44,7 @@ http_port = 8769
 chrome_debug_port = 9223
 
 def page_url():
-    return f"http://127.0.0.1:{http_port}/index.html"
+    return f"http://127.0.0.1:{http_port}/duolingo-avatar/"
 
 def find_chrome_exec(explicit=None):
     candidates = []
@@ -115,7 +116,7 @@ class TestRunner:
         info("Building static site...")
         build = subprocess.run(
             ["npm", "run", "build:site"],
-            cwd=str(PROJECT_DIR),
+            cwd=str(REPO_ROOT),
             text=True,
             capture_output=True,
             check=False,

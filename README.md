@@ -1,71 +1,35 @@
-# Duolingo Avatar Creator
+# WishFlow Tools
 
-Reverse-engineered Duolingo avatar editor using Rive runtime.
+WishFlow 的小工具与实验项目集合。每个应用放在 `apps/` 下独立维护和构建，站点根路径提供统一导航入口。
 
-Live avatar preview with per-tile Rive canvas instances, matching the official Duolingo avatar editor architecture.
+## 当前应用
 
-## Usage
+| 应用 | 路径 | 说明 |
+| --- | --- | --- |
+| Duolingo Avatar Editor | `/duolingo-avatar/` | 创建和编辑 Duolingo 风格头像；前端静态发布，AI 能力由现有 Cloudflare Worker 提供 |
 
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Start a local HTTP server
-cd assets && python3 -m http.server 8769
-
-# Open http://127.0.0.1:8769/avatar_explorer.html in a browser
-```
-
-The page needs to be served over HTTP (not `file://`) because the Rive runtime fetches the `.riv` file.
-
-## Testing
+## 本地开发
 
 ```bash
-# Run all tests (launches headless Chrome automatically)
-python3 tests/test_avatar_explorer.py
-
-# Custom ports
-python3 tests/test_avatar_explorer.py --port 8775 --debug-port 9228
-
-# Single test
-python3 tests/test_avatar_explorer.py --test 3
-
-# Keep browser open after tests
-python3 tests/test_avatar_explorer.py --keep
+npm ci
+npm run dev
 ```
 
-Requirements: `google-chrome` (Chromium), Python 3.10+, `websockets`, `Pillow`.
-
-## CDP Investigation
-
-To examine a live page (e.g. the official Duolingo editor) via Chrome DevTools Protocol:
+开发服务器直接打开头像编辑器。构建完整站点并在本地预览：
 
 ```bash
-python3 scripts/cdp_investigate.py --port 9222
-python3 scripts/cdp_investigate.py --interactive  # live JS REPL
+npm run build:site
+python3 -m http.server 8769 --directory _site
 ```
 
-## Project Structure
+访问 `http://127.0.0.1:8769/` 查看导航页，或访问 `/duolingo-avatar/` 打开编辑器。
 
-```
-crawler/
-├── assets/
-│   ├── avatar_explorer.html       # Main application
-│   ├── avatar_builder_config.json # Tab/tile configuration
-│   └── avatar_builder_*.riv       # Rive animation files
-├── src/cdp/
-│   └── client.py                  # CDPClient — async CDP over WebSocket
-├── tests/
-│   └── test_avatar_explorer.py    # 10 integration tests
-├── scripts/
-│   ├── cdp_investigate.py         # CDP page investigation tool
-│   └── exploration/               # Historical Rive API exploration scripts
-├── CLAUDE.md                      # Detailed project documentation for AI assistants
-├── requirements.txt
-└── README.md
+## 验证与发布
+
+```bash
+npm run test:ci
 ```
 
-## Architecture
+GitHub Pages 和 Cloudflare Pages 发布同一份 `_site` 静态产物；AI API 继续部署到现有 Cloudflare Worker，不为静态应用额外创建容器。
 
-See [CLAUDE.md](CLAUDE.md) for detailed architecture decisions, anti-patterns, and lessons learned.
-See [docs/architecture.md](docs/architecture.md) for the current end-to-end frontend, Worker, Generate, and Export flow.
+应用级代码、测试和部署说明见 [`apps/duolingo-avatar/README.md`](apps/duolingo-avatar/README.md)。

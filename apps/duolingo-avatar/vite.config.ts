@@ -6,7 +6,7 @@ export default defineConfig({
   base: './',
   publicDir: 'assets',
   build: {
-    outDir: '_site',
+    outDir: '../../_site/duolingo-avatar',
     emptyOutDir: true,
   },
 });

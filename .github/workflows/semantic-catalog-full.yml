@@ -45,11 +45,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: apps/duolingo-avatar/requirements.txt
 
       - run: npm ci
 
-      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m pip install -r apps/duolingo-avatar/requirements.txt
 
       - uses: browser-actions/setup-chrome@v2
         id: setup-chrome
@@ -65,10 +65,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          mkdir -p .cache/avatar-semantic/runs
+          mkdir -p apps/duolingo-avatar/.cache/avatar-semantic/runs
           set -o pipefail
-          python3 scripts/semantic_catalog.py --run --all --resume --max-calls 282 --model "$MODEL" 2>&1 \
-            | tee .cache/avatar-semantic/runs/semantic-catalog-full.log
+          python3 apps/duolingo-avatar/scripts/semantic_catalog.py --run --all --resume --max-calls 282 --model "$MODEL" 2>&1 \
+            | tee apps/duolingo-avatar/.cache/avatar-semantic/runs/semantic-catalog-full.log
 
       - run: npm run semantic:check
 
@@ -84,14 +84,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
-          git add assets/avatar_semantic_catalog.json docs/agent-steps/03.1-semantic-catalog-review.md
+          git add apps/duolingo-avatar/assets/avatar_semantic_catalog.json apps/duolingo-avatar/docs/agent-steps/03.1-semantic-catalog-review.md
           if git diff --cached --quiet; then
             echo "created=false" >> "$GITHUB_OUTPUT"
             echo "No semantic catalog changes to commit."
             exit 0
           fi
 
-          report="$(ls -t .cache/avatar-semantic/runs/semantic_catalog_*.json | head -n 1)"
+          report="$(ls -t apps/duolingo-avatar/.cache/avatar-semantic/runs/semantic_catalog_*.json | head -n 1)"
           {
             echo "# Full semantic catalog labeling"
             echo
@@ -99,11 +99,11 @@ jobs:
             echo "- report: \`${report}\`"
             echo
             echo "This is a Draft PR. Review catalog labels and the generated review Markdown before marking ready."
-          } > .cache/avatar-semantic/runs/pr-body.md
+          } > apps/duolingo-avatar/.cache/avatar-semantic/runs/pr-body.md
 
           git commit -m "Update semantic catalog labels"
           git push origin "$branch"
-          pr_url="$(gh pr create --draft --base master --head "$branch" --title "Update semantic catalog labels" --body-file .cache/avatar-semantic/runs/pr-body.md)"
+          pr_url="$(gh pr create --draft --base master --head "$branch" --title "Update semantic catalog labels" --body-file apps/duolingo-avatar/.cache/avatar-semantic/runs/pr-body.md)"
           echo "created=true" >> "$GITHUB_OUTPUT"
           echo "pr_url=$pr_url" >> "$GITHUB_OUTPUT"
 
@@ -119,7 +119,7 @@ jobs:
           from pathlib import Path
 
           summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
-          run_reports = sorted(Path(".cache/avatar-semantic/runs").glob("semantic_catalog_*.json"))
+          run_reports = sorted(Path("apps/duolingo-avatar/.cache/avatar-semantic/runs").glob("semantic_catalog_*.json"))
           lines = ["# Semantic catalog full labeling", ""]
           if run_reports:
               report = json.loads(run_reports[-1].read_text(encoding="utf-8"))
@@ -132,7 +132,7 @@ jobs:
                   f"- artifact: `semantic-catalog-full-{os.environ.get('GITHUB_RUN_ID')}-{os.environ.get('GITHUB_RUN_ATTEMPT')}`",
               ])
           else:
-              log = Path(".cache/avatar-semantic/runs/semantic-catalog-full.log")
+              log = Path("apps/duolingo-avatar/.cache/avatar-semantic/runs/semantic-catalog-full.log")
               lines.extend([
                   "- status: `failed before run report`",
                   "",
@@ -152,8 +152,8 @@ jobs:
           name: semantic-catalog-full-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: ignore
           path: |
-            .cache/avatar-semantic/options/**
-            .cache/avatar-semantic/samples/**
-            .cache/avatar-semantic/runs/**
-            assets/avatar_semantic_catalog.json
-            docs/agent-steps/03.1-semantic-catalog-review.md
+            apps/duolingo-avatar/.cache/avatar-semantic/options/**
+            apps/duolingo-avatar/.cache/avatar-semantic/samples/**
+            apps/duolingo-avatar/.cache/avatar-semantic/runs/**
+            apps/duolingo-avatar/assets/avatar_semantic_catalog.json
+            apps/duolingo-avatar/docs/agent-steps/03.1-semantic-catalog-review.md

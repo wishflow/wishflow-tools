@@ -1,36 +1,25 @@
 {
-  "name": "duolingo-avatar-extractor",
+  "name": "wishflow-tools",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build:site": "vite build && touch _site/.nojekyll",
-    "test:static": "python3 tests/test_static_site.py",
-    "test:worker": "tsx --test tests/worker.test.mjs",
-    "test:e2e": "python3 tests/test_avatar_explorer.py --port 8775 --debug-port 9228",
-    "semantic:catalog": "python3 scripts/semantic_catalog.py",
-    "semantic:check": "python3 scripts/semantic_catalog.py --check",
-    "semantic:codex:tasks": "python3 scripts/semantic_codex.py tasks",
-    "semantic:codex:merge": "python3 scripts/semantic_codex.py merge",
-    "semantic:codex:compare": "python3 scripts/semantic_codex.py compare",
-    "semantic:codex:report": "python3 scripts/semantic_codex.py report",
-    "test:ci": "npm run test:static && npm run test:worker && python3 tests/test_avatar_explorer.py --port 8775 --debug-port 9228 --require-browser",
-    "check:cloudflare-config": "node scripts/check_cloudflare_config.mjs",
-    "deploy:cf:pages": "wrangler pages deploy _site --project-name=duolingo-avator-creator --branch=master",
-    "deploy:cf:worker": "wrangler deploy"
-  },
-  "dependencies": {
-    "@rive-app/canvas": "^2.37.8",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260525.1",
-    "@vitejs/plugin-react": "^6.0.2",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "tsx": "^4.22.3",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.14",
-    "wrangler": "^4.94.0"
+    "dev": "npm run dev --workspace=@wishflow/duolingo-avatar",
+    "build:site": "node scripts/build-site.mjs",
+    "test:static": "npm run test:static --workspace=@wishflow/duolingo-avatar",
+    "test:worker": "npm run test:worker --workspace=@wishflow/duolingo-avatar",
+    "test:e2e": "npm run test:e2e --workspace=@wishflow/duolingo-avatar",
+    "test:ci": "npm run test:ci --workspace=@wishflow/duolingo-avatar",
+    "semantic:catalog": "npm run semantic:catalog --workspace=@wishflow/duolingo-avatar",
+    "semantic:check": "npm run semantic:check --workspace=@wishflow/duolingo-avatar",
+    "semantic:codex:tasks": "npm run semantic:codex:tasks --workspace=@wishflow/duolingo-avatar",
+    "semantic:codex:merge": "npm run semantic:codex:merge --workspace=@wishflow/duolingo-avatar",
+    "semantic:codex:compare": "npm run semantic:codex:compare --workspace=@wishflow/duolingo-avatar",
+    "semantic:codex:report": "npm run semantic:codex:report --workspace=@wishflow/duolingo-avatar",
+    "check:cloudflare-config": "npm run check:cloudflare-config --workspace=@wishflow/duolingo-avatar",
+    "deploy:cf:pages": "wrangler pages deploy _site --project-name=wishflow-tools --branch=master",
+    "deploy:cf:worker": "npm run deploy:cf:worker --workspace=@wishflow/duolingo-avatar"
   }
 }

@@ -46,11 +46,11 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: apps/duolingo-avatar/requirements.txt
 
       - run: npm ci
 
-      - run: python3 -m pip install -r requirements.txt
+      - run: python3 -m pip install -r apps/duolingo-avatar/requirements.txt
 
       - uses: browser-actions/setup-chrome@v2
         id: setup-chrome
@@ -71,8 +71,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
-          mkdir -p .cache/avatar-semantic/runs
-          cmd=(python3 scripts/semantic_catalog.py --run --model "$MODEL" --offset "$OFFSET" --max-calls "$MAX_CALLS")
+          mkdir -p apps/duolingo-avatar/.cache/avatar-semantic/runs
+          cmd=(python3 apps/duolingo-avatar/scripts/semantic_catalog.py --run --model "$MODEL" --offset "$OFFSET" --max-calls "$MAX_CALLS")
           if [ -n "$OPTION_IDS" ]; then
             normalized_ids="${OPTION_IDS//,/ }"
             for option_id in $normalized_ids; do
@@ -82,10 +82,10 @@ jobs:
             [ -n "$GROUP" ] && cmd+=(--group "$GROUP")
             [ -n "$LIMIT" ] && [ "$LIMIT" != "0" ] && cmd+=(--limit "$LIMIT")
           fi
-          printf 'Running: %q ' "${cmd[@]}" | tee .cache/avatar-semantic/runs/semantic-catalog-smoke.log
-          printf '\n' | tee -a .cache/avatar-semantic/runs/semantic-catalog-smoke.log
+          printf 'Running: %q ' "${cmd[@]}" | tee apps/duolingo-avatar/.cache/avatar-semantic/runs/semantic-catalog-smoke.log
+          printf '\n' | tee -a apps/duolingo-avatar/.cache/avatar-semantic/runs/semantic-catalog-smoke.log
           set -o pipefail
-          "${cmd[@]}" 2>&1 | tee -a .cache/avatar-semantic/runs/semantic-catalog-smoke.log
+          "${cmd[@]}" 2>&1 | tee -a apps/duolingo-avatar/.cache/avatar-semantic/runs/semantic-catalog-smoke.log
 
       - name: Write summary
         if: always()
@@ -97,7 +97,7 @@ jobs:
           from pathlib import Path
 
           summary = Path(os.environ["GITHUB_STEP_SUMMARY"])
-          run_reports = sorted(Path(".cache/avatar-semantic/runs").glob("semantic_catalog_*.json"))
+          run_reports = sorted(Path("apps/duolingo-avatar/.cache/avatar-semantic/runs").glob("semantic_catalog_*.json"))
           lines = ["# Semantic catalog smoke", ""]
           if run_reports:
               report = json.loads(run_reports[-1].read_text(encoding="utf-8"))
@@ -138,7 +138,7 @@ jobs:
                   for item in results:
                       lines.append(f"- `{item.get('optionId')}` image: `{item.get('imagePath')}` sample: `{item.get('samplePath')}`")
           else:
-              log = Path(".cache/avatar-semantic/runs/semantic-catalog-smoke.log")
+              log = Path("apps/duolingo-avatar/.cache/avatar-semantic/runs/semantic-catalog-smoke.log")
               lines.extend([
                   "- status: `failed before run report`",
                   "",
@@ -155,8 +155,8 @@ jobs:
           name: semantic-catalog-smoke-${{ github.run_id }}-${{ github.run_attempt }}
           if-no-files-found: ignore
           path: |
-            .cache/avatar-semantic/options/**
-            .cache/avatar-semantic/samples/**
-            .cache/avatar-semantic/runs/**
-            assets/avatar_semantic_catalog.json
-            docs/agent-steps/03.1-semantic-catalog-review.md
+            apps/duolingo-avatar/.cache/avatar-semantic/options/**
+            apps/duolingo-avatar/.cache/avatar-semantic/samples/**
+            apps/duolingo-avatar/.cache/avatar-semantic/runs/**
+            apps/duolingo-avatar/assets/avatar_semantic_catalog.json
+            apps/duolingo-avatar/docs/agent-steps/03.1-semantic-catalog-review.md

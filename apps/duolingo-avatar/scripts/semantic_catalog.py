@@ -34,12 +34,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.cdp import CDPClient  # noqa: E402
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = PROJECT_DIR.parents[1]
 ASSETS_DIR = PROJECT_DIR / "assets"
 CONFIG_PATH = ASSETS_DIR / "avatar_builder_config.json"
 OUTPUT_PATH = ASSETS_DIR / "avatar_semantic_catalog.json"
 REVIEW_PATH = PROJECT_DIR / "docs" / "agent-steps" / "03.1-semantic-catalog-review.md"
 CACHE_DIR = PROJECT_DIR / ".cache" / "avatar-semantic"
-SITE_DIR = PROJECT_DIR / "_site"
+SITE_DIR = REPO_ROOT / "_site" / "duolingo-avatar"
 DEFAULT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct"
 SEMANTIC_VERSION = 1
 DEFAULT_MAX_CALLS = 20
@@ -626,7 +627,7 @@ def find_playwright_chromium() -> str | None:
     if env_path and env_path != "0":
         roots.append(Path(env_path).expanduser())
     elif env_path == "0":
-        roots.append(PROJECT_DIR / "node_modules" / "playwright-core" / ".local-browsers")
+        roots.append(REPO_ROOT / "node_modules" / "playwright-core" / ".local-browsers")
     roots.append(Path.home() / ".cache" / "ms-playwright")
 
     for root in roots:
@@ -646,7 +647,7 @@ def find_free_port() -> int:
 def run_site_build() -> None:
     result = subprocess.run(
         ["npm", "run", "build:site"],
-        cwd=PROJECT_DIR,
+        cwd=REPO_ROOT,
         text=True,
         capture_output=True,
         check=False,

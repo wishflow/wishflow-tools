@@ -247,6 +247,15 @@ describe('Cloudflare Worker API', () => {
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://duolingo-avator-creator.pages.dev');
   });
 
+  it('allows the renamed Cloudflare Pages site origin', async () => {
+    const response = await fetchWorker('/api/config', {
+      headers: { Origin: 'https://wishflow-tools.pages.dev' },
+    });
+
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://wishflow-tools.pages.dev');
+  });
+
   it('requires Turnstile token before creating an AI session', async () => {
     const ai = makeAiMock();
     const response = await fetchWorker('/api/avatar/session', {

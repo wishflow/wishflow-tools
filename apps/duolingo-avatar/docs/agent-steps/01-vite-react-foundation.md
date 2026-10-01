@@ -162,7 +162,7 @@ declare global {
 4. 把 Rive 初始化、state machine 输入、tile 渲染抽到 `src/rive/`。
 5. 把 localStorage、本地历史、Undo/Redo 抽到 `src/state/`。
 6. 加 `__avatarTestHooks`，更新 E2E 测试访问方式。
-7. 确认 `npm run build:site` 生成 `_site/index.html` 和所有静态资源。
+7. 确认从仓库根目录运行 `npm run build:site`，生成导航页 `_site/index.html` 和应用目录 `_site/duolingo-avatar/`。
 
 迁移期间允许保留局部命令式 DOM 操作，但最终应让 React 管页面结构，Rive canvas 渲染仍由 imperative API 管。
 
@@ -170,10 +170,10 @@ declare global {
 
 必须保持：
 
-- GitHub Pages URL 不变：`https://wishflow.github.io/duolingo-avator-creator/`
-- Cloudflare Pages URL 不变：`https://duolingo-avator-creator.pages.dev/`
+- GitHub Pages 上的应用路径：`https://wishflow.github.io/wishflow-tools/duolingo-avatar/`
+- Cloudflare Pages 上的应用路径：`https://wishflow-tools.pages.dev/duolingo-avatar/`
 - Worker URL 不变：`https://duolingo-avator-creator.wei-shi-ws.workers.dev/`
-- `_site` 仍是两个 Pages 平台的发布目录。
+- `_site` 是两个 Pages 平台共用的发布目录，站点根路径为导航页。
 - GitHub Actions 仍必须先测试、再部署。
 
 静态资源路径要求：
