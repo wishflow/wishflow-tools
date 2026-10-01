@@ -170,9 +170,9 @@ declare global {
 
 必须保持：
 
-- GitHub Pages 上的应用路径：`https://wishflow.github.io/wishflow-tools/duolingo-avatar/`
-- Cloudflare Pages 上的应用路径：`https://wishflow-tools.pages.dev/duolingo-avatar/`
-- Worker URL 不变：`https://duolingo-avator-creator.wei-shi-ws.workers.dev/`
+- 用户从统一入口进入；应用位于 `/duolingo-avatar/` 子路径。
+- 对外主站地址统一维护在根目录 README。
+- 后端 API 由应用配置调用，不把 Worker origin 当作网站入口发布。
 - `_site` 是两个 Pages 平台共用的发布目录，站点根路径为导航页。
 - GitHub Actions 仍必须先测试、再部署。
 

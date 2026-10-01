@@ -232,7 +232,7 @@ describe('Cloudflare Worker API', () => {
 
   it('returns public AI generation config', async () => {
     const response = await fetchWorker('/api/config', {
-      headers: { Origin: 'https://duolingo-avator-creator.pages.dev' },
+      headers: { Origin: 'https://wishflow-tools.pages.dev' },
     });
     const body = await response.json();
 
@@ -244,15 +244,6 @@ describe('Cloudflare Worker API', () => {
     assert.equal(body.generation.turnstileSiteKey, '1x00000000000000000000AA');
     assert.equal(body.generation.sessionTtlSeconds, 1800);
     assert.deepEqual(body.generation.supportedMentions, ['current', 'default']);
-    assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://duolingo-avator-creator.pages.dev');
-  });
-
-  it('allows the renamed Cloudflare Pages site origin', async () => {
-    const response = await fetchWorker('/api/config', {
-      headers: { Origin: 'https://wishflow-tools.pages.dev' },
-    });
-
-    assert.equal(response.status, 200);
     assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://wishflow-tools.pages.dev');
   });
 

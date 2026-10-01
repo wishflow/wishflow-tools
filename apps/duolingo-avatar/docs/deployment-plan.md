@@ -2,17 +2,14 @@
 
 ## 1. 当前架构
 
-项目采用“统一导航静态站 + 应用子路径 + Cloudflare Worker API”的发布架构。GitHub Pages 和 Cloudflare Pages 发布同一份静态产物，不为每个应用新增 Pages 项目或 Worker。目前尚未绑定自定义域名，以下为当前线上地址；静态主入口使用 Cloudflare Pages，GitHub Pages 提供同内容镜像。
+项目采用“统一导航静态站 + 应用子路径 + Cloudflare Worker API”的发布架构。Cloudflare Pages 是唯一对外入口；各应用通过子路径访问。GitHub Pages 工作流仍发布同一静态产物作为技术镜像，但不作为用户入口宣传。
 
-| 内容 | 平台 | URL | 职责 |
+| 内容 | 平台 | 地址 | 职责 |
 | --- | --- | --- | --- |
-| WishFlow Tools 导航站（主入口） | Cloudflare Pages | `https://wishflow-tools.pages.dev/` | 应用目录 |
-| Duolingo Avatar Editor | Cloudflare Pages | `https://wishflow-tools.pages.dev/duolingo-avatar/` | 静态编辑器 |
-| WishFlow Tools 导航站（镜像） | GitHub Pages | `https://wishflow.github.io/wishflow-tools/` | 与主入口相同的静态站 |
-| Duolingo Avatar Editor（镜像） | GitHub Pages | `https://wishflow.github.io/wishflow-tools/duolingo-avatar/` | 与主入口相同的静态编辑器 |
-| 后端 API | Cloudflare Worker | `https://duolingo-avator-creator.wei-shi-ws.workers.dev/` | 配置读取、Turnstile 校验、Workers AI 代理 |
-
-旧版单应用回退入口仍保留在 `https://duolingo-avator-creator.pages.dev/`，不作为导航站主入口。
+| WishFlow Tools 导航站 | Cloudflare Pages | `https://wishflow-tools.pages.dev/` | 唯一对外入口 |
+| Duolingo Avatar Editor | Cloudflare Pages 子路径 | `/duolingo-avatar/` | 从导航站进入的静态编辑器 |
+| GitHub Pages | GitHub Pages | 技术镜像 | 同一静态产物，不作为用户入口 |
+| 后端 API | Cloudflare Worker | 由前端配置调用 | 配置读取、Turnstile 校验、Workers AI 代理；API origin 不作为网站入口发布 |
 
 一次 `push master` 的发布链路：
 
@@ -188,13 +185,7 @@ AI 返回结果后，前端直接应用到当前 Rive 预览；用户可以继�
 
 ## 4. Turnstile 与密钥配置
 
-Turnstile widget 只允许公网双前端：
-
-| Hostname |
-| --- |
-| `wishflow.github.io` |
-| `duolingo-avator-creator.pages.dev` |
-| `wishflow-tools.pages.dev` |
+Turnstile widget 的允许域名在 Cloudflare 中维护，并应与当前启用的前端入口保持一致。对外入口只使用上方列出的 Cloudflare Pages 主站；部署镜像和退役站点不作为用户入口。
 
 Worker secrets：
 

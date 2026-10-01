@@ -197,7 +197,6 @@ function getErrorMessage(error: unknown, fallback: string): string {
 
 const ALLOWED_ORIGINS = new Set([
   'https://wishflow.github.io',
-  'https://duolingo-avator-creator.pages.dev',
   'https://wishflow-tools.pages.dev',
 ]);
 const LOCAL_DEV_ORIGIN_PATTERN = new RegExp('^http://(localhost|127\\.0\\.0\\.1)(:\\d+)?$');
