@@ -6,7 +6,7 @@
 
 | 内容 | 平台 | 地址 | 职责 |
 | --- | --- | --- | --- |
-| WishFlow Tools 导航站 | Cloudflare Pages | `https://wishflow-tools.pages.dev/` | 唯一对外入口 |
+| WishFlow Tools 导航站 | Cloudflare Pages | [根目录 README 的线上地址](../../../README.md#线上地址) | 唯一对外入口 |
 | Duolingo Avatar Editor | Cloudflare Pages 子路径 | `/duolingo-avatar/` | 从导航站进入的静态编辑器 |
 | GitHub Pages | GitHub Pages | 技术镜像 | 同一静态产物，不作为用户入口 |
 | 后端 API | Cloudflare Worker | 由前端配置调用 | 配置读取、Turnstile 校验、Workers AI 代理；API origin 不作为网站入口发布 |
