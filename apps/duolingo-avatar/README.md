@@ -8,16 +8,17 @@ WishFlow Tools 中的头像编辑应用，部署在 `/duolingo-avatar/`。前端
 
 ## 本地开发
 
-从仓库根目录执行：
+在本目录安装应用自己的 JavaScript 和 Python 依赖并启动开发服务器：
 
 ```bash
-npm ci
+./scripts/install.sh
 npm run dev
 ```
 
-构建完整导航站和应用：
+`npm run build` 只构建此应用到本地 `dist/`。从仓库根目录构建完整导航站和所有已登记应用：
 
 ```bash
+cd ../..
 npm run build:site
 python3 -m http.server 8769 --directory _site
 ```
@@ -32,8 +33,8 @@ python3 -m http.server 8769 --directory _site
 - `tests/`：静态产物、Worker 和浏览器端检查。
 - `docs/`：应用架构、部署和语义标注说明。
 
-Vite 输出到仓库根目录 `_site/duolingo-avatar/`。`base: './'` 是必要配置，保证应用能在 GitHub Pages 项目路径和 Cloudflare Pages 子路径下加载资源。
+Vite 输出到本目录 `dist/`，共享构建器再复制到 `_site/duolingo-avatar/`。`base: './'` 保证应用能在 GitHub Pages 项目路径和 Cloudflare Pages 子路径下加载资源。
 
 ## 验证
 
-从仓库根目录运行 `npm run test:ci`。单独运行时可使用 `npm run test:static`、`npm run test:worker` 或 `npm run test:e2e`。
+在本目录运行 `npm run test:ci`。单独验证可使用 `npm run test:static`、`npm run test:worker` 或 `npm run test:e2e`。

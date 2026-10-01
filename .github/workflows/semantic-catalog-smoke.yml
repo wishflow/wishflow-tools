@@ -41,6 +41,7 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: apps/duolingo-avatar/package-lock.json
 
       - uses: actions/setup-python@v6
         with:
@@ -48,9 +49,9 @@ jobs:
           cache: pip
           cache-dependency-path: apps/duolingo-avatar/requirements.txt
 
-      - run: npm ci
+      - run: npm ci --prefix apps/duolingo-avatar
 
-      - run: python3 -m pip install -r apps/duolingo-avatar/requirements.txt
+      - run: python3 -m venv apps/duolingo-avatar/.venv && apps/duolingo-avatar/.venv/bin/python -m pip install -r apps/duolingo-avatar/requirements.txt
 
       - uses: browser-actions/setup-chrome@v2
         id: setup-chrome
@@ -72,7 +73,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           mkdir -p apps/duolingo-avatar/.cache/avatar-semantic/runs
-          cmd=(python3 apps/duolingo-avatar/scripts/semantic_catalog.py --run --model "$MODEL" --offset "$OFFSET" --max-calls "$MAX_CALLS")
+          cmd=(apps/duolingo-avatar/.venv/bin/python apps/duolingo-avatar/scripts/semantic_catalog.py --run --model "$MODEL" --offset "$OFFSET" --max-calls "$MAX_CALLS")
           if [ -n "$OPTION_IDS" ]; then
             normalized_ids="${OPTION_IDS//,/ }"
             for option_id in $normalized_ids; do

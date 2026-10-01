@@ -27,8 +27,7 @@ except ImportError:
 
 # === CONFIG ============================================================
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-REPO_ROOT = PROJECT_DIR.parents[1]
-SITE_DIR = REPO_ROOT / "_site"
+APP_BUILD_DIR = PROJECT_DIR / "dist"
 CHROME_EXEC = None
 CHROME_USER_DATA = "/tmp/chrome-test-profile"
 TEST_TIMEOUT = 30  # seconds per test
@@ -103,6 +102,7 @@ class TestRunner:
         self.results = []
         self._ws_url = None
         self.chrome_user_data = None
+        self.site_root_temp = None
 
     def register(self, name, fn):
         self.tests.append((name, fn))
@@ -112,24 +112,29 @@ class TestRunner:
     async def setup(self):
         """Start HTTP server, launch Chrome, connect CDP."""
 
-        # 1. Build the Vite static site that will be published.
-        info("Building static site...")
+        # 1. Build this app, then stage it under the production subpath.
+        info("Building app...")
         build = subprocess.run(
-            ["npm", "run", "build:site"],
-            cwd=str(REPO_ROOT),
+            ["npm", "run", "build"],
+            cwd=str(PROJECT_DIR),
             text=True,
             capture_output=True,
             check=False,
         )
         if build.returncode != 0:
-            raise RuntimeError(build.stderr or build.stdout or "Vite build failed")
-        ok("Static site built")
+            raise RuntimeError(build.stderr or build.stdout or "App build failed")
+        if not APP_BUILD_DIR.is_dir():
+            raise RuntimeError("App build did not create dist/")
+        self.site_root_temp = tempfile.TemporaryDirectory(prefix="avatar-e2e-site-")
+        site_root = Path(self.site_root_temp.name)
+        shutil.copytree(APP_BUILD_DIR, site_root / "duolingo-avatar")
+        ok("App staged at /duolingo-avatar/")
 
         # 2. Start HTTP server
         info("Starting HTTP server...")
         self.http_proc = subprocess.Popen(
             [sys.executable, "-m", "http.server", str(self.http_port)],
-            cwd=str(SITE_DIR),
+            cwd=str(site_root),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
         )
         await asyncio.sleep(0.5)
@@ -245,6 +250,10 @@ class TestRunner:
         if self.chrome_user_data:
             self.chrome_user_data.cleanup()
             self.chrome_user_data = None
+
+        if self.site_root_temp:
+            self.site_root_temp.cleanup()
+            self.site_root_temp = None
 
     # -- run -------------------------------------------------------------
 

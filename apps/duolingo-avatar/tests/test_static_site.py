@@ -3,7 +3,7 @@
 Static checks for the Vite-built public site.
 
 This suite is intended to run in Codespaces and CI without requiring Chrome.
-It verifies source assets, the `_site` publish shape, generated local
+It verifies source assets, the app-local `dist/` publish shape, generated local
 references, and manifest icon references. Browser rendering remains covered by
 tests/test_avatar_explorer.py.
 """
@@ -18,10 +18,8 @@ from urllib.parse import urlparse
 
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
-REPO_ROOT = PROJECT_DIR.parents[1]
 ASSETS_DIR = PROJECT_DIR / "assets"
-SITE_DIR = REPO_ROOT / "_site"
-APP_SITE_DIR = SITE_DIR / "duolingo-avatar"
+APP_SITE_DIR = PROJECT_DIR / "dist"
 INDEX_PATH = APP_SITE_DIR / "index.html"
 
 REQUIRED_SOURCE_ASSETS = [
@@ -83,10 +81,10 @@ def normalize_reference(ref):
     return path
 
 
-def run_site_build():
+def run_app_build():
     result = subprocess.run(
-        ["npm", "run", "build:site"],
-        cwd=REPO_ROOT,
+        ["npm", "run", "build"],
+        cwd=PROJECT_DIR,
         text=True,
         capture_output=True,
         check=False,
@@ -112,10 +110,8 @@ def assert_required_source_assets_exist():
         assert path.exists(), f"Required source asset missing: {rel}"
 
 
-def assert_pages_publish_shape():
-    assert (SITE_DIR / "index.html").exists(), "Navigation page missing from Pages artifact"
-    hub_html = (SITE_DIR / "index.html").read_text(encoding="utf-8")
-    assert 'href="./duolingo-avatar/"' in hub_html, "Navigation page is missing the avatar editor link"
+def assert_app_build_shape():
+    assert INDEX_PATH.exists(), "Vite app index missing from local dist/ build"
     for rel in REQUIRED_SITE_FILES:
         assert (APP_SITE_DIR / rel).exists(), f"Avatar app artifact missing: {rel}"
     assert any((APP_SITE_DIR / "assets").glob("*.js")), "Vite JS bundle missing"
@@ -171,8 +167,8 @@ def assert_no_unpkg_rive_runtime():
 
 def main():
     assert_required_source_assets_exist()
-    run_site_build()
-    assert_pages_publish_shape()
+    run_app_build()
+    assert_app_build_shape()
     assert_local_references_exist()
     assert_manifest_icon_references_exist()
     assert_no_unpkg_rive_runtime()

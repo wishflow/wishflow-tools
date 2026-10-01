@@ -76,7 +76,7 @@
 - `worker/` 暂时保持现状，后续第 2 步再迁移 TypeScript。
 - `assets/` 继续存 Rive、JSON、SVG、manifest、icon 等静态资源。
 - `index.html` 作为 Vite 入口。
-- Vite 构建输出目录固定为 `_site`。
+- Vite 在应用目录内独立构建到 `dist/`；共享构建器负责组装 `_site/`。
 
 ## 4. 构建配置
 
@@ -85,16 +85,16 @@
 | 配置 | 目标 |
 | --- | --- |
 | `base: './'` | 兼容 GitHub Pages 项目路径和 Cloudflare Pages 根路径 |
-| `build.outDir: '_site'` | 保持现有部署目录 |
+| `build.outDir: 'dist'` | 保持应用构建与共享发布解耦 |
 | `build.emptyOutDir: true` | 避免旧文件污染 |
-| 静态资源复制 | 确保 Rive、JSON、SVG、manifest、icon 进入 `_site` |
+| 静态资源复制 | 确保 Rive、JSON、SVG、manifest、icon 进入本应用 `dist/` |
 
 `package.json` 调整方向：
 
 | script | 行为 |
 | --- | --- |
-| `build:site` | 改为 `vite build` |
-| `test:static` | 检查 Vite 产物和本地资源引用 |
+| `build` | 运行 `vite build` 输出本应用 `dist/` |
+| `test:static` | 检查本应用 Vite 产物和本地资源引用 |
 | `test:e2e` | 继续跑现有 Python CDP 测试 |
 | `test:worker` | 暂不改变 |
 | `test:ci` | 仍然先静态、Worker，再强制 Chrome E2E |

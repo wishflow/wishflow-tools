@@ -209,15 +209,19 @@ CLOUDFLARE_ACCOUNT_ID=...
 
 ## 5. GitHub Actions 门禁
 
-workflow 包含四类 job：
+CI 使用 `apps/catalog.json` 和变更文件决定测试及发布范围。每个 JavaScript 应用在自己的目录维护 `package.json` 与 `package-lock.json`，CI 只在对应应用目录执行 `npm ci`，不使用根 npm workspace。
 
 | Job | 作用 |
 | --- | --- |
-| `test` | 安装 Chrome，运行 `npm run test:ci` |
-| `validate-cloudflare-config` | 检查 Cloudflare API token、AI binding、Turnstile secrets |
-| `deploy-github-pages` | 发布 GitHub Pages |
-| `deploy-cloudflare-pages` | 发布 Cloudflare Pages |
-| `deploy-cloudflare-worker` | 发布 Cloudflare Worker |
+| `changes` | 识别受影响的应用、共享静态站和 Worker |
+| `test` | 只测试改动涉及的应用；目录、共享站点或构建器变更时测试所有登记应用 |
+| `test-shared` | 验证应用目录和 CI 变更分类 |
+| `validate-cloudflare-config` | Worker 变更后检查 Cloudflare API token、AI binding、Turnstile secrets |
+| `deploy-github-pages` | 静态应用或共享站点变更后，组装并发布完整共享站 |
+| `deploy-cloudflare-pages` | 静态应用或共享站点变更后发布同一份完整站点 |
+| `deploy-cloudflare-worker` | 仅 Worker 源码、Wrangler 配置或应用依赖配置变化后发布 Worker |
+
+文档变更只运行 diff 检查。Worker 单独变化时，运行对应应用测试并部署 Worker，不重建静态站点。
 
 `validate-cloudflare-config` 执行：
 
@@ -242,18 +246,23 @@ npm run check:cloudflare-config
 
 | 命令 | 用途 |
 | --- | --- |
-| `npm run build:site` | 构建 GitHub Pages / Cloudflare Pages 共用静态产物 |
-| `npm run test:static` | 静态资源、HTML 引用、JS 语法检查 |
-| `npm run test:worker` | Worker 单元测试，mock AI 与 Turnstile |
-| `npm run test:e2e` | 本地有 Chrome 时跑浏览器 E2E；无 Chrome 时跳过 |
-| `npm run test:ci` | CI 强制跑静态、Worker、浏览器 E2E |
-| `npm run check:cloudflare-config` | 部署前 Cloudflare AI/secret 门禁 |
-| `npm run deploy:cf:pages` | 部署 Cloudflare Pages |
-| `npm run deploy:cf:worker` | 部署 Cloudflare Worker |
+| `./scripts/install.sh`（应用目录） | 安装本应用的 npm 依赖并创建 Python `.venv/` |
+| `npm run build`（应用目录） | 构建头像编辑器到本目录 `dist/` |
+| `npm run test:static`（应用目录） | 构建并检查本应用静态资源 |
+| `npm run test:worker`（应用目录） | Worker 单元测试，mock AI 与 Turnstile |
+| `npm run test:e2e`（应用目录） | 本地有 Chrome 时跑浏览器 E2E；无 Chrome 时跳过 |
+| `npm run test:ci`（应用目录） | 强制运行静态、Worker、浏览器 E2E 验证 |
+| `npm run build:site`（仓库根目录） | 构建所有目录中登记的应用及共享导航页 |
+| `npm run test:catalog`（仓库根目录） | 检查项目目录、导航卡片和 CI 变更分类 |
+| `npm run check:cloudflare-config`（仓库根目录） | 部署前 Cloudflare AI/secret 门禁 |
+| `npm run deploy:cf:pages`（仓库根目录） | 部署 Cloudflare Pages |
+| `npm run deploy:cf:worker`（仓库根目录） | 部署 Cloudflare Worker |
 
 本地快速验证：
 
 ```bash
+cd apps/duolingo-avatar
+./scripts/install.sh
 npm run test:static
 npm run test:worker
 npm run test:e2e

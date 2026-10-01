@@ -2,24 +2,23 @@
   "name": "wishflow-tools",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
-    "dev": "npm run dev --workspace=@wishflow/duolingo-avatar",
+    "dev": "npm --prefix apps/duolingo-avatar run dev",
     "build:site": "node scripts/build-site.mjs",
-    "test:static": "npm run test:static --workspace=@wishflow/duolingo-avatar",
-    "test:worker": "npm run test:worker --workspace=@wishflow/duolingo-avatar",
-    "test:e2e": "npm run test:e2e --workspace=@wishflow/duolingo-avatar",
-    "test:ci": "npm run test:ci --workspace=@wishflow/duolingo-avatar",
-    "semantic:catalog": "npm run semantic:catalog --workspace=@wishflow/duolingo-avatar",
-    "semantic:check": "npm run semantic:check --workspace=@wishflow/duolingo-avatar",
-    "semantic:codex:tasks": "npm run semantic:codex:tasks --workspace=@wishflow/duolingo-avatar",
-    "semantic:codex:merge": "npm run semantic:codex:merge --workspace=@wishflow/duolingo-avatar",
-    "semantic:codex:compare": "npm run semantic:codex:compare --workspace=@wishflow/duolingo-avatar",
-    "semantic:codex:report": "npm run semantic:codex:report --workspace=@wishflow/duolingo-avatar",
-    "check:cloudflare-config": "npm run check:cloudflare-config --workspace=@wishflow/duolingo-avatar",
-    "deploy:cf:pages": "wrangler pages deploy _site --project-name=wishflow-tools --branch=master",
-    "deploy:cf:worker": "npm run deploy:cf:worker --workspace=@wishflow/duolingo-avatar"
+    "install:apps": "node scripts/install-apps.mjs",
+    "test:catalog": "node scripts/project-catalog.test.mjs",
+    "test:static": "npm --prefix apps/duolingo-avatar run test:static",
+    "test:worker": "npm --prefix apps/duolingo-avatar run test:worker",
+    "test:e2e": "npm --prefix apps/duolingo-avatar run test:e2e --",
+    "test:ci": "npm --prefix apps/duolingo-avatar run test:ci",
+    "semantic:catalog": "npm --prefix apps/duolingo-avatar run semantic:catalog --",
+    "semantic:check": "npm --prefix apps/duolingo-avatar run semantic:check",
+    "semantic:codex:tasks": "npm --prefix apps/duolingo-avatar run semantic:codex:tasks --",
+    "semantic:codex:merge": "npm --prefix apps/duolingo-avatar run semantic:codex:merge --",
+    "semantic:codex:compare": "npm --prefix apps/duolingo-avatar run semantic:codex:compare --",
+    "semantic:codex:report": "npm --prefix apps/duolingo-avatar run semantic:codex:report --",
+    "check:cloudflare-config": "npm --prefix apps/duolingo-avatar run check:cloudflare-config",
+    "deploy:cf:pages": "npm --prefix apps/duolingo-avatar run deploy:cf:pages",
+    "deploy:cf:worker": "npm --prefix apps/duolingo-avatar run deploy:cf:worker"
   }
 }
