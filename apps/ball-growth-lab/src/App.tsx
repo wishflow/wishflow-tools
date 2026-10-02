@@ -31,6 +31,7 @@ const EMPTY_STATS: SimulationStats = {
   births: 0,
   exits: 0,
   missedBirths: 0,
+  maxSpeed: 0,
 };
 
 function formatTime(seconds: number): string {
@@ -96,6 +97,11 @@ export default function App() {
         setStats(message.stats);
         setPhysicsFps(message.stats.physicsFps);
         lastStatsUpdate.current = now;
+      }
+      if (message.ended) {
+        setStats(message.stats);
+        setPhysicsFps(message.stats.physicsFps);
+        setRunState('ended');
       }
       if (message.sequence === 0 || message.time - lastSampleTime.current >= 0.5) {
         setSamples((previous) => [...previous, { time: message.time, count: message.stats.currentCount }].slice(-120));
@@ -164,7 +170,13 @@ export default function App() {
     }
   };
 
-  const statusText = runState === 'running' ? '正在运行' : runState === 'paused' ? '已暂停' : '准备就绪';
+  const statusText = runState === 'running'
+    ? '正在运行'
+    : runState === 'paused'
+      ? '已暂停'
+      : runState === 'ended'
+        ? '人口目标达成'
+        : '等待发射';
   const sparkline = makeSparkline(samples);
 
   return (
@@ -182,18 +194,18 @@ export default function App() {
         </a>
         <div className="brand-copy">
           <p>球群生长实验室</p>
-          <span>重力 · 碰撞 · 新生</span>
+          <span>碰撞驱动的弹性世界</span>
         </div>
-        <span className="local-chip"><span />本地模拟</span>
+        <span className="local-chip"><span />离线实验舱</span>
       </header>
 
       <section className="intro-row">
-        <div>
-          <p className="intro-kicker">把规则交给物理</p>
-          <h1>碰撞之后，<span>会发生什么？</span></h1>
-          <p className="intro-copy">调整场地和繁殖规则，观察球群在重力与边界之间的生长。</p>
+        <div className="intro-copy-block">
+          <p className="intro-kicker"><span />物理游乐场 · 第 01 号实验</p>
+          <h1>让碰撞，<span>创造更多碰撞。</span></h1>
+          <p className="intro-copy">调好初速度、重力与繁殖规则，发射一群弹性小球。</p>
         </div>
-        <div className="status-stamp">
+        <div className={`status-stamp status-stamp-${runState}`}>
           <span className={`status-dot status-${runState}`} />
           <span aria-live="polite">{statusText}</span>
           {runState !== 'setup' && <strong>{formatTime(stats.elapsedSeconds)}</strong>}
@@ -220,13 +232,13 @@ export default function App() {
             <div className="stage-heading">
               <span className="orbit-mark" aria-hidden="true"><i /><i /><i /></span>
               <div>
-                <p className="overline">运动场</p>
-                <h2 id="stage-title">观察台</h2>
+                <p className="overline">LIVE ARENA</p>
+                <h2 id="stage-title">弹性运动场</h2>
               </div>
             </div>
             <div className="stage-actions">
               <span className="fps-pill"><i />{renderFps || '—'} <small>FPS</small></span>
-              {runState !== 'setup' && (
+              {(runState === 'running' || runState === 'paused') && (
                 <button type="button" className="stage-action-button" onClick={pauseOrResume} aria-label={runState === 'running' ? '暂停实验' : '继续实验'}>
                   {runState === 'running' ? (
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg>
@@ -242,6 +254,7 @@ export default function App() {
               ref={canvasRef}
               shape={config.shape}
               gapCount={config.gapCount}
+              arenaSize={config.arenaSize}
               ballDiameterRatio={config.ballDiameterRatio}
               gapWidthRatio={config.gapWidthRatio}
               onFps={handleRendererFps}
@@ -255,11 +268,20 @@ export default function App() {
               </div>
             )}
             {runState === 'paused' && <div className="paused-ribbon">实验暂停</div>}
+            {runState === 'ended' && (
+              <div className="game-over" role="status" aria-live="polite">
+                <span className="game-over-orbit" aria-hidden="true">✦</span>
+                <p>POPULATION GOAL</p>
+                <h3>球群已满员！</h3>
+                <span>{stats.currentCount} 颗球 · 实验完成</span>
+                <button type="button" onClick={reset}>调整规则，再玩一次</button>
+              </div>
+            )}
             {canvasError && <div className="canvas-error" role="alert">{canvasError}</div>}
           </div>
 
           <footer className="stage-footer">
-            <span><b>{config.shape === 'square' ? '正方形' : '圆形'}</b> · {config.gapCount} 个均匀缺口</span>
+            <span><b>{config.shape === 'square' ? '正方形' : '圆形'}</b> · 边长 {config.arenaSize} m · {config.gapCount} 个缺口</span>
             <span className="seed-chip">种子 <b>{config.seed || '未设置'}</b></span>
           </footer>
         </section>
@@ -289,21 +311,22 @@ export default function App() {
             <div className="metric-cell metric-exited"><span>离场</span><strong>{stats.exits}</strong></div>
             <div className="metric-cell metric-blocked"><span>未出生</span><strong>{stats.missedBirths}</strong></div>
             <div className="metric-cell metric-fps"><span>物理步进</span><strong>{physicsFps || '—'}<small> Hz</small></strong></div>
+            <div className="metric-cell metric-speed"><span>场内最高速度</span><strong>{runState === 'setup' ? '—' : stats.maxSpeed.toFixed(1)}<small> m/s</small></strong></div>
           </div>
 
           <PopulationChart samples={samples} active={runState !== 'setup'} />
 
           <p className="result-note">
             <span className="note-spark" aria-hidden="true">✳</span>
-            未出生表示碰撞通过概率判定，但出生位被占用或已达到人口上限。
+            未出生表示通过概率判定，但附近没有空位，或现有动能不足以生成球。
           </p>
           {simulationError && <p className="error-note" role="alert">{simulationError} 重置实验后可重试。</p>}
         </aside>
       </div>
 
       <footer className="page-footer">
-        <span>球是刚体圆球 · 出生会增加总质量，不保证动能守恒</span>
-        <span>纯前端运行 · 不上传实验数据</span>
+        <span>弹性碰撞 · 无阻尼 · 新生时重新分配动量与能量</span>
+        <span>本地运行 · 实验数据不会上传</span>
       </footer>
       </main>
     </>

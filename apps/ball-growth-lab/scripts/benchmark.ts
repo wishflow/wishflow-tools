@@ -79,11 +79,16 @@ for (const count of COUNTS) {
     const radius = ARENA_HALF_EXTENT * ballDiameterRatio;
     const config: SimulationConfig = {
       shape,
+      arenaSize: ARENA_HALF_EXTENT * 2,
       gapCount: 0,
       ballDiameterRatio,
       gapWidthRatio: 2,
       gravity: 9.8,
-      restitution: 0.9,
+      restitution: 1,
+      initialSpeed: 11,
+      speedSpread: 0.3,
+      initialDirection: 270,
+      directionSpread: 120,
       initialCount: Math.min(count, 100),
       birthProbability: BIRTH_PROBABILITY,
       pairCooldown: PAIR_COOLDOWN,

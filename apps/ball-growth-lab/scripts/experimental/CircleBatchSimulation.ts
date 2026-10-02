@@ -138,8 +138,10 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
   getSnapshot(): SimulationSnapshot {
     const balls: BallSnapshot[] = [];
+    let maxSpeed = 0;
     for (let index = 0; index < this.count; index += 1) {
       const id = this.ids[index];
+      maxSpeed = Math.max(maxSpeed, Math.hypot(this.vx[index], this.vy[index]));
       balls.push({
         id,
         x: this.x[index],
@@ -157,7 +159,9 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         births: this.births,
         exits: this.exits,
         missedBirths: this.missedBirths,
+        maxSpeed,
       },
+      ended: false,
     };
   }
 

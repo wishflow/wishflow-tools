@@ -5,7 +5,7 @@ import { ARENA_HALF_EXTENT, FIXED_STEP_SECONDS, type ArenaShape, type Simulation
 
 const GAP_WIDTH_RATIOS = [1.05, 1.25, 1.45, 1.75, 2, 2.5, 3];
 const SAMPLE_OFFSETS = Number(process.env.GAP_SCAN_SAMPLES ?? 17);
-const TRIAL_STEPS = 240;
+const TRIAL_STEPS = 960;
 const SHAPES: ArenaShape[] = ['square', 'circle'];
 const ALGORITHMS = (process.env.GAP_SCAN_ALGORITHMS ?? 'rapier,planck')
   .split(',')
@@ -16,11 +16,16 @@ if (ALGORITHMS.includes('rapier')) await initializeRapier(RapierBenchmark);
 function trialConfig(shape: ArenaShape, gapWidthRatio: number, seed: string): SimulationConfig {
   return {
     shape,
+    arenaSize: ARENA_HALF_EXTENT * 2,
     gapCount: 2,
     ballDiameterRatio: 0.024,
     gapWidthRatio,
     gravity: 9.8,
-    restitution: 0.9,
+    restitution: 1,
+    initialSpeed: 11,
+    speedSpread: 0.3,
+    initialDirection: 270,
+    directionSpread: 120,
     initialCount: 2,
     birthProbability: 0,
     pairCooldown: 0.7,
@@ -31,7 +36,7 @@ function trialConfig(shape: ArenaShape, gapWidthRatio: number, seed: string): Si
 
 function passedThrough(algorithm: 'rapier' | 'planck', shape: ArenaShape, ratio: number, offset: number, run: number): boolean {
   const config = trialConfig(shape, ratio, `GAP-${shape}-${ratio}-${run}`);
-  const radius = ARENA_HALF_EXTENT * config.ballDiameterRatio;
+  const radius = (config.arenaSize / 2) * config.ballDiameterRatio;
   const seeds = [{
     position: { x: offset, y: -ARENA_HALF_EXTENT - radius - 0.05 },
     velocity: { x: 0, y: 0 },

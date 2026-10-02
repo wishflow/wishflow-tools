@@ -1,4 +1,5 @@
 import type { ArenaShape, RunState, SimulationConfig } from '../types';
+import { MAX_ARENA_SIZE, MIN_ARENA_SIZE } from '../types';
 
 interface SetupPanelProps {
   config: SimulationConfig;
@@ -38,6 +39,7 @@ function RangeControl({
       </span>
       <input
         type="range"
+        name={label}
         min={min}
         max={max}
         step={step}
@@ -87,6 +89,8 @@ function Icon({ name }: { name: 'copy' | 'shuffle' | 'play' | 'reset' }) {
 export function SetupPanel({ config, runState, seedNotice, onChange, onStart, onReset, onNewSeed, onCopySeed }: SetupPanelProps) {
   const locked = runState !== 'setup';
   const change = <K extends keyof SimulationConfig>(key: K, value: SimulationConfig[K]) => onChange({ ...config, [key]: value });
+  const directionNames = ['右', '右下', '下', '左下', '左', '左上', '上', '右上'];
+  const directionName = directionNames[Math.round(config.initialDirection / 45) % directionNames.length];
 
   return (
     <section className="setup-panel panel" aria-labelledby="setup-title">
@@ -94,8 +98,8 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
         <div>
           <span className="section-glyph" aria-hidden="true">A</span>
           <div>
-            <p className="overline">实验条件</p>
-            <h2 id="setup-title">调一调，再观察</h2>
+            <p className="overline">控制台 01</p>
+            <h2 id="setup-title">实验设置</h2>
           </div>
         </div>
         {locked && <span className="lock-chip">已锁定</span>}
@@ -128,8 +132,18 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
       </div>
 
       <div className="setting-group">
-        <p className="group-title">场地</p>
+        <p className="group-title"><span>01</span> 场地结构</p>
         <ShapeChoice value={config.shape} disabled={locked} onChange={(value) => change('shape', value)} />
+        <RangeControl
+          label="场地边长"
+          value={config.arenaSize}
+          min={MIN_ARENA_SIZE}
+          max={MAX_ARENA_SIZE}
+          step={2}
+          display={`${config.arenaSize} m`}
+          disabled={locked}
+          onChange={(value) => change('arenaSize', value)}
+        />
         <RangeControl
           label="均匀分布的缺口"
           value={config.gapCount}
@@ -163,21 +177,21 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
       </div>
 
       <div className="setting-group">
-        <p className="group-title">球群与物理</p>
+        <p className="group-title"><span>02</span> 球群发射</p>
         <RangeControl
           label="初始球数"
           value={config.initialCount}
           min={2}
-          max={Math.max(2, Math.min(100, config.maxPopulation))}
+          max={Math.max(2, Math.min(100, config.maxPopulation - 1))}
           step={1}
           display={`${config.initialCount} 个`}
           disabled={locked}
           onChange={(value) => change('initialCount', value)}
         />
         <RangeControl
-          label="人口上限"
+          label="人口目标 · 达到即结束"
           value={config.maxPopulation}
-          min={2}
+          min={3}
           max={1000}
           step={1}
           display={`${config.maxPopulation} 个`}
@@ -185,9 +199,54 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
           onChange={(value) => onChange({
             ...config,
             maxPopulation: value,
-            initialCount: Math.min(config.initialCount, value),
+            initialCount: Math.min(config.initialCount, value - 1),
           })}
         />
+        <RangeControl
+          label="初速度强度"
+          value={config.initialSpeed}
+          min={0}
+          max={24}
+          step={0.5}
+          display={`${config.initialSpeed.toFixed(1)} m/s`}
+          disabled={locked}
+          onChange={(value) => change('initialSpeed', value)}
+        />
+        <RangeControl
+          label="球间速度波动"
+          value={config.speedSpread}
+          min={0}
+          max={1}
+          step={0.05}
+          display={`±${Math.round(config.speedSpread * 100)}%`}
+          disabled={locked}
+          onChange={(value) => change('speedSpread', value)}
+        />
+        <RangeControl
+          label="初始方向"
+          value={config.initialDirection}
+          min={0}
+          max={360}
+          step={15}
+          display={`${directionName} · ${config.initialDirection}°`}
+          disabled={locked}
+          onChange={(value) => change('initialDirection', value)}
+        />
+        <RangeControl
+          label="方向随机扩散"
+          value={config.directionSpread}
+          min={0}
+          max={180}
+          step={5}
+          display={`±${config.directionSpread}°`}
+          disabled={locked}
+          onChange={(value) => change('directionSpread', value)}
+        />
+        <p className="direction-hint">0° 向右 · 90° 向下 · 180° 向左 · 270° 向上</p>
+      </div>
+
+      <div className="setting-group">
+        <p className="group-title"><span>03</span> 物理与繁殖</p>
         <RangeControl
           label="向下重力"
           value={config.gravity}
@@ -198,16 +257,7 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
           disabled={locked}
           onChange={(value) => change('gravity', value)}
         />
-        <RangeControl
-          label="弹性"
-          value={config.restitution}
-          min={0.2}
-          max={1}
-          step={0.05}
-          display={`${Math.round(config.restitution * 100)}%`}
-          disabled={locked}
-          onChange={(value) => change('restitution', value)}
-        />
+        <p className="physics-hint">重力越强，球越集中在下方；设为 0 时，球沿直线运动并在碰撞时转向。</p>
         <RangeControl
           label="碰撞繁殖概率"
           value={config.birthProbability}
@@ -232,14 +282,14 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
 
       {runState === 'setup' ? (
         <button type="button" className="primary-button start-button" onClick={onStart}>
-          <Icon name="play" />开始实验
+          <Icon name="play" />发射球群
         </button>
       ) : (
         <button type="button" className="secondary-button start-button" onClick={onReset}>
           <Icon name="reset" />重置并调整参数
         </button>
       )}
-      <p className="panel-footnote">开始后参数锁定。重置后可调整并复用相同种子。</p>
+      <p className="panel-footnote">达到人口目标即结束。重置可改规则，种子默认复用。</p>
     </section>
   );
 }

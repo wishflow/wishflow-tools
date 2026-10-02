@@ -1,8 +1,8 @@
 import type { ColliderHandle, EventQueue, RigidBody, World } from '@dimforge/rapier2d-compat';
-import { buildBoundaryPaths, getGapArcs, isInsideArena, pointAtBoundaryDistance } from '../arena';
+import { buildBoundaryPaths, getArenaHalfExtent, getGapArcs, isInsideArena, pointAtBoundaryDistance } from '../arena';
 import { createRandom } from '../random';
 import {
-  ARENA_HALF_EXTENT,
+  FIXED_STEP_SECONDS,
   MAX_POPULATION,
   type BallSnapshot,
   type Point,
@@ -11,7 +11,7 @@ import {
   type SpawnSeed,
 } from '../types';
 import { PairCooldown } from './PairCooldown';
-import { shareBirthMomentum, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
+import { distributeBirthEnergy, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
 import { SpatialHash } from './SpatialHash';
 
 type RapierRuntime = typeof import('@dimforge/rapier2d-compat');
@@ -28,9 +28,11 @@ interface RapierBall {
 }
 
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
+const MAX_ADAPTIVE_SUBSTEPS = 32;
+const MAX_TRAVEL_PER_SUBSTEP = 0.75;
 
 export const DEFAULT_RAPIER_TUNING: SolverTuning = {
-  velocityIterations: 4,
+  velocityIterations: 6,
   positionIterations: 2,
   allowedLinearError: 0.001,
 };
@@ -46,6 +48,7 @@ export class RapierSimulation implements PhysicsAdapter {
   private readonly events: EventQueue;
   private readonly random: () => number;
   private readonly radius: number;
+  private readonly halfExtent: number;
   private readonly pairCooldown = new PairCooldown();
   private readonly balls = new Map<number, RapierBall>();
   private readonly bodyIdByCollider = new Map<ColliderHandle, number>();
@@ -56,6 +59,7 @@ export class RapierSimulation implements PhysicsAdapter {
   private births = 0;
   private exits = 0;
   private missedBirths = 0;
+  private ended = false;
   private lastCooldownPrune = 0;
   private disposed = false;
 
@@ -68,14 +72,15 @@ export class RapierSimulation implements PhysicsAdapter {
     // The standard and compatibility builds share the 0.21 runtime API but have separate private TS declarations.
     this.rapier = rapier as RapierRuntime;
     this.random = createRandom(config.seed);
-    this.radius = ARENA_HALF_EXTENT * config.ballDiameterRatio;
+    this.halfExtent = getArenaHalfExtent(config);
+    this.radius = this.halfExtent * config.ballDiameterRatio;
     this.occupancy = new SpatialHash(this.radius * 2.05);
     this.world = new this.rapier.World({ x: 0, y: config.gravity });
     this.world.lengthUnit = 1;
     this.world.numSolverIterations = tuning.velocityIterations;
     this.world.numInternalPgsIterations = tuning.positionIterations;
     this.world.integrationParameters.normalizedAllowedLinearError = tuning.allowedLinearError ?? 0.001;
-    this.world.timestep = 1 / 60;
+    this.world.timestep = FIXED_STEP_SECONDS;
     this.events = new this.rapier.EventQueue(true);
     this.createArena();
 
@@ -88,10 +93,12 @@ export class RapierSimulation implements PhysicsAdapter {
 
   step(deltaSeconds: number): void {
     if (this.disposed) throw new Error('Cannot step a disposed simulation.');
+    if (this.ended) return;
     this.elapsedSeconds += deltaSeconds;
-    this.world.timestep = deltaSeconds;
     this.pendingPairs.length = 0;
-    this.world.step(this.events);
+    const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
+    this.world.timestep = deltaSeconds / substepCount;
+    for (let index = 0; index < substepCount; index += 1) this.world.step(this.events);
     this.events.drainCollisionEvents((firstCollider, secondCollider, started) => {
       if (!started || this.config.birthProbability <= 0) return;
       const firstId = this.bodyIdByCollider.get(firstCollider);
@@ -112,10 +119,17 @@ export class RapierSimulation implements PhysicsAdapter {
     }
   }
 
+  get isEnded(): boolean {
+    return this.ended;
+  }
+
   getSnapshot(): SimulationSnapshot {
     const balls: BallSnapshot[] = [];
+    let maxSpeed = 0;
     for (const record of this.balls.values()) {
       const position = record.body.translation();
+      const velocity = record.body.linvel();
+      maxSpeed = Math.max(maxSpeed, Math.hypot(velocity.x, velocity.y));
       balls.push({
         id: record.id,
         x: position.x,
@@ -133,7 +147,9 @@ export class RapierSimulation implements PhysicsAdapter {
         births: this.births,
         exits: this.exits,
         missedBirths: this.missedBirths,
+        maxSpeed,
       },
+      ended: this.ended,
     };
   }
 
@@ -158,7 +174,7 @@ export class RapierSimulation implements PhysicsAdapter {
       });
       const descriptor = this.rapier.ColliderDesc.polyline(vertices)
         .setFriction(0)
-        .setRestitution(this.config.restitution);
+        .setRestitution(1);
       this.world.createCollider(descriptor);
     }
   }
@@ -167,15 +183,17 @@ export class RapierSimulation implements PhysicsAdapter {
     const seeds: SpawnSeed[] = [];
     if (this.config.gapCount > 0) {
       const gap = getGapArcs(this.config)[0];
-      const center = pointAtBoundaryDistance(this.config.shape, gap.center);
-      const laneCount = Math.max(1, Math.floor(gap.width / (this.radius * 2)));
-      const rowSpacing = this.radius * 2 + this.radius * 0.08;
+      const center = pointAtBoundaryDistance(this.config.shape, gap.center, this.halfExtent);
+      const laneCount = this.config.shape === 'circle'
+        ? 1
+        : Math.max(1, Math.floor(gap.width / (this.radius * 2)));
+      const rowSpacing = this.radius * 2.08;
       for (let index = 0; index < count; index += 1) {
         const row = Math.floor(index / laneCount);
         const lane = (index % laneCount - (laneCount - 1) / 2) * this.radius * 2;
         seeds.push({
-          position: { x: center.x + lane, y: center.y - this.radius - row * rowSpacing },
-          velocity: { x: 0, y: 0 },
+          position: { x: center.x + lane, y: center.y + this.radius + row * rowSpacing },
+          velocity: this.randomVelocity(),
         });
       }
       return seeds;
@@ -185,7 +203,7 @@ export class RapierSimulation implements PhysicsAdapter {
     for (let index = 0; index < count; index += 1) {
       let position: Point | null = null;
       for (let attempt = 0; attempt < 3000; attempt += 1) {
-        const candidate = this.randomInteriorPoint();
+        const candidate = this.randomHighPoint();
         if (!occupancy.overlaps(candidate, this.radius)) {
           position = candidate;
           break;
@@ -198,18 +216,36 @@ export class RapierSimulation implements PhysicsAdapter {
     return seeds;
   }
 
-  private randomInteriorPoint(): Point {
-    const edgeLimit = ARENA_HALF_EXTENT - this.radius;
+  private randomHighPoint(): Point {
+    const edgeLimit = this.halfExtent - this.radius;
     if (this.config.shape === 'square') {
-      return { x: (this.random() * 2 - 1) * edgeLimit, y: (this.random() * 2 - 1) * edgeLimit };
+      return {
+        x: (this.random() * 2 - 1) * edgeLimit,
+        y: -edgeLimit * (0.42 + this.random() * 0.5),
+      };
     }
-    const angle = this.random() * Math.PI * 2;
-    const distance = Math.sqrt(this.random()) * edgeLimit;
-    return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
+    const x = (this.random() * 2 - 1) * edgeLimit;
+    const y = -edgeLimit * (0.42 + this.random() * 0.5);
+    const candidate = { x, y };
+    return isInsideArena(this.config.shape, candidate, this.radius, this.halfExtent) ? candidate : this.randomHighPoint();
   }
 
   private randomVelocity(): Point {
-    return { x: (this.random() - 0.5) * 1.2, y: (this.random() - 0.5) * 0.7 };
+    const angleDegrees = this.config.initialDirection
+      + (this.random() * 2 - 1) * this.config.directionSpread;
+    const angle = (angleDegrees * Math.PI) / 180;
+    const speed = this.config.initialSpeed * (1 + (this.random() * 2 - 1) * this.config.speedSpread);
+    return { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+  }
+
+  private getAdaptiveSubstepCount(deltaSeconds: number): number {
+    let maximumSpeed = 0;
+    for (const { body } of this.balls.values()) {
+      const velocity = body.linvel();
+      maximumSpeed = Math.max(maximumSpeed, Math.hypot(velocity.x, velocity.y));
+    }
+    const maximumTravel = this.radius * MAX_TRAVEL_PER_SUBSTEP;
+    return Math.max(1, Math.min(MAX_ADAPTIVE_SUBSTEPS, Math.ceil((maximumSpeed * deltaSeconds) / maximumTravel)));
   }
 
   private addBall(position: Point, velocity: Point): RapierBall {
@@ -220,7 +256,7 @@ export class RapierSimulation implements PhysicsAdapter {
         .setLinvel(velocity.x, velocity.y)
         .setLinearDamping(0)
         .setAngularDamping(0)
-        .setCanSleep(true)
+        .setCanSleep(false)
         .lockRotations(),
     );
     body.userData = { kind: 'ball', id } satisfies BallUserData;
@@ -228,11 +264,11 @@ export class RapierSimulation implements PhysicsAdapter {
       this.rapier.ColliderDesc.ball(this.radius)
         .setDensity(1)
         .setFriction(0)
-        .setRestitution(this.config.restitution)
+        .setRestitution(1)
         .setActiveEvents(this.rapier.ActiveEvents.COLLISION_EVENTS),
       body,
     );
-    const record = { id, body, hasEntered: isInsideArena(this.config.shape, position, this.radius) };
+    const record = { id, body, hasEntered: isInsideArena(this.config.shape, position, this.radius, this.halfExtent) };
     this.balls.set(id, record);
     this.bodyIdByCollider.set(collider.handle, id);
     this.occupancy.insert(id, position);
@@ -243,7 +279,7 @@ export class RapierSimulation implements PhysicsAdapter {
     for (const [id, record] of this.balls) {
       const position = record.body.translation();
       const point = { x: position.x, y: position.y };
-      if (isInsideArena(this.config.shape, point, this.radius)) record.hasEntered = true;
+      if (isInsideArena(this.config.shape, point, this.radius, this.halfExtent)) record.hasEntered = true;
       if (!record.hasEntered || !this.isOutsideArena(point)) continue;
       for (let index = 0; index < record.body.numColliders(); index += 1) {
         this.bodyIdByCollider.delete(record.body.collider(index).handle);
@@ -255,7 +291,7 @@ export class RapierSimulation implements PhysicsAdapter {
   }
 
   private isOutsideArena(point: Point): boolean {
-    const threshold = ARENA_HALF_EXTENT + this.radius * 1.25;
+    const threshold = this.halfExtent + this.radius * 1.25;
     if (this.config.shape === 'square') return Math.abs(point.x) > threshold || Math.abs(point.y) > threshold;
     return Math.hypot(point.x, point.y) > threshold;
   }
@@ -273,9 +309,9 @@ export class RapierSimulation implements PhysicsAdapter {
       const first = this.balls.get(firstId);
       const second = this.balls.get(secondId);
       if (!first || !second) continue;
-      if (this.balls.size >= Math.min(this.config.maxPopulation, MAX_POPULATION)) {
-        this.missedBirths += 1;
-        continue;
+      if (this.balls.size >= this.populationLimit) {
+        this.ended = true;
+        break;
       }
       const firstPosition = first.body.translation();
       const secondPosition = second.body.translation();
@@ -287,11 +323,25 @@ export class RapierSimulation implements PhysicsAdapter {
       }
       const firstVelocity = first.body.linvel();
       const secondVelocity = second.body.linvel();
-      const momentum = shareBirthMomentum(firstVelocity, secondVelocity);
-      first.body.setLinvel(momentum.first, true);
-      second.body.setLinvel(momentum.second, true);
-      this.addBall(birthPosition, momentum.child);
+      const birthVelocities = distributeBirthEnergy(
+        firstVelocity,
+        secondVelocity,
+        this.config.gravity,
+        birthPosition.y,
+        this.random() * Math.PI * 2,
+      );
+      if (!birthVelocities) {
+        this.missedBirths += 1;
+        continue;
+      }
+      first.body.setLinvel(birthVelocities.first, true);
+      second.body.setLinvel(birthVelocities.second, true);
+      this.addBall(birthPosition, birthVelocities.child);
       this.births += 1;
+      if (this.balls.size >= this.populationLimit) {
+        this.ended = true;
+        break;
+      }
     }
     this.pendingPairs.length = 0;
   }
@@ -304,9 +354,13 @@ export class RapierSimulation implements PhysicsAdapter {
         x: midpoint.x + Math.cos(angle) * this.radius * 2.15,
         y: midpoint.y + Math.sin(angle) * this.radius * 2.15,
       };
-      if (!isInsideArena(this.config.shape, candidate, this.radius)) continue;
+      if (!isInsideArena(this.config.shape, candidate, this.radius, this.halfExtent)) continue;
       if (!this.occupancy.overlaps(candidate, this.radius)) return candidate;
     }
     return null;
+  }
+
+  private get populationLimit(): number {
+    return Math.min(this.config.maxPopulation, MAX_POPULATION);
   }
 }

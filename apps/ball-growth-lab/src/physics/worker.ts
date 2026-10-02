@@ -2,11 +2,12 @@ import { initializeRapier, RapierSimulation } from './RapierSimulation';
 import { FIXED_STEP_SECONDS, type SimulationConfig, type SimulationSnapshot, type WorkerCommand } from '../types';
 
 const workerScope = self as unknown as DedicatedWorkerGlobalScope;
-const SNAPSHOT_INTERVAL_MS = 1000 / 30;
+const SNAPSHOT_INTERVAL_MS = 1000 / 60;
 const MAX_STEPS_PER_TICK = 6;
 
 let simulation: RapierSimulation | null = null;
 let running = false;
+let requestedRunning = false;
 let accumulator = 0;
 let previousTime = 0;
 let lastSnapshotTime = 0;
@@ -40,11 +41,13 @@ async function start(config: SimulationConfig, currentRunId: number): Promise<vo
   sequence = 0;
   simulation?.dispose();
   simulation = null;
+  requestedRunning = true;
   running = true;
   accumulator = 0;
   const rapier = await loadRapier();
   if (currentVersion !== startVersion) return;
   simulation = new RapierSimulation(rapier, config);
+  running = requestedRunning && !simulation.isEnded;
   previousTime = performance.now();
   lastSnapshotTime = previousTime;
   physicsWindowStart = previousTime;
@@ -77,6 +80,7 @@ function sendSnapshot(): void {
     ballData: ballData.buffer,
     ballCount: snapshot.balls.length,
     stats: { ...snapshot.stats, physicsFps },
+    ended: snapshot.ended,
   }, [ballData.buffer]);
 }
 
@@ -92,6 +96,12 @@ function tick(): void {
     simulation.step(FIXED_STEP_SECONDS);
     accumulator -= FIXED_STEP_SECONDS;
     steps += 1;
+    if (simulation.isEnded) {
+      running = false;
+      accumulator = 0;
+      sendSnapshot();
+      break;
+    }
   }
   if (steps === MAX_STEPS_PER_TICK && accumulator >= FIXED_STEP_SECONDS) accumulator = 0;
 
@@ -112,13 +122,17 @@ async function handleCommand(command: WorkerCommand): Promise<void> {
     if (command.type === 'start' || command.type === 'reset') {
       await start(command.config, command.runId);
     } else if (command.type === 'pause') {
+      requestedRunning = false;
       running = false;
       sendSnapshot();
     } else if (command.type === 'resume') {
+      if (simulation?.isEnded) return;
+      requestedRunning = true;
       previousTime = performance.now();
-      running = true;
+      running = Boolean(simulation);
     } else if (command.type === 'stop') {
       startVersion += 1;
+      requestedRunning = false;
       running = false;
       simulation?.dispose();
       simulation = null;

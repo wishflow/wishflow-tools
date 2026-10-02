@@ -90,7 +90,12 @@ export class PlanckSimulation implements PhysicsAdapter {
         births: this.births,
         exits: this.exits,
         missedBirths: this.missedBirths,
+        maxSpeed: [...this.balls.values()].reduce((maximum, ball) => {
+          const velocity = ball.body.getLinearVelocity();
+          return Math.max(maximum, Math.hypot(velocity.x, velocity.y));
+        }, 0),
       },
+      ended: false,
     };
   }
 

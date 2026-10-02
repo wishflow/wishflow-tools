@@ -12,8 +12,8 @@ import {
   useImperativeHandle,
   useRef,
 } from 'react';
-import { buildBoundarySegments, getGapArcs, pointAtBoundaryDistance } from '../arena';
-import { ARENA_HALF_EXTENT, type ArenaShape, type BallSnapshot } from '../types';
+import { buildBoundarySegments, getArenaHalfExtent, getGapArcs, pointAtBoundaryDistance } from '../arena';
+import { MAX_ARENA_HALF_EXTENT, type ArenaShape, type BallSnapshot } from '../types';
 
 export interface CanvasHandle {
   updateBalls(balls: BallSnapshot[]): void;
@@ -22,6 +22,7 @@ export interface CanvasHandle {
 interface SimulationCanvasProps {
   shape: ArenaShape;
   gapCount: number;
+  arenaSize: number;
   ballDiameterRatio: number;
   gapWidthRatio: number;
   onFps: (fps: number) => void;
@@ -29,9 +30,9 @@ interface SimulationCanvasProps {
 }
 
 const PIXI_COLORS = {
-  arena: 0xfffcf1,
-  wall: 0x393748,
-  accent: 0xec7660,
+  arena: 0x1c2038,
+  wall: 0xffd45f,
+  accent: 0xff5b91,
 };
 
 function createBallTexture(): Texture {
@@ -61,15 +62,15 @@ function createBallTexture(): Texture {
 function drawArena(
   fill: Graphics,
   boundary: Graphics,
-  config: Pick<SimulationCanvasProps, 'shape' | 'gapCount' | 'ballDiameterRatio' | 'gapWidthRatio'>,
+  config: Pick<SimulationCanvasProps, 'shape' | 'gapCount' | 'arenaSize' | 'ballDiameterRatio' | 'gapWidthRatio'>,
 ): void {
   fill.clear();
+  const halfExtent = getArenaHalfExtent(config);
 
   if (config.shape === 'square') {
-    const inset = ARENA_HALF_EXTENT;
-    fill.rect(-inset, -inset, inset * 2, inset * 2).fill(PIXI_COLORS.arena);
+    fill.rect(-halfExtent, -halfExtent, halfExtent * 2, halfExtent * 2).fill(PIXI_COLORS.arena);
   } else {
-    fill.circle(0, 0, ARENA_HALF_EXTENT).fill(PIXI_COLORS.arena);
+    fill.circle(0, 0, halfExtent).fill(PIXI_COLORS.arena);
   }
 
   boundary.clear();
@@ -77,7 +78,11 @@ function drawArena(
   const simulationConfig = {
     ...config,
     gravity: 9.8,
-    restitution: 0.9,
+    restitution: 1,
+    initialSpeed: 11,
+    speedSpread: 0.3,
+    initialDirection: 270,
+    directionSpread: 120,
     initialCount: 2,
     birthProbability: 0,
     pairCooldown: 1,
@@ -87,19 +92,22 @@ function drawArena(
   for (const segment of buildBoundarySegments(simulationConfig)) {
     boundary.moveTo(segment.from.x, segment.from.y).lineTo(segment.to.x, segment.to.y);
   }
+  boundary.setStrokeStyle({ width: 0.44, color: PIXI_COLORS.accent, alpha: 0.22, cap: 'round', join: 'round' });
+  boundary.stroke();
+  boundary.setStrokeStyle({ width: 0.12, color: PIXI_COLORS.wall, cap: 'round', join: 'round' });
   boundary.stroke();
 
   const gaps = getGapArcs(simulationConfig);
   for (const gap of gaps) {
     for (const distance of [gap.center - gap.width / 2, gap.center + gap.width / 2]) {
-      const point = pointAtBoundaryDistance(config.shape, distance);
-      boundary.circle(point.x, point.y, 0.16).fill(PIXI_COLORS.accent);
+      const point = pointAtBoundaryDistance(config.shape, distance, halfExtent);
+      boundary.circle(point.x, point.y, 0.19).fill(PIXI_COLORS.accent);
     }
   }
 }
 
 export const SimulationCanvas = forwardRef<CanvasHandle, SimulationCanvasProps>(function SimulationCanvas(
-  { shape, gapCount, ballDiameterRatio, gapWidthRatio, onFps, onError },
+  { shape, gapCount, arenaSize, ballDiameterRatio, gapWidthRatio, onFps, onError },
   forwardedRef,
 ) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -167,7 +175,7 @@ export const SimulationCanvas = forwardRef<CanvasHandle, SimulationCanvasProps>(
       if (!root || !app.renderer) return;
       const size = Math.min(host.clientWidth - 28, host.clientHeight - 28);
       if (size <= 0) return;
-      const worldScale = size / (ARENA_HALF_EXTENT * 2);
+      const worldScale = size / (MAX_ARENA_HALF_EXTENT * 2);
       root.position.set(app.screen.width / 2, app.screen.height / 2);
       root.scale.set(worldScale);
     };
@@ -189,7 +197,7 @@ export const SimulationCanvas = forwardRef<CanvasHandle, SimulationCanvasProps>(
       root = new Container();
       arenaFill = new Graphics();
       arenaBoundary = new Graphics();
-      drawArena(arenaFill, arenaBoundary, { shape, gapCount, ballDiameterRatio, gapWidthRatio });
+      drawArena(arenaFill, arenaBoundary, { shape, gapCount, arenaSize, ballDiameterRatio, gapWidthRatio });
       arenaGraphicsRef.current = { fill: arenaFill, boundary: arenaBoundary };
       textureRef.current = createBallTexture();
       const particles = new ParticleContainer({
@@ -258,8 +266,8 @@ export const SimulationCanvas = forwardRef<CanvasHandle, SimulationCanvasProps>(
 
   useEffect(() => {
     const graphics = arenaGraphicsRef.current;
-    if (graphics) drawArena(graphics.fill, graphics.boundary, { shape, gapCount, ballDiameterRatio, gapWidthRatio });
-  }, [shape, gapCount, ballDiameterRatio, gapWidthRatio]);
+    if (graphics) drawArena(graphics.fill, graphics.boundary, { shape, gapCount, arenaSize, ballDiameterRatio, gapWidthRatio });
+  }, [shape, gapCount, arenaSize, ballDiameterRatio, gapWidthRatio]);
 
   const shapeName = shape === 'square' ? '正方形' : '圆形';
   const gapDescription = gapCount === 0 ? '没有缺口' : `${gapCount} 个均匀缺口`;

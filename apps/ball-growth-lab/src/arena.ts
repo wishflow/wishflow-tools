@@ -20,14 +20,19 @@ export interface BoundaryPath {
   loop: boolean;
 }
 
+export function getArenaHalfExtent(config: Pick<SimulationConfig, 'arenaSize'>): number {
+  return config.arenaSize / 2;
+}
+
 export function getPerimeter(shape: ArenaShape, halfExtent = ARENA_HALF_EXTENT): number {
   return shape === 'square' ? halfExtent * 8 : Math.PI * 2 * halfExtent;
 }
 
-export function getGapArcs(config: Pick<SimulationConfig, 'shape' | 'gapCount' | 'ballDiameterRatio' | 'gapWidthRatio'>): GapArc[] {
+export function getGapArcs(config: Pick<SimulationConfig, 'shape' | 'arenaSize' | 'gapCount' | 'ballDiameterRatio' | 'gapWidthRatio'>): GapArc[] {
   if (config.gapCount <= 0) return [];
-  const perimeter = getPerimeter(config.shape);
-  const ballDiameter = ARENA_HALF_EXTENT * 2 * config.ballDiameterRatio;
+  const halfExtent = getArenaHalfExtent(config);
+  const perimeter = getPerimeter(config.shape, halfExtent);
+  const ballDiameter = config.arenaSize * config.ballDiameterRatio;
   const width = Math.min(ballDiameter * config.gapWidthRatio, perimeter / (config.gapCount * 1.8));
   return Array.from({ length: config.gapCount }, (_, index) => ({
     center: (perimeter * index) / config.gapCount,
@@ -63,7 +68,7 @@ function splitWrappedInterval(start: number, end: number, perimeter: number): Ar
 }
 
 function visibleIntervals(config: SimulationConfig): Array<[number, number]> {
-  const perimeter = getPerimeter(config.shape);
+  const perimeter = getPerimeter(config.shape, getArenaHalfExtent(config));
   const gaps = getGapArcs(config)
     .flatMap(({ center, width }) => splitWrappedInterval(center - width / 2, center + width / 2, perimeter))
     .sort((a, b) => a[0] - b[0]);
@@ -85,8 +90,7 @@ function visibleIntervals(config: SimulationConfig): Array<[number, number]> {
   return visible;
 }
 
-function splitSquareInterval(start: number, end: number): number[] {
-  const h = ARENA_HALF_EXTENT;
+function splitSquareInterval(start: number, end: number, h: number): number[] {
   const corners = [0, h, h * 3, h * 5, h * 7, h * 8];
   return [start, ...corners.filter((corner) => corner > start && corner < end), end];
 }
@@ -106,9 +110,10 @@ export function buildBoundarySegments(config: SimulationConfig): BoundarySegment
 }
 
 export function buildBoundaryPaths(config: SimulationConfig): BoundaryPath[] {
+  const halfExtent = getArenaHalfExtent(config);
   if (config.gapCount === 0) {
     if (config.shape === 'square') {
-      const extent = ARENA_HALF_EXTENT;
+      const extent = halfExtent;
       return [{
         loop: true,
         points: [
@@ -120,27 +125,27 @@ export function buildBoundaryPaths(config: SimulationConfig): BoundaryPath[] {
       }];
     }
     const pointCount = 96;
-    const perimeter = getPerimeter(config.shape);
+    const perimeter = getPerimeter(config.shape, halfExtent);
     return [{
       loop: true,
-      points: Array.from({ length: pointCount }, (_, index) => pointAtBoundaryDistance(config.shape, (perimeter * index) / pointCount)),
+      points: Array.from({ length: pointCount }, (_, index) => pointAtBoundaryDistance(config.shape, (perimeter * index) / pointCount, halfExtent)),
     }];
   }
 
   return visibleIntervals(config).map(([start, end]) => {
     if (config.shape === 'square') {
-      return { loop: false, points: splitSquareInterval(start, end).map((distance) => pointAtBoundaryDistance(config.shape, distance)) };
+      return { loop: false, points: splitSquareInterval(start, end, halfExtent).map((distance) => pointAtBoundaryDistance(config.shape, distance, halfExtent)) };
     }
-    const slices = Math.max(1, Math.ceil(((end - start) / ARENA_HALF_EXTENT) / 0.055));
+    const slices = Math.max(1, Math.ceil(((end - start) / halfExtent) / 0.055));
     return {
       loop: false,
-      points: Array.from({ length: slices + 1 }, (_, index) => pointAtBoundaryDistance(config.shape, start + ((end - start) * index) / slices)),
+      points: Array.from({ length: slices + 1 }, (_, index) => pointAtBoundaryDistance(config.shape, start + ((end - start) * index) / slices, halfExtent)),
     };
   });
 }
 
-export function isInsideArena(shape: ArenaShape, point: Point, radius: number): boolean {
-  const limit = ARENA_HALF_EXTENT - radius;
+export function isInsideArena(shape: ArenaShape, point: Point, radius: number, halfExtent = ARENA_HALF_EXTENT): boolean {
+  const limit = halfExtent - radius;
   if (shape === 'square') return Math.abs(point.x) <= limit && Math.abs(point.y) <= limit;
   return Math.hypot(point.x, point.y) <= limit;
 }

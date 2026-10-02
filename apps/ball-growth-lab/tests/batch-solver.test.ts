@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CircleBatchSimulation } from '../scripts/experimental/CircleBatchSimulation';
-import { FIXED_STEP_SECONDS, type SimulationConfig, type SpawnSeed } from '../src/types';
+import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type SimulationConfig, type SpawnSeed } from '../src/types';
 
 function makeConfig(overrides: Partial<SimulationConfig> = {}): SimulationConfig {
   return {
+    ...DEFAULT_CONFIG,
     shape: 'square',
     gapCount: 0,
     ballDiameterRatio: 0.024,

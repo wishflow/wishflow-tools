@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PlanckSimulation } from '../scripts/experimental/PlanckSimulation';
 import { PairCooldown } from '../src/physics/PairCooldown';
-import { shareBirthMomentum } from '../src/physics/PhysicsAdapter';
+import { distributeBirthEnergy, shareBirthMomentum } from '../src/physics/PhysicsAdapter';
 import { SpatialHash } from '../src/physics/SpatialHash';
 import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type Point, type SimulationConfig, type SpawnSeed } from '../src/types';
 
@@ -91,7 +91,7 @@ test('达到人口上限时计入未出生次数，并阻止超额新增', () =>
 test('球从底部缺口离场后被移除并计数', () => {
   const seeds = [{ position: { x: 0, y: 9.5 }, velocity: { x: 0, y: 8 } }];
   const simulation = new PlanckSimulation(makeConfig({ gapCount: 2, gapWidthRatio: 2 }), seeds);
-  step(simulation, 20);
+  step(simulation, 30);
   const stats = simulation.getSnapshot().stats;
 
   assert.equal(stats.currentCount, 0);
@@ -108,6 +108,29 @@ test('新增等质量子球后总线动量保持', () => {
 
   assert.ok(Math.abs(afterTotal.x - before.x) < 1e-12);
   assert.ok(Math.abs(afterTotal.y - before.y) < 1e-12);
+});
+
+test('球群繁殖时按父球动量和新球重力势能重新分配动能', () => {
+  const first = { x: 2, y: 3 };
+  const second = { x: -1, y: 2 };
+  const gravity = 2;
+  const childY = -2;
+  const result = distributeBirthEnergy(first, second, gravity, childY, 0.7);
+
+  assert.ok(result);
+  assert.ok(Math.abs(result.first.x + result.second.x + result.child.x - first.x - second.x) < 1e-12);
+  assert.ok(Math.abs(result.first.y + result.second.y + result.child.y - first.y - second.y) < 1e-12);
+
+  const kineticBefore = (first.x ** 2 + first.y ** 2 + second.x ** 2 + second.y ** 2) / 2;
+  const kineticAfter = [result.first, result.second, result.child]
+    .reduce((total, velocity) => total + (velocity.x ** 2 + velocity.y ** 2) / 2, 0);
+  const mechanicalBefore = kineticBefore;
+  const mechanicalAfter = kineticAfter - gravity * childY;
+  assert.ok(Math.abs(mechanicalAfter - mechanicalBefore) < 1e-10);
+});
+
+test('高处繁殖所需能量不足时不凭空生成动能', () => {
+  assert.equal(distributeBirthEnergy({ x: 0, y: 0 }, { x: 0, y: 0 }, 2, -2, 0), null);
 });
 
 test('繁殖冷却按无序球对计算', () => {
