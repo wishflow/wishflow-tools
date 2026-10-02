@@ -1,0 +1,31 @@
+{
+  "name": "@wishflow/ball-growth-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --import tsx --test tests/*.test.ts",
+    "benchmark": "node --import tsx scripts/benchmark.ts",
+    "benchmark:gaps": "node --import tsx scripts/gap-scan.ts",
+    "test:ci": "npm run typecheck && npm run test:unit"
+  },
+  "dependencies": {
+    "@dimforge/rapier2d": "^0.21.0",
+    "pixi.js": "^8.21.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@dimforge/rapier2d-compat": "^0.21.0",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "planck": "^1.5.0",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}

@@ -1,0 +1,127 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { PlanckSimulation } from '../scripts/experimental/PlanckSimulation';
+import { PairCooldown } from '../src/physics/PairCooldown';
+import { shareBirthMomentum } from '../src/physics/PhysicsAdapter';
+import { SpatialHash } from '../src/physics/SpatialHash';
+import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type Point, type SimulationConfig, type SpawnSeed } from '../src/types';
+
+function makeConfig(overrides: Partial<SimulationConfig> = {}): SimulationConfig {
+  return {
+    ...DEFAULT_CONFIG,
+    gravity: 0,
+    restitution: 1,
+    initialCount: 2,
+    birthProbability: 0,
+    pairCooldown: 0.5,
+    maxPopulation: 10,
+    gapCount: 0,
+    ...overrides,
+  };
+}
+
+function movingPair(): SpawnSeed[] {
+  return [
+    { position: { x: -0.29, y: 0 }, velocity: { x: 1.5, y: 0 } },
+    { position: { x: 0.29, y: 0 }, velocity: { x: -1.5, y: 0 } },
+  ];
+}
+
+function step(simulation: PlanckSimulation, count: number): void {
+  for (let index = 0; index < count; index += 1) simulation.step(FIXED_STEP_SECONDS);
+}
+
+function vectorSum(vectors: Point[]): Point {
+  return vectors.reduce((sum, vector) => ({ x: sum.x + vector.x, y: sum.y + vector.y }), { x: 0, y: 0 });
+}
+
+test('空场地的初始球不重叠，固定种子的位置可复现', () => {
+  const config = makeConfig({ initialCount: 24, seed: 'PACK-TEST' });
+  const first = new PlanckSimulation(config);
+  const second = new PlanckSimulation(config);
+  const balls = first.getSnapshot().balls;
+
+  assert.equal(balls.length, 24);
+  assert.deepEqual(balls.map(({ x, y }) => [x, y]), second.getSnapshot().balls.map(({ x, y }) => [x, y]));
+  for (let firstIndex = 0; firstIndex < balls.length; firstIndex += 1) {
+    for (let secondIndex = firstIndex + 1; secondIndex < balls.length; secondIndex += 1) {
+      const dx = balls[firstIndex].x - balls[secondIndex].x;
+      const dy = balls[firstIndex].y - balls[secondIndex].y;
+      assert.ok(Math.hypot(dx, dy) >= balls[firstIndex].radius * 2 - 1e-6);
+    }
+  }
+  first.dispose();
+  second.dispose();
+});
+
+test('反弹后球体交换运动方向', () => {
+  const simulation = new PlanckSimulation(makeConfig(), movingPair());
+  step(simulation, 30);
+  const [first, second] = simulation.getSnapshot().balls;
+
+  assert.ok(first.x < 0, `expected first ball to rebound left, got ${first.x}`);
+  assert.ok(second.x > 0, `expected second ball to rebound right, got ${second.x}`);
+  simulation.dispose();
+});
+
+test('繁殖概率为 0 时不出生；概率为 1 时碰撞会产生一个新球', () => {
+  const noBirth = new PlanckSimulation(makeConfig({ birthProbability: 0 }), movingPair());
+  step(noBirth, 12);
+  assert.equal(noBirth.getSnapshot().stats.births, 0);
+  noBirth.dispose();
+
+  const birth = new PlanckSimulation(makeConfig({ birthProbability: 1, maxPopulation: 3 }), movingPair());
+  step(birth, 12);
+  assert.equal(birth.getSnapshot().stats.births, 1);
+  assert.equal(birth.getSnapshot().stats.currentCount, 3);
+  birth.dispose();
+});
+
+test('达到人口上限时计入未出生次数，并阻止超额新增', () => {
+  const simulation = new PlanckSimulation(makeConfig({ birthProbability: 1, maxPopulation: 2 }), movingPair());
+  step(simulation, 12);
+  const stats = simulation.getSnapshot().stats;
+
+  assert.equal(stats.currentCount, 2);
+  assert.equal(stats.births, 0);
+  assert.equal(stats.missedBirths, 1);
+  simulation.dispose();
+});
+
+test('球从底部缺口离场后被移除并计数', () => {
+  const seeds = [{ position: { x: 0, y: 9.5 }, velocity: { x: 0, y: 8 } }];
+  const simulation = new PlanckSimulation(makeConfig({ gapCount: 2, gapWidthRatio: 2 }), seeds);
+  step(simulation, 20);
+  const stats = simulation.getSnapshot().stats;
+
+  assert.equal(stats.currentCount, 0);
+  assert.equal(stats.exits, 1);
+  simulation.dispose();
+});
+
+test('新增等质量子球后总线动量保持', () => {
+  const first = { x: 2.4, y: -0.7 };
+  const second = { x: -0.5, y: 1.1 };
+  const before = vectorSum([first, second]);
+  const after = shareBirthMomentum(first, second);
+  const afterTotal = vectorSum([after.first, after.second, after.child]);
+
+  assert.ok(Math.abs(afterTotal.x - before.x) < 1e-12);
+  assert.ok(Math.abs(afterTotal.y - before.y) < 1e-12);
+});
+
+test('繁殖冷却按无序球对计算', () => {
+  const cooldown = new PairCooldown();
+  assert.equal(cooldown.shouldAccept(4, 9, 1, 0.5), true);
+  assert.equal(cooldown.shouldAccept(9, 4, 1.2, 0.5), false);
+  assert.equal(cooldown.shouldAccept(4, 9, 1.5, 0.5), true);
+  cooldown.prune(8, 2);
+  assert.equal(cooldown.shouldAccept(9, 4, 8, 0.5), true);
+});
+
+test('空间哈希只把临近同尺寸球判为重叠', () => {
+  const hash = new SpatialHash(0.5);
+  hash.insert(1, { x: -0.1, y: 0 });
+  assert.equal(hash.overlaps({ x: 0.25, y: 0 }, 0.24), true);
+  assert.equal(hash.overlaps({ x: 0.5, y: 0 }, 0.24), false);
+});

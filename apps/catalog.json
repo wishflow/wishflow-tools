@@ -4,5 +4,11 @@
     "title": "Duolingo Avatar Editor",
     "description": "创建、编辑并导出 Duolingo 风格的头像，也可以用文字生成可继续调整的头像配置。",
     "icon": "🎨"
+  },
+  {
+    "slug": "ball-growth-lab",
+    "title": "球群生长实验室",
+    "description": "调整重力、边界缺口和繁殖概率，观察球群碰撞后的变化。",
+    "icon": "🟠"
   }
 ]
