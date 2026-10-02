@@ -24,12 +24,13 @@ interface BallUserData {
 interface RapierBall {
   id: number;
   body: RigidBody;
+  mass: number;
   hasEntered: boolean;
 }
 
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
-const MAX_ADAPTIVE_SUBSTEPS = 32;
-const MAX_TRAVEL_PER_SUBSTEP = 0.75;
+export const MAX_ADAPTIVE_SUBSTEPS = 32;
+export const MAX_TRAVEL_PER_SUBSTEP = 0.75;
 
 export const DEFAULT_RAPIER_TUNING: SolverTuning = {
   velocityIterations: 6,
@@ -54,11 +55,15 @@ export class RapierSimulation implements PhysicsAdapter {
   private readonly bodyIdByCollider = new Map<ColliderHandle, number>();
   private readonly pendingPairs: Array<[number, number]> = [];
   private readonly occupancy: SpatialHash;
+  private energyScratch = new Float64Array(0);
   private nextId = 1;
   private elapsedSeconds = 0;
   private births = 0;
+  private birthAttempts = 0;
   private exits = 0;
   private missedBirths = 0;
+  private missedSpaceBirths = 0;
+  private missedEnergyBirths = 0;
   private ended = false;
   private lastCooldownPrune = 0;
   private disposed = false;
@@ -75,7 +80,7 @@ export class RapierSimulation implements PhysicsAdapter {
     this.halfExtent = getArenaHalfExtent(config);
     this.radius = this.halfExtent * config.ballDiameterRatio;
     this.occupancy = new SpatialHash(this.radius * 2.05);
-    this.world = new this.rapier.World({ x: 0, y: config.gravity });
+    this.world = new this.rapier.World({ x: 0, y: this.activeGravity });
     this.world.lengthUnit = 1;
     this.world.numSolverIterations = tuning.velocityIterations;
     this.world.numInternalPgsIterations = tuning.positionIterations;
@@ -97,15 +102,23 @@ export class RapierSimulation implements PhysicsAdapter {
     this.elapsedSeconds += deltaSeconds;
     this.pendingPairs.length = 0;
     const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
+    const energyBefore = this.getMechanicalEnergy();
     this.world.timestep = deltaSeconds / substepCount;
-    for (let index = 0; index < substepCount; index += 1) this.world.step(this.events);
+    for (let index = 0; index < substepCount; index += 1) {
+      if (this.config.motionField === 'curvature') this.curveBallVelocities(this.world.timestep);
+      this.world.step(this.events);
+    }
+    this.restoreMechanicalEnergy(energyBefore);
     this.events.drainCollisionEvents((firstCollider, secondCollider, started) => {
       if (!started || this.config.birthProbability <= 0) return;
       const firstId = this.bodyIdByCollider.get(firstCollider);
       const secondId = this.bodyIdByCollider.get(secondCollider);
       if (firstId === undefined || secondId === undefined) return;
       if (!this.pairCooldown.shouldAccept(firstId, secondId, this.elapsedSeconds, this.config.pairCooldown)) return;
-      if (this.random() < this.config.birthProbability) this.pendingPairs.push([firstId, secondId]);
+      if (this.random() < this.config.birthProbability) {
+        this.birthAttempts += 1;
+        this.pendingPairs.push([firstId, secondId]);
+      }
     });
 
     this.removeExitedBalls();
@@ -145,8 +158,11 @@ export class RapierSimulation implements PhysicsAdapter {
         elapsedSeconds: this.elapsedSeconds,
         currentCount: this.balls.size,
         births: this.births,
+        birthAttempts: this.birthAttempts,
         exits: this.exits,
         missedBirths: this.missedBirths,
+        missedSpaceBirths: this.missedSpaceBirths,
+        missedEnergyBirths: this.missedEnergyBirths,
         maxSpeed,
       },
       ended: this.ended,
@@ -176,6 +192,114 @@ export class RapierSimulation implements PhysicsAdapter {
         .setFriction(0)
         .setRestitution(1);
       this.world.createCollider(descriptor);
+    }
+  }
+
+  /**
+   * A uniform perpendicular field curves every free-flight path without doing
+   * work: rotating a velocity vector preserves its magnitude exactly.
+   * This avoids a preferred "down" direction while keeping the motion lively.
+   */
+  private curveBallVelocities(deltaSeconds: number): void {
+    const angle = this.config.curvatureRate * deltaSeconds;
+    if (Math.abs(angle) < 1e-12) return;
+    const cosine = Math.cos(angle);
+    const sine = Math.sin(angle);
+    for (const { body } of this.balls.values()) {
+      const velocity = body.linvel();
+      body.setLinvel({
+        x: cosine * velocity.x - sine * velocity.y,
+        y: sine * velocity.x + cosine * velocity.y,
+      }, true);
+    }
+  }
+
+  private getMechanicalEnergy(): number {
+    let energy = 0;
+    const gravity = this.activeGravity;
+    for (const { body, mass } of this.balls.values()) {
+      const position = body.translation();
+      const velocity = body.linvel();
+      energy += mass * ((velocity.x ** 2 + velocity.y ** 2) / 2 - gravity * position.y);
+    }
+    return energy;
+  }
+
+  /**
+   * Dense simultaneous contacts can make a sequential rigid-body solver lose
+   * or gain aggregate energy even with restitution 1 and zero friction. Scale
+   * motion relative to the center of mass when possible to retain solver
+   * momentum; use a total-kinetic fallback if a boundary impulse makes that
+   * decomposition unable to meet the energy target.
+   */
+  private restoreMechanicalEnergy(targetEnergy: number): void {
+    if (this.balls.size < 2) return;
+    const count = this.balls.size;
+    const requiredScratchLength = count * 3;
+    if (this.energyScratch.length < requiredScratchLength) this.energyScratch = new Float64Array(requiredScratchLength);
+    const gravity = this.activeGravity;
+    let totalMass = 0;
+    let momentumX = 0;
+    let momentumY = 0;
+    let weightedY = 0;
+
+    let index = 0;
+    for (const { body, mass } of this.balls.values()) {
+      const position = body.translation();
+      const velocity = body.linvel();
+      this.energyScratch[index] = mass;
+      this.energyScratch[index + 1] = velocity.x;
+      this.energyScratch[index + 2] = velocity.y;
+      index += 3;
+      totalMass += mass;
+      momentumX += mass * velocity.x;
+      momentumY += mass * velocity.y;
+      weightedY += mass * position.y;
+    }
+
+    if (totalMass <= 0) return;
+    const centerVelocity = { x: momentumX / totalMass, y: momentumY / totalMass };
+    let relativeEnergy = 0;
+    for (let offset = 0; offset < requiredScratchLength; offset += 3) {
+      const mass = this.energyScratch[offset];
+      const relativeX = this.energyScratch[offset + 1] - centerVelocity.x;
+      const relativeY = this.energyScratch[offset + 2] - centerVelocity.y;
+      relativeEnergy += mass * (relativeX ** 2 + relativeY ** 2) / 2;
+    }
+
+    const targetKineticEnergy = targetEnergy + gravity * weightedY;
+    const centerEnergy = totalMass * (centerVelocity.x ** 2 + centerVelocity.y ** 2) / 2;
+    const targetRelativeEnergy = targetKineticEnergy - centerEnergy;
+    if (targetKineticEnergy < -1e-9) return;
+
+    if (relativeEnergy > 1e-12 && targetRelativeEnergy >= 0) {
+      const scale = Math.sqrt(targetRelativeEnergy / relativeEnergy);
+      if (!Number.isFinite(scale) || Math.abs(scale - 1) < 1e-10) return;
+
+      index = 0;
+      for (const { body } of this.balls.values()) {
+        const velocityX = this.energyScratch[index + 1];
+        const velocityY = this.energyScratch[index + 2];
+        body.setLinvel({
+          x: centerVelocity.x + (velocityX - centerVelocity.x) * scale,
+          y: centerVelocity.y + (velocityY - centerVelocity.y) * scale,
+        }, true);
+        index += 3;
+      }
+      return;
+    }
+
+    // A wall impulse can make the solver's center-of-mass kinetic energy alone
+    // exceed the target. There is then no relative-energy scale that satisfies
+    // both constraints, so fall back to the exact total-energy constraint.
+    const currentKineticEnergy = relativeEnergy + centerEnergy;
+    if (currentKineticEnergy <= 1e-12) return;
+    const scale = Math.sqrt(Math.max(0, targetKineticEnergy) / currentKineticEnergy);
+    if (!Number.isFinite(scale) || Math.abs(scale - 1) < 1e-10) return;
+
+    for (const { body } of this.balls.values()) {
+      const velocity = body.linvel();
+      body.setLinvel({ x: velocity.x * scale, y: velocity.y * scale }, true);
     }
   }
 
@@ -268,7 +392,7 @@ export class RapierSimulation implements PhysicsAdapter {
         .setActiveEvents(this.rapier.ActiveEvents.COLLISION_EVENTS),
       body,
     );
-    const record = { id, body, hasEntered: isInsideArena(this.config.shape, position, this.radius, this.halfExtent) };
+    const record = { id, body, mass: body.mass(), hasEntered: isInsideArena(this.config.shape, position, this.radius, this.halfExtent) };
     this.balls.set(id, record);
     this.bodyIdByCollider.set(collider.handle, id);
     this.occupancy.insert(id, position);
@@ -319,6 +443,7 @@ export class RapierSimulation implements PhysicsAdapter {
       const birthPosition = this.findBirthPosition(midpoint);
       if (!birthPosition) {
         this.missedBirths += 1;
+        this.missedSpaceBirths += 1;
         continue;
       }
       const firstVelocity = first.body.linvel();
@@ -326,12 +451,13 @@ export class RapierSimulation implements PhysicsAdapter {
       const birthVelocities = distributeBirthEnergy(
         firstVelocity,
         secondVelocity,
-        this.config.gravity,
+        this.activeGravity,
         birthPosition.y,
         this.random() * Math.PI * 2,
       );
       if (!birthVelocities) {
         this.missedBirths += 1;
+        this.missedEnergyBirths += 1;
         continue;
       }
       first.body.setLinvel(birthVelocities.first, true);
@@ -348,16 +474,24 @@ export class RapierSimulation implements PhysicsAdapter {
 
   private findBirthPosition(midpoint: Point): Point | null {
     const startAngle = this.random() * Math.PI * 2;
-    for (let attempt = 0; attempt < 24; attempt += 1) {
-      const angle = startAngle + (Math.PI * 2 * attempt) / 24;
-      const candidate = {
-        x: midpoint.x + Math.cos(angle) * this.radius * 2.15,
-        y: midpoint.y + Math.sin(angle) * this.radius * 2.15,
-      };
-      if (!isInsideArena(this.config.shape, candidate, this.radius, this.halfExtent)) continue;
-      if (!this.occupancy.overlaps(candidate, this.radius)) return candidate;
+    const ringRadii = [2.15, 2.75, 3.45, 4.25, 5.2, 6.3, 7.6];
+    const directionsPerRing = 24;
+    for (const ringRadius of ringRadii) {
+      for (let attempt = 0; attempt < directionsPerRing; attempt += 1) {
+        const angle = startAngle + (Math.PI * 2 * attempt) / directionsPerRing;
+        const candidate = {
+          x: midpoint.x + Math.cos(angle) * this.radius * ringRadius,
+          y: midpoint.y + Math.sin(angle) * this.radius * ringRadius,
+        };
+        if (!isInsideArena(this.config.shape, candidate, this.radius, this.halfExtent)) continue;
+        if (!this.occupancy.overlaps(candidate, this.radius)) return candidate;
+      }
     }
     return null;
+  }
+
+  private get activeGravity(): number {
+    return this.config.motionField === 'gravity' ? this.config.gravity : 0;
   }
 
   private get populationLimit(): number {

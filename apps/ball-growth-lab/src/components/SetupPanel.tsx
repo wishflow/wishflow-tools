@@ -1,15 +1,16 @@
-import type { ArenaShape, RunState, SimulationConfig } from '../types';
+import type { ArenaShape, MotionField, RunState, SimulationConfig } from '../types';
 import { MAX_ARENA_SIZE, MIN_ARENA_SIZE } from '../types';
 
 interface SetupPanelProps {
   config: SimulationConfig;
   runState: RunState;
   seedNotice: string;
+  exportNotice: string;
   onChange: (config: SimulationConfig) => void;
-  onStart: () => void;
-  onReset: () => void;
   onNewSeed: () => void;
   onCopySeed: () => void;
+  onExportConfig: () => void;
+  onCopyConfig: () => void;
 }
 
 function RangeControl({
@@ -76,6 +77,30 @@ function ShapeChoice({
   );
 }
 
+function MotionChoice({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: MotionField;
+  disabled: boolean;
+  onChange: (value: MotionField) => void;
+}) {
+  return (
+    <div className="shape-control">
+      <span className="control-heading"><span>运动场</span></span>
+      <div className="segmented-control" role="group" aria-label="运动场类型">
+        <button type="button" aria-pressed={value === 'curvature'} disabled={disabled} onClick={() => onChange('curvature')}>
+          <span className="field-icon field-icon-curve" aria-hidden="true">↻</span>弯曲轨迹
+        </button>
+        <button type="button" aria-pressed={value === 'gravity'} disabled={disabled} onClick={() => onChange('gravity')}>
+          <span className="field-icon field-icon-gravity" aria-hidden="true">↓</span>重力
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Icon({ name }: { name: 'copy' | 'shuffle' | 'play' | 'reset' }) {
   const paths = {
     copy: <><rect x="8" y="8" width="11" height="12" rx="2" /><path d="M6 16H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></>,
@@ -86,7 +111,7 @@ function Icon({ name }: { name: 'copy' | 'shuffle' | 'play' | 'reset' }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
 
-export function SetupPanel({ config, runState, seedNotice, onChange, onStart, onReset, onNewSeed, onCopySeed }: SetupPanelProps) {
+export function SetupPanel({ config, runState, seedNotice, exportNotice, onChange, onNewSeed, onCopySeed, onExportConfig, onCopyConfig }: SetupPanelProps) {
   const locked = runState !== 'setup';
   const change = <K extends keyof SimulationConfig>(key: K, value: SimulationConfig[K]) => onChange({ ...config, [key]: value });
   const directionNames = ['右', '右下', '下', '左下', '左', '左上', '上', '右上'];
@@ -129,6 +154,14 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
           </button>
         </div>
         <p className="seed-hint" aria-live="polite">{seedNotice || '重置会复用这个种子，方便比较结果。'}</p>
+        <div className="export-actions">
+          <button type="button" className="export-button" onClick={onExportConfig} aria-label="下载复现配置 JSON">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 16v4h14v-4" /></svg>
+            下载复现配置
+          </button>
+          <button type="button" className="export-copy-button" onClick={onCopyConfig} aria-label="复制复现配置 JSON">复制 JSON</button>
+        </div>
+        <p className="export-hint" aria-live="polite">{exportNotice || '包含种子、完整参数和当前运行诊断。'}</p>
       </div>
 
       <div className="setting-group">
@@ -246,7 +279,24 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
       </div>
 
       <div className="setting-group">
-        <p className="group-title"><span>03</span> 物理与繁殖</p>
+        <p className="group-title"><span>03</span> 运动与繁殖</p>
+        <MotionChoice value={config.motionField} disabled={locked} onChange={(value) => change('motionField', value)} />
+        {config.motionField === 'curvature' ? (
+          <>
+            <RangeControl
+              label="轨迹弯曲方向与速率"
+              value={config.curvatureRate}
+              min={-2.5}
+              max={2.5}
+              step={0.1}
+              display={config.curvatureRate === 0 ? '直线' : `${config.curvatureRate > 0 ? '顺时针' : '逆时针'} ${Math.abs(config.curvatureRate).toFixed(1)} rad/s`}
+              disabled={locked}
+              onChange={(value) => change('curvatureRate', value)}
+            />
+            <p className="physics-hint">垂直于速度的转向场只改变方向，不改变自由飞行速度；不设重力，不会把球压向“底部”。</p>
+          </>
+        ) : (
+          <>
         <RangeControl
           label="向下重力"
           value={config.gravity}
@@ -257,7 +307,9 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
           disabled={locked}
           onChange={(value) => change('gravity', value)}
         />
-        <p className="physics-hint">重力越强，球越集中在下方；设为 0 时，球沿直线运动并在碰撞时转向。</p>
+            <p className="physics-hint">重力不直接消耗能量，但会让球持续向下聚集；调到 0 后是直线飞行，碰撞时改变方向。</p>
+          </>
+        )}
         <RangeControl
           label="碰撞繁殖概率"
           value={config.birthProbability}
@@ -280,16 +332,7 @@ export function SetupPanel({ config, runState, seedNotice, onChange, onStart, on
         />
       </div>
 
-      {runState === 'setup' ? (
-        <button type="button" className="primary-button start-button" onClick={onStart}>
-          <Icon name="play" />发射球群
-        </button>
-      ) : (
-        <button type="button" className="secondary-button start-button" onClick={onReset}>
-          <Icon name="reset" />重置并调整参数
-        </button>
-      )}
-      <p className="panel-footnote">达到人口目标即结束。重置可改规则，种子默认复用。</p>
+      <p className="panel-footnote">达到人口目标即结束。运行中参数锁定；重置后可以调整。</p>
     </section>
   );
 }

@@ -9,6 +9,7 @@
     "test:unit": "node --import tsx --test tests/*.test.ts",
     "benchmark": "node --import tsx scripts/benchmark.ts",
     "benchmark:gaps": "node --import tsx scripts/gap-scan.ts",
+    "diagnose:growth": "node --import tsx scripts/diagnose-growth.ts",
     "test:ci": "npm run typecheck && npm run test:unit"
   },
   "dependencies": {

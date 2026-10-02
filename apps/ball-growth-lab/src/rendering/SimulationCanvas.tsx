@@ -77,7 +77,9 @@ function drawArena(
   boundary.setStrokeStyle({ width: 0.16, color: PIXI_COLORS.wall, cap: 'round', join: 'round' });
   const simulationConfig = {
     ...config,
+    motionField: 'gravity' as const,
     gravity: 9.8,
+    curvatureRate: 0,
     restitution: 1,
     initialSpeed: 11,
     speedSpread: 0.3,

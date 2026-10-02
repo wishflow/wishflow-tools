@@ -4,7 +4,7 @@ import { CircleBatchSimulation } from './experimental/CircleBatchSimulation';
 import { PlanckSimulation } from './experimental/PlanckSimulation';
 import { initializeRapier, RapierSimulation } from '../src/physics/RapierSimulation';
 import type { SolverTuning } from '../src/physics/PhysicsAdapter';
-import { ARENA_HALF_EXTENT, DEFAULT_CONFIG, FIXED_STEP_SECONDS, type Point, type SimulationConfig, type SpawnSeed } from '../src/types';
+import { ARENA_HALF_EXTENT, DEFAULT_CONFIG, FIXED_STEP_SECONDS, type MotionField, type Point, type SimulationConfig, type SpawnSeed } from '../src/types';
 
 const COUNTS = (process.env.BENCHMARK_COUNTS ?? '100,500,1000').split(',').map(Number).filter(Number.isFinite);
 const SHAPES = (process.env.BENCHMARK_SHAPES ?? 'square,circle').split(',').filter((shape): shape is 'square' | 'circle' => shape === 'square' || shape === 'circle');
@@ -17,12 +17,18 @@ const TUNINGS: SolverTuning[] = (process.env.BENCHMARK_TUNINGS ?? '6/2')
 const BENCHMARK_FRAMES = Number(process.env.BENCHMARK_FRAMES ?? 300);
 const WARMUP_FRAMES = Number(process.env.WARMUP_FRAMES ?? 60);
 const BALL_DIAMETER_RATIO = Number(process.env.BENCHMARK_BALL_DIAMETER_RATIO ?? DEFAULT_CONFIG.ballDiameterRatio);
+const MOTION_FIELD: MotionField = process.env.BENCHMARK_MOTION_FIELD === 'curvature' ? 'curvature' : 'gravity';
+const INITIAL_SPEED = Number(process.env.BENCHMARK_INITIAL_SPEED ?? 0);
 const BIRTH_PROBABILITY = Number(process.env.BENCHMARK_BIRTH_PROBABILITY ?? 0);
 const PAIR_COOLDOWN = Number(process.env.BENCHMARK_PAIR_COOLDOWN ?? DEFAULT_CONFIG.pairCooldown);
 
+if (MOTION_FIELD === 'curvature' && ALGORITHMS.some((algorithm) => algorithm !== 'rapier')) {
+  throw new Error('曲率场只在生产用的 Rapier 适配器中实现；请将 BENCHMARK_ALGORITHMS 设为 rapier。');
+}
+
 if (ALGORITHMS.includes('rapier')) await initializeRapier(RapierBenchmark);
 
-function createGridSeeds(count: number, shape: SimulationConfig['shape'], radius: number): SpawnSeed[] {
+function createGridSeeds(count: number, shape: SimulationConfig['shape'], radius: number, speed: number): SpawnSeed[] {
   const points: Point[] = [];
   const spacing = radius * 2.05;
   const rowSpacing = spacing * Math.sqrt(3) / 2;
@@ -40,7 +46,10 @@ function createGridSeeds(count: number, shape: SimulationConfig['shape'], radius
   if (points.length < count) throw new Error(`Benchmark layout only fit ${points.length} of ${count} balls at diameter ratio ${BALL_DIAMETER_RATIO}.`);
   return Array.from({ length: count }, (_, index) => ({
     position: points[Math.floor(((index + 0.5) / count) * points.length)],
-    velocity: { x: 0, y: 0 },
+    velocity: {
+      x: speed * Math.cos(index * Math.PI * (3 - Math.sqrt(5))),
+      y: speed * Math.sin(index * Math.PI * (3 - Math.sqrt(5))),
+    },
   }));
 }
 
@@ -68,7 +77,7 @@ function maxPairOverlap(balls: Array<{ id: number; x: number; y: number; radius:
 }
 
 console.log(`Fixed-step physics benchmark · diameter ratio ${BALL_DIAMETER_RATIO} · one local run · browser GPU/rendering excluded`);
-console.log(`birth probability ${BIRTH_PROBABILITY} · pair cooldown ${PAIR_COOLDOWN}s`);
+console.log(`motion field ${MOTION_FIELD} · initial speed ${INITIAL_SPEED} m/s · birth probability ${BIRTH_PROBABILITY} · pair cooldown ${PAIR_COOLDOWN}s`);
 console.log('start  arena   algorithm     solver  avg ms/step   p95 ms/step  steps/s  end  births  missed  seed overlap  max overlap  pairs >0.01  worst IDs and positions');
 
 for (const count of COUNTS) {
@@ -83,7 +92,9 @@ for (const count of COUNTS) {
       gapCount: 0,
       ballDiameterRatio,
       gapWidthRatio: 2,
+      motionField: MOTION_FIELD,
       gravity: 9.8,
+      curvatureRate: 1.1,
       restitution: 1,
       initialSpeed: 11,
       speedSpread: 0.3,
@@ -95,7 +106,7 @@ for (const count of COUNTS) {
       maxPopulation: 1000,
       seed: `BENCH-${count}-${shape}`,
     };
-    const seeds = createGridSeeds(count, shape, radius);
+    const seeds = createGridSeeds(count, shape, radius, INITIAL_SPEED);
     const seedOverlap = maxPairOverlap(seeds.map((seed, index) => ({
       id: index + 1,
       x: seed.position.x,

@@ -1,4 +1,5 @@
 export type ArenaShape = 'square' | 'circle';
+export type MotionField = 'gravity' | 'curvature';
 export type RunState = 'setup' | 'running' | 'paused' | 'ended';
 export type SnapshotShape = 'circle' | 'outline';
 
@@ -8,7 +9,9 @@ export interface SimulationConfig {
   gapCount: number;
   ballDiameterRatio: number;
   gapWidthRatio: number;
+  motionField: MotionField;
   gravity: number;
+  curvatureRate: number;
   restitution: number;
   initialSpeed: number;
   speedSpread: number;
@@ -44,8 +47,11 @@ export interface SimulationStats {
   elapsedSeconds: number;
   currentCount: number;
   births: number;
+  birthAttempts: number;
   exits: number;
   missedBirths: number;
+  missedSpaceBirths: number;
+  missedEnergyBirths: number;
   maxSpeed: number;
 }
 
@@ -92,7 +98,9 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   gapCount: 0,
   ballDiameterRatio: 0.024,
   gapWidthRatio: 2,
+  motionField: 'curvature',
   gravity: 2,
+  curvatureRate: 1.1,
   restitution: 1,
   initialSpeed: 11,
   speedSpread: 0.3,

@@ -9,6 +9,7 @@ await initializeRapier(RAPIER);
 function makeConfig(overrides: Partial<SimulationConfig> = {}): SimulationConfig {
   return {
     ...DEFAULT_CONFIG,
+    motionField: 'gravity',
     gravity: 0,
     restitution: 1,
     initialCount: 2,
@@ -38,6 +39,24 @@ function distance(first: Point, second: Point): number {
 function physicsBodies(simulation: RapierSimulation): Array<{ linvel(): Point; isSleeping(): boolean }> {
   const internals = simulation as unknown as { balls: Map<number, { body: { linvel(): Point; isSleeping(): boolean } }> };
   return [...internals.balls.values()].map(({ body }) => body);
+}
+
+function energyState(simulation: RapierSimulation, gravity: number): { total: number; magnitude: number } {
+  const internals = simulation as unknown as {
+    balls: Map<number, { body: { mass(): number; translation(): Point; linvel(): Point } }>;
+  };
+  let total = 0;
+  let magnitude = 0;
+  for (const { body } of internals.balls.values()) {
+    const mass = body.mass();
+    const position = body.translation();
+    const velocity = body.linvel();
+    const kinetic = mass * (velocity.x ** 2 + velocity.y ** 2) / 2;
+    const potential = -mass * gravity * position.y;
+    total += kinetic + potential;
+    magnitude += Math.abs(kinetic) + Math.abs(potential);
+  }
+  return { total, magnitude };
 }
 
 function denseSeeds(count: number, shape: ArenaShape, radius: number): SpawnSeed[] {
@@ -103,6 +122,21 @@ test('发射速度、方向和随机扩散会实际控制初速度', () => {
   simulation.dispose();
 });
 
+test('无重力弯曲场持续转向且不改变自由飞行速度', () => {
+  const simulation = new RapierSimulation(RAPIER, makeConfig({
+    motionField: 'curvature',
+    gravity: 12,
+    curvatureRate: 1.2,
+  }), [{ position: { x: 0, y: 0 }, velocity: { x: 4, y: 0 } }]);
+  step(simulation, 240);
+  const [ball] = simulation.getSnapshot().balls;
+  const velocity = physicsBodies(simulation)[0].linvel();
+
+  assert.ok(ball.x > 2.5 && ball.y > 1, `expected a curved path, got (${ball.x}, ${ball.y})`);
+  assert.ok(Math.abs(Math.hypot(velocity.x, velocity.y) - 4) < 0.02);
+  simulation.dispose();
+});
+
 test('Rapier 弹性圆球碰撞后反向运动', () => {
   const simulation = new RapierSimulation(RAPIER, makeConfig(), movingPair());
   step(simulation, 30);
@@ -164,9 +198,12 @@ test('Rapier 首次接触按概率繁殖，并遵守人口上限', () => {
   }, 0);
   step(birth, 12);
   assert.equal(birth.getSnapshot().stats.births, 1);
+  assert.equal(birth.getSnapshot().stats.birthAttempts, 1);
   assert.equal(birth.getSnapshot().stats.currentCount, 3);
   assert.equal(birth.getSnapshot().ended, true);
   assert.equal(birth.getSnapshot().stats.missedBirths, 0);
+  assert.equal(birth.getSnapshot().stats.missedSpaceBirths, 0);
+  assert.equal(birth.getSnapshot().stats.missedEnergyBirths, 0);
   const finalKineticEnergy = physicsBodies(birth).reduce((total, body) => {
     const velocity = body.linvel();
     return total + (velocity.x ** 2 + velocity.y ** 2) / 2;
@@ -206,8 +243,10 @@ test('Rapier 1000 球堆叠的最大穿透受限', () => {
     });
     const radius = ARENA_HALF_EXTENT * config.ballDiameterRatio;
     const simulation = new RapierSimulation(RAPIER, config, denseSeeds(1000, shape, radius));
+    const initialEnergy = energyState(simulation, config.gravity);
     step(simulation, 960);
     const balls = simulation.getSnapshot().balls;
+    const finalEnergy = energyState(simulation, config.gravity);
     let maximumOverlap = 0;
 
     for (let first = 0; first < balls.length; first += 1) {
@@ -218,11 +257,15 @@ test('Rapier 1000 球堆叠的最大穿透受限', () => {
 
     assert.equal(balls.length, 1000);
     assert.ok(maximumOverlap <= 0.1, `${shape} arena maximum overlap ${maximumOverlap.toFixed(4)} exceeded 0.1`);
+    assert.ok(
+      Math.abs(finalEnergy.total - initialEnergy.total) / Math.max(initialEnergy.magnitude, 1) < 1e-5,
+      `${shape} arena energy drift exceeded correction tolerance`,
+    );
     simulation.dispose();
   }
 });
 
-test('Rapier 在高密度同步落地时保持运动并限制总能量漂移', () => {
+test('Rapier 在高密度同步落地时保持运动并校正刚体求解器的能量漂移', () => {
   const count = 20;
   const radius = ARENA_HALF_EXTENT * DEFAULT_CONFIG.ballDiameterRatio;
   const seeds = Array.from({ length: count }, (_, index) => ({
@@ -232,22 +275,12 @@ test('Rapier 在高密度同步落地时保持运动并限制总能量漂移', (
   const config = makeConfig({ gravity: 9.8, initialCount: count, maxPopulation: 100 });
   const simulation = new RapierSimulation(RAPIER, config, seeds);
   const bodies = physicsBodies(simulation);
-  const mechanicalEnergy = () => {
-    const internals = simulation as unknown as { balls: Map<number, { body: { linvel(): Point; translation(): Point } }> };
-    let energy = 0;
-    for (const { body } of internals.balls.values()) {
-      const velocity = body.linvel();
-      const position = body.translation();
-      energy += 0.5 * (velocity.x ** 2 + velocity.y ** 2) - config.gravity * position.y;
-    }
-    return energy;
-  };
-  const initialEnergy = mechanicalEnergy();
+  const initialEnergy = energyState(simulation, config.gravity);
 
   step(simulation, 2400);
 
-  const finalEnergy = mechanicalEnergy();
-  assert.ok(Math.abs(finalEnergy - initialEnergy) / initialEnergy < 0.03);
+  const finalEnergy = energyState(simulation, config.gravity);
+  assert.ok(Math.abs(finalEnergy.total - initialEnergy.total) / Math.max(initialEnergy.magnitude, 1) < 1e-5);
   assert.ok(bodies.every((body) => !body.isSleeping()));
   assert.ok(bodies.filter((body) => Math.hypot(body.linvel().x, body.linvel().y) > 0.1).length >= 15);
   simulation.dispose();
