@@ -95,6 +95,8 @@ export class PlanckSimulation implements PhysicsAdapter {
         missedBirths: this.missedBirths,
         missedSpaceBirths: this.missedBirths,
         missedEnergyBirths: 0,
+        birthKineticEnergyAdded: 0,
+        birthMomentumAdded: { x: 0, y: 0 },
         maxSpeed: [...this.balls.values()].reduce((maximum, ball) => {
           const velocity = ball.body.getLinearVelocity();
           return Math.max(maximum, Math.hypot(velocity.x, velocity.y));

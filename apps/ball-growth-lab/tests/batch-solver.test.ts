@@ -65,6 +65,13 @@ function velocities(simulation: CircleBatchSimulation): Point[] {
   return Array.from({ length: state.count }, (_, index) => ({ x: state.vx[index], y: state.vy[index] }));
 }
 
+function totalMomentum(simulation: CircleBatchSimulation): Point {
+  return velocities(simulation).reduce((total, velocity) => ({
+    x: total.x + velocity.x,
+    y: total.y + velocity.y,
+  }), { x: 0, y: 0 });
+}
+
 test('批量求解器按固定种子生成互不重叠的高位初始球', () => {
   const config = makeConfig({ initialCount: 24, maxPopulation: 30 });
   const first = new CircleBatchSimulation(config);
@@ -108,6 +115,22 @@ test('弹性正碰交换运动方向并保持动能', () => {
   assert.ok(balls[0].x < 0, `expected first ball to rebound left, got ${balls[0].x}`);
   assert.ok(balls[1].x > 0, `expected second ball to rebound right, got ${balls[1].x}`);
   assert.ok(Math.abs(kineticEnergy(simulation) - before) < 1e-9);
+  simulation.dispose();
+});
+
+test('弹性斜碰前后保持总动量和动能', () => {
+  const seeds: SpawnSeed[] = [
+    { position: { x: -0.3, y: -0.03 }, velocity: { x: 2, y: 0.8 } },
+    { position: { x: 0.3, y: 0.03 }, velocity: { x: -1, y: -0.4 } },
+  ];
+  const simulation = new CircleBatchSimulation(makeConfig(), seeds);
+  const beforeEnergy = kineticEnergy(simulation);
+  const beforeMomentum = totalMomentum(simulation);
+  step(simulation, 40);
+  const afterMomentum = totalMomentum(simulation);
+  assert.ok(Math.abs(kineticEnergy(simulation) - beforeEnergy) < 1e-9);
+  assert.ok(Math.abs(afterMomentum.x - beforeMomentum.x) < 1e-9);
+  assert.ok(Math.abs(afterMomentum.y - beforeMomentum.y) < 1e-9);
   simulation.dispose();
 });
 
@@ -213,25 +236,88 @@ test('繁殖概率为 0 时仍弹开碰撞但不会生成球', () => {
   simulation.dispose();
 });
 
-test('出生前后尽量保持父球和新球的总线动量', () => {
-  const simulation = new CircleBatchSimulation(makeConfig({ birthProbability: 1, maxPopulation: 3 }), [
+test('繁殖只改变人口，父球碰后速度与关闭繁殖时一致', () => {
+  const seeds: SpawnSeed[] = [
     { position: { x: -0.29, y: 0 }, velocity: { x: 2, y: 0.2 } },
     { position: { x: 0.29, y: 0 }, velocity: { x: -1, y: -0.1 } },
-  ]);
+  ];
+  const withoutBirth = new CircleBatchSimulation(makeConfig({ birthProbability: 0 }), seeds);
+  const withBirth = new CircleBatchSimulation(makeConfig({ birthProbability: 1, maxPopulation: 3 }), seeds);
+  for (let frame = 0; frame < 100 && withBirth.getSnapshot().stats.births === 0; frame += 1) {
+    withoutBirth.step(FIXED_STEP_SECONDS);
+    withBirth.step(FIXED_STEP_SECONDS);
+  }
+
+  assert.equal(withBirth.getSnapshot().stats.births, 1);
+  const controlVelocities = velocities(withoutBirth);
+  const bornVelocities = velocities(withBirth);
+  assert.deepEqual(bornVelocities.slice(0, 2), controlVelocities);
+  const childVelocity = bornVelocities[2];
+  const childSpeed = Math.hypot(childVelocity.x, childVelocity.y);
+  const parentSpeeds = bornVelocities.slice(0, 2).map((velocity) => Math.hypot(velocity.x, velocity.y));
+  assert.ok(childSpeed >= Math.min(...parentSpeeds) - 1e-10);
+  assert.ok(childSpeed <= Math.max(...parentSpeeds) + 1e-10);
+
+  const stats = withBirth.getSnapshot().stats;
+  assert.ok(Math.abs(stats.birthKineticEnergyAdded - childSpeed ** 2 / 2) < 1e-10);
+  assert.ok(Math.abs(stats.birthMomentumAdded.x - childVelocity.x) < 1e-10);
+  assert.ok(Math.abs(stats.birthMomentumAdded.y - childVelocity.y) < 1e-10);
+  withoutBirth.dispose();
+  withBirth.dispose();
+});
+
+test('静止重叠和分离接触不会触发繁殖判定', () => {
+  for (const [firstVelocity, secondVelocity] of [
+    [{ x: 0, y: 0 }, { x: 0, y: 0 }],
+    [{ x: -1, y: 0 }, { x: 1, y: 0 }],
+  ] as const) {
+    const simulation = new CircleBatchSimulation(makeConfig({ birthProbability: 1 }), [
+      { position: { x: -0.225, y: 0 }, velocity: firstVelocity },
+      { position: { x: 0.225, y: 0 }, velocity: secondVelocity },
+    ]);
+    simulation.step(FIXED_STEP_SECONDS);
+    assert.equal(simulation.getSnapshot().stats.birthAttempts, 0);
+    assert.equal(simulation.getSnapshot().stats.births, 0);
+    simulation.dispose();
+  }
+});
+
+test('父球碰后完全静止时子球也没有隐藏速度下限', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    birthProbability: 1,
+    restitution: 0,
+    maxPopulation: 3,
+  }), movingPair(1.5));
   step(simulation, 12);
-  const total = velocities(simulation).reduce((sum, velocity) => ({
-    x: sum.x + velocity.x,
-    y: sum.y + velocity.y,
-  }), { x: 0, y: 0 });
-  assert.ok(Math.abs(total.x - 1) < 1e-9);
-  assert.ok(Math.abs(total.y - 0.1) < 1e-9);
+  const state = velocities(simulation);
+  const childVelocity = state[2];
+  assert.equal(simulation.getSnapshot().stats.births, 1);
+  assert.equal(Math.hypot(state[0].x, state[0].y), 0);
+  assert.equal(Math.hypot(state[1].x, state[1].y), 0);
+  assert.equal(Math.hypot(childVelocity.x, childVelocity.y), 0);
+  simulation.dispose();
+});
+
+test('正重力下出生方向始终落在朝上 270° ± 45° 范围', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    gravity: 9.8,
+    birthProbability: 1,
+    maxPopulation: 3,
+  }), movingPair());
+  step(simulation, 100);
+  const snapshot = simulation.getSnapshot();
+  const childVelocity = velocities(simulation)[2];
+  assert.equal(snapshot.stats.births, 1);
+  const angle = (Math.atan2(childVelocity.y, childVelocity.x) * 180 / Math.PI + 360) % 360;
+  assert.ok(childVelocity.y < 0);
+  assert.ok(angle >= 225 - 1e-10 && angle <= 315 + 1e-10, `unexpected upward-cone angle ${angle}`);
   simulation.dispose();
 });
 
 test('一帧内求解器多次检测同一碰撞只记录一次尝试', () => {
   const simulation = new CircleBatchSimulation(makeConfig({ birthProbability: 0.5, maxPopulation: 10 }), [
-    { position: { x: -0.23, y: 0 }, velocity: { x: -0.1, y: 0 } },
-    { position: { x: 0.23, y: 0 }, velocity: { x: 0.1, y: 0 } },
+    { position: { x: -0.23, y: 0 }, velocity: { x: 0.1, y: 0 } },
+    { position: { x: 0.23, y: 0 }, velocity: { x: -0.1, y: 0 } },
   ]);
   simulation.step(FIXED_STEP_SECONDS);
   const stats = simulation.getSnapshot().stats;

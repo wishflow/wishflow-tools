@@ -11,8 +11,16 @@ import {
   type SpawnSeed,
 } from '../types';
 import { PairCooldown } from './PairCooldown';
-import { shareBirthMomentum, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
+import { createBirthVelocity, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
 import { SpatialHash } from './SpatialHash';
+
+interface PendingBirth {
+  firstId: number;
+  secondId: number;
+  midpoint: Point;
+  firstVelocity: Point;
+  secondVelocity: Point;
+}
 
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
 const POSITION_SLOP = 0.002;
@@ -63,9 +71,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private readonly gridNext: Int32Array;
   private readonly pairCooldown = new PairCooldown();
   private readonly indexById = new Map<number, number>();
-  private touchingPairs = new Set<string>();
-  private previousTouchingPairs = new Set<string>();
-  private readonly pendingPairs: Array<[number, number]> = [];
+  private readonly pendingBirths: PendingBirth[] = [];
   private readonly queuedBirthPairs = new Set<string>();
   private count = 0;
   private nextId = 1;
@@ -75,6 +81,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private exits = 0;
   private missedBirths = 0;
   private missedSpaceBirths = 0;
+  private birthKineticEnergyAdded = 0;
+  private readonly birthMomentumAdded: Point = { x: 0, y: 0 };
   private ended = false;
   private endReason: EndReason | null = null;
   private disposed = false;
@@ -126,12 +134,11 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     if (this.disposed) throw new Error('Cannot step a disposed simulation.');
     if (this.ended) return;
     this.elapsedSeconds += deltaSeconds;
-    this.pendingPairs.length = 0;
+    this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
     const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
     const substepSeconds = deltaSeconds / substepCount;
     for (let substep = 0; substep < substepCount; substep += 1) {
-      this.beginContactSubstep();
       this.integrate(substepSeconds);
 
       for (let iteration = 0; iteration < this.tuning.positionIterations; iteration += 1) {
@@ -155,7 +162,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
       this.pairCooldown.prune(this.elapsedSeconds, Math.max(this.config.pairCooldown * 4, 5));
       this.lastCooldownPrune = this.elapsedSeconds;
     }
-    if (!this.ended && this.pendingPairs.length > 0) {
+    if (!this.ended && this.pendingBirths.length > 0) {
       this.rebuildGrid();
       this.resolveBirths();
       this.endForPopulationState();
@@ -188,6 +195,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         missedBirths: this.missedBirths,
         missedSpaceBirths: this.missedSpaceBirths,
         missedEnergyBirths: 0,
+        birthKineticEnergyAdded: this.birthKineticEnergyAdded,
+        birthMomentumAdded: { ...this.birthMomentumAdded },
         maxSpeed,
       },
       ended: this.ended,
@@ -220,6 +229,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         missedBirths: this.missedBirths,
         missedSpaceBirths: this.missedSpaceBirths,
         missedEnergyBirths: 0,
+        birthKineticEnergyAdded: this.birthKineticEnergyAdded,
+        birthMomentumAdded: { ...this.birthMomentumAdded },
         maxSpeed,
       },
       ended: this.ended,
@@ -238,9 +249,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   dispose(): void {
     this.pairCooldown.clear();
     this.indexById.clear();
-    this.touchingPairs.clear();
-    this.previousTouchingPairs.clear();
-    this.pendingPairs.length = 0;
+    this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
     this.count = 0;
     this.disposed = true;
@@ -339,13 +348,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     return Math.max(0, Math.min(this.gridColumns - 1, Math.floor((coordinate - this.gridMin) / this.cellSize)));
   }
 
-  private beginContactSubstep(): void {
-    const priorPairs = this.previousTouchingPairs;
-    this.previousTouchingPairs = this.touchingPairs;
-    this.touchingPairs = priorPairs;
-    this.touchingPairs.clear();
-  }
-
   private integrate(deltaSeconds: number): void {
     for (let index = 0; index < this.count; index += 1) {
       this.vy[index] += this.config.gravity * deltaSeconds;
@@ -382,7 +384,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
               const dy = this.y[second] - this.y[first];
               const distanceSquared = dx * dx + dy * dy;
               if (distanceSquared < diameterSquared) {
-                if (this.config.birthProbability > 0) this.recordContact(first, second);
                 const distance = Math.sqrt(distanceSquared);
                 const overlap = this.diameter - distance;
                 const correction = Math.max(overlap - POSITION_SLOP, 0) * POSITION_CORRECTION / 2;
@@ -420,7 +421,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
               const dy = this.y[second] - this.y[first];
               const distanceSquared = dx * dx + dy * dy;
               if (distanceSquared <= diameterSquared) {
-                if (this.config.birthProbability > 0) this.recordContact(first, second);
                 const distance = Math.sqrt(distanceSquared);
                 const normalX = distance > 1e-9 ? dx / distance : 1;
                 const normalY = distance > 1e-9 ? dy / distance : 0;
@@ -431,6 +431,12 @@ export class CircleBatchSimulation implements PhysicsAdapter {
                   this.vy[first] -= impulse * normalY;
                   this.vx[second] += impulse * normalX;
                   this.vy[second] += impulse * normalY;
+                  if (this.config.birthProbability > 0) {
+                    this.recordImpact(first, second, {
+                      x: (this.x[first] + this.x[second]) / 2,
+                      y: (this.y[first] + this.y[second]) / 2,
+                    });
+                  }
                 }
               }
             }
@@ -575,18 +581,22 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.reflectFromWall(index, dx / distance, dy / distance);
   }
 
-  private recordContact(first: number, second: number): void {
+  private recordImpact(first: number, second: number, midpoint: Point): void {
     const firstId = this.ids[first];
     const secondId = this.ids[second];
     const key = firstId < secondId ? `${firstId}:${secondId}` : `${secondId}:${firstId}`;
-    if (this.touchingPairs.has(key)) return;
-    this.touchingPairs.add(key);
-    if (this.previousTouchingPairs.has(key)) return;
     if (!this.pairCooldown.shouldAccept(firstId, secondId, this.elapsedSeconds, this.config.pairCooldown)) return;
     if (this.queuedBirthPairs.has(key)) return;
     this.queuedBirthPairs.add(key);
     this.birthAttempts += 1;
-    if (this.random() < this.config.birthProbability) this.pendingPairs.push([firstId, secondId]);
+    if (this.random() >= this.config.birthProbability) return;
+    this.pendingBirths.push({
+      firstId,
+      secondId,
+      midpoint,
+      firstVelocity: { x: this.vx[first], y: this.vy[first] },
+      secondVelocity: { x: this.vx[second], y: this.vy[second] },
+    });
   }
 
   private removeExitedBalls(): void {
@@ -615,9 +625,9 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   }
 
   private resolveBirths(): void {
-    for (const [firstId, secondId] of this.pendingPairs) {
-      const first = this.findIndexById(firstId);
-      const second = this.findIndexById(secondId);
+    for (const impact of this.pendingBirths) {
+      const first = this.findIndexById(impact.firstId);
+      const second = this.findIndexById(impact.secondId);
       if (first < 0 || second < 0) {
         this.missedBirths += 1;
         continue;
@@ -630,22 +640,22 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         this.missedBirths += 1;
         continue;
       }
-      const midpoint = { x: (this.x[first] + this.x[second]) / 2, y: (this.y[first] + this.y[second]) / 2 };
-      const position = this.findBirthPosition(midpoint);
+      const position = this.findBirthPosition(impact.midpoint);
       if (!position) {
         this.missedBirths += 1;
         this.missedSpaceBirths += 1;
         continue;
       }
-      const momentum = shareBirthMomentum(
-        { x: this.vx[first], y: this.vy[first] },
-        { x: this.vx[second], y: this.vy[second] },
+      const velocity = createBirthVelocity(
+        Math.hypot(impact.firstVelocity.x, impact.firstVelocity.y),
+        Math.hypot(impact.secondVelocity.x, impact.secondVelocity.y),
+        this.config.gravity,
+        this.random,
       );
-      this.vx[first] = momentum.first.x;
-      this.vy[first] = momentum.first.y;
-      this.vx[second] = momentum.second.x;
-      this.vy[second] = momentum.second.y;
-      this.addBall(position, momentum.child);
+      this.addBall(position, velocity);
+      this.birthKineticEnergyAdded += (velocity.x ** 2 + velocity.y ** 2) / 2;
+      this.birthMomentumAdded.x += velocity.x;
+      this.birthMomentumAdded.y += velocity.y;
       this.births += 1;
       this.insertGrid(this.count - 1);
       if (this.stopOnTerminalState && this.count >= this.populationLimit) {
@@ -727,6 +737,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private finish(reason: EndReason): void {
     this.ended = true;
     this.endReason = reason;
-    this.pendingPairs.length = 0;
+    this.pendingBirths.length = 0;
   }
 }

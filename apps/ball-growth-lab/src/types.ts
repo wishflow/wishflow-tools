@@ -50,6 +50,10 @@ export interface SimulationStats {
   missedBirths: number;
   missedSpaceBirths: number;
   missedEnergyBirths: number;
+  /** Sum of ½|v|² for newborns under the unit-mass model. */
+  birthKineticEnergyAdded: number;
+  /** Sum of newborn velocities under the unit-mass model. */
+  birthMomentumAdded: Point;
   maxSpeed: number;
 }
 

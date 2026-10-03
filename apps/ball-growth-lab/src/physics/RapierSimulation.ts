@@ -176,6 +176,8 @@ export class RapierSimulation implements PhysicsAdapter {
         missedBirths: this.missedBirths,
         missedSpaceBirths: this.missedSpaceBirths,
         missedEnergyBirths: this.missedEnergyBirths,
+        birthKineticEnergyAdded: 0,
+        birthMomentumAdded: { x: 0, y: 0 },
         maxSpeed,
       },
       ended: this.ended,

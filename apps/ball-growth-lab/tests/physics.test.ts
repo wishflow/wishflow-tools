@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { PlanckSimulation } from '../scripts/experimental/PlanckSimulation';
 import { PairCooldown } from '../src/physics/PairCooldown';
-import { distributeBirthEnergy, shareBirthMomentum } from '../src/physics/PhysicsAdapter';
+import { createBirthVelocity, distributeBirthEnergy, shareBirthMomentum } from '../src/physics/PhysicsAdapter';
 import { SpatialHash } from '../src/physics/SpatialHash';
 import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type Point, type SimulationConfig, type SpawnSeed } from '../src/types';
 
@@ -34,6 +34,47 @@ function step(simulation: PlanckSimulation, count: number): void {
 function vectorSum(vectors: Point[]): Point {
   return vectors.reduce((sum, vector) => ({ x: sum.x + vector.x, y: sum.y + vector.y }), { x: 0, y: 0 });
 }
+
+function sequenceRandom(values: number[]): () => number {
+  let index = 0;
+  return () => values[index++] ?? 0;
+}
+
+test('子球速率平方在碰后父球速率平方之间均匀抽样', () => {
+  const sampleCount = 1000;
+  const randomValues = Array.from({ length: sampleCount }, (_, index) => [
+    (index + 0.5) / sampleCount,
+    0,
+  ]).flat();
+  const random = sequenceRandom(randomValues);
+  const squaredSpeeds = Array.from({ length: sampleCount }, () => {
+    const velocity = createBirthVelocity(3, 5, 0, random);
+    return velocity.x ** 2 + velocity.y ** 2;
+  });
+
+  assert.ok(squaredSpeeds.every((value) => value >= 9 && value <= 25));
+  const meanSquaredSpeed = squaredSpeeds.reduce((sum, value) => sum + value, 0) / sampleCount;
+  assert.ok(Math.abs(meanSquaredSpeed - 17) < 1e-10);
+});
+
+test('零重力方向覆盖全圆，正重力方向限定在朝上的 90° 扇区', () => {
+  const zeroGravityDirections = [0, 0.25, 0.5, 0.75].map((directionSample) => {
+    const velocity = createBirthVelocity(4, 4, 0, sequenceRandom([0, directionSample]));
+    return (Math.atan2(velocity.y, velocity.x) * 180 / Math.PI + 360) % 360;
+  });
+  assert.deepEqual(zeroGravityDirections, [0, 90, 180, 270]);
+
+  for (const directionSample of [0, 0.25, 0.5, 0.75, 1]) {
+    const velocity = createBirthVelocity(4, 4, 9.8, sequenceRandom([0, directionSample]));
+    const angle = (Math.atan2(velocity.y, velocity.x) * 180 / Math.PI + 360) % 360;
+    assert.ok(velocity.y < 0);
+    assert.ok(angle >= 225 - 1e-10 && angle <= 315 + 1e-10);
+  }
+});
+
+test('零速父球生成零速子球', () => {
+  assert.deepEqual(createBirthVelocity(0, 0, 9.8, sequenceRandom([0.5, 0.5])), { x: 0, y: 0 });
+});
 
 test('空场地的初始球不重叠，固定种子的位置可复现', () => {
   const config = makeConfig({ initialCount: 24, seed: 'PACK-TEST' });

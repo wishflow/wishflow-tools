@@ -14,6 +14,30 @@ export interface SolverTuning {
 
 export const DEFAULT_SOLVER_TUNING: SolverTuning = { velocityIterations: 6, positionIterations: 2 };
 
+/**
+ * Samples a unit-mass offspring velocity from the parents' post-impact speeds.
+ * Speed is uniform in v² so expected offspring kinetic energy equals the
+ * average kinetic energy of the two parents. Positive gravity points downward.
+ */
+export function createBirthVelocity(
+  firstSpeed: number,
+  secondSpeed: number,
+  gravity: number,
+  random: () => number,
+): Point {
+  const firstSpeedSquared = Math.max(0, firstSpeed) ** 2;
+  const secondSpeedSquared = Math.max(0, secondSpeed) ** 2;
+  const speedSquared = Math.min(firstSpeedSquared, secondSpeedSquared)
+    + random() * Math.abs(firstSpeedSquared - secondSpeedSquared);
+  const angle = gravity > 0
+    ? ((270 + (random() * 2 - 1) * 45) * Math.PI) / 180
+    : random() * Math.PI * 2;
+  const speed = Math.sqrt(speedSquared);
+  if (speed === 0) return { x: 0, y: 0 };
+  return { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+}
+
+/** Legacy birth redistribution used only by the experimental Planck baseline. */
 export function shareBirthMomentum(first: Point, second: Point): { first: Point; second: Point; child: Point } {
   const child = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
   return {
@@ -24,8 +48,9 @@ export function shareBirthMomentum(first: Point, second: Point): { first: Point;
 }
 
 /**
- * Redistribute two equal-mass bodies into three while preserving total momentum
- * and mechanical energy, including the newborn's gravitational potential.
+ * Legacy energy redistribution for the experimental Rapier baseline. Redistributes
+ * two equal-mass bodies into three while preserving total momentum and mechanical
+ * energy, including the newborn's gravitational potential.
  * Returns null when there is not enough available kinetic energy to create the
  * newborn at childY without adding energy to the simulation.
  */

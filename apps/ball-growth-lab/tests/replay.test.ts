@@ -14,6 +14,8 @@ test('复现导出包含可重放参数和现场诊断，并可 JSON 往返', ()
     missedBirths: 29,
     missedSpaceBirths: 21,
     missedEnergyBirths: 8,
+    birthKineticEnergyAdded: 23.45,
+    birthMomentumAdded: { x: -2.4, y: -8.2 },
     maxSpeed: 18.4,
   };
   const replay = createReplayExport({
@@ -31,8 +33,15 @@ test('复现导出包含可重放参数和现场诊断，并可 JSON 往返', ()
   const restored = JSON.parse(JSON.stringify(replay));
 
   assert.equal(restored.format, 'ball-growth-lab.replay');
-  assert.equal(restored.formatVersion, 3);
+  assert.equal(restored.formatVersion, 4);
   assert.equal(restored.physics.engine, 'CircleBatch2D');
+  assert.equal(restored.physics.engineVersion, '2');
+  assert.deepEqual(restored.physics.birthRule, {
+    massModel: 'unit-mass',
+    speedSampling: 'uniform-squared-speed-between-post-impact-parent-speeds',
+    direction: 'isotropic-at-zero-gravity-upward-270deg-plus-minus-45deg-otherwise',
+    parentVelocityMutation: false,
+  });
   assert.deepEqual(restored.config, config);
   assert.deepEqual(restored.environment.viewport, { width: 390, height: 844, devicePixelRatio: 3 });
   assert.equal(restored.observation.runState, 'paused');

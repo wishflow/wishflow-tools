@@ -23,15 +23,21 @@ export interface ReplayExportInput {
 export function createReplayExport(input: ReplayExportInput) {
   return {
     format: 'ball-growth-lab.replay',
-    formatVersion: 3,
+    formatVersion: 4,
     physics: {
       engine: 'CircleBatch2D',
-      engineVersion: '1',
+      engineVersion: '2',
       fixedStepSeconds: FIXED_STEP_SECONDS,
       solver: DEFAULT_CIRCLE_BATCH_TUNING,
       adaptiveSubsteps: {
         maxSubsteps: MAX_BATCH_SUBSTEPS,
         maxTravelInBallRadii: MAX_BATCH_TRAVEL_PER_SUBSTEP,
+      },
+      birthRule: {
+        massModel: 'unit-mass',
+        speedSampling: 'uniform-squared-speed-between-post-impact-parent-speeds',
+        direction: 'isotropic-at-zero-gravity-upward-270deg-plus-minus-45deg-otherwise',
+        parentVelocityMutation: false,
       },
     },
     config: input.config,

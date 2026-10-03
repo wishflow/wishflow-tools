@@ -93,7 +93,7 @@ test('修改设置会保留上一轮结果，当前参数可以导出为 JSON', 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^ball-growth-.*\.json$/);
   const exported = JSON.parse(await readFile((await download.path())!, 'utf8')) as { config: { seed: string }; formatVersion: number };
-  expect(exported.formatVersion).toBe(3);
+  expect(exported.formatVersion).toBe(4);
   expect(exported.config.seed).toBe('BALL-0426');
 });
 

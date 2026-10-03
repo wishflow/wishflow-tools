@@ -50,6 +50,8 @@ const EMPTY_STATS: SimulationStats = {
   missedBirths: 0,
   missedSpaceBirths: 0,
   missedEnergyBirths: 0,
+  birthKineticEnergyAdded: 0,
+  birthMomentumAdded: { x: 0, y: 0 },
   maxSpeed: 0,
 };
 
