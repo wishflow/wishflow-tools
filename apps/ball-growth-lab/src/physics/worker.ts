@@ -22,7 +22,7 @@ let rapierInitialization: Promise<unknown> | null = null;
 
 function loadRapier(): Promise<unknown> {
   if (!rapierInitialization) {
-    rapierInitialization = import('@dimforge/rapier2d')
+    rapierInitialization = import('@dimforge/rapier2d-compat')
       .then(async (rapier) => {
         await initializeRapier(rapier);
         return rapier;
@@ -59,7 +59,7 @@ async function start(config: SimulationConfig, currentRunId: number): Promise<vo
 function sendSnapshot(): void {
   if (!simulation) return;
   const snapshot: SimulationSnapshot = simulation.getSnapshot();
-  const valuesPerBall = 6;
+  const valuesPerBall = 5;
   const ballData = new Float32Array(snapshot.balls.length * valuesPerBall);
 
   snapshot.balls.forEach((ball, index) => {
@@ -69,7 +69,6 @@ function sendSnapshot(): void {
     ballData[offset + 2] = ball.y;
     ballData[offset + 3] = ball.radius;
     ballData[offset + 4] = ball.color;
-    ballData[offset + 5] = ball.shape === 'circle' ? 0 : 1;
   });
 
   workerScope.postMessage({
@@ -81,6 +80,7 @@ function sendSnapshot(): void {
     ballCount: snapshot.balls.length,
     stats: { ...snapshot.stats, physicsFps },
     ended: snapshot.ended,
+    endReason: snapshot.endReason,
   }, [ballData.buffer]);
 }
 
@@ -119,7 +119,7 @@ function tick(): void {
 
 async function handleCommand(command: WorkerCommand): Promise<void> {
   try {
-    if (command.type === 'start' || command.type === 'reset') {
+    if (command.type === 'start') {
       await start(command.config, command.runId);
     } else if (command.type === 'pause') {
       requestedRunning = false;
@@ -130,6 +130,11 @@ async function handleCommand(command: WorkerCommand): Promise<void> {
       requestedRunning = true;
       previousTime = performance.now();
       running = Boolean(simulation);
+    } else if (command.type === 'finish') {
+      requestedRunning = false;
+      running = false;
+      simulation?.finishManually();
+      sendSnapshot();
     } else if (command.type === 'stop') {
       startVersion += 1;
       requestedRunning = false;

@@ -6,7 +6,7 @@ import { ARENA_HALF_EXTENT, FIXED_STEP_SECONDS, type ArenaShape, type Simulation
 const GAP_WIDTH_RATIOS = [1.05, 1.25, 1.45, 1.75, 2, 2.5, 3];
 const SAMPLE_OFFSETS = Number(process.env.GAP_SCAN_SAMPLES ?? 17);
 const TRIAL_STEPS = 960;
-const SHAPES: ArenaShape[] = ['square', 'circle'];
+const SHAPES: ArenaShape[] = ['circle'];
 const ALGORITHMS = (process.env.GAP_SCAN_ALGORITHMS ?? 'rapier,planck')
   .split(',')
   .filter((algorithm): algorithm is 'rapier' | 'planck' => algorithm === 'rapier' || algorithm === 'planck');
@@ -20,9 +20,7 @@ function trialConfig(shape: ArenaShape, gapWidthRatio: number, seed: string): Si
     gapCount: 2,
     ballDiameterRatio: 0.024,
     gapWidthRatio,
-    motionField: 'gravity',
     gravity: 9.8,
-    curvatureRate: 0,
     restitution: 1,
     initialSpeed: 11,
     speedSpread: 0.3,

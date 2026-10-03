@@ -29,7 +29,9 @@ interface BallRecord {
 
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
 
-Settings.velocityThreshold = 0.8;
+// Avoid a hidden low-speed bounce cutoff in the solver comparison. With this
+// set to zero, restitution is governed by the configured coefficient only.
+Settings.velocityThreshold = 0;
 
 export class PlanckSimulation implements PhysicsAdapter {
   private readonly world: World;
@@ -99,6 +101,7 @@ export class PlanckSimulation implements PhysicsAdapter {
         }, 0),
       },
       ended: false,
+      endReason: null,
     };
   }
 
@@ -168,12 +171,6 @@ export class PlanckSimulation implements PhysicsAdapter {
 
   private randomInteriorPoint(): Point {
     const edgeLimit = ARENA_HALF_EXTENT - this.radius;
-    if (this.config.shape === 'square') {
-      return {
-        x: (this.random() * 2 - 1) * edgeLimit,
-        y: (this.random() * 2 - 1) * edgeLimit,
-      };
-    }
     const angle = this.random() * Math.PI * 2;
     const distance = Math.sqrt(this.random()) * edgeLimit;
     return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
@@ -236,7 +233,6 @@ export class PlanckSimulation implements PhysicsAdapter {
 
   private isOutsideArena(point: Point): boolean {
     const threshold = ARENA_HALF_EXTENT + this.radius * 1.25;
-    if (this.config.shape === 'square') return Math.abs(point.x) > threshold || Math.abs(point.y) > threshold;
     return Math.hypot(point.x, point.y) > threshold;
   }
 

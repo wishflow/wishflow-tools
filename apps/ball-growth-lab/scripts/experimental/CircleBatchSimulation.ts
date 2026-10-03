@@ -165,6 +165,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         maxSpeed,
       },
       ended: false,
+      endReason: null,
     };
   }
 
@@ -216,9 +217,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
   private randomInteriorPoint(): Point {
     const edgeLimit = ARENA_HALF_EXTENT - this.radius;
-    if (this.config.shape === 'square') {
-      return { x: (this.random() * 2 - 1) * edgeLimit, y: (this.random() * 2 - 1) * edgeLimit };
-    }
     const angle = this.random() * Math.PI * 2;
     const distance = Math.sqrt(this.random()) * edgeLimit;
     return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
@@ -319,8 +317,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
                 const normalY = distance > 1e-9 ? dy / distance : 0;
                 const relativeNormalVelocity = (this.vx[second] - this.vx[first]) * normalX + (this.vy[second] - this.vy[first]) * normalY;
                 if (relativeNormalVelocity < 0) {
-                  const impactRestitution = -relativeNormalVelocity > 0.8 ? restitution : 0;
-                  const impulse = -(1 + impactRestitution) * relativeNormalVelocity / 2;
+                  const impulse = -(1 + restitution) * relativeNormalVelocity / 2;
                   this.vx[first] -= impulse * normalX;
                   this.vy[first] -= impulse * normalY;
                   this.vx[second] += impulse * normalX;
@@ -416,6 +413,10 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private solveCircleWallVelocity(index: number): void {
     const distance = Math.hypot(this.x[index], this.y[index]);
     if (distance <= 0 || (distance < ARENA_HALF_EXTENT - this.radius - POSITION_SLOP)) return;
+    if (this.insideGapPortal(index)) {
+      for (const point of this.boundaryPoints) this.resolvePointVelocity(index, point.x, point.y);
+      return;
+    }
     const normalX = -this.x[index] / distance;
     const normalY = -this.y[index] / distance;
     this.reflectFromWall(index, normalX, normalY);
@@ -451,8 +452,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private reflectFromWall(index: number, normalX: number, normalY: number): void {
     const intoWall = this.vx[index] * normalX + this.vy[index] * normalY;
     if (intoWall >= 0) return;
-    const restitution = -intoWall > 0.8 ? this.config.restitution : 0;
-    const impulse = (1 + restitution) * intoWall;
+    const impulse = (1 + this.config.restitution) * intoWall;
     this.vx[index] -= impulse * normalX;
     this.vy[index] -= impulse * normalY;
   }
@@ -498,7 +498,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
   private isOutsideArena(point: Point): boolean {
     const threshold = ARENA_HALF_EXTENT + this.radius * 1.25;
-    if (this.config.shape === 'square') return Math.abs(point.x) > threshold || Math.abs(point.y) > threshold;
     return Math.hypot(point.x, point.y) > threshold;
   }
 

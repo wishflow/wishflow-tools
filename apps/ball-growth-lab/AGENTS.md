@@ -13,7 +13,7 @@
 - `./scripts/install.sh` 安装本应用依赖。
 - `npm run dev` 启动本地开发服务器。
 - `npm run build` 进行 TypeScript 检查并构建到 `dist/`。
-- `npm run test:ci` 运行类型检查和确定性单元测试。
+- `npm run test:ci` 运行类型检查、确定性单元测试和 Playwright 端到端流程。
 - `npm run benchmark` 运行本地物理步进基准；结果不代表真实手机性能。
 
 ## 可复用 skills

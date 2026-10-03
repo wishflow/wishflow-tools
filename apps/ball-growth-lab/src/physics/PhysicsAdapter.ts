@@ -9,6 +9,7 @@ export interface SolverTuning {
   velocityIterations: number;
   positionIterations: number;
   allowedLinearError?: number;
+  maxTravelPerSubstep?: number;
 }
 
 export const DEFAULT_SOLVER_TUNING: SolverTuning = { velocityIterations: 6, positionIterations: 2 };

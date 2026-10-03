@@ -6,7 +6,7 @@ import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type SimulationConfig, type SpawnSe
 function makeConfig(overrides: Partial<SimulationConfig> = {}): SimulationConfig {
   return {
     ...DEFAULT_CONFIG,
-    shape: 'square',
+    shape: 'circle',
     gapCount: 0,
     ballDiameterRatio: 0.024,
     gapWidthRatio: 1.45,
@@ -69,7 +69,7 @@ test('首次碰撞繁殖并服从人口上限', () => {
   simulation.dispose();
 });
 
-test('穿过方形底部缺口的球会移除并计数', () => {
+test('穿过圆形底部缺口的球会移除并计数', () => {
   const simulation = new CircleBatchSimulation(
     makeConfig({ gapCount: 2, gapWidthRatio: 2 }),
     [{ position: { x: 0, y: 9.5 }, velocity: { x: 0, y: 8 } }],

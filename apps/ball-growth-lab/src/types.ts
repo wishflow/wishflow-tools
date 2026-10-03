@@ -1,6 +1,6 @@
-export type ArenaShape = 'square' | 'circle';
-export type MotionField = 'gravity' | 'curvature';
-export type RunState = 'setup' | 'running' | 'paused' | 'ended';
+export type ArenaShape = 'circle';
+export type EndReason = 'population-target' | 'single-ball' | 'no-balls' | 'manual';
+export type RunState = 'setup' | 'starting' | 'running' | 'paused' | 'ending' | 'ended' | 'failed';
 export type SnapshotShape = 'circle' | 'outline';
 
 export interface SimulationConfig {
@@ -9,9 +9,7 @@ export interface SimulationConfig {
   gapCount: number;
   ballDiameterRatio: number;
   gapWidthRatio: number;
-  motionField: MotionField;
   gravity: number;
-  curvatureRate: number;
   restitution: number;
   initialSpeed: number;
   speedSpread: number;
@@ -59,13 +57,14 @@ export interface SimulationSnapshot {
   balls: BallSnapshot[];
   stats: SimulationStats;
   ended: boolean;
+  endReason: EndReason | null;
 }
 
 export type WorkerCommand =
   | { type: 'start'; config: SimulationConfig; runId: number }
-  | { type: 'reset'; config: SimulationConfig; runId: number }
   | { type: 'pause' }
   | { type: 'resume' }
+  | { type: 'finish' }
   | { type: 'stop' };
 
 export interface WorkerStats extends SimulationStats {
@@ -81,6 +80,7 @@ export interface WorkerSnapshotMessage {
   ballCount: number;
   stats: WorkerStats;
   ended: boolean;
+  endReason: EndReason | null;
 }
 
 export const ARENA_HALF_EXTENT = 10;
@@ -93,14 +93,12 @@ export const MAX_INITIAL_COUNT = 100;
 export const FIXED_STEP_SECONDS = 1 / 240;
 
 export const DEFAULT_CONFIG: SimulationConfig = {
-  shape: 'square',
+  shape: 'circle',
   arenaSize: ARENA_HALF_EXTENT * 2,
   gapCount: 0,
   ballDiameterRatio: 0.024,
   gapWidthRatio: 2,
-  motionField: 'curvature',
-  gravity: 2,
-  curvatureRate: 1.1,
+  gravity: 0,
   restitution: 1,
   initialSpeed: 11,
   speedSpread: 0.3,

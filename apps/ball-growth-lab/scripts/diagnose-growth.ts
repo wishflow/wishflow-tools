@@ -1,10 +1,10 @@
 import * as RapierBenchmark from '@dimforge/rapier2d-compat';
 import { initializeRapier, RapierSimulation } from '../src/physics/RapierSimulation';
-import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type MotionField, type SimulationConfig } from '../src/types';
+import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type SimulationConfig } from '../src/types';
 
 const DURATION_SECONDS = Number(process.env.GROWTH_DIAGNOSTIC_SECONDS ?? 90);
 const SEEDS = (process.env.GROWTH_DIAGNOSTIC_SEEDS ?? 'LAB-0012AB34,LAB-07A1298F,LAB-4D8C03F1').split(',').filter(Boolean);
-const MODES: MotionField[] = ['gravity', 'curvature'];
+const GRAVITY_LEVELS = [0, 2, 9.8];
 const INITIAL_COUNT = Number(process.env.GROWTH_DIAGNOSTIC_INITIAL_COUNT ?? 100);
 const BIRTH_PROBABILITY = Number(process.env.GROWTH_DIAGNOSTIC_BIRTH_PROBABILITY ?? 0.35);
 const STALL_TARGET = Number(process.env.GROWTH_DIAGNOSTIC_STALL_TARGET ?? 780);
@@ -59,13 +59,11 @@ console.log(`Growth samples (${INITIAL_COUNT} initial balls, p=${BIRTH_PROBABILI
 console.log('seed      field      elapsed  count births attempts blocked-space blocked-energy exits bottom-half lower-third max-cell max-speed');
 
 for (const seed of SEEDS) {
-  for (const motionField of MODES) {
+  for (const gravity of GRAVITY_LEVELS) {
     const config: SimulationConfig = {
       ...DEFAULT_CONFIG,
       seed,
-      motionField,
-      gravity: 2,
-      curvatureRate: 1.1,
+      gravity,
       initialCount: INITIAL_COUNT,
       maxPopulation: 1000,
       birthProbability: BIRTH_PROBABILITY,
@@ -77,7 +75,7 @@ for (const seed of SEEDS) {
     const flowBottomHalf = flowSnapshot.balls.filter((ball) => ball.y > 0).length;
     const flowLowerThird = flowSnapshot.balls.filter((ball) => ball.y > config.arenaSize / 6).length;
     console.log([
-      seed.padEnd(9), motionField.padEnd(10), '20.0'.padStart(7),
+      seed.padEnd(9), `${gravity.toFixed(1)} m/s²`.padEnd(10), '20.0'.padStart(7),
       `${Math.round(flowBottomHalf / flowSnapshot.balls.length * 100)}%`.padStart(11),
       `${Math.round(flowLowerThird / flowSnapshot.balls.length * 100)}%`.padStart(11),
       String(flowCells.size).padStart(14),
@@ -109,7 +107,7 @@ for (const seed of SEEDS) {
     const stats = snapshot.stats;
     console.log([
       seed.padEnd(9),
-      motionField.padEnd(10),
+      `${gravity.toFixed(1)} m/s²`.padEnd(10),
       stats.elapsedSeconds.toFixed(1).padStart(7),
       String(stats.currentCount).padStart(6),
       String(stats.births).padStart(6),
@@ -132,9 +130,7 @@ if (checkpointSeed && INITIAL_COUNT < STALL_TARGET) {
   const config: SimulationConfig = {
     ...DEFAULT_CONFIG,
     seed: checkpointSeed,
-    motionField: 'gravity',
     gravity: 2,
-    curvatureRate: 1.1,
     initialCount: INITIAL_COUNT,
     maxPopulation: 1000,
     birthProbability: BIRTH_PROBABILITY,
@@ -159,15 +155,15 @@ if (checkpointSeed && INITIAL_COUNT < STALL_TARGET) {
 
   console.log(`Fixed-count continuation from that exact checkpoint (${STALL_COMPARISON_SECONDS} s, births disabled)`);
   console.log('field      count bottom-half lower-third mean-speed max-speed energy-drift');
-  for (const motionField of MODES) {
+  for (const gravity of GRAVITY_LEVELS) {
     const comparisonConfig: SimulationConfig = {
       ...config,
-      motionField,
+      gravity,
       initialCount: seeds.length,
       birthProbability: 0,
     };
     const comparison = new RapierSimulation(RapierBenchmark, comparisonConfig, seeds);
-    const activeGravity = motionField === 'gravity' ? comparisonConfig.gravity : 0;
+    const activeGravity = comparisonConfig.gravity;
     const before = physicalState(comparison, activeGravity);
     for (let frame = 0; frame < STALL_COMPARISON_SECONDS / FIXED_STEP_SECONDS; frame += 1) comparison.step(FIXED_STEP_SECONDS);
     const after = physicalState(comparison, activeGravity);
@@ -175,7 +171,7 @@ if (checkpointSeed && INITIAL_COUNT < STALL_TARGET) {
     const bottomHalf = snapshot.balls.filter((ball) => ball.y > 0).length;
     const lowerThird = snapshot.balls.filter((ball) => ball.y > comparisonConfig.arenaSize / 6).length;
     console.log([
-      motionField.padEnd(10),
+      `${gravity.toFixed(1)} m/s²`.padEnd(10),
       String(snapshot.stats.currentCount).padStart(5),
       `${Math.round(bottomHalf / Math.max(1, snapshot.stats.currentCount) * 100)}%`.padStart(11),
       `${Math.round(lowerThird / Math.max(1, snapshot.stats.currentCount) * 100)}%`.padStart(10),

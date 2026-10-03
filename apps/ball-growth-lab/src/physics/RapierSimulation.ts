@@ -5,6 +5,7 @@ import {
   FIXED_STEP_SECONDS,
   MAX_POPULATION,
   type BallSnapshot,
+  type EndReason,
   type Point,
   type SimulationConfig,
   type SimulationSnapshot,
@@ -31,11 +32,13 @@ interface RapierBall {
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
 export const MAX_ADAPTIVE_SUBSTEPS = 32;
 export const MAX_TRAVEL_PER_SUBSTEP = 0.75;
+const CONTACT_PREDICTION_DISTANCE = 0.001;
 
 export const DEFAULT_RAPIER_TUNING: SolverTuning = {
   velocityIterations: 6,
   positionIterations: 2,
   allowedLinearError: 0.001,
+  maxTravelPerSubstep: MAX_TRAVEL_PER_SUBSTEP,
 };
 
 export async function initializeRapier(rapier: unknown): Promise<void> {
@@ -55,7 +58,6 @@ export class RapierSimulation implements PhysicsAdapter {
   private readonly bodyIdByCollider = new Map<ColliderHandle, number>();
   private readonly pendingPairs: Array<[number, number]> = [];
   private readonly occupancy: SpatialHash;
-  private energyScratch = new Float64Array(0);
   private nextId = 1;
   private elapsedSeconds = 0;
   private births = 0;
@@ -65,6 +67,7 @@ export class RapierSimulation implements PhysicsAdapter {
   private missedSpaceBirths = 0;
   private missedEnergyBirths = 0;
   private ended = false;
+  private endReason: EndReason | null = null;
   private lastCooldownPrune = 0;
   private disposed = false;
 
@@ -73,6 +76,7 @@ export class RapierSimulation implements PhysicsAdapter {
     private readonly config: SimulationConfig,
     initialSeeds?: SpawnSeed[],
     private readonly tuning: SolverTuning = DEFAULT_RAPIER_TUNING,
+    private readonly stopAtPopulationTarget = true,
   ) {
     // The standard and compatibility builds share the 0.21 runtime API but have separate private TS declarations.
     this.rapier = rapier as RapierRuntime;
@@ -85,6 +89,7 @@ export class RapierSimulation implements PhysicsAdapter {
     this.world.numSolverIterations = tuning.velocityIterations;
     this.world.numInternalPgsIterations = tuning.positionIterations;
     this.world.integrationParameters.normalizedAllowedLinearError = tuning.allowedLinearError ?? 0.001;
+    this.world.integrationParameters.normalizedPredictionDistance = CONTACT_PREDICTION_DISTANCE;
     this.world.timestep = FIXED_STEP_SECONDS;
     this.events = new this.rapier.EventQueue(true);
     this.createArena();
@@ -94,6 +99,7 @@ export class RapierSimulation implements PhysicsAdapter {
       throw new Error('初始球数不能超过人口上限。');
     }
     for (const seed of seeds) this.addBall(seed.position, seed.velocity ?? this.randomVelocity());
+    this.endForPopulationState();
   }
 
   step(deltaSeconds: number): void {
@@ -102,13 +108,10 @@ export class RapierSimulation implements PhysicsAdapter {
     this.elapsedSeconds += deltaSeconds;
     this.pendingPairs.length = 0;
     const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
-    const energyBefore = this.getMechanicalEnergy();
     this.world.timestep = deltaSeconds / substepCount;
     for (let index = 0; index < substepCount; index += 1) {
-      if (this.config.motionField === 'curvature') this.curveBallVelocities(this.world.timestep);
       this.world.step(this.events);
     }
-    this.restoreMechanicalEnergy(energyBefore);
     this.events.drainCollisionEvents((firstCollider, secondCollider, started) => {
       if (!started || this.config.birthProbability <= 0) return;
       const firstId = this.bodyIdByCollider.get(firstCollider);
@@ -122,6 +125,11 @@ export class RapierSimulation implements PhysicsAdapter {
     });
 
     this.removeExitedBalls();
+    this.endForPopulationState();
+    if (this.ended) {
+      this.pendingPairs.length = 0;
+      return;
+    }
     if (this.balls.size > 500 && this.elapsedSeconds - this.lastCooldownPrune >= 5) {
       this.pairCooldown.prune(this.elapsedSeconds, Math.max(this.config.pairCooldown * 4, 5));
       this.lastCooldownPrune = this.elapsedSeconds;
@@ -134,6 +142,11 @@ export class RapierSimulation implements PhysicsAdapter {
 
   get isEnded(): boolean {
     return this.ended;
+  }
+
+  finishManually(): void {
+    if (this.ended) return;
+    this.finish('manual');
   }
 
   getSnapshot(): SimulationSnapshot {
@@ -166,6 +179,7 @@ export class RapierSimulation implements PhysicsAdapter {
         maxSpeed,
       },
       ended: this.ended,
+      endReason: this.endReason,
     };
   }
 
@@ -190,116 +204,8 @@ export class RapierSimulation implements PhysicsAdapter {
       });
       const descriptor = this.rapier.ColliderDesc.polyline(vertices)
         .setFriction(0)
-        .setRestitution(1);
+        .setRestitution(this.config.restitution);
       this.world.createCollider(descriptor);
-    }
-  }
-
-  /**
-   * A uniform perpendicular field curves every free-flight path without doing
-   * work: rotating a velocity vector preserves its magnitude exactly.
-   * This avoids a preferred "down" direction while keeping the motion lively.
-   */
-  private curveBallVelocities(deltaSeconds: number): void {
-    const angle = this.config.curvatureRate * deltaSeconds;
-    if (Math.abs(angle) < 1e-12) return;
-    const cosine = Math.cos(angle);
-    const sine = Math.sin(angle);
-    for (const { body } of this.balls.values()) {
-      const velocity = body.linvel();
-      body.setLinvel({
-        x: cosine * velocity.x - sine * velocity.y,
-        y: sine * velocity.x + cosine * velocity.y,
-      }, true);
-    }
-  }
-
-  private getMechanicalEnergy(): number {
-    let energy = 0;
-    const gravity = this.activeGravity;
-    for (const { body, mass } of this.balls.values()) {
-      const position = body.translation();
-      const velocity = body.linvel();
-      energy += mass * ((velocity.x ** 2 + velocity.y ** 2) / 2 - gravity * position.y);
-    }
-    return energy;
-  }
-
-  /**
-   * Dense simultaneous contacts can make a sequential rigid-body solver lose
-   * or gain aggregate energy even with restitution 1 and zero friction. Scale
-   * motion relative to the center of mass when possible to retain solver
-   * momentum; use a total-kinetic fallback if a boundary impulse makes that
-   * decomposition unable to meet the energy target.
-   */
-  private restoreMechanicalEnergy(targetEnergy: number): void {
-    if (this.balls.size < 2) return;
-    const count = this.balls.size;
-    const requiredScratchLength = count * 3;
-    if (this.energyScratch.length < requiredScratchLength) this.energyScratch = new Float64Array(requiredScratchLength);
-    const gravity = this.activeGravity;
-    let totalMass = 0;
-    let momentumX = 0;
-    let momentumY = 0;
-    let weightedY = 0;
-
-    let index = 0;
-    for (const { body, mass } of this.balls.values()) {
-      const position = body.translation();
-      const velocity = body.linvel();
-      this.energyScratch[index] = mass;
-      this.energyScratch[index + 1] = velocity.x;
-      this.energyScratch[index + 2] = velocity.y;
-      index += 3;
-      totalMass += mass;
-      momentumX += mass * velocity.x;
-      momentumY += mass * velocity.y;
-      weightedY += mass * position.y;
-    }
-
-    if (totalMass <= 0) return;
-    const centerVelocity = { x: momentumX / totalMass, y: momentumY / totalMass };
-    let relativeEnergy = 0;
-    for (let offset = 0; offset < requiredScratchLength; offset += 3) {
-      const mass = this.energyScratch[offset];
-      const relativeX = this.energyScratch[offset + 1] - centerVelocity.x;
-      const relativeY = this.energyScratch[offset + 2] - centerVelocity.y;
-      relativeEnergy += mass * (relativeX ** 2 + relativeY ** 2) / 2;
-    }
-
-    const targetKineticEnergy = targetEnergy + gravity * weightedY;
-    const centerEnergy = totalMass * (centerVelocity.x ** 2 + centerVelocity.y ** 2) / 2;
-    const targetRelativeEnergy = targetKineticEnergy - centerEnergy;
-    if (targetKineticEnergy < -1e-9) return;
-
-    if (relativeEnergy > 1e-12 && targetRelativeEnergy >= 0) {
-      const scale = Math.sqrt(targetRelativeEnergy / relativeEnergy);
-      if (!Number.isFinite(scale) || Math.abs(scale - 1) < 1e-10) return;
-
-      index = 0;
-      for (const { body } of this.balls.values()) {
-        const velocityX = this.energyScratch[index + 1];
-        const velocityY = this.energyScratch[index + 2];
-        body.setLinvel({
-          x: centerVelocity.x + (velocityX - centerVelocity.x) * scale,
-          y: centerVelocity.y + (velocityY - centerVelocity.y) * scale,
-        }, true);
-        index += 3;
-      }
-      return;
-    }
-
-    // A wall impulse can make the solver's center-of-mass kinetic energy alone
-    // exceed the target. There is then no relative-energy scale that satisfies
-    // both constraints, so fall back to the exact total-energy constraint.
-    const currentKineticEnergy = relativeEnergy + centerEnergy;
-    if (currentKineticEnergy <= 1e-12) return;
-    const scale = Math.sqrt(Math.max(0, targetKineticEnergy) / currentKineticEnergy);
-    if (!Number.isFinite(scale) || Math.abs(scale - 1) < 1e-10) return;
-
-    for (const { body } of this.balls.values()) {
-      const velocity = body.linvel();
-      body.setLinvel({ x: velocity.x * scale, y: velocity.y * scale }, true);
     }
   }
 
@@ -308,9 +214,7 @@ export class RapierSimulation implements PhysicsAdapter {
     if (this.config.gapCount > 0) {
       const gap = getGapArcs(this.config)[0];
       const center = pointAtBoundaryDistance(this.config.shape, gap.center, this.halfExtent);
-      const laneCount = this.config.shape === 'circle'
-        ? 1
-        : Math.max(1, Math.floor(gap.width / (this.radius * 2)));
+      const laneCount = 1;
       const rowSpacing = this.radius * 2.08;
       for (let index = 0; index < count; index += 1) {
         const row = Math.floor(index / laneCount);
@@ -342,12 +246,6 @@ export class RapierSimulation implements PhysicsAdapter {
 
   private randomHighPoint(): Point {
     const edgeLimit = this.halfExtent - this.radius;
-    if (this.config.shape === 'square') {
-      return {
-        x: (this.random() * 2 - 1) * edgeLimit,
-        y: -edgeLimit * (0.42 + this.random() * 0.5),
-      };
-    }
     const x = (this.random() * 2 - 1) * edgeLimit;
     const y = -edgeLimit * (0.42 + this.random() * 0.5);
     const candidate = { x, y };
@@ -368,7 +266,7 @@ export class RapierSimulation implements PhysicsAdapter {
       const velocity = body.linvel();
       maximumSpeed = Math.max(maximumSpeed, Math.hypot(velocity.x, velocity.y));
     }
-    const maximumTravel = this.radius * MAX_TRAVEL_PER_SUBSTEP;
+    const maximumTravel = this.radius * (this.tuning.maxTravelPerSubstep ?? MAX_TRAVEL_PER_SUBSTEP);
     return Math.max(1, Math.min(MAX_ADAPTIVE_SUBSTEPS, Math.ceil((maximumSpeed * deltaSeconds) / maximumTravel)));
   }
 
@@ -388,7 +286,7 @@ export class RapierSimulation implements PhysicsAdapter {
       this.rapier.ColliderDesc.ball(this.radius)
         .setDensity(1)
         .setFriction(0)
-        .setRestitution(1)
+        .setRestitution(this.config.restitution)
         .setActiveEvents(this.rapier.ActiveEvents.COLLISION_EVENTS),
       body,
     );
@@ -416,7 +314,6 @@ export class RapierSimulation implements PhysicsAdapter {
 
   private isOutsideArena(point: Point): boolean {
     const threshold = this.halfExtent + this.radius * 1.25;
-    if (this.config.shape === 'square') return Math.abs(point.x) > threshold || Math.abs(point.y) > threshold;
     return Math.hypot(point.x, point.y) > threshold;
   }
 
@@ -434,8 +331,12 @@ export class RapierSimulation implements PhysicsAdapter {
       const second = this.balls.get(secondId);
       if (!first || !second) continue;
       if (this.balls.size >= this.populationLimit) {
-        this.ended = true;
-        break;
+        if (this.stopAtPopulationTarget) {
+          this.finish('population-target');
+          break;
+        }
+        this.missedBirths += 1;
+        continue;
       }
       const firstPosition = first.body.translation();
       const secondPosition = second.body.translation();
@@ -464,8 +365,8 @@ export class RapierSimulation implements PhysicsAdapter {
       second.body.setLinvel(birthVelocities.second, true);
       this.addBall(birthPosition, birthVelocities.child);
       this.births += 1;
-      if (this.balls.size >= this.populationLimit) {
-        this.ended = true;
+      if (this.stopAtPopulationTarget && this.balls.size >= this.populationLimit) {
+        this.finish('population-target');
         break;
       }
     }
@@ -490,8 +391,20 @@ export class RapierSimulation implements PhysicsAdapter {
     return null;
   }
 
+  private endForPopulationState(): void {
+    if (this.balls.size === 0) this.finish('no-balls');
+    else if (this.balls.size === 1) this.finish('single-ball');
+    else if (this.stopAtPopulationTarget && this.balls.size >= this.populationLimit) this.finish('population-target');
+  }
+
+  private finish(reason: EndReason): void {
+    this.ended = true;
+    this.endReason = reason;
+    this.pendingPairs.length = 0;
+  }
+
   private get activeGravity(): number {
-    return this.config.motionField === 'gravity' ? this.config.gravity : 0;
+    return this.config.gravity;
   }
 
   private get populationLimit(): number {

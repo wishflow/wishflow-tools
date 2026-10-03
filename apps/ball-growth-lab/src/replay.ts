@@ -1,5 +1,5 @@
 import { DEFAULT_RAPIER_TUNING, MAX_ADAPTIVE_SUBSTEPS, MAX_TRAVEL_PER_SUBSTEP } from './physics/RapierSimulation';
-import { FIXED_STEP_SECONDS, type RunState, type SimulationConfig, type SimulationStats } from './types';
+import { FIXED_STEP_SECONDS, type EndReason, type RunState, type SimulationConfig, type SimulationStats } from './types';
 
 export interface ReplayEnvironment {
   userAgent: string;
@@ -14,6 +14,7 @@ export interface ReplayEnvironment {
 export interface ReplayExportInput {
   config: SimulationConfig;
   runState: RunState;
+  endReason: EndReason | null;
   stats: SimulationStats;
   rendererFps: number;
   environment: ReplayEnvironment;
@@ -22,7 +23,7 @@ export interface ReplayExportInput {
 export function createReplayExport(input: ReplayExportInput) {
   return {
     format: 'ball-growth-lab.replay',
-    formatVersion: 1,
+    formatVersion: 2,
     physics: {
       engine: 'Rapier2D',
       engineVersion: '0.21',
@@ -37,6 +38,7 @@ export function createReplayExport(input: ReplayExportInput) {
     environment: input.environment,
     observation: {
       runState: input.runState,
+      endReason: input.endReason,
       elapsedSeconds: Number(input.stats.elapsedSeconds.toFixed(4)),
       physicsSteps: Math.round(input.stats.elapsedSeconds / FIXED_STEP_SECONDS),
       rendererFps: input.rendererFps,

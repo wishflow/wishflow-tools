@@ -15,7 +15,7 @@ export function PopulationChart({ samples, active }: { samples: Sample[]; active
   const area = points.length > 0 ? `0,80 ${line} 100,80` : '';
 
   return (
-    <figure className="chart-figure">
+    <figure className="population-chart-figure">
       <div className="chart-heading">
         <div>
           <p className="overline">球群变化</p>

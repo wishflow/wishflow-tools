@@ -12,7 +12,9 @@ test('缺口沿周长等距分布，第一处在顶部中心', () => {
   assert.equal(gaps.length, 4);
   assert.equal(gaps[0].center, 0);
   assert.deepEqual(gaps.map((gap) => gap.center), [0, spacing, spacing * 2, spacing * 3]);
-  assert.deepEqual(pointAtBoundaryDistance('square', 0), { x: 0, y: -10 });
+  const top = pointAtBoundaryDistance('circle', 0);
+  assert.ok(Math.abs(top.x) < 1e-12);
+  assert.equal(top.y, -10);
 });
 
 test('缺口宽度按球径比例计算且没有缺口时不产生缺口', () => {
@@ -21,18 +23,8 @@ test('缺口宽度按球径比例计算且没有缺口时不产生缺口', () =>
   assert.deepEqual(getGapArcs({ ...config, gapCount: 0 }), []);
 });
 
-test('正方形无缺口由四条边构成，缺口会从顶部边界移除开口', () => {
-  const solid = buildBoundarySegments({ ...DEFAULT_CONFIG, gapCount: 0 });
-  const open = buildBoundarySegments({ ...DEFAULT_CONFIG, gapCount: 1 });
-
-  assert.equal(solid.length, 4);
-  assert.equal(open.length, 5);
-  assert.equal(open.some((segment) => segment.from.x === 0 && segment.from.y === -10), false);
-  assert.equal(open.some((segment) => segment.to.x === 0 && segment.to.y === -10), false);
-});
-
 test('圆形边界由连续圆弧逼近，球心范围按半径收缩', () => {
-  const config = { ...DEFAULT_CONFIG, shape: 'circle' as const, gapCount: 2 };
+  const config = { ...DEFAULT_CONFIG, gapCount: 2 };
   const segments = buildBoundarySegments(config);
   assert.ok(segments.length > 100);
   for (const segment of segments) {
