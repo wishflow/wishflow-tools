@@ -60,6 +60,14 @@ export interface SimulationSnapshot {
   endReason: EndReason | null;
 }
 
+export interface SimulationRenderSnapshot {
+  /** Packed as id, x, y, radius, color for each ball. */
+  ballData: Float32Array;
+  stats: SimulationStats;
+  ended: boolean;
+  endReason: EndReason | null;
+}
+
 export type WorkerCommand =
   | { type: 'start'; config: SimulationConfig; runId: number }
   | { type: 'pause' }

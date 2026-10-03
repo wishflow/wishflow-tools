@@ -1,5 +1,7 @@
 # 性能与物理质量基准
 
+> 本文记录的是旧版实验（包含 Rapier、方形场地和弯曲运动模式），不描述当前 v2 生产架构。当前生产求解器和切换后的验证结果见 [`benchmark-v2-2026-10-03.md`](benchmark-v2-2026-10-03.md)。
+
 ## 测量范围
 
 基准由 `npm run benchmark` 执行，测量 Node 下的 Rapier 固定步长，不包含浏览器消息传递、PixiJS 绘制、GPU 或设备功耗。物理场景使用无重叠六角初始排布、重力 9.8、恢复系数 1、关闭繁殖；球径为场地宽度的 2.4%。规模矩阵预热 30 步、测量 120 步；精度扫描预热 60 步、测量 240 步。单次时间受宿主负载影响，应结合重复运行结果判断。
@@ -164,4 +166,4 @@ BENCHMARK_FRAMES=600 WARMUP_FRAMES=120 \
 BENCHMARK_MOTION_FIELD=curvature BENCHMARK_INITIAL_SPEED=4 npm run benchmark
 ```
 
-Rapier WASM 延迟到用户开始实验时才由 Worker 加载；当前 Vite 产物中的 WASM 文件约 2.4 MB（gzip 约 0.92 MB）。PixiJS 主应用 chunk 为 513 KB（gzip 约 156 KB），略高于 Vite 500 KB 的提示阈值；构建通过。物理 Worker 每秒最多发 60 次快照，React 不逐步更新坐标。Node 数据不能证明浏览器或真实手机帧率；后续需在目标浏览器和手机上记录机型、系统、浏览器及实际球数。
+该历史版本将 Rapier WASM 延迟到用户开始实验时加载；这些 bundle 数值不是当前 CircleBatch 版本的数据。Worker 每秒最多发 60 次快照，React 不逐步更新坐标。Node 数据不能证明浏览器或真实手机帧率；后续需在目标浏览器和手机上记录机型、系统、浏览器及实际球数。

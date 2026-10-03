@@ -1,11 +1,11 @@
-import { initializeRapier, RapierSimulation } from './RapierSimulation';
-import { FIXED_STEP_SECONDS, type SimulationConfig, type SimulationSnapshot, type WorkerCommand } from '../types';
+import { CircleBatchSimulation } from './CircleBatchSimulation';
+import { FIXED_STEP_SECONDS, type SimulationConfig, type WorkerCommand } from '../types';
 
 const workerScope = self as unknown as DedicatedWorkerGlobalScope;
 const SNAPSHOT_INTERVAL_MS = 1000 / 60;
 const MAX_STEPS_PER_TICK = 6;
 
-let simulation: RapierSimulation | null = null;
+let simulation: CircleBatchSimulation | null = null;
 let running = false;
 let requestedRunning = false;
 let accumulator = 0;
@@ -17,36 +17,15 @@ let physicsFps = 0;
 let sequence = 0;
 let timer = 0;
 let runId = 0;
-let startVersion = 0;
-let rapierInitialization: Promise<unknown> | null = null;
-
-function loadRapier(): Promise<unknown> {
-  if (!rapierInitialization) {
-    rapierInitialization = import('@dimforge/rapier2d-compat')
-      .then(async (rapier) => {
-        await initializeRapier(rapier);
-        return rapier;
-      })
-      .catch((error: unknown) => {
-        rapierInitialization = null;
-        throw error;
-      });
-  }
-  return rapierInitialization;
-}
-
-async function start(config: SimulationConfig, currentRunId: number): Promise<void> {
-  const currentVersion = ++startVersion;
+function start(config: SimulationConfig, currentRunId: number): void {
   runId = currentRunId;
   sequence = 0;
   simulation?.dispose();
   simulation = null;
   requestedRunning = true;
-  running = true;
+  running = false;
   accumulator = 0;
-  const rapier = await loadRapier();
-  if (currentVersion !== startVersion) return;
-  simulation = new RapierSimulation(rapier, config);
+  simulation = new CircleBatchSimulation(config);
   running = requestedRunning && !simulation.isEnded;
   previousTime = performance.now();
   lastSnapshotTime = previousTime;
@@ -58,18 +37,8 @@ async function start(config: SimulationConfig, currentRunId: number): Promise<vo
 
 function sendSnapshot(): void {
   if (!simulation) return;
-  const snapshot: SimulationSnapshot = simulation.getSnapshot();
-  const valuesPerBall = 5;
-  const ballData = new Float32Array(snapshot.balls.length * valuesPerBall);
-
-  snapshot.balls.forEach((ball, index) => {
-    const offset = index * valuesPerBall;
-    ballData[offset] = ball.id;
-    ballData[offset + 1] = ball.x;
-    ballData[offset + 2] = ball.y;
-    ballData[offset + 3] = ball.radius;
-    ballData[offset + 4] = ball.color;
-  });
+  const snapshot = simulation.getRenderSnapshot();
+  const { ballData } = snapshot;
 
   workerScope.postMessage({
     type: 'snapshot',
@@ -77,7 +46,7 @@ function sendSnapshot(): void {
     sequence: sequence++,
     time: snapshot.stats.elapsedSeconds,
     ballData: ballData.buffer,
-    ballCount: snapshot.balls.length,
+    ballCount: snapshot.stats.currentCount,
     stats: { ...snapshot.stats, physicsFps },
     ended: snapshot.ended,
     endReason: snapshot.endReason,
@@ -117,10 +86,10 @@ function tick(): void {
   }
 }
 
-async function handleCommand(command: WorkerCommand): Promise<void> {
+function handleCommand(command: WorkerCommand): void {
   try {
     if (command.type === 'start') {
-      await start(command.config, command.runId);
+      start(command.config, command.runId);
     } else if (command.type === 'pause') {
       requestedRunning = false;
       running = false;
@@ -136,19 +105,21 @@ async function handleCommand(command: WorkerCommand): Promise<void> {
       simulation?.finishManually();
       sendSnapshot();
     } else if (command.type === 'stop') {
-      startVersion += 1;
       requestedRunning = false;
       running = false;
       simulation?.dispose();
       simulation = null;
     }
   } catch (error) {
+    requestedRunning = false;
+    running = false;
+    accumulator = 0;
     workerScope.postMessage({ runId, type: 'error', message: error instanceof Error ? error.message : '物理模拟初始化失败。' });
   }
 }
 
 workerScope.onmessage = (event: MessageEvent<WorkerCommand>) => {
-  void handleCommand(event.data);
+  handleCommand(event.data);
 };
 
 timer = workerScope.setInterval(tick, 4);

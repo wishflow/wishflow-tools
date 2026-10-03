@@ -93,7 +93,7 @@ test('修改设置会保留上一轮结果，当前参数可以导出为 JSON', 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^ball-growth-.*\.json$/);
   const exported = JSON.parse(await readFile((await download.path())!, 'utf8')) as { config: { seed: string }; formatVersion: number };
-  expect(exported.formatVersion).toBe(2);
+  expect(exported.formatVersion).toBe(3);
   expect(exported.config.seed).toBe('BALL-0426');
 });
 
@@ -108,7 +108,7 @@ test('只剩一球时自动结束并显示原因', async ({ page }) => {
   await installWorkerConfigPatch(page, {
     maxPopulation: 100,
     gapCount: 1,
-    gapWidthRatio: 3,
+    gapWidthRatio: 1.05,
     initialSpeed: 24,
     speedSpread: 0,
     initialDirection: 270,

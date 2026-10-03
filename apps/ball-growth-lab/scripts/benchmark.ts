@@ -1,6 +1,6 @@
 import { performance } from 'node:perf_hooks';
 import * as RapierBenchmark from '@dimforge/rapier2d-compat';
-import { CircleBatchSimulation } from './experimental/CircleBatchSimulation';
+import { CircleBatchSimulation, MAX_BATCH_TRAVEL_PER_SUBSTEP } from '../src/physics/CircleBatchSimulation';
 import { PlanckSimulation } from './experimental/PlanckSimulation';
 import { initializeRapier, RapierSimulation } from '../src/physics/RapierSimulation';
 import type { SolverTuning } from '../src/physics/PhysicsAdapter';
@@ -104,8 +104,8 @@ function mechanicalEnergy(simulation: PlanckSimulation | CircleBatchSimulation |
 }
 
 console.log(`Fixed-step physics benchmark · ${BENCHMARK_STEP_HZ} Hz · diameter ratio ${BALL_DIAMETER_RATIO} · one local run · browser GPU/rendering excluded`);
-console.log(`gravity ${GRAVITY} m/s² · initial speed ${INITIAL_SPEED} m/s · birth probability ${BIRTH_PROBABILITY} · pair cooldown ${PAIR_COOLDOWN}s · max travel ${MAX_TRAVEL_PER_SUBSTEP} ball radii/substep`);
-console.log(`warmup ${WARMUP_FRAMES} steps · measure ${BENCHMARK_FRAMES} steps (${BENCHMARK_DURATION_SECONDS}s requested)`);
+console.log(`gravity ${GRAVITY} m/s² · initial speed ${INITIAL_SPEED} m/s · birth probability ${BIRTH_PROBABILITY} · pair cooldown ${PAIR_COOLDOWN}s · CircleBatch travel ${MAX_BATCH_TRAVEL_PER_SUBSTEP}r/substep · Rapier travel ${MAX_TRAVEL_PER_SUBSTEP}r/substep`);
+console.log(`warmup ${WARMUP_FRAMES} steps · measure ${BENCHMARK_FRAMES} steps (${(BENCHMARK_FRAMES / BENCHMARK_STEP_HZ).toFixed(2)}s)`);
 console.log(`balls density arena algorithm     solver  avg ms/step  p95 ms/step steps/s realtime@${BENCHMARK_STEP_HZ} end births missed energy-drift max-speed seed-overlap max-overlap penetrated-pairs worst pair/positions`);
 
 for (const count of COUNTS) {
@@ -150,7 +150,7 @@ for (const count of COUNTS) {
                 { ...tuning, maxTravelPerSubstep: MAX_TRAVEL_PER_SUBSTEP },
                 false,
               )
-              : new CircleBatchSimulation(config, seeds, tuning);
+              : new CircleBatchSimulation(config, seeds, tuning, false);
 
           for (let index = 0; index < WARMUP_FRAMES; index += 1) simulation.step(BENCHMARK_STEP_SECONDS);
           const initialEnergy = mechanicalEnergy(simulation, algorithm, GRAVITY);

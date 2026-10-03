@@ -1,5 +1,4 @@
-import * as RapierBenchmark from '@dimforge/rapier2d-compat';
-import { initializeRapier, RapierSimulation } from '../src/physics/RapierSimulation';
+import { CircleBatchSimulation } from '../src/physics/CircleBatchSimulation';
 import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type SimulationConfig } from '../src/types';
 
 const DURATION_SECONDS = Number(process.env.GROWTH_DIAGNOSTIC_SECONDS ?? 90);
@@ -19,23 +18,28 @@ function bucketBalls(balls: Array<{ x: number; y: number }>, cellSize: number): 
   return buckets;
 }
 
-function physicalState(simulation: RapierSimulation, gravity: number): {
+function physicalState(simulation: CircleBatchSimulation, gravity: number): {
   energy: number;
   energyMagnitude: number;
   meanSpeed: number;
   maxSpeed: number;
 } {
   const internals = simulation as unknown as {
-    balls: Map<number, { body: { mass(): number; translation(): { x: number; y: number }; linvel(): { x: number; y: number } } }>;
+    count: number;
+    radius: number;
+    x: Float64Array;
+    y: Float64Array;
+    vx: Float64Array;
+    vy: Float64Array;
   };
+  const mass = Math.PI * internals.radius ** 2;
   let energy = 0;
   let energyMagnitude = 0;
   let speedTotal = 0;
   let maxSpeed = 0;
-  for (const { body } of internals.balls.values()) {
-    const mass = body.mass();
-    const position = body.translation();
-    const velocity = body.linvel();
+  for (let index = 0; index < internals.count; index += 1) {
+    const position = { x: internals.x[index], y: internals.y[index] };
+    const velocity = { x: internals.vx[index], y: internals.vy[index] };
     const speed = Math.hypot(velocity.x, velocity.y);
     const kinetic = mass * (velocity.x ** 2 + velocity.y ** 2) / 2;
     const potential = -mass * gravity * position.y;
@@ -47,13 +51,12 @@ function physicalState(simulation: RapierSimulation, gravity: number): {
   return {
     energy,
     energyMagnitude,
-    meanSpeed: speedTotal / Math.max(1, internals.balls.size),
+    meanSpeed: speedTotal / Math.max(1, internals.count),
     maxSpeed,
   };
 }
 
-await initializeRapier(RapierBenchmark);
-console.log(`Fixed-population flow samples (${INITIAL_COUNT} balls, no births, same 20 s for each field)`);
+console.log(`CircleBatch fixed-population flow samples (${INITIAL_COUNT} balls, no births, same 20 s for each field)`);
 console.log('seed      field      elapsed bottom-half lower-third occupied-cells max-cell max-speed');
 console.log(`Growth samples (${INITIAL_COUNT} initial balls, p=${BIRTH_PROBABILITY}, run until target or ${DURATION_SECONDS} s)`);
 console.log('seed      field      elapsed  count births attempts blocked-space blocked-energy exits bottom-half lower-third max-cell max-speed');
@@ -68,7 +71,7 @@ for (const seed of SEEDS) {
       maxPopulation: 1000,
       birthProbability: BIRTH_PROBABILITY,
     };
-    const flowSimulation = new RapierSimulation(RapierBenchmark, { ...config, birthProbability: 0 });
+    const flowSimulation = new CircleBatchSimulation({ ...config, birthProbability: 0 });
     for (let frame = 0; frame < 20 / FIXED_STEP_SECONDS; frame += 1) flowSimulation.step(FIXED_STEP_SECONDS);
     const flowSnapshot = flowSimulation.getSnapshot();
     const flowCells = bucketBalls(flowSnapshot.balls, 1.5);
@@ -84,7 +87,7 @@ for (const seed of SEEDS) {
     ].join(' '));
     flowSimulation.dispose();
 
-    const simulation = new RapierSimulation(RapierBenchmark, config);
+    const simulation = new CircleBatchSimulation(config);
     const frameCount = Math.ceil(DURATION_SECONDS / FIXED_STEP_SECONDS);
     let lastGrowthAt = 0;
     let previousCount = INITIAL_COUNT;
@@ -135,7 +138,7 @@ if (checkpointSeed && INITIAL_COUNT < STALL_TARGET) {
     maxPopulation: 1000,
     birthProbability: BIRTH_PROBABILITY,
   };
-  const growth = new RapierSimulation(RapierBenchmark, config);
+  const growth = new CircleBatchSimulation(config);
   for (let frame = 0; frame < DURATION_SECONDS / FIXED_STEP_SECONDS; frame += 1) {
     growth.step(FIXED_STEP_SECONDS);
     if (growth.getSnapshot().stats.currentCount >= STALL_TARGET || growth.isEnded) break;
@@ -143,11 +146,15 @@ if (checkpointSeed && INITIAL_COUNT < STALL_TARGET) {
 
   const checkpoint = growth.getSnapshot();
   const internalGrowth = growth as unknown as {
-    balls: Map<number, { body: { translation(): { x: number; y: number }; linvel(): { x: number; y: number } } }>;
+    count: number;
+    x: Float64Array;
+    y: Float64Array;
+    vx: Float64Array;
+    vy: Float64Array;
   };
-  const seeds = [...internalGrowth.balls.values()].map(({ body }) => ({
-    position: body.translation(),
-    velocity: body.linvel(),
+  const seeds = Array.from({ length: internalGrowth.count }, (_, index) => ({
+    position: { x: internalGrowth.x[index], y: internalGrowth.y[index] },
+    velocity: { x: internalGrowth.vx[index], y: internalGrowth.vy[index] },
   }));
   const checkpointStats = checkpoint.stats;
   console.log(`\nDense-growth checkpoint: seed=${checkpointSeed}, count=${checkpointStats.currentCount}, time=${checkpointStats.elapsedSeconds.toFixed(2)} s, blocked-space=${checkpointStats.missedSpaceBirths}, blocked-energy=${checkpointStats.missedEnergyBirths}`);
@@ -162,7 +169,7 @@ if (checkpointSeed && INITIAL_COUNT < STALL_TARGET) {
       initialCount: seeds.length,
       birthProbability: 0,
     };
-    const comparison = new RapierSimulation(RapierBenchmark, comparisonConfig, seeds);
+    const comparison = new CircleBatchSimulation(comparisonConfig, seeds);
     const activeGravity = comparisonConfig.gravity;
     const before = physicalState(comparison, activeGravity);
     for (let frame = 0; frame < STALL_COMPARISON_SECONDS / FIXED_STEP_SECONDS; frame += 1) comparison.step(FIXED_STEP_SECONDS);

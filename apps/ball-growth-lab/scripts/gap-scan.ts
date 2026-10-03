@@ -1,4 +1,5 @@
 import * as RapierBenchmark from '@dimforge/rapier2d-compat';
+import { CircleBatchSimulation } from '../src/physics/CircleBatchSimulation';
 import { PlanckSimulation } from './experimental/PlanckSimulation';
 import { initializeRapier, RapierSimulation } from '../src/physics/RapierSimulation';
 import { ARENA_HALF_EXTENT, FIXED_STEP_SECONDS, type ArenaShape, type SimulationConfig } from '../src/types';
@@ -7,9 +8,9 @@ const GAP_WIDTH_RATIOS = [1.05, 1.25, 1.45, 1.75, 2, 2.5, 3];
 const SAMPLE_OFFSETS = Number(process.env.GAP_SCAN_SAMPLES ?? 17);
 const TRIAL_STEPS = 960;
 const SHAPES: ArenaShape[] = ['circle'];
-const ALGORITHMS = (process.env.GAP_SCAN_ALGORITHMS ?? 'rapier,planck')
+const ALGORITHMS = (process.env.GAP_SCAN_ALGORITHMS ?? 'circle-batch,rapier,planck')
   .split(',')
-  .filter((algorithm): algorithm is 'rapier' | 'planck' => algorithm === 'rapier' || algorithm === 'planck');
+  .filter((algorithm): algorithm is 'circle-batch' | 'rapier' | 'planck' => algorithm === 'circle-batch' || algorithm === 'rapier' || algorithm === 'planck');
 
 if (ALGORITHMS.includes('rapier')) await initializeRapier(RapierBenchmark);
 
@@ -34,16 +35,18 @@ function trialConfig(shape: ArenaShape, gapWidthRatio: number, seed: string): Si
   };
 }
 
-function passedThrough(algorithm: 'rapier' | 'planck', shape: ArenaShape, ratio: number, offset: number, run: number): boolean {
+function passedThrough(algorithm: 'circle-batch' | 'rapier' | 'planck', shape: ArenaShape, ratio: number, offset: number, run: number): boolean {
   const config = trialConfig(shape, ratio, `GAP-${shape}-${ratio}-${run}`);
   const radius = (config.arenaSize / 2) * config.ballDiameterRatio;
   const seeds = [{
     position: { x: offset, y: -ARENA_HALF_EXTENT - radius - 0.05 },
     velocity: { x: 0, y: 0 },
   }];
-  const simulation = algorithm === 'rapier'
-    ? new RapierSimulation(RapierBenchmark, config, seeds)
-    : new PlanckSimulation(config, seeds);
+  const simulation = algorithm === 'circle-batch'
+    ? new CircleBatchSimulation(config, seeds, undefined, false)
+    : algorithm === 'rapier'
+      ? new RapierSimulation(RapierBenchmark, config, seeds)
+      : new PlanckSimulation(config, seeds);
 
   try {
     for (let step = 0; step < TRIAL_STEPS; step += 1) {

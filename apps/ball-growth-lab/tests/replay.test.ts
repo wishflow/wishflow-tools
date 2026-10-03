@@ -31,7 +31,8 @@ test('复现导出包含可重放参数和现场诊断，并可 JSON 往返', ()
   const restored = JSON.parse(JSON.stringify(replay));
 
   assert.equal(restored.format, 'ball-growth-lab.replay');
-  assert.equal(restored.formatVersion, 2);
+  assert.equal(restored.formatVersion, 3);
+  assert.equal(restored.physics.engine, 'CircleBatch2D');
   assert.deepEqual(restored.config, config);
   assert.deepEqual(restored.environment.viewport, { width: 390, height: 844, devicePixelRatio: 3 });
   assert.equal(restored.observation.runState, 'paused');

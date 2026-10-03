@@ -1,4 +1,4 @@
-import { DEFAULT_RAPIER_TUNING, MAX_ADAPTIVE_SUBSTEPS, MAX_TRAVEL_PER_SUBSTEP } from './physics/RapierSimulation';
+import { DEFAULT_CIRCLE_BATCH_TUNING, MAX_BATCH_SUBSTEPS, MAX_BATCH_TRAVEL_PER_SUBSTEP } from './physics/CircleBatchSimulation';
 import { FIXED_STEP_SECONDS, type EndReason, type RunState, type SimulationConfig, type SimulationStats } from './types';
 
 export interface ReplayEnvironment {
@@ -23,15 +23,15 @@ export interface ReplayExportInput {
 export function createReplayExport(input: ReplayExportInput) {
   return {
     format: 'ball-growth-lab.replay',
-    formatVersion: 2,
+    formatVersion: 3,
     physics: {
-      engine: 'Rapier2D',
-      engineVersion: '0.21',
+      engine: 'CircleBatch2D',
+      engineVersion: '1',
       fixedStepSeconds: FIXED_STEP_SECONDS,
-      solver: DEFAULT_RAPIER_TUNING,
+      solver: DEFAULT_CIRCLE_BATCH_TUNING,
       adaptiveSubsteps: {
-        maxSubsteps: MAX_ADAPTIVE_SUBSTEPS,
-        maxTravelInBallRadii: MAX_TRAVEL_PER_SUBSTEP,
+        maxSubsteps: MAX_BATCH_SUBSTEPS,
+        maxTravelInBallRadii: MAX_BATCH_TRAVEL_PER_SUBSTEP,
       },
     },
     config: input.config,

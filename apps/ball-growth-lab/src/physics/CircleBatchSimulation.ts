@@ -1,21 +1,34 @@
-import { buildBoundarySegments, getGapArcs, getPerimeter, isInsideArena, pointAtBoundaryDistance } from '../../src/arena';
-import { createRandom } from '../../src/random';
+import { buildBoundarySegments, getArenaHalfExtent, getGapArcs, getPerimeter, isInsideArena, pointAtBoundaryDistance } from '../arena';
+import { createRandom } from '../random';
 import {
-  ARENA_HALF_EXTENT,
   MAX_POPULATION,
   type BallSnapshot,
+  type EndReason,
   type Point,
   type SimulationConfig,
+  type SimulationRenderSnapshot,
   type SimulationSnapshot,
   type SpawnSeed,
-} from '../../src/types';
-import { PairCooldown } from '../../src/physics/PairCooldown';
-import { shareBirthMomentum, type PhysicsAdapter, type SolverTuning } from '../../src/physics/PhysicsAdapter';
-import { SpatialHash } from '../../src/physics/SpatialHash';
+} from '../types';
+import { PairCooldown } from './PairCooldown';
+import { shareBirthMomentum, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
+import { SpatialHash } from './SpatialHash';
 
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
 const POSITION_SLOP = 0.002;
 const POSITION_CORRECTION = 0.85;
+const BIRTH_SEARCH_RING_RADII = [2.15, 2.75, 3.45, 4.25, 5.2, 6.3, 7.6];
+const BIRTH_SEARCH_DIRECTIONS = Array.from({ length: 24 }, (_, index) => {
+  const angle = (Math.PI * 2 * index) / 24;
+  return { x: Math.cos(angle), y: Math.sin(angle) };
+});
+export const MAX_BATCH_SUBSTEPS = 32;
+export const MAX_BATCH_TRAVEL_PER_SUBSTEP = 0.25;
+export const DEFAULT_CIRCLE_BATCH_TUNING: SolverTuning = {
+  velocityIterations: 4,
+  positionIterations: 2,
+  maxTravelPerSubstep: MAX_BATCH_TRAVEL_PER_SUBSTEP,
+};
 
 function wrappedDistance(first: number, second: number, perimeter: number): number {
   const half = perimeter / 2;
@@ -23,13 +36,15 @@ function wrappedDistance(first: number, second: number, perimeter: number): numb
 }
 
 /**
- * Experimental equal-radius circle solver.
+ * Equal-radius circle solver for the production circular arena.
  * Stores ball state in typed arrays and uses a rebuilt uniform grid for each solver pass.
  */
 export class CircleBatchSimulation implements PhysicsAdapter {
   private readonly random: () => number;
   private readonly radius: number;
   private readonly diameter: number;
+  private readonly halfExtent: number;
+  private readonly populationLimit: number;
   private readonly capacity: number;
   private readonly x: Float64Array;
   private readonly y: Float64Array;
@@ -51,88 +66,99 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private touchingPairs = new Set<string>();
   private previousTouchingPairs = new Set<string>();
   private readonly pendingPairs: Array<[number, number]> = [];
+  private readonly queuedBirthPairs = new Set<string>();
   private count = 0;
   private nextId = 1;
   private elapsedSeconds = 0;
   private births = 0;
+  private birthAttempts = 0;
   private exits = 0;
   private missedBirths = 0;
+  private missedSpaceBirths = 0;
+  private ended = false;
+  private endReason: EndReason | null = null;
   private disposed = false;
   private lastCooldownPrune = 0;
 
   constructor(
     private readonly config: SimulationConfig,
     initialSeeds?: SpawnSeed[],
-    private readonly tuning: SolverTuning = { velocityIterations: 4, positionIterations: 2 },
+    private readonly tuning: SolverTuning = DEFAULT_CIRCLE_BATCH_TUNING,
+    private readonly stopOnTerminalState = true,
   ) {
     this.random = createRandom(config.seed);
-    this.radius = ARENA_HALF_EXTENT * config.ballDiameterRatio;
+    this.halfExtent = getArenaHalfExtent(config);
+    this.radius = this.halfExtent * config.ballDiameterRatio;
     this.diameter = this.radius * 2;
-    this.capacity = Math.max(1, Math.min(config.maxPopulation, MAX_POPULATION));
+    this.populationLimit = Math.max(1, Math.min(config.maxPopulation, MAX_POPULATION));
+    this.capacity = this.populationLimit;
     this.x = new Float64Array(this.capacity);
     this.y = new Float64Array(this.capacity);
     this.vx = new Float64Array(this.capacity);
     this.vy = new Float64Array(this.capacity);
     this.ids = new Uint32Array(this.capacity);
     this.hasEntered = new Uint8Array(this.capacity);
-    this.wallSegments = buildBoundarySegments(config);
+    this.wallSegments = config.shape === 'circle' ? [] : buildBoundarySegments(config);
     this.gapArcs = getGapArcs(config);
-    this.perimeter = getPerimeter(config.shape);
+    this.perimeter = getPerimeter(config.shape, this.halfExtent);
     this.boundaryPoints = this.gapArcs.flatMap(({ center, width }) => [
-      pointAtBoundaryDistance(config.shape, center - width / 2),
-      pointAtBoundaryDistance(config.shape, center + width / 2),
+      pointAtBoundaryDistance(config.shape, center - width / 2, this.halfExtent),
+      pointAtBoundaryDistance(config.shape, center + width / 2, this.halfExtent),
     ]);
     this.cellSize = this.diameter;
     let seedPadding = 4;
     for (const seed of initialSeeds ?? []) {
-      seedPadding = Math.max(seedPadding, Math.max(Math.abs(seed.position.x), Math.abs(seed.position.y)) - ARENA_HALF_EXTENT + this.diameter);
+      seedPadding = Math.max(seedPadding, Math.max(Math.abs(seed.position.x), Math.abs(seed.position.y)) - this.halfExtent + this.diameter);
     }
     const gridPadding = Math.max(seedPadding, this.radius * 4);
-    this.gridMin = -ARENA_HALF_EXTENT - gridPadding;
-    this.gridColumns = Math.ceil((ARENA_HALF_EXTENT * 2 + gridPadding * 2) / this.cellSize) + 1;
+    this.gridMin = -this.halfExtent - gridPadding;
+    this.gridColumns = Math.ceil((this.halfExtent * 2 + gridPadding * 2) / this.cellSize) + 1;
     this.gridHeads = new Int32Array(this.gridColumns * this.gridColumns);
     this.gridNext = new Int32Array(this.capacity);
 
     const seeds = initialSeeds ?? this.createInitialSeeds(config.initialCount);
     if (seeds.length > this.capacity) throw new Error('初始球数不能超过人口上限。');
     for (const seed of seeds) this.addBall(seed.position, seed.velocity ?? this.randomVelocity());
+    this.endForPopulationState();
   }
 
   step(deltaSeconds: number): void {
     if (this.disposed) throw new Error('Cannot step a disposed simulation.');
+    if (this.ended) return;
     this.elapsedSeconds += deltaSeconds;
-    const oldContacts = this.touchingPairs;
-    this.touchingPairs = this.previousTouchingPairs;
-    this.previousTouchingPairs = oldContacts;
-    this.touchingPairs.clear();
     this.pendingPairs.length = 0;
+    this.queuedBirthPairs.clear();
+    const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
+    const substepSeconds = deltaSeconds / substepCount;
+    for (let substep = 0; substep < substepCount; substep += 1) {
+      this.beginContactSubstep();
+      this.integrate(substepSeconds);
 
-    for (let index = 0; index < this.count; index += 1) {
-      this.vy[index] += this.config.gravity * deltaSeconds;
-      this.x[index] += this.vx[index] * deltaSeconds;
-      this.y[index] += this.vy[index] * deltaSeconds;
+      for (let iteration = 0; iteration < this.tuning.positionIterations; iteration += 1) {
+        this.rebuildGrid();
+        this.solveBallPositions();
+        this.solveWallPositions();
+      }
+
+      for (let iteration = 0; iteration < this.tuning.velocityIterations; iteration += 1) {
+        this.rebuildGrid();
+        this.solveBallVelocities();
+        this.solveWallVelocities();
+      }
+
+      this.removeExitedBalls();
+      this.endForPopulationState();
+      if (this.ended) break;
     }
 
-    for (let iteration = 0; iteration < this.tuning.positionIterations; iteration += 1) {
-      this.rebuildGrid();
-      this.solveBallPositions();
-      this.solveWallPositions();
-    }
-
-    for (let iteration = 0; iteration < this.tuning.velocityIterations; iteration += 1) {
-      this.rebuildGrid();
-      this.solveBallVelocities();
-      this.solveWallVelocities();
-    }
-
-    this.removeExitedBalls();
     if (this.count > 500 && this.elapsedSeconds - this.lastCooldownPrune >= 5) {
       this.pairCooldown.prune(this.elapsedSeconds, Math.max(this.config.pairCooldown * 4, 5));
       this.lastCooldownPrune = this.elapsedSeconds;
     }
-    if (this.pendingPairs.length > 0) {
+    if (!this.ended && this.pendingPairs.length > 0) {
       this.rebuildGrid();
       this.resolveBirths();
+      this.endForPopulationState();
     }
   }
 
@@ -157,16 +183,56 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         elapsedSeconds: this.elapsedSeconds,
         currentCount: this.count,
         births: this.births,
-        birthAttempts: this.births + this.missedBirths,
+        birthAttempts: this.birthAttempts,
         exits: this.exits,
         missedBirths: this.missedBirths,
-        missedSpaceBirths: this.missedBirths,
+        missedSpaceBirths: this.missedSpaceBirths,
         missedEnergyBirths: 0,
         maxSpeed,
       },
-      ended: false,
-      endReason: null,
+      ended: this.ended,
+      endReason: this.endReason,
     };
+  }
+
+  getRenderSnapshot(): SimulationRenderSnapshot {
+    const valuesPerBall = 5;
+    const ballData = new Float32Array(this.count * valuesPerBall);
+    let maxSpeed = 0;
+    for (let index = 0; index < this.count; index += 1) {
+      const offset = index * valuesPerBall;
+      const id = this.ids[index];
+      ballData[offset] = id;
+      ballData[offset + 1] = this.x[index];
+      ballData[offset + 2] = this.y[index];
+      ballData[offset + 3] = this.radius;
+      ballData[offset + 4] = BALL_COLORS[(id - 1) % BALL_COLORS.length];
+      maxSpeed = Math.max(maxSpeed, Math.hypot(this.vx[index], this.vy[index]));
+    }
+    return {
+      ballData,
+      stats: {
+        elapsedSeconds: this.elapsedSeconds,
+        currentCount: this.count,
+        births: this.births,
+        birthAttempts: this.birthAttempts,
+        exits: this.exits,
+        missedBirths: this.missedBirths,
+        missedSpaceBirths: this.missedSpaceBirths,
+        missedEnergyBirths: 0,
+        maxSpeed,
+      },
+      ended: this.ended,
+      endReason: this.endReason,
+    };
+  }
+
+  get isEnded(): boolean {
+    return this.ended;
+  }
+
+  finishManually(): void {
+    if (!this.ended) this.finish('manual');
   }
 
   dispose(): void {
@@ -175,6 +241,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.touchingPairs.clear();
     this.previousTouchingPairs.clear();
     this.pendingPairs.length = 0;
+    this.queuedBirthPairs.clear();
     this.count = 0;
     this.disposed = true;
   }
@@ -183,16 +250,25 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     const seeds: SpawnSeed[] = [];
     if (this.config.gapCount > 0) {
       const gap = this.gapArcs[0];
-      const center = pointAtBoundaryDistance(this.config.shape, gap.center);
-      const laneCount = Math.max(1, Math.floor(gap.width / this.diameter));
-      const lanes = Array.from({ length: laneCount }, (_, index) => (index - (laneCount - 1) / 2) * this.diameter);
+      const center = pointAtBoundaryDistance(this.config.shape, gap.center, this.halfExtent);
+      const outwardX = center.x / this.halfExtent;
+      const outwardY = center.y / this.halfExtent;
+      const tangentX = -outwardY;
+      const tangentY = outwardX;
+      const maximumLaneOffset = Math.max(0, gap.width / 2 - this.radius - POSITION_SLOP);
+      const laneCount = Math.max(1, Math.floor((maximumLaneOffset * 2) / this.diameter) + 1);
       const rowSpacing = this.diameter + this.radius * 0.08;
       for (let index = 0; index < count; index += 1) {
         const row = Math.floor(index / laneCount);
-        const lane = lanes[index % laneCount];
+        const lane = (index % laneCount - (laneCount - 1) / 2) * this.diameter;
+        const radialRoom = Math.sqrt(Math.max(0, (this.halfExtent - this.radius) ** 2 - lane ** 2));
+        const inwardDistance = this.halfExtent - radialRoom + POSITION_SLOP + row * rowSpacing;
         seeds.push({
-          position: { x: center.x + lane, y: center.y - this.radius - row * rowSpacing },
-          velocity: { x: 0, y: 0 },
+          position: {
+            x: center.x - outwardX * inwardDistance + tangentX * lane,
+            y: center.y - outwardY * inwardDistance + tangentY * lane,
+          },
+          velocity: this.randomVelocity(),
         });
       }
       return seeds;
@@ -202,7 +278,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     for (let index = 0; index < count; index += 1) {
       let position: Point | null = null;
       for (let attempt = 0; attempt < 3000; attempt += 1) {
-        const candidate = this.randomInteriorPoint();
+        const candidate = this.randomHighPoint();
         if (!occupancy.overlaps(candidate, this.radius)) {
           position = candidate;
           break;
@@ -215,15 +291,23 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     return seeds;
   }
 
-  private randomInteriorPoint(): Point {
-    const edgeLimit = ARENA_HALF_EXTENT - this.radius;
-    const angle = this.random() * Math.PI * 2;
-    const distance = Math.sqrt(this.random()) * edgeLimit;
-    return { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance };
+  private randomHighPoint(): Point {
+    const edgeLimit = this.halfExtent - this.radius;
+    for (let attempt = 0; attempt < 128; attempt += 1) {
+      const candidate = {
+        x: (this.random() * 2 - 1) * edgeLimit,
+        y: -edgeLimit * (0.25 + this.random() * 0.65),
+      };
+      if (isInsideArena(this.config.shape, candidate, this.radius, this.halfExtent)) return candidate;
+    }
+    throw new Error('无法在场地上半部找到可用的初始位置。');
   }
 
   private randomVelocity(): Point {
-    return { x: (this.random() - 0.5) * 1.2, y: (this.random() - 0.5) * 0.7 };
+    const direction = this.config.initialDirection + (this.random() * 2 - 1) * this.config.directionSpread;
+    const angle = (direction * Math.PI) / 180;
+    const speed = Math.max(0, this.config.initialSpeed * (1 + (this.random() * 2 - 1) * this.config.speedSpread));
+    return { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
   }
 
   private addBall(position: Point, velocity: Point): number {
@@ -236,7 +320,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.y[index] = position.y;
     this.vx[index] = velocity.x;
     this.vy[index] = velocity.y;
-    this.hasEntered[index] = isInsideArena(this.config.shape, position, this.radius) ? 1 : 0;
+    this.hasEntered[index] = isInsideArena(this.config.shape, position, this.radius, this.halfExtent) ? 1 : 0;
     return id;
   }
 
@@ -253,6 +337,31 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
   private toGridCell(coordinate: number): number {
     return Math.max(0, Math.min(this.gridColumns - 1, Math.floor((coordinate - this.gridMin) / this.cellSize)));
+  }
+
+  private beginContactSubstep(): void {
+    const priorPairs = this.previousTouchingPairs;
+    this.previousTouchingPairs = this.touchingPairs;
+    this.touchingPairs = priorPairs;
+    this.touchingPairs.clear();
+  }
+
+  private integrate(deltaSeconds: number): void {
+    for (let index = 0; index < this.count; index += 1) {
+      this.vy[index] += this.config.gravity * deltaSeconds;
+      this.x[index] += this.vx[index] * deltaSeconds;
+      this.y[index] += this.vy[index] * deltaSeconds;
+    }
+  }
+
+  private getAdaptiveSubstepCount(deltaSeconds: number): number {
+    let maximumSpeed = 0;
+    for (let index = 0; index < this.count; index += 1) {
+      maximumSpeed = Math.max(maximumSpeed, Math.hypot(this.vx[index], this.vy[index]));
+    }
+    const estimatedTravel = maximumSpeed * deltaSeconds + Math.abs(this.config.gravity) * deltaSeconds ** 2 / 2;
+    const allowedTravel = this.radius * (this.tuning.maxTravelPerSubstep ?? MAX_BATCH_TRAVEL_PER_SUBSTEP);
+    return Math.max(1, Math.min(MAX_BATCH_SUBSTEPS, Math.ceil(estimatedTravel / Math.max(allowedTravel, 1e-9))));
   }
 
   private solveBallPositions(): void {
@@ -344,8 +453,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     if (distance <= 0) return;
     const normalX = -this.x[index] / distance;
     const normalY = -this.y[index] / distance;
-    if (distance > ARENA_HALF_EXTENT - this.radius && !this.insideGapPortal(index)) {
-      const correction = distance - (ARENA_HALF_EXTENT - this.radius) + POSITION_SLOP;
+    if (distance > this.halfExtent - this.radius && !this.insideGapPortal(index)) {
+      const correction = distance - (this.halfExtent - this.radius) + POSITION_SLOP;
       this.x[index] += normalX * correction;
       this.y[index] += normalY * correction;
     }
@@ -355,7 +464,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private insideGapPortal(index: number): boolean {
     if (this.gapArcs.length === 0) return false;
     const angle = Math.atan2(this.y[index], this.x[index]);
-    const arcDistance = ((angle + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2)) * ARENA_HALF_EXTENT;
+    const arcDistance = ((angle + Math.PI / 2 + Math.PI * 2) % (Math.PI * 2)) * this.halfExtent;
     return this.gapArcs.some(({ center, width }) => Math.abs(wrappedDistance(arcDistance, center, this.perimeter)) < width / 2 - this.radius);
   }
 
@@ -412,7 +521,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
   private solveCircleWallVelocity(index: number): void {
     const distance = Math.hypot(this.x[index], this.y[index]);
-    if (distance <= 0 || (distance < ARENA_HALF_EXTENT - this.radius - POSITION_SLOP)) return;
+    if (distance <= 0 || (distance < this.halfExtent - this.radius - POSITION_SLOP)) return;
     if (this.insideGapPortal(index)) {
       for (const point of this.boundaryPoints) this.resolvePointVelocity(index, point.x, point.y);
       return;
@@ -452,7 +561,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private reflectFromWall(index: number, normalX: number, normalY: number): void {
     const intoWall = this.vx[index] * normalX + this.vy[index] * normalY;
     if (intoWall >= 0) return;
-    const impulse = (1 + this.config.restitution) * intoWall;
+    const restitution = Math.max(0, Math.min(1, this.config.restitution));
+    const impulse = (1 + restitution) * intoWall;
     this.vx[index] -= impulse * normalX;
     this.vy[index] -= impulse * normalY;
   }
@@ -473,13 +583,16 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.touchingPairs.add(key);
     if (this.previousTouchingPairs.has(key)) return;
     if (!this.pairCooldown.shouldAccept(firstId, secondId, this.elapsedSeconds, this.config.pairCooldown)) return;
+    if (this.queuedBirthPairs.has(key)) return;
+    this.queuedBirthPairs.add(key);
+    this.birthAttempts += 1;
     if (this.random() < this.config.birthProbability) this.pendingPairs.push([firstId, secondId]);
   }
 
   private removeExitedBalls(): void {
     for (let index = this.count - 1; index >= 0; index -= 1) {
       const point = { x: this.x[index], y: this.y[index] };
-      if (isInsideArena(this.config.shape, point, this.radius)) this.hasEntered[index] = 1;
+      if (isInsideArena(this.config.shape, point, this.radius, this.halfExtent)) this.hasEntered[index] = 1;
       if (!this.hasEntered[index] || !this.isOutsideArena(point)) continue;
       const last = --this.count;
       this.indexById.delete(this.ids[index]);
@@ -497,17 +610,23 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   }
 
   private isOutsideArena(point: Point): boolean {
-    const threshold = ARENA_HALF_EXTENT + this.radius * 1.25;
+    const threshold = this.halfExtent + this.radius * 1.25;
     return Math.hypot(point.x, point.y) > threshold;
   }
 
   private resolveBirths(): void {
-    const maxPopulation = Math.min(this.capacity, this.config.maxPopulation, MAX_POPULATION);
     for (const [firstId, secondId] of this.pendingPairs) {
       const first = this.findIndexById(firstId);
       const second = this.findIndexById(secondId);
-      if (first < 0 || second < 0) continue;
-      if (this.count >= maxPopulation) {
+      if (first < 0 || second < 0) {
+        this.missedBirths += 1;
+        continue;
+      }
+      if (this.count >= this.populationLimit) {
+        if (this.stopOnTerminalState) {
+          this.finish('population-target');
+          break;
+        }
         this.missedBirths += 1;
         continue;
       }
@@ -515,6 +634,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
       const position = this.findBirthPosition(midpoint);
       if (!position) {
         this.missedBirths += 1;
+        this.missedSpaceBirths += 1;
         continue;
       }
       const momentum = shareBirthMomentum(
@@ -528,19 +648,38 @@ export class CircleBatchSimulation implements PhysicsAdapter {
       this.addBall(position, momentum.child);
       this.births += 1;
       this.insertGrid(this.count - 1);
+      if (this.stopOnTerminalState && this.count >= this.populationLimit) {
+        this.finish('population-target');
+        break;
+      }
     }
   }
 
   private findBirthPosition(midpoint: Point): Point | null {
-    const startAngle = this.random() * Math.PI * 2;
-    for (let attempt = 0; attempt < 24; attempt += 1) {
-      const angle = startAngle + (Math.PI * 2 * attempt) / 24;
-      const point = {
-        x: midpoint.x + Math.cos(angle) * this.radius * 2.15,
-        y: midpoint.y + Math.sin(angle) * this.radius * 2.15,
-      };
-      if (!isInsideArena(this.config.shape, point, this.radius)) continue;
-      if (!this.gridOverlaps(point)) return point;
+    const rotation = this.random() * Math.PI * 2;
+    const rotationX = Math.cos(rotation);
+    const rotationY = Math.sin(rotation);
+    for (const ringRadius of BIRTH_SEARCH_RING_RADII) {
+      for (const direction of BIRTH_SEARCH_DIRECTIONS) {
+        const directionX = direction.x * rotationX - direction.y * rotationY;
+        const directionY = direction.x * rotationY + direction.y * rotationX;
+        const point = {
+          x: midpoint.x + directionX * this.radius * ringRadius,
+          y: midpoint.y + directionY * this.radius * ringRadius,
+        };
+        if (!isInsideArena(this.config.shape, point, this.radius, this.halfExtent)) continue;
+        if (this.gridOverlaps(point)) continue;
+        let overlapsGapEndpoint = false;
+        for (const boundary of this.boundaryPoints) {
+          const dx = point.x - boundary.x;
+          const dy = point.y - boundary.y;
+          if (dx * dx + dy * dy < this.radius * this.radius) {
+            overlapsGapEndpoint = true;
+            break;
+          }
+        }
+        if (!overlapsGapEndpoint) return point;
+      }
     }
     return null;
   }
@@ -576,5 +715,18 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
   private findIndexById(id: number): number {
     return this.indexById.get(id) ?? -1;
+  }
+
+  private endForPopulationState(): void {
+    if (!this.stopOnTerminalState) return;
+    if (this.count === 0) this.finish('no-balls');
+    else if (this.count === 1) this.finish('single-ball');
+    else if (this.count >= this.populationLimit) this.finish('population-target');
+  }
+
+  private finish(reason: EndReason): void {
+    this.ended = true;
+    this.endReason = reason;
+    this.pendingPairs.length = 0;
   }
 }

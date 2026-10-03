@@ -14,12 +14,12 @@
     "test:ci": "npm run typecheck && npm run test:unit && npm run test:e2e"
   },
   "dependencies": {
-    "@dimforge/rapier2d-compat": "^0.21.0",
     "pixi.js": "^8.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },
   "devDependencies": {
+    "@dimforge/rapier2d-compat": "^0.21.0",
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
     "@types/react": "^19.2.14",

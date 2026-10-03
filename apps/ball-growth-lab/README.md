@@ -30,7 +30,7 @@ npm run dev
 - 场地为可调直径的圆形，0–8 个缺口沿圆周均匀分布，并让一个缺口对齐正上方。缺口宽度按球径倍数设置。
 - 无缺口时，同尺寸圆球按种子在上方随机生成且不重叠；有缺口时从顶部缺口内侧附近生成。球速大小、随机速度扩散、发射方向和角度扩散都可调。
 - 重力默认为 0，可调为向下重力；零重力自由飞行是直线，有重力时轨迹由重力形成抛物线。恢复系数控制球球和球墙碰撞，100% 不施加摩擦或阻尼，也不做全局速度缩放。
-- 两球首次接触时按繁殖概率和球对冷却规则尝试生成新球。出生点须有安全空位；球会重新分配速度以尽量保持总动量和机械能。没有空位或剩余能量不足时记录未出生次数。
+- 两球首次接触时按繁殖概率和球对冷却规则尝试生成新球。出生点须有安全空位；出生前后尽量保持总线动量。增加球体会增加系统总质量，因此出生过程不保证动能守恒。
 - 球穿过真实缺口离场后会移除并计数。人口目标是结束条件；达到目标后冻结模拟，不再继续繁殖。
 - 设置页可导出参数；运行页可导出当前复现信息，结束页可导出结果记录。导出 JSON 包含参数、种子、结束原因、统计、浏览器和视口信息。
 
@@ -39,13 +39,13 @@ npm run dev
 | 路径 | 职责 |
 | --- | --- |
 | `src/App.tsx`、`src/components/` | 实验流程、设置、统计 HUD 与数量图表 |
-| `src/physics/` | Rapier 刚体世界、繁殖规则、空间哈希与 Web Worker |
+| `src/physics/` | CircleBatch 等半径球求解器、繁殖规则与 Web Worker |
 | `src/rendering/` | PixiJS 场地、球体粒子和 FPS 统计 |
 | `src/arena.ts`、`src/random.ts` | 场地几何与可复现随机数 |
 | `tests/`、`e2e/` | 几何、物理规则和浏览器交互验证 |
 | `scripts/benchmark.ts` | Planck、Rapier 与圆球批量算法基准对比 |
 | `scripts/diagnose-growth.ts` | 重力、球群分布和密集场景续跑诊断 |
-| `scripts/experimental/` | 仅用于对比的 Planck 与 typed-array 圆球批量实现 |
+| `scripts/experimental/` | 仅用于对比的 Planck 求解器 |
 
 React 不逐帧维护球的位置。物理在 Worker 以固定 1/240 秒步长运行，Worker 最多每秒发送 60 次画面快照；PixiJS 使用共享纹理与 ParticleContainer 绘制球群。
 
@@ -59,6 +59,6 @@ npm run benchmark:gaps
 npm run diagnose:growth
 ```
 
-截至 2026-10-03 的本地物理基准和生长诊断记录在 [`docs/benchmark-v2-2026-10-03.md`](docs/benchmark-v2-2026-10-03.md)。报告发现 Rapier 在高密度多球接触中仍有显著数值能量损失；这不是用户设置的阻尼。该缺陷会让大球群逐渐变慢，是进一步确认生产求解器前的重要限制。Codespaces 的 Node/WASM 基准不包含浏览器绘制和 Worker 通信，手机视口仿真也不能代替真实手机性能测试。
+截至 2026-10-03 的 Rapier、Planck 和 CircleBatch 本地物理基准记录在 [`docs/benchmark-v2-2026-10-03.md`](docs/benchmark-v2-2026-10-03.md)。测试发现 Rapier 在高密度接触中存在显著数值能量损失，因此生产 Worker 已改用经过碰撞、离场、繁殖和结束条件测试的 CircleBatch。Node 基准不包含浏览器绘制和 Worker 通信；手机视口仿真也不能代替真实手机性能测试。
 
 相关全局 Codex skills 的来源和重装说明见 [`docs/reusable-skills.md`](docs/reusable-skills.md)。

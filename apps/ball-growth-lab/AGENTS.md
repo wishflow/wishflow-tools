@@ -3,8 +3,9 @@
 ## 项目边界
 
 - 纯前端 Vite 应用，登记于根目录 `apps/catalog.json`，发布到 `/ball-growth-lab/`。
-- React 负责设置和统计；PixiJS 负责绘制；Rapier 物理世界只在 Web Worker 内运行。Planck.js 仅作基准对照。
-- `src/physics/` 拥有物理规则和 Rapier 适配器，`src/rendering/` 只处理画面，React 不逐帧管理球的位置。
+- React 负责设置和统计；PixiJS 负责绘制；`CircleBatchSimulation` 在 Web Worker 内运行。Rapier 和 Planck 仅作基准对照。
+- `src/physics/` 拥有等半径圆球的批量碰撞、繁殖、离场和结束规则；`src/rendering/` 只处理画面，React 不逐帧管理球的位置。
+- 生产场景限定为圆形边界和等半径球。求解器使用 `Float64Array`、均匀网格和按位移选择的固定步长内细分；更换算法前先更新基准并验证高密度、快速碰撞和长时间稳定性。
 - 所有随机初始条件和繁殖判定使用配置种子，重置应可复现。
 - 不增加后端、Cloudflare Worker、账号或持久化服务。
 
