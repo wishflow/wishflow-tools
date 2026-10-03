@@ -16,6 +16,8 @@
 - `apps/catalog.json` 是导航卡片和静态应用发布路径的单一数据源；不要在导航 HTML 或构建脚本中重复维护应用列表。
 - 新增 Worker、容器、数据库或其他 Cloudflare 资源前，先评估免费额度、成本、密钥边界和维护责任；复用现有 Worker 也必须符合安全边界。
 - Worker 只在对应源码或部署配置变化时发布。静态站点变更不应触发 Worker 发布。
+- 正常发布使用 `git push origin master` 触发 `.github/workflows/pages.yml`；工作流会按变更范围和测试结果决定是否部署静态站或 Worker。该流程不要求安装或登录 GitHub CLI（`gh`）。
+- `gh` 仅作为查看 Actions 运行状态、手动触发工作流或管理 GitHub 资源的可选工具。若 `gh` 未安装或未登录，不得因此阻塞已有 Git 凭证可完成的提交和 push；需要手动操作时可使用 GitHub 网页。
 
 ## 3. Roadmap 演进规则
 
