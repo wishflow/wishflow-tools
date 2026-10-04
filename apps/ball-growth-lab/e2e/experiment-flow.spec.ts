@@ -31,12 +31,18 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await expect(page.getByRole('heading', { name: '每次碰撞，都是下一步。' })).toBeVisible();
   await page.getByRole('tab', { name: /发射/ }).click();
   await expect(page.getByRole('tabpanel')).toContainText('初速度大小');
+  await expect(page.getByRole('slider', { name: '初始球数' })).toHaveCount(0);
   await page.getByRole('tab', { name: /规则/ }).click();
   await expect(page.getByRole('tabpanel')).toContainText('恢复系数');
+  await expect(page.getByRole('tabpanel')).toContainText('100%');
+  await expect(page.getByRole('tabpanel')).toContainText('0.70 秒');
+  await expect(page.getByRole('slider', { name: '人口目标' })).toHaveCount(0);
   await page.getByRole('tab', { name: /场地/ }).click();
 
   await page.getByRole('button', { name: '开始实验' }).click();
   await waitForRunState(page, '运行中');
+  await expect(page.getByRole('img', { name: /实际数量曲线与回归模型 P10 至 P90/ })).toBeVisible();
+  await expect(page.getByText('模型 P10–P90')).toBeVisible();
   await expect(page.getByRole('button', { name: '暂停' })).toBeVisible();
   await expect(page.getByRole('button', { name: '结束实验' })).toBeVisible();
   await expect(page.getByRole('tab', { name: /发射/ })).toHaveCount(0);
@@ -93,7 +99,7 @@ test('修改设置会保留上一轮结果，当前参数可以导出为 JSON', 
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/^ball-growth-.*\.json$/);
   const exported = JSON.parse(await readFile((await download.path())!, 'utf8')) as { config: { seed: string }; formatVersion: number };
-  expect(exported.formatVersion).toBe(4);
+  expect(exported.formatVersion).toBe(5);
   expect(exported.config.seed).toBe('BALL-0426');
 });
 

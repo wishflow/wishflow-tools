@@ -1,4 +1,5 @@
 import { DEFAULT_CIRCLE_BATCH_TUNING, MAX_BATCH_SUBSTEPS, MAX_BATCH_TRAVEL_PER_SUBSTEP } from './physics/CircleBatchSimulation';
+import type { GrowthModelArtifact } from './growthModel';
 import { FIXED_STEP_SECONDS, type EndReason, type RunState, type SimulationConfig, type SimulationStats } from './types';
 
 export interface ReplayEnvironment {
@@ -18,12 +19,13 @@ export interface ReplayExportInput {
   stats: SimulationStats;
   rendererFps: number;
   environment: ReplayEnvironment;
+  growthModel: GrowthModelArtifact;
 }
 
 export function createReplayExport(input: ReplayExportInput) {
   return {
     format: 'ball-growth-lab.replay',
-    formatVersion: 4,
+    formatVersion: 5,
     physics: {
       engine: 'CircleBatch2D',
       engineVersion: '2',
@@ -41,6 +43,22 @@ export function createReplayExport(input: ReplayExportInput) {
       },
     },
     config: input.config,
+    growthModel: {
+      format: input.growthModel.format,
+      version: input.growthModel.version,
+      trainedAt: input.growthModel.trainedAt,
+      calibrated: input.growthModel.calibrated,
+      trainingConfigCount: input.growthModel.trainingConfigCount,
+      validationConfigCount: input.growthModel.validationConfigCount,
+      trainingRuns: input.growthModel.trainingRuns,
+      validation: input.growthModel.validation,
+      horizonSeconds: input.growthModel.horizonSeconds,
+      ranges: input.growthModel.ranges,
+      fixedParameters: input.growthModel.fixedParameters,
+      regressions: input.growthModel.regressions,
+      rateNoiseSigma: input.growthModel.rateNoiseSigma,
+      contactStudy: input.growthModel.contactStudy,
+    },
     environment: input.environment,
     observation: {
       runState: input.runState,

@@ -152,10 +152,13 @@ export class RapierSimulation implements PhysicsAdapter {
   getSnapshot(): SimulationSnapshot {
     const balls: BallSnapshot[] = [];
     let maxSpeed = 0;
+    let speedSum = 0;
     for (const record of this.balls.values()) {
       const position = record.body.translation();
       const velocity = record.body.linvel();
-      maxSpeed = Math.max(maxSpeed, Math.hypot(velocity.x, velocity.y));
+      const speed = Math.hypot(velocity.x, velocity.y);
+      maxSpeed = Math.max(maxSpeed, speed);
+      speedSum += speed;
       balls.push({
         id: record.id,
         x: position.x,
@@ -179,6 +182,13 @@ export class RapierSimulation implements PhysicsAdapter {
         birthKineticEnergyAdded: 0,
         birthMomentumAdded: { x: 0, y: 0 },
         maxSpeed,
+        speedSum,
+        collisionEvents: 0,
+        collisionClosingSpeedSum: 0,
+        cooldownAccepted: 0,
+        cooldownRejected: 0,
+        birthProbabilityPassed: 0,
+        birthSpaceAttempts: 0,
       },
       ended: this.ended,
       endReason: this.endReason,

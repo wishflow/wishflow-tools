@@ -21,8 +21,8 @@ interface SetupPanelProps {
 
 const TABS: Array<{ id: SetupTab; number: string; label: string; note: string }> = [
   { id: 'arena', number: '01', label: '场地', note: '边界与球体尺寸' },
-  { id: 'launch', number: '02', label: '发射', note: '数量、初速与方向' },
-  { id: 'rules', number: '03', label: '规则', note: '重力、碰撞与终止' },
+  { id: 'launch', number: '02', label: '发射', note: '初速与方向' },
+  { id: 'rules', number: '03', label: '规则', note: '重力与固定繁殖规则' },
 ];
 
 function endReasonLabel(reason: EndReason | null): string {
@@ -74,6 +74,16 @@ function RangeControl({
   );
 }
 
+function FixedControl({ label, value, help }: { label: string; value: string; help?: string }) {
+  return (
+    <div className="range-control fixed-control" aria-label={`${label}：${value}`}>
+      <span className="control-heading"><span>{label}</span><output>{value}</output></span>
+      <span className="fixed-control-mark" aria-hidden="true">固定</span>
+      {help && <span className="control-help">{help}</span>}
+    </div>
+  );
+}
+
 function Icon({ name }: { name: 'shuffle' | 'copy' | 'download' }) {
   const paths = {
     shuffle: <><path d="m16 3 4 4-4 4" /><path d="M4 7h2c5 0 7 10 12 10h2" /><path d="m16 13 4 4-4 4" /><path d="M4 17h2c1.7 0 3-1.2 4.1-2.8M14 9.8C15.1 8.2 16.4 7 18 7h2" /></>,
@@ -100,7 +110,6 @@ export function SetupPanel({
 }: SetupPanelProps) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const change = <K extends keyof SimulationConfig>(key: K, value: SimulationConfig[K]) => onChange({ ...config, [key]: value });
-  const initialMax = Math.max(2, Math.min(100, config.maxPopulation - 1));
   const directionNames = ['右', '右下', '下', '左下', '左', '左上', '上', '右上'];
   const directionName = directionNames[Math.round((config.initialDirection % 360) / 45) % directionNames.length];
   const activeIndex = TABS.findIndex((tab) => tab.id === activeTab);
@@ -203,7 +212,7 @@ export function SetupPanel({
             )}
             {activeTab === 'launch' && (
               <div className="control-grid">
-                <RangeControl label="初始球数" value={config.initialCount} min={2} max={initialMax} step={1} output={`${config.initialCount} 颗`} onChange={(value) => change('initialCount', value)} />
+                <FixedControl label="初始球数" value="2 颗" help="用于不同参数组合间的公平比较" />
                 <RangeControl label="初速度大小" value={config.initialSpeed} min={0} max={24} step={0.5} output={`${config.initialSpeed.toFixed(1)} m/s`} onChange={(value) => change('initialSpeed', value)} />
                 <RangeControl label="速度随机扩散" value={config.speedSpread} min={0} max={1} step={0.05} output={`±${Math.round(config.speedSpread * 100)}%`} help="每颗球的速度会在范围内随机取值" onChange={(value) => change('speedSpread', value)} />
                 <RangeControl label="初始方向" value={config.initialDirection} min={0} max={360} step={15} output={`${directionName} · ${config.initialDirection}°`} help="0° 向右 · 90° 向下 · 180° 向左 · 270° 向上" onChange={(value) => change('initialDirection', value)} />
@@ -213,15 +222,15 @@ export function SetupPanel({
             {activeTab === 'rules' && (
               <div className="control-grid">
                 <RangeControl label="重力" value={config.gravity} min={0} max={20} step={0.2} output={`${config.gravity.toFixed(1)} m/s²`} help="0 时自由飞行是直线；有重力时形成抛物线" onChange={(value) => change('gravity', value)} />
-                <RangeControl label="恢复系数" value={config.restitution} min={0} max={1} step={0.05} output={`${Math.round(config.restitution * 100)}%`} help="100% 表示理想弹性碰撞，不额外施加阻尼" onChange={(value) => change('restitution', value)} />
-                <RangeControl label="碰撞繁殖概率" value={config.birthProbability} min={0} max={1} step={0.05} output={`${Math.round(config.birthProbability * 100)}%`} onChange={(value) => change('birthProbability', value)} />
-                <RangeControl label="同一球对冷却" value={config.pairCooldown} min={0.25} max={3} step={0.25} output={`${config.pairCooldown.toFixed(2)} 秒`} help="冷却结束后，这一对球才可再次尝试繁殖" onChange={(value) => change('pairCooldown', value)} />
-                <RangeControl label="人口目标" value={config.maxPopulation} min={3} max={1000} step={1} output={`${config.maxPopulation} 颗`} help="达到目标即结束；只剩一球或没有球也会结束" onChange={(value) => onChange({ ...config, maxPopulation: value, initialCount: Math.min(config.initialCount, value - 1) })} />
+                <FixedControl label="恢复系数" value="100%" help="理想弹性碰撞；不施加阻尼" />
+                <FixedControl label="碰撞繁殖概率" value="35%" />
+                <FixedControl label="同一球对冷却" value="0.70 秒" />
+                <FixedControl label="人口目标" value="1000 颗" help="达到目标、只剩一球或没有球时结束" />
               </div>
             )}
           </div>
 
-          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>球会从场地上方出发。实验开始后参数锁定，结束后可返回修改。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
+          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>每轮从 2 球开始；繁殖规则、弹性和 1000 球目标固定，便于比较可调参数。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
         </section>
       </section>
 

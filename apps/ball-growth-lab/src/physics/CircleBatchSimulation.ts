@@ -8,6 +8,7 @@ import {
   type SimulationConfig,
   type SimulationRenderSnapshot,
   type SimulationSnapshot,
+  type SimulationStats,
   type SpawnSeed,
 } from '../types';
 import { PairCooldown } from './PairCooldown';
@@ -83,6 +84,12 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private missedSpaceBirths = 0;
   private birthKineticEnergyAdded = 0;
   private readonly birthMomentumAdded: Point = { x: 0, y: 0 };
+  private collisionEvents = 0;
+  private collisionClosingSpeedSum = 0;
+  private cooldownAccepted = 0;
+  private cooldownRejected = 0;
+  private birthProbabilityPassed = 0;
+  private birthSpaceAttempts = 0;
   private ended = false;
   private endReason: EndReason | null = null;
   private disposed = false;
@@ -172,9 +179,12 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   getSnapshot(): SimulationSnapshot {
     const balls: BallSnapshot[] = [];
     let maxSpeed = 0;
+    let speedSum = 0;
     for (let index = 0; index < this.count; index += 1) {
       const id = this.ids[index];
-      maxSpeed = Math.max(maxSpeed, Math.hypot(this.vx[index], this.vy[index]));
+      const speed = Math.hypot(this.vx[index], this.vy[index]);
+      maxSpeed = Math.max(maxSpeed, speed);
+      speedSum += speed;
       balls.push({
         id,
         x: this.x[index],
@@ -198,9 +208,47 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         birthKineticEnergyAdded: this.birthKineticEnergyAdded,
         birthMomentumAdded: { ...this.birthMomentumAdded },
         maxSpeed,
+        speedSum,
+        collisionEvents: this.collisionEvents,
+        collisionClosingSpeedSum: this.collisionClosingSpeedSum,
+        cooldownAccepted: this.cooldownAccepted,
+        cooldownRejected: this.cooldownRejected,
+        birthProbabilityPassed: this.birthProbabilityPassed,
+        birthSpaceAttempts: this.birthSpaceAttempts,
       },
       ended: this.ended,
       endReason: this.endReason,
+    };
+  }
+
+  /** Returns aggregate telemetry without allocating one object per ball. */
+  getStatsSnapshot(): SimulationStats {
+    let maxSpeed = 0;
+    let speedSum = 0;
+    for (let index = 0; index < this.count; index += 1) {
+      const speed = Math.hypot(this.vx[index], this.vy[index]);
+      maxSpeed = Math.max(maxSpeed, speed);
+      speedSum += speed;
+    }
+    return {
+      elapsedSeconds: this.elapsedSeconds,
+      currentCount: this.count,
+      births: this.births,
+      birthAttempts: this.birthAttempts,
+      exits: this.exits,
+      missedBirths: this.missedBirths,
+      missedSpaceBirths: this.missedSpaceBirths,
+      missedEnergyBirths: 0,
+      birthKineticEnergyAdded: this.birthKineticEnergyAdded,
+      birthMomentumAdded: { ...this.birthMomentumAdded },
+      maxSpeed,
+      speedSum,
+      collisionEvents: this.collisionEvents,
+      collisionClosingSpeedSum: this.collisionClosingSpeedSum,
+      cooldownAccepted: this.cooldownAccepted,
+      cooldownRejected: this.cooldownRejected,
+      birthProbabilityPassed: this.birthProbabilityPassed,
+      birthSpaceAttempts: this.birthSpaceAttempts,
     };
   }
 
@@ -208,6 +256,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     const valuesPerBall = 5;
     const ballData = new Float32Array(this.count * valuesPerBall);
     let maxSpeed = 0;
+    let speedSum = 0;
     for (let index = 0; index < this.count; index += 1) {
       const offset = index * valuesPerBall;
       const id = this.ids[index];
@@ -216,7 +265,9 @@ export class CircleBatchSimulation implements PhysicsAdapter {
       ballData[offset + 2] = this.y[index];
       ballData[offset + 3] = this.radius;
       ballData[offset + 4] = BALL_COLORS[(id - 1) % BALL_COLORS.length];
-      maxSpeed = Math.max(maxSpeed, Math.hypot(this.vx[index], this.vy[index]));
+      const speed = Math.hypot(this.vx[index], this.vy[index]);
+      maxSpeed = Math.max(maxSpeed, speed);
+      speedSum += speed;
     }
     return {
       ballData,
@@ -232,6 +283,13 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         birthKineticEnergyAdded: this.birthKineticEnergyAdded,
         birthMomentumAdded: { ...this.birthMomentumAdded },
         maxSpeed,
+        speedSum,
+        collisionEvents: this.collisionEvents,
+        collisionClosingSpeedSum: this.collisionClosingSpeedSum,
+        cooldownAccepted: this.cooldownAccepted,
+        cooldownRejected: this.cooldownRejected,
+        birthProbabilityPassed: this.birthProbabilityPassed,
+        birthSpaceAttempts: this.birthSpaceAttempts,
       },
       ended: this.ended,
       endReason: this.endReason,
@@ -240,6 +298,15 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
   get isEnded(): boolean {
     return this.ended;
+  }
+
+  /** Lightweight counter for scenario runners that need event timing without copying ball snapshots. */
+  get birthCount(): number {
+    return this.births;
+  }
+
+  get populationCount(): number {
+    return this.count;
   }
 
   finishManually(): void {
@@ -426,6 +493,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
                 const normalY = distance > 1e-9 ? dy / distance : 0;
                 const relativeNormalVelocity = (this.vx[second] - this.vx[first]) * normalX + (this.vy[second] - this.vy[first]) * normalY;
                 if (relativeNormalVelocity < 0) {
+                  this.collisionEvents += 1;
+                  this.collisionClosingSpeedSum += -relativeNormalVelocity;
                   const impulse = -(1 + restitution) * relativeNormalVelocity / 2;
                   this.vx[first] -= impulse * normalX;
                   this.vy[first] -= impulse * normalY;
@@ -585,11 +654,16 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     const firstId = this.ids[first];
     const secondId = this.ids[second];
     const key = firstId < secondId ? `${firstId}:${secondId}` : `${secondId}:${firstId}`;
-    if (!this.pairCooldown.shouldAccept(firstId, secondId, this.elapsedSeconds, this.config.pairCooldown)) return;
+    if (!this.pairCooldown.shouldAccept(firstId, secondId, this.elapsedSeconds, this.config.pairCooldown)) {
+      this.cooldownRejected += 1;
+      return;
+    }
+    this.cooldownAccepted += 1;
     if (this.queuedBirthPairs.has(key)) return;
     this.queuedBirthPairs.add(key);
     this.birthAttempts += 1;
     if (this.random() >= this.config.birthProbability) return;
+    this.birthProbabilityPassed += 1;
     this.pendingBirths.push({
       firstId,
       secondId,
@@ -640,6 +714,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         this.missedBirths += 1;
         continue;
       }
+      this.birthSpaceAttempts += 1;
       const position = this.findBirthPosition(impact.midpoint);
       if (!position) {
         this.missedBirths += 1;

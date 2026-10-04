@@ -101,6 +101,16 @@ export class PlanckSimulation implements PhysicsAdapter {
           const velocity = ball.body.getLinearVelocity();
           return Math.max(maximum, Math.hypot(velocity.x, velocity.y));
         }, 0),
+        speedSum: [...this.balls.values()].reduce((sum, ball) => {
+          const velocity = ball.body.getLinearVelocity();
+          return sum + Math.hypot(velocity.x, velocity.y);
+        }, 0),
+        collisionEvents: 0,
+        collisionClosingSpeedSum: 0,
+        cooldownAccepted: 0,
+        cooldownRejected: 0,
+        birthProbabilityPassed: 0,
+        birthSpaceAttempts: 0,
       },
       ended: false,
       endReason: null,

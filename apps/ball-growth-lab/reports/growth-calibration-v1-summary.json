@@ -1,0 +1,654 @@
+{
+  "format": "ball-growth-lab.growth-calibration",
+  "version": 2,
+  "workerCount": 4,
+  "seedCount": 24,
+  "reusedRunCount": 240,
+  "newRunCount": 48,
+  "observationCeilingSeconds": 180,
+  "fixedParameters": {
+    "initialCount": 2,
+    "maxPopulation": 1000,
+    "birthProbability": 0.35,
+    "pairCooldown": 0.7,
+    "restitution": 1
+  },
+  "trainingConfigurations": [
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.024,
+      "gapWidthRatio": 2,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 11,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.016,
+      "gapWidthRatio": 2,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 11,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.032,
+      "gapWidthRatio": 2,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 11,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.024,
+      "gapWidthRatio": 2,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 7,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.024,
+      "gapWidthRatio": 2,
+      "gravity": 2,
+      "restitution": 1,
+      "initialSpeed": 16,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 2,
+      "ballDiameterRatio": 0.024,
+      "gapWidthRatio": 1.5,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 11,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 16,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.024,
+      "gapWidthRatio": 2,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 11,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 2,
+      "ballDiameterRatio": 0.02,
+      "gapWidthRatio": 2,
+      "gravity": 3,
+      "restitution": 1,
+      "initialSpeed": 10,
+      "speedSpread": 0.3,
+      "initialDirection": 300,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 22,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.028,
+      "gapWidthRatio": 2,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 14,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 180,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 20,
+      "gapCount": 2,
+      "ballDiameterRatio": 0.02,
+      "gapWidthRatio": 2,
+      "gravity": 4,
+      "restitution": 1,
+      "initialSpeed": 9,
+      "speedSpread": 0.3,
+      "initialDirection": 300,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    }
+  ],
+  "validationConfigurations": [
+    {
+      "shape": "circle",
+      "arenaSize": 24,
+      "gapCount": 0,
+      "ballDiameterRatio": 0.028,
+      "gapWidthRatio": 2,
+      "gravity": 0,
+      "restitution": 1,
+      "initialSpeed": 14,
+      "speedSpread": 0.3,
+      "initialDirection": 270,
+      "directionSpread": 180,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    },
+    {
+      "shape": "circle",
+      "arenaSize": 18,
+      "gapCount": 2,
+      "ballDiameterRatio": 0.02,
+      "gapWidthRatio": 2,
+      "gravity": 4,
+      "restitution": 1,
+      "initialSpeed": 9,
+      "speedSpread": 0.3,
+      "initialDirection": 300,
+      "directionSpread": 120,
+      "initialCount": 2,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "maxPopulation": 1000,
+      "seed": "BALL-0426"
+    }
+  ],
+  "trainingSummary": {
+    "succeeded": 240,
+    "failed": 0,
+    "byEndReason": {
+      "population-target": 149,
+      "observation-window": 67,
+      "single-ball": 24
+    },
+    "metricQuantiles": {
+      "elapsedSeconds": {
+        "p10": 26.61249999999881,
+        "p50": 93.89166666666344,
+        "p90": 180.00416666658512
+      },
+      "finalPopulation": {
+        "p10": 1,
+        "p50": 1000,
+        "p90": 1000
+      },
+      "births": {
+        "p10": 0,
+        "p50": 998,
+        "p90": 1001
+      },
+      "birthAttempts": {
+        "p10": 3,
+        "p50": 5127,
+        "p90": 441264
+      },
+      "exits": {
+        "p10": 0,
+        "p50": 0,
+        "p90": 3
+      },
+      "missedBirths": {
+        "p10": 0,
+        "p50": 788,
+        "p90": 153587
+      },
+      "missedSpaceBirths": {
+        "p10": 0,
+        "p50": 788,
+        "p90": 153587
+      },
+      "firstBirthSeconds": {
+        "p10": 0.11249999999999999,
+        "p50": 20.745833333332477,
+        "p90": 85.55416666667102
+      },
+      "collisionEvents": {
+        "p10": 3,
+        "p50": 21829,
+        "p90": 20243178
+      },
+      "collisionClosingSpeedSum": {
+        "p10": 34.86008847838224,
+        "p50": 495566.9388940328,
+        "p90": 547779468.5015088
+      },
+      "cooldownAccepted": {
+        "p10": 3,
+        "p50": 5127,
+        "p90": 441264
+      },
+      "cooldownRejected": {
+        "p10": 0,
+        "p50": 16618,
+        "p90": 19911385
+      },
+      "birthProbabilityPassed": {
+        "p10": 0,
+        "p50": 1795,
+        "p90": 154506
+      },
+      "birthSpaceAttempts": {
+        "p10": 0,
+        "p50": 1786,
+        "p90": 154506
+      },
+      "meanSpeed": {
+        "p10": 9.949590902316281,
+        "p50": 17.825733124276027,
+        "p90": 30.96630731352632
+      },
+      "t10Seconds": {
+        "p10": 35.19166666666771,
+        "p50": 66.09583333335539,
+        "p90": 153.39999999994265
+      },
+      "t90Seconds": {
+        "p10": 47.354166666677386,
+        "p50": 88.68333333333484,
+        "p90": 157.17499999993922
+      },
+      "t10To90Seconds": {
+        "p10": 0.5708333333337876,
+        "p50": 29.50416666665687,
+        "p90": 42.99999999997172
+      }
+    }
+  },
+  "validationSummary": {
+    "succeeded": 48,
+    "failed": 0,
+    "byEndReason": {
+      "observation-window": 26,
+      "population-target": 15,
+      "single-ball": 7
+    },
+    "metricQuantiles": {
+      "elapsedSeconds": {
+        "p10": 0.0875,
+        "p50": 180.00416666658512,
+        "p90": 180.00416666658512
+      },
+      "finalPopulation": {
+        "p10": 1,
+        "p50": 934,
+        "p90": 1000
+      },
+      "births": {
+        "p10": 0,
+        "p50": 932,
+        "p90": 1004
+      },
+      "birthAttempts": {
+        "p10": 0,
+        "p50": 4621,
+        "p90": 584669
+      },
+      "exits": {
+        "p10": 0,
+        "p50": 0,
+        "p90": 6
+      },
+      "missedBirths": {
+        "p10": 0,
+        "p50": 588,
+        "p90": 203702
+      },
+      "missedSpaceBirths": {
+        "p10": 0,
+        "p50": 588,
+        "p90": 203702
+      },
+      "firstBirthSeconds": {
+        "p10": 0.004166666666666667,
+        "p50": 26.804166666665466,
+        "p90": 98.23749999999282
+      },
+      "collisionEvents": {
+        "p10": 0,
+        "p50": 20601,
+        "p90": 38384093
+      },
+      "collisionClosingSpeedSum": {
+        "p10": 0,
+        "p50": 649747.7622543648,
+        "p90": 1368888224.7031412
+      },
+      "cooldownAccepted": {
+        "p10": 0,
+        "p50": 4621,
+        "p90": 584669
+      },
+      "cooldownRejected": {
+        "p10": 0,
+        "p50": 16112,
+        "p90": 37849057
+      },
+      "birthProbabilityPassed": {
+        "p10": 0,
+        "p50": 1630,
+        "p90": 204640
+      },
+      "birthSpaceAttempts": {
+        "p10": 0,
+        "p50": 1593,
+        "p90": 204640
+      },
+      "meanSpeed": {
+        "p10": 9.951301325884643,
+        "p50": 22.25666865478853,
+        "p90": 29.97422083417215
+      },
+      "t10Seconds": {
+        "p10": 19.045833333332574,
+        "p50": 58.37916666668616,
+        "p90": 113.78749999997868
+      },
+      "t90Seconds": {
+        "p10": 19.474999999999216,
+        "p50": 59.02083333335334,
+        "p90": 114.3791666666448
+      },
+      "t10To90Seconds": {
+        "p10": 0.46249999999957936,
+        "p50": 0.5916666666661285,
+        "p90": 1.0875000000008654
+      }
+    }
+  },
+  "validation": {
+    "t10To90MedianRelativeError": 0.1742857142855867,
+    "t10To90CompletionRateAbsoluteError": 0.027666666666666617,
+    "intervalCoverage80": 0.9577793127266447,
+    "validationRuns": 48,
+    "minimumSeedsPerConfig": 20,
+    "t10To90Target": 0.1,
+    "intervalCoverageTarget": [
+      0.75,
+      0.85
+    ],
+    "configurationDiagnostics": [
+      {
+        "key": "arenaSize=24|ballDiameterRatio=0.028|gapCount=0|gapWidthRatio=2|gravity=0|initialSpeed=14|speedSpread=0.3|initialDirection=270|directionSpread=180",
+        "observedCompletionRate": 0.7916666666666666,
+        "predictedCompletionRate": 0.764,
+        "observedT10To90MedianSeconds": 34.99999999999459,
+        "predictedT10To90MedianSeconds": 28.900000000000002,
+        "predictedT10To90P10Seconds": 18.7,
+        "predictedT10To90P90Seconds": 42.25,
+        "t10To90MedianRelativeError": 0.1742857142855867,
+        "intervalCoverage80": 0.9821098799630655
+      },
+      {
+        "key": "arenaSize=18|ballDiameterRatio=0.02|gapCount=2|gapWidthRatio=2|gravity=4|initialSpeed=9|speedSpread=0.3|initialDirection=300|directionSpread=120",
+        "observedCompletionRate": 0.625,
+        "predictedCompletionRate": 0.36,
+        "observedT10To90MedianSeconds": 0.5916666666661285,
+        "predictedT10To90MedianSeconds": 1.1500000000000001,
+        "predictedT10To90P10Seconds": 0.8,
+        "predictedT10To90P90Seconds": 1.75,
+        "t10To90MedianRelativeError": 0.9436619718327539,
+        "intervalCoverage80": 0.8855380397532556
+      }
+    ],
+    "accepted": false
+  },
+  "model": {
+    "format": "ball-growth-lab.growth-model",
+    "version": 2,
+    "trainedAt": "2026-10-04T14:01:13.918Z",
+    "calibrated": true,
+    "trainingConfigCount": 10,
+    "validationConfigCount": 2,
+    "trainingRuns": 240,
+    "validation": {
+      "t10To90MedianRelativeError": 0.1742857142855867,
+      "t10To90CompletionRateAbsoluteError": 0.027666666666666617,
+      "intervalCoverage80": 0.9577793127266447,
+      "validationRuns": 48,
+      "minimumSeedsPerConfig": 20,
+      "t10To90Target": 0.1,
+      "intervalCoverageTarget": [
+        0.75,
+        0.85
+      ],
+      "configurationDiagnostics": [
+        {
+          "key": "arenaSize=24|ballDiameterRatio=0.028|gapCount=0|gapWidthRatio=2|gravity=0|initialSpeed=14|speedSpread=0.3|initialDirection=270|directionSpread=180",
+          "observedCompletionRate": 0.7916666666666666,
+          "predictedCompletionRate": 0.764,
+          "observedT10To90MedianSeconds": 34.99999999999459,
+          "predictedT10To90MedianSeconds": 28.900000000000002,
+          "predictedT10To90P10Seconds": 18.7,
+          "predictedT10To90P90Seconds": 42.25,
+          "t10To90MedianRelativeError": 0.1742857142855867,
+          "intervalCoverage80": 0.9821098799630655
+        },
+        {
+          "key": "arenaSize=18|ballDiameterRatio=0.02|gapCount=2|gapWidthRatio=2|gravity=4|initialSpeed=9|speedSpread=0.3|initialDirection=300|directionSpread=120",
+          "observedCompletionRate": 0.625,
+          "predictedCompletionRate": 0.36,
+          "observedT10To90MedianSeconds": 0.5916666666661285,
+          "predictedT10To90MedianSeconds": 1.1500000000000001,
+          "predictedT10To90P10Seconds": 0.8,
+          "predictedT10To90P90Seconds": 1.75,
+          "t10To90MedianRelativeError": 0.9436619718327539,
+          "intervalCoverage80": 0.8855380397532556
+        }
+      ],
+      "accepted": false
+    },
+    "horizonSeconds": 180.00416666658512,
+    "ranges": {
+      "arenaSize": [
+        16,
+        24
+      ],
+      "ballDiameterRatio": [
+        0.016,
+        0.032
+      ],
+      "gapCount": [
+        0,
+        2
+      ],
+      "gapWidthRatio": [
+        1.5,
+        2
+      ],
+      "gravity": [
+        0,
+        4
+      ],
+      "initialSpeed": [
+        7,
+        16
+      ],
+      "speedSpread": [
+        0.3,
+        0.3
+      ],
+      "initialDirection": [
+        270,
+        300
+      ],
+      "directionSpread": [
+        120,
+        180
+      ]
+    },
+    "fixedParameters": {
+      "initialCount": 2,
+      "maxPopulation": 1000,
+      "birthProbability": 0.35,
+      "pairCooldown": 0.7,
+      "restitution": 1
+    },
+    "regressions": {
+      "collisionLog": [
+        0.7981412314243072,
+        2.548987219802323,
+        -1.6908153983157088,
+        1.9043265093250297,
+        -0.2445065986142244,
+        0.26307407828672535,
+        -0.3571371954857298,
+        0.014878181868282322,
+        0.24774625328591407,
+        -0.24623854212588442,
+        0.20248518545614283,
+        -0.006270412985454536,
+        0.0023944236904127718,
+        -0.042421824492610775,
+        0.457577851428351
+      ],
+      "birthOpportunityLog": [
+        -0.3559544718096428,
+        -3.068849660406667,
+        8.082520440589258,
+        -11.889174173954574,
+        0.05754463080853732,
+        0.03768348004867713,
+        -0.6564987914193993,
+        0.0005465622521860732,
+        -1.9045802661939595,
+        1.8180907203279295,
+        -0.05436557151077571,
+        0.04629730002109257,
+        -0.0010678660848419505,
+        -0.631394546515878,
+        -0.013122546744896194
+      ],
+      "cooldownLogit": [
+        0.9547423788520212,
+        -2.2422196701934873,
+        -3.6151127774009106,
+        -3.0023668560346004,
+        -0.39800466358521724
+      ],
+      "spaceLogit": [
+        2.4207030095709148,
+        0.17465315161175113,
+        -18.99558418021252,
+        -15.687245122406182,
+        9.452541368593627,
+        -0.0695542518843434
+      ],
+      "exitLog": [
+        -12.402972165929299,
+        0.11164807112530332,
+        3.3157854513626854,
+        0.5831963383904161,
+        0.5898780530727618,
+        1.4398696795752541,
+        2.2105236342427617,
+        0.9599131197161578,
+        -0.03720891649731561,
+        -1.5427305523017136,
+        0.6081847579583394
+      ],
+      "speedLog": [
+        -0.06717463462959805,
+        0.3373051916417237,
+        0.969314243710161,
+        -0.130138231965015,
+        -0.10913475296999095,
+        0.1191659635953422,
+        1.207383520681804,
+        0.08239718442020945,
+        -0.08675874129389277,
+        0.47872593837336114,
+        0.5249212822431565,
+        0.22390746393750233,
+        1.7713176311937517
+      ]
+    },
+    "rateNoiseSigma": 0.2929464112652273,
+    "contactStudy": {
+      "observations": 49376,
+      "medianCorrection": 0.9565389590056008,
+      "cooldownAvailability": 0.01717624006413742,
+      "spaceAvailability": 0.025298891943775315,
+      "meanExitRatePerBallSecond": 0.00005438214091141094
+    }
+  }
+}

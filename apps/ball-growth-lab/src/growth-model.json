@@ -1,0 +1,45 @@
+{
+  "format": "ball-growth-lab.growth-model",
+  "version": 3,
+  "trainedAt": "",
+  "calibrated": false,
+  "trainingConfigCount": 0,
+  "validationConfigCount": 0,
+  "trainingRuns": 0,
+  "validation": {
+    "t10To90MedianRelativeError": null,
+    "t10To90CompletionRateAbsoluteError": null,
+    "intervalCoverage80": null,
+    "validationRuns": 0,
+    "minimumSeedsPerConfig": 20,
+    "t10To90Target": 0.1,
+    "intervalCoverageTarget": [0.75, 0.85],
+    "configurationDiagnostics": [],
+    "accepted": false
+  },
+  "horizonSeconds": 0,
+  "ranges": {},
+  "fixedParameters": {
+    "initialCount": 2,
+    "maxPopulation": 1000,
+    "birthProbability": 0.35,
+    "pairCooldown": 0.7,
+    "restitution": 1
+  },
+  "regressions": {
+    "collisionLog": [],
+    "birthOpportunityLog": [],
+    "cooldownLogit": [],
+    "spaceLogit": [],
+    "exitLog": [],
+    "speedLog": []
+  },
+  "rateNoiseSigma": 0,
+  "contactStudy": {
+    "observations": 0,
+    "medianCorrection": 0,
+    "cooldownAvailability": 0,
+    "spaceAvailability": 0,
+    "meanExitRatePerBallSecond": 0
+  }
+}

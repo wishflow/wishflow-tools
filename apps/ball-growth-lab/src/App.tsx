@@ -1,9 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createSeed } from './random';
 import { PopulationChart } from './components/PopulationChart';
 import { SetupPanel, type SetupTab } from './components/SetupPanel';
 import type { CanvasHandle } from './rendering/SimulationCanvas';
 import { createReplayExport } from './replay';
+import modelData from './growth-model.json';
+import { isGrowthPredictionValidated, predictGrowth, type GrowthModelArtifact } from './growthModel';
 import {
   DEFAULT_CONFIG,
   type EndReason,
@@ -53,7 +55,16 @@ const EMPTY_STATS: SimulationStats = {
   birthKineticEnergyAdded: 0,
   birthMomentumAdded: { x: 0, y: 0 },
   maxSpeed: 0,
+  speedSum: 0,
+  collisionEvents: 0,
+  collisionClosingSpeedSum: 0,
+  cooldownAccepted: 0,
+  cooldownRejected: 0,
+  birthProbabilityPassed: 0,
+  birthSpaceAttempts: 0,
 };
+
+const growthModel = modelData as unknown as GrowthModelArtifact;
 
 function formatTime(seconds: number): string {
   const wholeSeconds = Math.floor(seconds);
@@ -83,6 +94,8 @@ function makeRunRecord(
 
 export default function App() {
   const [config, setConfig] = useState<SimulationConfig>(DEFAULT_CONFIG);
+  const prediction = useMemo(() => predictGrowth(config, growthModel, { replicates: 120 }), [config]);
+  const predictionValidated = isGrowthPredictionValidated(config, growthModel);
   const [setupTab, setSetupTab] = useState<SetupTab>('arena');
   const [runState, setRunState] = useState<RunState>('setup');
   const [stats, setStats] = useState(EMPTY_STATS);
@@ -309,6 +322,7 @@ export default function App() {
     endReason: record?.endReason ?? null,
     stats: record?.stats ?? (state === 'setup' ? EMPTY_STATS : latestStatsRef.current),
     rendererFps: record?.rendererFps ?? renderFpsRef.current,
+    growthModel,
     environment: {
       userAgent: navigator.userAgent,
       language: navigator.language,
@@ -443,7 +457,13 @@ export default function App() {
             <div><span>未能出生</span><strong>{stats.missedBirths}</strong></div>
             <div><span>最高速度</span><strong>{stats.maxSpeed.toFixed(1)}<small> m/s</small></strong></div>
           </div>
-          <PopulationChart samples={samples} active={runState !== 'starting'} />
+          <PopulationChart
+            samples={samples}
+            active={runState === 'running' || runState === 'paused' || runState === 'starting'}
+            prediction={prediction}
+            predictionValidated={predictionValidated}
+            modelAccepted={growthModel.validation.accepted}
+          />
           <p className="physics-caption">重力 {activeConfig.gravity.toFixed(1)} m/s² · 弹性 {activeConfig.restitution.toFixed(2)}</p>
           {simulationError && <p className="error-note" role="alert">{simulationError}</p>}
           {lastRun && runState !== 'failed' && (

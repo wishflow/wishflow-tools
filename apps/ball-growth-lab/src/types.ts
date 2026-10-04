@@ -55,6 +55,16 @@ export interface SimulationStats {
   /** Sum of newborn velocities under the unit-mass model. */
   birthMomentumAdded: Point;
   maxSpeed: number;
+  /** Sum of ball speed magnitudes at this snapshot. */
+  speedSum: number;
+  /** Cumulative approaching ball-ball contacts observed by the production solver. */
+  collisionEvents: number;
+  /** Sum of closing normal speeds for those contacts. */
+  collisionClosingSpeedSum: number;
+  cooldownAccepted: number;
+  cooldownRejected: number;
+  birthProbabilityPassed: number;
+  birthSpaceAttempts: number;
 }
 
 export interface SimulationSnapshot {

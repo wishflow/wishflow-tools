@@ -92,6 +92,12 @@ test('批量求解器按固定种子生成互不重叠的高位初始球', () =>
   second.dispose();
 });
 
+test('统计快照和完整快照中的遥测一致', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({ initialCount: 8 }));
+  assert.deepEqual(simulation.getStatsSnapshot(), simulation.getSnapshot().stats);
+  simulation.dispose();
+});
+
 test('初始速度大小和方向使用配置值', () => {
   const simulation = new CircleBatchSimulation(makeConfig({
     initialSpeed: 7,
