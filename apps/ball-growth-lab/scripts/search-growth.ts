@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { gzipSync } from 'node:zlib';
 import {
   SimulationWorkerPool,
   kaplanMeierQuantile,
@@ -101,13 +102,16 @@ function firstBirthSummary(outcomes: SimulationOutcome[]) {
 function thresholds(outcome: SimulationOutcome): ThresholdMetrics | null {
   if (outcome.status !== 'succeeded') return null;
   const points = outcome.result.timeSeries;
+  const exactT10To90 = outcome.result.metrics.t10To90Seconds;
   const times = [2, 10, 100, 500, 900].map((population) => timeToThreshold(points, population));
   const slopes = times.slice(0, -1).map((time, index) => {
     const next = times[index + 1];
     return time === null || next === null || next <= time ? null : ([8, 90, 400, 400][index] / (next - time));
   });
   return {
-    t10To90: times[2] !== null && times[4] !== null && times[4] > times[2] ? times[4] - times[2] : null,
+    t10To90: typeof exactT10To90 === 'number'
+      ? exactT10To90
+      : times[2] !== null && times[4] !== null && times[4] > times[2] ? times[4] - times[2] : null,
     slopes,
     reachesTarget: outcome.result.endReason === 'population-target',
   };
@@ -117,6 +121,17 @@ function summarizeCandidate(candidate: Candidate, firstBirth: SimulationOutcome[
   const birth = firstBirthSummary(firstBirth);
   const trajectories = growth.map(thresholds).filter((value): value is ThresholdMetrics => value !== null);
   const t10To90 = trajectories.flatMap((value) => value.t10To90 === null ? [] : [value.t10To90]);
+  const completedTrajectories = trajectories.filter((value) => value.t10To90 !== null);
+  const perRunPeakSlopes = completedTrajectories.flatMap((trajectory) => {
+    const slopes = trajectory.slopes.filter((value): value is number => value !== null);
+    return slopes.length ? [Math.max(...slopes)] : [];
+  });
+  const averageT10To90Slopes = t10To90.map((duration) => 800 / duration);
+  const finalPopulations = growth.flatMap((outcome) => {
+    if (outcome.status !== 'succeeded') return [];
+    const population = outcome.result.metrics.finalPopulation;
+    return typeof population === 'number' && Number.isFinite(population) ? [population] : [];
+  });
   const stageSlopes = [0, 1, 2, 3].map((stage) => {
     const values = trajectories.flatMap((trajectory) => trajectory.slopes[stage] === null ? [] : [trajectory.slopes[stage]!]);
     return values.length ? percentile(values, 0.5) : null;
@@ -136,8 +151,14 @@ function summarizeCandidate(candidate: Candidate, firstBirth: SimulationOutcome[
       t10To90P10Seconds: t10To90.length ? percentile(t10To90, 0.1) : null,
       t10To90P90Seconds: t10To90.length ? percentile(t10To90, 0.9) : null,
       t10To90CompletionRate: reachedT10To90 / Math.max(1, growth.length),
+      averageT10To90SlopeMedianBallsPerSecond: averageT10To90Slopes.length ? percentile(averageT10To90Slopes, 0.5) : null,
+      averageT10To90SlopeP90BallsPerSecond: averageT10To90Slopes.length ? percentile(averageT10To90Slopes, 0.9) : null,
+      observationWindowFinalPopulationP10: finalPopulations.length ? percentile(finalPopulations, 0.1) : null,
+      observationWindowFinalPopulationP50: finalPopulations.length ? percentile(finalPopulations, 0.5) : null,
+      observationWindowFinalPopulationP90: finalPopulations.length ? percentile(finalPopulations, 0.9) : null,
       stageSlopeMedianBallsPerSecond: stageSlopes,
       peakStageSlopeMedianBallsPerSecond: stageSlopes.some((value) => value !== null) ? Math.max(...stageSlopes.filter((value): value is number => value !== null)) : null,
+      peakStageSlopeP90BallsPerSecond: perRunPeakSlopes.length ? percentile(perRunPeakSlopes, 0.9) : null,
       seedToSeedT10To90SpreadSeconds: t10To90.length > 1 ? percentile(t10To90, 0.9) - percentile(t10To90, 0.1) : null,
       targetCompletionProbability: completedTarget / Math.max(1, growth.length),
       earlyTerminationProbability: earlyEnds / Math.max(1, growth.length),
@@ -154,21 +175,27 @@ function summarizeCandidate(candidate: Candidate, firstBirth: SimulationOutcome[
 function paretoFrontier(summaries: ReturnType<typeof summarizeCandidate>[]) {
   const eligible = summaries.filter((candidate) => candidate.eligibleByWaitCap
     && candidate.growth.t10To90MedianSeconds !== null
-    && candidate.growth.peakStageSlopeMedianBallsPerSecond !== null
-    && candidate.growth.seedToSeedT10To90SpreadSeconds !== null);
+    && candidate.growth.averageT10To90SlopeP90BallsPerSecond !== null
+    && candidate.growth.seedToSeedT10To90SpreadSeconds !== null
+    && candidate.growth.t10To90CompletionRate !== null
+    && candidate.growth.targetCompletionProbability !== null);
   const dominates = (first: typeof eligible[number], second: typeof eligible[number]) => {
     const values = [
       first.growth.t10To90MedianSeconds! >= second.growth.t10To90MedianSeconds!,
-      first.growth.peakStageSlopeMedianBallsPerSecond! <= second.growth.peakStageSlopeMedianBallsPerSecond!,
+      first.growth.averageT10To90SlopeP90BallsPerSecond! <= second.growth.averageT10To90SlopeP90BallsPerSecond!,
       first.firstBirth.p90Seconds! <= second.firstBirth.p90Seconds!,
       first.growth.seedToSeedT10To90SpreadSeconds! <= second.growth.seedToSeedT10To90SpreadSeconds!,
       first.growth.earlyTerminationProbability <= second.growth.earlyTerminationProbability,
+      first.growth.t10To90CompletionRate! >= second.growth.t10To90CompletionRate!,
+      first.growth.targetCompletionProbability >= second.growth.targetCompletionProbability,
     ];
     const strict = first.growth.t10To90MedianSeconds! > second.growth.t10To90MedianSeconds!
-      || first.growth.peakStageSlopeMedianBallsPerSecond! < second.growth.peakStageSlopeMedianBallsPerSecond!
+      || first.growth.averageT10To90SlopeP90BallsPerSecond! < second.growth.averageT10To90SlopeP90BallsPerSecond!
       || first.firstBirth.p90Seconds! < second.firstBirth.p90Seconds!
       || first.growth.seedToSeedT10To90SpreadSeconds! < second.growth.seedToSeedT10To90SpreadSeconds!
-      || first.growth.earlyTerminationProbability < second.growth.earlyTerminationProbability;
+      || first.growth.earlyTerminationProbability < second.growth.earlyTerminationProbability
+      || first.growth.t10To90CompletionRate! > second.growth.t10To90CompletionRate!
+      || first.growth.targetCompletionProbability > second.growth.targetCompletionProbability;
     return values.every(Boolean) && strict;
   };
   return eligible.filter((candidate) => !eligible.some((other) => other !== candidate && dominates(other, candidate)));
@@ -178,6 +205,8 @@ function csv(summaries: ReturnType<typeof summarizeCandidate>[]): string {
   const columns = [
     'id', 'eligibleByWaitCap', 'firstBirthP50Seconds', 'firstBirthP90Seconds', 't10To90MedianSeconds',
     't10To90P10Seconds', 't10To90P90Seconds', 't10To90CompletionRate', 'peakStageSlopeMedianBallsPerSecond',
+    'averageT10To90SlopeMedianBallsPerSecond', 'averageT10To90SlopeP90BallsPerSecond',
+    'observationWindowFinalPopulationP10', 'observationWindowFinalPopulationP50', 'observationWindowFinalPopulationP90',
     'seedToSeedT10To90SpreadSeconds', 'targetCompletionProbability', 'earlyTerminationProbability', 'predictionValidated', 'pareto', 'config',
   ];
   const frontier = new Set(paretoFrontier(summaries).map((candidate) => candidate.id));
@@ -192,6 +221,11 @@ function csv(summaries: ReturnType<typeof summarizeCandidate>[]): string {
     candidate.growth.t10To90P90Seconds,
     candidate.growth.t10To90CompletionRate,
     candidate.growth.peakStageSlopeMedianBallsPerSecond,
+    candidate.growth.averageT10To90SlopeMedianBallsPerSecond,
+    candidate.growth.averageT10To90SlopeP90BallsPerSecond,
+    candidate.growth.observationWindowFinalPopulationP10,
+    candidate.growth.observationWindowFinalPopulationP50,
+    candidate.growth.observationWindowFinalPopulationP90,
     candidate.growth.seedToSeedT10To90SpreadSeconds,
     candidate.growth.targetCompletionProbability,
     candidate.growth.earlyTerminationProbability,
@@ -248,7 +282,7 @@ const summaries = candidates.map((candidate) => summarizeCandidate(
 ));
 const report = {
   format: 'ball-growth-lab.pareto-search',
-  version: 1,
+  version: 2,
   generatedAt: new Date().toISOString(),
   method: 'paired-seed-one-factor-screen-plus-predeclared-interaction-configurations',
   fixedConditions: fixedConfig,
@@ -259,17 +293,27 @@ const report = {
   },
   firstBirthCapSeconds,
   observationCeilingSeconds: observationCeiling,
+  measurement: {
+    growthSampleIntervalSeconds: 0.5,
+    t10To90Source: 'per-step threshold crossing metric from the production scenario',
+    stageSlopeSource: 'sampled time series; diagnostic only at 0.5 second resolution',
+    paretoUsesSampledStageSlope: false,
+  },
   workerCount,
   seedCount,
+  seeds,
   candidateCount: candidates.length,
   eligibleCount: summaries.filter((candidate) => candidate.eligibleByWaitCap).length,
   paretoIds: paretoFrontier(summaries).map((candidate) => candidate.id),
   optimizationDirections: {
     t10To90MedianSeconds: 'maximize for slower, more gradual growth',
-    peakStageSlopeMedianBallsPerSecond: 'minimize',
+    stageSlopeMedianBallsPerSecond: 'sampled at 0.5 seconds; diagnostic only',
+    averageT10To90SlopeP90BallsPerSecond: 'minimize to reduce steep seed outliers',
     firstBirthP90Seconds: 'minimize subject to the chosen cap',
     seedToSeedT10To90SpreadSeconds: 'minimize',
     earlyTerminationProbability: 'minimize',
+    t10To90CompletionRate: 'maximize to avoid favoring stalled runs',
+    targetCompletionProbability: 'maximize',
   },
   summaries,
   firstBirthRuns: Object.fromEntries(firstBirthRuns),
@@ -277,6 +321,27 @@ const report = {
 };
 
 await mkdir(outputDirectory, { recursive: true });
-await writeFile(path.join(outputDirectory, 'growth-pareto-search-v1.json'), JSON.stringify(report, null, 2));
-await writeFile(path.join(outputDirectory, 'growth-pareto-search-v1.csv'), csv(summaries));
+const reportName = `growth-pareto-search-${firstBirthCapSeconds}s`;
+const summary = {
+  format: 'ball-growth-lab.pareto-search-summary',
+  version: 1,
+  generatedAt: report.generatedAt,
+  method: report.method,
+  fixedConditions: report.fixedConditions,
+  firstBirthCapSeconds,
+  observationCeilingSeconds: observationCeiling,
+  measurement: report.measurement,
+  workerCount,
+  seedCount,
+  seeds,
+  candidateCount: candidates.length,
+  eligibleCount: report.eligibleCount,
+  growthModel: report.growthModel,
+  paretoIds: report.paretoIds,
+  optimizationDirections: report.optimizationDirections,
+  summaries,
+};
+await writeFile(path.join(outputDirectory, `${reportName}.json.gz`), gzipSync(Buffer.from(JSON.stringify(report)), { level: 9 }));
+await writeFile(path.join(outputDirectory, `${reportName}-summary.json`), JSON.stringify(summary, null, 2));
+await writeFile(path.join(outputDirectory, `${reportName}.csv`), csv(summaries));
 console.log(JSON.stringify({ eligibleCount: report.eligibleCount, paretoIds: report.paretoIds, outputDirectory }, null, 2));
