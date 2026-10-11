@@ -9,8 +9,8 @@ for (const project of projects) {
   const appDir = path.join(repoRoot, 'apps', project.slug);
   console.log(`Installing apps/${project.slug} dependencies`);
   const result = spawnSync(
-    process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    ['ci'],
+    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
+    ['install', '--frozen-lockfile'],
     { cwd: appDir, stdio: 'inherit' },
   );
   if (result.error) throw result.error;

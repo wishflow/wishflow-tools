@@ -83,7 +83,7 @@ def normalize_reference(ref):
 
 def run_app_build():
     result = subprocess.run(
-        ["npm", "run", "build"],
+        ["pnpm", "run", "build"],
         cwd=PROJECT_DIR,
         text=True,
         capture_output=True,

@@ -115,7 +115,7 @@ class TestRunner:
         # 1. Build this app, then stage it under the production subpath.
         info("Building app...")
         build = subprocess.run(
-            ["npm", "run", "build"],
+            ["pnpm", "run", "build"],
             cwd=str(PROJECT_DIR),
             text=True,
             capture_output=True,

@@ -37,11 +37,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          cache: true
+          cache_dependency_path: apps/duolingo-avatar/pnpm-lock.yaml
+          run_install: false
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: apps/duolingo-avatar/package-lock.json
 
       - uses: actions/setup-python@v6
         with:
@@ -49,7 +54,7 @@ jobs:
           cache: pip
           cache-dependency-path: apps/duolingo-avatar/requirements.txt
 
-      - run: npm ci --prefix apps/duolingo-avatar
+      - run: pnpm --dir apps/duolingo-avatar install --frozen-lockfile
 
       - run: python3 -m venv apps/duolingo-avatar/.venv && apps/duolingo-avatar/.venv/bin/python -m pip install -r apps/duolingo-avatar/requirements.txt
 

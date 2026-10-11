@@ -16,19 +16,121 @@ function isWorkerOnlyPath(file) {
   return /^apps\/[^/]+\/(?:worker\/|wrangler(?:\.[^/]+)?$)/.test(file);
 }
 
+function pnpmDependencyLock(lockfileText) {
+  const lines = lockfileText.split(/\r?\n/);
+  const importersIndex = lines.findLastIndex((line) => line.trim() === 'importers:');
+  const packagesIndex = lines.findIndex((line, index) => index > importersIndex && line.trim() === 'packages:');
+  if (importersIndex < 0 || packagesIndex <= importersIndex) return null;
+
+  const versions = new Map();
+  let inRootImporter = false;
+  let section = null;
+  let packageName = null;
+  for (const line of lines.slice(importersIndex + 1, packagesIndex)) {
+    if (/^  \.\s*:$/.test(line)) {
+      inRootImporter = true;
+      section = null;
+      packageName = null;
+      continue;
+    }
+    if (/^  \S/.test(line)) {
+      inRootImporter = false;
+      section = null;
+      packageName = null;
+    }
+    if (!inRootImporter) continue;
+
+    const sectionMatch = /^    (dependencies|devDependencies):\s*$/.exec(line);
+    if (sectionMatch) {
+      section = sectionMatch[1];
+      packageName = null;
+      continue;
+    }
+    if (/^    \S/.test(line)) {
+      section = null;
+      packageName = null;
+      continue;
+    }
+    if (!section) continue;
+
+    const dependencyMatch = /^      (.+):\s*$/.exec(line);
+    if (dependencyMatch) {
+      packageName = dependencyMatch[1].replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1');
+      continue;
+    }
+    const versionMatch = /^        version:\s*(.+?)\s*$/.exec(line);
+    if (packageName && versionMatch) {
+      const value = versionMatch[1];
+      const version = value.replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1');
+      versions.set(packageName, version);
+      packageName = null;
+    }
+  }
+  const integrities = new Map();
+  let packageKey = null;
+  let readingResolution = false;
+  for (const line of lines.slice(packagesIndex + 1)) {
+    if (/^\S/.test(line)) break;
+    const entryMatch = /^  (.+):\s*$/.exec(line);
+    if (entryMatch) {
+      packageKey = entryMatch[1].replace(/^'(.*)'$/, '$1').replace(/^"(.*)"$/, '$1');
+      readingResolution = false;
+      continue;
+    }
+    if (!packageKey) continue;
+    const inlineIntegrity = /^    resolution:\s*\{[^}]*integrity:\s*([^, }]+)[^}]*\}/.exec(line);
+    const nestedResolution = /^    resolution:\s*$/.test(line);
+    const nestedIntegrity = /^      integrity:\s*(\S+)/.exec(line);
+    if (inlineIntegrity) {
+      integrities.set(packageKey, inlineIntegrity[1]);
+      packageKey = null;
+    } else if (nestedResolution) {
+      readingResolution = true;
+    } else if (readingResolution && nestedIntegrity) {
+      integrities.set(packageKey, nestedIntegrity[1]);
+      packageKey = null;
+      readingResolution = false;
+    }
+  }
+  return { versions, integrities };
+}
+
 function dependencyBuildInputs(packageJson, lockfile) {
+  if (!packageJson || !lockfile) return null;
   const declarations = { ...packageJson.dependencies, ...packageJson.devDependencies };
   const sortedNames = Object.keys(declarations).sort();
-  return sortedNames.map((name) => {
-    const locked = lockfile.packages?.[`node_modules/${name}`];
+
+  let npmLock = lockfile;
+  if (typeof lockfile === 'string') {
+    try {
+      npmLock = JSON.parse(lockfile);
+    } catch {
+      const pnpmLock = pnpmDependencyLock(lockfile);
+      if (!pnpmLock) return null;
+      const inputs = sortedNames.map((name) => {
+        const version = pnpmLock.versions.get(name) ?? null;
+        const packageVersion = version?.split('(', 1)[0] ?? null;
+        const comparableVersion = packageVersion?.startsWith('file:') ? null : packageVersion;
+        const packageKey = comparableVersion === null ? null : `${name}@${comparableVersion}`;
+        const integrity = packageKey ? pnpmLock.integrities.get(packageKey) ?? null : null;
+        return [name, declarations[name], comparableVersion, integrity];
+      });
+      return inputs;
+    }
+  }
+
+  const inputs = sortedNames.map((name) => {
+    const locked = npmLock.packages?.[`node_modules/${name}`];
     return [name, declarations[name], locked?.version ?? null, locked?.integrity ?? null];
   });
+  return inputs;
 }
 
 export function workerBuildInputsChanged(previousPackage, currentPackage, previousLock, currentLock) {
-  if (!previousPackage || !previousLock || !currentPackage || !currentLock) return true;
-  return JSON.stringify(dependencyBuildInputs(previousPackage, previousLock))
-    !== JSON.stringify(dependencyBuildInputs(currentPackage, currentLock));
+  const previousInputs = dependencyBuildInputs(previousPackage, previousLock);
+  const currentInputs = dependencyBuildInputs(currentPackage, currentLock);
+  if (!previousInputs || !currentInputs) return true;
+  return JSON.stringify(previousInputs) !== JSON.stringify(currentInputs);
 }
 
 export function analyzeChanges(changedFiles, projects, workerConfigApps = new Set()) {
@@ -80,35 +182,36 @@ function changedFilesBetween(base, head) {
   return result.stdout.split('\0').filter(Boolean);
 }
 
-function readGitJson(revision, file) {
+function readGitText(revision, file) {
   if (!revision || /^0+$/.test(revision)) return null;
   const result = spawnSync('git', ['show', `${revision}:${file}`], { cwd: repoRoot, encoding: 'utf8' });
-  if (result.status !== 0) return null;
-  try {
-    return JSON.parse(result.stdout);
-  } catch {
-    return null;
-  }
+  return result.status === 0 ? result.stdout : null;
 }
 
 function findWorkerConfigChanges(changedFiles, projects, base) {
   const changedPackages = new Set();
   for (const file of changedFiles) {
-    const match = /^apps\/([^/]+)\/package(?:-lock)?\.json$/.exec(file);
+    const match = /^apps\/([^/]+)\/(?:package\.json|package-lock\.json|pnpm-lock\.yaml)$/.exec(file);
     if (match && projects.some(({ slug }) => slug === match[1])) changedPackages.add(match[1]);
   }
 
   const changedWorkerConfigs = new Set();
   for (const slug of changedPackages) {
     const appPath = `apps/${slug}`;
-    const previousPackage = readGitJson(base, `${appPath}/package.json`);
-    const previousLock = readGitJson(base, `${appPath}/package-lock.json`)
-      ?? readGitJson(base, 'package-lock.json');
+    let previousPackage;
+    try {
+      previousPackage = JSON.parse(readGitText(base, `${appPath}/package.json`) ?? 'null');
+    } catch {
+      previousPackage = null;
+    }
+    const previousLock = readGitText(base, `${appPath}/pnpm-lock.yaml`)
+      ?? readGitText(base, `${appPath}/package-lock.json`)
+      ?? readGitText(base, 'package-lock.json');
     let currentPackage;
     let currentLock;
     try {
       currentPackage = JSON.parse(readFileSync(path.join(repoRoot, appPath, 'package.json'), 'utf8'));
-      currentLock = JSON.parse(readFileSync(path.join(repoRoot, appPath, 'package-lock.json'), 'utf8'));
+      currentLock = readFileSync(path.join(repoRoot, appPath, 'pnpm-lock.yaml'), 'utf8');
     } catch {
       changedWorkerConfigs.add(slug);
       continue;

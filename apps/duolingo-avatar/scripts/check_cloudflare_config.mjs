@@ -34,8 +34,8 @@ for (const name of ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']) {
   if (!process.env[name]) fail(`Missing required environment variable: ${name}`);
 }
 
-const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-const result = spawnSync(npx, ['wrangler', 'secret', 'list', '--format=json'], {
+const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+const result = spawnSync(pnpm, ['exec', 'wrangler', 'secret', 'list', '--format=json'], {
   encoding: 'utf8',
   env: {
     ...process.env,

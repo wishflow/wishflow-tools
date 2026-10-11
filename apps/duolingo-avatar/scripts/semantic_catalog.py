@@ -646,7 +646,7 @@ def find_free_port() -> int:
 
 def run_site_build() -> None:
     result = subprocess.run(
-        ["npm", "run", "build:site"],
+        ["pnpm", "run", "build:site"],
         cwd=REPO_ROOT,
         text=True,
         capture_output=True,
@@ -892,7 +892,7 @@ def write_review(catalog: dict[str, Any]) -> None:
     lines = [
         "# 03.1 Semantic Catalog 复核清单",
         "",
-        "本文件由 `npm run semantic:catalog` 生成，用于复核低置信度或需人工确认的选项。",
+        "本文件由 `pnpm run semantic:catalog` 生成，用于复核低置信度或需人工确认的选项。",
         "",
         f"- sourceVersion: `{catalog.get('sourceVersion')}`",
         f"- semanticVersion: `{catalog.get('semanticVersion')}`",

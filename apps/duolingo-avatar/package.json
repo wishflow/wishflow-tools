@@ -2,10 +2,11 @@
   "name": "@wishflow/duolingo-avatar",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.11.2",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
-    "build:app": "npm run build",
+    "build:app": "pnpm run build",
     "test:static": "./scripts/python.sh tests/test_static_site.py",
     "test:worker": "node --import tsx --test tests/worker.test.mjs",
     "test:e2e": "./scripts/python.sh tests/test_avatar_explorer.py --port 8775 --debug-port 9228",
@@ -15,7 +16,7 @@
     "semantic:codex:merge": "./scripts/python.sh scripts/semantic_codex.py merge",
     "semantic:codex:compare": "./scripts/python.sh scripts/semantic_codex.py compare",
     "semantic:codex:report": "./scripts/python.sh scripts/semantic_codex.py report",
-    "test:ci": "npm run test:static && npm run test:worker && npm run test:e2e -- --require-browser",
+    "test:ci": "pnpm run test:static && pnpm run test:worker && pnpm run test:e2e --require-browser",
     "check:cloudflare-config": "node scripts/check_cloudflare_config.mjs",
     "deploy:cf:worker": "wrangler deploy",
     "deploy:cf:pages": "wrangler pages deploy ../../_site --project-name=wishflow-tools --branch=master"

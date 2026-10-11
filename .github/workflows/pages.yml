@@ -73,6 +73,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          cache: true
+          cache_dependency_path: apps/${{ matrix.app }}/pnpm-lock.yaml
+          run_install: false
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -91,7 +98,7 @@ jobs:
         run: ./apps/${{ matrix.app }}/scripts/install.sh
 
       - name: Run project tests
-        run: npm --prefix apps/${{ matrix.app }} run test:ci
+        run: pnpm --dir apps/${{ matrix.app }} run test:ci
         env:
           CHROME_EXEC: ${{ steps.setup-chrome.outputs.chrome-path }}
 
@@ -102,12 +109,17 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          run_install: false
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
 
       - name: Test catalog and change classification
-        run: npm run test:catalog
+        run: pnpm run test:catalog
 
   validate-cloudflare-config:
     runs-on: ubuntu-latest
@@ -118,15 +130,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          cache: true
+          cache_dependency_path: apps/duolingo-avatar/pnpm-lock.yaml
+          run_install: false
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
 
       - name: Install avatar editor dependencies
-        run: npm ci --prefix apps/duolingo-avatar
+        run: pnpm --dir apps/duolingo-avatar install --frozen-lockfile
 
       - name: Validate Cloudflare AI configuration
-        run: npm run check:cloudflare-config
+        run: pnpm run check:cloudflare-config
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -143,6 +162,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          cache: true
+          cache_dependency_path: |
+            apps/ball-growth-lab/pnpm-lock.yaml
+            apps/duolingo-avatar/pnpm-lock.yaml
+          run_install: false
+
       - uses: actions/configure-pages@v6
         with:
           enablement: true
@@ -152,10 +180,10 @@ jobs:
           node-version: 24
 
       - name: Install all registered app dependencies
-        run: npm run install:apps
+        run: pnpm run install:apps
 
       - name: Prepare complete shared site
-        run: npm run build:site
+        run: pnpm run build:site
 
       - uses: actions/upload-pages-artifact@v5
         with:
@@ -173,18 +201,27 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          cache: true
+          cache_dependency_path: |
+            apps/ball-growth-lab/pnpm-lock.yaml
+            apps/duolingo-avatar/pnpm-lock.yaml
+          run_install: false
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
 
       - name: Install all registered app dependencies
-        run: npm run install:apps
+        run: pnpm run install:apps
 
       - name: Prepare complete shared site
-        run: npm run build:site
+        run: pnpm run build:site
 
       - name: Deploy Cloudflare Pages
-        run: npm run deploy:cf:pages
+        run: pnpm run deploy:cf:pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -198,15 +235,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          cache: true
+          cache_dependency_path: apps/duolingo-avatar/pnpm-lock.yaml
+          run_install: false
+
       - uses: actions/setup-node@v6
         with:
           node-version: 24
 
       - name: Install avatar editor dependencies
-        run: npm ci --prefix apps/duolingo-avatar
+        run: pnpm --dir apps/duolingo-avatar install --frozen-lockfile
 
       - name: Deploy Cloudflare Worker
-        run: npm run deploy:cf:worker
+        run: pnpm run deploy:cf:worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

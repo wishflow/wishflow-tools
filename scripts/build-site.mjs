@@ -16,7 +16,7 @@ if (indexTemplate.split(marker).length !== 2) {
 for (const project of projects) {
   const appDir = path.join(repoRoot, 'apps', project.slug);
   const build = spawnSync(
-    process.platform === 'win32' ? 'npm.cmd' : 'npm',
+    process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm',
     ['run', 'build'],
     { cwd: appDir, stdio: 'inherit' },
   );

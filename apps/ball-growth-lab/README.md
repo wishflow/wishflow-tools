@@ -6,10 +6,10 @@
 
 ```bash
 ./scripts/install.sh
-npm run dev
+pnpm run dev
 ```
 
-`npm run build` 会先检查类型，再把应用构建到本目录的 `dist/`。在仓库根目录运行 `npm run build:site` 会构建登记的应用并将本应用复制到 `_site/ball-growth-lab/`。共享站说明见根目录 [README](../../README.md)。
+`pnpm run build` 会先检查类型，再把应用构建到本目录的 `dist/`。在仓库根目录运行 `pnpm run build:site` 会构建登记的应用并将本应用复制到 `_site/ball-growth-lab/`。共享站说明见根目录 [README](../../README.md)。
 
 ## 实验流程
 
@@ -52,11 +52,11 @@ React 不逐帧维护球的位置。物理在 Worker 以固定 1/240 秒步长�
 ## 验证与已知边界
 
 ```bash
-npm run test:ci
-npm run build
-npm run benchmark
-npm run benchmark:gaps
-npm run diagnose:growth
+pnpm run test:ci
+pnpm run build
+pnpm run benchmark
+pnpm run benchmark:gaps
+pnpm run diagnose:growth
 ```
 
 截至 2026-10-03 的 Rapier、Planck 和 CircleBatch 本地物理基准记录在 [`docs/benchmark-v2-2026-10-03.md`](docs/benchmark-v2-2026-10-03.md)。测试发现 Rapier 在高密度接触中存在显著数值能量损失，因此生产 Worker 已改用经过碰撞、离场、繁殖和结束条件测试的 CircleBatch。Node 基准不包含浏览器绘制和 Worker 通信；手机视口仿真也不能代替真实手机性能测试。

@@ -10,7 +10,7 @@ import { readProjectCatalog, renderProjectCards, validateCatalog, verifySiteOutp
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const projects = readProjectCatalog(repoRoot);
 
-test('catalog projects have valid local build and test contracts', () => {
+test('catalog projects have valid local pnpm build and test contracts', () => {
   assert.ok(projects.length > 0);
   assert.equal(new Set(projects.map(({ slug }) => slug)).size, projects.length);
 });
@@ -87,6 +87,27 @@ test('Worker deployment follows dependency lock changes, not unrelated app scrip
     previousLock,
     { packages: { 'node_modules/zod': { version: '4.2.0', integrity: 'new' } } },
   ), true);
+});
+
+test('Worker dependency comparison accepts pnpm lockfiles and preserves npm-to-pnpm versions', () => {
+  const previousPackage = { dependencies: { zod: '^4.0.0' }, scripts: { test: 'old' } };
+  const currentPackage = { dependencies: { zod: '^4.0.0' }, packageManager: 'pnpm@12.11.2' };
+  const previousLock = {
+    packages: { 'node_modules/zod': { version: '4.1.0', integrity: 'sha512-same' } },
+  };
+  const packageManagerLock = `lockfileVersion: '9.0'\n\nimporters:\n  .:\n    configDependencies: {}\n    packageManagerDependencies:\n      pnpm:\n        specifier: 12.11.2\n        version: 12.11.2\n\npackages: {}\n\nsnapshots: {}\n\n---\n`;
+  const currentLock = `${packageManagerLock}lockfileVersion: '9.0'\n\nimporters:\n  .:\n    dependencies:\n      zod:\n        specifier: ^4.0.0\n        version: 4.1.0(peer@1.0.0)\n\npackages:\n  zod@4.1.0:\n    resolution: {integrity: sha512-same}\n`;
+  assert.equal(workerBuildInputsChanged(previousPackage, currentPackage, previousLock, currentLock), false);
+
+  const changedLock = currentLock.replace('version: 4.1.0(peer@1.0.0)', 'version: 4.2.0(peer@1.0.0)').replace('zod@4.1.0:', 'zod@4.2.0:');
+  assert.equal(workerBuildInputsChanged(previousPackage, currentPackage, previousLock, changedLock), true);
+});
+
+test('Worker dependency comparison treats local file dependencies consistently across lockfile formats', () => {
+  const packageJson = { dependencies: { shared: 'file:../../packages/shared' } };
+  const npmLock = { packages: { 'node_modules/shared': { link: true } } };
+  const pnpmLock = `lockfileVersion: '9.0'\n\nimporters:\n  .:\n    dependencies:\n      shared:\n        specifier: file:../../packages/shared\n        version: file:../../packages/shared\n\npackages:\n`;
+  assert.equal(workerBuildInputsChanged(packageJson, packageJson, npmLock, pnpmLock), false);
 });
 
 test('catalog or shared site changes test every app and rebuild the full site', () => {

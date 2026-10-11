@@ -160,10 +160,10 @@ Worker 实现：
 本步骤完成后至少运行：
 
 ```bash
-npm run test:worker
-npx tsc -p tsconfig.worker.json --noEmit
-npm run build:site
-npm run test:static
+pnpm run test:worker
+pnpm exec tsc -p tsconfig.worker.json --noEmit
+pnpm run build:site
+pnpm run test:static
 python3 tests/test_avatar_explorer.py --port 8775 --debug-port 9228 --test 12
 git diff --check
 ```
@@ -171,7 +171,7 @@ git diff --check
 浏览器可用时继续运行：
 
 ```bash
-npm run test:e2e
+pnpm run test:e2e
 ```
 
 E2E 覆盖重点：

@@ -4,7 +4,7 @@
 
 ## 测量范围
 
-基准由 `npm run benchmark` 执行，测量 Node 下的 Rapier 固定步长，不包含浏览器消息传递、PixiJS 绘制、GPU 或设备功耗。物理场景使用无重叠六角初始排布、重力 9.8、恢复系数 1、关闭繁殖；球径为场地宽度的 2.4%。规模矩阵预热 30 步、测量 120 步；精度扫描预热 60 步、测量 240 步。单次时间受宿主负载影响，应结合重复运行结果判断。
+基准由 `pnpm run benchmark` 执行，测量 Node 下的 Rapier 固定步长，不包含浏览器消息传递、PixiJS 绘制、GPU 或设备功耗。物理场景使用无重叠六角初始排布、重力 9.8、恢复系数 1、关闭繁殖；球径为场地宽度的 2.4%。规模矩阵预热 30 步、测量 120 步；精度扫描预热 60 步、测量 240 步。单次时间受宿主负载影响，应结合重复运行结果判断。
 
 穿透量定义为同一时刻两球直径之和减去球心距离；表中只列正值。它用于比较拥挤堆叠的稳定性，不代表完整的物理误差指标。
 
@@ -87,7 +87,7 @@
 
 ### 780 球停滞复现与当前算法
 
-诊断脚本 `npm run diagnose:growth` 用相同种子对照重力场与无重力弯曲场，并分别记录增长失败原因、空间分布和速度。三组默认种子的 100 球增长实验都达到 1000 球结束目标；这不能复原用户旧线上实验的准确配置，但当前代码已能复现“人口接近 780 后出生受阻”的拥挤状态。使用 `LAB-0012AB34`、初始 100 球、重力 2、繁殖率 0.35、冷却 0.7 秒，达到 782 球时记录到 188 次空间不足、267 次能量不足。关闭繁殖后，从这组准确状态复制两个场景续跑 20 秒：
+诊断脚本 `pnpm run diagnose:growth` 用相同种子对照重力场与无重力弯曲场，并分别记录增长失败原因、空间分布和速度。三组默认种子的 100 球增长实验都达到 1000 球结束目标；这不能复原用户旧线上实验的准确配置，但当前代码已能复现“人口接近 780 后出生受阻”的拥挤状态。使用 `LAB-0012AB34`、初始 100 球、重力 2、繁殖率 0.35、冷却 0.7 秒，达到 782 球时记录到 188 次空间不足、267 次能量不足。关闭繁殖后，从这组准确状态复制两个场景续跑 20 秒：
 
 | 相同的 782 球初态，关闭繁殖续跑 20 秒 | 下半区 | 下方三分之一 | 平均速度 | 最高速度 | 总机械能漂移 |
 | --- | ---: | ---: | ---: | ---: | ---: |
@@ -101,7 +101,7 @@
 要重跑上述样本：
 
 ```bash
-GROWTH_DIAGNOSTIC_SEEDS=LAB-0012AB34 npm run diagnose:growth
+GROWTH_DIAGNOSTIC_SEEDS=LAB-0012AB34 pnpm run diagnose:growth
 ```
 
 修正后的当前性能测量使用 1/240 秒、Rapier 6/2、120 步预热、600 步测量（测量时长 2.5 秒）。重力场用静止六角初始排布，弯曲场初速 4 m/s；下表是单次 Node 结果：
@@ -119,7 +119,7 @@ GROWTH_DIAGNOSTIC_SEEDS=LAB-0012AB34 npm run diagnose:growth
 
 ## 缺口宽度扫描
 
-`npm run benchmark:gaps` 对 Planck 和 Rapier 各跑正方形、圆形场地，设置两个周长等距缺口。单球从顶部缺口落入并从底部离开；17 个初始横向偏移覆盖球半径范围，单次最多运行 4 秒：
+`pnpm run benchmark:gaps` 对 Planck 和 Rapier 各跑正方形、圆形场地，设置两个周长等距缺口。单球从顶部缺口落入并从底部离开；17 个初始横向偏移覆盖球半径范围，单次最多运行 4 秒：
 
 | 缺口宽度 / 球径 | Rapier 正方形 / 圆形 | Planck 正方形 / 圆形 |
 | ---: | ---: | ---: |
@@ -141,29 +141,29 @@ BENCHMARK_COUNTS=100,500,1000 \
 BENCHMARK_SHAPES=square,circle \
 BENCHMARK_ALGORITHMS=planck,circle-batch,rapier \
 BENCHMARK_TUNINGS=2/1,4/2,6/2,6/4 \
-BENCHMARK_FRAMES=120 WARMUP_FRAMES=30 npm run benchmark
+BENCHMARK_FRAMES=120 WARMUP_FRAMES=30 pnpm run benchmark
 
 # Rapier 的误差阈值可附在迭代配置后，例如 4/2/0.0001
 BENCHMARK_ALGORITHMS=rapier \
 BENCHMARK_TUNINGS=2/1/0.01,2/1/0.001,4/2/0.001,4/2/0.0001 \
-BENCHMARK_COUNTS=1000 BENCHMARK_FRAMES=240 WARMUP_FRAMES=60 npm run benchmark
+BENCHMARK_COUNTS=1000 BENCHMARK_FRAMES=240 WARMUP_FRAMES=60 pnpm run benchmark
 
 # 带繁殖负载；输出最终球数、出生数和未出生数
 BENCHMARK_COUNTS=100 BENCHMARK_BIRTH_PROBABILITY=0.35 \
 BENCHMARK_PAIR_COOLDOWN=0.7 BENCHMARK_FRAMES=600 \
-BENCHMARK_ALGORITHMS=rapier BENCHMARK_TUNINGS=4/2 npm run benchmark
+BENCHMARK_ALGORITHMS=rapier BENCHMARK_TUNINGS=4/2 pnpm run benchmark
 
-GAP_SCAN_SAMPLES=101 npm run benchmark:gaps
+GAP_SCAN_SAMPLES=101 pnpm run benchmark:gaps
 
 # 当前 100/500/1000 球场景（每种场地 120 步预热、600 步测量）
 BENCHMARK_COUNTS=100,500,1000 BENCHMARK_SHAPES=square,circle \
 BENCHMARK_ALGORITHMS=rapier BENCHMARK_TUNINGS=6/2 \
-BENCHMARK_FRAMES=600 WARMUP_FRAMES=120 npm run benchmark
+BENCHMARK_FRAMES=600 WARMUP_FRAMES=120 pnpm run benchmark
 
 BENCHMARK_COUNTS=100,500,1000 BENCHMARK_SHAPES=square,circle \
 BENCHMARK_ALGORITHMS=rapier BENCHMARK_TUNINGS=6/2 \
 BENCHMARK_FRAMES=600 WARMUP_FRAMES=120 \
-BENCHMARK_MOTION_FIELD=curvature BENCHMARK_INITIAL_SPEED=4 npm run benchmark
+BENCHMARK_MOTION_FIELD=curvature BENCHMARK_INITIAL_SPEED=4 pnpm run benchmark
 ```
 
 该历史版本将 Rapier WASM 延迟到用户开始实验时加载；这些 bundle 数值不是当前 CircleBatch 版本的数据。Worker 每秒最多发 60 次快照，React 不逐步更新坐标。Node 数据不能证明浏览器或真实手机帧率；后续需在目标浏览器和手机上记录机型、系统、浏览器及实际球数。

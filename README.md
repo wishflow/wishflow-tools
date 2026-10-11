@@ -15,7 +15,7 @@ WishFlow Tools 将多个独立工具汇集到一个导航站。前端应用放�
 ```bash
 cd apps/ball-growth-lab
 ./scripts/install.sh
-npm run dev
+pnpm run dev
 ```
 
 头像编辑器的本地开发方式见 [`apps/duolingo-avatar/README.md`](apps/duolingo-avatar/README.md)。
@@ -24,7 +24,7 @@ npm run dev
 
 ```bash
 cd ../..
-npm run build:site
+pnpm run build:site
 python3 -m http.server 8769 --directory _site
 ```
 
@@ -33,9 +33,9 @@ python3 -m http.server 8769 --directory _site
 ## 验证与发布
 
 ```bash
-npm run test:catalog
-npm --prefix apps/ball-growth-lab run test:ci
-npm --prefix apps/duolingo-avatar run test:ci
+pnpm run test:catalog
+pnpm --dir apps/ball-growth-lab run test:ci
+pnpm --dir apps/duolingo-avatar run test:ci
 ```
 
 GitHub Pages 和 Cloudflare Pages 发布同一份 `_site` 静态产物；AI API 继续部署到现有 Cloudflare Worker，不为静态应用额外创建容器。CI 按变更选择应用测试，并只在 Worker 源码或配置变化时部署 Worker。

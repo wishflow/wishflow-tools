@@ -162,7 +162,7 @@ declare global {
 4. 把 Rive 初始化、state machine 输入、tile 渲染抽到 `src/rive/`。
 5. 把 localStorage、本地历史、Undo/Redo 抽到 `src/state/`。
 6. 加 `__avatarTestHooks`，更新 E2E 测试访问方式。
-7. 确认从仓库根目录运行 `npm run build:site`，生成导航页 `_site/index.html` 和应用目录 `_site/duolingo-avatar/`。
+7. 确认从仓库根目录运行 `pnpm run build:site`，生成导航页 `_site/index.html` 和应用目录 `_site/duolingo-avatar/`。
 
 迁移期间允许保留局部命令式 DOM 操作，但最终应让 React 管页面结构，Rive canvas 渲染仍由 imperative API 管。
 
@@ -187,17 +187,17 @@ declare global {
 本步骤完成后至少运行：
 
 ```bash
-npm run test:static
-npm run test:worker
-npm run build:site
-npm run test:e2e
+pnpm run test:static
+pnpm run test:worker
+pnpm run build:site
+pnpm run test:e2e
 git diff --check
 ```
 
 说明：
 
-- 本地无 Chrome 时，`npm run test:e2e` 可按现有逻辑跳过。
-- CI 中 `npm run test:ci` 必须安装 Chrome 并完整通过。
+- 本地无 Chrome 时，`pnpm run test:e2e` 可按现有逻辑跳过。
+- CI 中 `pnpm run test:ci` 必须安装 Chrome 并完整通过。
 - `test:worker` 暂不改变，因为 Worker 不在本步骤范围内。
 
 E2E 验收场景：

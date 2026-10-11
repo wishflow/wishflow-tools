@@ -12,14 +12,14 @@ WishFlow Tools 中的头像编辑应用，部署在 `/duolingo-avatar/`。前端
 
 ```bash
 ./scripts/install.sh
-npm run dev
+pnpm run dev
 ```
 
-`npm run build` 只构建此应用到本地 `dist/`。从仓库根目录构建完整导航站和所有已登记应用：
+`pnpm run build` 只构建此应用到本地 `dist/`。从仓库根目录构建完整导航站和所有已登记应用：
 
 ```bash
 cd ../..
-npm run build:site
+pnpm run build:site
 python3 -m http.server 8769 --directory _site
 ```
 
@@ -37,4 +37,4 @@ Vite 输出到本目录 `dist/`，共享构建器再复制到 `_site/duolingo-av
 
 ## 验证
 
-在本目录运行 `npm run test:ci`。单独验证可使用 `npm run test:static`、`npm run test:worker` 或 `npm run test:e2e`。
+在本目录运行 `pnpm run test:ci`。单独验证可使用 `pnpm run test:static`、`pnpm run test:worker` 或 `pnpm run test:e2e`。

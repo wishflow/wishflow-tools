@@ -191,7 +191,7 @@ package.json
 关键实现：
 
 - `wrangler.toml` 的 `main` 指向 `worker/index.ts`。
-- `worker-configuration.d.ts` 由 `npx wrangler types worker-configuration.d.ts --include-runtime false` 生成，并随仓库提交。
+- `worker-configuration.d.ts` 由 `pnpm exec wrangler types worker-configuration.d.ts --include-runtime false` 生成，并随仓库提交。
 - Worker 运行时类型由 `@cloudflare/workers-types` 提供，避免提交大体积 runtime declaration。
 - `tsconfig.worker.json` 只包含 Worker 和生成类型，启用 `strict: true`。
 - `zod` 放在 `dependencies`，因为 Worker 运行时需要。
@@ -223,17 +223,17 @@ flowchart TD
 本步骤完成后至少运行：
 
 ```bash
-npm run test:worker
-npx tsc -p tsconfig.worker.json --noEmit
-npm run build:site
-npm run test:static
+pnpm run test:worker
+pnpm exec tsc -p tsconfig.worker.json --noEmit
+pnpm run build:site
+pnpm run test:static
 git diff --check
 ```
 
 建议有浏览器环境时继续运行：
 
 ```bash
-npm run test:e2e
+pnpm run test:e2e
 ```
 
 Worker 单测覆盖：

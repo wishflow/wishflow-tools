@@ -315,7 +315,7 @@ async def capture_compare_images_async(records: list[dict[str, Any]], args: argp
     chrome_exec = catalog_lib.find_chrome_exec(args.chrome_exec)
     if not chrome_exec:
         raise RuntimeError(
-            "Chrome/Chromium is required. Run `npx playwright install --with-deps chromium` or set CHROME_EXEC."
+            "Chrome/Chromium is required. Run `pnpm exec playwright install --with-deps chromium` or set CHROME_EXEC."
         )
 
     missing = [
@@ -629,7 +629,7 @@ def load_task_scope(args: argparse.Namespace) -> tuple[dict[str, dict[str, Any]]
     errors: list[str] = []
     task_options: dict[str, dict[str, Any]] = {}
     if not task_files:
-        errors.append("No Codex task package found. Run `npm run semantic:codex:tasks` first or pass --task.")
+        errors.append("No Codex task package found. Run `pnpm run semantic:codex:tasks` first or pass --task.")
         return task_options, errors, warnings
     for task_file in task_files:
         if not task_file.exists():
@@ -796,7 +796,7 @@ def merge_label_inputs(args: argparse.Namespace) -> tuple[list[Path], list[str],
     errors: list[str] = []
     input_paths: list[Path] = []
     if not task_files:
-        errors.append("No Codex task package found. Run `npm run semantic:codex:tasks` first or pass --task.")
+        errors.append("No Codex task package found. Run `pnpm run semantic:codex:tasks` first or pass --task.")
         return input_paths, errors, warnings
     for task_file in task_files:
         if not task_file.exists():
@@ -1216,7 +1216,7 @@ def report_issue_rows(summaries: list[dict[str, Any]]) -> list[dict[str, str]]:
 def run_report(args: argparse.Namespace) -> int:
     task_files, warnings = load_task_files(args)
     if not task_files:
-        raise RuntimeError("No Codex task package found. Run `npm run semantic:codex:tasks` first or pass --task.")
+        raise RuntimeError("No Codex task package found. Run `pnpm run semantic:codex:tasks` first or pass --task.")
 
     summaries = []
     errors = []

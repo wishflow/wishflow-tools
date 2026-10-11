@@ -37,11 +37,13 @@ export function validateCatalog(catalog, repoRoot) {
 
     const appDir = path.join(repoRoot, 'apps', slug);
     const packagePath = path.join(appDir, 'package.json');
-    const lockPath = path.join(appDir, 'package-lock.json');
+    const lockPath = path.join(appDir, 'pnpm-lock.yaml');
+    const npmLockPath = path.join(appDir, 'package-lock.json');
     const installPath = path.join(appDir, 'scripts', 'install.sh');
     if (!existsSync(appDir)) throw new Error(`Project directory does not exist: apps/${slug}/.`);
     if (!existsSync(packagePath)) throw new Error(`Project apps/${slug} is missing package.json.`);
-    if (!existsSync(lockPath)) throw new Error(`Project apps/${slug} is missing package-lock.json.`);
+    if (!existsSync(lockPath)) throw new Error(`Project apps/${slug} is missing pnpm-lock.yaml.`);
+    if (existsSync(npmLockPath)) throw new Error(`Project apps/${slug} still has an npm package-lock.json.`);
     if (!existsSync(installPath)) throw new Error(`Project apps/${slug} is missing scripts/install.sh.`);
     try {
       accessSync(installPath, constants.X_OK);
@@ -49,6 +51,9 @@ export function validateCatalog(catalog, repoRoot) {
       throw new Error(`Project apps/${slug}/scripts/install.sh must be executable.`);
     }
     const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+    if (packageJson.packageManager !== 'pnpm@12.11.2') {
+      throw new Error(`Project apps/${slug}/package.json must pin packageManager to pnpm@12.11.2.`);
+    }
     for (const script of ['build', 'test:ci']) {
       if (typeof packageJson.scripts?.[script] !== 'string' || packageJson.scripts[script].trim() === '') {
         throw new Error(`Project apps/${slug}/package.json must define a "${script}" script.`);

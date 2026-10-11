@@ -31,10 +31,10 @@
 共享包位于 `packages/simulation-testkit`，版本为 `1.0.0`。每个任务包含完整配置、随机种子和采样选项；固定大小的长驻 Node Worker 线程池会为超额任务排队。结果按提交顺序返回，失败结果保留任务配置、种子与错误，不自动重试。场景适配器负责每次调用创建并释放独立模拟状态。
 
 ```sh
-npm run baseline:first-birth
-npm run calibrate:growth
+pnpm run baseline:first-birth
+pnpm run calibrate:growth
 export FIRST_BIRTH_CAP_SECONDS # 填入你选定的首繁殖等待上限（秒）
-npm run search:growth
+pnpm run search:growth
 ```
 
 可用 `SIMULATION_WORKERS` 指定 Worker 数量，`FIRST_BIRTH_SEEDS` 指定首繁殖样本数，`CALIBRATION_SEEDS` 指定每个参数组合的配对种子数（默认 24），`CALIBRATION_SAMPLE_INTERVAL_SECONDS` 指定校准采样间隔（默认 0.05 秒）。校准默认以 300 秒作为统计观察窗；达到观察窗但仍未终止的场景会作为右删失数据保留，不会改变游戏本身的终止规则。设置 `CALIBRATION_OBSERVATION_CEILING_SECONDS=0` 可要求物理场景运行到终止，但有可能遇到永久停滞场景。

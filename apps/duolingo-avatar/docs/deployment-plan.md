@@ -209,7 +209,7 @@ CLOUDFLARE_ACCOUNT_ID=...
 
 ## 5. GitHub Actions 门禁
 
-CI 使用 `apps/catalog.json` 和变更文件决定测试及发布范围。每个 JavaScript 应用在自己的目录维护 `package.json` 与 `package-lock.json`，CI 只在对应应用目录执行 `npm ci`，不使用根 npm workspace。
+CI 使用 `apps/catalog.json` 和变更文件决定测试及发布范围。每个 JavaScript 应用在自己的目录维护 `package.json` 与 `pnpm-lock.yaml`，CI 只在对应应用目录执行 `pnpm install --frozen-lockfile`；仓库根目录不配置跨应用 pnpm workspace。
 
 | Job | 作用 |
 | --- | --- |
@@ -226,7 +226,7 @@ CI 使用 `apps/catalog.json` 和变更文件决定测试及发布范围。每�
 `validate-cloudflare-config` 执行：
 
 ```bash
-npm run check:cloudflare-config
+pnpm run check:cloudflare-config
 ```
 
 该脚本在本地会自动读取 `.env`；在 GitHub Actions 中使用 repository secrets。
@@ -246,26 +246,26 @@ npm run check:cloudflare-config
 
 | 命令 | 用途 |
 | --- | --- |
-| `./scripts/install.sh`（应用目录） | 安装本应用的 npm 依赖并创建 Python `.venv/` |
-| `npm run build`（应用目录） | 构建头像编辑器到本目录 `dist/` |
-| `npm run test:static`（应用目录） | 构建并检查本应用静态资源 |
-| `npm run test:worker`（应用目录） | Worker 单元测试，mock AI 与 Turnstile |
-| `npm run test:e2e`（应用目录） | 本地有 Chrome 时跑浏览器 E2E；无 Chrome 时跳过 |
-| `npm run test:ci`（应用目录） | 强制运行静态、Worker、浏览器 E2E 验证 |
-| `npm run build:site`（仓库根目录） | 构建所有目录中登记的应用及共享导航页 |
-| `npm run test:catalog`（仓库根目录） | 检查项目目录、导航卡片和 CI 变更分类 |
-| `npm run check:cloudflare-config`（仓库根目录） | 部署前 Cloudflare AI/secret 门禁 |
-| `npm run deploy:cf:pages`（仓库根目录） | 部署 Cloudflare Pages |
-| `npm run deploy:cf:worker`（仓库根目录） | 部署 Cloudflare Worker |
+| `./scripts/install.sh`（应用目录） | 安装本应用的 pnpm 依赖并创建 Python `.venv/` |
+| `pnpm run build`（应用目录） | 构建头像编辑器到本目录 `dist/` |
+| `pnpm run test:static`（应用目录） | 构建并检查本应用静态资源 |
+| `pnpm run test:worker`（应用目录） | Worker 单元测试，mock AI 与 Turnstile |
+| `pnpm run test:e2e`（应用目录） | 本地有 Chrome 时跑浏览器 E2E；无 Chrome 时跳过 |
+| `pnpm run test:ci`（应用目录） | 强制运行静态、Worker、浏览器 E2E 验证 |
+| `pnpm run build:site`（仓库根目录） | 构建所有目录中登记的应用及共享导航页 |
+| `pnpm run test:catalog`（仓库根目录） | 检查项目目录、导航卡片和 CI 变更分类 |
+| `pnpm run check:cloudflare-config`（仓库根目录） | 部署前 Cloudflare AI/secret 门禁 |
+| `pnpm run deploy:cf:pages`（仓库根目录） | 部署 Cloudflare Pages |
+| `pnpm run deploy:cf:worker`（仓库根目录） | 部署 Cloudflare Worker |
 
 本地快速验证：
 
 ```bash
 cd apps/duolingo-avatar
 ./scripts/install.sh
-npm run test:static
-npm run test:worker
-npm run test:e2e
+pnpm run test:static
+pnpm run test:worker
+pnpm run test:e2e
 ```
 
 首次本地配置 Turnstile：
@@ -278,7 +278,7 @@ cp .env.example .env
 本地 Worker 调试：
 
 ```bash
-npx wrangler dev
+pnpm exec wrangler dev
 ```
 
 然后访问：

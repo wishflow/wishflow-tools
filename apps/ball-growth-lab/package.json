@@ -2,12 +2,13 @@
   "name": "@wishflow/ball-growth-lab",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.11.2",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "npm run typecheck && vite build",
+    "build": "pnpm run typecheck && vite build",
     "typecheck": "tsc --noEmit",
     "test:unit": "node --import tsx --test tests/*.test.ts",
-    "test:shared": "npm --prefix ../../packages/simulation-testkit test",
+    "test:shared": "pnpm --dir ../../packages/simulation-testkit test",
     "test:e2e": "playwright test",
     "benchmark": "node --import tsx scripts/benchmark.ts",
     "benchmark:gaps": "node --import tsx scripts/gap-scan.ts",
@@ -15,7 +16,7 @@
     "baseline:first-birth": "node --import tsx scripts/baseline-first-birth.ts",
     "calibrate:growth": "node --import tsx scripts/calibrate-growth.ts",
     "search:growth": "node --import tsx scripts/search-growth.ts",
-    "test:ci": "npm run typecheck && npm run test:shared && npm run test:unit && npm run test:e2e"
+    "test:ci": "pnpm run typecheck && pnpm run test:shared && pnpm run test:unit && pnpm run test:e2e"
   },
   "dependencies": {
     "@wishflow/simulation-testkit": "file:../../packages/simulation-testkit",

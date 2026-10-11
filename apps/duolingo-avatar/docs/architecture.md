@@ -271,11 +271,11 @@ sequenceDiagram
 
 | 命令 | 覆盖范围 |
 | --- | --- |
-| `npm run test:worker` | Worker API、session、Generate SSE、Prompt/schema、fallback、语义匹配 |
-| `npm run test:static` | Vite 构建、静态资源、manifest、本地引用、Rive WASM |
+| `pnpm run test:worker` | Worker API、session、Generate SSE、Prompt/schema、fallback、语义匹配 |
+| `pnpm run test:static` | Vite 构建、静态资源、manifest、本地引用、Rive WASM |
 | `python3 tests/test_avatar_explorer.py` | 浏览器集成：Rive、缩略图、移动布局、AI mock、导出文件名 |
-| `npm run test:ci` | 静态、Worker、浏览器完整验证 |
-| `npm run deploy:cf:pages` | 发布 `_site` 到 Cloudflare Pages |
-| `npm run deploy:cf:worker` | 发布 Worker |
+| `pnpm run test:ci` | 静态、Worker、浏览器完整验证 |
+| `pnpm run deploy:cf:pages` | 发布 `_site` 到 Cloudflare Pages |
+| `pnpm run deploy:cf:worker` | 发布 Worker |
 
 发布前应至少完成与改动范围匹配的验证。修改文档、实现计划或修复问题后，按协作规则提交 commit 并 push。
