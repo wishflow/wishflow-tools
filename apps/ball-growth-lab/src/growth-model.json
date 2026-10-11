@@ -22,7 +22,8 @@
   "fixedParameters": {
     "initialCount": 2,
     "maxPopulation": 1000,
-    "birthProbability": 0.35,
+    "birthProbability": 1,
+    "birthCooldown": 8,
     "pairCooldown": 0.7,
     "restitution": 1
   },

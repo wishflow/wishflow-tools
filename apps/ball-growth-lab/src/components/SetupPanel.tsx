@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent } from 'react';
-import { MAX_ARENA_SIZE, MIN_ARENA_SIZE, type EndReason, type SimulationConfig, type SimulationStats } from '../types';
+import { MAX_ARENA_SIZE, MAX_POPULATION, MIN_ARENA_SIZE, MIN_POPULATION_TARGET, type EndReason, type SimulationConfig, type SimulationStats } from '../types';
 
 export type SetupTab = 'arena' | 'launch' | 'rules';
 
@@ -22,7 +22,7 @@ interface SetupPanelProps {
 const TABS: Array<{ id: SetupTab; number: string; label: string; note: string }> = [
   { id: 'arena', number: '01', label: '场地', note: '边界与球体尺寸' },
   { id: 'launch', number: '02', label: '发射', note: '初速与方向' },
-  { id: 'rules', number: '03', label: '规则', note: '重力与繁殖规则' },
+  { id: 'rules', number: '03', label: '规则', note: '繁殖节奏与人口上限' },
 ];
 
 function endReasonLabel(reason: EndReason | null): string {
@@ -223,14 +223,15 @@ export function SetupPanel({
               <div className="control-grid">
                 <RangeControl label="重力" value={config.gravity} min={0} max={20} step={0.2} output={`${config.gravity.toFixed(1)} m/s²`} help="0 时自由飞行是直线；有重力时形成抛物线" onChange={(value) => change('gravity', value)} />
                 <FixedControl label="恢复系数" value="100%" help="理想弹性碰撞；不施加阻尼" />
-                <RangeControl label="基准繁殖概率" value={config.birthProbability} min={0} max={1} step={0.05} output={`${Math.round(config.birthProbability * 100)}%`} help="按 20 球作为参考，实际概率随人口缩放，使人均增长率近似稳定" onChange={(value) => change('birthProbability', value)} />
+                <RangeControl label="繁殖概率" value={config.birthProbability} min={0} max={1} step={0.05} output={`${Math.round(config.birthProbability * 100)}%`} help="每次有效碰撞按此概率繁殖；默认 100%，不会随人口缩放" onChange={(value) => change('birthProbability', value)} />
+                <RangeControl label="单球繁殖冷却" value={config.birthCooldown} min={1} max={30} step={0.5} output={`${config.birthCooldown.toFixed(1)} 秒`} help="成功繁殖的两颗球暂时不能再次繁殖；冷却越长，增长越慢" onChange={(value) => change('birthCooldown', value)} />
                 <FixedControl label="同一球对冷却" value="0.70 秒" />
-                <FixedControl label="人口目标" value="1000 颗" help="达到目标、只剩一球或没有球时结束" />
+                <RangeControl label="人口上限" value={config.maxPopulation} min={MIN_POPULATION_TARGET} max={MAX_POPULATION} step={10} output={`${config.maxPopulation} 颗`} help="达到上限、只剩一球或没有球时结束" onChange={(value) => change('maxPopulation', value)} />
               </div>
             )}
           </div>
 
-          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>每轮从 2 球开始；碰撞触发繁殖，概率可调并按人口缩放，弹性和 1000 球目标固定。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
+          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>每轮从 2 球开始；繁殖概率默认 100% 且可调，不随人口缩放；单球冷却控制增长速度，人口上限可调。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
         </section>
       </section>
 

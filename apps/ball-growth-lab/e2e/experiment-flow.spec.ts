@@ -36,11 +36,21 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await expect(page.getByRole('tabpanel')).toContainText('恢复系数');
   await expect(page.getByRole('tabpanel')).toContainText('100%');
   await expect(page.getByRole('tabpanel')).toContainText('0.70 秒');
-  const birthProbability = page.getByRole('slider', { name: '基准繁殖概率' });
-  await expect(birthProbability).toHaveValue('0.35');
+  await expect(page.getByRole('tabpanel')).toContainText('繁殖概率');
+  const birthProbability = page.getByRole('slider', { name: '繁殖概率' });
+  await expect(birthProbability).toHaveValue('1');
+  await birthProbability.press('ArrowLeft');
+  await expect(birthProbability).toHaveValue('0.95');
   await birthProbability.press('ArrowRight');
-  await expect(birthProbability).toHaveValue('0.4');
-  await expect(page.getByRole('slider', { name: '人口目标' })).toHaveCount(0);
+  await expect(birthProbability).toHaveValue('1');
+  const birthCooldown = page.getByRole('slider', { name: '单球繁殖冷却' });
+  await expect(birthCooldown).toHaveValue('8');
+  await birthCooldown.press('ArrowRight');
+  await expect(birthCooldown).toHaveValue('8.5');
+  const populationLimit = page.getByRole('slider', { name: '人口上限' });
+  await expect(populationLimit).toHaveValue('1000');
+  await populationLimit.press('ArrowLeft');
+  await expect(populationLimit).toHaveValue('990');
   await page.getByRole('tab', { name: /场地/ }).click();
 
   await page.getByRole('button', { name: '开始实验' }).click();

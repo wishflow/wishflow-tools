@@ -23,7 +23,7 @@ const WARMUP_FRAMES = Number(process.env.WARMUP_FRAMES ?? Math.round(BENCHMARK_D
 const BALL_DIAMETER_RATIO = Number(process.env.BENCHMARK_BALL_DIAMETER_RATIO ?? DEFAULT_CONFIG.ballDiameterRatio);
 const INITIAL_SPEED = Number(process.env.BENCHMARK_INITIAL_SPEED ?? 6);
 const GRAVITY = Number(process.env.BENCHMARK_GRAVITY ?? 0);
-const BIRTH_PROBABILITY = Number(process.env.BENCHMARK_BIRTH_PROBABILITY ?? 0);
+const BIRTH_PROBABILITY = Number(process.env.BENCHMARK_BIRTH_PROBABILITY ?? DEFAULT_CONFIG.birthProbability);
 const PAIR_COOLDOWN = Number(process.env.BENCHMARK_PAIR_COOLDOWN ?? DEFAULT_CONFIG.pairCooldown);
 const MAX_TRAVEL_PER_SUBSTEP = Number(process.env.BENCHMARK_MAX_TRAVEL_RADIUS_RATIO ?? 0.75);
 
@@ -129,6 +129,7 @@ for (const count of COUNTS) {
             directionSpread: 120,
             initialCount: Math.min(count, 100),
             birthProbability: BIRTH_PROBABILITY,
+            birthCooldown: DEFAULT_CONFIG.birthCooldown,
             pairCooldown: PAIR_COOLDOWN,
             maxPopulation: 1000,
             seed: `BENCH-${count}-${shape}`,

@@ -3,14 +3,21 @@ import test from 'node:test';
 import { CircleBatchSimulation } from '../src/physics/CircleBatchSimulation';
 import { DEFAULT_CONFIG, FIXED_STEP_SECONDS } from '../src/types';
 
-function thresholdTimes(birthProbability = DEFAULT_CONFIG.birthProbability): Map<number, number> {
+interface GrowthRun {
+  times: Map<number, number>;
+  finalPopulation: number;
+  endReason: string | null;
+}
+
+function runGrowth(birthCooldown: number, maxPopulation = 1000, stopAtCheckpoints = true): GrowthRun {
   const simulation = new CircleBatchSimulation({
     ...DEFAULT_CONFIG,
     seed: 'BALL-0426',
-    maxPopulation: 1000,
-    birthProbability,
+    maxPopulation,
+    birthProbability: 1,
+    birthCooldown,
   });
-  const thresholds = [10, 100, 900];
+  const thresholds = [10, 100, 900].filter((threshold) => threshold <= maxPopulation);
   const times = new Map<number, number>();
 
   try {
@@ -21,17 +28,25 @@ function thresholdTimes(birthProbability = DEFAULT_CONFIG.birthProbability): Map
           times.set(threshold, frame * FIXED_STEP_SECONDS);
         }
       }
-      if (times.size === thresholds.length) break;
+      if (stopAtCheckpoints && times.size === thresholds.length) break;
     }
+    return {
+      times,
+      finalPopulation: simulation.populationCount,
+      endReason: simulation.getSnapshot().endReason,
+    };
   } finally {
     simulation.dispose();
   }
-
-  return times;
 }
 
-test('碰撞繁殖默认曲线保持近似恒定的人均增长率', () => {
-  const times = thresholdTimes();
+function thresholdTimes(birthCooldown: number, maxPopulation = 1000): Map<number, number> {
+  return runGrowth(birthCooldown, maxPopulation).times;
+}
+
+test('默认碰撞繁殖概率为 100%，单球冷却使人均增长率不过度加速', () => {
+  assert.equal(DEFAULT_CONFIG.birthProbability, 1);
+  const times = thresholdTimes(8);
   assert.deepEqual([...times.keys()], [10, 100, 900], 'the fixed seed must reach all population checkpoints');
 
   const earlyLogRate = Math.log(100 / 10) / (times.get(100)! - times.get(10)!);
@@ -44,12 +59,19 @@ test('碰撞繁殖默认曲线保持近似恒定的人均增长率', () => {
   );
 });
 
-test('基准繁殖概率可以调节达到人口目标所需的模拟时间', () => {
-  const standardProbabilityTime = thresholdTimes(0.35).get(900)!;
-  const lowerProbabilityTime = thresholdTimes(0.175).get(900)!;
+test('较长的单球繁殖冷却会延长达到人口目标所需的模拟时间', () => {
+  const standardCooldownTime = thresholdTimes(4).get(900)!;
+  const longerCooldownTime = thresholdTimes(12).get(900)!;
 
   assert.ok(
-    lowerProbabilityTime > standardProbabilityTime,
-    `lower baseline probability should slow growth, got ${lowerProbabilityTime}s vs ${standardProbabilityTime}s`,
+    longerCooldownTime > standardCooldownTime,
+    `longer per-ball cooldown should slow growth, got ${longerCooldownTime}s vs ${standardCooldownTime}s`,
   );
+});
+
+test('人口上限限制最大人口并决定自动结束点', () => {
+  const run = runGrowth(8, 100, false);
+  assert.deepEqual([...run.times.keys()], [10, 100]);
+  assert.equal(run.finalPopulation, 100);
+  assert.equal(run.endReason, 'population-target');
 });

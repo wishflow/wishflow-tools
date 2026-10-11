@@ -47,7 +47,7 @@ test('复现导出包含可重放参数和现场诊断，并可 JSON 往返', ()
     },
     horizonSeconds: 0,
     ranges: {},
-    fixedParameters: { initialCount: 2, maxPopulation: 1000, birthProbability: 0.35, pairCooldown: 0.7, restitution: 1 },
+    fixedParameters: { initialCount: 2, maxPopulation: 1000, birthProbability: 1, birthCooldown: 8, pairCooldown: 0.7, restitution: 1 },
     regressions: { collisionLog: [], birthOpportunityLog: [], cooldownLogit: [], spaceLogit: [], exitLog: [], speedLog: [] },
     rateNoiseSigma: 0,
     contactStudy: { observations: 0, medianCorrection: 0, cooldownAvailability: 0, spaceAvailability: 0, meanExitRatePerBallSecond: 0 },

@@ -26,7 +26,6 @@ interface PendingBirth {
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
 const POSITION_SLOP = 0.002;
 const POSITION_CORRECTION = 0.85;
-const BIRTH_PROBABILITY_REFERENCE_POPULATION = 20;
 const BIRTH_SEARCH_RING_RADII = [2.15, 2.75, 3.45, 4.25, 5.2, 6.3, 7.6];
 const BIRTH_SEARCH_DIRECTIONS = Array.from({ length: 24 }, (_, index) => {
   const angle = (Math.PI * 2 * index) / 24;
@@ -60,6 +59,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private readonly y: Float64Array;
   private readonly vx: Float64Array;
   private readonly vy: Float64Array;
+  private readonly birthCooldownReadyAt: Float64Array;
   private readonly ids: Uint32Array;
   private readonly hasEntered: Uint8Array;
   private readonly wallSegments;
@@ -75,6 +75,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private readonly indexById = new Map<number, number>();
   private readonly pendingBirths: PendingBirth[] = [];
   private readonly queuedBirthPairs = new Set<string>();
+  private readonly queuedBirthBalls = new Set<number>();
   private count = 0;
   private nextId = 1;
   private elapsedSeconds = 0;
@@ -112,6 +113,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.y = new Float64Array(this.capacity);
     this.vx = new Float64Array(this.capacity);
     this.vy = new Float64Array(this.capacity);
+    this.birthCooldownReadyAt = new Float64Array(this.capacity);
     this.ids = new Uint32Array(this.capacity);
     this.hasEntered = new Uint8Array(this.capacity);
     this.wallSegments = config.shape === 'circle' ? [] : buildBoundarySegments(config);
@@ -144,6 +146,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.elapsedSeconds += deltaSeconds;
     this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
+    this.queuedBirthBalls.clear();
     const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
     const substepSeconds = deltaSeconds / substepCount;
     for (let substep = 0; substep < substepCount; substep += 1) {
@@ -319,6 +322,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.indexById.clear();
     this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
+    this.queuedBirthBalls.clear();
     this.count = 0;
     this.disposed = true;
   }
@@ -397,6 +401,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.y[index] = position.y;
     this.vx[index] = velocity.x;
     this.vy[index] = velocity.y;
+    this.birthCooldownReadyAt[index] = 0;
     this.hasEntered[index] = isInsideArena(this.config.shape, position, this.radius, this.halfExtent) ? 1 : 0;
     return id;
   }
@@ -662,12 +667,15 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.cooldownAccepted += 1;
     if (this.queuedBirthPairs.has(key)) return;
     this.queuedBirthPairs.add(key);
+    if (this.elapsedSeconds < this.birthCooldownReadyAt[first]
+      || this.elapsedSeconds < this.birthCooldownReadyAt[second]
+      || this.queuedBirthBalls.has(firstId)
+      || this.queuedBirthBalls.has(secondId)) return;
     this.birthAttempts += 1;
-    const referencePopulation = Math.max(BIRTH_PROBABILITY_REFERENCE_POPULATION, this.config.initialCount);
-    const populationAdjustment = referencePopulation / Math.max(1, this.count);
-    const effectiveBirthProbability = Math.max(0, Math.min(1, this.config.birthProbability * populationAdjustment));
-    if (this.random() >= effectiveBirthProbability) return;
+    if (this.random() >= this.config.birthProbability) return;
     this.birthProbabilityPassed += 1;
+    this.queuedBirthBalls.add(firstId);
+    this.queuedBirthBalls.add(secondId);
     this.pendingBirths.push({
       firstId,
       secondId,
@@ -689,6 +697,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         this.y[index] = this.y[last];
         this.vx[index] = this.vx[last];
         this.vy[index] = this.vy[last];
+        this.birthCooldownReadyAt[index] = this.birthCooldownReadyAt[last];
         this.ids[index] = this.ids[last];
         this.hasEntered[index] = this.hasEntered[last];
         this.indexById.set(this.ids[index], index);
@@ -725,6 +734,9 @@ export class CircleBatchSimulation implements PhysicsAdapter {
         this.missedSpaceBirths += 1;
         continue;
       }
+      const birthCooldownReadyAt = this.elapsedSeconds + Math.max(0, this.config.birthCooldown);
+      this.birthCooldownReadyAt[first] = birthCooldownReadyAt;
+      this.birthCooldownReadyAt[second] = birthCooldownReadyAt;
       const velocity = createBirthVelocity(
         Math.hypot(impact.firstVelocity.x, impact.firstVelocity.y),
         Math.hypot(impact.secondVelocity.x, impact.secondVelocity.y),

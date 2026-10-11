@@ -2,7 +2,7 @@ import * as RapierBenchmark from '@dimforge/rapier2d-compat';
 import { CircleBatchSimulation } from '../src/physics/CircleBatchSimulation';
 import { PlanckSimulation } from './experimental/PlanckSimulation';
 import { initializeRapier, RapierSimulation } from '../src/physics/RapierSimulation';
-import { ARENA_HALF_EXTENT, FIXED_STEP_SECONDS, type ArenaShape, type SimulationConfig } from '../src/types';
+import { ARENA_HALF_EXTENT, DEFAULT_CONFIG, FIXED_STEP_SECONDS, type ArenaShape, type SimulationConfig } from '../src/types';
 
 const GAP_WIDTH_RATIOS = [1.05, 1.25, 1.45, 1.75, 2, 2.5, 3];
 const SAMPLE_OFFSETS = Number(process.env.GAP_SCAN_SAMPLES ?? 17);
@@ -29,6 +29,7 @@ function trialConfig(shape: ArenaShape, gapWidthRatio: number, seed: string): Si
     directionSpread: 120,
     initialCount: 2,
     birthProbability: 0,
+    birthCooldown: DEFAULT_CONFIG.birthCooldown,
     pairCooldown: 0.7,
     maxPopulation: 1000,
     seed,

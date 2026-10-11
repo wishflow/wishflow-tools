@@ -1,5 +1,5 @@
 import { CircleBatchSimulation } from './physics/CircleBatchSimulation';
-import { FIXED_STEP_SECONDS, type SimulationConfig } from './types';
+import { DEFAULT_CONFIG, FIXED_STEP_SECONDS, type SimulationConfig } from './types';
 
 export interface GrowthModelArtifact {
   format: 'ball-growth-lab.growth-model';
@@ -32,7 +32,7 @@ export interface GrowthModelArtifact {
   };
   horizonSeconds: number;
   ranges: Partial<Record<NumericConfigKey, [number, number]>>;
-  fixedParameters: { initialCount: number; maxPopulation: number; birthProbability: number; pairCooldown: number; restitution: number };
+  fixedParameters: { initialCount: number; maxPopulation: number; birthProbability: number; birthCooldown: number; pairCooldown: number; restitution: number };
   regressions: {
     collisionLog: number[];
     birthOpportunityLog: number[];
@@ -518,7 +518,8 @@ export function fitGrowthModel(
     fixedParameters: {
       initialCount: successful[0]?.config.initialCount ?? 2,
       maxPopulation: successful[0]?.config.maxPopulation ?? 1000,
-      birthProbability: successful[0]?.config.birthProbability ?? 0.35,
+      birthProbability: successful[0]?.config.birthProbability ?? DEFAULT_CONFIG.birthProbability,
+      birthCooldown: successful[0]?.config.birthCooldown ?? DEFAULT_CONFIG.birthCooldown,
       pairCooldown: successful[0]?.config.pairCooldown ?? 0.7,
       restitution: successful[0]?.config.restitution ?? 1,
     },
@@ -543,6 +544,7 @@ export function isGrowthPredictionValidated(config: SimulationConfig, model: Gro
     || config.initialCount !== model.fixedParameters.initialCount
     || config.maxPopulation !== model.fixedParameters.maxPopulation
     || config.birthProbability !== model.fixedParameters.birthProbability
+    || config.birthCooldown !== model.fixedParameters.birthCooldown
     || config.pairCooldown !== model.fixedParameters.pairCooldown
     || config.restitution !== model.fixedParameters.restitution) return false;
   return FEATURE_KEYS.every((key) => {

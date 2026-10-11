@@ -19,6 +19,7 @@ export interface SimulationConfig {
   directionSpread: number;
   initialCount: number;
   birthProbability: number;
+  birthCooldown: number;
   pairCooldown: number;
   maxPopulation: number;
   seed: string;
@@ -113,6 +114,7 @@ export const MIN_ARENA_SIZE = 16;
 export const MAX_ARENA_SIZE = 24;
 export const MAX_ARENA_HALF_EXTENT = MAX_ARENA_SIZE / 2;
 export const MAX_POPULATION = 1000;
+export const MIN_POPULATION_TARGET = 10;
 export const MIN_INITIAL_COUNT = 2;
 export const MAX_INITIAL_COUNT = 100;
 export const FIXED_STEP_SECONDS = 1 / 240;
@@ -130,7 +132,8 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   initialDirection: 270,
   directionSpread: 120,
   initialCount: 2,
-  birthProbability: 0.35,
+  birthProbability: 1,
+  birthCooldown: 8,
   pairCooldown: 0.7,
   maxPopulation: 1000,
   seed: 'BALL-0426',

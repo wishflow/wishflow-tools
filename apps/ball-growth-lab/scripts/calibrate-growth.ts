@@ -13,7 +13,7 @@ const minimumValidationSeedsPerConfig = 20;
 const outputDirectory = path.resolve(process.env.CALIBRATION_OUTPUT_DIR ?? 'reports');
 const observationCeiling = Number(process.env.CALIBRATION_OBSERVATION_CEILING_SECONDS ?? 300);
 const sampleInterval = Math.max(0.05, Number(process.env.CALIBRATION_SAMPLE_INTERVAL_SECONDS ?? 0.05));
-const common = { ...DEFAULT_CONFIG, initialCount: 2, maxPopulation: 1000, birthProbability: 0.35, pairCooldown: 0.7, restitution: 1 };
+const common = { ...DEFAULT_CONFIG, initialCount: 2, maxPopulation: 1000, birthProbability: 1, birthCooldown: 8, pairCooldown: 0.7, restitution: 1 };
 const trainingConfigs: SimulationConfig[] = [
   common,
   { ...common, ballDiameterRatio: 0.016 },

@@ -12,7 +12,7 @@ function makeConfig(overrides: Partial<SimulationConfig> = {}): SimulationConfig
     gravity: 0,
     restitution: 1,
     initialCount: 2,
-    birthProbability: 0,
+    birthProbability: DEFAULT_CONFIG.birthProbability,
     pairCooldown: 0.5,
     maxPopulation: 10,
     gapCount: 0,

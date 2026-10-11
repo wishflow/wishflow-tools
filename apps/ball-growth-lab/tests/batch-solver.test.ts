@@ -32,7 +32,7 @@ function makeConfig(overrides: Partial<SimulationConfig> = {}): SimulationConfig
     initialDirection: 270,
     directionSpread: 120,
     initialCount: 2,
-    birthProbability: 0,
+    birthProbability: DEFAULT_CONFIG.birthProbability,
     pairCooldown: 0.5,
     maxPopulation: 10,
     seed: 'BATCH-TEST',
@@ -114,7 +114,7 @@ test('初始速度大小和方向使用配置值', () => {
 });
 
 test('弹性正碰交换运动方向并保持动能', () => {
-  const simulation = new CircleBatchSimulation(makeConfig(), movingPair());
+  const simulation = new CircleBatchSimulation(makeConfig({ birthProbability: 0 }), movingPair());
   const before = kineticEnergy(simulation);
   step(simulation, 30);
   const balls = simulation.getSnapshot().balls;
@@ -129,7 +129,7 @@ test('弹性斜碰前后保持总动量和动能', () => {
     { position: { x: -0.3, y: -0.03 }, velocity: { x: 2, y: 0.8 } },
     { position: { x: 0.3, y: 0.03 }, velocity: { x: -1, y: -0.4 } },
   ];
-  const simulation = new CircleBatchSimulation(makeConfig(), seeds);
+  const simulation = new CircleBatchSimulation(makeConfig({ birthProbability: 0 }), seeds);
   const beforeEnergy = kineticEnergy(simulation);
   const beforeMomentum = totalMomentum(simulation);
   step(simulation, 40);
@@ -390,7 +390,7 @@ test('人口上限、单球、空场和手动结束分别产生正确原因', ()
 });
 
 test('连续运动保持数值有限且球速不会无故累积', () => {
-  const simulation = new CircleBatchSimulation(makeConfig({ gravity: 0 }), [
+  const simulation = new CircleBatchSimulation(makeConfig({ gravity: 0, birthProbability: 0 }), [
     { position: { x: -0.29, y: 0 }, velocity: { x: 1.5, y: 0 } },
     { position: { x: 0.29, y: 0 }, velocity: { x: -1.5, y: 0 } },
   ]);
@@ -404,7 +404,7 @@ test('连续运动保持数值有限且球速不会无故累积', () => {
 });
 
 test('同一配置和种子可复现繁殖运行', () => {
-  const config = makeConfig({ initialCount: 12, maxPopulation: 40, birthProbability: 0.35 });
+  const config = makeConfig({ initialCount: 12, maxPopulation: 40, birthProbability: 1 });
   const first = new CircleBatchSimulation(config);
   const second = new CircleBatchSimulation(config);
   step(first, 240);
@@ -413,6 +413,8 @@ test('同一配置和种子可复现繁殖运行', () => {
   const secondSnapshot = second.getSnapshot();
   assert.deepEqual(firstSnapshot.balls, secondSnapshot.balls);
   assert.deepEqual(firstSnapshot.stats, secondSnapshot.stats);
+  assert.ok(firstSnapshot.stats.birthAttempts > 0, 'the fixed seed should produce eligible collisions');
+  assert.equal(firstSnapshot.stats.birthProbabilityPassed, firstSnapshot.stats.birthAttempts, '100% probability should pass every eligible collision');
   first.dispose();
   second.dispose();
 });
