@@ -337,6 +337,51 @@ test('一帧内求解器多次检测同一碰撞只记录一次尝试', () => {
   simulation.dispose();
 });
 
+test('同一持续接触跨物理步不会重复繁殖判定', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    gravity: 20,
+    restitution: 0,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 100,
+  }), [
+    { position: { x: 0, y: 9.76 }, velocity: { x: 0, y: 0 } },
+    { position: { x: 0, y: 9.28 }, velocity: { x: 0, y: 0 } },
+  ]);
+
+  step(simulation, 20);
+
+  const stats = simulation.getSnapshot().stats;
+  assert.equal(stats.birthAttempts, 1);
+  assert.equal(stats.births, 1);
+  assert.equal(stats.currentCount, 3);
+  assert.equal(stats.collisionEvents, 1);
+  assert.equal(stats.birthSpaceAttempts, 1);
+  simulation.dispose();
+});
+
+test('同一球对分离后可在零冷却时再次触发繁殖', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    arenaSize: 2,
+    ballDiameterRatio: 0.1,
+    gravity: 0,
+    restitution: 1,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 10,
+  }), [
+    { position: { x: -0.3, y: 0 }, velocity: { x: 2, y: 0 } },
+    { position: { x: 0.3, y: 0 }, velocity: { x: -2, y: 0 } },
+  ]);
+
+  step(simulation, 300);
+
+  assert.ok(simulation.getSnapshot().stats.birthAttempts >= 2);
+  simulation.dispose();
+});
+
 test('碰撞对在冷却时间内不接受新繁殖判定', () => {
   const cooldown = new PairCooldown();
   assert.equal(cooldown.shouldAccept(4, 9, 1, 0.7), true);

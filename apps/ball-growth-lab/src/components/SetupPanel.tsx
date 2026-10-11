@@ -222,7 +222,7 @@ export function SetupPanel({
             {activeTab === 'rules' && (
               <div className="control-grid">
                 <RangeControl label="重力" value={config.gravity} min={0} max={20} step={0.2} output={`${config.gravity.toFixed(1)} m/s²`} help="0 时自由飞行是直线；有重力时形成抛物线" onChange={(value) => change('gravity', value)} />
-                <FixedControl label="恢复系数" value="100%" help="理想弹性碰撞；不施加阻尼" />
+                <RangeControl label="恢复系数" value={config.restitution} min={0} max={1} step={0.05} output={`${Math.round(config.restitution * 100)}%`} help="碰撞后保留的法向速度比例；低值会减弱反弹" onChange={(value) => change('restitution', value)} />
                 <RangeControl label="繁殖概率" value={config.birthProbability} min={0} max={1} step={0.05} output={`${Math.round(config.birthProbability * 100)}%`} help="通过冷却的碰撞按此概率尝试繁殖；还需有安全空位。默认 100%，不会随人口缩放" onChange={(value) => change('birthProbability', value)} />
                 <RangeControl label="单球繁殖冷却" value={config.birthCooldown} min={0} max={30} step={0.5} output={`${config.birthCooldown.toFixed(1)} 秒`} help="成功繁殖的两颗球在此时长内不能再次繁殖；设为 0 关闭" onChange={(value) => change('birthCooldown', value)} />
                 <RangeControl label="同一球对冷却" value={config.pairCooldown} min={0} max={5} step={0.1} output={`${config.pairCooldown.toFixed(1)} 秒`} help="限制同一对球重复碰撞触发繁殖的频率；设为 0 关闭" onChange={(value) => change('pairCooldown', value)} />
@@ -231,7 +231,7 @@ export function SetupPanel({
             )}
           </div>
 
-          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>每轮从 2 球开始；繁殖概率默认 100%；两种冷却默认关闭且可调，人口上限可调。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
+          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>每轮从 2 球开始；繁殖概率默认 100%；两种冷却默认关闭且可调，恢复系数和人口上限可调。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
         </section>
       </section>
 

@@ -35,6 +35,14 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await page.getByRole('tab', { name: /规则/ }).click();
   await expect(page.getByRole('tabpanel')).toContainText('恢复系数');
   await expect(page.getByRole('tabpanel')).toContainText('100%');
+  const restitution = page.getByRole('slider', { name: '恢复系数' });
+  await expect(restitution).toHaveValue('0.05');
+  await restitution.press('ArrowRight');
+  await expect(restitution).toHaveValue('0.1');
+  await restitution.press('Home');
+  await expect(restitution).toHaveValue('0');
+  await restitution.press('ArrowRight');
+  await expect(restitution).toHaveValue('0.05');
   await expect(page.getByRole('tabpanel')).toContainText('繁殖概率');
   const birthProbability = page.getByRole('slider', { name: '繁殖概率' });
   await expect(birthProbability).toHaveValue('1');

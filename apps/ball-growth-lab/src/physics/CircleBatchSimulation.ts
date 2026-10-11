@@ -11,7 +11,7 @@ import {
   type SimulationStats,
   type SpawnSeed,
 } from '../types';
-import { PairCooldown } from './PairCooldown';
+import { getBallPairKey, PairCooldown } from './PairCooldown';
 import { createBirthVelocity, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
 import { SpatialHash } from './SpatialHash';
 
@@ -76,6 +76,9 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private readonly pendingBirths: PendingBirth[] = [];
   private readonly queuedBirthPairs = new Set<string>();
   private readonly queuedBirthBalls = new Set<number>();
+  private readonly activeContactPairs = new Set<string>();
+  private readonly contactsAtEndOfStep = new Set<string>();
+  private readonly collisionPairsSeenThisStep = new Set<string>();
   private count = 0;
   private nextId = 1;
   private elapsedSeconds = 0;
@@ -147,6 +150,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
     this.queuedBirthBalls.clear();
+    this.contactsAtEndOfStep.clear();
+    this.collisionPairsSeenThisStep.clear();
     const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
     const substepSeconds = deltaSeconds / substepCount;
     for (let substep = 0; substep < substepCount; substep += 1) {
@@ -160,7 +165,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
 
       for (let iteration = 0; iteration < this.tuning.velocityIterations; iteration += 1) {
         this.rebuildGrid();
-        this.solveBallVelocities();
+        const captureContacts = substep === substepCount - 1 && iteration === this.tuning.velocityIterations - 1;
+        this.solveBallVelocities(captureContacts);
         this.solveWallVelocities();
       }
 
@@ -168,6 +174,9 @@ export class CircleBatchSimulation implements PhysicsAdapter {
       this.endForPopulationState();
       if (this.ended) break;
     }
+
+    this.activeContactPairs.clear();
+    for (const key of this.contactsAtEndOfStep) this.activeContactPairs.add(key);
 
     if (this.count > 500 && this.elapsedSeconds - this.lastCooldownPrune >= 5) {
       this.pairCooldown.prune(this.elapsedSeconds, Math.max(this.config.pairCooldown * 4, 5));
@@ -475,7 +484,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     }
   }
 
-  private solveBallVelocities(): void {
+  private solveBallVelocities(captureContacts = false): void {
     const diameterSquared = (this.diameter + POSITION_SLOP) ** 2;
     const restitution = Math.max(0, Math.min(1, this.config.restitution));
     for (let first = 0; first < this.count; first += 1) {
@@ -494,19 +503,28 @@ export class CircleBatchSimulation implements PhysicsAdapter {
               const dy = this.y[second] - this.y[first];
               const distanceSquared = dx * dx + dy * dy;
               if (distanceSquared <= diameterSquared) {
+                const firstId = this.ids[first];
+                const secondId = this.ids[second];
+                const pairKey = getBallPairKey(firstId, secondId);
+                if (captureContacts) this.contactsAtEndOfStep.add(pairKey);
                 const distance = Math.sqrt(distanceSquared);
                 const normalX = distance > 1e-9 ? dx / distance : 1;
                 const normalY = distance > 1e-9 ? dy / distance : 0;
                 const relativeNormalVelocity = (this.vx[second] - this.vx[first]) * normalX + (this.vy[second] - this.vy[first]) * normalY;
                 if (relativeNormalVelocity < 0) {
-                  this.collisionEvents += 1;
-                  this.collisionClosingSpeedSum += -relativeNormalVelocity;
                   const impulse = -(1 + restitution) * relativeNormalVelocity / 2;
                   this.vx[first] -= impulse * normalX;
                   this.vy[first] -= impulse * normalY;
                   this.vx[second] += impulse * normalX;
                   this.vy[second] += impulse * normalY;
-                  if (this.config.birthProbability > 0) {
+                  const isNewContact = !this.activeContactPairs.has(pairKey)
+                    && !this.collisionPairsSeenThisStep.has(pairKey);
+                  this.collisionPairsSeenThisStep.add(pairKey);
+                  if (isNewContact) {
+                    this.collisionEvents += 1;
+                    this.collisionClosingSpeedSum += -relativeNormalVelocity;
+                  }
+                  if (isNewContact && this.config.birthProbability > 0) {
                     this.recordImpact(first, second, {
                       x: (this.x[first] + this.x[second]) / 2,
                       y: (this.y[first] + this.y[second]) / 2,
@@ -659,7 +677,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private recordImpact(first: number, second: number, midpoint: Point): void {
     const firstId = this.ids[first];
     const secondId = this.ids[second];
-    const key = firstId < secondId ? `${firstId}:${secondId}` : `${secondId}:${firstId}`;
+    const key = getBallPairKey(firstId, secondId);
     if (!this.pairCooldown.shouldAccept(firstId, secondId, this.elapsedSeconds, this.config.pairCooldown)) {
       this.cooldownRejected += 1;
       return;
