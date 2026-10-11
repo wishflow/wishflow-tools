@@ -520,7 +520,7 @@ export function fitGrowthModel(
       maxPopulation: successful[0]?.config.maxPopulation ?? 1000,
       birthProbability: successful[0]?.config.birthProbability ?? DEFAULT_CONFIG.birthProbability,
       birthCooldown: successful[0]?.config.birthCooldown ?? DEFAULT_CONFIG.birthCooldown,
-      pairCooldown: successful[0]?.config.pairCooldown ?? 0.7,
+      pairCooldown: successful[0]?.config.pairCooldown ?? DEFAULT_CONFIG.pairCooldown,
       restitution: successful[0]?.config.restitution ?? 1,
     },
     regressions,

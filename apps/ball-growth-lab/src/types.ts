@@ -133,8 +133,8 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   directionSpread: 120,
   initialCount: 2,
   birthProbability: 1,
-  birthCooldown: 8,
-  pairCooldown: 0.7,
+  birthCooldown: 0,
+  pairCooldown: 0,
   maxPopulation: 1000,
   seed: 'BALL-0426',
 };

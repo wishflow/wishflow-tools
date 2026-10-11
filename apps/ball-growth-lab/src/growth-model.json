@@ -23,8 +23,8 @@
     "initialCount": 2,
     "maxPopulation": 1000,
     "birthProbability": 1,
-    "birthCooldown": 8,
-    "pairCooldown": 0.7,
+    "birthCooldown": 0,
+    "pairCooldown": 0,
     "restitution": 1
   },
   "regressions": {

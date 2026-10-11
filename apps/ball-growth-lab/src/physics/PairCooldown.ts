@@ -2,6 +2,7 @@ export class PairCooldown {
   private readonly lastContact = new Map<string, number>();
 
   shouldAccept(firstId: number, secondId: number, time: number, duration: number): boolean {
+    if (duration <= 0) return true;
     const key = firstId < secondId ? `${firstId}:${secondId}` : `${secondId}:${firstId}`;
     const last = this.lastContact.get(key) ?? Number.NEGATIVE_INFINITY;
     if (time - last < duration) return false;

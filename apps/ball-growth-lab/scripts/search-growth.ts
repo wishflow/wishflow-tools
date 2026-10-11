@@ -29,8 +29,6 @@ const fixedConfig: SimulationConfig = {
   maxPopulation: 1000,
   restitution: 1,
   birthProbability: 1,
-  birthCooldown: 8,
-  pairCooldown: 0.7,
 };
 const growthModel = modelData as unknown as GrowthModelArtifact;
 

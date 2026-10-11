@@ -72,6 +72,12 @@ function totalMomentum(simulation: CircleBatchSimulation): Point {
   }), { x: 0, y: 0 });
 }
 
+test('默认繁殖概率为 100%，两类繁殖冷却均为 0', () => {
+  assert.equal(DEFAULT_CONFIG.birthProbability, 1);
+  assert.equal(DEFAULT_CONFIG.birthCooldown, 0);
+  assert.equal(DEFAULT_CONFIG.pairCooldown, 0);
+});
+
 test('批量求解器按固定种子生成互不重叠的高位初始球', () => {
   const config = makeConfig({ initialCount: 24, maxPopulation: 30 });
   const first = new CircleBatchSimulation(config);
@@ -336,6 +342,12 @@ test('碰撞对在冷却时间内不接受新繁殖判定', () => {
   assert.equal(cooldown.shouldAccept(4, 9, 1, 0.7), true);
   assert.equal(cooldown.shouldAccept(9, 4, 1.6, 0.7), false);
   assert.equal(cooldown.shouldAccept(4, 9, 1.7, 0.7), true);
+});
+
+test('球对冷却设为 0 时不屏蔽同一对球的再次碰撞', () => {
+  const cooldown = new PairCooldown();
+  assert.equal(cooldown.shouldAccept(4, 9, 1, 0), true);
+  assert.equal(cooldown.shouldAccept(4, 9, 1, 0), true);
 });
 
 test('穿过底部缺口的球会移除、计数并以空场结束', () => {

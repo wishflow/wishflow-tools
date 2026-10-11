@@ -44,7 +44,7 @@ function thresholdTimes(birthCooldown: number, maxPopulation = 1000): Map<number
   return runGrowth(birthCooldown, maxPopulation).times;
 }
 
-test('默认碰撞繁殖概率为 100%，单球冷却使人均增长率不过度加速', () => {
+test('繁殖概率为 100% 时，单球冷却使人均增长率不过度加速', () => {
   assert.equal(DEFAULT_CONFIG.birthProbability, 1);
   const times = thresholdTimes(8);
   assert.deepEqual([...times.keys()], [10, 100, 900], 'the fixed seed must reach all population checkpoints');

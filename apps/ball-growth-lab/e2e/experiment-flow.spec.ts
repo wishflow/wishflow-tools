@@ -35,7 +35,6 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await page.getByRole('tab', { name: /规则/ }).click();
   await expect(page.getByRole('tabpanel')).toContainText('恢复系数');
   await expect(page.getByRole('tabpanel')).toContainText('100%');
-  await expect(page.getByRole('tabpanel')).toContainText('0.70 秒');
   await expect(page.getByRole('tabpanel')).toContainText('繁殖概率');
   const birthProbability = page.getByRole('slider', { name: '繁殖概率' });
   await expect(birthProbability).toHaveValue('1');
@@ -44,9 +43,17 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await birthProbability.press('ArrowRight');
   await expect(birthProbability).toHaveValue('1');
   const birthCooldown = page.getByRole('slider', { name: '单球繁殖冷却' });
-  await expect(birthCooldown).toHaveValue('8');
+  await expect(birthCooldown).toHaveValue('0');
   await birthCooldown.press('ArrowRight');
-  await expect(birthCooldown).toHaveValue('8.5');
+  await expect(birthCooldown).toHaveValue('0.5');
+  await birthCooldown.press('Home');
+  await expect(birthCooldown).toHaveValue('0');
+  const pairCooldown = page.getByRole('slider', { name: '同一球对冷却' });
+  await expect(pairCooldown).toHaveValue('0');
+  await pairCooldown.press('ArrowRight');
+  await expect(pairCooldown).toHaveValue('0.1');
+  await pairCooldown.press('Home');
+  await expect(pairCooldown).toHaveValue('0');
   const populationLimit = page.getByRole('slider', { name: '人口上限' });
   await expect(populationLimit).toHaveValue('1000');
   await populationLimit.press('ArrowLeft');

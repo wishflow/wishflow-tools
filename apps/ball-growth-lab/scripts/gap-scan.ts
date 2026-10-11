@@ -30,7 +30,7 @@ function trialConfig(shape: ArenaShape, gapWidthRatio: number, seed: string): Si
     initialCount: 2,
     birthProbability: 0,
     birthCooldown: DEFAULT_CONFIG.birthCooldown,
-    pairCooldown: 0.7,
+    pairCooldown: DEFAULT_CONFIG.pairCooldown,
     maxPopulation: 1000,
     seed,
   };
