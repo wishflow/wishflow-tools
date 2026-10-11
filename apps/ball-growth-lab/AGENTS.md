@@ -17,6 +17,12 @@
 - `pnpm run test:ci` 运行类型检查、确定性单元测试和 Playwright 端到端流程。
 - `pnpm run benchmark` 运行本地物理步进基准；结果不代表真实手机性能。
 
+## 端到端测试约束
+
+- `pnpm run test:e2e` 只能在普通 shell 运行：Playwright 的 webServer 需要监听 `127.0.0.1:4173`，沙箱化的 Agent 执行环境禁止 bind/listen，会启动失败。
+- 沙箱内不要本机跑 e2e，交给 push 后的 CI；需要本机验证时改用非沙箱 shell。
+- 全新环境或重装系统后，先在仓库根运行 `sudo pnpm run install:browser-deps` 安装 Chromium 系统依赖（libnspr4、libnss3、X11 库、字体等）；Playwright 浏览器二进制按用户缓存在 `~/.cache/ms-playwright`，所有应用共用。
+
 ## 可复用 skills
 
 相关 skills 安装在 Codex 全局目录 `$CODEX_HOME/skills/`，可供其他仓库复用。仓库内的来源与重装说明见 `docs/reusable-skills.md`。不要复制到应用自身的 `skills/` 目录；该目录不会自动加载。

@@ -7,6 +7,7 @@
     "dev": "pnpm --dir apps/duolingo-avatar run dev",
     "build:site": "node scripts/build-site.mjs",
     "install:apps": "node scripts/install-apps.mjs",
+    "install:browser-deps": "pnpm --dir apps/ball-growth-lab exec playwright install-deps chromium",
     "test:catalog": "node scripts/project-catalog.test.mjs",
     "test:static": "pnpm --dir apps/duolingo-avatar run test:static",
     "test:worker": "pnpm --dir apps/duolingo-avatar run test:worker",
