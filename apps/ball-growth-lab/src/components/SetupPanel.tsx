@@ -22,7 +22,7 @@ interface SetupPanelProps {
 const TABS: Array<{ id: SetupTab; number: string; label: string; note: string }> = [
   { id: 'arena', number: '01', label: '场地', note: '边界与球体尺寸' },
   { id: 'launch', number: '02', label: '发射', note: '初速与方向' },
-  { id: 'rules', number: '03', label: '规则', note: '重力与固定繁殖规则' },
+  { id: 'rules', number: '03', label: '规则', note: '重力与繁殖规则' },
 ];
 
 function endReasonLabel(reason: EndReason | null): string {
@@ -223,14 +223,14 @@ export function SetupPanel({
               <div className="control-grid">
                 <RangeControl label="重力" value={config.gravity} min={0} max={20} step={0.2} output={`${config.gravity.toFixed(1)} m/s²`} help="0 时自由飞行是直线；有重力时形成抛物线" onChange={(value) => change('gravity', value)} />
                 <FixedControl label="恢复系数" value="100%" help="理想弹性碰撞；不施加阻尼" />
-                <FixedControl label="碰撞繁殖概率" value="35%" />
+                <RangeControl label="基准繁殖概率" value={config.birthProbability} min={0} max={1} step={0.05} output={`${Math.round(config.birthProbability * 100)}%`} help="按 20 球作为参考，实际概率随人口缩放，使人均增长率近似稳定" onChange={(value) => change('birthProbability', value)} />
                 <FixedControl label="同一球对冷却" value="0.70 秒" />
                 <FixedControl label="人口目标" value="1000 颗" help="达到目标、只剩一球或没有球时结束" />
               </div>
             )}
           </div>
 
-          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>每轮从 2 球开始；繁殖规则、弹性和 1000 球目标固定，便于比较可调参数。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
+          <div className="settings-footnote"><span className="footnote-orbit" aria-hidden="true">↗</span><span>每轮从 2 球开始；碰撞触发繁殖，概率可调并按人口缩放，弹性和 1000 球目标固定。</span><span className="export-feedback" aria-live="polite">{exportNotice}</span></div>
         </section>
       </section>
 

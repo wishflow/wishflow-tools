@@ -2,6 +2,8 @@ export type ArenaShape = 'circle';
 export type EndReason = 'population-target' | 'single-ball' | 'no-balls' | 'manual';
 export type RunState = 'setup' | 'starting' | 'running' | 'paused' | 'ending' | 'ended' | 'failed';
 export type SnapshotShape = 'circle' | 'outline';
+export const SIMULATION_SPEEDS = [1, 2, 4, 6] as const;
+export type SimulationSpeed = typeof SIMULATION_SPEEDS[number];
 
 export interface SimulationConfig {
   shape: ArenaShape;
@@ -84,6 +86,7 @@ export interface SimulationRenderSnapshot {
 
 export type WorkerCommand =
   | { type: 'start'; config: SimulationConfig; runId: number }
+  | { type: 'set-speed'; speed: SimulationSpeed }
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'finish' }

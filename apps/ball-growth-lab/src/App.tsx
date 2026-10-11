@@ -8,9 +8,11 @@ import modelData from './growth-model.json';
 import { isGrowthPredictionValidated, predictGrowth, type GrowthModelArtifact } from './growthModel';
 import {
   DEFAULT_CONFIG,
+  SIMULATION_SPEEDS,
   type EndReason,
   type RunState,
   type SimulationConfig,
+  type SimulationSpeed,
   type SimulationStats,
   type WorkerCommand,
   type WorkerSnapshotMessage,
@@ -101,6 +103,7 @@ export default function App() {
   const [stats, setStats] = useState(EMPTY_STATS);
   const [physicsFps, setPhysicsFps] = useState(0);
   const [renderFps, setRenderFps] = useState(0);
+  const [simulationSpeed, setSimulationSpeedState] = useState<SimulationSpeed>(1);
   const [samples, setSamples] = useState<PopulationSample[]>([]);
   const [lastRun, setLastRun] = useState<RunRecord | null>(null);
   const [endDialogOpen, setEndDialogOpen] = useState(false);
@@ -226,6 +229,11 @@ export default function App() {
   }, []);
   const handleCanvasError = useCallback((message: string) => setCanvasError(message), []);
 
+  const selectSimulationSpeed = (speed: SimulationSpeed) => {
+    setSimulationSpeedState(speed);
+    workerRef.current?.postMessage({ type: 'set-speed', speed } satisfies WorkerCommand);
+  };
+
   const startRun = (runConfig: SimulationConfig) => {
     let worker: Worker;
     try {
@@ -237,6 +245,7 @@ export default function App() {
     }
     activeRunId.current += 1;
     activeRunConfigRef.current = { ...runConfig };
+    setSimulationSpeedState(1);
     setSimulationError('');
     setCanvasError('');
     setEndDialogOpen(false);
@@ -450,7 +459,26 @@ export default function App() {
         </section>
 
         <aside className="live-panel" aria-label="实验数据">
-          <div className="live-heading"><span>本轮记录</span><strong>{renderFps || '—'} <small>FPS</small></strong></div>
+          <div className="live-heading">
+            <span>本轮记录</span>
+            {(runState === 'running' || runState === 'paused') && (
+              <div className="speed-control" role="group" aria-label="模拟演进速度">
+                {SIMULATION_SPEEDS.map((speed) => (
+                  <button
+                    key={speed}
+                    className={`speed-button${simulationSpeed === speed ? ' is-selected' : ''}`}
+                    type="button"
+                    aria-label={`模拟速度 ${speed} 倍`}
+                    aria-pressed={simulationSpeed === speed}
+                    onClick={() => selectSimulationSpeed(speed)}
+                  >
+                    {speed}×
+                  </button>
+                ))}
+              </div>
+            )}
+            <strong>{renderFps || '—'} <small>FPS</small></strong>
+          </div>
           <div className="live-metrics">
             <div><span>新生</span><strong>{stats.births}</strong></div>
             <div><span>离场</span><strong>{stats.exits}</strong></div>

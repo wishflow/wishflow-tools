@@ -1,15 +1,16 @@
 import { CircleBatchSimulation } from './CircleBatchSimulation';
-import { FIXED_STEP_SECONDS, type SimulationConfig, type WorkerCommand } from '../types';
+import { SimulationClock } from './SimulationClock';
+import { FIXED_STEP_SECONDS, type SimulationConfig, type SimulationSpeed, type WorkerCommand } from '../types';
 
 const workerScope = self as unknown as DedicatedWorkerGlobalScope;
 const SNAPSHOT_INTERVAL_MS = 1000 / 60;
 const MAX_STEPS_PER_TICK = 6;
 
 let simulation: CircleBatchSimulation | null = null;
+const simulationClock = new SimulationClock(FIXED_STEP_SECONDS);
 let running = false;
 let requestedRunning = false;
-let accumulator = 0;
-let previousTime = 0;
+let simulationSpeed: SimulationSpeed = 1;
 let lastSnapshotTime = 0;
 let physicsWindowStart = 0;
 let physicsWindowSteps = 0;
@@ -24,12 +25,13 @@ function start(config: SimulationConfig, currentRunId: number): void {
   simulation = null;
   requestedRunning = true;
   running = false;
-  accumulator = 0;
+  simulationSpeed = 1;
   simulation = new CircleBatchSimulation(config);
   running = requestedRunning && !simulation.isEnded;
-  previousTime = performance.now();
-  lastSnapshotTime = previousTime;
-  physicsWindowStart = previousTime;
+  const now = performance.now();
+  simulationClock.reset(now, true);
+  lastSnapshotTime = now;
+  physicsWindowStart = now;
   physicsWindowSteps = 0;
   physicsFps = 0;
   sendSnapshot();
@@ -56,23 +58,18 @@ function sendSnapshot(): void {
 function tick(): void {
   if (!running || !simulation) return;
   const now = performance.now();
-  const elapsed = Math.min((now - previousTime) / 1000, 0.1);
-  previousTime = now;
-  accumulator += elapsed;
+  const stepsToRun = simulationClock.advance(now, simulationSpeed, MAX_STEPS_PER_TICK);
 
   let steps = 0;
-  while (accumulator >= FIXED_STEP_SECONDS && steps < MAX_STEPS_PER_TICK) {
+  for (let step = 0; step < stepsToRun; step += 1) {
     simulation.step(FIXED_STEP_SECONDS);
-    accumulator -= FIXED_STEP_SECONDS;
     steps += 1;
     if (simulation.isEnded) {
       running = false;
-      accumulator = 0;
       sendSnapshot();
       break;
     }
   }
-  if (steps === MAX_STEPS_PER_TICK && accumulator >= FIXED_STEP_SECONDS) accumulator = 0;
 
   physicsWindowSteps += steps;
   if (now - physicsWindowStart >= 1000) {
@@ -93,12 +90,16 @@ function handleCommand(command: WorkerCommand): void {
     } else if (command.type === 'pause') {
       requestedRunning = false;
       running = false;
+      simulationClock.reset(performance.now());
       sendSnapshot();
     } else if (command.type === 'resume') {
       if (simulation?.isEnded) return;
       requestedRunning = true;
-      previousTime = performance.now();
+      simulationClock.reset(performance.now());
       running = Boolean(simulation);
+    } else if (command.type === 'set-speed') {
+      simulationSpeed = command.speed;
+      simulationClock.reset(performance.now());
     } else if (command.type === 'finish') {
       requestedRunning = false;
       running = false;
@@ -113,7 +114,7 @@ function handleCommand(command: WorkerCommand): void {
   } catch (error) {
     requestedRunning = false;
     running = false;
-    accumulator = 0;
+    simulationClock.reset(performance.now(), true);
     workerScope.postMessage({ runId, type: 'error', message: error instanceof Error ? error.message : '物理模拟初始化失败。' });
   }
 }

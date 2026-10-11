@@ -168,6 +168,11 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .live-heading { display: flex; min-height: 37px; align-items: center; justify-content: space-between; border-bottom: 1px solid #e9e8e1; color: #39435f; font-size: 16px; font-weight: 850; }
 .live-heading strong { color: #53876c; font-family: "DM Mono", monospace; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .live-heading small { color: #7e8595; font-family: Manrope, sans-serif; font-size: 13px; font-weight: 750; }
+.speed-control { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; padding: 2px; border: 1px solid #e6e5de; border-radius: 8px; background: #f5f5ef; }
+.speed-button { min-width: 25px; min-height: 25px; padding: 0 3px; border: 0; border-radius: 6px; background: transparent; color: #68728a; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; }
+.speed-button:hover { background: #e8ebdf; color: #303b55; }
+.speed-button.is-selected { background: var(--lime); color: #2c3823; box-shadow: 0 1px 3px rgba(39, 52, 33, .12); }
+.speed-button:focus-visible { outline: 2px solid #657eb9; outline-offset: 1px; }
 .live-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .live-metrics > div { display: flex; min-width: 0; min-height: 68px; flex-direction: column; justify-content: space-between; padding: 9px 10px; border: 1px solid #e7e6de; border-radius: 10px; background: #fbfaf5; }
 .live-metrics > div span { overflow: hidden; color: #6c7489; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }

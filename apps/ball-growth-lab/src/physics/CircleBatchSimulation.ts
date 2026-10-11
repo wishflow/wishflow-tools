@@ -26,6 +26,7 @@ interface PendingBirth {
 const BALL_COLORS = [0xf06b56, 0x3886c8, 0x54ae86, 0xeabf3a, 0x8975c6, 0xe07ca4];
 const POSITION_SLOP = 0.002;
 const POSITION_CORRECTION = 0.85;
+const BIRTH_PROBABILITY_REFERENCE_POPULATION = 20;
 const BIRTH_SEARCH_RING_RADII = [2.15, 2.75, 3.45, 4.25, 5.2, 6.3, 7.6];
 const BIRTH_SEARCH_DIRECTIONS = Array.from({ length: 24 }, (_, index) => {
   const angle = (Math.PI * 2 * index) / 24;
@@ -662,7 +663,10 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     if (this.queuedBirthPairs.has(key)) return;
     this.queuedBirthPairs.add(key);
     this.birthAttempts += 1;
-    if (this.random() >= this.config.birthProbability) return;
+    const referencePopulation = Math.max(BIRTH_PROBABILITY_REFERENCE_POPULATION, this.config.initialCount);
+    const populationAdjustment = referencePopulation / Math.max(1, this.count);
+    const effectiveBirthProbability = Math.max(0, Math.min(1, this.config.birthProbability * populationAdjustment));
+    if (this.random() >= effectiveBirthProbability) return;
     this.birthProbabilityPassed += 1;
     this.pendingBirths.push({
       firstId,

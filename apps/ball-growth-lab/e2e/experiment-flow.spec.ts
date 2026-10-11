@@ -36,6 +36,10 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await expect(page.getByRole('tabpanel')).toContainText('恢复系数');
   await expect(page.getByRole('tabpanel')).toContainText('100%');
   await expect(page.getByRole('tabpanel')).toContainText('0.70 秒');
+  const birthProbability = page.getByRole('slider', { name: '基准繁殖概率' });
+  await expect(birthProbability).toHaveValue('0.35');
+  await birthProbability.press('ArrowRight');
+  await expect(birthProbability).toHaveValue('0.4');
   await expect(page.getByRole('slider', { name: '人口目标' })).toHaveCount(0);
   await page.getByRole('tab', { name: /场地/ }).click();
 
@@ -82,6 +86,27 @@ test('结束确认可取消或确认，结束结果可保留并同条件重跑',
   await expect(page.getByRole('button', { name: '同条件重跑' })).toBeVisible();
   await page.getByRole('button', { name: '同条件重跑' }).click();
   await waitForRunState(page, '运行中');
+});
+
+test('运行中可以切换模拟速度，暂停后保留所选倍率', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '开始实验' }).click();
+  await waitForRunState(page, '运行中');
+
+  const speed2 = page.getByRole('button', { name: '模拟速度 2 倍' });
+  const speed6 = page.getByRole('button', { name: '模拟速度 6 倍' });
+  await expect(page.getByRole('button', { name: '模拟速度 1 倍' })).toHaveAttribute('aria-pressed', 'true');
+  await speed2.click();
+  await expect(speed2).toHaveAttribute('aria-pressed', 'true');
+  await speed6.click();
+  await expect(speed6).toHaveAttribute('aria-pressed', 'true');
+
+  await page.getByRole('button', { name: '暂停' }).click();
+  await waitForRunState(page, '已暂停');
+  await expect(speed6).toHaveAttribute('aria-pressed', 'true');
+  await page.getByRole('button', { name: '继续' }).click();
+  await waitForRunState(page, '运行中');
+  await expect(speed6).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('修改设置会保留上一轮结果，当前参数可以导出为 JSON', async ({ page }) => {
