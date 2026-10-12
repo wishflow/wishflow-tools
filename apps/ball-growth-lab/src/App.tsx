@@ -492,7 +492,7 @@ export default function App() {
             predictionValidated={predictionValidated}
             modelAccepted={growthModel.validation.accepted}
           />
-          <p className="physics-caption">重力 {activeConfig.gravity.toFixed(1)} m/s² · 弹性 {activeConfig.restitution.toFixed(2)}</p>
+          <p className="physics-caption">重力 {activeConfig.gravity.toFixed(2)} m/s² · 球球弹性 {activeConfig.restitution.toFixed(2)} · 球墙弹性 1.00</p>
           {simulationError && <p className="error-note" role="alert">{simulationError}</p>}
           {lastRun && runState !== 'failed' && (
             <p className="last-run-note">上轮：{reasonCopy(lastRun.endReason).title} · {lastRun.stats.currentCount} 颗球</p>

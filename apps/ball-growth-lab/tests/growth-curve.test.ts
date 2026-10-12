@@ -7,7 +7,12 @@ interface GrowthRun {
   times: Map<number, number>;
   finalPopulation: number;
   endReason: string | null;
-  maxBirthsPerStep: number;
+  initialMeanSpeed: number;
+  finalMeanSpeed: number;
+  collisionEvents: number;
+  birthAttempts: number;
+  births: number;
+  missedSpaceBirths: number;
 }
 
 function runGrowth(
@@ -26,16 +31,16 @@ function runGrowth(
     birthCooldown,
   });
   const thresholds = [10, 100, 900, ...additionalThresholds].filter((threshold, index, all) => threshold <= maxPopulation && all.indexOf(threshold) === index);
-  const times = new Map<number, number>();
-  let maxBirthsPerStep = 0;
-  let previousPopulation = simulation.populationCount;
+  const initialStats = simulation.getStatsSnapshot();
+  const times = new Map<number, number>(
+    thresholds.filter((threshold) => threshold <= initialStats.currentCount).map((threshold) => [threshold, 0]),
+  );
+  const initialMeanSpeed = initialStats.speedSum / Math.max(1, initialStats.currentCount);
 
   try {
     for (let frame = 1; frame <= 300 / FIXED_STEP_SECONDS && !simulation.isEnded; frame += 1) {
       simulation.step(FIXED_STEP_SECONDS);
       const currentPopulation = simulation.populationCount;
-      maxBirthsPerStep = Math.max(maxBirthsPerStep, currentPopulation - previousPopulation);
-      previousPopulation = currentPopulation;
       for (const threshold of thresholds) {
         if (!times.has(threshold) && currentPopulation >= threshold) {
           times.set(threshold, frame * FIXED_STEP_SECONDS);
@@ -43,11 +48,17 @@ function runGrowth(
       }
       if (stopAtCheckpoints && times.size === thresholds.length) break;
     }
+    const stats = simulation.getStatsSnapshot();
     return {
       times,
       finalPopulation: simulation.populationCount,
       endReason: simulation.getSnapshot().endReason,
-      maxBirthsPerStep,
+      initialMeanSpeed,
+      finalMeanSpeed: stats.speedSum / Math.max(1, stats.currentCount),
+      collisionEvents: stats.collisionEvents,
+      birthAttempts: stats.birthAttempts,
+      births: stats.births,
+      missedSpaceBirths: stats.missedSpaceBirths,
     };
   } finally {
     simulation.dispose();
@@ -73,28 +84,44 @@ test('繁殖概率为 100% 时，单球冷却使人均增长率不过度加速',
   );
 });
 
-test('默认参数在 1×、100% 繁殖、零冷却下约 90 秒达到人口上限且不会瞬间暴增', () => {
+test('推荐默认参数在 1×、100% 繁殖、零冷却下 30–60 秒达到人口上限且增长平缓', () => {
   assert.equal(DEFAULT_CONFIG.birthProbability, 1);
   assert.equal(DEFAULT_CONFIG.birthCooldown, 0);
   assert.equal(DEFAULT_CONFIG.pairCooldown, 0);
+  assert.equal(DEFAULT_CONFIG.gravity, 0.03);
+  assert.equal(DEFAULT_CONFIG.initialSpeed, 0.8);
+  assert.equal(DEFAULT_CONFIG.speedSpread, 0.3);
+  assert.equal(DEFAULT_CONFIG.directionSpread, 180);
+  assert.equal(DEFAULT_CONFIG.restitution, 1);
+  assert.equal(DEFAULT_CONFIG.ballDiameterRatio, 0.028);
+  assert.equal(DEFAULT_CONFIG.initialCount, 10);
+  assert.equal(DEFAULT_CONFIG.maxPopulation, 40);
 
-  const run = runGrowth(DEFAULT_CONFIG.birthCooldown, DEFAULT_CONFIG.maxPopulation, false, [500, DEFAULT_CONFIG.maxPopulation]);
+  const run = runGrowth(DEFAULT_CONFIG.birthCooldown, DEFAULT_CONFIG.maxPopulation, false, [20, 36, DEFAULT_CONFIG.maxPopulation]);
+  const repeat = runGrowth(DEFAULT_CONFIG.birthCooldown, DEFAULT_CONFIG.maxPopulation, false, [20, 36, DEFAULT_CONFIG.maxPopulation]);
   const duration = run.times.get(DEFAULT_CONFIG.maxPopulation);
   const t10 = run.times.get(10);
-  const t100 = run.times.get(100);
-  const t900 = run.times.get(900);
+  const t20 = run.times.get(20);
+  const t36 = run.times.get(36);
 
   assert.equal(run.endReason, 'population-target');
-  assert.ok(duration !== undefined && duration >= 80 && duration <= 100, `expected 80–100 s to target, got ${duration}s`);
-  assert.ok(t100 !== undefined && t900 !== undefined && t900 - t100 >= 30, `expected at least 30 s from 100 to 900 balls, got ${t900! - t100!}s`);
-  assert.ok(t10 !== undefined && t100 !== undefined && t900 !== undefined, 'expected 10, 100, and 900 ball checkpoints');
-  const earlyLogGrowthRate = Math.log(100 / 10) / (t100 - t10);
-  const lateLogGrowthRate = Math.log(900 / 100) / (t900 - t100);
+  assert.ok(duration !== undefined && duration >= 30 && duration <= 60, `expected 30–60 s to target, got ${duration}s`);
+  assert.ok(t10 !== undefined && t20 !== undefined && t36 !== undefined, 'expected 10, 20, and 36 ball checkpoints');
+  assert.ok(t36 - t10 >= 25, `expected at least 25 s from 10 to 36 balls, got ${t36 - t10}s`);
+  const earlyLogGrowthRate = Math.log(20 / 10) / (t20 - t10);
+  const lateLogGrowthRate = Math.log(36 / 20) / (t36 - t20);
   assert.ok(
     lateLogGrowthRate / earlyLogGrowthRate <= 1.5,
     `late per-capita growth rate should remain near the early rate, got ${(lateLogGrowthRate / earlyLogGrowthRate).toFixed(2)}x`,
   );
-  assert.ok(run.maxBirthsPerStep <= 2, `expected no more than two births in a physics step, got ${run.maxBirthsPerStep}`);
+  assert.deepEqual([...repeat.times], [...run.times], 'fixed initial conditions must reproduce the same checkpoints');
+  assert.equal(repeat.collisionEvents, run.collisionEvents);
+  assert.equal(repeat.births, run.births);
+  assert.equal(run.collisionEvents, run.birthAttempts, 'each detected contact surface should get one birth attempt at 100% with zero cooldown');
+  assert.equal(run.birthAttempts, run.births, 'all default-seed births should have a valid location below the population cap');
+  assert.equal(run.missedSpaceBirths, 0);
+  assert.ok(run.finalMeanSpeed / run.initialMeanSpeed >= 0.8 && run.finalMeanSpeed / run.initialMeanSpeed <= 1.25,
+    `expected mean speed to stay near its initial value, got ${(run.finalMeanSpeed / run.initialMeanSpeed).toFixed(2)}x`);
 });
 
 test('较长的单球繁殖冷却会延长达到人口目标所需的模拟时间', () => {

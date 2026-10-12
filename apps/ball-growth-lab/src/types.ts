@@ -12,6 +12,7 @@ export interface SimulationConfig {
   ballDiameterRatio: number;
   gapWidthRatio: number;
   gravity: number;
+  /** Ball-to-ball coefficient of restitution; the production arena wall stays fully elastic. */
   restitution: number;
   initialSpeed: number;
   speedSpread: number;
@@ -118,23 +119,24 @@ export const MIN_POPULATION_TARGET = 10;
 export const MIN_INITIAL_COUNT = 2;
 export const MAX_INITIAL_COUNT = 100;
 export const FIXED_STEP_SECONDS = 1 / 240;
+export const WALL_RESTITUTION = 1;
 
 export const DEFAULT_CONFIG: SimulationConfig = {
   shape: 'circle',
   arenaSize: ARENA_HALF_EXTENT * 2,
   gapCount: 0,
-  ballDiameterRatio: 0.024,
+  ballDiameterRatio: 0.028,
   gapWidthRatio: 2,
-  gravity: 0,
-  restitution: 0.05,
-  initialSpeed: 13.5,
+  gravity: 0.03,
+  restitution: 1,
+  initialSpeed: 0.8,
   speedSpread: 0.3,
   initialDirection: 270,
-  directionSpread: 120,
-  initialCount: 2,
+  directionSpread: 180,
+  initialCount: 10,
   birthProbability: 1,
   birthCooldown: 0,
   pairCooldown: 0,
-  maxPopulation: 1000,
+  maxPopulation: 40,
   seed: 'BALL-0426',
 };

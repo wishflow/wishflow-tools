@@ -182,6 +182,90 @@ test('高速度圆形边界反弹保持速率', () => {
   simulation.dispose();
 });
 
+test('默认球球恢复系数较低时，球墙反弹仍保留全部法向速度', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    initialSpeed: 0,
+    restitution: 0.05,
+    birthProbability: 0,
+  }), [
+    { position: { x: 9.6, y: 0 }, velocity: { x: 120, y: 0 } },
+    { position: { x: 0, y: 5 }, velocity: { x: 0, y: 0 } },
+  ]);
+
+  simulation.step(FIXED_STEP_SECONDS);
+
+  const state = velocities(simulation);
+  assert.ok(state[0].x < 0, `expected ball to rebound inward, got ${state[0].x}`);
+  assert.ok(Math.abs(Math.hypot(state[0].x, state[0].y) - 120) < 1e-8);
+  simulation.dispose();
+});
+
+test('单次两球碰撞只生成一个球', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    restitution: DEFAULT_CONFIG.restitution,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 100,
+  }), movingPair());
+
+  step(simulation, 600);
+
+  const stats = simulation.getSnapshot().stats;
+  assert.equal(stats.collisionEvents, 1);
+  assert.equal(stats.birthAttempts, 1);
+  assert.equal(stats.births, 1);
+  assert.equal(stats.currentCount, 3);
+  simulation.dispose();
+});
+
+test('高速碰撞经过同一物理步的多个内步和求解迭代仍只生成一个球', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    restitution: 1,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 100,
+  }), [
+    { position: { x: -0.5, y: 0 }, velocity: { x: 120, y: 0 } },
+    { position: { x: 0.5, y: 0 }, velocity: { x: -120, y: 0 } },
+  ]);
+
+  simulation.step(FIXED_STEP_SECONDS);
+
+  const stats = simulation.getSnapshot().stats;
+  assert.equal(stats.collisionEvents, 1);
+  assert.equal(stats.birthAttempts, 1);
+  assert.equal(stats.births, 1);
+  assert.equal(stats.currentCount, 3);
+  simulation.dispose();
+});
+
+test('同一物理步里两个不同碰撞面各生成一个球', () => {
+  const config = makeConfig({
+    restitution: 1,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 100,
+  });
+  const diameter = config.arenaSize * config.ballDiameterRatio;
+  const simulation = new CircleBatchSimulation(config, [
+    { position: { x: -diameter, y: 0 }, velocity: { x: 1, y: 0 } },
+    { position: { x: 0, y: 0 }, velocity: { x: 0, y: 0 } },
+    { position: { x: diameter, y: 0 }, velocity: { x: -1, y: 0 } },
+  ]);
+
+  simulation.step(FIXED_STEP_SECONDS);
+
+  const stats = simulation.getSnapshot().stats;
+  assert.equal(stats.collisionEvents, 2);
+  assert.equal(stats.birthAttempts, 2);
+  assert.equal(stats.births, 2);
+  assert.equal(stats.currentCount, 5);
+  simulation.dispose();
+});
+
 test('可调重力使速度按固定步长改变', () => {
   const simulation = new CircleBatchSimulation(makeConfig({ gravity: 12 }), [
     { position: { x: -2, y: 0 }, velocity: { x: 0, y: 3 } },

@@ -10,6 +10,7 @@ import {
   type SimulationSnapshot,
   type SimulationStats,
   type SpawnSeed,
+  WALL_RESTITUTION,
 } from '../types';
 import { getBallPairKey, PairCooldown } from './PairCooldown';
 import { createBirthVelocity, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
@@ -75,7 +76,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private readonly indexById = new Map<number, number>();
   private readonly pendingBirths: PendingBirth[] = [];
   private readonly queuedBirthPairs = new Set<string>();
-  private readonly queuedBirthBalls = new Set<number>();
   private readonly activeContactPairs = new Set<string>();
   private readonly contactsAtEndOfStep = new Set<string>();
   private readonly collisionPairsSeenThisStep = new Set<string>();
@@ -149,7 +149,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.elapsedSeconds += deltaSeconds;
     this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
-    this.queuedBirthBalls.clear();
     this.contactsAtEndOfStep.clear();
     this.collisionPairsSeenThisStep.clear();
     const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
@@ -331,7 +330,6 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.indexById.clear();
     this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
-    this.queuedBirthBalls.clear();
     this.count = 0;
     this.disposed = true;
   }
@@ -660,8 +658,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private reflectFromWall(index: number, normalX: number, normalY: number): void {
     const intoWall = this.vx[index] * normalX + this.vy[index] * normalY;
     if (intoWall >= 0) return;
-    const restitution = Math.max(0, Math.min(1, this.config.restitution));
-    const impulse = (1 + restitution) * intoWall;
+    const impulse = (1 + WALL_RESTITUTION) * intoWall;
     this.vx[index] -= impulse * normalX;
     this.vy[index] -= impulse * normalY;
   }
@@ -686,14 +683,10 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     if (this.queuedBirthPairs.has(key)) return;
     this.queuedBirthPairs.add(key);
     if (this.elapsedSeconds < this.birthCooldownReadyAt[first]
-      || this.elapsedSeconds < this.birthCooldownReadyAt[second]
-      || this.queuedBirthBalls.has(firstId)
-      || this.queuedBirthBalls.has(secondId)) return;
+      || this.elapsedSeconds < this.birthCooldownReadyAt[second]) return;
     this.birthAttempts += 1;
     if (this.random() >= this.config.birthProbability) return;
     this.birthProbabilityPassed += 1;
-    this.queuedBirthBalls.add(firstId);
-    this.queuedBirthBalls.add(secondId);
     this.pendingBirths.push({
       firstId,
       secondId,

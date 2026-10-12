@@ -9,6 +9,7 @@ await initializeRapier(RAPIER);
 function makeConfig(overrides: Partial<SimulationConfig> = {}): SimulationConfig {
   return {
     ...DEFAULT_CONFIG,
+    ballDiameterRatio: 0.024,
     gravity: 0,
     restitution: 1,
     initialCount: 2,
@@ -183,18 +184,23 @@ test('高速球自适应细分后不穿过彼此或圆形边界', () => {
   ]);
   step(boundarySimulation, 1);
   const [ball] = boundarySimulation.getSnapshot().balls;
-  assert.ok(ball.x < 9.5, `circle wall should rebound a fast ball, got x=${ball.x}`);
+  assert.ok(physicsBodies(boundarySimulation)[0].linvel().x < 0, `circle wall should reverse a fast ball, got x=${ball.x}`);
   boundarySimulation.dispose();
 });
 
-test('弹性圆形边界会把球反弹回场内', () => {
-  const simulation = new RapierSimulation(RAPIER, makeConfig(), [
+test('球球恢复系数为 0.05 时，弹性圆形边界仍完整反弹', () => {
+  const simulation = new RapierSimulation(RAPIER, makeConfig({ restitution: 0.05 }), [
     { position: { x: 9.4, y: 0 }, velocity: { x: 3, y: 0 } },
     { position: { x: -5, y: 5 }, velocity: { x: 0, y: 0 } },
   ]);
   step(simulation, 120);
   const [ball] = simulation.getSnapshot().balls;
   assert.ok(ball.x < 9.4, `circle arena should rebound the ball inward, got x=${ball.x}`);
+  const wallBounceVelocity = physicsBodies(simulation)[0].linvel();
+  assert.ok(
+    Math.abs(Math.hypot(wallBounceVelocity.x, wallBounceVelocity.y) - 3) < 0.01,
+    `expected wall bounce to preserve speed 3, got (${wallBounceVelocity.x}, ${wallBounceVelocity.y})`,
+  );
   simulation.dispose();
 });
 

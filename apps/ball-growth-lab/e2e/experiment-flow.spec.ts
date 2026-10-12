@@ -1,8 +1,13 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 async function waitForRunState(page: Page, state: string): Promise<void> {
   await expect(page.locator('.run-status')).toContainText(state, { timeout: 10_000 });
+}
+
+async function setSliderValue(slider: Locator, minValue: number, targetValue: number): Promise<void> {
+  await slider.press('Home');
+  for (let value = minValue; value < targetValue; value += 1) await slider.press('ArrowRight');
 }
 
 async function installWorkerConfigPatch(page: Page, patch: Record<string, unknown>): Promise<void> {
@@ -31,18 +36,24 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await expect(page.getByRole('heading', { name: '每次碰撞，都是下一步。' })).toBeVisible();
   await page.getByRole('tab', { name: /发射/ }).click();
   await expect(page.getByRole('tabpanel')).toContainText('初速度大小');
-  await expect(page.getByRole('slider', { name: '初始球数' })).toHaveCount(0);
+  const initialCount = page.getByRole('slider', { name: '初始球数' });
+  await expect(initialCount).toHaveValue('10');
+  await initialCount.press('ArrowRight');
+  await expect(initialCount).toHaveValue('11');
+  await setSliderValue(initialCount, 2, 10);
+  await expect(initialCount).toHaveValue('10');
+  await initialCount.press('End');
+  await expect(initialCount).toHaveValue('40');
   await page.getByRole('tab', { name: /规则/ }).click();
-  await expect(page.getByRole('tabpanel')).toContainText('恢复系数');
+  await expect(page.getByRole('tabpanel')).toContainText('球球恢复系数');
   await expect(page.getByRole('tabpanel')).toContainText('100%');
-  const restitution = page.getByRole('slider', { name: '恢复系数' });
-  await expect(restitution).toHaveValue('0.05');
-  await restitution.press('ArrowRight');
-  await expect(restitution).toHaveValue('0.1');
+  const restitution = page.getByRole('slider', { name: '球球恢复系数' });
+  await expect(restitution).toHaveValue('1');
   await restitution.press('Home');
   await expect(restitution).toHaveValue('0');
   await restitution.press('ArrowRight');
-  await expect(restitution).toHaveValue('0.05');
+  await restitution.press('End');
+  await expect(restitution).toHaveValue('1');
   await expect(page.getByRole('tabpanel')).toContainText('繁殖概率');
   const birthProbability = page.getByRole('slider', { name: '繁殖概率' });
   await expect(birthProbability).toHaveValue('1');
@@ -63,13 +74,20 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await pairCooldown.press('Home');
   await expect(pairCooldown).toHaveValue('0');
   const populationLimit = page.getByRole('slider', { name: '人口上限' });
-  await expect(populationLimit).toHaveValue('1000');
+  await expect(populationLimit).toHaveValue('40');
   await populationLimit.press('ArrowLeft');
-  await expect(populationLimit).toHaveValue('990');
+  await expect(populationLimit).toHaveValue('30');
+  await populationLimit.press('ArrowRight');
+  await expect(populationLimit).toHaveValue('40');
+  await page.getByRole('tab', { name: /发射/ }).click();
+  await expect(page.getByRole('slider', { name: '初始球数' })).toHaveValue('30');
+  await setSliderValue(page.getByRole('slider', { name: '初始球数' }), 2, 10);
+  await expect(page.getByRole('slider', { name: '初始球数' })).toHaveValue('10');
   await page.getByRole('tab', { name: /场地/ }).click();
 
   await page.getByRole('button', { name: '开始实验' }).click();
   await waitForRunState(page, '运行中');
+  await expect(page.locator('.physics-caption')).toContainText('重力 0.03 m/s²');
   await expect(page.getByRole('img', { name: /实际数量曲线与回归模型 P10 至 P90/ })).toBeVisible();
   await expect(page.getByText('模型 P10–P90')).toBeVisible();
   await expect(page.getByRole('button', { name: '暂停' })).toBeVisible();
@@ -143,7 +161,7 @@ test('修改设置会保留上一轮结果，当前参数可以导出为 JSON', 
   await expect(page.getByText('实验已结束', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '修改设置' }).click();
 
-  await expect(page.getByRole('complementary', { name: '上一轮结果' })).toContainText('2');
+  await expect(page.getByRole('complementary', { name: '上一轮结果' })).toContainText('10');
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: '导出参数' }).click();
   const download = await downloadPromise;
@@ -154,7 +172,7 @@ test('修改设置会保留上一轮结果，当前参数可以导出为 JSON', 
 });
 
 test('达到人口目标时自动结束并显示原因', async ({ page }) => {
-  await installWorkerConfigPatch(page, { maxPopulation: 2 });
+  await installWorkerConfigPatch(page, { initialCount: 2, maxPopulation: 2 });
   await page.goto('/');
   await page.getByRole('button', { name: '开始实验' }).click();
   await expect(page.getByText('达到人口目标', { exact: true })).toBeVisible();
@@ -162,6 +180,7 @@ test('达到人口目标时自动结束并显示原因', async ({ page }) => {
 
 test('只剩一球时自动结束并显示原因', async ({ page }) => {
   await installWorkerConfigPatch(page, {
+    initialCount: 2,
     maxPopulation: 100,
     gapCount: 1,
     gapWidthRatio: 1.05,

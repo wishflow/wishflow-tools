@@ -1,3 +1,4 @@
+import { CoefficientCombineRule } from '@dimforge/rapier2d-compat';
 import type { ColliderHandle, EventQueue, RigidBody, World } from '@dimforge/rapier2d-compat';
 import { buildBoundaryPaths, getArenaHalfExtent, getGapArcs, isInsideArena, pointAtBoundaryDistance } from '../arena';
 import { createRandom } from '../random';
@@ -10,6 +11,7 @@ import {
   type SimulationConfig,
   type SimulationSnapshot,
   type SpawnSeed,
+  WALL_RESTITUTION,
 } from '../types';
 import { PairCooldown } from './PairCooldown';
 import { distributeBirthEnergy, type PhysicsAdapter, type SolverTuning } from './PhysicsAdapter';
@@ -216,7 +218,8 @@ export class RapierSimulation implements PhysicsAdapter {
       });
       const descriptor = this.rapier.ColliderDesc.polyline(vertices)
         .setFriction(0)
-        .setRestitution(this.config.restitution);
+        .setRestitution(WALL_RESTITUTION)
+        .setRestitutionCombineRule(CoefficientCombineRule.Max);
       this.world.createCollider(descriptor);
     }
   }
@@ -299,6 +302,7 @@ export class RapierSimulation implements PhysicsAdapter {
         .setDensity(1)
         .setFriction(0)
         .setRestitution(this.config.restitution)
+        .setRestitutionCombineRule(CoefficientCombineRule.Max)
         .setActiveEvents(this.rapier.ActiveEvents.COLLISION_EVENTS),
       body,
     );
