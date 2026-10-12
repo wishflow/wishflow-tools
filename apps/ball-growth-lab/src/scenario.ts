@@ -16,6 +16,7 @@ function samplePoint(time: number, stats: SimulationStats) {
     exits: stats.exits,
     missedBirths: stats.missedBirths,
     collisionEvents: stats.collisionEvents,
+    birthGraceSuppressed: stats.birthGraceSuppressed,
     collisionClosingSpeedSum: stats.collisionClosingSpeedSum,
     cooldownAccepted: stats.cooldownAccepted,
     cooldownRejected: stats.cooldownRejected,
@@ -95,6 +96,7 @@ export function runScenario(config: SimulationConfig, seed: string, options: Sce
           ? threshold90Seconds - threshold10Seconds
           : null,
         collisionEvents: finalSnapshot.stats.collisionEvents,
+        birthGraceSuppressed: finalSnapshot.stats.birthGraceSuppressed,
         collisionClosingSpeedSum: finalSnapshot.stats.collisionClosingSpeedSum,
         cooldownAccepted: finalSnapshot.stats.cooldownAccepted,
         cooldownRejected: finalSnapshot.stats.cooldownRejected,

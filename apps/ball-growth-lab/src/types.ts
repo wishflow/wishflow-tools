@@ -63,6 +63,8 @@ export interface SimulationStats {
   speedSum: number;
   /** Cumulative approaching ball-ball contacts observed by the production solver. */
   collisionEvents: number;
+  /** Newborn-parent contact surfaces that collide physically but are temporarily excluded from breeding. */
+  birthGraceSuppressed: number;
   /** Sum of closing normal speeds for those contacts. */
   collisionClosingSpeedSum: number;
   cooldownAccepted: number;

@@ -20,6 +20,7 @@ test('复现导出包含可重放参数和现场诊断，并可 JSON 往返', ()
     maxSpeed: 18.4,
     speedSum: 246.8,
     collisionEvents: 61,
+    birthGraceSuppressed: 0,
     collisionClosingSpeedSum: 344.2,
     cooldownAccepted: 60,
     cooldownRejected: 1,

@@ -106,6 +106,7 @@ export class PlanckSimulation implements PhysicsAdapter {
           return sum + Math.hypot(velocity.x, velocity.y);
         }, 0),
         collisionEvents: 0,
+        birthGraceSuppressed: 0,
         collisionClosingSpeedSum: 0,
         cooldownAccepted: 0,
         cooldownRejected: 0,

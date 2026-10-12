@@ -219,6 +219,38 @@ test('单次两球碰撞只生成一个球', () => {
   simulation.dispose();
 });
 
+test('新生球首次与父球接触只弹开不繁殖，分离后的再次碰撞仍可繁殖', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    gravity: 0,
+    restitution: 1,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 10,
+    seed: 'CHAIN-3-0.1-0',
+  }), [
+    { position: { x: -0.24, y: 0 }, velocity: { x: 3, y: 0 } },
+    { position: { x: 0.24, y: 0 }, velocity: { x: -0.1, y: 0 } },
+  ]);
+
+  simulation.step(FIXED_STEP_SECONDS);
+  assert.equal(simulation.getSnapshot().stats.births, 1);
+
+  simulation.step(FIXED_STEP_SECONDS);
+  const afterImmediateParentContact = simulation.getSnapshot().stats;
+  assert.equal(afterImmediateParentContact.collisionEvents, 2, 'the parent-child pair still collides physically');
+  assert.equal(afterImmediateParentContact.birthGraceSuppressed, 1, 'the parent-child contact is counted as intentionally protected');
+  assert.equal(afterImmediateParentContact.birthAttempts, 1, 'the near-immediate parent-child contact is not a new birth surface');
+  assert.equal(afterImmediateParentContact.births, 1);
+  assert.equal(afterImmediateParentContact.currentCount, 3);
+
+  step(simulation, 1107);
+  const afterSeparatedRecontact = simulation.getSnapshot().stats;
+  assert.equal(afterSeparatedRecontact.birthAttempts, 2, 'a later parent-child collision after separation is eligible');
+  assert.equal(afterSeparatedRecontact.births, 2);
+  simulation.dispose();
+});
+
 test('高速碰撞经过同一物理步的多个内步和求解迭代仍只生成一个球', () => {
   const simulation = new CircleBatchSimulation(makeConfig({
     restitution: 1,

@@ -10,6 +10,7 @@ interface GrowthRun {
   initialMeanSpeed: number;
   finalMeanSpeed: number;
   collisionEvents: number;
+  birthGraceSuppressed: number;
   birthAttempts: number;
   births: number;
   missedSpaceBirths: number;
@@ -56,6 +57,7 @@ function runGrowth(
       initialMeanSpeed,
       finalMeanSpeed: stats.speedSum / Math.max(1, stats.currentCount),
       collisionEvents: stats.collisionEvents,
+      birthGraceSuppressed: stats.birthGraceSuppressed,
       birthAttempts: stats.birthAttempts,
       births: stats.births,
       missedSpaceBirths: stats.missedSpaceBirths,
@@ -117,7 +119,11 @@ test('推荐默认参数在 1×、100% 繁殖、零冷却下 30–60 秒达到�
   assert.deepEqual([...repeat.times], [...run.times], 'fixed initial conditions must reproduce the same checkpoints');
   assert.equal(repeat.collisionEvents, run.collisionEvents);
   assert.equal(repeat.births, run.births);
-  assert.equal(run.collisionEvents, run.birthAttempts, 'each detected contact surface should get one birth attempt at 100% with zero cooldown');
+  assert.equal(
+    run.collisionEvents,
+    run.birthGraceSuppressed + run.birthAttempts,
+    'each detected contact surface is either a birth attempt or an immediate parent-child contact protected from rebirth',
+  );
   assert.equal(run.birthAttempts, run.births, 'all default-seed births should have a valid location below the population cap');
   assert.equal(run.missedSpaceBirths, 0);
   assert.ok(run.finalMeanSpeed / run.initialMeanSpeed >= 0.8 && run.finalMeanSpeed / run.initialMeanSpeed <= 1.25,
