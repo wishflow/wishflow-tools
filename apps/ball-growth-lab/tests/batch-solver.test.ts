@@ -277,6 +277,114 @@ test('新生球出生后较晚发生的首次碰撞也只反弹不繁殖', () =>
   simulation.dispose();
 });
 
+test('新生球同一物理步内接触两位父球时两个碰撞面都只反弹', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    gravity: 0,
+    restitution: 1,
+    ballDiameterRatio: 0.028,
+    initialCount: 2,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 100,
+    seed: 'TRIPLE-3--100-358',
+  }), [
+    { position: { x: -0.28, y: 0 }, velocity: { x: 3, y: 0 } },
+    { position: { x: 0.28, y: 0 }, velocity: { x: -100, y: 0 } },
+  ]);
+
+  simulation.step(FIXED_STEP_SECONDS);
+  assert.equal(simulation.getSnapshot().stats.births, 1, 'the initial mature pair creates one newborn');
+  let sameStepParentContacts: {
+    collisionEvents: number;
+    newbornFirstCollisionSuppressed: number;
+    birthAttempts: number;
+    births: number;
+    currentCount: number;
+  } | null = null;
+
+  for (let index = 0; index < 45 && !simulation.isEnded; index += 1) {
+    const before = simulation.getSnapshot().stats;
+    simulation.step(FIXED_STEP_SECONDS);
+    const after = simulation.getSnapshot().stats;
+    if (after.collisionEvents - before.collisionEvents === 2) {
+      sameStepParentContacts = {
+        collisionEvents: after.collisionEvents - before.collisionEvents,
+        newbornFirstCollisionSuppressed: after.newbornFirstCollisionSuppressed - before.newbornFirstCollisionSuppressed,
+        birthAttempts: after.birthAttempts - before.birthAttempts,
+        births: after.births - before.births,
+        currentCount: after.currentCount,
+      };
+      break;
+    }
+  }
+
+  assert.deepEqual(sameStepParentContacts, {
+    collisionEvents: 2,
+    newbornFirstCollisionSuppressed: 2,
+    birthAttempts: 0,
+    births: 0,
+    currentCount: 3,
+  }, 'the same physics step detects both newborn-parent surfaces but neither reproduces');
+  simulation.dispose();
+});
+
+test('BALL-0426 给定的两组参数逐步回放时单个物理步最多出生一球', () => {
+  const replays = [
+    {
+      steps: 5_156,
+      expectedBirths: 2,
+      config: {
+        gravity: 2.6,
+        ballDiameterRatio: 0.036,
+        initialSpeed: 5,
+        speedSpread: 0.3,
+        directionSpread: 120,
+      },
+    },
+    {
+      steps: 38_441,
+      expectedBirths: 7,
+      config: {
+        gravity: 0.03,
+        ballDiameterRatio: 0.028,
+        initialSpeed: 0.8,
+        speedSpread: 0.3,
+        directionSpread: 180,
+      },
+    },
+  ];
+
+  for (const replay of replays) {
+    const simulation = new CircleBatchSimulation(makeConfig({
+      ...replay.config,
+      restitution: 1,
+      initialCount: 2,
+      birthProbability: 1,
+      birthCooldown: 0,
+      pairCooldown: 0,
+      maxPopulation: 1000,
+      seed: 'BALL-0426',
+    }));
+    let previousBirths = simulation.birthCount;
+    let maxBirthsPerPhysicsStep = 0;
+
+    for (let frame = 0; frame < replay.steps; frame += 1) {
+      simulation.step(FIXED_STEP_SECONDS);
+      const birthsThisStep = simulation.birthCount - previousBirths;
+      previousBirths = simulation.birthCount;
+      maxBirthsPerPhysicsStep = Math.max(maxBirthsPerPhysicsStep, birthsThisStep);
+    }
+
+    const stats = simulation.getStatsSnapshot();
+    assert.equal(stats.births, replay.expectedBirths);
+    assert.equal(stats.currentCount, 2 + replay.expectedBirths);
+    assert.equal(maxBirthsPerPhysicsStep, 1);
+    assert.equal(stats.birthProbabilityPassed, stats.birthAttempts, 'the replay uses 100% reproduction probability');
+    simulation.dispose();
+  }
+});
+
 test('高速碰撞经过同一物理步的多个内步和求解迭代仍只生成一个球', () => {
   const simulation = new CircleBatchSimulation(makeConfig({
     restitution: 1,

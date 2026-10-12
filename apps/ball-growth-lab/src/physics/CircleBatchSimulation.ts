@@ -80,6 +80,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
   private readonly activeContactPairs = new Set<string>();
   private readonly contactsAtEndOfStep = new Set<string>();
   private readonly collisionPairsSeenThisStep = new Set<string>();
+  private readonly deferredNewbornCollisionCountsThisStep = new Map<number, number>();
   private count = 0;
   private nextId = 1;
   private elapsedSeconds = 0;
@@ -154,6 +155,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.queuedBirthPairs.clear();
     this.contactsAtEndOfStep.clear();
     this.collisionPairsSeenThisStep.clear();
+    this.deferredNewbornCollisionCountsThisStep.clear();
     const substepCount = this.getAdaptiveSubstepCount(deltaSeconds);
     const substepSeconds = deltaSeconds / substepCount;
     for (let substep = 0; substep < substepCount; substep += 1) {
@@ -176,6 +178,8 @@ export class CircleBatchSimulation implements PhysicsAdapter {
       this.endForPopulationState();
       if (this.ended) break;
     }
+
+    this.flushDeferredNewbornCollisionCounts();
 
     this.activeContactPairs.clear();
     for (const key of this.contactsAtEndOfStep) this.activeContactPairs.add(key);
@@ -336,6 +340,7 @@ export class CircleBatchSimulation implements PhysicsAdapter {
     this.indexById.clear();
     this.pendingBirths.length = 0;
     this.queuedBirthPairs.clear();
+    this.deferredNewbornCollisionCountsThisStep.clear();
     this.count = 0;
     this.disposed = true;
   }
@@ -528,11 +533,14 @@ export class CircleBatchSimulation implements PhysicsAdapter {
                   if (isNewContact) {
                     this.collisionEvents += 1;
                     this.collisionClosingSpeedSum += -relativeNormalVelocity;
-                    const newbornFirstContact = this.collisionCounts[first] === 0
-                      || this.collisionCounts[second] === 0;
-                    this.collisionCounts[first] += 1;
-                    this.collisionCounts[second] += 1;
-                    if (newbornFirstContact) {
+                    const firstIsNewborn = this.collisionCounts[first] === 0;
+                    const secondIsNewborn = this.collisionCounts[second] === 0;
+                    if (firstIsNewborn) this.deferNewbornCollisionCount(firstId);
+                    else this.collisionCounts[first] += 1;
+                    if (secondIsNewborn) this.deferNewbornCollisionCount(secondId);
+                    else this.collisionCounts[second] += 1;
+                    const newbornFirstContactStep = firstIsNewborn || secondIsNewborn;
+                    if (newbornFirstContactStep) {
                       this.newbornFirstCollisionSuppressed += 1;
                     } else if (this.config.birthProbability > 0) {
                       this.recordImpact(first, second, {
@@ -707,6 +715,21 @@ export class CircleBatchSimulation implements PhysicsAdapter {
       firstVelocity: { x: this.vx[first], y: this.vy[first] },
       secondVelocity: { x: this.vx[second], y: this.vy[second] },
     });
+  }
+
+  private deferNewbornCollisionCount(ballId: number): void {
+    this.deferredNewbornCollisionCountsThisStep.set(
+      ballId,
+      (this.deferredNewbornCollisionCountsThisStep.get(ballId) ?? 0) + 1,
+    );
+  }
+
+  private flushDeferredNewbornCollisionCounts(): void {
+    for (const [ballId, collisionCount] of this.deferredNewbornCollisionCountsThisStep) {
+      const index = this.findIndexById(ballId);
+      if (index >= 0) this.collisionCounts[index] += collisionCount;
+    }
+    this.deferredNewbornCollisionCountsThisStep.clear();
   }
 
   private removeExitedBalls(): void {

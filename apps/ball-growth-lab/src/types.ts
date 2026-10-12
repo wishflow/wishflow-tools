@@ -63,7 +63,7 @@ export interface SimulationStats {
   speedSum: number;
   /** Cumulative approaching ball-ball contacts observed by the production solver. */
   collisionEvents: number;
-  /** Contact surfaces suppressed because at least one newborn was on its first collision. */
+  /** Contact surfaces suppressed during the physics step containing a newborn's first collision. */
   newbornFirstCollisionSuppressed: number;
   /** Sum of closing normal speeds for those contacts. */
   collisionClosingSpeedSum: number;

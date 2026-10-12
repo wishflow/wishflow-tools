@@ -122,7 +122,7 @@ test('推荐默认参数在 1×、100% 繁殖、零冷却下 30–60 秒达到�
   assert.equal(
     run.collisionEvents,
     run.newbornFirstCollisionSuppressed + run.birthAttempts,
-    'each detected contact surface is either a birth attempt or a newborn first contact suppressed from rebirth',
+    'each detected contact surface is either a birth attempt or a contact suppressed during a newborn’s first-collision physics step',
   );
   assert.equal(run.birthAttempts, run.births, 'all default-seed births should have a valid location below the population cap');
   assert.equal(run.missedSpaceBirths, 0);

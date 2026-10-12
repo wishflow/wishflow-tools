@@ -42,6 +42,13 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
   await expect(initialCount).toHaveValue('11');
   await setSliderValue(initialCount, 2, 10);
   await expect(initialCount).toHaveValue('10');
+  const initialSpeed = page.getByRole('slider', { name: '初速度大小' });
+  await expect(initialSpeed).toHaveAttribute('step', '0.1');
+  await initialSpeed.press('Home');
+  for (let index = 0; index < 8; index += 1) await initialSpeed.press('ArrowRight');
+  await expect(initialSpeed).toHaveValue('0.8');
+  for (let index = 0; index < 4; index += 1) await initialSpeed.press('ArrowRight');
+  await expect(initialSpeed).toHaveValue('1.2');
   await initialCount.press('End');
   await expect(initialCount).toHaveValue('40');
   await page.getByRole('tab', { name: /规则/ }).click();

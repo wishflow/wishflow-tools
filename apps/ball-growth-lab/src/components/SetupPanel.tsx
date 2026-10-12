@@ -212,7 +212,7 @@ export function SetupPanel({
             {activeTab === 'launch' && (
               <div className="control-grid">
                 <RangeControl label="初始球数" value={config.initialCount} min={MIN_INITIAL_COUNT} max={Math.min(MAX_INITIAL_COUNT, config.maxPopulation)} step={1} output={`${config.initialCount} 颗`} help="起始球数越多，越容易较早出现碰撞" onChange={(value) => change('initialCount', value)} />
-                <RangeControl label="初速度大小" value={config.initialSpeed} min={0} max={24} step={0.5} output={`${config.initialSpeed.toFixed(1)} m/s`} onChange={(value) => change('initialSpeed', value)} />
+                <RangeControl label="初速度大小" value={config.initialSpeed} min={0} max={24} step={0.1} output={`${config.initialSpeed.toFixed(1)} m/s`} onChange={(value) => change('initialSpeed', value)} />
                 <RangeControl label="速度随机扩散" value={config.speedSpread} min={0} max={1} step={0.05} output={`±${Math.round(config.speedSpread * 100)}%`} help="每颗球的速度会在范围内随机取值" onChange={(value) => change('speedSpread', value)} />
                 <RangeControl label="初始方向" value={config.initialDirection} min={0} max={360} step={15} output={`${directionName} · ${config.initialDirection}°`} help="0° 向右 · 90° 向下 · 180° 向左 · 270° 向上" onChange={(value) => change('initialDirection', value)} />
                 <RangeControl label="方向随机扩散" value={config.directionSpread} min={0} max={180} step={5} output={`±${config.directionSpread}°`} help="每颗球围绕初始方向随机偏转" onChange={(value) => change('directionSpread', value)} />
