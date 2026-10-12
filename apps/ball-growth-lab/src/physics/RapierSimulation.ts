@@ -186,7 +186,7 @@ export class RapierSimulation implements PhysicsAdapter {
         maxSpeed,
         speedSum,
         collisionEvents: 0,
-        birthGraceSuppressed: 0,
+        newbornFirstCollisionSuppressed: 0,
         collisionClosingSpeedSum: 0,
         cooldownAccepted: 0,
         cooldownRejected: 0,

@@ -63,8 +63,8 @@ export interface SimulationStats {
   speedSum: number;
   /** Cumulative approaching ball-ball contacts observed by the production solver. */
   collisionEvents: number;
-  /** Newborn-parent contact surfaces that collide physically but are temporarily excluded from breeding. */
-  birthGraceSuppressed: number;
+  /** Contact surfaces suppressed because at least one newborn was on its first collision. */
+  newbornFirstCollisionSuppressed: number;
   /** Sum of closing normal speeds for those contacts. */
   collisionClosingSpeedSum: number;
   cooldownAccepted: number;
@@ -129,9 +129,9 @@ export const DEFAULT_CONFIG: SimulationConfig = {
   gapCount: 0,
   ballDiameterRatio: 0.028,
   gapWidthRatio: 2,
-  gravity: 0.03,
+  gravity: 0.02,
   restitution: 1,
-  initialSpeed: 0.8,
+  initialSpeed: 1.2,
   speedSpread: 0.3,
   initialDirection: 270,
   directionSpread: 180,

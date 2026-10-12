@@ -10,7 +10,7 @@ interface GrowthRun {
   initialMeanSpeed: number;
   finalMeanSpeed: number;
   collisionEvents: number;
-  birthGraceSuppressed: number;
+  newbornFirstCollisionSuppressed: number;
   birthAttempts: number;
   births: number;
   missedSpaceBirths: number;
@@ -57,7 +57,7 @@ function runGrowth(
       initialMeanSpeed,
       finalMeanSpeed: stats.speedSum / Math.max(1, stats.currentCount),
       collisionEvents: stats.collisionEvents,
-      birthGraceSuppressed: stats.birthGraceSuppressed,
+      newbornFirstCollisionSuppressed: stats.newbornFirstCollisionSuppressed,
       birthAttempts: stats.birthAttempts,
       births: stats.births,
       missedSpaceBirths: stats.missedSpaceBirths,
@@ -90,8 +90,8 @@ test('推荐默认参数在 1×、100% 繁殖、零冷却下 30–60 秒达到�
   assert.equal(DEFAULT_CONFIG.birthProbability, 1);
   assert.equal(DEFAULT_CONFIG.birthCooldown, 0);
   assert.equal(DEFAULT_CONFIG.pairCooldown, 0);
-  assert.equal(DEFAULT_CONFIG.gravity, 0.03);
-  assert.equal(DEFAULT_CONFIG.initialSpeed, 0.8);
+  assert.equal(DEFAULT_CONFIG.gravity, 0.02);
+  assert.equal(DEFAULT_CONFIG.initialSpeed, 1.2);
   assert.equal(DEFAULT_CONFIG.speedSpread, 0.3);
   assert.equal(DEFAULT_CONFIG.directionSpread, 180);
   assert.equal(DEFAULT_CONFIG.restitution, 1);
@@ -121,8 +121,8 @@ test('推荐默认参数在 1×、100% 繁殖、零冷却下 30–60 秒达到�
   assert.equal(repeat.births, run.births);
   assert.equal(
     run.collisionEvents,
-    run.birthGraceSuppressed + run.birthAttempts,
-    'each detected contact surface is either a birth attempt or an immediate parent-child contact protected from rebirth',
+    run.newbornFirstCollisionSuppressed + run.birthAttempts,
+    'each detected contact surface is either a birth attempt or a newborn first contact suppressed from rebirth',
   );
   assert.equal(run.birthAttempts, run.births, 'all default-seed births should have a valid location below the population cap');
   assert.equal(run.missedSpaceBirths, 0);

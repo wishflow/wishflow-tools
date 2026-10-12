@@ -87,7 +87,7 @@ test('设置分组可切换，开始后参数离开编辑态，暂停和继续�
 
   await page.getByRole('button', { name: '开始实验' }).click();
   await waitForRunState(page, '运行中');
-  await expect(page.locator('.physics-caption')).toContainText('重力 0.03 m/s²');
+  await expect(page.locator('.physics-caption')).toContainText('重力 0.02 m/s²');
   await expect(page.getByRole('img', { name: /实际数量曲线与回归模型 P10 至 P90/ })).toBeVisible();
   await expect(page.getByText('模型 P10–P90')).toBeVisible();
   await expect(page.getByRole('button', { name: '暂停' })).toBeVisible();

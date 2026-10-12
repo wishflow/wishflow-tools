@@ -59,7 +59,7 @@ const EMPTY_STATS: SimulationStats = {
   maxSpeed: 0,
   speedSum: 0,
   collisionEvents: 0,
-  birthGraceSuppressed: 0,
+  newbornFirstCollisionSuppressed: 0,
   collisionClosingSpeedSum: 0,
   cooldownAccepted: 0,
   cooldownRejected: 0,

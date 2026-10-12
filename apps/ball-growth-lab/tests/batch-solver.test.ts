@@ -239,7 +239,7 @@ test('新生球首次与父球接触只弹开不繁殖，分离后的再次碰�
   simulation.step(FIXED_STEP_SECONDS);
   const afterImmediateParentContact = simulation.getSnapshot().stats;
   assert.equal(afterImmediateParentContact.collisionEvents, 2, 'the parent-child pair still collides physically');
-  assert.equal(afterImmediateParentContact.birthGraceSuppressed, 1, 'the parent-child contact is counted as intentionally protected');
+  assert.equal(afterImmediateParentContact.newbornFirstCollisionSuppressed, 1, 'the newborn’s first contact is counted as suppressed');
   assert.equal(afterImmediateParentContact.birthAttempts, 1, 'the near-immediate parent-child contact is not a new birth surface');
   assert.equal(afterImmediateParentContact.births, 1);
   assert.equal(afterImmediateParentContact.currentCount, 3);
@@ -248,6 +248,32 @@ test('新生球首次与父球接触只弹开不繁殖，分离后的再次碰�
   const afterSeparatedRecontact = simulation.getSnapshot().stats;
   assert.equal(afterSeparatedRecontact.birthAttempts, 2, 'a later parent-child collision after separation is eligible');
   assert.equal(afterSeparatedRecontact.births, 2);
+  simulation.dispose();
+});
+
+test('新生球出生后较晚发生的首次碰撞也只反弹不繁殖', () => {
+  const simulation = new CircleBatchSimulation(makeConfig({
+    gravity: 0.03,
+    restitution: 1,
+    ballDiameterRatio: 0.028,
+    initialSpeed: 0.8,
+    speedSpread: 0.3,
+    directionSpread: 180,
+    initialCount: 2,
+    birthProbability: 1,
+    birthCooldown: 0,
+    pairCooldown: 0,
+    maxPopulation: 1000,
+    seed: 'BALL-0426',
+  }));
+
+  step(simulation, 923);
+
+  const stats = simulation.getSnapshot().stats;
+  assert.equal(stats.collisionEvents, 2, 'the later parent-child impact still counts as a physical collision');
+  assert.equal(stats.births, 1, 'a newborn’s first collision is suppressed even after several physics steps');
+  assert.equal(stats.birthAttempts, 1, 'only the initial mature pair attempts reproduction');
+  assert.equal(stats.newbornFirstCollisionSuppressed, 1, 'the newborn matures after its first collision');
   simulation.dispose();
 });
 
