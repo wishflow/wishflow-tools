@@ -5,6 +5,7 @@
 - 本文件定义整个仓库通用的协作规则；各子项目在自己的 `AGENTS.md` 中补充本地架构、依赖、测试和部署约束。
 - 根目录及每个子项目的 `CLAUDE.md` 只导入同目录的 `AGENTS.md`，不复制规则正文。
 - 新应用放在 `apps/<slug>/`，目录名使用小写字母、数字和连字符；每个应用使用 pnpm 并独立维护依赖清单和 `pnpm-lock.yaml`，不加入跨应用的根 workspace。
+- CI 的 pnpm 版本从仓库级 `package.json` 配置读取（可使用 `packageManager` 或支持版本范围的 `devEngines.packageManager`），workflow 不重复声明具体版本；子应用默认不重复声明工具版本，确需独立工具链时再单独配置并维护匹配的 lockfile。
 - 可从导航站访问的前端应用必须登记在 `apps/catalog.json`。`slug` 同时决定 `/<slug>/` URL 和 `_site/<slug>/` 发布目录。
 - 每个登记的前端应用提供自己的 `package.json`、`pnpm-lock.yaml`、`scripts/install.sh`、`build` 和 `test:ci` 入口；构建产物写入应用目录内的 `dist/`。
 - 应用之间默认不直接导入代码。确需复用时，建立职责清晰的共享包并明确其版本和测试边界。

@@ -38,7 +38,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           cache: true
           cache_dependency_path: apps/duolingo-avatar/pnpm-lock.yaml
           run_install: false

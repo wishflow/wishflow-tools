@@ -7,6 +7,7 @@ import { readProjectCatalog } from './project-catalog.mjs';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DOC_PATTERN = /\.(?:md|mdx)$/i;
 const SHARED_TEST_PATHS = new Set(['apps/catalog.json', 'package.json', 'scripts/build-site.mjs']);
+const SITE_BUILD_PATHS = new Set(['apps/catalog.json', 'scripts/build-site.mjs', 'scripts/project-catalog.mjs']);
 
 function affectsWorker(file) {
   return /^apps\/[^/]+\/(?:worker\/|wrangler(?:\.[^/]+)?$)/.test(file);
@@ -148,8 +149,7 @@ export function analyzeChanges(changedFiles, projects, workerConfigApps = new Se
     || file.startsWith('site/')
   ));
   let siteRequired = files.some((file) => (
-    file === 'apps/catalog.json'
-    || file === 'scripts/build-site.mjs'
+    SITE_BUILD_PATHS.has(file)
     || file.startsWith('site/')
   ));
   let workerRequired = false;

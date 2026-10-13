@@ -75,7 +75,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           cache: true
           cache_dependency_path: apps/${{ matrix.app }}/pnpm-lock.yaml
           run_install: false
@@ -113,7 +112,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           run_install: false
 
       - uses: actions/setup-node@v6
@@ -139,7 +137,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           run_install: false
 
       - uses: actions/setup-node@v6
@@ -160,7 +157,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           cache: true
           cache_dependency_path: apps/duolingo-avatar/pnpm-lock.yaml
           run_install: false
@@ -193,7 +189,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           cache: true
           cache_dependency_path: |
             apps/ball-growth-lab/pnpm-lock.yaml
@@ -234,7 +229,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           cache: true
           cache_dependency_path: |
             apps/ball-growth-lab/pnpm-lock.yaml
@@ -269,7 +263,6 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 12.11.2
           cache: true
           cache_dependency_path: apps/duolingo-avatar/pnpm-lock.yaml
           run_install: false

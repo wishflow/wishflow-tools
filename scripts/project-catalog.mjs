@@ -51,8 +51,9 @@ export function validateCatalog(catalog, repoRoot) {
       throw new Error(`Project apps/${slug}/scripts/install.sh must be executable.`);
     }
     const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
-    if (packageJson.packageManager !== 'pnpm@12.11.2') {
-      throw new Error(`Project apps/${slug}/package.json must pin packageManager to pnpm@12.11.2.`);
+    const packageManager = packageJson.packageManager;
+    if (packageManager !== undefined && (typeof packageManager !== 'string' || !/^pnpm@.+$/.test(packageManager))) {
+      throw new Error(`Project apps/${slug}/package.json may omit packageManager, but an explicit manager must use pnpm.`);
     }
     for (const script of ['build', 'test:ci']) {
       if (typeof packageJson.scripts?.[script] !== 'string' || packageJson.scripts[script].trim() === '') {
