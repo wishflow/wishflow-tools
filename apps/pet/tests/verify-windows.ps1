@@ -41,8 +41,15 @@ function Invoke-InstallerProcess {
     else { $env:CODEX_HOME = $CodexHome }
     $env:USERPROFILE = $UserProfile
     $env:USAGI_PET_TEST_MODE = $Mode
-    $output = & $powershellPath -NoProfile -ExecutionPolicy Bypass -File $harnessPath 2>&1
-    $exitCode = $LASTEXITCODE
+    $previousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $output = & $powershellPath -NoProfile -ExecutionPolicy Bypass -File $harnessPath 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
     return [pscustomobject]@{
         ExitCode = $exitCode
         Output = [string]::Join([Environment]::NewLine, @($output))
