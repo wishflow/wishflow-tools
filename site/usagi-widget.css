@@ -37,7 +37,12 @@
 
 .usagi-widget__pet:focus-visible,
 .usagi-widget__control:focus-visible,
-.usagi-widget__restore:focus-visible {
+.usagi-widget__restore:focus-visible,
+.usagi-widget__mini-toggle:focus-visible,
+.usagi-widget__panel button:focus-visible,
+.usagi-widget__panel textarea:focus-visible,
+.usagi-widget__picker button:focus-visible,
+.usagi-widget__context button:focus-visible {
   outline: 3px solid #6d9f48;
   outline-offset: 2px;
 }
@@ -51,8 +56,28 @@
   background-position: 0 0;
   background-size: 800% 900%;
   filter: drop-shadow(0 5px 3px rgb(36 45 27 / 10%));
-  animation: usagi-widget-idle 1250ms steps(5, end) infinite;
+  animation: usagi-widget-idle 1500ms steps(5, end) infinite;
   pointer-events: none;
+}
+
+.usagi-widget[data-status="running"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 87.5%;
+  animation-name: usagi-widget-working;
+}
+
+.usagi-widget[data-status="needs-input"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 75%;
+  animation-name: usagi-widget-waiting;
+}
+
+.usagi-widget[data-status="ready"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 100%;
+  animation-name: usagi-widget-review;
+}
+
+.usagi-widget[data-status="blocked"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 62.5%;
+  animation-name: usagi-widget-failed;
 }
 
 .usagi-widget__controls {
@@ -74,7 +99,8 @@
 }
 
 .usagi-widget:hover .usagi-widget__controls,
-.usagi-widget:focus-within .usagi-widget__controls {
+.usagi-widget:focus-within .usagi-widget__controls,
+.usagi-widget[data-mini="true"] .usagi-widget__controls {
   opacity: 1;
   pointer-events: auto;
   transform: translateY(0);
@@ -93,14 +119,16 @@
   background: transparent;
   color: #1f2920;
   cursor: pointer;
-  text-decoration: none;
 }
 
 .usagi-widget__control:last-child {
   border-right: 0;
 }
 
-.usagi-widget__control:hover {
+.usagi-widget__control:hover,
+.usagi-widget__panel button:hover,
+.usagi-widget__picker button:hover,
+.usagi-widget__context button:hover {
   background: #f4f7ef;
 }
 
@@ -112,6 +140,254 @@
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
+}
+
+.usagi-widget__panel,
+.usagi-widget__picker,
+.usagi-widget__context {
+  position: absolute;
+  z-index: 3;
+  width: min(292px, calc(100vw - 24px));
+  padding: 14px;
+  border: 1px solid rgb(222 228 216 / 96%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 12px 32px rgb(39 47 34 / 18%);
+  color: #263320;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.usagi-widget[data-popup-side="left"] .usagi-widget__panel,
+.usagi-widget[data-popup-side="left"] .usagi-widget__picker,
+.usagi-widget[data-popup-side="left"] .usagi-widget__context {
+  right: 0;
+}
+
+.usagi-widget[data-popup-side="right"] .usagi-widget__panel,
+.usagi-widget[data-popup-side="right"] .usagi-widget__picker,
+.usagi-widget[data-popup-side="right"] .usagi-widget__context {
+  left: 0;
+}
+
+.usagi-widget[data-popup-placement="top"] .usagi-widget__panel,
+.usagi-widget[data-popup-placement="top"] .usagi-widget__picker,
+.usagi-widget[data-popup-placement="top"] .usagi-widget__context {
+  bottom: calc(100% + 8px);
+}
+
+.usagi-widget[data-popup-placement="bottom"] .usagi-widget__panel,
+.usagi-widget[data-popup-placement="bottom"] .usagi-widget__picker,
+.usagi-widget[data-popup-placement="bottom"] .usagi-widget__context {
+  top: calc(100% + 8px);
+}
+
+.usagi-widget__panel[hidden],
+.usagi-widget__picker[hidden],
+.usagi-widget__context[hidden],
+.usagi-widget__mini-toggle[hidden],
+.usagi-widget__restore[hidden] {
+  display: none !important;
+}
+
+.usagi-widget__panel-header,
+.usagi-widget__panel-header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.usagi-widget__panel-header {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.usagi-widget__panel-header-actions {
+  gap: 4px;
+}
+
+.usagi-widget__panel-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #42513b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 18px;
+}
+
+.usagi-widget__panel-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.usagi-widget__demo-note,
+.usagi-widget__panel-message,
+.usagi-widget__thread-empty {
+  margin: 0 0 10px;
+  color: #65715d;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.usagi-widget__demo-note {
+  padding: 8px 9px;
+  border-left: 2px solid #91ad75;
+  background: #f4f7ef;
+}
+
+.usagi-widget__chat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.usagi-widget__chat-form textarea {
+  width: 100%;
+  min-height: 58px;
+  resize: vertical;
+  padding: 9px;
+  border: 1px solid #dbe3d4;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+}
+
+.usagi-widget__chat-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.usagi-widget__hint {
+  color: #78816f;
+  font-size: 10px;
+}
+
+.usagi-widget__send,
+.usagi-widget__picker button,
+.usagi-widget__context button {
+  padding: 7px 10px;
+  border: 1px solid #dbe3d4;
+  border-radius: 7px;
+  background: #fff;
+  color: #35532b;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+}
+
+.usagi-widget__send {
+  border-color: #4e822c;
+  background: #4e822c;
+  color: #fff;
+}
+
+.usagi-widget__send:hover {
+  background: #3f6b22 !important;
+  color: #fff;
+}
+
+.usagi-widget__panel-message {
+  margin-top: 4px;
+}
+
+.usagi-widget__voice-message {
+  margin: 0;
+}
+
+.usagi-widget__threads {
+  display: grid;
+  max-height: 240px;
+  gap: 5px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usagi-widget__thread {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 9px;
+  border: 1px solid #e8ece3;
+  border-radius: 8px;
+  background: #fff;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.usagi-widget__thread[aria-current="true"] {
+  border-color: #8da779;
+  background: #f4f7ef;
+}
+
+.usagi-widget__thread-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.usagi-widget__thread-state {
+  flex: none;
+  color: #68735f;
+  font-size: 10px;
+}
+
+.usagi-widget__picker {
+  display: grid;
+  gap: 7px;
+}
+
+.usagi-widget__picker strong {
+  margin-bottom: 2px;
+}
+
+.usagi-widget__picker button[aria-pressed="true"] {
+  border-color: #658b49;
+  background: #eaf3e2;
+}
+
+.usagi-widget__context {
+  width: max-content;
+  min-width: 132px;
+  padding: 5px;
+}
+
+.usagi-widget__context button {
+  width: 100%;
+  border-color: transparent;
+  text-align: left;
+}
+
+.usagi-widget__mini-toggle {
+  padding: 5px 9px;
+  border: 1px solid #dbe3d4;
+  border-radius: 12px;
+  background: #fff;
+  color: #526348;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
 }
 
 .usagi-widget__restore {
@@ -134,13 +410,15 @@
   filter: none;
 }
 
+.usagi-widget[data-mini="true"] .usagi-widget__pet,
 .usagi-widget[data-collapsed="true"] .usagi-widget__pet,
+.usagi-widget[data-collapsed="true"] .usagi-widget__mini-toggle,
 .usagi-widget[data-collapsed="true"] .usagi-widget__controls {
   display: none;
 }
 
-.usagi-widget__restore[hidden] {
-  display: none;
+.usagi-widget[data-collapsed="true"] .usagi-widget__restore {
+  display: grid;
 }
 
 .usagi-widget__sr-only {
@@ -153,13 +431,15 @@
   clip-path: inset(50%);
 }
 
-.usagi-widget[data-action="running"] .usagi-widget__pet .usagi-widget__sprite {
-  animation: usagi-widget-run 1750ms steps(7, end) 1 both;
+.usagi-widget[data-status="running"] .usagi-widget__pet .usagi-widget__sprite,
+.usagi-widget[data-status="needs-input"] .usagi-widget__pet .usagi-widget__sprite,
+.usagi-widget[data-status="ready"] .usagi-widget__pet .usagi-widget__sprite {
+  animation-duration: 1500ms;
 }
 
-.usagi-widget:not([data-collapsed="true"]):hover .usagi-widget__pet .usagi-widget__sprite,
-.usagi-widget:not([data-collapsed="true"]):focus-within .usagi-widget__pet .usagi-widget__sprite {
-  animation: usagi-widget-run 1750ms steps(7, end) infinite;
+.usagi-widget[data-status="blocked"] .usagi-widget__pet .usagi-widget__sprite {
+  animation-duration: 2000ms;
+  animation-timing-function: steps(7, end);
 }
 
 @keyframes usagi-widget-idle {
@@ -167,9 +447,24 @@
   to { background-position: 71.428571% 0; }
 }
 
-@keyframes usagi-widget-run {
-  from { background-position: 0 12.5%; }
-  to { background-position: 100% 12.5%; }
+@keyframes usagi-widget-working {
+  from { background-position: 0 87.5%; }
+  to { background-position: 71.428571% 87.5%; }
+}
+
+@keyframes usagi-widget-waiting {
+  from { background-position: 0 75%; }
+  to { background-position: 71.428571% 75%; }
+}
+
+@keyframes usagi-widget-review {
+  from { background-position: 0 100%; }
+  to { background-position: 71.428571% 100%; }
+}
+
+@keyframes usagi-widget-failed {
+  from { background-position: 0 62.5%; }
+  to { background-position: 100% 62.5%; }
 }
 
 @media (max-width: 600px) {
@@ -186,6 +481,14 @@
     width: 86px;
     height: 93px;
   }
+
+  .usagi-widget__controls {
+    width: 108px;
+  }
+
+  .usagi-widget__control {
+    width: 35px;
+  }
 }
 
 @media (hover: none) {
@@ -198,13 +501,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .usagi-widget__sprite,
-  .usagi-widget__restore .usagi-widget__sprite {
+  .usagi-widget__sprite {
     animation: none !important;
     background-position: 0 0 !important;
   }
 
-  .usagi-widget__controls {
-    transition: none;
-  }
+  .usagi-widget[data-status="running"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 87.5% !important; }
+  .usagi-widget[data-status="needs-input"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 75% !important; }
+  .usagi-widget[data-status="ready"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 100% !important; }
+  .usagi-widget[data-status="blocked"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 62.5% !important; }
+  .usagi-widget__controls { transition: none; }
 }

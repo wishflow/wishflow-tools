@@ -21,8 +21,8 @@
   const promptFallback = document.querySelector('#prompt-fallback');
 
   const stateNames = {
-    en: { idle: 'Idle', working: 'Working', running: 'Running', 'needs-input': 'Needs input', complete: 'Complete' },
-    zh: { idle: '待机', working: '工作中', running: '运行中', 'needs-input': '等待确认', complete: '已完成' },
+    en: { idle: 'Idle', working: 'Working', running: 'Running', 'needs-input': 'Needs input', complete: 'Ready', blocked: 'Blocked' },
+    zh: { idle: '待机', working: '工作中', running: '运行中', 'needs-input': '等待输入', complete: '已就绪', blocked: '已阻塞' },
   };
   const stateDescriptions = {
     en: {
@@ -30,14 +30,16 @@
       working: 'Usagi is working on the request.',
       running: 'The sample task is running.',
       'needs-input': 'The sample task is waiting for your approval.',
-      complete: 'The sample task is complete.',
+      complete: 'The sample task is complete and ready for review.',
+      blocked: 'The sample task is blocked by an error.',
     },
     zh: {
       idle: 'Usagi 已准备就绪。',
       working: 'Usagi 正在处理请求。',
       running: '模拟任务正在运行。',
       'needs-input': '模拟任务正在等待你的确认。',
-      complete: '模拟任务已完成。',
+      complete: '模拟任务已完成，等待查看结果。',
+      blocked: '模拟任务遇到错误，暂时无法继续。',
     },
   };
   const installPrompts = {
@@ -258,7 +260,6 @@
   runDemoButton.addEventListener('click', startDemo);
   approveButton.addEventListener('click', finishDemo);
   copyButton.addEventListener('click', copyPrompt);
-
   setLanguage(language, false);
   setPreviewState('idle');
   selectInstallTab(installTabs[0]?.dataset.installTab);
