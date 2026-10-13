@@ -55,12 +55,11 @@ h1 { margin-bottom: 18px; font-size: clamp(38px, 5vw, 60px); letter-spacing: -.0
 .pet-sprite[data-state="running-right"] { background-position: 0 12.5%; animation: usagi-running-right 2000ms steps(7, end) infinite; }
 .pet-sprite[data-state="running-left"] { background-position: 0 25%; animation: usagi-running-left 2000ms steps(7, end) infinite; }
 .pet-sprite[data-state="waving"] { background-position: 0 37.5%; animation: usagi-waving 700ms linear infinite; }
-.pet-sprite[data-state="jumping"] { background-position: 0 50%; animation: usagi-jumping 1250ms steps(4, end) 1 forwards; }
+.pet-sprite[data-state="jumping"] { background-position: 0 50%; animation: usagi-jumping 1250ms steps(4, end) infinite; }
 .pet-sprite[data-state="running"] { background-position: 0 87.5%; animation-name: usagi-running; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="needs-input"] { background-position: 0 75%; animation-name: usagi-waiting; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="complete"] { background-position: 0 100%; animation-name: usagi-review; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="blocked"] { background-position: 0 62.5%; animation-name: usagi-failed; animation-duration: 2000ms; animation-timing-function: steps(7, end); }
-.pet-sprite:hover { background-position: 0 37.5%; animation: usagi-waving 700ms linear infinite; }
 @keyframes usagi-idle { to { background-position: 71.428571% 0; } }
 @keyframes usagi-running-right { to { background-position: 100% 12.5%; } }
 @keyframes usagi-running-left { to { background-position: 100% 25%; } }
@@ -179,7 +178,6 @@ pre { overflow-x: auto; margin: 0 0 10px; padding: 11px 12px; border: 1px solid 
   .pet-sprite[data-state="running-left"] { background-position: 0 25% !important; }
   .pet-sprite[data-state="waving"] { background-position: 0 37.5% !important; }
   .pet-sprite[data-state="jumping"] { background-position: 0 50% !important; }
-  .pet-sprite:hover { background-position: 0 37.5% !important; }
   .pet-sprite[data-state="running"] { background-position: 0 87.5% !important; }
   .pet-sprite[data-state="needs-input"] { background-position: 0 75% !important; }
   .pet-sprite[data-state="complete"] { background-position: 0 100% !important; }

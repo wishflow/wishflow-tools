@@ -30,7 +30,7 @@
       'running-right': 'Usagi is moving toward the right.',
       'running-left': 'Usagi is moving toward the left.',
       waving: 'Usagi plays the original four-frame staff flourish.',
-      jumping: 'Usagi jumps and returns to its resting pose.',
+      jumping: 'Usagi loops the jumping animation until you choose another state.',
       running: 'The sample task is running.',
       'needs-input': 'The sample task is waiting for your approval.',
       complete: 'The sample task is complete and ready for review.',
@@ -41,7 +41,7 @@
       'running-right': 'Usagi 正在向右移动。',
       'running-left': 'Usagi 正在向左移动。',
       waving: 'Usagi 播放原始图集中的四帧挥棒动作。',
-      jumping: 'Usagi 跳起后回到待机姿势。',
+      jumping: 'Usagi 会持续循环跳跃动作，直到你选择其他状态。',
       running: '模拟任务正在运行。',
       'needs-input': '模拟任务正在等待你的确认。',
       complete: '模拟任务已完成，等待查看结果。',
@@ -170,11 +170,6 @@
     previewStatus.textContent = stateDescriptions[language][state];
     sprite.setAttribute('aria-label', copyMessages[language].sprite + stateNames[language][state]);
     approveButton.hidden = state !== 'needs-input';
-    if (state === 'jumping') {
-      demoTimers.push(window.setTimeout(() => {
-        if (activeState === 'jumping') setPreviewState('idle');
-      }, 1250));
-    }
   }
 
   function selectInstallTab(tabName, moveFocus = false) {

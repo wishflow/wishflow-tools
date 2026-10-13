@@ -41,6 +41,7 @@
 .usagi-widget__mini-toggle:focus-visible,
 .usagi-widget__panel button:focus-visible,
 .usagi-widget__panel textarea:focus-visible,
+.usagi-widget__action-option:focus-visible,
 .usagi-widget__picker button:focus-visible,
 .usagi-widget__context button:focus-visible {
   outline: 3px solid #6d9f48;
@@ -81,11 +82,11 @@
   animation-name: usagi-widget-failed;
 }
 
-/* Play the original four-frame staff gesture from sprite row 3. */
-.usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:hover .usagi-widget__sprite,
-.usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:focus-visible .usagi-widget__sprite {
-  background-position: 0 37.5%;
-  animation: usagi-widget-waving 700ms linear infinite;
+/* Hover follows the selected Jump animation from sprite row 4. */
+.usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]):not([data-manual-state]) .usagi-widget__pet:hover .usagi-widget__sprite,
+.usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]):not([data-manual-state]) .usagi-widget__pet:focus-visible .usagi-widget__sprite {
+  background-position: 0 50%;
+  animation: usagi-widget-jumping 1250ms steps(4, end) infinite;
 }
 
 .usagi-widget[data-dragging="true"][data-direction="right"] .usagi-widget__pet .usagi-widget__sprite,
@@ -129,7 +130,7 @@
 
 .usagi-widget__control {
   display: grid;
-  width: 38px;
+  width: 29px;
   height: 36px;
   flex: none;
   place-items: center;
@@ -298,6 +299,7 @@
 }
 
 .usagi-widget__send,
+.usagi-widget__action-option,
 .usagi-widget__picker button,
 .usagi-widget__context button {
   padding: 7px 10px;
@@ -387,6 +389,37 @@
   background: #eaf3e2;
 }
 
+.usagi-widget__actions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.usagi-widget__actions-panel[hidden] {
+  display: none !important;
+}
+
+.usagi-widget__action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.usagi-widget__action-option {
+  min-width: 0;
+  text-align: center;
+}
+
+.usagi-widget__follow-action {
+  width: 100%;
+  text-align: left;
+}
+
+.usagi-widget__action-option[aria-pressed="true"] {
+  border-color: #658b49;
+  background: #eaf3e2;
+}
+
 .usagi-widget__context {
   width: max-content;
   min-width: 132px;
@@ -462,6 +495,51 @@
   animation-timing-function: steps(7, end);
 }
 
+.usagi-widget[data-manual-state="idle"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 0;
+  animation: usagi-widget-idle 1250ms steps(5, end) infinite;
+}
+
+.usagi-widget[data-manual-state="running-right"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 12.5%;
+  animation: usagi-widget-run-right 2000ms steps(7, end) infinite;
+}
+
+.usagi-widget[data-manual-state="running-left"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 25%;
+  animation: usagi-widget-run-left 2000ms steps(7, end) infinite;
+}
+
+.usagi-widget[data-manual-state="waving"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 37.5%;
+  animation: usagi-widget-waving 700ms linear infinite;
+}
+
+.usagi-widget[data-manual-state="jumping"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 50%;
+  animation: usagi-widget-jumping 1250ms steps(4, end) infinite;
+}
+
+.usagi-widget[data-manual-state="running"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 87.5%;
+  animation: usagi-widget-working 1500ms steps(5, end) infinite;
+}
+
+.usagi-widget[data-manual-state="needs-input"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 75%;
+  animation: usagi-widget-waiting 1500ms steps(5, end) infinite;
+}
+
+.usagi-widget[data-manual-state="ready"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 100%;
+  animation: usagi-widget-review 1500ms steps(5, end) infinite;
+}
+
+.usagi-widget[data-manual-state="blocked"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 62.5%;
+  animation: usagi-widget-failed 2000ms steps(7, end) infinite;
+}
+
 @keyframes usagi-widget-idle {
   from { background-position: 0 0; }
   to { background-position: 71.428571% 0; }
@@ -504,6 +582,11 @@
   60%, 100% { background-position: 42.857143% 37.5%; }
 }
 
+@keyframes usagi-widget-jumping {
+  from { background-position: 0 50%; }
+  to { background-position: 57.142857% 50%; }
+}
+
 @media (max-width: 600px) {
   .usagi-widget {
     width: 112px;
@@ -524,7 +607,7 @@
   }
 
   .usagi-widget__control {
-    width: 35px;
+    width: 27px;
   }
 }
 
@@ -547,8 +630,17 @@
   .usagi-widget[data-status="needs-input"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 75% !important; }
   .usagi-widget[data-status="ready"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 100% !important; }
   .usagi-widget[data-status="blocked"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 62.5% !important; }
-  .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:hover .usagi-widget__sprite,
-  .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:focus-visible .usagi-widget__sprite { background-position: 0 37.5% !important; }
+  .usagi-widget[data-manual-state="idle"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 0 !important; }
+  .usagi-widget[data-manual-state="running-right"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 12.5% !important; }
+  .usagi-widget[data-manual-state="running-left"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 25% !important; }
+  .usagi-widget[data-manual-state="waving"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 37.5% !important; }
+  .usagi-widget[data-manual-state="jumping"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 50% !important; }
+  .usagi-widget[data-manual-state="blocked"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 62.5% !important; }
+  .usagi-widget[data-manual-state="needs-input"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 75% !important; }
+  .usagi-widget[data-manual-state="running"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 87.5% !important; }
+  .usagi-widget[data-manual-state="ready"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 100% !important; }
+  .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]):not([data-manual-state]) .usagi-widget__pet:hover .usagi-widget__sprite,
+  .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]):not([data-manual-state]) .usagi-widget__pet:focus-visible .usagi-widget__sprite { background-position: 0 50% !important; }
   .usagi-widget[data-dragging="true"][data-direction="right"] .usagi-widget__pet .usagi-widget__sprite,
   .usagi-widget[data-key-moving="true"][data-direction="right"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 12.5% !important; }
   .usagi-widget[data-dragging="true"][data-direction="left"] .usagi-widget__pet .usagi-widget__sprite,

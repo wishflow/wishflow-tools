@@ -12,11 +12,15 @@
   const words = {
     en: {
       region: 'Usagi animated pet',
-      petGuide: 'Open the Usagi pet guide. Hover to play its original staff gesture; drag or use the arrow keys to move.',
-      petAction: 'Choose a pet. Hover to play its original staff gesture; drag or use the arrow keys to move.',
+      petGuide: 'Open the Usagi pet guide. Hover to play Jump; drag or use the arrow keys to move.',
+      petAction: 'Choose a pet. Hover to play Jump; drag or use the arrow keys to move.',
       mini: 'Mini · controls only',
-      controls: 'Quick chat, voice, and activity controls',
+      controls: 'Quick chat, actions, voice, and activity controls',
       chat: 'Quick chat',
+      actions: 'Choose an animation',
+      panelActions: 'Choose an animation',
+      followActivity: 'Follow activity',
+      actionChanged: 'Pet animation: ',
       voice: 'Voice chat',
       activity: 'Follow activity',
       collapse: 'Collapse threads',
@@ -46,6 +50,10 @@
       activityNote: 'Select a sample thread to preview its conversation. Thread order follows the desktop pet status priority.',
       activityEmpty: 'No sample threads yet. Start a request with Quick Chat.',
       stateIdle: 'Idle',
+      stateRunRight: 'Run right',
+      stateRunLeft: 'Run left',
+      stateWaving: 'Staff flourish',
+      stateJumping: 'Jump',
       stateRunning: 'Running',
       stateNeedsInput: 'Needs input',
       stateReady: 'Ready',
@@ -55,11 +63,15 @@
     },
     zh: {
       region: 'Usagi 网页宠物',
-      petGuide: '打开 Usagi 宠物详情页。悬停播放图集中的原始挥棒动作；拖动或按方向键移动。',
-      petAction: '选择宠物。悬停播放图集中的原始挥棒动作；拖动或按方向键移动。',
+      petGuide: '打开 Usagi 宠物详情页。悬停播放 Jump；拖动或按方向键移动。',
+      petAction: '选择宠物。悬停播放 Jump；拖动或按方向键移动。',
       mini: 'Mini · 仅显示控件',
-      controls: '快速聊天、语音和活动控件',
+      controls: '快速聊天、动作、语音和活动控件',
       chat: '快速聊天',
+      actions: '选择动画',
+      panelActions: '选择动画',
+      followActivity: '跟随状态',
+      actionChanged: '宠物动作：',
       voice: '语音聊天',
       activity: '查看活动',
       collapse: '收起线程',
@@ -89,6 +101,10 @@
       activityNote: '选择一条模拟线程预览对话。线程顺序遵循桌面宠物的状态优先级。',
       activityEmpty: '还没有模拟线程。先从快速聊天发送一条请求。',
       stateIdle: '待机',
+      stateRunRight: '向右跑',
+      stateRunLeft: '向左跑',
+      stateWaving: '挥舞金箍棒',
+      stateJumping: '跳跃',
       stateRunning: '运行中',
       stateNeedsInput: '等待输入',
       stateReady: '已就绪',
@@ -109,6 +125,9 @@
     '<div class="usagi-widget__controls" data-usagi-controls role="toolbar">',
     '  <button class="usagi-widget__control" data-usagi-chat type="button">',
     '    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>',
+    '  </button>',
+    '  <button class="usagi-widget__control" data-usagi-actions type="button" aria-expanded="false">',
+    '    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5L12 3Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>',
     '  </button>',
     '  <button class="usagi-widget__control" data-usagi-voice type="button">',
     '    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10v4M7 7v10M11 4v16M15 8v8M19 10v4"/></svg>',
@@ -148,6 +167,10 @@
     '    <p class="usagi-widget__thread-empty" data-usagi-thread-empty role="status" hidden></p>',
     '    <ul class="usagi-widget__threads" data-usagi-threads></ul>',
     '  </div>',
+    '  <div class="usagi-widget__panel-body usagi-widget__actions-panel" data-usagi-actions-panel role="group" hidden>',
+    '    <button class="usagi-widget__action-option usagi-widget__follow-action" data-usagi-follow type="button" aria-pressed="true"></button>',
+    '    <div class="usagi-widget__action-grid" data-usagi-action-list role="group"></div>',
+    '  </div>',
     '</section>',
     '<section class="usagi-widget__picker" data-usagi-picker hidden role="group">',
     '  <strong data-usagi-picker-title></strong>',
@@ -167,6 +190,7 @@
   const petLink = widget.querySelector('[data-usagi-pet]');
   const controls = widget.querySelector('[data-usagi-controls]');
   const chatButton = widget.querySelector('[data-usagi-chat]');
+  const actionsButton = widget.querySelector('[data-usagi-actions]');
   const voiceButton = widget.querySelector('[data-usagi-voice]');
   const activityButton = widget.querySelector('[data-usagi-activity]');
   const hideButton = widget.querySelector('[data-usagi-hide]');
@@ -177,6 +201,9 @@
   const chatPanel = widget.querySelector('[data-usagi-chat-panel]');
   const voicePanel = widget.querySelector('[data-usagi-voice-panel]');
   const activityPanel = widget.querySelector('[data-usagi-activity-panel]');
+  const actionsPanel = widget.querySelector('[data-usagi-actions-panel]');
+  const followButton = widget.querySelector('[data-usagi-follow]');
+  const actionList = widget.querySelector('[data-usagi-action-list]');
   const chatForm = widget.querySelector('[data-usagi-chat-form]');
   const chatInput = widget.querySelector('[data-usagi-chat-input]');
   const chatMessage = widget.querySelector('[data-usagi-chat-message]');
@@ -192,6 +219,26 @@
   const petModeButtons = [...widget.querySelectorAll('[data-usagi-pet-mode]')];
   const contextMenu = widget.querySelector('[data-usagi-context]');
   const statusAnnouncer = widget.querySelector('[data-usagi-status]');
+  const petActions = [
+    ['idle', 'stateIdle'],
+    ['running-right', 'stateRunRight'],
+    ['running-left', 'stateRunLeft'],
+    ['waving', 'stateWaving'],
+    ['jumping', 'stateJumping'],
+    ['running', 'stateRunning'],
+    ['needs-input', 'stateNeedsInput'],
+    ['ready', 'stateReady'],
+    ['blocked', 'stateBlocked'],
+  ];
+  const actionButtons = petActions.map(([state, labelKey]) => {
+    const button = document.createElement('button');
+    button.className = 'usagi-widget__action-option';
+    button.type = 'button';
+    button.dataset.usagiState = state;
+    button.dataset.labelKey = labelKey;
+    actionList.append(button);
+    return button;
+  });
   const spriteUrl = new URL(spritePath, document.baseURI);
 
   widget.querySelectorAll('.usagi-widget__sprite').forEach((sprite) => {
@@ -214,11 +261,43 @@
   function stateLabel(state) {
     return {
       idle: text('stateIdle'),
+      'running-right': text('stateRunRight'),
+      'running-left': text('stateRunLeft'),
+      waving: text('stateWaving'),
+      jumping: text('stateJumping'),
       running: text('stateRunning'),
       'needs-input': text('stateNeedsInput'),
       ready: text('stateReady'),
       blocked: text('stateBlocked'),
     }[state] || text('stateIdle');
+  }
+
+  function updateActionSelection() {
+    const manualState = widget.dataset.manualState || '';
+    followButton.setAttribute('aria-pressed', String(!manualState));
+    actionButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.usagiState === manualState));
+    });
+  }
+
+  function setManualState(state) {
+    if (state) widget.dataset.manualState = state;
+    else delete widget.dataset.manualState;
+    updateActionSelection();
+    announce(text('actionChanged') + (state ? stateLabel(state) : text('followActivity')));
+  }
+
+  function panelTrigger(mode) {
+    return mode === 'chat' ? chatButton
+      : mode === 'voice' ? voiceButton
+        : mode === 'actions' ? actionsButton
+          : activityButton;
+  }
+
+  function closePanelAndReturnFocus() {
+    const trigger = panelTrigger(activePanel);
+    closePanels();
+    trigger.focus();
   }
 
   let currentMode = 'usagi';
@@ -293,6 +372,7 @@
     contextMenu.hidden = true;
     activePanel = '';
     activityButton.setAttribute('aria-expanded', 'false');
+    actionsButton.setAttribute('aria-expanded', 'false');
   }
 
   function openPanel(mode, focusTarget) {
@@ -303,12 +383,17 @@
     chatPanel.hidden = mode !== 'chat';
     voicePanel.hidden = mode !== 'voice';
     activityPanel.hidden = mode !== 'activity';
+    actionsPanel.hidden = mode !== 'actions';
     collapseButton.hidden = mode !== 'activity';
     activityButton.setAttribute('aria-expanded', String(mode === 'activity'));
+    actionsButton.setAttribute('aria-expanded', String(mode === 'actions'));
     if (mode === 'chat') renderSelectedThread();
     updateLabels();
     if (focusTarget) {
-      const target = mode === 'chat' ? chatInput : mode === 'activity' ? threadList.querySelector('button') || closeButton : closeButton;
+      const target = mode === 'chat' ? chatInput
+        : mode === 'activity' ? threadList.querySelector('button') || closeButton
+          : mode === 'actions' ? followButton
+            : closeButton;
       target.focus();
     }
   }
@@ -319,6 +404,7 @@
     picker.hidden = false;
     activePanel = '';
     activityButton.setAttribute('aria-expanded', 'false');
+    actionsButton.setAttribute('aria-expanded', 'false');
     updateLabels();
     petModeButtons[0].focus();
   }
@@ -402,6 +488,8 @@
     miniToggle.textContent = isPetPage ? words[current].mini : words[current].miniGuide;
     chatButton.setAttribute('aria-label', words[current].chat);
     chatButton.title = words[current].chat;
+    actionsButton.setAttribute('aria-label', words[current].actions);
+    actionsButton.title = words[current].actions;
     voiceButton.setAttribute('aria-label', words[current].voice);
     voiceButton.title = words[current].voice;
     activityButton.setAttribute('aria-label', words[current].activity);
@@ -418,9 +506,18 @@
     petModeButtons.forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.usagiPetMode === currentMode));
     });
+    actionsPanel.setAttribute('aria-label', words[current].panelActions);
+    actionList.setAttribute('aria-label', words[current].panelActions);
+    followButton.textContent = words[current].followActivity;
+    actionButtons.forEach((button) => {
+      button.textContent = words[current][button.dataset.labelKey];
+    });
+    updateActionSelection();
     panelTitle.textContent = activePanel === 'chat'
       ? (threads.find((thread) => thread.id === selectedThreadId)?.title || words[current].panelChat)
-      : activePanel === 'voice' ? words[current].panelVoice : words[current].panelActivity;
+      : activePanel === 'voice' ? words[current].panelVoice
+        : activePanel === 'actions' ? words[current].panelActions
+          : words[current].panelActivity;
     widget.querySelector('[data-usagi-demo-note]').textContent = words[current].demoOnly;
     widget.querySelector('[data-usagi-chat-label]').textContent = words[current].chatPlaceholder;
     chatInput.placeholder = words[current].chatPlaceholder;
@@ -511,6 +608,15 @@
   petModeButtons[0].addEventListener('click', () => setMode('usagi'));
   petModeButtons[1].addEventListener('click', () => setMode('mini'));
   chatButton.addEventListener('click', () => openPanel('chat', true));
+  actionsButton.addEventListener('click', () => {
+    if (!panel.hidden && activePanel === 'actions') closePanels();
+    else openPanel('actions', true);
+  });
+  followButton.addEventListener('click', () => setManualState(''));
+  actionList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-usagi-state]');
+    if (button) setManualState(button.dataset.usagiState);
+  });
   voiceButton.addEventListener('click', () => openPanel('voice', false));
   activityButton.addEventListener('click', () => {
     if (!panel.hidden && activePanel === 'activity') closePanels();
@@ -521,8 +627,7 @@
     activityButton.focus();
   });
   closeButton.addEventListener('click', () => {
-    closePanels();
-    activityButton.focus();
+    closePanelAndReturnFocus();
   });
   hideButton.addEventListener('click', () => {
     widget.dataset.collapsed = 'true';
@@ -631,8 +736,11 @@
     if (event.key === 'Escape') {
       if (!panel.hidden || !picker.hidden || !contextMenu.hidden) {
         event.preventDefault();
-        closePanels();
-        (currentMode === 'mini' ? miniToggle : petLink).focus();
+        if (!panel.hidden) closePanelAndReturnFocus();
+        else {
+          closePanels();
+          (currentMode === 'mini' ? miniToggle : petLink).focus();
+        }
       } else if (petFocused) {
         event.preventDefault();
         setPosition(defaultPosition(), true);

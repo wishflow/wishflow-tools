@@ -41,21 +41,34 @@ test('navigation cards include both languages and render the configured Usagi im
 
   const homePage = readFileSync(path.join(repoRoot, 'site', 'index.html'), 'utf8');
   assert.match(homePage, /@keyframes usagi-idle/);
-  assert.match(homePage, /@keyframes usagi-card-waving/);
+  assert.match(homePage, /@keyframes usagi-card-jumping/);
   assert.match(homePage, /\.card:hover \.icon-image img, \.card:focus-visible \.icon-image img/);
-  assert.match(homePage, /translate\(-37\.5%, -33\.333333%\)/);
+  assert.match(homePage, /translate\(-50%, -50%\)/);
   assert.doesNotMatch(homePage, /usagi-card-staff-spin|icon-image::after/);
   assert.match(homePage, /prefers-reduced-motion: reduce/);
 
   const widgetStyles = readFileSync(path.join(repoRoot, 'site', 'usagi-widget.css'), 'utf8');
   const widgetScript = readFileSync(path.join(repoRoot, 'site', 'usagi-widget.js'), 'utf8');
-  assert.match(widgetStyles, /usagi-widget-waving 700ms linear infinite/);
-  assert.match(widgetStyles, /background-position: 0 37\.5%/);
+  assert.match(widgetStyles, /usagi-widget-jumping 1250ms steps\(4, end\) infinite/);
+  assert.match(widgetStyles, /not\(\[data-manual-state\]\).*:hover \.usagi-widget__sprite/);
+  assert.match(widgetStyles, /data-manual-state="waving"[\s\S]*?usagi-widget-waving 700ms linear infinite/);
+  assert.match(widgetStyles, /data-manual-state="jumping"[\s\S]*?usagi-widget-jumping 1250ms steps\(4, end\) infinite/);
   assert.doesNotMatch(widgetStyles, /usagi-widget-staff-spin|usagi-widget__sprite::after/);
   assert.match(widgetStyles, /data-direction="right"[\s\S]*?usagi-widget-run-right 2000ms steps\(7, end\)/);
   assert.match(widgetStyles, /data-direction="left"[\s\S]*?usagi-widget-run-left 2000ms steps\(7, end\)/);
+  assert.match(widgetStyles, /prefers-reduced-motion: reduce/);
   assert.match(widgetScript, /dataset\.direction = event\.key === 'ArrowRight' \? 'right' : 'left'/);
   assert.match(widgetScript, /Math\.abs\(movementX\) > 1/);
+  assert.match(widgetScript, /data-usagi-action-list/);
+  assert.match(widgetScript, /function setManualState\(state\)/);
+  assert.match(widgetScript, /followButton\.addEventListener\('click', \(\) => setManualState\(''\)\)/);
+
+  const petStyles = readFileSync(path.join(repoRoot, 'apps', 'pet', 'styles.css'), 'utf8');
+  const petScript = readFileSync(path.join(repoRoot, 'apps', 'pet', 'app.js'), 'utf8');
+  assert.match(petStyles, /\.pet-sprite\[data-state="jumping"\][^{]*\{[^}]*usagi-jumping 1250ms steps\(4, end\) infinite/);
+  assert.doesNotMatch(petStyles, /\.pet-sprite:hover/);
+  assert.match(petScript, /jumping: 'Usagi loops the jumping animation until you choose another state\.'/);
+  assert.doesNotMatch(petScript, /activeState === 'jumping'[\s\S]{0,120}setPreviewState\('idle'\)/);
 });
 
 test('shared output contains exactly one navigation card and app build per catalog entry', async () => {

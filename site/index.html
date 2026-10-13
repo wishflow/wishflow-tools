@@ -26,21 +26,16 @@
       .icon { position: relative; display: grid; width: 48px; height: 48px; place-items: center; overflow: hidden; border-radius: 12px; background: #eaf8dc; font-size: 25px; }
       .icon-image { position: relative; width: 48px; height: 52px; background: transparent; }
       .icon-image img { position: absolute; top: 0; left: 0; display: block; width: 800%; max-width: none; height: 900%; animation: usagi-idle 1250ms steps(5, end) infinite; }
-      .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: usagi-card-waving 700ms linear infinite; }
+      .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: usagi-card-jumping 1250ms steps(4, end) infinite; }
       @keyframes usagi-idle { to { transform: translateX(-62.5%); } }
-      @keyframes usagi-card-waving {
-        0% { transform: translate(0, -33.333333%); animation-timing-function: steps(1, end); }
-        20% { transform: translate(-12.5%, -33.333333%); animation-timing-function: steps(1, end); }
-        40% { transform: translate(-25%, -33.333333%); animation-timing-function: steps(1, end); }
-        60%, 100% { transform: translate(-37.5%, -33.333333%); }
-      }
+      @keyframes usagi-card-jumping { to { transform: translate(-50%, -50%); } }
       h2 { margin: 22px 0 8px; font-size: 21px; letter-spacing: -.02em; }
       .description { margin: 0; color: #657066; line-height: 1.55; }
       .open { margin-top: auto; padding-top: 24px; color: #438215; font-size: 14px; font-weight: 700; }
       footer { margin-top: 44px; color: #8a9588; font-size: 13px; line-height: 1.6; }
       html[lang="en"] [data-locale="zh"], html[lang="zh"] [data-locale="en"] { display: none !important; }
       @media (max-width: 600px) { main { padding-top: 48px; } .card { min-height: 210px; padding: 22px; } }
-      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .icon-image img { animation: none !important; transform: none !important; } .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: none !important; transform: translate(0, -33.333333%); } }
+      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .icon-image img { animation: none !important; transform: none !important; } .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: none !important; transform: translate(0, -50%); } }
     </style>
     <script src="./site.js" defer></script>
   </head>
