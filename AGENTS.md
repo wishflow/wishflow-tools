@@ -17,8 +17,9 @@
 - `apps/catalog.json` 是导航卡片和静态应用发布路径的单一数据源；不要在导航 HTML 或构建脚本中重复维护应用列表。
 - 新增 Worker、容器、数据库或其他 Cloudflare 资源前，先评估免费额度、成本、密钥边界和维护责任；复用现有 Worker 也必须符合安全边界。
 - Worker 只在对应源码或部署配置变化时发布。静态站点变更不应触发 Worker 发布。
-- 正常发布使用 `git push origin master` 触发 `.github/workflows/pages.yml`；工作流会按变更范围和测试结果决定是否部署静态站或 Worker。该流程不要求安装或登录 GitHub CLI（`gh`）。
-- `gh` 仅作为查看 Actions 运行状态、手动触发工作流或管理 GitHub 资源的可选工具。若 `gh` 未安装或未登录，不得因此阻塞已有 Git 凭证可完成的提交和 push；需要手动操作时可使用 GitHub 网页。
+- 正常发布使用裸 `git push origin master` 触发 `.github/workflows/pages.yml`；工作流会按变更范围和测试结果决定是否部署静态站或 Worker。纯 Git 版本控制操作（如 `status`、`diff`、`add`、`commit`、`pull`、`push`）必须使用 `git` 命令，不通过 GitHub/Cloudflare CLI 或网页操作。
+- GitHub 资源与状态的读写（如仓库、PR、Issue、Actions 和发布管理）原则上使用 GitHub CLI（`gh`）；Cloudflare 资源、配置与部署状态的读写原则上使用 Cloudflare CLI（`wrangler`）或官方命令行 API，不使用 GitHub 网站或 Cloudflare Dashboard 代替 CLI。公开网站本身的功能预览不属于平台管理操作，可按网页预览规则使用 Codex 内置浏览器。
+- `gh` 未安装或未登录不得阻塞已有 Git 凭证可完成的纯 Git 操作。若 GitHub/Cloudflare 管理操作无法通过可用 CLI 完成，先说明具体限制；未经用户明确要求，不切换到网页界面操作。
 
 ## 3. Roadmap 演进规则
 
