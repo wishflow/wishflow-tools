@@ -72,8 +72,15 @@ test('static build contains the bilingual page, interactive preview, and an unmo
   assert.match(builtPage, /Settings → Personalization → Pet/);
   assert.match(builtPage, /\/pets uu-usagi/);
   assert.match(builtPage, /not connected to a Codex session/);
-  for (const state of ['idle', 'working', 'running', 'needs-input', 'complete']) {
-    assert.ok(builtScript.includes(state), 'preview includes state ' + state);
+  const previewStates = ['idle', 'running-right', 'running-left', 'waving', 'jumping', 'running', 'needs-input', 'complete', 'blocked'];
+  for (const state of previewStates) {
+    assert.ok(builtPage.includes('data-state="' + state + '"'), 'page exposes state ' + state);
+    assert.ok(
+      state === 'idle'
+        ? builtStyles.includes('.pet-sprite {') && builtStyles.includes('animation: usagi-idle')
+        : builtStyles.includes('.pet-sprite[data-state="' + state + '"]'),
+      'styles map state ' + state,
+    );
   }
   assert.match(builtScript, /clipboard\.writeText/);
   assert.match(builtScript, /ArrowRight/);

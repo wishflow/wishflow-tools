@@ -21,13 +21,16 @@
   const promptFallback = document.querySelector('#prompt-fallback');
 
   const stateNames = {
-    en: { idle: 'Idle', working: 'Working', running: 'Running', 'needs-input': 'Needs input', complete: 'Ready', blocked: 'Blocked' },
-    zh: { idle: '待机', working: '工作中', running: '运行中', 'needs-input': '等待输入', complete: '已就绪', blocked: '已阻塞' },
+    en: { idle: 'Idle', 'running-right': 'Run right', 'running-left': 'Run left', waving: 'Wave weapon', jumping: 'Jumping', running: 'Running', 'needs-input': 'Needs input', complete: 'Ready', blocked: 'Blocked' },
+    zh: { idle: '待机', 'running-right': '向右跑', 'running-left': '向左跑', waving: '挥舞武器', jumping: '跳跃', running: '运行中', 'needs-input': '等待输入', complete: '已就绪', blocked: '已阻塞' },
   };
   const stateDescriptions = {
     en: {
       idle: 'Usagi is ready.',
-      working: 'Usagi is working on the request.',
+      'running-right': 'Usagi is moving toward the right.',
+      'running-left': 'Usagi is moving toward the left.',
+      waving: 'Usagi waves its weapon to greet you.',
+      jumping: 'Usagi jumps and returns to its resting pose.',
       running: 'The sample task is running.',
       'needs-input': 'The sample task is waiting for your approval.',
       complete: 'The sample task is complete and ready for review.',
@@ -35,7 +38,10 @@
     },
     zh: {
       idle: 'Usagi 已准备就绪。',
-      working: 'Usagi 正在处理请求。',
+      'running-right': 'Usagi 正在向右移动。',
+      'running-left': 'Usagi 正在向左移动。',
+      waving: 'Usagi 正挥舞武器向你打招呼。',
+      jumping: 'Usagi 跳起后回到待机姿势。',
       running: '模拟任务正在运行。',
       'needs-input': '模拟任务正在等待你的确认。',
       complete: '模拟任务已完成，等待查看结果。',
@@ -78,14 +84,14 @@
   };
   const demoReplies = {
     en: {
-      initial: 'Choose a state or start the sample conversation.',
+      initial: 'Choose a sprite state, hover or drag Usagi, or start the sample conversation.',
       working: 'I’ll inspect the request and prepare the change.',
       running: 'The change is ready. I’m checking the result now.',
       'needs-input': 'Checks are ready. Review the change and approve to finish.',
       complete: 'Approved. The sample task is complete.',
     },
     zh: {
-      initial: '切换状态，或开始一段模拟对话。',
+      initial: '选择动画状态、悬停或拖动 Usagi，或开始一段模拟对话。',
       working: '我会先检查请求并准备修改。',
       running: '修改已准备好，我正在检查结果。',
       'needs-input': '检查已完成。请查看修改并确认结束任务。',
@@ -164,6 +170,11 @@
     previewStatus.textContent = stateDescriptions[language][state];
     sprite.setAttribute('aria-label', copyMessages[language].sprite + stateNames[language][state]);
     approveButton.hidden = state !== 'needs-input';
+    if (state === 'jumping') {
+      demoTimers.push(window.setTimeout(() => {
+        if (activeState === 'jumping') setPreviewState('idle');
+      }, 1250));
+    }
   }
 
   function selectInstallTab(tabName, moveFocus = false) {
@@ -198,10 +209,9 @@
     demoUser.hidden = false;
     runDemoButton.disabled = true;
     demoReply.textContent = demoReplies[language].working;
-    setPreviewState('working');
+    setPreviewState('running');
     demoTimers.push(window.setTimeout(() => {
       demoReply.textContent = demoReplies[language].running;
-      setPreviewState('running');
     }, 950));
     demoTimers.push(window.setTimeout(() => {
       demoReply.textContent = demoReplies[language]['needs-input'];

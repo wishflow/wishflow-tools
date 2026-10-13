@@ -52,13 +52,20 @@ h1 { margin-bottom: 18px; font-size: clamp(38px, 5vw, 60px); letter-spacing: -.0
 .pet-preview { display: flex; flex-direction: column; }
 .pet-stage { position: relative; display: grid; min-height: 254px; place-items: center; overflow: hidden; background: transparent; }
 .pet-sprite { width: 192px; height: 208px; background-image: url("./pets/uu-usagi/spritesheet.webp"); background-repeat: no-repeat; background-size: 800% 900%; animation: usagi-idle 1250ms steps(5, end) infinite; }
-.pet-sprite[data-state="working"] { background-position: 0 87.5%; animation-name: usagi-working; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
+.pet-sprite[data-state="running-right"] { background-position: 0 12.5%; animation: usagi-running-right 2000ms steps(7, end) infinite; }
+.pet-sprite[data-state="running-left"] { background-position: 0 25%; animation: usagi-running-left 2000ms steps(7, end) infinite; }
+.pet-sprite[data-state="waving"] { background-position: 0 37.5%; animation: usagi-waving 1000ms steps(3, end) infinite; }
+.pet-sprite[data-state="jumping"] { background-position: 0 50%; animation: usagi-jumping 1250ms steps(4, end) 1 forwards; }
 .pet-sprite[data-state="running"] { background-position: 0 87.5%; animation-name: usagi-running; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="needs-input"] { background-position: 0 75%; animation-name: usagi-waiting; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="complete"] { background-position: 0 100%; animation-name: usagi-review; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="blocked"] { background-position: 0 62.5%; animation-name: usagi-failed; animation-duration: 2000ms; animation-timing-function: steps(7, end); }
+.pet-sprite:hover { background-position: 0 37.5%; animation: usagi-waving 1000ms steps(3, end) infinite; }
 @keyframes usagi-idle { to { background-position: 71.428571% 0; } }
-@keyframes usagi-working { to { background-position: 71.428571% 87.5%; } }
+@keyframes usagi-running-right { to { background-position: 100% 12.5%; } }
+@keyframes usagi-running-left { to { background-position: 100% 25%; } }
+@keyframes usagi-waving { to { background-position: 42.857143% 37.5%; } }
+@keyframes usagi-jumping { to { background-position: 57.142857% 50%; } }
 @keyframes usagi-running { to { background-position: 71.428571% 87.5%; } }
 @keyframes usagi-waiting { to { background-position: 71.428571% 75%; } }
 @keyframes usagi-review { to { background-position: 71.428571% 100%; } }
@@ -163,4 +170,13 @@ pre { overflow-x: auto; margin: 0 0 10px; padding: 11px 12px; border: 1px solid 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
   .pet-sprite { animation: none !important; }
+  .pet-sprite[data-state="running-right"] { background-position: 0 12.5% !important; }
+  .pet-sprite[data-state="running-left"] { background-position: 0 25% !important; }
+  .pet-sprite[data-state="waving"] { background-position: 0 37.5% !important; }
+  .pet-sprite[data-state="jumping"] { background-position: 0 50% !important; }
+  .pet-sprite:hover { background-position: 0 37.5% !important; }
+  .pet-sprite[data-state="running"] { background-position: 0 87.5% !important; }
+  .pet-sprite[data-state="needs-input"] { background-position: 0 75% !important; }
+  .pet-sprite[data-state="complete"] { background-position: 0 100% !important; }
+  .pet-sprite[data-state="blocked"] { background-position: 0 62.5% !important; }
 }

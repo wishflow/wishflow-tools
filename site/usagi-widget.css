@@ -56,7 +56,7 @@
   background-position: 0 0;
   background-size: 800% 900%;
   filter: drop-shadow(0 5px 3px rgb(36 45 27 / 10%));
-  animation: usagi-widget-idle 1500ms steps(5, end) infinite;
+  animation: usagi-widget-idle 1250ms steps(5, end) infinite;
   pointer-events: none;
 }
 
@@ -78,6 +78,24 @@
 .usagi-widget[data-status="blocked"] .usagi-widget__pet .usagi-widget__sprite {
   background-position: 0 62.5%;
   animation-name: usagi-widget-failed;
+}
+
+.usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:hover .usagi-widget__sprite,
+.usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:focus-visible .usagi-widget__sprite {
+  background-position: 0 37.5%;
+  animation: usagi-widget-wave 1000ms steps(3, end) infinite;
+}
+
+.usagi-widget[data-dragging="true"][data-direction="right"] .usagi-widget__pet .usagi-widget__sprite,
+.usagi-widget[data-key-moving="true"][data-direction="right"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 12.5%;
+  animation: usagi-widget-run-right 2000ms steps(7, end) infinite;
+}
+
+.usagi-widget[data-dragging="true"][data-direction="left"] .usagi-widget__pet .usagi-widget__sprite,
+.usagi-widget[data-key-moving="true"][data-direction="left"] .usagi-widget__pet .usagi-widget__sprite {
+  background-position: 0 25%;
+  animation: usagi-widget-run-left 2000ms steps(7, end) infinite;
 }
 
 .usagi-widget__controls {
@@ -467,6 +485,21 @@
   to { background-position: 100% 62.5%; }
 }
 
+@keyframes usagi-widget-run-right {
+  from { background-position: 0 12.5%; }
+  to { background-position: 100% 12.5%; }
+}
+
+@keyframes usagi-widget-run-left {
+  from { background-position: 0 25%; }
+  to { background-position: 100% 25%; }
+}
+
+@keyframes usagi-widget-wave {
+  from { background-position: 0 37.5%; }
+  to { background-position: 42.857143% 37.5%; }
+}
+
 @media (max-width: 600px) {
   .usagi-widget {
     width: 112px;
@@ -510,5 +543,11 @@
   .usagi-widget[data-status="needs-input"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 75% !important; }
   .usagi-widget[data-status="ready"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 100% !important; }
   .usagi-widget[data-status="blocked"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 62.5% !important; }
+  .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:hover .usagi-widget__sprite,
+  .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:focus-visible .usagi-widget__sprite { background-position: 0 37.5% !important; }
+  .usagi-widget[data-dragging="true"][data-direction="right"] .usagi-widget__pet .usagi-widget__sprite,
+  .usagi-widget[data-key-moving="true"][data-direction="right"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 12.5% !important; }
+  .usagi-widget[data-dragging="true"][data-direction="left"] .usagi-widget__pet .usagi-widget__sprite,
+  .usagi-widget[data-key-moving="true"][data-direction="left"] .usagi-widget__pet .usagi-widget__sprite { background-position: 0 25% !important; }
   .usagi-widget__controls { transition: none; }
 }

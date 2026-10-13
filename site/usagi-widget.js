@@ -12,8 +12,8 @@
   const words = {
     en: {
       region: 'Usagi animated pet',
-      petGuide: 'Open the Usagi pet guide. Drag to move.',
-      petAction: 'Choose a pet. Drag to move.',
+      petGuide: 'Open the Usagi pet guide. Hover to wave; drag or use the arrow keys to move.',
+      petAction: 'Choose a pet. Hover to wave; drag or use the arrow keys to move.',
       mini: 'Mini · controls only',
       controls: 'Quick chat, voice, and activity controls',
       chat: 'Quick chat',
@@ -55,8 +55,8 @@
     },
     zh: {
       region: 'Usagi 网页宠物',
-      petGuide: '打开 Usagi 宠物详情页。拖动可移动。',
-      petAction: '选择宠物。拖动可移动。',
+      petGuide: '打开 Usagi 宠物详情页。悬停可挥舞武器；拖动或按方向键移动。',
+      petAction: '选择宠物。悬停可挥舞武器；拖动或按方向键移动。',
       mini: 'Mini · 仅显示控件',
       controls: '快速聊天、语音和活动控件',
       chat: '快速聊天',
@@ -230,6 +230,7 @@
 
   let position = { x: 0, y: 0 };
   let drag = null;
+  let keyboardMoveTimer = 0;
   let suppressClick = false;
   let activePanel = '';
   let selectedThreadId = '';
@@ -570,6 +571,7 @@
       startY: event.clientY,
       originX: position.x,
       originY: position.y,
+      lastX: event.clientX,
       moved: false,
     };
     try {
@@ -583,10 +585,15 @@
     if (!drag || drag.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - drag.startX;
     const deltaY = event.clientY - drag.startY;
+    const movementX = event.clientX - drag.lastX;
     if (!drag.moved && Math.hypot(deltaX, deltaY) >= 6) {
       drag.moved = true;
       widget.dataset.dragging = 'true';
+      if (Math.abs(deltaX) > 1) widget.dataset.direction = deltaX > 0 ? 'right' : 'left';
+    } else if (drag.moved && Math.abs(movementX) > 1) {
+      widget.dataset.direction = movementX > 0 ? 'right' : 'left';
     }
+    drag.lastX = event.clientX;
     if (drag.moved) {
       event.preventDefault();
       setPosition({ x: drag.originX + deltaX, y: drag.originY + deltaY }, false);
@@ -602,6 +609,7 @@
     }
     drag = null;
     delete widget.dataset.dragging;
+    delete widget.dataset.direction;
   }
 
   petLink.addEventListener('pointerup', finishDrag);
@@ -642,10 +650,28 @@
     };
     if (moves[event.key]) {
       event.preventDefault();
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        window.clearTimeout(keyboardMoveTimer);
+        widget.dataset.keyMoving = 'true';
+        widget.dataset.direction = event.key === 'ArrowRight' ? 'right' : 'left';
+      }
       setPosition({ x: position.x + moves[event.key][0], y: position.y + moves[event.key][1] }, true);
       announce(text('moved'));
     }
   });
+
+  function finishKeyboardMove() {
+    window.clearTimeout(keyboardMoveTimer);
+    keyboardMoveTimer = window.setTimeout(() => {
+      delete widget.dataset.keyMoving;
+      if (!widget.hasAttribute('data-dragging')) delete widget.dataset.direction;
+    }, 250);
+  }
+
+  widget.addEventListener('keyup', (event) => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') finishKeyboardMove();
+  });
+  window.addEventListener('blur', finishKeyboardMove);
 
   window.addEventListener('resize', () => setPosition(position, true));
   document.addEventListener('pointerdown', (event) => {

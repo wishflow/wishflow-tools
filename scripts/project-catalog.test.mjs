@@ -41,9 +41,18 @@ test('navigation cards include both languages and render the configured Usagi im
 
   const homePage = readFileSync(path.join(repoRoot, 'site', 'index.html'), 'utf8');
   assert.match(homePage, /@keyframes usagi-idle/);
-  assert.match(homePage, /@keyframes usagi-run/);
+  assert.match(homePage, /@keyframes usagi-wave/);
   assert.match(homePage, /\.card:hover \.icon-image img/);
+  assert.match(homePage, /animation-duration: 1000ms; animation-timing-function: steps\(3, end\)/);
   assert.match(homePage, /prefers-reduced-motion: reduce/);
+
+  const widgetStyles = readFileSync(path.join(repoRoot, 'site', 'usagi-widget.css'), 'utf8');
+  const widgetScript = readFileSync(path.join(repoRoot, 'site', 'usagi-widget.js'), 'utf8');
+  assert.match(widgetStyles, /usagi-widget-wave 1000ms steps\(3, end\)/);
+  assert.match(widgetStyles, /data-direction="right"[\s\S]*?usagi-widget-run-right 2000ms steps\(7, end\)/);
+  assert.match(widgetStyles, /data-direction="left"[\s\S]*?usagi-widget-run-left 2000ms steps\(7, end\)/);
+  assert.match(widgetScript, /dataset\.direction = event\.key === 'ArrowRight' \? 'right' : 'left'/);
+  assert.match(widgetScript, /Math\.abs\(movementX\) > 1/);
 });
 
 test('shared output contains exactly one navigation card and app build per catalog entry', async () => {
