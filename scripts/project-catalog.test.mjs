@@ -5,7 +5,7 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { analyzeChanges, workerBuildInputsChanged } from './workflow-changes.mjs';
+import { analyzeChanges, findWorkerConfigChanges, workerBuildInputsChanged } from './workflow-changes.mjs';
 import { readProjectCatalog, renderProjectCards, validateCatalog, verifySiteOutput } from './project-catalog.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -154,6 +154,21 @@ test('Worker deployment follows dependency lock changes, not unrelated app scrip
     }),
     true,
     'a newly declared build dependency is classified as a Worker build input change',
+  );
+});
+
+test('static-only app dependencies do not trigger Worker credential validation', () => {
+  assert.deepEqual(
+    [...findWorkerConfigChanges(
+      ['apps/simple-house/package.json', 'apps/simple-house/pnpm-lock.yaml'],
+      projects,
+      'unknown-base-revision',
+    )],
+    [],
+  );
+  assert.deepEqual(
+    [...findWorkerConfigChanges(['apps/duolingo-avatar/package.json'], projects, 'unknown-base-revision')],
+    ['duolingo-avatar'],
   );
 });
 

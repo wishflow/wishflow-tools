@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readProjectCatalog } from './project-catalog.mjs';
@@ -16,6 +16,12 @@ function affectsWorker(file) {
 
 function isWorkerOnlyPath(file) {
   return /^apps\/[^/]+\/(?:worker\/|wrangler(?:\.[^/]+)?$)/.test(file);
+}
+
+export function appHasWorkerConfiguration(appDirectory) {
+  if (!existsSync(appDirectory)) return false;
+  return existsSync(path.join(appDirectory, 'worker'))
+    || readdirSync(appDirectory).some((name) => /^wrangler(?:\.[^/]+)?$/.test(name));
 }
 
 function pnpmDependencyLock(lockfileText) {
@@ -199,7 +205,7 @@ function readGitText(revision, file) {
   return result.status === 0 ? result.stdout : null;
 }
 
-function findWorkerConfigChanges(changedFiles, projects, base) {
+export function findWorkerConfigChanges(changedFiles, projects, base) {
   const changedPackages = new Set();
   for (const file of changedFiles) {
     const match = /^apps\/([^/]+)\/(?:package\.json|package-lock\.json|pnpm-lock\.yaml)$/.exec(file);
@@ -209,6 +215,7 @@ function findWorkerConfigChanges(changedFiles, projects, base) {
   const changedWorkerConfigs = new Set();
   for (const slug of changedPackages) {
     const appPath = `apps/${slug}`;
+    if (!appHasWorkerConfiguration(path.join(repoRoot, appPath))) continue;
     let previousPackage;
     try {
       previousPackage = JSON.parse(readGitText(base, `${appPath}/package.json`) ?? 'null');
