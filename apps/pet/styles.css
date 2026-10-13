@@ -51,11 +51,11 @@ h1 { margin-bottom: 18px; font-size: clamp(38px, 5vw, 60px); letter-spacing: -.0
 .preview-layout { display: grid; grid-template-columns: minmax(200px, .72fr) minmax(0, 1.28fr); gap: 16px; }
 .pet-preview { display: flex; flex-direction: column; }
 .pet-stage { position: relative; display: grid; min-height: 254px; place-items: center; overflow: hidden; background: transparent; }
-.pet-sprite { width: 192px; height: 208px; background-image: url("./pets/uu-usagi/spritesheet.webp"); background-repeat: no-repeat; background-size: 800% 900%; animation: usagi-idle 500ms steps(5, end) infinite; }
-.pet-sprite[data-state="working"] { background-position: 0 37.5%; animation-name: usagi-working; animation-duration: 300ms; animation-timing-function: steps(3, end); }
-.pet-sprite[data-state="running"] { background-position: 0 12.5%; animation-name: usagi-running; animation-duration: 700ms; animation-timing-function: steps(7, end); }
+.pet-sprite { width: 192px; height: 208px; background-image: url("./pets/uu-usagi/spritesheet.webp"); background-repeat: no-repeat; background-size: 800% 900%; animation: usagi-idle 800ms steps(5, end) infinite; }
+.pet-sprite[data-state="working"] { background-position: 0 37.5%; animation-name: usagi-working; animation-duration: 480ms; animation-timing-function: steps(3, end); }
+.pet-sprite[data-state="running"] { background-position: 0 12.5%; animation-name: usagi-running; animation-duration: 1120ms; animation-timing-function: steps(7, end); }
 .pet-sprite[data-state="needs-input"] { background-position: 57.142857% 0; animation: none; }
-.pet-sprite[data-state="complete"] { background-position: 0 50%; animation-name: usagi-complete; animation-duration: 400ms; animation-timing-function: steps(4, end); }
+.pet-sprite[data-state="complete"] { background-position: 0 50%; animation-name: usagi-complete; animation-duration: 640ms; animation-timing-function: steps(4, end); }
 @keyframes usagi-idle { to { background-position: 71.428571% 0; } }
 @keyframes usagi-working { to { background-position: 42.857143% 37.5%; } }
 @keyframes usagi-running { to { background-position: 100% 12.5%; } }
