@@ -1,0 +1,10 @@
+{
+  "name": "@wishflow/blender-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:integrations": "node scripts/setup-mcp.mjs --check",
+    "setup:integrations": "node scripts/setup-mcp.mjs"
+  }
+}
