@@ -51,20 +51,22 @@ h1 { margin-bottom: 18px; font-size: clamp(38px, 5vw, 60px); letter-spacing: -.0
 .preview-layout { display: grid; grid-template-columns: minmax(200px, .72fr) minmax(0, 1.28fr); gap: 16px; }
 .pet-preview { display: flex; flex-direction: column; }
 .pet-stage { position: relative; display: grid; min-height: 254px; place-items: center; overflow: hidden; background: transparent; }
-.pet-sprite { width: 192px; height: 208px; background-image: url("./pets/uu-usagi/spritesheet.webp"); background-repeat: no-repeat; background-size: 800% 900%; animation: usagi-idle 1250ms steps(5, end) infinite; }
+.pet-sprite { position: relative; width: 192px; height: 208px; background-image: url("./pets/uu-usagi/spritesheet.webp"); background-repeat: no-repeat; background-size: 800% 900%; animation: usagi-idle 1250ms steps(5, end) infinite; }
+.pet-sprite::after { content: ""; position: absolute; z-index: 1; top: 61%; left: 50%; width: 76%; height: 3.5%; min-height: 6px; max-height: 8px; border: 1px solid #312515; border-radius: 999px; background: linear-gradient(90deg, #bd8119 0 5%, #f1c340 5% 9%, #ffe88c 9% 12%, #eab531 12% 88%, #fff0a0 88% 91%, #d59a26 91% 95%, #b47816 95% 100%); box-shadow: inset 0 1px 0 #fff2ad, 0 1px 2px rgba(0,0,0,.18); opacity: 0; pointer-events: none; transform: translate(-50%, -50%) rotate(-38deg); transform-origin: center; }
 .pet-sprite[data-state="running-right"] { background-position: 0 12.5%; animation: usagi-running-right 2000ms steps(7, end) infinite; }
 .pet-sprite[data-state="running-left"] { background-position: 0 25%; animation: usagi-running-left 2000ms steps(7, end) infinite; }
-.pet-sprite[data-state="waving"] { background-position: 0 37.5%; animation: usagi-waving 1000ms steps(3, end) infinite; }
+.pet-sprite[data-state="waving"] { background-position: 0 0; animation: usagi-idle 1250ms steps(5, end) infinite; }
+.pet-sprite[data-state="waving"]::after, .pet-sprite:hover::after { opacity: 1; animation: usagi-pet-staff-spin 700ms linear infinite; }
 .pet-sprite[data-state="jumping"] { background-position: 0 50%; animation: usagi-jumping 1250ms steps(4, end) 1 forwards; }
 .pet-sprite[data-state="running"] { background-position: 0 87.5%; animation-name: usagi-running; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="needs-input"] { background-position: 0 75%; animation-name: usagi-waiting; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="complete"] { background-position: 0 100%; animation-name: usagi-review; animation-duration: 1500ms; animation-timing-function: steps(5, end); }
 .pet-sprite[data-state="blocked"] { background-position: 0 62.5%; animation-name: usagi-failed; animation-duration: 2000ms; animation-timing-function: steps(7, end); }
-.pet-sprite:hover { background-position: 0 37.5%; animation: usagi-waving 1000ms steps(3, end) infinite; }
+.pet-sprite:hover { background-position: 0 0; animation: usagi-idle 1250ms steps(5, end) infinite; }
 @keyframes usagi-idle { to { background-position: 71.428571% 0; } }
 @keyframes usagi-running-right { to { background-position: 100% 12.5%; } }
 @keyframes usagi-running-left { to { background-position: 100% 25%; } }
-@keyframes usagi-waving { to { background-position: 42.857143% 37.5%; } }
+@keyframes usagi-pet-staff-spin { from { transform: translate(-50%, -50%) rotate(-38deg); } to { transform: translate(-50%, -50%) rotate(322deg); } }
 @keyframes usagi-jumping { to { background-position: 57.142857% 50%; } }
 @keyframes usagi-running { to { background-position: 71.428571% 87.5%; } }
 @keyframes usagi-waiting { to { background-position: 71.428571% 75%; } }
@@ -172,9 +174,10 @@ pre { overflow-x: auto; margin: 0 0 10px; padding: 11px 12px; border: 1px solid 
   .pet-sprite { animation: none !important; }
   .pet-sprite[data-state="running-right"] { background-position: 0 12.5% !important; }
   .pet-sprite[data-state="running-left"] { background-position: 0 25% !important; }
-  .pet-sprite[data-state="waving"] { background-position: 0 37.5% !important; }
+  .pet-sprite[data-state="waving"] { background-position: 0 0 !important; }
   .pet-sprite[data-state="jumping"] { background-position: 0 50% !important; }
-  .pet-sprite:hover { background-position: 0 37.5% !important; }
+  .pet-sprite:hover { background-position: 0 0 !important; }
+  .pet-sprite[data-state="waving"]::after, .pet-sprite:hover::after { opacity: 1; animation: none !important; transform: translate(-50%, -50%) rotate(-38deg); }
   .pet-sprite[data-state="running"] { background-position: 0 87.5% !important; }
   .pet-sprite[data-state="needs-input"] { background-position: 0 75% !important; }
   .pet-sprite[data-state="complete"] { background-position: 0 100% !important; }

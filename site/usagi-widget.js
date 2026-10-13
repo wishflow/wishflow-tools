@@ -12,8 +12,8 @@
   const words = {
     en: {
       region: 'Usagi animated pet',
-      petGuide: 'Open the Usagi pet guide. Hover to wave; drag or use the arrow keys to move.',
-      petAction: 'Choose a pet. Hover to wave; drag or use the arrow keys to move.',
+      petGuide: 'Open the Usagi pet guide. Hover to spin the golden staff; drag or use the arrow keys to move.',
+      petAction: 'Choose a pet. Hover to spin the golden staff; drag or use the arrow keys to move.',
       mini: 'Mini · controls only',
       controls: 'Quick chat, voice, and activity controls',
       chat: 'Quick chat',
@@ -55,8 +55,8 @@
     },
     zh: {
       region: 'Usagi 网页宠物',
-      petGuide: '打开 Usagi 宠物详情页。悬停可挥舞武器；拖动或按方向键移动。',
-      petAction: '选择宠物。悬停可挥舞武器；拖动或按方向键移动。',
+      petGuide: '打开 Usagi 宠物详情页。悬停可旋转金箍棒；拖动或按方向键移动。',
+      petAction: '选择宠物。悬停可旋转金箍棒；拖动或按方向键移动。',
       mini: 'Mini · 仅显示控件',
       controls: '快速聊天、语音和活动控件',
       chat: '快速聊天',
