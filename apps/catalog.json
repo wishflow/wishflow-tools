@@ -2,19 +2,25 @@
   {
     "slug": "duolingo-avatar",
     "title": "Duolingo Avatar Editor",
-    "description": "创建、编辑并导出 Duolingo 风格的头像，也可以用文字生成可继续调整的头像配置。",
+    "titleZh": "Duolingo 风格头像编辑器",
+    "description": "Create, edit, and export Duolingo-style avatars, or turn a prompt into an editable design.",
+    "descriptionZh": "创建、编辑并导出 Duolingo 风格的头像，也可以用文字生成可继续调整的头像配置。",
     "icon": "🎨"
   },
   {
     "slug": "ball-growth-lab",
-    "title": "球群生长实验室",
-    "description": "调整重力、边界缺口和繁殖概率，观察球群碰撞后的变化。",
+    "title": "Ball Growth Lab",
+    "titleZh": "球群生长实验室",
+    "description": "Adjust gravity, boundary gaps, and reproduction rates to explore how a bouncing ball population changes.",
+    "descriptionZh": "调整重力、边界缺口和繁殖概率，观察球群碰撞后的变化。",
     "icon": "🟠"
   },
   {
     "slug": "pet",
-    "title": "Usagi 宠物包",
-    "description": "预览 Usagi 原始图集，并查看 macOS、Linux 和 Windows 本地安装说明。",
-    "icon": "🐰"
+    "title": "Usagi animated pet",
+    "titleZh": "Usagi 动画宠物",
+    "description": "Preview Usagi in motion and follow setup steps for desktop, web, and Codex CLI.",
+    "descriptionZh": "预览 Usagi 动画，并查看桌面端、网页端和 Codex CLI 的安装与选择步骤。",
+    "iconImage": "pets/uu-usagi/spritesheet.webp"
   }
 ]

@@ -1,85 +1,117 @@
-# Usagi 本地宠物包
+# Usagi 动画预览与安装指南
 
-这是 `uu-usagi` 的本地备份包，包含原始 `pet.json`、原始 WebP 图集以及适用于 macOS、Linux 和 Windows 的安装器。网站预览位于 [WishFlow Tools `/pet/`](https://wishflow-tools.pages.dev/pet/)；页面展示整张图集和安装指引，不重建动画。
+Usagi 页面提供动画预览，并按 ChatGPT 桌面端、网页端和 Codex CLI 分别说明安装与选择步骤。宠物 ID 为 **uu-usagi**。导航页与详情页均支持中英切换，首次访问默认英文，并记住之后的选择。
 
-## 平台范围
+页面预览直接读取原始 8 × 9 WebP 图集，以 CSS 切换帧，模拟待机、工作、运行、等待确认和完成状态。对话与状态切换仅是页面演示，不连接真实 Codex 会话，也不访问或修改文件。系统设置为减少动态效果时，预览显示静帧。
 
-- **macOS**：运行 POSIX shell 安装器，安装到用户 Codex 宠物目录。
-- **Windows**：使用 Windows PowerShell 5.1 安装器，不要求额外模块或管理员权限。
-- **Linux**：保证本包文件安装。CLI 显示依赖支持 Kitty 图形协议或 Sixel 的终端；不承诺 Linux 桌面浮动宠物功能。tmux、Zellij 等环境可能无法显示相应图形输出。
+## 选择使用场景
 
-## 一行安装
+| 使用场景 | 安装或上传 | 安装后的选择 |
+| --- | --- | --- |
+| ChatGPT 桌面端（macOS / Windows） | 在当前电脑运行对应安装命令 | 打开 Settings → Pets，刷新后选择 Usagi |
+| ChatGPT 网页端 | 下载原始图集并在宠物设置中上传 | 打开 Settings → Personalization → Pet，上传后选择 Usagi |
+| Codex CLI | 在当前设备安装宠物文件 | 交互式 CLI 中输入 /pets uu-usagi |
+| Linux CLI | 在 shell 中运行 POSIX 安装命令 | 使用支持 Kitty 图形协议或 Sixel 的终端 |
 
-macOS / Linux：
+桌面端的自定义宠物保存在当前电脑，不会自动同步到网页端。网页端上传和桌面端文件安装是独立设置。账号或工作区是否提供相应 Pets 功能，以实际界面为准。
 
-```sh
-curl -fsSL "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.sh" | sh
-```
+## ChatGPT 桌面端：macOS 与 Windows
+
+### 1. 安装
+
+macOS 终端：
+
+    curl -fsSL "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.sh" | sh
 
 Windows PowerShell：
 
-```powershell
-irm "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.ps1" | iex
-```
+    irm "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.ps1" | iex
 
-安装器把下载内容放入临时目录，验证固定 SHA-256 和元数据引用后再安装。若目标目录已有不同或额外内容，安装器会报错并保留原目录。
+安装器会先下载并验证素材，再将文件放入当前用户的 Codex 宠物目录。它不需要管理员权限，不会自动更改当前宠物选择。目标目录包含不同或额外内容时，安装器会停止并保留原文件。
 
-## 安装位置与选择
+### 2. 刷新并选择
 
-- macOS / Linux：`$CODEX_HOME/pets/uu-usagi`；`CODEX_HOME` 未设置或为空时为 `$HOME/.codex/pets/uu-usagi`。
-- Windows：`$env:CODEX_HOME\pets\uu-usagi`；变量未设置或为空时为 `$env:USERPROFILE\.codex\pets\uu-usagi`。
+1. 打开 ChatGPT 桌面应用。
+2. 打开个人资料菜单并选择 **Pets**，或进入 **Settings → Pets**。
+3. 选择 **Refresh**。
+4. 在宠物列表中选择 **Usagi**。
 
-安装器只复制文件，不会自动更改当前选择。安装后在 ChatGPT / Codex 的 Pets 设置中刷新列表并手动选择 Usagi；CLI 可运行：
+### 3. 显示或隐藏
 
-```text
-/pets uu-usagi
-```
+- 在桌面应用中输入 **/pet**，或从命令菜单选择 **Show pet**，即可显示宠物。
+- 右键点击宠物并选择 **Hide**，或从命令菜单 / Settings → Pets 中选择 **Hide pet**，即可隐藏。
 
-桌面端宠物保存在本机，不会自动同步到网页。更多说明见 [Pets 官方文档](https://learn.chatgpt.com/docs/pets)。
+## ChatGPT 网页端
+
+网页宠物由网页设置管理，不会因桌面端安装而自动出现。
+
+1. 下载页面提供的原始文件： [spritesheet.webp](pets/uu-usagi/spritesheet.webp)。
+2. 在 ChatGPT 网页端打开 **Settings → Personalization → Pet**。
+3. 选择 **Upload pet**，上传下载的 WebP 图集。
+4. 在 **Select pet** 中选择 **Usagi**。
+
+图集规格为 1536 × 1872 WebP。上传功能是否可用取决于账号与工作区设置。
+
+## Codex CLI
+
+1. 在当前设备运行与操作系统对应的安装命令。macOS / Linux 使用上面的 shell 命令；Windows 使用 PowerShell 命令。
+2. 启动交互式 Codex CLI。
+3. 输入以下命令选择 Usagi：
+
+    /pets uu-usagi
+
+终端宠物需要 iTerm2 3.6 或更新版本，或支持 Kitty 图形协议 / Sixel 的终端。宠物在 tmux 和 Zellij 中不可用。Linux 说明只覆盖 CLI 终端显示，不承诺桌面浮动宠物能力。
+
+## 复制给 Codex 的安装提示词
+
+详情页的 **Copy install prompt** 按钮会生成适用于当前语言的提示词。将它粘贴到要安装 Usagi 的那台设备上的 Codex，Codex 会识别系统，并使用本仓库现有安装器。
+
+提示词要求安装器保留 SHA-256 检查：目标内容冲突时停止并报告，不覆盖或删除原文件，也不接触其他宠物。安装成功后，仅当当前界面提供明确、受支持的选择方式时才尝试选择 Usagi；否则给出该界面的手动操作步骤。网页端仍需单独上传图集。若剪贴板不可用，页面会展开可手动选择和复制的提示词文本框。
+
+## 素材声明
+
+**非原创，仅供非商业备份和分享。** 原作者和原始许可目前无法追溯。本项目不声称是素材作者；这项声明只说明本副本的用途，不代表原作者授权，也不代替正式许可。如果找到原始来源，应补充作者署名、来源链接和原许可，并按原许可调整分发方式。
+
+项目中的宠物元数据和图集保留原始内容。原始图集 SHA-256：
+
+    3bb176b93e06e7a9d73717f26ac102f816f64d083e77d11691f3aa63958306a0
+
+平台流程以 [Pets 官方文档](https://learn.chatgpt.com/docs/pets) 为准。
 
 ## 卸载
 
-先关闭或退出正在使用该宠物的界面，然后只删除 `pets/uu-usagi` 目录。使用自定义 `CODEX_HOME` 时，先确认变量值。
+先退出正在使用宠物的 ChatGPT / Codex 界面，再仅删除 uu-usagi 目录。若设置了自定义 CODEX_HOME，请先确认变量指向的位置。
 
-macOS / Linux：
+macOS / Linux（默认位置）：
 
-```sh
-rm -r "${CODEX_HOME:-$HOME/.codex}/pets/uu-usagi"
-```
+    rm -r "$HOME/.codex/pets/uu-usagi"
+
+使用自定义 CODEX_HOME 时，将上面的根路径改为该变量指向的目录，再执行相同的 pets/uu-usagi 删除操作。
 
 Windows PowerShell：
 
-```powershell
-$codexHome = if ([string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
-  Join-Path $env:USERPROFILE '.codex'
-} else {
-  $env:CODEX_HOME
-}
-Remove-Item -LiteralPath (Join-Path (Join-Path $codexHome 'pets') 'uu-usagi') -Recurse
-```
+    $codexHome = if ([string]::IsNullOrWhiteSpace($env:CODEX_HOME)) {
+      Join-Path $env:USERPROFILE '.codex'
+    } else {
+      $env:CODEX_HOME
+    }
+    Remove-Item -LiteralPath (Join-Path (Join-Path $codexHome 'pets') 'uu-usagi') -Recurse
 
-安装器不提供自动卸载，不要删除整个 `.codex`、`pets` 或其他宠物目录。
-
-## 素材与许可
-
-**非原创，仅供非商业备份和分享。** 素材来自用户本机已有安装；本项目不声称是素材作者。原作者与原始许可目前无法追溯，因此该声明不代表原作者授权，也不代替正式许可。若找到来源，应补充作者署名、来源链接和原许可，并遵循原许可调整分发方式。详见 [素材声明](ASSET_NOTICE.md)。
+不要删除整个 .codex、pets 或其他宠物目录。
 
 ## 开发与验证
 
-```sh
-./scripts/install.sh
-pnpm run build
-pnpm run test:ci
-```
+本应用使用原生 HTML、CSS、少量 JavaScript 和 Node.js 内置模块，不引入前端框架或服务端。
 
-完整站点由仓库根目录构建：
+    ./scripts/install.sh
+    pnpm run build
+    pnpm run test:ci
 
-```sh
-pnpm run build:site
-```
+根目录构建共享导航站点：
 
-Windows PowerShell 5.1 安装器检查：
+    pnpm run test:catalog
+    pnpm run build:site
 
-```powershell
-./tests/verify-windows.ps1
-```
+Windows PowerShell 安装器另有语法和行为检查：
+
+    ./tests/verify-windows.ps1

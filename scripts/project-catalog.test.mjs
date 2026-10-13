@@ -15,19 +15,28 @@ test('catalog projects have valid local pnpm build and test contracts', () => {
   assert.equal(new Set(projects.map(({ slug }) => slug)).size, projects.length);
 });
 
-test('catalog rejects duplicate and unsafe slugs', () => {
+test('catalog rejects duplicate and unsafe slugs and unsafe icon paths', () => {
   assert.throws(() => validateCatalog([...projects, { ...projects[0] }], repoRoot), /Duplicate project slug/);
   assert.throws(
     () => validateCatalog([{ ...projects[0], slug: '../escape' }], repoRoot),
     /invalid slug/,
   );
+  assert.throws(
+    () => validateCatalog([{ ...projects.find(({ slug }) => slug === 'pet'), iconImage: '../outside.webp' }], repoRoot),
+    /safe project-relative path/,
+  );
 });
 
-test('navigation cards are rendered from catalog values with HTML escaping', () => {
-  const cards = renderProjectCards([{ ...projects[0], title: '<script>alert(1)</script>' }]);
-  assert.match(cards, /href="\.\/duolingo-avatar\/"/);
-  assert.match(cards, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
-  assert.doesNotMatch(cards, /<script>/);
+test('navigation cards include both languages and render the configured Usagi image safely', () => {
+  const cards = renderProjectCards(projects);
+  assert.match(cards, /data-locale="en">Usagi animated pet/);
+  assert.match(cards, /data-locale="zh">Usagi 动画宠物/);
+  assert.match(cards, /src="\.\/pet\/pets\/uu-usagi\/spritesheet\.webp"/);
+  assert.doesNotMatch(cards, /🐰/);
+
+  const escaped = renderProjectCards([{ ...projects[0], title: '<script>alert(1)</script>' }]);
+  assert.match(escaped, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(escaped, /<script>/);
 });
 
 test('shared output contains exactly one navigation card and app build per catalog entry', async () => {

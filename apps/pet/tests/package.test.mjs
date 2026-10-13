@@ -28,7 +28,7 @@ test('pet metadata and original spritesheet match the preserved package', () => 
 
   for (const [relativePath, expectedHash] of Object.entries(expected)) {
     const absolutePath = path.join(appRoot, relativePath);
-    assert.equal(sha256(absolutePath), expectedHash, `${relativePath} SHA-256`);
+    assert.equal(sha256(absolutePath), expectedHash, relativePath + ' SHA-256');
   }
 
   const image = readFileSync(path.join(assetsRoot, 'spritesheet.webp'));
@@ -45,24 +45,37 @@ test('checksum manifest and both installers pin the original asset hashes', () =
   const manifest = readFileSync(path.join(appRoot, 'SHA256SUMS'), 'utf8');
   for (const [relativePath, expectedHash] of Object.entries(expected)) {
     const escapedPath = relativePath.replaceAll('/', '\\/');
-    assert.match(manifest, new RegExp(`^${expectedHash}  ${escapedPath}\\s*$`, 'm'));
+    assert.match(manifest, new RegExp('^' + expectedHash + '  ' + escapedPath + '\\s*$', 'm'));
   }
 
   for (const installer of ['install.sh', 'install.ps1']) {
     const source = readFileSync(path.join(appRoot, installer), 'utf8');
-    for (const hash of Object.values(expected)) assert.ok(source.includes(hash), `${installer} pins ${hash}`);
-    assert.ok(source.includes('wishflow/wishflow-tools/master/apps/pet'), `${installer} uses the repository master branch`);
+    for (const hash of Object.values(expected)) assert.ok(source.includes(hash), installer + ' pins ' + hash);
+    assert.ok(source.includes('wishflow/wishflow-tools/master/apps/pet'), installer + ' uses the repository master branch');
   }
 });
 
-test('static build contains the page and an unmodified copy of the spritesheet', () => {
+test('static build contains the bilingual page, interactive preview, and an unmodified spritesheet copy', () => {
   const builtPage = readFileSync(path.join(appRoot, 'dist', 'index.html'), 'utf8');
-  assert.match(builtPage, /<html lang="zh-CN">/);
-  assert.match(builtPage, /pets\/uu-usagi\/spritesheet\.webp/);
-  assert.match(builtPage, /install\.ps1/);
+  const builtScript = readFileSync(path.join(appRoot, 'dist', 'app.js'), 'utf8');
+  assert.match(builtPage, /<html lang="en">/);
+  assert.match(builtPage, /data-language-toggle/);
+  assert.match(builtPage, /id="install-prompt"/);
+  assert.match(builtPage, /Settings → Personalization → Pet/);
+  assert.match(builtPage, /\/pets uu-usagi/);
+  assert.match(builtPage, /not connected to a Codex session/);
+  for (const state of ['idle', 'working', 'running', 'needs-input', 'complete']) {
+    assert.ok(builtScript.includes(state), 'preview includes state ' + state);
+  }
+  assert.match(builtScript, /prefers-reduced-motion/);
+  assert.match(builtScript, /clipboard\.writeText/);
   assert.equal(
     sha256(path.join(appRoot, 'dist', 'pets', 'uu-usagi', 'spritesheet.webp')),
     expected['pets/uu-usagi/spritesheet.webp'],
+  );
+  assert.equal(
+    sha256(path.join(appRoot, 'dist', 'pets', 'uu-usagi', 'pet.json')),
+    expected['pets/uu-usagi/pet.json'],
   );
   assert.equal(statSync(path.join(appRoot, 'dist', 'index.html')).isFile(), true);
 });

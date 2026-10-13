@@ -1,100 +1,247 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f7f8f2" />
-    <meta name="description" content="Usagi 本地宠物包备份、跨平台安装说明与原始图集预览。" />
-    <title>Usagi 本地宠物包 · WishFlow Tools</title>
+    <meta name="description" content="Preview Usagi's sprite animation and follow installation steps for desktop, web, and Codex CLI." />
+    <title>Usagi animated preview and installation guide · WishFlow Tools</title>
     <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
   </head>
   <body>
     <header class="topbar">
       <a class="wordmark" href="../">WishFlow Tools</a>
-      <span class="topbar-label">本地宠物包</span>
+      <div class="topbar-actions">
+        <span class="topbar-label"><span data-locale="en">Usagi animated pet</span><span data-locale="zh">Usagi 动画宠物</span></span>
+        <button class="language-toggle" type="button" data-language-toggle aria-label="Switch language to Chinese">中文</button>
+      </div>
     </header>
 
     <main>
-      <section class="intro" aria-labelledby="page-title">
+      <nav class="section-nav" data-section-nav aria-label="Page sections">
+        <a href="#preview"><span data-locale="en">Preview</span><span data-locale="zh">动画预览</span></a>
+        <a href="#install"><span data-locale="en">Install</span><span data-locale="zh">安装方式</span></a>
+        <a href="#choose"><span data-locale="en">Choose Usagi</span><span data-locale="zh">安装后选择</span></a>
+        <a href="#materials"><span data-locale="en">Materials & removal</span><span data-locale="zh">素材与卸载</span></a>
+      </nav>
+
+      <section class="intro" id="preview" aria-labelledby="page-title">
         <div class="intro-copy">
-          <p class="eyebrow">UU-USAGI · LOCAL PET PACKAGE</p>
-          <h1 id="page-title">Usagi，<br />回到你的桌面。</h1>
-          <p class="lead">备份自本机现有安装的动画兔子宠物包。安装器只复制文件，不会替你切换当前宠物。</p>
-          <div class="platforms" aria-label="支持的平台">
-            <span>macOS</span>
-            <span>Linux 文件安装</span>
-            <span>Windows</span>
+          <p class="eyebrow"><span data-locale="en">UU-USAGI · SPRITE PREVIEW</span><span data-locale="zh">UU-USAGI · 精灵动画预览</span></p>
+          <h1 id="page-title"><span data-locale="en">Usagi animated preview and installation guide</span><span data-locale="zh">Usagi 动画预览与安装指南</span></h1>
+          <p class="lead"><span data-locale="en">See Usagi move through a few work states, then choose the installation steps for the ChatGPT or Codex surface you use.</span><span data-locale="zh">先看看 Usagi 在不同工作状态下的动画，再按你使用的 ChatGPT 或 Codex 界面查看安装步骤。</span></p>
+          <div class="platforms" data-platforms aria-label="Supported interfaces">
+            <span><span data-locale="en">ChatGPT desktop</span><span data-locale="zh">ChatGPT 桌面端</span></span>
+            <span><span data-locale="en">ChatGPT web</span><span data-locale="zh">ChatGPT 网页端</span></span>
+            <span>Codex CLI</span>
           </div>
         </div>
 
-        <figure class="sheet-card">
-          <div class="sheet-frame">
-            <img
-              src="./pets/uu-usagi/spritesheet.webp"
-              alt="Usagi 原始精灵图集，包含多种姿势和表情"
-              width="1536"
-              height="1872"
-            />
+        <div class="preview-card" aria-labelledby="preview-title">
+          <div class="preview-heading">
+            <div>
+              <p class="eyebrow"><span data-locale="en">ANIMATED PREVIEW</span><span data-locale="zh">动态预览</span></p>
+              <h2 id="preview-title"><span data-locale="en">See Usagi in action</span><span data-locale="zh">看看 Usagi 的状态</span></h2>
+            </div>
+            <span class="demo-badge"><span data-locale="en">Demo only</span><span data-locale="zh">仅为演示</span></span>
           </div>
-          <figcaption>
-            <span>原始精灵图集</span>
-            <span>1536 × 1872 · WebP</span>
-          </figcaption>
-        </figure>
-      </section>
 
-      <section class="notice" aria-labelledby="notice-title">
-        <span class="notice-mark" aria-hidden="true">i</span>
-        <div>
-          <h2 id="notice-title">素材说明</h2>
-          <p><strong>非原创，仅供非商业备份和分享。</strong>素材来自用户本机已有安装；原作者和原始许可目前无法追溯。本声明只描述本备份用途，不代表原作者授权，也不代替正式许可。</p>
+          <div class="preview-layout">
+            <div class="pet-preview">
+              <div class="pet-stage">
+                <span class="state-indicator" id="state-indicator">Ready</span>
+                <div class="pet-sprite" id="pet-sprite" role="img" aria-label="Usagi idle animation frame"></div>
+                <span class="speech-bubble" aria-hidden="true">…</span>
+              </div>
+              <p class="preview-status" id="preview-status" aria-live="polite">Usagi is ready.</p>
+            </div>
+
+            <div class="conversation">
+              <div class="conversation-heading">
+                <h3><span data-locale="en">A short demo conversation</span><span data-locale="zh">一段模拟对话</span></h3>
+              </div>
+              <p class="demo-disclaimer"><span data-locale="en">This is a local interface demo. It is not connected to a Codex session and does not read or change files.</span><span data-locale="zh">这是页面内的交互演示，不连接真实 Codex 会话，也不会读取或修改文件。</span></p>
+              <div class="chat-log" aria-live="polite">
+                <p class="chat-message user-message" id="demo-user" hidden><span data-locale="en">Add an export button and check that it works.</span><span data-locale="zh">加一个导出按钮，并检查它能否正常工作。</span></p>
+                <p class="chat-message assistant-message" id="demo-reply">Choose a state or start the sample conversation.</p>
+              </div>
+              <div class="demo-actions">
+                <button class="button button-primary" type="button" id="run-demo"><span data-locale="en">Try the sample conversation</span><span data-locale="zh">开始模拟任务</span></button>
+                <button class="button button-secondary" type="button" id="approve-demo" hidden><span data-locale="en">Approve and finish</span><span data-locale="zh">确认并完成</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="state-control-wrap">
+            <p class="state-control-label" id="state-control-label"><span data-locale="en">Preview a state</span><span data-locale="zh">切换预览状态</span></p>
+            <div class="state-controls" role="group" aria-labelledby="state-control-label">
+              <button type="button" class="state-button" data-state="idle" aria-pressed="true"><span data-locale="en">Idle</span><span data-locale="zh">待机</span></button>
+              <button type="button" class="state-button" data-state="working" aria-pressed="false"><span data-locale="en">Working</span><span data-locale="zh">工作中</span></button>
+              <button type="button" class="state-button" data-state="running" aria-pressed="false"><span data-locale="en">Running</span><span data-locale="zh">运行中</span></button>
+              <button type="button" class="state-button" data-state="needs-input" aria-pressed="false"><span data-locale="en">Needs input</span><span data-locale="zh">等待确认</span></button>
+              <button type="button" class="state-button" data-state="complete" aria-pressed="false"><span data-locale="en">Complete</span><span data-locale="zh">已完成</span></button>
+            </div>
+          </div>
+          <p class="motion-note"><span data-locale="en">The preview uses the original 8 × 9 sprite sheet. Reduced-motion settings show a still frame.</span><span data-locale="zh">预览直接读取原始 8 × 9 图集；系统开启减少动态效果时显示静帧。</span></p>
         </div>
       </section>
 
-      <section class="install-section" aria-labelledby="install-title">
+      <section class="content-section" id="install" aria-labelledby="install-title">
         <div class="section-heading">
-          <p class="eyebrow">INSTALL</p>
-          <h2 id="install-title">安装到本机</h2>
-          <p>运行对应命令后，安装器会校验文件，再复制到你的 Codex 宠物目录。</p>
+          <p class="eyebrow"><span data-locale="en">CHOOSE A SURFACE</span><span data-locale="zh">选择使用界面</span></p>
+          <h2 id="install-title"><span data-locale="en">Choose how you use ChatGPT or Codex</span><span data-locale="zh">选择你的使用场景</span></h2>
+          <p><span data-locale="en">Desktop files, web uploads, and terminal pets are set up separately. Follow the matching steps below.</span><span data-locale="zh">桌面端文件、网页端上传和终端宠物分别设置，请按对应场景操作。</span></p>
         </div>
-        <div class="command-grid">
-          <article class="command-card">
-            <h3>macOS / Linux</h3>
+
+        <div class="use-case-grid">
+          <article class="use-case">
+            <div class="use-case-heading">
+              <span class="step-number">01</span>
+              <div>
+                <p class="eyebrow"><span data-locale="en">MACOS / WINDOWS</span><span data-locale="zh">MACOS / WINDOWS</span></p>
+                <h3><span data-locale="en">ChatGPT desktop app</span><span data-locale="zh">ChatGPT 桌面端</span></h3>
+              </div>
+            </div>
+            <p><span data-locale="en">Install the pet files on this computer. Use the command for your operating system.</span><span data-locale="zh">将宠物文件安装到当前电脑，并按操作系统运行对应命令。</span></p>
+            <h4>macOS</h4>
             <pre><code>curl -fsSL "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.sh" | sh</code></pre>
-            <p>Linux 仅保证文件安装。CLI 显示依赖支持 Kitty 图形协议或 Sixel 的终端；不承诺桌面浮动宠物功能。</p>
-          </article>
-          <article class="command-card">
-            <h3>Windows PowerShell</h3>
+            <h4>Windows PowerShell</h4>
             <pre><code>irm "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.ps1" | iex</code></pre>
-            <p>无需管理员权限。PowerShell 会在输出中显示安装路径和后续操作。</p>
+            <p class="card-note"><span data-locale="en">The installer checks both files before copying. It stops and keeps existing files if the target has conflicting content.</span><span data-locale="zh">安装器会先校验文件再复制。目标目录存在冲突时会停止并保留现有内容。</span></p>
+          </article>
+
+          <article class="use-case">
+            <div class="use-case-heading">
+              <span class="step-number">02</span>
+              <div>
+                <p class="eyebrow"><span data-locale="en">BROWSER</span><span data-locale="zh">浏览器</span></p>
+                <h3><span data-locale="en">ChatGPT on the web</span><span data-locale="zh">ChatGPT 网页端</span></h3>
+              </div>
+            </div>
+            <p><span data-locale="en">Upload the sprite sheet in web settings. This is separate from installing a pet on the desktop app.</span><span data-locale="zh">在网页设置中上传精灵图集。网页端选择与桌面端本机安装相互独立。</span></p>
+            <a class="download-link" href="./pets/uu-usagi/spritesheet.webp" download="usagi-spritesheet.webp"><span data-locale="en">Download the original sprite sheet</span><span data-locale="zh">下载原始精灵图集</span><span aria-hidden="true">↓</span></a>
+            <ol class="compact-steps">
+              <li><span data-locale="en">Open Settings → Personalization → Pet.</span><span data-locale="zh">打开 Settings → Personalization → Pet。</span></li>
+              <li><span data-locale="en">Choose Upload pet and select the downloaded WebP file.</span><span data-locale="zh">选择 Upload pet，并上传刚下载的 WebP 文件。</span></li>
+              <li><span data-locale="en">Select Usagi in the pet picker.</span><span data-locale="zh">在宠物选择器中选择 Usagi。</span></li>
+            </ol>
+          </article>
+
+          <article class="use-case">
+            <div class="use-case-heading">
+              <span class="step-number">03</span>
+              <div>
+                <p class="eyebrow">CODEX</p>
+                <h3><span data-locale="en">Codex CLI</span><span data-locale="zh">Codex CLI</span></h3>
+              </div>
+            </div>
+            <p><span data-locale="en">Install the package with the command for your shell, then choose the pet in an interactive CLI session.</span><span data-locale="zh">先按当前 shell 运行安装命令，再在交互式 CLI 会话中选择宠物。</span></p>
+            <h4>macOS / Linux shell</h4>
+            <pre><code>curl -fsSL "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.sh" | sh</code></pre>
+            <h4>Windows PowerShell</h4>
+            <pre><code>irm "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.ps1" | iex</code></pre>
+            <p class="card-note"><span data-locale="en">The exact selection command is listed in the next section.</span><span data-locale="zh">具体选择命令见下一节。</span></p>
+          </article>
+
+          <article class="use-case">
+            <div class="use-case-heading">
+              <span class="step-number">04</span>
+              <div>
+                <p class="eyebrow">LINUX</p>
+                <h3><span data-locale="en">Linux terminal</span><span data-locale="zh">Linux 终端</span></h3>
+              </div>
+            </div>
+            <p><span data-locale="en">Install the files from a shell, then use the pet in a compatible terminal.</span><span data-locale="zh">在 shell 中安装文件，然后在兼容的终端里使用。</span></p>
+            <pre><code>curl -fsSL "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.sh" | sh</code></pre>
+            <p class="card-note"><span data-locale="en">Terminal pets need Kitty graphics or Sixel support. They are unavailable inside tmux and Zellij. This does not install a floating desktop pet.</span><span data-locale="zh">终端宠物需要 Kitty 图形协议或 Sixel 支持；tmux 和 Zellij 内不可用。此方式不提供桌面浮动宠物。</span></p>
+          </article>
+        </div>
+
+        <section class="prompt-card" aria-labelledby="prompt-title">
+          <div class="prompt-copy">
+            <p class="eyebrow"><span data-locale="en">OPTIONAL SHORTCUT</span><span data-locale="zh">可选快捷方式</span></p>
+            <h3 id="prompt-title"><span data-locale="en">Copy an install prompt for Codex</span><span data-locale="zh">复制给 Codex 的安装提示词</span></h3>
+            <p><span data-locale="en">Paste this prompt into Codex on the computer where you want to install Usagi. It asks Codex to use the existing checksum-verified installer and only select Usagi when the current interface supports it.</span><span data-locale="zh">在要安装 Usagi 的电脑上，把提示词粘贴到 Codex。它会调用现有的校验安装器，并仅在当前界面支持时尝试选择 Usagi。</span></p>
+          </div>
+          <button class="button button-primary copy-button" type="button" id="copy-prompt"><span data-locale="en">Copy install prompt</span><span data-locale="zh">复制安装提示词</span></button>
+          <p class="copy-status" id="copy-status" aria-live="polite"></p>
+          <details class="prompt-fallback" id="prompt-fallback">
+            <summary><span data-locale="en">View or manually copy the prompt</span><span data-locale="zh">查看或手动复制提示词</span></summary>
+            <label for="install-prompt"><span data-locale="en">Prompt text</span><span data-locale="zh">提示词文本</span></label>
+            <textarea id="install-prompt" rows="10" readonly spellcheck="false"></textarea>
+          </details>
+        </section>
+      </section>
+
+      <section class="content-section choose-section" id="choose" aria-labelledby="choose-title">
+        <div class="section-heading">
+          <p class="eyebrow"><span data-locale="en">AFTER INSTALL</span><span data-locale="zh">安装后操作</span></p>
+          <h2 id="choose-title"><span data-locale="en">Select and show Usagi</span><span data-locale="zh">安装后选择并显示 Usagi</span></h2>
+          <p><span data-locale="en">Installation only adds files. Choose Usagi in the interface you want to use.</span><span data-locale="zh">安装过程只复制文件。请在你实际使用的界面中选择 Usagi。</span></p>
+        </div>
+        <div class="selection-grid">
+          <article class="selection-card">
+            <h3><span data-locale="en">ChatGPT desktop · macOS / Windows</span><span data-locale="zh">ChatGPT 桌面端 · macOS / Windows</span></h3>
+            <ol class="compact-steps">
+              <li><span data-locale="en">Open the profile menu and choose Pets, or open Settings → Pets.</span><span data-locale="zh">打开个人资料菜单并选择 Pets，或进入 Settings → Pets。</span></li>
+              <li><span data-locale="en">Select Refresh, then choose Usagi.</span><span data-locale="zh">选择 Refresh，然后选择 Usagi。</span></li>
+              <li><span data-locale="en">To show the pet, enter /pet or choose Show pet from the command menu. Right-click the pet or choose Hide pet to hide it.</span><span data-locale="zh">输入 /pet 或在命令菜单中选择 Show pet 来显示宠物；右键点击宠物或选择 Hide pet 可隐藏。</span></li>
+            </ol>
+            <p class="card-note"><span data-locale="en">Desktop pets are stored on this computer and do not automatically sync to the web.</span><span data-locale="zh">桌面宠物保存在当前电脑，不会自动同步到网页端。</span></p>
+          </article>
+
+          <article class="selection-card">
+            <h3><span data-locale="en">ChatGPT on the web</span><span data-locale="zh">ChatGPT 网页端</span></h3>
+            <ol class="compact-steps">
+              <li><span data-locale="en">Open Settings → Personalization → Pet.</span><span data-locale="zh">打开 Settings → Personalization → Pet。</span></li>
+              <li><span data-locale="en">Choose Usagi from Select pet. If you have not uploaded it yet, choose Upload pet and add the original sprite sheet first.</span><span data-locale="zh">在 Select pet 中选择 Usagi。若还未上传，先选择 Upload pet 并添加原始精灵图集。</span></li>
+            </ol>
+            <p class="card-note"><span data-locale="en">Web selection is separate from the desktop pet files.</span><span data-locale="zh">网页端选择与桌面端宠物文件相互独立。</span></p>
+          </article>
+
+          <article class="selection-card">
+            <h3><span data-locale="en">Interactive Codex CLI</span><span data-locale="zh">交互式 Codex CLI</span></h3>
+            <p><span data-locale="en">Enter this command in the CLI session:</span><span data-locale="zh">在 CLI 交互会话中输入：</span></p>
+            <pre><code>/pets uu-usagi</code></pre>
+            <p class="card-note"><span data-locale="en">Use iTerm2 3.6 or later, or a terminal with Kitty graphics or Sixel support. Pets are unavailable inside tmux and Zellij.</span><span data-locale="zh">使用 iTerm2 3.6 或更高版本，或支持 Kitty 图形协议 / Sixel 的终端；tmux 和 Zellij 内不可用。</span></p>
+          </article>
+        </div>
+        <p class="source-link"><span data-locale="en">Platform steps follow the <a href="https://learn.chatgpt.com/docs/pets">official Pets guide</a>.</span><span data-locale="zh">平台操作步骤以 <a href="https://learn.chatgpt.com/docs/pets">Pets 官方说明</a>为准。</span></p>
+      </section>
+
+      <section class="content-section materials-section" id="materials" aria-labelledby="materials-title">
+        <div class="section-heading">
+          <p class="eyebrow"><span data-locale="en">MATERIALS & REMOVAL</span><span data-locale="zh">素材与卸载</span></p>
+          <h2 id="materials-title"><span data-locale="en">Materials and uninstall</span><span data-locale="zh">素材说明与卸载</span></h2>
+        </div>
+        <div class="materials-grid">
+          <article class="notice">
+            <span class="notice-mark" aria-hidden="true">i</span>
+            <div>
+              <h3><span data-locale="en">Asset notice</span><span data-locale="zh">素材声明</span></h3>
+              <p><strong><span data-locale="en">Not original work; for non-commercial backup and sharing only.</span><span data-locale="zh">非原创，仅供非商业备份和分享。</span></strong></p>
+              <p><span data-locale="en">The source and original license could not be traced. This statement describes the use of this copy; it does not claim authorship or grant permission on behalf of the original creator. If the source is found, attribution and original terms should be added.</span><span data-locale="zh">原作者和原始许可目前无法追溯。本声明只描述这份素材的用途，不声称拥有作者身份，也不代表原作者授予许可。若找到来源，应补充署名、来源和原许可。</span></p>
+            </div>
+          </article>
+          <article class="uninstall-card">
+            <h3><span data-locale="en">Remove the installed files</span><span data-locale="zh">删除已安装文件</span></h3>
+            <p><span data-locale="en">Quit the app or CLI first. Remove only the uu-usagi folder; check CODEX_HOME first if you set a custom location.</span><span data-locale="zh">先退出正在使用宠物的应用或 CLI。只删除 uu-usagi 目录；若设置了自定义 CODEX_HOME，请先确认路径。</span></p>
+            <h4>macOS / Linux</h4>
+            <pre><code>codex_home="$CODEX_HOME"
+if [ -z "$codex_home" ]; then codex_home="$HOME/.codex"; fi
+rm -r "$codex_home/pets/uu-usagi"</code></pre>
+            <h4>Windows PowerShell</h4>
+            <pre><code>$codexHome = if ([string]::IsNullOrWhiteSpace($env:CODEX_HOME)) { Join-Path $env:USERPROFILE '.codex' } else { $env:CODEX_HOME }
+Remove-Item -LiteralPath (Join-Path (Join-Path $codexHome 'pets') 'uu-usagi') -Recurse</code></pre>
+            <p class="card-note"><span data-locale="en">Do not remove the whole .codex or pets directory.</span><span data-locale="zh">不要删除整个 .codex 或 pets 目录。</span></p>
           </article>
         </div>
       </section>
 
-      <section class="steps" aria-labelledby="steps-title">
-        <div class="section-heading">
-          <p class="eyebrow">AFTER INSTALL</p>
-          <h2 id="steps-title">安装后如何选择</h2>
-        </div>
-        <ol>
-          <li>在 ChatGPT / Codex 的 Pets 设置中刷新列表，然后手动选择 Usagi。</li>
-          <li>CLI 中可以运行 <code>/pets uu-usagi</code> 选择。</li>
-        </ol>
-        <p class="muted">桌面端宠物保存在本机，不会自动同步到网页。Linux CLI 的显示能力取决于终端图形协议；tmux、Zellij 等环境可能无法显示。</p>
-      </section>
-
-      <section class="uninstall" aria-labelledby="uninstall-title">
-        <div>
-          <p class="eyebrow">REMOVE</p>
-          <h2 id="uninstall-title">卸载</h2>
-          <p>退出正在使用宠物的界面后，只删除本包目录。使用自定义 <code>CODEX_HOME</code> 时，请先确认变量值。</p>
-        </div>
-        <pre><code>rm -r "${CODEX_HOME:-$HOME/.codex}/pets/uu-usagi"</code></pre>
-      </section>
-
-      <footer>
-        <a href="https://learn.chatgpt.com/docs/pets">Pets 官方说明</a>
-        <span>素材原样保存，未重绘、转换或重排。</span>
+      <footer class="page-footer">
+        <a href="https://learn.chatgpt.com/docs/pets"><span data-locale="en">Official Pets documentation</span><span data-locale="zh">Pets 官方说明</span></a>
+        <span><span data-locale="en">Original sprite sheet: 1536 × 1872 · WebP</span><span data-locale="zh">原始精灵图集：1536 × 1872 · WebP</span></span>
       </footer>
     </main>
   </body>
