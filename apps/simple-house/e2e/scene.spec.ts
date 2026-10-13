@@ -5,7 +5,16 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: '小屋，拆开来看。' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '3D Objects' })).toBeVisible();
+  await expect(page.getByRole('banner')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '主要页面' })).toBeVisible();
+  await expect(page.getByRole('contentinfo')).toContainText('Poly Haven · CC0');
+  await page.getByRole('link', { name: '打开木结构小屋 3D 场景' }).click();
+  await expect(page).toHaveURL(/#\/objects\/house$/);
+  await expect(page.getByRole('heading', { name: '木结构小屋' })).toBeVisible();
+  await expect(page.getByRole('banner')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '主要页面' })).toBeVisible();
+  await expect(page.getByRole('contentinfo')).toContainText('Poly Haven · CC0');
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'loaded', { timeout: 15000 });
   await expect(page.locator('#viewer canvas')).toBeVisible();
   await expect(page.getByRole('button', { name: '复位视角、拆解进度和构件显隐' })).toBeEnabled();
@@ -82,7 +91,7 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
 
 test('360px 窄屏仍可查看模型并操作控件', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
-  await page.goto('/');
+  await page.goto('/#/objects/house');
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'loaded', { timeout: 15000 });
   await expect(page.locator('#viewer canvas')).toBeVisible();
 
@@ -107,7 +116,7 @@ test('模型加载失败时显示原因并提供重试入口', async ({ page }) 
     }
     return route.continue();
   });
-  await page.goto('/');
+  await page.goto('/#/objects/house');
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'error', { timeout: 15000 });
   await expect(page.locator('#error-message')).toBeVisible();
   await page.getByRole('button', { name: '重新加载' }).click();

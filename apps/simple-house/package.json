@@ -18,11 +18,14 @@
     "check:release": "pnpm run check:assets && pnpm run check:scene && pnpm run test:ci"
   },
   "dependencies": {
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/three": "^0.185.4",
+    "@vitejs/plugin-vue": "^6.0.10",
     "typescript": "^6.0.3",
     "vite": "^8.0.14"
   }

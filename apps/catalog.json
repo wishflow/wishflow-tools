@@ -25,10 +25,10 @@
   },
   {
     "slug": "simple-house",
-    "title": "House Explorer",
-    "titleZh": "小屋拆解观察台",
-    "description": "Orbit, zoom, and explore a small timber house by separating its roof, walls, and frame.",
-    "descriptionZh": "旋转、缩放并拆解观察一座木结构小屋的屋顶、墙体、门窗与框架。",
+    "title": "3D Objects",
+    "titleZh": "3D Objects",
+    "description": "Browse interactive 3D objects and inspect a small timber house.",
+    "descriptionZh": "浏览交互式 3D 物体，旋转、缩放并拆解观察一座木结构小屋。",
     "icon": "🏠"
   }
 ]
