@@ -101,6 +101,7 @@
   animation-name: usagi-widget-failed;
 }
 
+/* Keep the bunny on its idle row; rotate the golden staff as a separate layer. */
 .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:hover .usagi-widget__sprite,
 .usagi-widget:not([data-dragging="true"]):not([data-key-moving="true"]) .usagi-widget__pet:focus-visible .usagi-widget__sprite {
   background-position: 0 0;
