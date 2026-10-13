@@ -1,0 +1,210 @@
+.usagi-widget {
+  position: fixed;
+  z-index: 80;
+  display: flex;
+  width: 124px;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  isolation: isolate;
+  color: #263320;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.usagi-widget,
+.usagi-widget * {
+  box-sizing: border-box;
+}
+
+.usagi-widget__pet {
+  display: grid;
+  width: 112px;
+  height: 119px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  color: inherit;
+  cursor: grab;
+  touch-action: none;
+  text-decoration: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.usagi-widget[data-dragging="true"] .usagi-widget__pet {
+  cursor: grabbing;
+}
+
+.usagi-widget__pet:focus-visible,
+.usagi-widget__control:focus-visible,
+.usagi-widget__restore:focus-visible {
+  outline: 3px solid #6d9f48;
+  outline-offset: 2px;
+}
+
+.usagi-widget__sprite {
+  display: block;
+  width: 96px;
+  height: 104px;
+  flex: none;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 800% 900%;
+  filter: drop-shadow(0 5px 3px rgb(36 45 27 / 10%));
+  animation: usagi-widget-idle 1250ms steps(5, end) infinite;
+  pointer-events: none;
+}
+
+.usagi-widget__controls {
+  display: flex;
+  width: 116px;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgb(226 226 226 / 85%);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 7px 20px rgb(39 47 34 / 16%);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-3px);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+  visibility: hidden;
+}
+
+.usagi-widget:hover .usagi-widget__controls,
+.usagi-widget:focus-within .usagi-widget__controls {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+.usagi-widget__control {
+  display: grid;
+  width: 38px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  border-right: 1px solid #e8e8e8;
+  border-radius: 0;
+  background: transparent;
+  color: #1f2920;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.usagi-widget__control:last-child {
+  border-right: 0;
+}
+
+.usagi-widget__control:hover {
+  background: #f4f7ef;
+}
+
+.usagi-widget__control svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.usagi-widget__restore {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgb(226 226 226 / 90%);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 7px 20px rgb(39 47 34 / 16%);
+  cursor: pointer;
+}
+
+.usagi-widget__restore .usagi-widget__sprite {
+  width: 28px;
+  height: 30px;
+  animation: none;
+  background-position: 0 0;
+  filter: none;
+}
+
+.usagi-widget[data-collapsed="true"] .usagi-widget__pet,
+.usagi-widget[data-collapsed="true"] .usagi-widget__controls {
+  display: none;
+}
+
+.usagi-widget__restore[hidden] {
+  display: none;
+}
+
+.usagi-widget__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.usagi-widget[data-action="running"] .usagi-widget__pet .usagi-widget__sprite {
+  animation: usagi-widget-run 1750ms steps(7, end) 1 both;
+}
+
+.usagi-widget:not([data-collapsed="true"]):hover .usagi-widget__pet .usagi-widget__sprite,
+.usagi-widget:not([data-collapsed="true"]):focus-within .usagi-widget__pet .usagi-widget__sprite {
+  animation: usagi-widget-run 1750ms steps(7, end) infinite;
+}
+
+@keyframes usagi-widget-idle {
+  from { background-position: 0 0; }
+  to { background-position: 71.428571% 0; }
+}
+
+@keyframes usagi-widget-run {
+  from { background-position: 0 12.5%; }
+  to { background-position: 100% 12.5%; }
+}
+
+@media (max-width: 600px) {
+  .usagi-widget {
+    width: 112px;
+  }
+
+  .usagi-widget__pet {
+    width: 104px;
+    height: 108px;
+  }
+
+  .usagi-widget__pet .usagi-widget__sprite {
+    width: 86px;
+    height: 93px;
+  }
+}
+
+@media (hover: none) {
+  .usagi-widget__controls {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    visibility: visible;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .usagi-widget__sprite,
+  .usagi-widget__restore .usagi-widget__sprite {
+    animation: none !important;
+    background-position: 0 0 !important;
+  }
+
+  .usagi-widget__controls {
+    transition: none;
+  }
+}
