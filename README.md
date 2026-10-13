@@ -4,6 +4,8 @@ WishFlow Tools 将多个独立工具汇集到一个导航站。前端应用放�
 
 头像编辑器位于 `/duolingo-avatar/`；球群生长实验室位于 `/ball-growth-lab/`；Usagi 宠物包预览与安装说明位于 `/pet/`。应用路径和 Worker 部署说明见 [`apps/duolingo-avatar/docs/deployment-plan.md`](apps/duolingo-avatar/docs/deployment-plan.md)。
 
+小屋拆解观察台位于 `/simple-house/`，可旋转、缩放并拆开展示一座木结构小屋。
+
 ## 线上地址
 
 统一对外入口：[wishflow-tools.pages.dev](https://wishflow-tools.pages.dev/)。各应用从导航站进入，并使用自己的子路径。

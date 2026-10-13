@@ -22,5 +22,13 @@
     "description": "Preview Usagi in motion and follow setup steps for desktop, web, and Codex CLI.",
     "descriptionZh": "预览 Usagi 动画，并查看桌面端、网页端和 Codex CLI 的安装与选择步骤。",
     "iconImage": "pets/uu-usagi/spritesheet.webp"
+  },
+  {
+    "slug": "simple-house",
+    "title": "House Explorer",
+    "titleZh": "小屋拆解观察台",
+    "description": "Orbit, zoom, and explore a small timber house by separating its roof, walls, and frame.",
+    "descriptionZh": "旋转、缩放并拆解观察一座木结构小屋的屋顶、墙体、门窗与框架。",
+    "icon": "🏠"
   }
 ]

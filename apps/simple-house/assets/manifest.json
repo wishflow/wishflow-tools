@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "polyhaven-grey-roof-01-diff-1k",
+      "name": "Grey Roof 01 — Diffuse 1K",
+      "origin": "external",
+      "sourceUrl": "https://polyhaven.com/a/grey_roof_01",
+      "author": "Rob Tuytel / Poly Haven",
+      "license": "CC0 1.0 Universal",
+      "attribution": "CC0 不强制署名；网页致谢链接注明素材由 Poly Haven 提供。",
+      "redistribution": "allowed",
+      "localPath": "assets/textures/grey_roof_01_diff_1k.jpg",
+      "retrievedAt": "2026-10-13",
+      "usage": "作为屋面瓦片细节图，并在 Blender 材质中调成森林绿；随 GLB 静态嵌入。"
+    },
+    {
+      "id": "polyhaven-wooden-planks-diff-1k",
+      "name": "Wooden Planks — Diffuse 1K",
+      "origin": "external",
+      "sourceUrl": "https://polyhaven.com/a/wooden_planks",
+      "author": "Charlotte Baglioni (摄影), Dario Barresi (处理) / Poly Haven",
+      "license": "CC0 1.0 Universal",
+      "attribution": "CC0 不强制署名；网页致谢链接注明素材由 Poly Haven 提供。",
+      "redistribution": "allowed",
+      "localPath": "assets/textures/wooden_planks_diff_1k.jpg",
+      "retrievedAt": "2026-10-13",
+      "usage": "表现室内木地板和门板；随 GLB 静态嵌入。"
+    }
+  ]
+}

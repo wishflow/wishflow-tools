@@ -1,0 +1,29 @@
+{
+  "name": "@wishflow/simple-house",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "preview": "vite preview",
+    "generate:scene": "node scripts/generate-scene.mjs",
+    "check:assets": "node scripts/check-assets.mjs",
+    "check:scene": "node scripts/check-scene.mjs",
+    "check:web": "node scripts/check-web.mjs",
+    "typecheck": "tsc --noEmit",
+    "build": "pnpm run check:web && pnpm run typecheck && vite build && pnpm run check:bundle",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:e2e": "playwright test",
+    "test:ci": "pnpm run check:assets && pnpm run test:unit && pnpm run build && pnpm run test:e2e",
+    "check:release": "pnpm run check:assets && pnpm run check:scene && pnpm run test:ci"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/three": "^0.185.4",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}

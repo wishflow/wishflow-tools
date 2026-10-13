@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#e9e7df" />
+    <meta name="description" content="旋转、缩放并拆解观察一座小型木屋的屋顶、墙体与内部结构。" />
+    <title>小屋拆解观察台 — 建筑模型 01</title>
+  </head>
+  <body>
+    <div class="site-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="小屋拆解观察台首页">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 28 28" fill="none">
+              <path d="M4 13.2 14 5l10 8.2M7 12v11h14V12M11 23v-7h6v7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="brand-name">FIELD NOTES <small>建筑观察 · 01</small></span>
+        </a>
+        <div class="topbar-meta"><span class="meta-dot"></span> BLENDER → WEBGL</div>
+      </header>
+
+      <main>
+        <section class="page-intro" aria-labelledby="page-title">
+          <div>
+            <p class="eyebrow">A SMALL HOUSE, OPENED UP</p>
+            <h1 id="page-title">小屋，拆开来看。</h1>
+            <p class="intro-copy">从屋面瓦片到木结构框架，拖动模型，沿着构造一层层观察。</p>
+          </div>
+          <div class="project-stamp" aria-label="房屋基本信息">
+            <span>STUDY NO. 01</span>
+            <strong>6.0 × 5.0 m</strong>
+            <small>单层木结构 · 约 30 m²</small>
+          </div>
+        </section>
+
+        <section class="workbench" aria-label="小屋 3D 观察与控制">
+          <div class="viewer-column">
+            <div class="viewer-frame">
+              <div id="viewer" class="viewer" data-state="loading">
+                <div class="viewer-topline" aria-hidden="true">
+                  <span>ASSEMBLY VIEW</span><span>01 / 01</span>
+                </div>
+                <div class="viewer-grid" aria-hidden="true"></div>
+                <div id="status" class="status" role="status" aria-live="polite" data-state="loading">
+                  <span class="status-dot" aria-hidden="true"></span>
+                  <span id="status-text">正在准备模型…</span>
+                </div>
+                <div id="error-message" class="error-message" role="alert" hidden>
+                  <strong>模型暂时无法显示</strong>
+                  <span id="error-detail">请稍后重试。</span>
+                  <button id="retry-load" type="button">重新加载</button>
+                </div>
+                <button id="reset-view" class="reset-button" type="button" aria-label="复位视角、拆解进度和构件显隐" disabled>
+                  <span aria-hidden="true">↺</span> 复位
+                </button>
+                <div class="viewer-bottomline" aria-hidden="true">
+                  <span>ORBIT · ZOOM · PAN</span><span>DRAG TO EXPLORE</span>
+                </div>
+              </div>
+            </div>
+            <div class="viewer-toolbar" aria-label="视图快捷操作">
+              <p><span class="toolbar-key">拖动</span> 旋转 <span class="toolbar-separator">·</span> <span class="toolbar-key">滚轮</span> 缩放 <span class="toolbar-separator">·</span> 右键拖动平移</p>
+              <div class="zoom-controls">
+                <button id="zoom-out" type="button" aria-label="缩小模型" disabled>−</button>
+                <button id="zoom-in" type="button" aria-label="放大模型" disabled>＋</button>
+              </div>
+            </div>
+          </div>
+
+          <aside class="inspector" aria-label="模型控制面板">
+            <section class="control-section explode-section">
+              <div class="section-heading">
+                <div><span class="section-index">01</span><h2>拆解视图</h2></div>
+                <output id="explode-value" for="explode-range">0%</output>
+              </div>
+              <p class="section-copy">让屋顶与四面墙体沿构造方向移开。</p>
+              <label class="range-label" for="explode-range">
+                <span class="sr-only">拆解进度</span>
+                <input id="explode-range" type="range" min="0" max="100" step="1" value="0" disabled />
+              </label>
+              <div class="range-scale"><span>组装</span><span>拆解</span></div>
+              <div class="preset-row">
+                <button id="assemble-all" type="button" class="preset-button is-active" disabled>整体</button>
+                <button id="explode-all" type="button" class="preset-button" disabled>完全拆解</button>
+              </div>
+            </section>
+
+            <section class="control-section layer-section">
+              <div class="section-heading">
+                <div><span class="section-index">02</span><h2>构件显隐</h2></div>
+                <button id="show-all" class="text-button" type="button" disabled>显示全部</button>
+              </div>
+              <div class="layer-list">
+                <label class="layer-item"><input type="checkbox" data-layer="roof" checked disabled /><span class="layer-swatch swatch-roof"></span><span>屋顶与屋架</span><span class="layer-count">02</span></label>
+                <label class="layer-item"><input type="checkbox" data-layer="walls" checked disabled /><span class="layer-swatch swatch-wall"></span><span>四面墙体</span><span class="layer-count">04</span></label>
+                <label class="layer-item"><input type="checkbox" data-layer="structure" checked disabled /><span class="layer-swatch swatch-wood"></span><span>基础与木结构</span><span class="layer-count">03</span></label>
+                <label class="layer-item"><input type="checkbox" data-layer="openings" checked disabled /><span class="layer-swatch swatch-glass"></span><span>门与窗</span><span class="layer-count">04</span></label>
+                <label class="layer-item"><input type="checkbox" data-layer="interior" checked disabled /><span class="layer-swatch swatch-interior"></span><span>室内陈设</span><span class="layer-count">01</span></label>
+                <label class="layer-item"><input type="checkbox" data-layer="ground" checked disabled /><span class="layer-swatch swatch-ground"></span><span>观察地台</span><span class="layer-count">01</span></label>
+              </div>
+            </section>
+
+            <section class="component-card" aria-live="polite" aria-atomic="true">
+              <div class="component-card-top"><span class="section-index">03 / SELECTED PART</span><span id="component-material" class="material-chip">整体</span></div>
+              <h2 id="component-title">一座紧凑的小屋</h2>
+              <p id="component-description">选择屋顶、墙板或木构件，查看它在房屋中的位置与作用。</p>
+            </section>
+
+            <div class="inspector-footnote"><span class="footnote-mark">i</span><p>点击模型中的任意构件查看说明。键盘用户可通过上方显隐清单逐组检查。</p></div>
+          </aside>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span>原创 Blender 场景 · 纯静态网页 · 无运行时 API</span>
+        <span>屋面与木纹贴图：<a href="https://polyhaven.com/license" target="_blank" rel="noreferrer">Poly Haven · CC0</a></span>
+      </footer>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

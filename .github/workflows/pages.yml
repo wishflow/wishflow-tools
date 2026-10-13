@@ -193,6 +193,7 @@ jobs:
           cache_dependency_path: |
             apps/ball-growth-lab/pnpm-lock.yaml
             apps/duolingo-avatar/pnpm-lock.yaml
+            apps/simple-house/pnpm-lock.yaml
             apps/pet/pnpm-lock.yaml
           run_install: false
 
@@ -233,6 +234,7 @@ jobs:
           cache_dependency_path: |
             apps/ball-growth-lab/pnpm-lock.yaml
             apps/duolingo-avatar/pnpm-lock.yaml
+            apps/simple-house/pnpm-lock.yaml
             apps/pet/pnpm-lock.yaml
           run_install: false
 
