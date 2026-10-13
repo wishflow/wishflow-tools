@@ -12,13 +12,13 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
   await expect(page.getByRole('heading', { name: '3D Objects' })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
   await expect(page.getByRole('navigation', { name: '本页导航' })).toBeVisible();
-  await expect(page.getByRole('contentinfo')).toContainText('Poly Haven · CC0');
+  await expect(page.getByRole('link', { name: 'Poly Haven · CC0' })).toHaveAttribute('href', 'https://polyhaven.com/');
   await page.getByRole('link', { name: '打开木结构小屋 3D 场景' }).click();
   await expect(page).toHaveURL(/#\/objects\/house$/);
   await expect(page.getByRole('heading', { name: '木结构小屋' })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
   await expect(page.getByRole('navigation', { name: '本页导航' })).toBeVisible();
-  await expect(page.getByRole('contentinfo')).toContainText('Poly Haven · CC0');
+  await expect(page.getByRole('link', { name: 'Poly Haven · CC0' })).toBeVisible();
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'loaded', { timeout: 15000 });
   await expect(page.locator('#viewer canvas')).toBeVisible();
   await expect(page.getByRole('button', { name: '复位视角、拆解进度和构件显隐' })).toBeEnabled();
