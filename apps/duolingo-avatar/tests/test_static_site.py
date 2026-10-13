@@ -165,6 +165,20 @@ def assert_no_unpkg_rive_runtime():
     assert not offenders, "Built site still references unpkg Rive runtime: " + ", ".join(offenders)
 
 
+def assert_home_navigation():
+    scripts = "\n".join(
+        path.read_text(encoding="utf-8", errors="ignore")
+        for path in (APP_SITE_DIR / "assets").glob("*.js")
+    )
+    styles = "\n".join(
+        path.read_text(encoding="utf-8", errors="ignore")
+        for path in (APP_SITE_DIR / "assets").glob("*.css")
+    )
+    assert "app-home-link" in scripts, "WishFlow Tools home link missing from the avatar editor"
+    assert "WishFlow Tools" in scripts, "Avatar editor home link label missing"
+    assert ".app-home-link" in styles, "Avatar editor home link styles missing"
+
+
 def main():
     assert_required_source_assets_exist()
     run_app_build()
@@ -172,6 +186,7 @@ def main():
     assert_local_references_exist()
     assert_manifest_icon_references_exist()
     assert_no_unpkg_rive_runtime()
+    assert_home_navigation()
     print("Static site checks passed")
 
 

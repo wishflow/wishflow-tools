@@ -24,15 +24,18 @@
       .card:hover { transform: translateY(-3px); border-color: #c7d8b8; box-shadow: 0 16px 34px rgba(35,60,24,.08); }
       .card:focus-visible, .language-toggle:focus-visible { outline: 3px solid #6d9f48; outline-offset: 3px; }
       .icon { position: relative; display: grid; width: 48px; height: 48px; place-items: center; overflow: hidden; border-radius: 12px; background: #eaf8dc; font-size: 25px; }
-      .icon-image { width: 48px; height: 52px; background: #fff; }
-      .icon-image img { position: absolute; top: 0; left: 0; display: block; width: 800%; max-width: none; height: 900%; }
+      .icon-image { width: 48px; height: 52px; background: transparent; }
+      .icon-image img { position: absolute; top: 0; left: 0; display: block; width: 800%; max-width: none; height: 900%; animation: usagi-idle 600ms steps(5, end) infinite; }
+      .card:hover .icon-image img, .card:focus-visible .icon-image img { animation-name: usagi-run; animation-duration: 800ms; animation-timing-function: steps(7, end); }
+      @keyframes usagi-idle { to { transform: translateX(-62.5%); } }
+      @keyframes usagi-run { from { transform: translate(0, -11.111111%); } to { transform: translate(-87.5%, -11.111111%); } }
       h2 { margin: 22px 0 8px; font-size: 21px; letter-spacing: -.02em; }
       .description { margin: 0; color: #657066; line-height: 1.55; }
       .open { margin-top: auto; padding-top: 24px; color: #438215; font-size: 14px; font-weight: 700; }
       footer { margin-top: 44px; color: #8a9588; font-size: 13px; line-height: 1.6; }
       html[lang="en"] [data-locale="zh"], html[lang="zh"] [data-locale="en"] { display: none !important; }
       @media (max-width: 600px) { main { padding-top: 48px; } .card { min-height: 210px; padding: 22px; } }
-      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } }
+      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .icon-image img { animation: none !important; transform: none !important; } }
     </style>
     <script src="./site.js" defer></script>
   </head>

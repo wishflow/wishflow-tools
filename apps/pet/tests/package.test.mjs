@@ -58,17 +58,31 @@ test('checksum manifest and both installers pin the original asset hashes', () =
 test('static build contains the bilingual page, interactive preview, and an unmodified spritesheet copy', () => {
   const builtPage = readFileSync(path.join(appRoot, 'dist', 'index.html'), 'utf8');
   const builtScript = readFileSync(path.join(appRoot, 'dist', 'app.js'), 'utf8');
+  const builtStyles = readFileSync(path.join(appRoot, 'dist', 'styles.css'), 'utf8');
   assert.match(builtPage, /<html lang="en">/);
   assert.match(builtPage, /data-language-toggle/);
   assert.match(builtPage, /id="install-prompt"/);
+  assert.ok(builtPage.indexOf('id="copy-prompt"') < builtPage.indexOf('id="preview"'), 'Codex prompt is at the top of the page');
+  assert.match(builtPage, /role="tablist"[^>]*data-install-tabs/);
+  assert.equal((builtPage.match(/role="tab"/g) ?? []).length, 4, 'four installation scenario tabs');
+  assert.equal((builtPage.match(/role="tabpanel"/g) ?? []).length, 4, 'four installation scenario panels');
+  assert.match(builtPage, /id="install-panel-desktop"[^>]*data-install-panel="desktop"/);
+  assert.match(builtPage, /id="install-panel-web"[^>]*data-install-panel="web"[^>]*hidden/);
+  assert.match(builtPage, /Settings → Pets/);
   assert.match(builtPage, /Settings → Personalization → Pet/);
   assert.match(builtPage, /\/pets uu-usagi/);
   assert.match(builtPage, /not connected to a Codex session/);
   for (const state of ['idle', 'working', 'running', 'needs-input', 'complete']) {
     assert.ok(builtScript.includes(state), 'preview includes state ' + state);
   }
-  assert.match(builtScript, /prefers-reduced-motion/);
   assert.match(builtScript, /clipboard\.writeText/);
+  assert.match(builtScript, /ArrowRight/);
+  assert.match(builtScript, /aria-selected/);
+  assert.doesNotMatch(builtScript, /setInterval/);
+  assert.match(builtStyles, /\.pet-stage\s*\{[^}]*background:\s*transparent/);
+  assert.match(builtStyles, /@keyframes usagi-idle/);
+  assert.match(builtStyles, /@keyframes usagi-running/);
+  assert.match(builtStyles, /prefers-reduced-motion/);
   assert.equal(
     sha256(path.join(appRoot, 'dist', 'pets', 'uu-usagi', 'spritesheet.webp')),
     expected['pets/uu-usagi/spritesheet.webp'],

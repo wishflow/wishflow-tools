@@ -3,6 +3,9 @@
   const languageToggle = document.querySelector('[data-language-toggle]');
   const pageDescription = document.querySelector('meta[name="description"]');
   const sectionNav = document.querySelector('[data-section-nav]');
+  const installTabList = document.querySelector('[data-install-tabs]');
+  const installTabs = [...document.querySelectorAll('[data-install-tab]')];
+  const installPanels = [...document.querySelectorAll('[data-install-panel]')];
   const platformList = document.querySelector('[data-platforms]');
   const sprite = document.querySelector('#pet-sprite');
   const stateIndicator = document.querySelector('#state-indicator');
@@ -16,7 +19,6 @@
   const copyStatus = document.querySelector('#copy-status');
   const promptField = document.querySelector('#install-prompt');
   const promptFallback = document.querySelector('#prompt-fallback');
-  const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const stateNames = {
     en: { idle: 'Idle', working: 'Working', running: 'Running', 'needs-input': 'Needs input', complete: 'Complete' },
@@ -37,13 +39,6 @@
       'needs-input': '模拟任务正在等待你的确认。',
       complete: '模拟任务已完成。',
     },
-  };
-  const spriteFrames = {
-    idle: [{ col: 0, row: 0 }, { col: 1, row: 0 }, { col: 2, row: 0 }, { col: 3, row: 0 }, { col: 4, row: 0 }, { col: 5, row: 0 }],
-    working: [{ col: 0, row: 3 }, { col: 1, row: 3 }, { col: 2, row: 3 }, { col: 3, row: 3 }],
-    running: [{ col: 0, row: 1 }, { col: 1, row: 1 }, { col: 2, row: 1 }, { col: 3, row: 1 }, { col: 4, row: 1 }, { col: 5, row: 1 }, { col: 6, row: 1 }, { col: 7, row: 1 }],
-    'needs-input': [{ col: 4, row: 0 }],
-    complete: [{ col: 0, row: 4 }, { col: 1, row: 4 }, { col: 2, row: 4 }, { col: 3, row: 4 }, { col: 4, row: 4 }],
   };
   const installPrompts = {
     en: [
@@ -116,8 +111,6 @@
   }
 
   let activeState = 'idle';
-  let frameIndex = 0;
-  let frameTimer = 0;
   let demoTimers = [];
 
   function setLanguage(nextLanguage, remember) {
@@ -136,6 +129,7 @@
     );
     promptField.value = installPrompts[language];
     sectionNav.setAttribute('aria-label', language === 'en' ? 'Page sections' : '页面导航');
+    installTabList.setAttribute('aria-label', language === 'en' ? 'Installation scenarios' : '安装场景');
     platformList.setAttribute('aria-label', language === 'en' ? 'Supported interfaces' : '支持的界面');
     demoReply.textContent = demoUser.hidden ? demoReplies[language].initial : demoReplies[language][activeState];
     if (copyStatus.dataset.messageType) {
@@ -157,35 +151,31 @@
     sprite.setAttribute('aria-label', copyMessages[language].sprite + stateNames[language][activeState]);
   }
 
-  function drawFrame(frame) {
-    sprite.style.backgroundPosition = (frame.col * 100 / 7) + '% ' + (frame.row * 100 / 8) + '%';
-  }
-
-  function stopFrameTimer() {
-    if (frameTimer) window.clearInterval(frameTimer);
-    frameTimer = 0;
-  }
-
   function setPreviewState(state) {
     activeState = state;
-    frameIndex = 0;
-    stopFrameTimer();
     stateButtons.forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.state === state));
     });
     stateIndicator.dataset.state = state;
+    sprite.dataset.state = state;
     stateIndicator.textContent = stateNames[language][state];
     previewStatus.textContent = stateDescriptions[language][state];
     sprite.setAttribute('aria-label', copyMessages[language].sprite + stateNames[language][state]);
-    const frames = spriteFrames[state];
-    drawFrame(frames[0]);
-    if (!motionPreference.matches && frames.length > 1) {
-      frameTimer = window.setInterval(() => {
-        frameIndex = (frameIndex + 1) % frames.length;
-        drawFrame(frames[frameIndex]);
-      }, 360);
-    }
     approveButton.hidden = state !== 'needs-input';
+  }
+
+  function selectInstallTab(tabName, moveFocus = false) {
+    const selectedTab = installTabs.find((tab) => tab.dataset.installTab === tabName);
+    if (!selectedTab) return;
+    installTabs.forEach((tab) => {
+      const selected = tab === selectedTab;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    installPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.installPanel !== tabName;
+    });
+    if (moveFocus) selectedTab.focus();
   }
 
   function clearDemoTimers() {
@@ -252,11 +242,24 @@
       setPreviewState(button.dataset.state);
     });
   });
+  installTabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => selectInstallTab(tab.dataset.installTab));
+    tab.addEventListener('keydown', (event) => {
+      let nextIndex = index;
+      if (event.key === 'ArrowRight') nextIndex = (index + 1) % installTabs.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + installTabs.length) % installTabs.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = installTabs.length - 1;
+      else return;
+      event.preventDefault();
+      selectInstallTab(installTabs[nextIndex].dataset.installTab, true);
+    });
+  });
   runDemoButton.addEventListener('click', startDemo);
   approveButton.addEventListener('click', finishDemo);
   copyButton.addEventListener('click', copyPrompt);
-  motionPreference.addEventListener?.('change', () => setPreviewState(activeState));
 
   setLanguage(language, false);
   setPreviewState('idle');
+  selectInstallTab(installTabs[0]?.dataset.installTab);
 })();

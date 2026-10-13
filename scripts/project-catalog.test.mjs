@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -37,6 +38,12 @@ test('navigation cards include both languages and render the configured Usagi im
   const escaped = renderProjectCards([{ ...projects[0], title: '<script>alert(1)</script>' }]);
   assert.match(escaped, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.doesNotMatch(escaped, /<script>/);
+
+  const homePage = readFileSync(path.join(repoRoot, 'site', 'index.html'), 'utf8');
+  assert.match(homePage, /@keyframes usagi-idle/);
+  assert.match(homePage, /@keyframes usagi-run/);
+  assert.match(homePage, /\.card:hover \.icon-image img/);
+  assert.match(homePage, /prefers-reduced-motion: reduce/);
 });
 
 test('shared output contains exactly one navigation card and app build per catalog entry', async () => {
