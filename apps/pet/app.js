@@ -21,15 +21,15 @@
   const promptFallback = document.querySelector('#prompt-fallback');
 
   const stateNames = {
-    en: { idle: 'Idle', 'running-right': 'Run right', 'running-left': 'Run left', waving: 'Spin golden staff', jumping: 'Jumping', running: 'Running', 'needs-input': 'Needs input', complete: 'Ready', blocked: 'Blocked' },
-    zh: { idle: '待机', 'running-right': '向右跑', 'running-left': '向左跑', waving: '旋转金箍棒', jumping: '跳跃', running: '运行中', 'needs-input': '等待输入', complete: '已就绪', blocked: '已阻塞' },
+    en: { idle: 'Idle', 'running-right': 'Run right', 'running-left': 'Run left', waving: 'Staff flourish', jumping: 'Jumping', running: 'Running', 'needs-input': 'Needs input', complete: 'Ready', blocked: 'Blocked' },
+    zh: { idle: '待机', 'running-right': '向右跑', 'running-left': '向左跑', waving: '挥舞金箍棒', jumping: '跳跃', running: '运行中', 'needs-input': '等待输入', complete: '已就绪', blocked: '已阻塞' },
   };
   const stateDescriptions = {
     en: {
       idle: 'Usagi is ready.',
       'running-right': 'Usagi is moving toward the right.',
       'running-left': 'Usagi is moving toward the left.',
-      waving: 'Usagi keeps its resting pose while spinning the golden staff.',
+      waving: 'Usagi plays the original four-frame staff flourish.',
       jumping: 'Usagi jumps and returns to its resting pose.',
       running: 'The sample task is running.',
       'needs-input': 'The sample task is waiting for your approval.',
@@ -40,7 +40,7 @@
       idle: 'Usagi 已准备就绪。',
       'running-right': 'Usagi 正在向右移动。',
       'running-left': 'Usagi 正在向左移动。',
-      waving: 'Usagi 保持待机姿势并旋转金箍棒。',
+      waving: 'Usagi 播放原始图集中的四帧挥棒动作。',
       jumping: 'Usagi 跳起后回到待机姿势。',
       running: '模拟任务正在运行。',
       'needs-input': '模拟任务正在等待你的确认。',

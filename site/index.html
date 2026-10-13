@@ -26,17 +26,21 @@
       .icon { position: relative; display: grid; width: 48px; height: 48px; place-items: center; overflow: hidden; border-radius: 12px; background: #eaf8dc; font-size: 25px; }
       .icon-image { position: relative; width: 48px; height: 52px; background: transparent; }
       .icon-image img { position: absolute; top: 0; left: 0; display: block; width: 800%; max-width: none; height: 900%; animation: usagi-idle 1250ms steps(5, end) infinite; }
-      .icon-image::after { content: ""; position: absolute; z-index: 1; top: 61%; left: 50%; width: 76%; height: 6px; border: 1px solid #312515; border-radius: 999px; background: linear-gradient(90deg, #bd8119 0 5%, #f1c340 5% 9%, #ffe88c 9% 12%, #eab531 12% 88%, #fff0a0 88% 91%, #d59a26 91% 95%, #b47816 95% 100%); box-shadow: inset 0 1px 0 #fff2ad, 0 1px 2px rgba(0,0,0,.18); opacity: 0; pointer-events: none; transform: translate(-50%, -50%) rotate(-38deg); transform-origin: center; }
-      .card:hover .icon-image::after, .card:focus-visible .icon-image::after { opacity: 1; animation: usagi-card-staff-spin 700ms linear infinite; }
+      .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: usagi-card-waving 700ms linear infinite; }
       @keyframes usagi-idle { to { transform: translateX(-62.5%); } }
-      @keyframes usagi-card-staff-spin { from { transform: translate(-50%, -50%) rotate(-38deg); } to { transform: translate(-50%, -50%) rotate(322deg); } }
+      @keyframes usagi-card-waving {
+        0% { transform: translate(0, -33.333333%); animation-timing-function: steps(1, end); }
+        20% { transform: translate(-12.5%, -33.333333%); animation-timing-function: steps(1, end); }
+        40% { transform: translate(-25%, -33.333333%); animation-timing-function: steps(1, end); }
+        60%, 100% { transform: translate(-37.5%, -33.333333%); }
+      }
       h2 { margin: 22px 0 8px; font-size: 21px; letter-spacing: -.02em; }
       .description { margin: 0; color: #657066; line-height: 1.55; }
       .open { margin-top: auto; padding-top: 24px; color: #438215; font-size: 14px; font-weight: 700; }
       footer { margin-top: 44px; color: #8a9588; font-size: 13px; line-height: 1.6; }
       html[lang="en"] [data-locale="zh"], html[lang="zh"] [data-locale="en"] { display: none !important; }
       @media (max-width: 600px) { main { padding-top: 48px; } .card { min-height: 210px; padding: 22px; } }
-      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .icon-image img { animation: none !important; transform: none !important; } .card:hover .icon-image::after, .card:focus-visible .icon-image::after { animation: none !important; opacity: 1; transform: translate(-50%, -50%) rotate(-38deg); } }
+      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .icon-image img { animation: none !important; transform: none !important; } .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: none !important; transform: translate(0, -33.333333%); } }
     </style>
     <script src="./site.js" defer></script>
   </head>
