@@ -10,5 +10,11 @@
     "title": "球群生长实验室",
     "description": "调整重力、边界缺口和繁殖概率，观察球群碰撞后的变化。",
     "icon": "🟠"
+  },
+  {
+    "slug": "pet",
+    "title": "Usagi 宠物包",
+    "description": "预览 Usagi 原始图集，并查看 macOS、Linux 和 Windows 本地安装说明。",
+    "icon": "🐰"
   }
 ]

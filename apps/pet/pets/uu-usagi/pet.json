@@ -1,0 +1,7 @@
+{
+  "id": "uu-usagi",
+  "displayName": "Usagi",
+  "description": "A preview build of the animated yellow bunny pet.",
+  "spritesheetPath": "spritesheet.webp",
+  "kind": "animal"
+}

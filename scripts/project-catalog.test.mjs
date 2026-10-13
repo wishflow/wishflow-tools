@@ -87,6 +87,24 @@ test('Worker deployment follows dependency lock changes, not unrelated app scrip
     previousLock,
     { packages: { 'node_modules/zod': { version: '4.2.0', integrity: 'new' } } },
   ), true);
+
+  assert.equal(
+    workerBuildInputsChanged(
+      null,
+      { name: '@wishflow/usagi-pet', packageManager: 'pnpm@12.11.2' },
+      null,
+      `lockfileVersion: '9.0'\n\nimporters:\n\n  .: {}\n`,
+    ),
+    false,
+    'adding a dependency-free static app does not change Worker build inputs',
+  );
+  assert.equal(
+    workerBuildInputsChanged(null, { dependencies: { zod: '^4.0.0' } }, null, {
+      packages: { 'node_modules/zod': { version: '4.1.0', integrity: 'new' } },
+    }),
+    true,
+    'a newly declared build dependency is classified as a Worker build input change',
+  );
 });
 
 test('Worker dependency comparison accepts pnpm lockfiles and preserves npm-to-pnpm versions', () => {

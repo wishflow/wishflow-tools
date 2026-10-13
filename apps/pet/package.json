@@ -1,0 +1,11 @@
+{
+  "name": "@wishflow/usagi-pet",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.11.2",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test:ci": "node scripts/build.mjs && node --test tests/*.test.mjs"
+  }
+}

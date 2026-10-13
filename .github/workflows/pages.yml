@@ -102,6 +102,34 @@ jobs:
         env:
           CHROME_EXEC: ${{ steps.setup-chrome.outputs.chrome-path }}
 
+  test-pet-windows:
+    runs-on: windows-latest
+    needs: changes
+    if: >-
+      needs.changes.outputs.test_required == 'true' &&
+      contains(fromJSON(needs.changes.outputs.test_matrix).app, 'pet')
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12.11.2
+          run_install: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install pet app dependencies
+        run: pnpm --dir apps/pet install --frozen-lockfile
+
+      - name: Run pet app tests
+        run: pnpm --dir apps/pet run test:ci
+
+      - name: Verify Windows PowerShell installer
+        shell: powershell
+        run: ./apps/pet/tests/verify-windows.ps1
+
   test-shared:
     runs-on: ubuntu-latest
     needs: changes
@@ -152,10 +180,11 @@ jobs:
 
   deploy-github-pages:
     runs-on: ubuntu-latest
-    needs: [changes, test, test-shared]
+    needs: [changes, test, test-shared, test-pet-windows]
     if: >-
       always() && needs.changes.outputs.site_required == 'true' &&
-      needs.test.result == 'success' && needs.test-shared.result == 'success'
+      needs.test.result == 'success' && needs.test-shared.result == 'success' &&
+      (needs.test-pet-windows.result == 'success' || needs.test-pet-windows.result == 'skipped')
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -169,6 +198,7 @@ jobs:
           cache_dependency_path: |
             apps/ball-growth-lab/pnpm-lock.yaml
             apps/duolingo-avatar/pnpm-lock.yaml
+            apps/pet/pnpm-lock.yaml
           run_install: false
 
       - uses: actions/configure-pages@v6
@@ -194,10 +224,11 @@ jobs:
 
   deploy-cloudflare-pages:
     runs-on: ubuntu-latest
-    needs: [changes, test, test-shared]
+    needs: [changes, test, test-shared, test-pet-windows]
     if: >-
       always() && needs.changes.outputs.site_required == 'true' &&
-      needs.test.result == 'success' && needs.test-shared.result == 'success'
+      needs.test.result == 'success' && needs.test-shared.result == 'success' &&
+      (needs.test-pet-windows.result == 'success' || needs.test-pet-windows.result == 'skipped')
     steps:
       - uses: actions/checkout@v6
 
@@ -208,6 +239,7 @@ jobs:
           cache_dependency_path: |
             apps/ball-growth-lab/pnpm-lock.yaml
             apps/duolingo-avatar/pnpm-lock.yaml
+            apps/pet/pnpm-lock.yaml
           run_install: false
 
       - uses: actions/setup-node@v6

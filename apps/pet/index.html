@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f7f8f2" />
+    <meta name="description" content="Usagi 本地宠物包备份、跨平台安装说明与原始图集预览。" />
+    <title>Usagi 本地宠物包 · WishFlow Tools</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="../">WishFlow Tools</a>
+      <span class="topbar-label">本地宠物包</span>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro-copy">
+          <p class="eyebrow">UU-USAGI · LOCAL PET PACKAGE</p>
+          <h1 id="page-title">Usagi，<br />回到你的桌面。</h1>
+          <p class="lead">备份自本机现有安装的动画兔子宠物包。安装器只复制文件，不会替你切换当前宠物。</p>
+          <div class="platforms" aria-label="支持的平台">
+            <span>macOS</span>
+            <span>Linux 文件安装</span>
+            <span>Windows</span>
+          </div>
+        </div>
+
+        <figure class="sheet-card">
+          <div class="sheet-frame">
+            <img
+              src="./pets/uu-usagi/spritesheet.webp"
+              alt="Usagi 原始精灵图集，包含多种姿势和表情"
+              width="1536"
+              height="1872"
+            />
+          </div>
+          <figcaption>
+            <span>原始精灵图集</span>
+            <span>1536 × 1872 · WebP</span>
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="notice" aria-labelledby="notice-title">
+        <span class="notice-mark" aria-hidden="true">i</span>
+        <div>
+          <h2 id="notice-title">素材说明</h2>
+          <p><strong>非原创，仅供非商业备份和分享。</strong>素材来自用户本机已有安装；原作者和原始许可目前无法追溯。本声明只描述本备份用途，不代表原作者授权，也不代替正式许可。</p>
+        </div>
+      </section>
+
+      <section class="install-section" aria-labelledby="install-title">
+        <div class="section-heading">
+          <p class="eyebrow">INSTALL</p>
+          <h2 id="install-title">安装到本机</h2>
+          <p>运行对应命令后，安装器会校验文件，再复制到你的 Codex 宠物目录。</p>
+        </div>
+        <div class="command-grid">
+          <article class="command-card">
+            <h3>macOS / Linux</h3>
+            <pre><code>curl -fsSL "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.sh" | sh</code></pre>
+            <p>Linux 仅保证文件安装。CLI 显示依赖支持 Kitty 图形协议或 Sixel 的终端；不承诺桌面浮动宠物功能。</p>
+          </article>
+          <article class="command-card">
+            <h3>Windows PowerShell</h3>
+            <pre><code>irm "https://raw.githubusercontent.com/wishflow/wishflow-tools/master/apps/pet/install.ps1" | iex</code></pre>
+            <p>无需管理员权限。PowerShell 会在输出中显示安装路径和后续操作。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="steps" aria-labelledby="steps-title">
+        <div class="section-heading">
+          <p class="eyebrow">AFTER INSTALL</p>
+          <h2 id="steps-title">安装后如何选择</h2>
+        </div>
+        <ol>
+          <li>在 ChatGPT / Codex 的 Pets 设置中刷新列表，然后手动选择 Usagi。</li>
+          <li>CLI 中可以运行 <code>/pets uu-usagi</code> 选择。</li>
+        </ol>
+        <p class="muted">桌面端宠物保存在本机，不会自动同步到网页。Linux CLI 的显示能力取决于终端图形协议；tmux、Zellij 等环境可能无法显示。</p>
+      </section>
+
+      <section class="uninstall" aria-labelledby="uninstall-title">
+        <div>
+          <p class="eyebrow">REMOVE</p>
+          <h2 id="uninstall-title">卸载</h2>
+          <p>退出正在使用宠物的界面后，只删除本包目录。使用自定义 <code>CODEX_HOME</code> 时，请先确认变量值。</p>
+        </div>
+        <pre><code>rm -r "${CODEX_HOME:-$HOME/.codex}/pets/uu-usagi"</code></pre>
+      </section>
+
+      <footer>
+        <a href="https://learn.chatgpt.com/docs/pets">Pets 官方说明</a>
+        <span>素材原样保存，未重绘、转换或重排。</span>
+      </footer>
+    </main>
+  </body>
+</html>

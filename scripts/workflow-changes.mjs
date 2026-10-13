@@ -19,8 +19,9 @@ function isWorkerOnlyPath(file) {
 function pnpmDependencyLock(lockfileText) {
   const lines = lockfileText.split(/\r?\n/);
   const importersIndex = lines.findLastIndex((line) => line.trim() === 'importers:');
-  const packagesIndex = lines.findIndex((line, index) => index > importersIndex && line.trim() === 'packages:');
-  if (importersIndex < 0 || packagesIndex <= importersIndex) return null;
+  const declaredPackagesIndex = lines.findIndex((line, index) => index > importersIndex && line.trim() === 'packages:');
+  if (importersIndex < 0) return null;
+  const packagesIndex = declaredPackagesIndex > importersIndex ? declaredPackagesIndex : lines.length;
 
   const versions = new Map();
   let inRootImporter = false;
@@ -69,7 +70,7 @@ function pnpmDependencyLock(lockfileText) {
   const integrities = new Map();
   let packageKey = null;
   let readingResolution = false;
-  for (const line of lines.slice(packagesIndex + 1)) {
+  for (const line of lines.slice(declaredPackagesIndex > importersIndex ? packagesIndex + 1 : lines.length)) {
     if (/^\S/.test(line)) break;
     const entryMatch = /^  (.+):\s*$/.exec(line);
     if (entryMatch) {
@@ -127,10 +128,14 @@ function dependencyBuildInputs(packageJson, lockfile) {
 }
 
 export function workerBuildInputsChanged(previousPackage, currentPackage, previousLock, currentLock) {
-  const previousInputs = dependencyBuildInputs(previousPackage, previousLock);
   const currentInputs = dependencyBuildInputs(currentPackage, currentLock);
-  if (!previousInputs || !currentInputs) return true;
-  return JSON.stringify(previousInputs) !== JSON.stringify(currentInputs);
+  if (!currentInputs) return true;
+  const previousInputs = previousPackage
+    ? dependencyBuildInputs(previousPackage, previousLock)
+    : [];
+  if (previousPackage && !previousInputs) return true;
+  return JSON.stringify(previousInputs)
+    !== JSON.stringify(currentInputs);
 }
 
 export function analyzeChanges(changedFiles, projects, workerConfigApps = new Set()) {
