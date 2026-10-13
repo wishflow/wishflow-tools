@@ -166,17 +166,15 @@ def assert_no_unpkg_rive_runtime():
 
 
 def assert_home_navigation():
+    index = read_site_file("index.html")
     scripts = "\n".join(
         path.read_text(encoding="utf-8", errors="ignore")
         for path in (APP_SITE_DIR / "assets").glob("*.js")
     )
-    styles = "\n".join(
-        path.read_text(encoding="utf-8", errors="ignore")
-        for path in (APP_SITE_DIR / "assets").glob("*.css")
-    )
-    assert "app-home-link" in scripts, "WishFlow Tools home link missing from the avatar editor"
-    assert "WishFlow Tools" in scripts, "Avatar editor home link label missing"
-    assert ".app-home-link" in styles, "Avatar editor home link styles missing"
+    assert '<wishflow-site-shell' in index, "Shared site shell missing from the avatar editor"
+    assert 'data-app="duolingo-avatar"' in index, "Avatar editor is missing its shared shell app identity"
+    assert "home-link" in scripts, "Shared WishFlow Tools home link missing from the avatar editor"
+    assert "WishFlow Tools" in scripts, "Shared home link label missing from the avatar editor"
 
 
 def main():

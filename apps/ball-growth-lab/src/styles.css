@@ -354,6 +354,18 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   .play-layout { grid-template-rows: minmax(0, 1fr) auto; }
 }
 
+@media (max-height: 850px) and (max-width: 640px) {
+  .setup-screen { grid-template-rows: minmax(0, 1fr) 60px; padding-top: 4px; padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+  .setup-workspace { gap: 5px; padding-top: 6px; padding-bottom: 4px; }
+  .setup-intro { min-height: 56px; }
+  .setup-card-top { gap: 4px; padding-top: 5px; padding-bottom: 5px; }
+  .settings-panel { padding: 4px 7px; }
+  .control-grid { gap: 3px; }
+  .range-control { min-height: 40px; grid-template-rows: 18px 18px; padding: 2px 7px; }
+  .range-control .control-help { display: none; }
+  .range-control input { height: 18px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }

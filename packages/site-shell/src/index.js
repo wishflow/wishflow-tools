@@ -303,8 +303,8 @@ class WishflowSiteShell extends HTMLElement {
         '</header>' +
         '<div class="workspace">' +
           '<aside class="sidebar">' +
-            '<section class="nav-group local-group" hidden><h2 class="nav-heading local-heading"></h2><nav><ul class="nav-list local-list"></ul></nav></section>' +
-            '<section class="nav-group project-group"><h2 class="nav-heading project-heading"></h2><nav><ul class="nav-list project-list"></ul></nav></section>' +
+            '<section class="nav-group local-group" hidden><h2 class="nav-heading local-heading" id="local-heading"></h2><nav aria-labelledby="local-heading"><ul class="nav-list local-list"></ul></nav></section>' +
+            '<section class="nav-group project-group"><h2 class="nav-heading project-heading" id="project-heading"></h2><nav aria-labelledby="project-heading"><ul class="nav-list project-list"></ul></nav></section>' +
           '</aside>' +
           '<div class="page-content"><slot name="content"></slot></div>' +
         '</div>' +

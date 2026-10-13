@@ -2,7 +2,6 @@
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,7 +26,7 @@ if (!existsSync(path.join(templateRoot, 'pnpm-lock.yaml'))) {
   process.exit(1);
 }
 
-const copiedRoot = path.join(tmpdir(), 'blender-lab-template-' + process.pid);
+const copiedRoot = path.join(path.dirname(projectRoot), 'blender-lab-template-' + process.pid);
 try {
   cpSync(templateRoot, copiedRoot, {
     recursive: true,

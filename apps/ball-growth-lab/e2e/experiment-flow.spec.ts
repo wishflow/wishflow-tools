@@ -1,6 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('wishflow-tools-language', 'zh'));
+});
+
 async function waitForRunState(page: Page, state: string): Promise<void> {
   await expect(page.locator('.run-status')).toContainText(state, { timeout: 10_000 });
 }

@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem('wishflow-tools-language', 'zh'));
+});
+
 test('小屋静态页面加载本地模型并支持拆解、显隐与复位', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -7,13 +11,13 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '3D Objects' })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
-  await expect(page.getByRole('navigation', { name: '主要页面' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '本页导航' })).toBeVisible();
   await expect(page.getByRole('contentinfo')).toContainText('Poly Haven · CC0');
   await page.getByRole('link', { name: '打开木结构小屋 3D 场景' }).click();
   await expect(page).toHaveURL(/#\/objects\/house$/);
   await expect(page.getByRole('heading', { name: '木结构小屋' })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
-  await expect(page.getByRole('navigation', { name: '主要页面' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '本页导航' })).toBeVisible();
   await expect(page.getByRole('contentinfo')).toContainText('Poly Haven · CC0');
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'loaded', { timeout: 15000 });
   await expect(page.locator('#viewer canvas')).toBeVisible();
