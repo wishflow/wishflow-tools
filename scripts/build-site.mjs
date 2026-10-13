@@ -30,6 +30,21 @@ async function attachUsagiWidget(pagePath, relativePrefix, isPetPage) {
   await writeFile(pagePath, html.replace('</head>', `${widgetTags}\n  </head>`));
 }
 
+async function configureSiteShell(pagePath) {
+  const html = await readFile(pagePath, 'utf8');
+  const projectPayload = JSON.stringify(projects.map(({ slug, title, titleZh }) => ({ slug, title, titleZh })))
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;');
+  const configured = html.replace(/<wishflow-site-shell\b([^>]*)>/g, (tag, attributes) => {
+    const cleaned = attributes.replace(/\sdata-projects=(?:"[^"]*"|'[^']*')/g, '');
+    return `<wishflow-site-shell${cleaned} data-projects="${projectPayload}">`;
+  });
+  if (configured === html || !configured.includes('data-projects=')) {
+    throw new Error(`No wishflow-site-shell element found in ${pagePath}.`);
+  }
+  await writeFile(pagePath, configured);
+}
+
 for (const project of projects) {
   const appDir = path.join(repoRoot, 'apps', project.slug);
   const build = spawnSync(
@@ -51,6 +66,10 @@ for (const project of projects) {
 await rm(siteRoot, { recursive: true, force: true });
 await mkdir(siteRoot, { recursive: true });
 await cp(path.join(repoRoot, 'site'), siteRoot, { recursive: true });
+await cp(
+  path.join(repoRoot, 'packages', 'site-shell', 'src', 'index.js'),
+  path.join(siteRoot, 'site-shell.js'),
+);
 const renderedIndex = indexTemplate.replace(marker, renderProjectCards(projects));
 await writeFile(path.join(siteRoot, 'index.html'), renderedIndex);
 for (const project of projects) {
@@ -59,6 +78,10 @@ for (const project of projects) {
     path.join(siteRoot, project.slug),
     { recursive: true },
   );
+}
+await configureSiteShell(path.join(siteRoot, 'index.html'));
+for (const project of projects) {
+  await configureSiteShell(path.join(siteRoot, project.slug, 'index.html'));
 }
 await attachUsagiWidget(path.join(siteRoot, 'index.html'), './', false);
 for (const project of projects) {

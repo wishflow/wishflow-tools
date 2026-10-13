@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@wishflow/site-shell':
+        specifier: file:../../packages/site-shell
+        version: file:../../packages/site-shell
       '@rive-app/canvas':
         specifier: ^2.37.8
         version: 2.37.8
@@ -1176,7 +1179,12 @@ packages:
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
+  '@wishflow/site-shell@file:../../packages/site-shell':
+    resolution: {directory: ../../packages/site-shell, type: directory}
+
 snapshots:
+
+  '@wishflow/site-shell@file:../../packages/site-shell': {}
 
   '@cloudflare/kv-asset-handler@0.5.0': {}
 

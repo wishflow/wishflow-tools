@@ -23,6 +23,8 @@
 ## 页面应用契约
 
 - 使用 Vite、TypeScript 和 Three.js 的静态模板，GLB 从应用自身的 public 目录加载；Three.js、GLB、贴图及 UI 均随应用构建，不从运行时 CDN 获取关键资源。
+- 所有公开页面必须复用仓库 `@wishflow/site-shell` 包提供的页眉、项目侧栏、页脚和语言切换。模板复制到 `apps/<slug>` 后，将 `data-app` 改成与 catalog 一致的 slug；局部页面入口通过 `data-local-nav` 接入同一侧栏。
+- 中英文语言状态、存储和切换由 `@wishflow/site-shell` 统一管理；页面文案用 `registerMessages` 或 `data-locale` 提供双语，不添加独立语言切换按钮或存储键。
 - 每个登记应用维护独立的 package.json、pnpm-lock.yaml、scripts/install.sh、build 和 test:ci；构建产物写到自己的 dist/。
 - 页面必须提供加载中、加载成功和加载失败状态；有模型加载、WebGL 或网络错误时显示可理解的提示，不能只留下空白画布。
 - 保持可访问的状态文本、键盘可达的页面控件、响应式视口与移动端可用的基础交互。

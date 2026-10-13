@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,11 +9,13 @@
     <meta name="apple-mobile-web-app-title" content="Avatar Builder" />
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="apple-touch-icon" href="avatar-icon-192.png" />
-    <title>Duolingo Avatar Explorer</title>
+    <title>Duolingo Avatar Editor · WishFlow Tools</title>
     <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   </head>
   <body>
-    <div id="root"></div>
+    <wishflow-site-shell data-app="duolingo-avatar" data-base="../" data-home-href="../" data-title-en="Duolingo Avatar Editor" data-title-zh="Duolingo 风格头像编辑器">
+      <div id="root" slot="content"></div>
+    </wishflow-site-shell>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

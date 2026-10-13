@@ -15,6 +15,8 @@
 
 - 导航页与已登记的静态前端应用由同一个共享站点构建和发布；根 README 是完整公开域名的唯一文档维护位置。
 - `apps/catalog.json` 是导航卡片和静态应用发布路径的单一数据源；不要在导航 HTML 或构建脚本中重复维护应用列表。
+- 所有公开页面共用 `@wishflow/site-shell` 提供的页眉、项目侧栏、页脚和语言切换；应用专属页面导航通过 `data-local-nav` 接入公共侧栏，功能控件仍放在各自页面内容区。
+- 所有公开页面的语言状态、持久化和切换逻辑必须使用 `@wishflow/site-shell`；页面只维护自己的中英文文案，通过 `registerMessages` 或 `data-locale` 接入，不另建语言存储键或切换按钮。
 - 新增 Worker、容器、数据库或其他 Cloudflare 资源前，先评估免费额度、成本、密钥边界和维护责任；复用现有 Worker 也必须符合安全边界。
 - Worker 只在对应源码或部署配置变化时发布。静态站点变更不应触发 Worker 发布。
 - 正常发布使用裸 `git push origin master` 触发 `.github/workflows/pages.yml`；工作流会按变更范围和测试结果决定是否部署静态站或 Worker。纯 Git 版本控制操作（如 `status`、`diff`、`add`、`commit`、`pull`、`push`）必须使用 `git` 命令，不通过 GitHub/Cloudflare CLI 或网页操作。

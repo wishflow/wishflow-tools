@@ -4,7 +4,7 @@ WishFlow Tools 将多个独立工具汇集到一个导航站。前端应用放�
 
 头像编辑器位于 `/duolingo-avatar/`；球群生长实验室位于 `/ball-growth-lab/`；Usagi 宠物包预览与安装说明位于 `/pet/`。应用路径和 Worker 部署说明见 [`apps/duolingo-avatar/docs/deployment-plan.md`](apps/duolingo-avatar/docs/deployment-plan.md)。
 
-3D Objects 位于 `/simple-house/`，当前收录一座可旋转、缩放和拆解观察的木结构小屋。
+3D Objects 位于 `/3d-objects/`，当前收录一座可旋转、缩放和拆解观察的木结构小屋。
 
 ## 线上地址
 

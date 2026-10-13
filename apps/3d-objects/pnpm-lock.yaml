@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@wishflow/site-shell':
+        specifier: file:../../packages/site-shell
+        version: file:../../packages/site-shell
       three:
         specifier: ^0.186.1
         version: 0.186.1
@@ -38,6 +41,9 @@ importers:
         version: 8.3.3
 
 packages:
+
+  '@wishflow/site-shell@file:../../packages/site-shell':
+    resolution: {directory: ../../packages/site-shell, type: directory}
 
   '@babel/helper-string-parser@7.29.7':
     resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
@@ -423,6 +429,8 @@ packages:
         optional: true
 
 snapshots:
+
+  '@wishflow/site-shell@file:../../packages/site-shell': {}
 
   '@babel/helper-string-parser@7.29.7': {}
 

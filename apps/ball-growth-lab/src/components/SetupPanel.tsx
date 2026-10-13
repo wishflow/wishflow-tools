@@ -128,14 +128,6 @@ export function SetupPanel({
 
   return (
     <main className="setup-screen">
-      <header className="setup-topbar">
-        <a className="brand-link" href="../" aria-label="回到工具首页">
-          <span className="brand-orbit" aria-hidden="true"><i /><i /><i /></span>
-          <span className="brand-copy"><strong>球群生长</strong><small>碰撞 · 繁殖 · 观察</small></span>
-        </a>
-        <span className="setup-version">物理实验室 <b>V2</b></span>
-      </header>
-
       <section className="setup-workspace" aria-labelledby="setup-title">
         <div className="setup-intro">
           <div>

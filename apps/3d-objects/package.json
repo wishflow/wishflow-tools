@@ -1,5 +1,5 @@
 {
-  "name": "@wishflow/simple-house",
+  "name": "@wishflow/3d-objects",
   "private": true,
   "type": "module",
   "scripts": {
@@ -18,6 +18,7 @@
     "check:release": "pnpm run check:assets && pnpm run check:scene && pnpm run test:ci"
   },
   "dependencies": {
+    "@wishflow/site-shell": "file:../../packages/site-shell",
     "three": "^0.186.1",
     "vue": "3.5.43",
     "vue-router": "4.6.4"

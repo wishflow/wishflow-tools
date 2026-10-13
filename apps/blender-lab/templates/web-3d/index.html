@@ -1,23 +1,15 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#10151d" />
     <meta name="description" content="A static, interactive 3D scene exported from Blender." />
-    <title>Scene Studio — 交互式 3D 场景</title>
+    <title>Scene Studio · WishFlow Tools</title>
   </head>
   <body>
-    <div class="page-shell">
-      <header class="topbar">
-        <a class="brand" href="./" aria-label="返回场景首页">
-          <span class="brand-mark" aria-hidden="true">S</span>
-          <span>SCENE STUDIO</span>
-        </a>
-        <span class="topbar-note">由 Blender 场景驱动</span>
-      </header>
-
-      <main class="layout">
+    <wishflow-site-shell data-app="scene-project" data-base="../" data-home-href="../" data-title-en="Scene Studio" data-title-zh="场景工作室">
+      <main class="layout" slot="content">
         <section class="viewer-card" aria-label="3D 场景预览">
           <div id="viewer" class="viewer" data-state="loading">
             <div class="viewer-grid" aria-hidden="true"></div>
@@ -56,12 +48,7 @@
           </div>
         </aside>
       </main>
-
-      <footer class="footer">
-        <span>静态前端 · 无运行时 API</span>
-        <span>Three.js + glTF</span>
-      </footer>
-    </div>
+    </wishflow-site-shell>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

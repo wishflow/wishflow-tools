@@ -59,8 +59,10 @@ test('static build contains the bilingual page, interactive preview, and an unmo
   const builtPage = readFileSync(path.join(appRoot, 'dist', 'index.html'), 'utf8');
   const builtScript = readFileSync(path.join(appRoot, 'dist', 'app.js'), 'utf8');
   const builtStyles = readFileSync(path.join(appRoot, 'dist', 'styles.css'), 'utf8');
+  const builtShell = readFileSync(path.join(appRoot, 'dist', 'site-shell.js'), 'utf8');
   assert.match(builtPage, /<html lang="en">/);
-  assert.match(builtPage, /data-language-toggle/);
+  assert.match(builtPage, /<wishflow-site-shell\b/);
+  assert.match(builtPage, /data-local-nav=/);
   assert.match(builtPage, /id="install-prompt"/);
   assert.ok(builtPage.indexOf('id="copy-prompt"') < builtPage.indexOf('id="preview"'), 'Codex prompt is at the top of the page');
   assert.match(builtPage, /role="tablist"[^>]*data-install-tabs/);
@@ -83,6 +85,8 @@ test('static build contains the bilingual page, interactive preview, and an unmo
     );
   }
   assert.match(builtScript, /clipboard\.writeText/);
+  assert.match(builtScript, /subscribeLanguage/);
+  assert.match(builtShell, /wishflow-tools-language/);
   assert.match(builtScript, /ArrowRight/);
   assert.match(builtScript, /aria-selected/);
   assert.doesNotMatch(builtScript, /setInterval/);

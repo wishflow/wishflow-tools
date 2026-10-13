@@ -2,7 +2,9 @@
 
 这是一个可复制到仓库 apps/<slug>/ 的独立静态页面。它使用 Three.js 加载 Blender 导出的 glTF 二进制文件，默认场景只是可构建、可检查的占位内容；Agent 应按已确认的 SceneSpec 替换生成脚本和页面文案。
 
-复制后将 package.json 的 name 改为项目专属名称，并把 Idea 文档放进 docs/；把确认后的素材计划整理到 assets/manifest.json。
+复制后将 package.json 的 name 改为项目专属名称，并把 `index.html` 中 `data-app` 改为与 catalog 一致的 slug，再填写中英文标题和页面文案。模板已依赖仓库公共包 `@wishflow/site-shell`（`file:../../packages/site-shell`），为新应用安装依赖时需在仓库根目录下的 `apps/<slug>` 位置执行 `scripts/install.sh`。把 Idea 文档放进 docs/，并将确认后的素材计划整理到 assets/manifest.json。
+
+页眉、项目侧栏、页脚和语言切换由公共包提供。场景标题、加载状态、错误和控件说明用应用自己的 `src/locales.ts` 注册双语词条；不要复制或另写公共导航、语言存储和语言切换逻辑。
 
 ## 第一次运行
 

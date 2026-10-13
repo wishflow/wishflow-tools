@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import '@wishflow/site-shell';
+import './locales';
 import './styles.css';
 
 function requiredElement<T extends Element>(selector: string): T {

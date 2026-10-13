@@ -22,6 +22,7 @@
     "deploy:cf:pages": "wrangler pages deploy ../../_site --project-name=wishflow-tools --branch=master"
   },
   "dependencies": {
+    "@wishflow/site-shell": "file:../../packages/site-shell",
     "@rive-app/canvas": "^2.37.8",
     "zod": "^4.4.3"
   },

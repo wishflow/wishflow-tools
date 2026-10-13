@@ -34,27 +34,15 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 
 .setup-screen {
   display: grid;
-  grid-template-rows: 58px minmax(0, 1fr) 82px;
+  grid-template-rows: minmax(0, 1fr) 82px;
   width: min(100%, 1600px);
-  height: 100dvh;
+  height: 100%;
   min-height: 0;
   margin: 0 auto;
   padding: max(8px, env(safe-area-inset-top)) clamp(14px, 4vw, 58px) max(8px, env(safe-area-inset-bottom));
   overflow: hidden;
 }
-.setup-topbar, .brand-link, .setup-version, .seed-tools, .export-tools, .setup-tabs, .setup-tab, .settings-footnote, .setup-footer, .start-summary, .button, .previous-run .text-action { display: flex; align-items: center; }
-.setup-topbar { justify-content: space-between; border-bottom: 1px solid rgba(23, 33, 61, .12); }
-.brand-link { min-width: 0; gap: 11px; color: var(--ink); text-decoration: none; }
-.brand-orbit { position: relative; display: block; width: 37px; height: 37px; flex: 0 0 auto; border: 1px solid #9992a2; border-radius: 50%; transform: rotate(-24deg); }
-.brand-orbit::before { position: absolute; inset: 5px -2px; border: 1px solid #aaa3b1; border-radius: 50%; content: ''; }
-.brand-orbit i { position: absolute; width: 9px; height: 9px; border: 2px solid var(--paper); border-radius: 50%; background: var(--coral); }
-.brand-orbit i:nth-child(1) { top: -2px; left: 10px; }
-.brand-orbit i:nth-child(2) { right: 0; bottom: 3px; background: var(--lime); }
-.brand-orbit i:nth-child(3) { bottom: 4px; left: -3px; background: var(--sky); }
-.brand-copy strong { display: block; font-size: 18px; font-weight: 850; letter-spacing: -.055em; line-height: 1.05; }
-.brand-copy small { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; font-weight: 650; }
-.setup-version { gap: 8px; color: var(--muted); font-size: 14px; font-weight: 700; }
-.setup-version b { padding: 4px 8px; border-radius: 999px; background: #e8edcf; color: #56672d; font-family: "DM Mono", monospace; font-size: 12px; }
+.seed-tools, .export-tools, .setup-tabs, .setup-tab, .settings-footnote, .setup-footer, .start-summary, .button, .previous-run .text-action { display: flex; align-items: center; }
 .setup-workspace { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 17px; width: min(100%, 1190px); min-height: 0; margin: 0 auto; padding: clamp(14px, 2.3vh, 25px) 0 11px; }
 .setup-intro { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 22px; }
 .eyebrow { margin: 0 0 5px; color: #52638c; font-family: "DM Mono", monospace; font-size: 13px; font-weight: 500; letter-spacing: .045em; }
@@ -122,7 +110,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .button-start:hover { background: #ff806a; box-shadow: 0 10px 23px rgba(221, 98, 77, .26); }
 .button-start b { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .32); font-size: 20px; font-weight: 600; }
 
-.play-screen { display: grid; grid-template-rows: 62px minmax(0, 1fr); gap: 11px; width: 100%; height: 100dvh; min-height: 0; padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); overflow: hidden; }
+.play-screen { display: grid; grid-template-rows: 62px minmax(0, 1fr); gap: 11px; width: 100%; height: 100%; min-height: 0; padding: 8px max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); overflow: hidden; }
 .play-topbar { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid rgba(23, 33, 61, .12); }
 .run-status { display: flex; align-items: center; gap: 9px; color: #58627d; font-size: 14px; font-weight: 750; }
 .run-status > strong { margin-left: 3px; color: #202b48; font-family: "DM Mono", monospace; font-size: 15px; font-variant-numeric: tabular-nums; }
@@ -215,7 +203,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .dialog-actions .button { min-height: 48px; }
 
 @media (max-width: 900px) {
-  .setup-screen { grid-template-rows: 54px minmax(0, 1fr) 75px; padding-right: max(14px, env(safe-area-inset-right)); padding-left: max(14px, env(safe-area-inset-left)); }
+  .setup-screen { grid-template-rows: minmax(0, 1fr) 75px; padding-right: max(14px, env(safe-area-inset-right)); padding-left: max(14px, env(safe-area-inset-left)); }
   .setup-workspace { gap: 10px; padding-top: 11px; }
   .setup-intro { min-height: 88px; }
   .setup-intro h1 { font-size: clamp(24px, 4.5vw, 34px); }
@@ -230,13 +218,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 }
 
 @media (max-width: 640px) {
-  .setup-screen { grid-template-rows: 51px minmax(0, 1fr) 74px; gap: 0; padding-top: max(5px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
-  .brand-link { gap: 8px; }
-  .brand-orbit { width: 31px; height: 31px; }
-  .brand-copy strong { font-size: 16px; }
-  .brand-copy small { font-size: 12px; }
-  .setup-version { font-size: 13px; }
-  .setup-version b { padding: 3px 6px; }
+  .setup-screen { grid-template-rows: minmax(0, 1fr) 74px; gap: 0; padding-top: 5px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
   .setup-workspace { gap: 8px; padding: 10px 0 8px; }
   .setup-intro { min-height: 77px; align-items: flex-start; }
   .eyebrow { margin-bottom: 4px; font-size: 12px; }
@@ -279,9 +261,6 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 
   .play-screen { grid-template-rows: 55px minmax(0, 1fr); gap: 7px; padding-right: max(8px, env(safe-area-inset-right)); padding-left: max(8px, env(safe-area-inset-left)); }
   .play-topbar { gap: 5px; }
-  .play-topbar .brand-orbit { width: 30px; height: 30px; }
-  .play-topbar .brand-copy strong { font-size: 15px; }
-  .play-topbar .brand-copy small { display: none; }
   .run-status { gap: 5px; font-size: 13px; }
   .run-status > strong { font-size: 13px; }
   .play-actions { gap: 4px; }
@@ -318,7 +297,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 }
 
 @media (max-width: 370px) {
-  .setup-screen { grid-template-rows: 48px minmax(0, 1fr) 70px; padding-right: 8px; padding-left: 8px; }
+  .setup-screen { grid-template-rows: minmax(0, 1fr) 70px; padding-right: 8px; padding-left: 8px; }
   .setup-intro { min-height: 69px; }
   .setup-intro h1 { font-size: 22px; }
   .setup-card-top { padding: 6px 7px; }
@@ -337,7 +316,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 }
 
 @media (max-height: 720px) and (min-width: 641px) {
-  .setup-screen { grid-template-rows: 49px minmax(0, 1fr) 68px; }
+  .setup-screen { grid-template-rows: minmax(0, 1fr) 68px; }
   .setup-workspace { gap: 8px; padding-top: 8px; padding-bottom: 6px; }
   .setup-intro h1 { font-size: 28px; }
   .intro-copy { margin-top: 3px; }
@@ -351,7 +330,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 }
 
 @media (max-height: 720px) and (max-width: 640px) {
-  .setup-screen { grid-template-rows: 47px minmax(0, 1fr) 65px; }
+  .setup-screen { grid-template-rows: minmax(0, 1fr) 65px; }
   .setup-workspace { gap: 5px; padding-top: 6px; padding-bottom: 4px; }
   .setup-intro { min-height: 59px; }
   .eyebrow { font-size: 11px; }

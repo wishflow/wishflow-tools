@@ -18,6 +18,7 @@
     "check:release": "pnpm run check:assets && pnpm run check:scene && pnpm run test:ci"
   },
   "dependencies": {
+    "@wishflow/site-shell": "file:../../packages/site-shell",
     "three": "^0.186.1"
   },
   "devDependencies": {

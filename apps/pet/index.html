@@ -5,24 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f7f8f2" />
     <meta name="description" content="Preview Usagi's sprite animation and follow installation steps for desktop, web, and Codex CLI." />
-    <title>Usagi animated preview and installation guide · WishFlow Tools</title>
+    <title>Usagi animated pet · WishFlow Tools</title>
     <link rel="stylesheet" href="./styles.css" />
-    <script src="./app.js" defer></script>
+    <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <header class="topbar">
-      <a class="wordmark" href="../">WishFlow Tools</a>
-      <div class="topbar-actions">
-        <nav class="site-project-nav" aria-label="Other WishFlow tools">
-          <a href="../duolingo-avatar/"><span data-locale="en">Avatar editor</span><span data-locale="zh">头像编辑器</span></a>
-          <a href="../ball-growth-lab/">Ball Growth Lab</a>
-        </nav>
-        <span class="topbar-label"><span data-locale="en">Usagi animated pet</span><span data-locale="zh">Usagi 动画宠物</span></span>
-        <button class="language-toggle" type="button" data-language-toggle aria-label="Switch language to Chinese">中文</button>
-      </div>
-    </header>
-
-    <main>
+    <wishflow-site-shell data-app="pet" data-base="../" data-home-href="../" data-title-en="Usagi animated pet" data-title-zh="Usagi 动画宠物" data-local-nav='[{"href":"#preview","en":"Preview","zh":"动画预览","icon":"◉"},{"href":"#install","en":"Install & choose","zh":"安装与选择","icon":"↓"},{"href":"#materials","en":"Materials & removal","zh":"素材与卸载","icon":"i"}]'>
+    <main slot="content">
       <section class="prompt-card quick-prompt" aria-labelledby="prompt-title">
         <div class="prompt-copy">
           <p class="eyebrow"><span data-locale="en">QUICK INSTALL</span><span data-locale="zh">快速安装</span></p>
@@ -37,12 +26,6 @@
           <textarea id="install-prompt" rows="10" readonly spellcheck="false"></textarea>
         </details>
       </section>
-
-      <nav class="section-nav" data-section-nav aria-label="Page sections">
-        <a href="#preview"><span data-locale="en">Preview</span><span data-locale="zh">动画预览</span></a>
-        <a href="#install"><span data-locale="en">Install & choose</span><span data-locale="zh">安装与选择</span></a>
-        <a href="#materials"><span data-locale="en">Materials & removal</span><span data-locale="zh">素材与卸载</span></a>
-      </nav>
 
       <section class="intro" id="preview" aria-labelledby="page-title">
         <div class="intro-copy">
@@ -202,10 +185,7 @@ Remove-Item -LiteralPath (Join-Path (Join-Path $codexHome 'pets') 'uu-usagi') -R
         </div>
       </section>
 
-      <footer class="page-footer">
-        <a href="https://learn.chatgpt.com/docs/pets"><span data-locale="en">Official Pets documentation</span><span data-locale="zh">Pets 官方说明</span></a>
-        <span><span data-locale="en">Original sprite sheet: 1536 × 1872 · WebP</span><span data-locale="zh">原始精灵图集：1536 × 1872 · WebP</span></span>
-      </footer>
     </main>
+    </wishflow-site-shell>
   </body>
 </html>

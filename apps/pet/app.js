@@ -1,8 +1,7 @@
+import { getLanguage, subscribeLanguage } from './site-shell.js';
+
 (() => {
-  const languageKey = 'wishflow-tools-language';
-  const languageToggle = document.querySelector('[data-language-toggle]');
   const pageDescription = document.querySelector('meta[name="description"]');
-  const sectionNav = document.querySelector('[data-section-nav]');
   const installTabList = document.querySelector('[data-install-tabs]');
   const installTabs = [...document.querySelectorAll('[data-install-tab]')];
   const installPanels = [...document.querySelectorAll('[data-install-panel]')];
@@ -111,44 +110,22 @@
     },
   };
 
-  let language = 'en';
-  try {
-    language = localStorage.getItem(languageKey) === 'zh' ? 'zh' : 'en';
-  } catch {
-    language = 'en';
-  }
+  let language = getLanguage();
 
   let activeState = 'idle';
   let demoTimers = [];
 
-  function setLanguage(nextLanguage, remember) {
+  function updateLanguage(nextLanguage) {
     language = nextLanguage === 'zh' ? 'zh' : 'en';
-    document.documentElement.lang = language;
-    document.title = language === 'en'
-      ? 'Usagi animated preview and installation guide · WishFlow Tools'
-      : 'Usagi 动画预览与安装指南 · WishFlow Tools';
     pageDescription.content = language === 'en'
       ? "Preview Usagi's sprite animation and follow installation steps for desktop, web, and Codex CLI."
       : '预览 Usagi 动画，并查看桌面端、网页端和 Codex CLI 的安装与选择步骤。';
-    languageToggle.textContent = language === 'en' ? '中文' : 'English';
-    languageToggle.setAttribute(
-      'aria-label',
-      language === 'en' ? 'Switch language to Chinese' : '切换界面语言为英文',
-    );
     promptField.value = installPrompts[language];
-    sectionNav.setAttribute('aria-label', language === 'en' ? 'Page sections' : '页面导航');
     installTabList.setAttribute('aria-label', language === 'en' ? 'Installation scenarios' : '安装场景');
     platformList.setAttribute('aria-label', language === 'en' ? 'Supported interfaces' : '支持的界面');
     demoReply.textContent = demoUser.hidden ? demoReplies[language].initial : demoReplies[language][activeState];
     if (copyStatus.dataset.messageType) {
       copyStatus.textContent = copyMessages[language][copyStatus.dataset.messageType];
-    }
-    if (remember) {
-      try {
-        localStorage.setItem(languageKey, language);
-      } catch {
-        // Language switching remains available when storage is disabled.
-      }
     }
     updateStateText();
   }
@@ -242,7 +219,7 @@
     }
   }
 
-  languageToggle.addEventListener('click', () => setLanguage(language === 'en' ? 'zh' : 'en', true));
+  subscribeLanguage(updateLanguage);
   stateButtons.forEach((button) => {
     button.addEventListener('click', () => {
       resetDemo();
@@ -265,7 +242,7 @@
   runDemoButton.addEventListener('click', startDemo);
   approveButton.addEventListener('click', finishDemo);
   copyButton.addEventListener('click', copyPrompt);
-  setLanguage(language, false);
+  updateLanguage(language);
   setPreviewState('idle');
   selectInstallTab(installTabs[0]?.dataset.installTab);
 })();

@@ -4,7 +4,7 @@
 
 本文记录 WishFlow Tools 中 slug 为 pet 的静态应用实现。该应用在 /pet/ 提供 Usagi 精灵动画预览、按使用场景拆分的安装与选择指南，以及可复制给 Codex 的安装提示词。
 
-导航页和详情页以英文作为首次访问默认语言，用户切换后记住偏好。导航目录仍由 apps/catalog.json 单一维护。详情页使用原生 HTML、CSS 和少量 JavaScript；不增加框架、服务端、API、账号或同步功能。
+导航页和详情页以英文作为首次访问默认语言，用户切换后记住偏好。导航目录仍由 apps/catalog.json 单一维护。所有公开页面复用 `@wishflow/site-shell` 的页眉、项目侧栏、页脚和语言状态；宠物详情页的内容仍使用原生 HTML、CSS 和少量 JavaScript，不增加应用框架、服务端、API、账号或同步功能。
 
 ## 2. 素材完整性
 
@@ -49,7 +49,7 @@
 
 pet 项目的导航图标使用原始图集文件，不使用兔子 emoji。默认循环播放第 0 行第 0–5 列的待机动画；鼠标悬停或键盘聚焦项目卡片时，循环播放第 4 行的 Jump 动画。减少动态效果设置下显示对应状态的首帧。生成 HTML 时名称、说明、slug、图标路径均需转义；目录验证需拒绝绝对路径和路径穿越。
 
-site/index.html 使用英文默认文案；site/site.js 与 apps/pet/app.js 共用 localStorage 键 wishflow-tools-language。仅接受 en / zh 值，存储不可用时仍允许本页切换。当前页面只保存语言偏好，不向其他站点发送信息。
+`@wishflow/site-shell` 使用英文默认文案，并统一负责 `wishflow-tools-language` 的读取、持久化和切换；`site/site.js` 与 `apps/pet/app.js` 通过公共接口获取或订阅语言状态。仅接受 en / zh 值，存储不可用时仍允许本页切换。当前页面只保存语言偏好，不向其他站点发送信息。
 
 ### 4.1 全站悬浮宠物
 

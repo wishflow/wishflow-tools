@@ -11,5 +11,6 @@ await Promise.all([
   cp(path.join(appRoot, 'index.html'), path.join(distRoot, 'index.html')),
   cp(path.join(appRoot, 'styles.css'), path.join(distRoot, 'styles.css')),
   cp(path.join(appRoot, 'app.js'), path.join(distRoot, 'app.js')),
+  cp(path.resolve(appRoot, '../../packages/site-shell/src/index.js'), path.join(distRoot, 'site-shell.js')),
   cp(path.join(appRoot, 'pets'), path.join(distRoot, 'pets'), { recursive: true }),
 ]);

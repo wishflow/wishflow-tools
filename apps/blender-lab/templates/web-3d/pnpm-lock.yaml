@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@wishflow/site-shell':
+        specifier: file:../../packages/site-shell
+        version: file:../../packages/site-shell
       three:
         specifier: ^0.186.1
         version: 0.186.1
@@ -26,6 +29,9 @@ importers:
         version: 8.3.3
 
 packages:
+
+  '@wishflow/site-shell@file:../../packages/site-shell':
+    resolution: {directory: ../../packages/site-shell, type: directory}
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
@@ -328,6 +334,8 @@ packages:
         optional: true
 
 snapshots:
+
+  '@wishflow/site-shell@file:../../packages/site-shell': {}
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 

@@ -160,7 +160,7 @@ test('Worker deployment follows dependency lock changes, not unrelated app scrip
 test('static-only app dependencies do not trigger Worker credential validation', () => {
   assert.deepEqual(
     [...findWorkerConfigChanges(
-      ['apps/simple-house/package.json', 'apps/simple-house/pnpm-lock.yaml'],
+      ['apps/3d-objects/package.json', 'apps/3d-objects/pnpm-lock.yaml'],
       projects,
       'unknown-base-revision',
     )],

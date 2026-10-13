@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@wishflow/site-shell':
+        specifier: file:../../packages/site-shell
+        version: file:../../packages/site-shell
       '@wishflow/simulation-testkit':
         specifier: file:../../packages/simulation-testkit
         version: file:../../packages/simulation-testkit
@@ -513,6 +516,9 @@ packages:
 
   '@webgpu/types@0.1.74':
     resolution: {integrity: sha512-lgiI4hbuLcI9unnm2cL/tvCaQU45dp0xcLWJh5uB/9MBGvIA4F8XIk7nSiBeg+K4xWGYwgZKn80LmERI5CxoTA==}
+
+  '@wishflow/site-shell@file:../../packages/site-shell':
+    resolution: {directory: ../../packages/site-shell, type: directory}
 
   '@wishflow/simulation-testkit@file:../../packages/simulation-testkit':
     resolution: {directory: ../../packages/simulation-testkit, type: directory}
@@ -920,6 +926,8 @@ snapshots:
       vite: 8.3.2(@types/node@26.6.4)(esbuild@0.28.2)(tsx@4.23.15)
 
   '@webgpu/types@0.1.74': {}
+
+  '@wishflow/site-shell@file:../../packages/site-shell': {}
 
   '@wishflow/simulation-testkit@file:../../packages/simulation-testkit': {}
 

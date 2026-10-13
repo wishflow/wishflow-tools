@@ -399,10 +399,6 @@ export default function App() {
   return (
     <main className={`play-screen play-screen-${runState}`}>
       <header className="play-topbar">
-        <a className="brand-link" href="../" aria-label="回到工具首页">
-          <span className="brand-orbit" aria-hidden="true"><i /><i /><i /></span>
-          <span><strong>球群生长</strong><small>碰撞 · 繁殖 · 观察</small></span>
-        </a>
         <div className="run-status" aria-live="polite">
           <i className={`run-status-dot dot-${runState}`} />
           <span>{statusLabel[runState]}</span>
