@@ -1,6 +1,6 @@
 # Blender Lab 依赖与接入清单
 
-本文用于记录本机建模工作区依赖、MCP 状态检查、安装命令和凭据边界。项目目前是本地工作区，没有网页 UI、静态发布或导航站登记。
+本文用于记录本机建模工作区依赖、MCP 状态检查、3D 静态网页模板、安装命令和凭据边界。Blender Lab 自身仍是本地工作区；将来由它创建的成品应用才登记到导航站。
 
 ## 1. 依赖总览
 
@@ -11,7 +11,7 @@
 | `blender-mcp` | 为编码 Agent 提供 Blender 场景工具的 stdio 服务 | 本机命令，无 API key | `command -v blender-mcp`；`pnpm run check:integrations` | 当前机器已安装；服务端命令和 Blender 内扩展需要同时可用。 |
 | 3D Assets MCP | 搜索并获取可下载的 3D 素材 | 公开 API，无 key | 配置后在客户端 MCP 列表检查 `3d-assets` | 端点：`https://3d.shep.bot/mcp`。下载素材仍需核对来源及单项许可。 |
 | Blendkit（原 BlenderKit） | 在 Blender 内搜索/下载模型、材质、HDRI 等 | 部分素材免登录；账号功能按需登录 | Blender 插件列表中查看 `bl_ext.user_default.blenderkit` | 已从官方站下载并安装 `3.21.3-261002`，当前 Blender 5.3 Beta 已启用。 |
-| Node.js / pnpm | 运行 MCP 客户端检查与安装脚本 | 无 | `node --version`、`pnpm --version` | 安装脚本只用 Node 内置模块；不添加项目运行时 npm 依赖。 |
+| Node.js / pnpm | 运行 MCP 检查脚本及成品网页模板 | 无 | `node --version`、`pnpm --version` | MCP 配置脚本只用 Node 内置模块；web-3d 模板独立维护 Vite、TypeScript、Three.js 和 Playwright 依赖及锁文件。 |
 
 ## 2. 支持的编码客户端
 
@@ -79,6 +79,37 @@ Blendkit 官方下载页提供 Blender 插件 ZIP，官方 GitHub README 说明�
 
 - 若未来接入需要密钥的服务，先检查官方认证方式、用户数据存储位置和静态部署边界；密钥只能留在本机/客户端用户配置或服务端 Secret Store，不能放进浏览器可读取的变量。
 
-## 6. 后续网页导出边界
+## 6. 3D 静态网页模板
 
-当前项目只准备 Blender 本地建模与素材发现。将来导出网页场景时，可把 `.blend` 作为源文件，将优化后的 `.glb`、贴图和前端代码交给静态站点构建；模型压缩、贴图尺寸、加载预算、许可证清单、Three.js 加载和 GitHub/Cloudflare Pages 发布策略需要在对应网页项目中单独确定。不要把 Blender MCP、Python 自动化或任何凭据打包进静态站点。
+**templates/web-3d/** 是供 Agent 复制的独立静态应用模板，不登记到目录。它包含：
+
+- Vite、TypeScript 与 Three.js；GLTFLoader 加载仓库内的 GLB，OrbitControls 提供基础旋转和缩放交互。
+- 本地 Blender Python 生成脚本、场景合同文件和场景检查器。
+- 素材许可清单验证、静态网页检查、Playwright 浏览器冒烟测试和独立 pnpm 锁文件。
+
+Three.js 的 GLTFLoader 与 OrbitControls 是 Three.js 提供的 addons，需从 **three/addons/...** 显式导入；不需要另外安装 loader 或 controls 包。参考 [Three.js 安装与 addons 文档](https://threejs.org/manual/pages/installation.html)。
+
+复制模板时：
+
+1. 为新项目建立 **apps/<slug>**，先复制 **templates/web-3d/** 并把 package.json 的 name 改成项目专属名称。
+2. 填写 **templates/idea/** 的文档；确认后复制 Markdown 到新应用的 docs/，将素材计划整理到 assets/manifest.json。
+3. 更新项目标题、SceneSpec 和 scene-contract.json，再开始建模。
+4. 在本机运行 Blender 生成/检查场景；页面应用自身运行 build/test:ci；最后登记到 **apps/catalog.json**。
+5. 凭据只留在 MCP 客户端或 Blender 插件的用户级登录态。静态项目不得含密钥或依赖认证 API。
+
+模板的默认网页预算为最多 250,000 个三角面、GLB 不超过 20 MiB、贴图最长边不超过 2,048 像素、JavaScript 总 gzip 体积不超过 256 KiB。每个 Idea 在审批规格时必须明确这些值；需要调整时由用户确认，不能为了通过检查而自行放宽。
+
+## 7. 工作流命令与检查边界
+
+Blender Lab 自身的 **pnpm run test:ci** 验证工作流文档模板、资产验证规则和 3D 网页模板。模板成品应用提供以下命令：
+
+| 命令 | 作用 | 执行环境 |
+| --- | --- | --- |
+| **pnpm run generate:scene** | 从项目 Blender Python 脚本生成 .blend 和 GLB | 本机 Blender |
+| **pnpm run check:assets** | 检查资产来源、许可、署名和本地文件路径 | 本机或 CI |
+| **pnpm run check:scene** | 检查相机、网格、贴图、预算和导出 GLB | 本机 Blender |
+| **pnpm run check:bundle** | 检查构建后 JavaScript gzip 总体积 | 本机或 CI |
+| **pnpm run test:ci** | 运行资产/网页检查、单元测试、静态构建和浏览器冒烟测试 | 本机或 CI |
+| **pnpm run check:release** | 合并运行素材、场景与 CI 检查，作为本地提交前门禁 | 本机 Blender 与浏览器 |
+
+GitHub Actions 不安装 Blender：Blender 结构检查在 Agent 本机完成，CI 检查已经提交的 GLB、前端构建和浏览器加载。框架目录的代码改动会运行自身 CI 测试，但不会触发网站发布。只有注册的 **apps/<slug>** 成品应用才进入共享站点部署。

@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "check:integrations": "node scripts/setup-mcp.mjs --check",
-    "setup:integrations": "node scripts/setup-mcp.mjs"
+    "setup:integrations": "node scripts/setup-mcp.mjs",
+    "test:unit": "node --test tests/*.test.mjs",
+    "test:template": "node scripts/test-template.mjs",
+    "test:ci": "pnpm run test:unit && pnpm run test:template"
   }
 }

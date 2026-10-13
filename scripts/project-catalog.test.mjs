@@ -91,6 +91,15 @@ test('worker-only changes run app tests and deploy only the Worker', () => {
   });
 });
 
+test('Blender Lab framework changes run its tests without publishing a static app', () => {
+  assert.deepEqual(analyzeChanges(['apps/blender-lab/scripts/check-scene.mjs'], projects), {
+    docsOnly: false,
+    siteRequired: false,
+    workerRequired: false,
+    testApps: ['blender-lab'],
+  });
+});
+
 test('app manifest script changes test the app and rebuild static output', () => {
   assert.deepEqual(analyzeChanges(['apps/duolingo-avatar/package.json'], projects), {
     docsOnly: false,

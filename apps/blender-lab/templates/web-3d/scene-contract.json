@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "modelPath": "public/models/scene.glb",
+  "maxTriangles": 250000,
+  "maxGlbBytes": 20971520,
+  "maxTextureEdge": 2048,
+  "maxJavaScriptGzipBytes": 262144,
+  "minimumMeshCount": 2,
+  "requiredObjects": ["Hero", "Ground"]
+}

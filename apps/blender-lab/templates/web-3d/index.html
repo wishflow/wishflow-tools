@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10151d" />
+    <meta name="description" content="A static, interactive 3D scene exported from Blender." />
+    <title>Scene Studio — 交互式 3D 场景</title>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="返回场景首页">
+          <span class="brand-mark" aria-hidden="true">S</span>
+          <span>SCENE STUDIO</span>
+        </a>
+        <span class="topbar-note">由 Blender 场景驱动</span>
+      </header>
+
+      <main class="layout">
+        <section class="viewer-card" aria-label="3D 场景预览">
+          <div id="viewer" class="viewer" data-state="loading">
+            <div class="viewer-grid" aria-hidden="true"></div>
+            <div id="status" class="status" role="status" aria-live="polite" data-state="loading">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span id="status-text">正在加载场景…</span>
+            </div>
+            <div id="error-message" class="error-message" role="alert" hidden></div>
+            <button id="reset-view" class="reset-button" type="button" aria-label="重置模型视角">
+              重置视角
+            </button>
+            <p class="viewer-hint">拖动旋转 <span aria-hidden="true">·</span> 滚轮缩放</p>
+          </div>
+        </section>
+
+        <aside class="info-panel">
+          <p class="eyebrow">BLENDER / WEBGL</p>
+          <h1 id="scene-title">你的 3D 场景</h1>
+          <p class="intro">
+            在 Blender 中构建场景并导出 GLB。这里展示可以直接部署到静态站点的交互式模型。
+          </p>
+
+          <div class="divider"></div>
+          <div class="detail-row">
+            <span>场景状态</span>
+            <span id="scene-state-label" class="detail-value">准备中</span>
+          </div>
+          <div class="detail-row">
+            <span>操作方式</span>
+            <span class="detail-value">拖动 · 缩放 · 重置</span>
+          </div>
+
+          <div class="notice">
+            <span class="notice-mark" aria-hidden="true">✳</span>
+            <p>替换项目标题、介绍和 Blender 导出的场景，即可开始一个新的 Idea 页面。</p>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="footer">
+        <span>静态前端 · 无运行时 API</span>
+        <span>Three.js + glTF</span>
+      </footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

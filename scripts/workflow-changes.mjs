@@ -8,6 +8,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const DOC_PATTERN = /\.(?:md|mdx)$/i;
 const SHARED_TEST_PATHS = new Set(['apps/catalog.json', 'package.json', 'scripts/build-site.mjs']);
 const SITE_BUILD_PATHS = new Set(['apps/catalog.json', 'scripts/build-site.mjs', 'scripts/project-catalog.mjs']);
+const TEST_ONLY_PROJECTS = new Set(['blender-lab']);
 
 function affectsWorker(file) {
   return /^apps\/[^/]+\/(?:worker\/|wrangler(?:\.[^/]+)?$)/.test(file);
@@ -166,12 +167,17 @@ export function analyzeChanges(changedFiles, projects, workerConfigApps = new Se
   const testApps = sharedTestChange
     ? [...projectSlugs]
     : [...changedApps];
+  for (const slug of TEST_ONLY_PROJECTS) {
+    if (files.some((file) => file.startsWith('apps/' + slug + '/') && !DOC_PATTERN.test(file))) {
+      testApps.push(slug);
+    }
+  }
 
   return {
     docsOnly: files.length > 0 && files.every((file) => DOC_PATTERN.test(file)),
     siteRequired,
     workerRequired,
-    testApps: testApps.sort(),
+    testApps: [...new Set(testApps)].sort(),
   };
 }
 
