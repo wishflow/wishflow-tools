@@ -105,6 +105,8 @@ try {
     }
 
     if ((Get-ChildItem -LiteralPath $testTemp -Force).Count -ne 0) { throw 'Windows installer left temporary files behind.' }
+    # Expected child-process failures are asserted above; do not leak their exit code to the GitHub Actions wrapper.
+    $global:LASTEXITCODE = 0
     Write-Output 'Windows PowerShell 5.1 installer checks passed.'
 }
 finally {
