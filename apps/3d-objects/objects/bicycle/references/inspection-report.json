@@ -1,0 +1,1080 @@
+{
+  "date": "2026-10-14",
+  "method": "后台Blender CLI/MCP只读检查，自动脚本执行关闭，原件不保存改动；求值使用报告中明确的版本、帧与细分级别；OBJ为文本检查",
+  "reports": {
+    "pink": {
+      "blender_version": "5.3.0 Beta",
+      "file_version": [
+        3,
+        5,
+        10
+      ],
+      "scene": "upload",
+      "unit_system": "METRIC",
+      "unit_scale": 1,
+      "frame": 1,
+      "objects_total": 44,
+      "mesh_count": 38,
+      "armatures": [
+        {
+          "name": "骨架",
+          "bones": 20
+        }
+      ],
+      "action_count": 2,
+      "materials": 12,
+      "images": [
+        {
+          "name": "ee2bb77a62579941c157339c74719873dc61e4d0.png.001",
+          "packed": true,
+          "size": [
+            1024,
+            1024
+          ]
+        },
+        {
+          "name": "Tire marks.png.002",
+          "packed": true,
+          "size": [
+            1024,
+            1024
+          ]
+        }
+      ],
+      "bounds_min": [
+        -1.1741595268249512,
+        -1.6694618463516235,
+        -0.6110114455223083
+      ],
+      "bounds_max": [
+        1.1721422672271729,
+        1.1908152103424072,
+        1.9744963645935059
+      ],
+      "bounds_dimensions": [
+        2.346301794052124,
+        2.8602770566940308,
+        2.585507810115814
+      ],
+      "triangles_evaluated": 710112,
+      "objects": [
+        {
+          "name": "鍊條檔板",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            0,
+            -0.029564,
+            0.237498
+          ],
+          "dimensions": [
+            0.01379,
+            0.544679,
+            0.191711
+          ],
+          "triangles_evaluated": 320,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "車燈架",
+          "type": "MESH",
+          "parent": "handle",
+          "origin_world": [
+            -5.4e-05,
+            -0.415912,
+            0.624222
+          ],
+          "dimensions": [
+            0.055268,
+            0.110522,
+            0.032502
+          ],
+          "triangles_evaluated": 21824,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "煞車TL.003",
+          "type": "MESH",
+          "parent": "handle",
+          "origin_world": [
+            -0.159859,
+            -0.147697,
+            1.01355
+          ],
+          "dimensions": [
+            0.085911,
+            0.137385,
+            0.061504
+          ],
+          "triangles_evaluated": 15160,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "煞車TL.002",
+          "type": "MESH",
+          "parent": "handle",
+          "origin_world": [
+            0.133826,
+            -0.517947,
+            1.094024
+          ],
+          "dimensions": [
+            0.085911,
+            0.137385,
+            0.061504
+          ],
+          "triangles_evaluated": 15160,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "柱体.073",
+          "type": "MESH",
+          "parent": "Saddle車座",
+          "origin_world": [
+            0,
+            0.182609,
+            0.751608
+          ],
+          "dimensions": [
+            0.110362,
+            0.033106,
+            0.057803
+          ],
+          "triangles_evaluated": 9848,
+          "modifiers": [],
+          "material_count": 1
+        },
+        {
+          "name": "柱体.066",
+          "type": "MESH",
+          "parent": "車燈架",
+          "origin_world": [
+            -0.055703,
+            -0.458066,
+            0.646699
+          ],
+          "dimensions": [
+            0.012648,
+            0.011648,
+            0.011646
+          ],
+          "triangles_evaluated": 3600,
+          "modifiers": [
+            "SUBSURF",
+            "MIRROR"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "柱体.054",
+          "type": "MESH",
+          "parent": "Seatpost坐管",
+          "origin_world": [
+            0,
+            0.163193,
+            0.755071
+          ],
+          "dimensions": [
+            0.033106,
+            0.054447,
+            0.033106
+          ],
+          "triangles_evaluated": 2176,
+          "modifiers": [],
+          "material_count": 1
+        },
+        {
+          "name": "後座",
+          "type": "CURVE",
+          "parent": "Frameset",
+          "origin_world": [
+            0,
+            0.343626,
+            0.652959
+          ],
+          "dimensions": [
+            0.295168,
+            0.590019,
+            0.455331
+          ],
+          "triangles_evaluated": 4992,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "後剎車線lse",
+          "type": "CURVE",
+          "parent": "Frameset",
+          "origin_world": [
+            0.183502,
+            -0.461084,
+            1.003635
+          ],
+          "dimensions": [
+            2.12703,
+            2.54622,
+            2.585508
+          ],
+          "triangles_evaluated": 4320,
+          "modifiers": [
+            "HOOK",
+            "HOOK",
+            "HOOK",
+            "HOOK",
+            "HOOK"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "平面.010",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            0.153276,
+            -0.221737,
+            1.076447
+          ],
+          "dimensions": [
+            0.939361,
+            0.089281,
+            0.054125
+          ],
+          "triangles_evaluated": 0,
+          "modifiers": [],
+          "material_count": 0
+        },
+        {
+          "name": "小齒輪",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            -0.046455,
+            0.477146,
+            0.28866
+          ],
+          "dimensions": [
+            0.002736,
+            0.105901,
+            0.105901
+          ],
+          "triangles_evaluated": 10496,
+          "modifiers": [
+            "SUBSURF",
+            "SOLIDIFY",
+            "BEVEL"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "大齒輪",
+          "type": "MESH",
+          "parent": "Crank.L",
+          "origin_world": [
+            -0.020009,
+            -0.029565,
+            0.237498
+          ],
+          "dimensions": [
+            0.002736,
+            0.189969,
+            0.189969
+          ],
+          "triangles_evaluated": 42304,
+          "modifiers": [
+            "SUBSURF",
+            "SOLIDIFY",
+            "BEVEL"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "剎車TL2.003",
+          "type": "MESH",
+          "parent": "煞車TL.003",
+          "origin_world": [
+            -0.21325,
+            -0.184838,
+            1.003332
+          ],
+          "dimensions": [
+            0.218951,
+            0.051187,
+            0.014287
+          ],
+          "triangles_evaluated": 944,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "剎車TL2.002",
+          "type": "MESH",
+          "parent": "煞車TL.002",
+          "origin_world": [
+            0.087467,
+            -0.563953,
+            1.085732
+          ],
+          "dimensions": [
+            0.218951,
+            0.051187,
+            0.014287
+          ],
+          "triangles_evaluated": 944,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "前剎車線lse",
+          "type": "CURVE",
+          "parent": "Frameset",
+          "origin_world": [
+            0.183502,
+            -0.734203,
+            1.003635
+          ],
+          "dimensions": [
+            2.122658,
+            1.887417,
+            2.221295
+          ],
+          "triangles_evaluated": 2880,
+          "modifiers": [
+            "HOOK",
+            "HOOK",
+            "HOOK",
+            "HOOK",
+            "HOOK"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "Seatpost坐管",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            0,
+            0.003256,
+            0.331999
+          ],
+          "dimensions": [
+            0.030298,
+            0.030298,
+            0.242482
+          ],
+          "triangles_evaluated": 128,
+          "modifiers": [
+            "SHRINKWRAP",
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "Saddle車座",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            0,
+            0.182609,
+            0.751608
+          ],
+          "dimensions": [
+            0.243536,
+            0.334459,
+            0.08998
+          ],
+          "triangles_evaluated": 12824,
+          "modifiers": [],
+          "material_count": 2
+        },
+        {
+          "name": "Pedals.R",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            -0.051965,
+            -0.029564,
+            0.38326
+          ],
+          "dimensions": [
+            0.17356,
+            0.137648,
+            0.032037
+          ],
+          "triangles_evaluated": 34240,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "Pedals.L",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            0.052224,
+            -0.029564,
+            0.091736
+          ],
+          "dimensions": [
+            0.17356,
+            0.137648,
+            0.032037
+          ],
+          "triangles_evaluated": 34240,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "handle",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            0,
+            -0.40701,
+            0.664955
+          ],
+          "dimensions": [
+            0.928191,
+            0.116643,
+            0.493675
+          ],
+          "triangles_evaluated": 42112,
+          "modifiers": [],
+          "material_count": 3
+        },
+        {
+          "name": "front_wheelset",
+          "type": "MESH",
+          "parent": "Front_axis",
+          "origin_world": [
+            -3.3e-05,
+            -0.488744,
+            0.289027
+          ],
+          "dimensions": [
+            0.085116,
+            0.58183,
+            0.58183
+          ],
+          "triangles_evaluated": 19328,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "front_mudguard",
+          "type": "MESH",
+          "parent": "Fork",
+          "origin_world": [
+            -3.3e-05,
+            -0.488745,
+            0.289027
+          ],
+          "dimensions": [
+            0.342433,
+            0.454628,
+            0.088864
+          ],
+          "triangles_evaluated": 2000,
+          "modifiers": [],
+          "material_count": 1
+        },
+        {
+          "name": "Front_axis",
+          "type": "MESH",
+          "parent": "Fork",
+          "origin_world": [
+            -3.3e-05,
+            -0.488744,
+            0.289027
+          ],
+          "dimensions": [
+            0.168464,
+            0.041549,
+            0.041541
+          ],
+          "triangles_evaluated": 5904,
+          "modifiers": [],
+          "material_count": 3
+        },
+        {
+          "name": "Frameset",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            0,
+            -0.029565,
+            0.237498
+          ],
+          "dimensions": [
+            0.143501,
+            0.941573,
+            0.560105
+          ],
+          "triangles_evaluated": 13080,
+          "modifiers": [],
+          "material_count": 2
+        },
+        {
+          "name": "Fork",
+          "type": "MESH",
+          "parent": "handle",
+          "origin_world": [
+            0.041241,
+            -0.540702,
+            0.300368
+          ],
+          "dimensions": [
+            0.147656,
+            0.043065,
+            0.366383
+          ],
+          "triangles_evaluated": 3528,
+          "modifiers": [],
+          "material_count": 1
+        },
+        {
+          "name": "F_V-BrakeR01.003",
+          "type": "MESH",
+          "parent": "F_V-BrakeR01.002",
+          "origin_world": [
+            -0.041244,
+            -0.431492,
+            0.601382
+          ],
+          "dimensions": [
+            0.065659,
+            0.012674,
+            0.012674
+          ],
+          "triangles_evaluated": 16128,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "F_V-BrakeR01.002",
+          "type": "MESH",
+          "parent": "F_V-BrakeR.001",
+          "origin_world": [
+            -0.065123,
+            -0.401387,
+            0.594839
+          ],
+          "dimensions": [
+            0.037682,
+            0.005989,
+            0.008133
+          ],
+          "triangles_evaluated": 5568,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "F_V-BrakeR.001",
+          "type": "MESH",
+          "parent": "handle",
+          "origin_world": [
+            -0.059901,
+            -0.411538,
+            0.487539
+          ],
+          "dimensions": [
+            0.038902,
+            0.037961,
+            0.123005
+          ],
+          "triangles_evaluated": 33360,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "F_V-BrakeL.001",
+          "type": "MESH",
+          "parent": "handle",
+          "origin_world": [
+            0.016715,
+            -0.508126,
+            0.508533
+          ],
+          "dimensions": [
+            0.038902,
+            0.037961,
+            0.123005
+          ],
+          "triangles_evaluated": 33360,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "Crank.R",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            0,
+            -0.029564,
+            0.237498
+          ],
+          "dimensions": [
+            0.182015,
+            0.053399,
+            0.186064
+          ],
+          "triangles_evaluated": 24320,
+          "modifiers": [
+            "SUBSURF",
+            "NODES"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "Crank.L",
+          "type": "MESH",
+          "parent": "Pink city bicycle",
+          "origin_world": [
+            0,
+            -0.029564,
+            0.237498
+          ],
+          "dimensions": [
+            0.182015,
+            0.053399,
+            0.186064
+          ],
+          "triangles_evaluated": 24320,
+          "modifiers": [
+            "SUBSURF",
+            "NODES"
+          ],
+          "material_count": 2
+        },
+        {
+          "name": "ChainC",
+          "type": "CURVE",
+          "parent": "Frameset",
+          "origin_world": [
+            -0.059754,
+            -0.029564,
+            0.237498
+          ],
+          "dimensions": [
+            0.201784,
+            0.842003,
+            0.377295
+          ],
+          "triangles_evaluated": 0,
+          "modifiers": [],
+          "material_count": 0
+        },
+        {
+          "name": "Chain02",
+          "type": "MESH",
+          "parent": "ChainC",
+          "origin_world": [
+            -0.059754,
+            0.223551,
+            0.237498
+          ],
+          "dimensions": [
+            0.022409,
+            0.665716,
+            0.206429
+          ],
+          "triangles_evaluated": 74800,
+          "modifiers": [
+            "ARRAY",
+            "CURVE"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "Chain01",
+          "type": "MESH",
+          "parent": "Chain02",
+          "origin_world": [
+            -0.059754,
+            0.223551,
+            0.237498
+          ],
+          "dimensions": [
+            0.020089,
+            0.665712,
+            0.206422
+          ],
+          "triangles_evaluated": 26400,
+          "modifiers": [
+            "ARRAY",
+            "CURVE"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "Bolt.001",
+          "type": "CURVE",
+          "parent": "Saddle車座",
+          "origin_world": [
+            0.068158,
+            0.259749,
+            0.753098
+          ],
+          "dimensions": [
+            1.476352,
+            1.476353,
+            1.174933
+          ],
+          "triangles_evaluated": 5984,
+          "modifiers": [
+            "MIRROR"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "BK_V-BrakeR01.005",
+          "type": "MESH",
+          "parent": "BK_V-BrakeR.002",
+          "origin_world": [
+            0.053755,
+            0.281469,
+            0.558206
+          ],
+          "dimensions": [
+            0.037682,
+            0.005989,
+            0.008133
+          ],
+          "triangles_evaluated": 5568,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "BK_V-BrakeR01.004",
+          "type": "MESH",
+          "parent": "BK_V-BrakeR01.005",
+          "origin_world": [
+            0.014807,
+            0.282619,
+            0.55713
+          ],
+          "dimensions": [
+            0.059749,
+            0.012674,
+            0.012674
+          ],
+          "triangles_evaluated": 16128,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "BK_V-BrakeR.002",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            0.060727,
+            0.351384,
+            0.476311
+          ],
+          "dimensions": [
+            0.038902,
+            0.044304,
+            0.123005
+          ],
+          "triangles_evaluated": 33360,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "BK_V-BrakeL.002",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            -0.056212,
+            0.350239,
+            0.471498
+          ],
+          "dimensions": [
+            0.038902,
+            0.044304,
+            0.123005
+          ],
+          "triangles_evaluated": 33360,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "basket",
+          "type": "MESH",
+          "parent": "handle",
+          "origin_world": [
+            -0.195012,
+            -0.529929,
+            0.811108
+          ],
+          "dimensions": [
+            0.354281,
+            0.247067,
+            0.269997
+          ],
+          "triangles_evaluated": 47424,
+          "modifiers": [
+            "SUBSURF",
+            "WIREFRAME"
+          ],
+          "material_count": 1
+        },
+        {
+          "name": "back_wheelset",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            0,
+            0.477146,
+            0.28866
+          ],
+          "dimensions": [
+            0.085116,
+            0.58183,
+            0.58183
+          ],
+          "triangles_evaluated": 19328,
+          "modifiers": [
+            "SUBSURF"
+          ],
+          "material_count": 3
+        },
+        {
+          "name": "back_mudguard",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            0,
+            0.477146,
+            0.28866
+          ],
+          "dimensions": [
+            0.464974,
+            0.589218,
+            0.079284
+          ],
+          "triangles_evaluated": 2448,
+          "modifiers": [],
+          "material_count": 1
+        },
+        {
+          "name": "back_axis",
+          "type": "MESH",
+          "parent": "Frameset",
+          "origin_world": [
+            0,
+            0.477146,
+            0.28866
+          ],
+          "dimensions": [
+            0.168464,
+            0.041549,
+            0.041541
+          ],
+          "triangles_evaluated": 5904,
+          "modifiers": [],
+          "material_count": 3
+        }
+      ]
+    },
+    "blue": {
+      "blender_version": "5.3.0 Beta",
+      "file_version": [
+        3,
+        3,
+        6
+      ],
+      "scene": "upload",
+      "unit_system": "METRIC",
+      "unit_scale": 1,
+      "frame": 1,
+      "objects_total": 1,
+      "mesh_count": 1,
+      "armatures": [],
+      "action_count": 0,
+      "materials": 15,
+      "images": [],
+      "bounds_min": [
+        -0.3774009346961975,
+        -0.8780275583267212,
+        -0.0030826348811388016
+      ],
+      "bounds_max": [
+        0.3774009346961975,
+        0.8468658924102783,
+        1.0098625421524048
+      ],
+      "bounds_dimensions": [
+        0.754801869392395,
+        1.7248934507369995,
+        1.0129451770335436
+      ],
+      "triangles_evaluated": 144412,
+      "objects": [
+        {
+          "name": "Blue Bicycle",
+          "type": "MESH",
+          "parent": null,
+          "origin_world": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": [
+            0.754802,
+            1.724893,
+            1.012945
+          ],
+          "triangles_evaluated": 144412,
+          "modifiers": [],
+          "material_count": 15
+        }
+      ]
+    },
+    "rigged": {
+      "blender_version": "5.3.0 Beta",
+      "file_version": [
+        2,
+        62,
+        0
+      ],
+      "scene": "Scene",
+      "unit_system": "NONE",
+      "unit_scale": 1,
+      "frame": 2,
+      "objects_total": 4,
+      "mesh_count": 1,
+      "armatures": [
+        {
+          "name": "BicycleArm",
+          "bones": 7
+        }
+      ],
+      "action_count": 1,
+      "materials": 3,
+      "images": [
+        {
+          "name": "bicycle_diffuse.png",
+          "packed": false,
+          "size": [
+            512,
+            512
+          ]
+        },
+        {
+          "name": "Render Result",
+          "packed": false,
+          "size": [
+            0,
+            0
+          ]
+        }
+      ],
+      "bounds_min": [
+        -0.3222220242023468,
+        -0.6273687481880188,
+        0.011186763644218445
+      ],
+      "bounds_max": [
+        0.33100008964538574,
+        0.6556325554847717,
+        0.8471579551696777
+      ],
+      "bounds_dimensions": [
+        0.6532221138477325,
+        1.2830013036727905,
+        0.8359711915254593
+      ],
+      "triangles_evaluated": 820,
+      "objects": [
+        {
+          "name": "Bicycle",
+          "type": "MESH",
+          "parent": null,
+          "origin_world": [
+            0,
+            0,
+            0
+          ],
+          "dimensions": [
+            0.653222,
+            1.283001,
+            0.835971
+          ],
+          "triangles_evaluated": 820,
+          "modifiers": [
+            "EDGE_SPLIT",
+            "ARMATURE"
+          ],
+          "material_count": 3
+        }
+      ]
+    },
+    "wheel_obj": {
+      "archive": "references/models/bicycle-wheel.zip",
+      "member": "BicycleWheel.obj",
+      "vertices": 274,
+      "faces": 240,
+      "objects": [
+        "BicycleWheel"
+      ],
+      "units": "not-declared",
+      "bounds_dimensions": [
+        5.512538,
+        5.522486,
+        0.559952
+      ],
+      "declaredMaterialLibrary": "BicycleWheel.mtl",
+      "materialLibraryIncluded": false,
+      "textureFiles": [
+        "ao.png",
+        "BaseMaterial_albedom1.tga",
+        "BaseMaterial_normal.tga"
+      ]
+    }
+  },
+  "additionalReports": [
+    "references/inspections/blendswap-front-wheel.json",
+    "references/inspections/blendswap-chain.json",
+    "references/inspections/blendswap-simple.json",
+    "references/inspections/blendswap-old.json"
+  ]
+}

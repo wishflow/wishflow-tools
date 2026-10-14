@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import bpy
+from mathutils import Vector
 
 if "--" in sys.argv and len(sys.argv) > sys.argv.index("--") + 1:
     MODULE_ROOT = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
@@ -55,7 +56,7 @@ def check_number(value, label):
         fail(label + " 不是有限数值。")
 
 
-def check_glb(glb_path, max_bytes):
+def check_glb(glb_path, max_bytes, require_pbr_textures=False):
     if not glb_path.is_file():
         fail("找不到网页模型：" + str(glb_path.relative_to(MODULE_ROOT)))
         return
@@ -77,8 +78,104 @@ def check_glb(glb_path, max_bytes):
         document = json.loads(json_bytes.decode("utf-8").rstrip(" \t\n\r\x00"))
         if not str(document.get("asset", {}).get("version", "")).startswith("2."):
             fail("glTF asset.version 必须为 2.x。")
+        if require_pbr_textures:
+            images = document.get("images", [])
+            textures = document.get("textures", [])
+            textured_materials = [
+                material
+                for material in document.get("materials", [])
+                if material.get("normalTexture")
+                and material.get("pbrMetallicRoughness", {}).get("baseColorTexture")
+                and material.get("pbrMetallicRoughness", {}).get("metallicRoughnessTexture")
+            ]
+            if len(images) < 3 or len(textures) < 3 or not textured_materials:
+                fail("GLB 必须嵌入 Metal012 底色、法线、粗糙度贴图，并由金属材质引用。")
+            else:
+                image_names = " ".join(str(image.get("name", "")) for image in images)
+                for suffix in ("Color", "NormalGL", "Roughness"):
+                    if suffix not in image_names:
+                        fail("GLB 缺少 Metal012 贴图：" + suffix)
     except Exception as error:
         fail("GLB JSON chunk 无法解析：" + str(error))
+
+
+def check_measurements(contract):
+    checks = contract.get("measurementChecks", {})
+    if not isinstance(checks, dict):
+        fail("scene-contract.json 的 measurementChecks 必须是对象。")
+        return
+
+    objects = {obj.name: obj for obj in bpy.context.scene.objects}
+    for name, expected_count in checks.get("namePrefixCounts", {}).items():
+        if not isinstance(name, str) or type(expected_count) is not int:
+            fail("measurementChecks.namePrefixCounts 的键值无效。")
+            continue
+        actual_count = sum(obj.name.startswith(name) for obj in bpy.context.scene.objects)
+        if actual_count != expected_count:
+            fail("对象名前缀数量不符：{} 预期 {}，实际 {}。".format(name, expected_count, actual_count))
+
+    for item in checks.get("worldLocationsMm", []):
+        if not isinstance(item, dict):
+            fail("measurementChecks.worldLocationsMm 条目必须是对象。")
+            continue
+        name = item.get("object")
+        expected = item.get("browserMm")
+        tolerance = item.get("toleranceMm", 1)
+        obj = objects.get(name)
+        if obj is None:
+            fail("尺寸定位对象不存在：{}。".format(name))
+            continue
+        if not isinstance(expected, list) or len(expected) != 3:
+            fail("尺寸定位值必须是三个浏览器坐标。")
+            continue
+        bpy_point = obj.matrix_world.translation
+        actual = (bpy_point.x * 1000, bpy_point.z * 1000, -bpy_point.y * 1000)
+        errors = [abs(float(actual[index]) - float(expected[index])) for index in range(3)]
+        if max(errors) > float(tolerance):
+            fail("{} 世界坐标偏差超限：预期 {} mm，实际 {} mm，容差 {} mm。".format(name, expected, [round(value, 4) for value in actual], tolerance))
+
+    for item in checks.get("browserBoundsMm", []):
+        if not isinstance(item, dict):
+            fail("measurementChecks.browserBoundsMm 条目必须是对象。")
+            continue
+        name = item.get("object")
+        expected = item.get("dimensions")
+        tolerance = float(item.get("toleranceMm", 1))
+        obj = objects.get(name)
+        if obj is None or obj.type != "MESH":
+            fail("尺寸包络网格不存在：{}。".format(name))
+            continue
+        if not isinstance(expected, list) or len(expected) != 3:
+            fail("browserBoundsMm.dimensions 必须是三个浏览器坐标尺寸。")
+            continue
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        evaluated = obj.evaluated_get(depsgraph)
+        corners = [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
+        extents = (
+            (max(point.x for point in corners) - min(point.x for point in corners)) * 1000,
+            (max(point.z for point in corners) - min(point.z for point in corners)) * 1000,
+            (max(point.y for point in corners) - min(point.y for point in corners)) * 1000,
+        )
+        errors = [abs(extents[index] - float(expected[index])) for index in range(3)]
+        if max(errors) > tolerance:
+            fail("{} 包络尺寸偏差超限：预期 {} mm，实际 {} mm，容差 {} mm。".format(name, expected, [round(value, 4) for value in extents], tolerance))
+
+    for item in checks.get("circleClearancesMm", []):
+        first = objects.get(item.get("first")) if isinstance(item, dict) else None
+        second = objects.get(item.get("second")) if isinstance(item, dict) else None
+        if first is None or second is None:
+            fail("圆形机构间隙检查缺少中心对象。")
+            continue
+        first_radius = float(item.get("firstRadiusMm", -1))
+        second_radius = float(item.get("secondRadiusMm", -1))
+        minimum = float(item.get("minimumClearanceMm", 0))
+        if first_radius < 0 or second_radius < 0:
+            fail("圆形机构间隙检查半径不得为负值。")
+            continue
+        distance = (first.matrix_world.translation - second.matrix_world.translation).length * 1000
+        clearance = distance - first_radius - second_radius
+        if clearance < minimum:
+            fail("{} 与 {} 圆形外包间隙不足：{} mm < {} mm。".format(first.name, second.name, round(clearance, 3), minimum))
 
 
 def check_scene(contract):
@@ -135,12 +232,33 @@ def check_scene(contract):
         if width > 0 and height > 0 and max(width, height) > max_texture_edge:
             fail("贴图超出最长边预算：" + image.name + " " + str(width) + "x" + str(height))
 
+    texture_material_names = contract.get("textureMaterialNames", [])
+    if not isinstance(texture_material_names, list) or any(not isinstance(name, str) for name in texture_material_names):
+        fail("scene-contract.json 的 textureMaterialNames 必须是材质名数组。")
+        texture_material_names = []
+    for material_name in texture_material_names:
+        material = bpy.data.materials.get(material_name)
+        if material is None:
+            fail("缺少要求使用 PBR 贴图的材质：" + material_name)
+            continue
+        image_names = {node.image.name for node in material.node_tree.nodes if node.type == "TEX_IMAGE" and node.image}
+        for suffix in ("Color.jpg", "NormalGL.jpg", "Roughness.jpg"):
+            if not any(name.endswith(suffix) for name in image_names):
+                fail("材质 {} 未连接 Metal012 {} 贴图。".format(material_name, suffix))
+        users = [obj for obj in meshes if any(slot == material for slot in obj.data.materials)]
+        if not users:
+            fail("PBR 贴图材质没有实际网格使用：" + material_name)
+        for obj in users:
+            if not obj.data.uv_layers:
+                fail("使用 PBR 贴图的网格缺少 UV：" + obj.name)
+
     model_path = resolve_module_path(contract.get("modelPath", "assets/scene.glb"))
-    check_glb(model_path, max_glb_bytes)
+    check_glb(model_path, max_glb_bytes, bool(texture_material_names))
 
 
 contract = load_contract()
 check_scene(contract)
+check_measurements(contract)
 if errors:
     for message in errors:
         print("ERROR: " + message)

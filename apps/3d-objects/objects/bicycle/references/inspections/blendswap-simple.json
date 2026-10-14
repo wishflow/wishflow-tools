@@ -1,0 +1,5962 @@
+{
+  "source": {
+    "title": "Simple Bicycle",
+    "author_from_download_page": "brodysean1899",
+    "url": "https://blendswap.com/blend/21760",
+    "legacy_id_in_license": 92090,
+    "zip_path": "/Users/shiwei/.codex/worktrees/0d85/wishflow-tools/apps/3d-objects/objects/bicycle/references/models/blendswap-simple-bicycle.zip",
+    "zip_sha256": "141457b79509817e839d73a71e0717be27966223688fd3cca4de6d10a2e0a18c",
+    "blend_path": "/tmp/blendswap-simple-bicycle-inspect/Bicycle.blend"
+  },
+  "inspection": {
+    "blender_version": "5.2.2 LTS",
+    "opened_background": true,
+    "autoexec_disabled": true,
+    "read_only": true,
+    "saved_blend": false,
+    "frame": 2,
+    "render_engine": "CYCLES",
+    "autoexec_disabled_cli": true,
+    "background_command": "Blender --background --factory-startup --disable-autoexec Bicycle.blend --python supplement_report.py",
+    "source_blend_sha256_after_inspection": "61c6b3cf31907595f4c48693408c007e7804a89164e68473f6c8276e09a07a7f"
+  },
+  "units": {
+    "system": "NONE",
+    "scale_length": 1.0,
+    "length_unit": "ADAPTIVE",
+    "physical_scale_confirmed": false
+  },
+  "summary": {
+    "objects": 74,
+    "mesh_objects": 70,
+    "armature_objects": 0,
+    "base_vertices": 21478,
+    "base_triangles": 41663,
+    "evaluated_vertices": 20716,
+    "evaluated_triangles": 40181,
+    "all_mesh_world_bounds": {
+      "min": [
+        -99.634651184,
+        -97.670852661,
+        -3.059827566
+      ],
+      "max": [
+        98.912223816,
+        100.876022339,
+        22.818254471
+      ],
+      "dimensions": [
+        198.546875,
+        198.546875,
+        25.878082037
+      ],
+      "centre": [
+        -0.361213684,
+        1.602584839,
+        9.879213452
+      ]
+    },
+    "materials": 9,
+    "images": 4,
+    "actions": 0,
+    "embedded_texts": [],
+    "evaluated_curves_triangles": 3840,
+    "evaluated_meshes_and_curves_triangles": 44021,
+    "bicycle_geometry_excluding_background": {
+      "objects": 71,
+      "mesh_objects": 69,
+      "curve_objects": 2,
+      "triangles": 44001,
+      "bounds_source_BU": {
+        "min": [
+          -4.813038349,
+          -2.0731287,
+          -3.055893421
+        ],
+        "max": [
+          4.795558453,
+          2.07043004,
+          3.077789307
+        ],
+        "dimensions": [
+          9.608596802000001,
+          4.14355874,
+          6.133682728
+        ]
+      }
+    }
+  },
+  "objects": [
+    {
+      "name": "Cylinder.046",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        1.809792757,
+        -1.69e-07,
+        0.749448121
+      ],
+      "world_origin": [
+        1.809792757,
+        -1.69e-07,
+        0.749448121
+      ],
+      "rotation_euler": [
+        1e-08,
+        -0.366327137,
+        -5.2e-08
+      ],
+      "scale": [
+        0.089690864,
+        0.089690879,
+        0.018395647
+      ],
+      "dimensions": [
+        0.467208833,
+        0.616121948,
+        2.260528326
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.046\", name=\"s_curve\", address=0x122665350>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.046\", name=\"cycles\", address=0x122665400>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.046\", name=\"cycles_visibility\", address=0x1226654b0>"
+      },
+      "base_vertices": 391,
+      "base_polygons": 523,
+      "base_triangles": 774,
+      "uv_layers": [],
+      "evaluated_vertices": 391,
+      "evaluated_triangles": 774,
+      "evaluated_world_bounds": {
+        "min": [
+          1.719376683,
+          -0.308061153,
+          -1.220166087
+        ],
+        "max": [
+          2.955951452,
+          0.308060795,
+          0.798782885
+        ],
+        "dimensions": [
+          1.236574769,
+          0.616121948,
+          2.018948972
+        ],
+        "centre": [
+          2.337664068,
+          -1.79e-07,
+          -0.210691601
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.045",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        1.797288895,
+        -1.64e-07,
+        0.782040298
+      ],
+      "world_origin": [
+        1.797288895,
+        -1.64e-07,
+        0.782040298
+      ],
+      "rotation_euler": [
+        1e-08,
+        -0.366327137,
+        -5.2e-08
+      ],
+      "scale": [
+        0.111731641,
+        0.111731648,
+        0.019707255
+      ],
+      "dimensions": [
+        0.222389862,
+        0.222326368,
+        0.039414514
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.045\", name=\"s_curve\", address=0x122664d60>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.045\", name=\"cycles\", address=0x122664e10>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.045\", name=\"cycles_visibility\", address=0x122664ec0>"
+      },
+      "base_vertices": 189,
+      "base_polygons": 263,
+      "base_triangles": 374,
+      "uv_layers": [],
+      "evaluated_vertices": 189,
+      "evaluated_triangles": 374,
+      "evaluated_world_bounds": {
+        "min": [
+          1.68837893,
+          -0.111195095,
+          0.724566579
+        ],
+        "max": [
+          1.906226397,
+          0.111131281,
+          0.839503467
+        ],
+        "dimensions": [
+          0.217847466,
+          0.222326376,
+          0.114936888
+        ],
+        "centre": [
+          1.797302663,
+          -3.1907e-05,
+          0.782035023
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.043",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953828335,
+        0.086001053,
+        -1.194443583
+      ],
+      "world_origin": [
+        -2.953828335,
+        0.086001053,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        3.141592979
+      ],
+      "scale": [
+        0.10569834,
+        0.10569834,
+        0.017321408
+      ],
+      "dimensions": [
+        0.211396679,
+        0.211396679,
+        0.034642816
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.043\", name=\"s_curve\", address=0x122664180>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.043\", name=\"cycles\", address=0x122664230>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.043\", name=\"cycles_visibility\", address=0x1226642e0>"
+      },
+      "base_vertices": 192,
+      "base_polygons": 162,
+      "base_triangles": 380,
+      "uv_layers": [],
+      "evaluated_vertices": 192,
+      "evaluated_triangles": 380,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.059526682,
+          0.068679608,
+          -1.300141931
+        ],
+        "max": [
+          -2.848129988,
+          0.103322499,
+          -1.088745236
+        ],
+        "dimensions": [
+          0.211396694,
+          0.03464289,
+          0.211396694
+        ],
+        "centre": [
+          -2.953828335,
+          0.086001053,
+          -1.194443583
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.042",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953828335,
+        0.1091097,
+        -1.194443583
+      ],
+      "world_origin": [
+        -2.953828335,
+        0.1091097,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        3.141592979
+      ],
+      "scale": [
+        0.037927918,
+        0.037927918,
+        0.006215471
+      ],
+      "dimensions": [
+        0.075855836,
+        0.075855836,
+        0.012430942
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.042\", name=\"s_curve\", address=0x122663b90>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.042\", name=\"cycles\", address=0x122663c40>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.042\", name=\"cycles_visibility\", address=0x122663cf0>"
+      },
+      "base_vertices": 192,
+      "base_polygons": 162,
+      "base_triangles": 380,
+      "uv_layers": [],
+      "evaluated_vertices": 192,
+      "evaluated_triangles": 380,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.991756201,
+          0.102894217,
+          -1.232371449
+        ],
+        "max": [
+          -2.915900469,
+          0.115325183,
+          -1.156515718
+        ],
+        "dimensions": [
+          0.075855732,
+          0.012430966,
+          0.075855732
+        ],
+        "centre": [
+          -2.953828335,
+          0.1091097,
+          -1.194443583
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "NurbsPath",
+      "type": "CURVE",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.873295307,
+        -0.130042657,
+        -2.021575451
+      ],
+      "world_origin": [
+        -0.873295307,
+        -0.130042657,
+        -2.021575451
+      ],
+      "rotation_euler": [
+        4e-09,
+        0.244038165,
+        3.3e-08
+      ],
+      "scale": [
+        0.087101519,
+        0.087101519,
+        0.087101519
+      ],
+      "dimensions": [
+        3.177644253,
+        0.028106216,
+        0.991959333
+      ],
+      "material_slots": [],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBNurbsPath\", name=\"s_curve\", address=0x122665f40>",
+        "cycles": "<bpy id prop: owner=\"OBNurbsPath\", name=\"cycles\", address=0x122665ff0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBNurbsPath\", name=\"cycles_visibility\", address=0x1226660a0>"
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ],
+      "evaluated_vertices": 326,
+      "evaluated_triangles": 0,
+      "curve_data": {
+        "splines": 3,
+        "bevel_depth": 0.0,
+        "bevel_resolution": 0,
+        "resolution_u": 12
+      },
+      "evaluated_world_bounds": {
+        "min": [
+          -3.129962205886841,
+          -0.1337881237268448,
+          -2.087073564529419
+        ],
+        "max": [
+          0.018654704093933105,
+          -0.1056818962097168,
+          -1.0219298601150513
+        ],
+        "dimensions": [
+          3.148616909980774,
+          0.02810622751712799,
+          1.0651437044143677
+        ]
+      }
+    },
+    {
+      "name": "Cylinder.041",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.715323329,
+        1.99e-07,
+        -1.509803534
+      ],
+      "world_origin": [
+        -0.715323329,
+        1.99e-07,
+        -1.509803534
+      ],
+      "rotation_euler": [
+        4.55e-07,
+        1.668762445,
+        4.65e-07
+      ],
+      "scale": [
+        0.076228932,
+        0.076228924,
+        0.249508977
+      ],
+      "dimensions": [
+        0.185964301,
+        0.310463816,
+        2.507132292
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [
+        {
+          "name": "Mirror",
+          "type": "MIRROR",
+          "viewport": true,
+          "render": true,
+          "levels": null,
+          "render_levels": null
+        }
+      ],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.041\", name=\"s_curve\", address=0x1226634d0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.041\", name=\"cycles\", address=0x122663580>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.041\", name=\"cycles_visibility\", address=0x122663630>"
+      },
+      "base_vertices": 352,
+      "base_polygons": 323,
+      "base_triangles": 730,
+      "uv_layers": [],
+      "evaluated_vertices": 700,
+      "evaluated_triangles": 1460,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.955341816,
+          -0.155231714,
+          -1.610071301
+        ],
+        "max": [
+          -0.459554791,
+          0.155232102,
+          -1.179777384
+        ],
+        "dimensions": [
+          2.495787024,
+          0.310463816,
+          0.430293918
+        ],
+        "centre": [
+          -1.707448304,
+          1.94e-07,
+          -1.394924343
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Circle.003",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.132805645,
+        0.246822417,
+        -0.732669115
+      ],
+      "world_origin": [
+        -0.132805645,
+        0.246822417,
+        -0.732669115
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.030842068,
+        0.030842068,
+        0.030842068
+      ],
+      "dimensions": [
+        0.359150112,
+        0.18505241,
+        0.01102604
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [
+        {
+          "name": "Mirror",
+          "type": "MIRROR",
+          "viewport": true,
+          "render": true,
+          "levels": null,
+          "render_levels": null
+        }
+      ],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCircle.003\", name=\"s_curve\", address=0x122650730>",
+        "cycles": "<bpy id prop: owner=\"OBCircle.003\", name=\"cycles\", address=0x1226507e0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCircle.003\", name=\"cycles_visibility\", address=0x122650ed0>"
+      },
+      "base_vertices": 48,
+      "base_polygons": 33,
+      "base_triangles": 92,
+      "uv_layers": [],
+      "evaluated_vertices": 92,
+      "evaluated_triangles": 182,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.312380701,
+          0.246822417,
+          -0.825195312
+        ],
+        "max": [
+          0.04676941,
+          0.257848471,
+          -0.640142918
+        ],
+        "dimensions": [
+          0.359150112,
+          0.011026055,
+          0.185052395
+        ],
+        "centre": [
+          -0.132805645,
+          0.252335444,
+          -0.732669115
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Sphere.003",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.132805645,
+        0.246822417,
+        -0.732669115
+      ],
+      "world_origin": [
+        -0.132805645,
+        0.246822417,
+        -0.732669115
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.025507836,
+        0.013699944,
+        0.025507836
+      ],
+      "dimensions": [
+        0.153560594,
+        0.081806898,
+        0.152924135
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBSphere.003\", name=\"s_curve\", address=0x122667bf0>",
+        "cycles": "<bpy id prop: owner=\"OBSphere.003\", name=\"cycles\", address=0x122667ca0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBSphere.003\", name=\"cycles_visibility\", address=0x122667d50>"
+      },
+      "base_vertices": 100,
+      "base_polygons": 174,
+      "base_triangles": 196,
+      "uv_layers": [],
+      "evaluated_vertices": 100,
+      "evaluated_triangles": 196,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.210006237,
+          0.206162095,
+          -0.809129953
+        ],
+        "max": [
+          -0.056445658,
+          0.287968993,
+          -0.656205833
+        ],
+        "dimensions": [
+          0.153560579,
+          0.081806898,
+          0.15292412
+        ],
+        "centre": [
+          -0.133225948,
+          0.247065544,
+          -0.732667893
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.040",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.132805645,
+        0.369463325,
+        -0.732669115
+      ],
+      "world_origin": [
+        -0.132805645,
+        0.369463325,
+        -0.732669115
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.037193,
+        0.037193,
+        0.094907105
+      ],
+      "dimensions": [
+        0.075174861,
+        0.076361239,
+        0.18981421
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.040\", name=\"s_curve\", address=0x122662ee0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.040\", name=\"cycles\", address=0x122662f90>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.040\", name=\"cycles_visibility\", address=0x122663040>"
+      },
+      "base_vertices": 17,
+      "base_polygons": 12,
+      "base_triangles": 30,
+      "uv_layers": [],
+      "evaluated_vertices": 17,
+      "evaluated_triangles": 30,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.171089381,
+          0.27455622,
+          -0.769952297
+        ],
+        "max": [
+          -0.095914528,
+          0.46437043,
+          -0.693591058
+        ],
+        "dimensions": [
+          0.075174853,
+          0.18981421,
+          0.076361239
+        ],
+        "centre": [
+          -0.133501954,
+          0.369463325,
+          -0.731771678
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Sphere.002",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.132805645,
+        0.492174029,
+        -0.732669115
+      ],
+      "world_origin": [
+        -0.132805645,
+        0.492174029,
+        -0.732669115
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.025507836,
+        0.013699944,
+        0.025507836
+      ],
+      "dimensions": [
+        0.153560594,
+        0.081806898,
+        0.152924135
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBSphere.002\", name=\"s_curve\", address=0x122667600>",
+        "cycles": "<bpy id prop: owner=\"OBSphere.002\", name=\"cycles\", address=0x1226676b0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBSphere.002\", name=\"cycles_visibility\", address=0x122667760>"
+      },
+      "base_vertices": 96,
+      "base_polygons": 170,
+      "base_triangles": 188,
+      "uv_layers": [],
+      "evaluated_vertices": 96,
+      "evaluated_triangles": 188,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.210006237,
+          0.451513708,
+          -0.809129953
+        ],
+        "max": [
+          -0.056445658,
+          0.533320606,
+          -0.656205833
+        ],
+        "dimensions": [
+          0.153560579,
+          0.081806898,
+          0.15292412
+        ],
+        "centre": [
+          -0.133225948,
+          0.492417157,
+          -0.732667893
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Circle.002",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.132805645,
+        0.492174029,
+        -0.732669115
+      ],
+      "world_origin": [
+        -0.132805645,
+        0.492174029,
+        -0.732669115
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.030842068,
+        0.030842068,
+        0.030842068
+      ],
+      "dimensions": [
+        0.359150112,
+        0.18505241,
+        0.01102604
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [
+        {
+          "name": "Mirror",
+          "type": "MIRROR",
+          "viewport": true,
+          "render": true,
+          "levels": null,
+          "render_levels": null
+        }
+      ],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCircle.002\", name=\"s_curve\", address=0x1226504f0>",
+        "cycles": "<bpy id prop: owner=\"OBCircle.002\", name=\"cycles\", address=0x1226505a0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCircle.002\", name=\"cycles_visibility\", address=0x122650650>"
+      },
+      "base_vertices": 48,
+      "base_polygons": 33,
+      "base_triangles": 92,
+      "uv_layers": [],
+      "evaluated_vertices": 92,
+      "evaluated_triangles": 182,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.312380701,
+          0.492174029,
+          -0.825195312
+        ],
+        "max": [
+          0.04676941,
+          0.503200054,
+          -0.640142918
+        ],
+        "dimensions": [
+          0.359150112,
+          0.011026025,
+          0.185052395
+        ],
+        "centre": [
+          -0.132805645,
+          0.497687042,
+          -0.732669115
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cube.006",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.001436651,
+        0.377675176,
+        -0.732273817
+      ],
+      "world_origin": [
+        -0.001436651,
+        0.377675176,
+        -0.732273817
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.014290574,
+        0.041198775,
+        0.014290574
+      ],
+      "dimensions": [
+        0.085743442,
+        0.247192651,
+        0.085743442
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCube.006\", name=\"s_curve\", address=0x122650bb0>",
+        "cycles": "<bpy id prop: owner=\"OBCube.006\", name=\"cycles\", address=0x122650c60>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCube.006\", name=\"cycles_visibility\", address=0x122650d10>"
+      },
+      "base_vertices": 56,
+      "base_polygons": 54,
+      "base_triangles": 108,
+      "uv_layers": [],
+      "evaluated_vertices": 56,
+      "evaluated_triangles": 108,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.044308372,
+          0.254078865,
+          -0.775145531
+        ],
+        "max": [
+          0.04143507,
+          0.501271486,
+          -0.689402103
+        ],
+        "dimensions": [
+          0.085743442,
+          0.247192621,
+          0.085743427
+        ],
+        "centre": [
+          -0.001436651,
+          0.377675176,
+          -0.732273817
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cube.004",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.260572195,
+        0.377675176,
+        -0.732273817
+      ],
+      "world_origin": [
+        -0.260572195,
+        0.377675176,
+        -0.732273817
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.014290574,
+        0.041198775,
+        0.014290574
+      ],
+      "dimensions": [
+        0.085743442,
+        0.247192651,
+        0.085743442
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCube.004\", name=\"s_curve\", address=0x1226532a0>",
+        "cycles": "<bpy id prop: owner=\"OBCube.004\", name=\"cycles\", address=0x122653350>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCube.004\", name=\"cycles_visibility\", address=0x122653400>"
+      },
+      "base_vertices": 56,
+      "base_polygons": 54,
+      "base_triangles": 108,
+      "uv_layers": [],
+      "evaluated_vertices": 56,
+      "evaluated_triangles": 108,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.303443909,
+          0.254078865,
+          -0.775145531
+        ],
+        "max": [
+          -0.217700481,
+          0.501271486,
+          -0.689402103
+        ],
+        "dimensions": [
+          0.085743427,
+          0.247192621,
+          0.085743427
+        ],
+        "centre": [
+          -0.260572195,
+          0.377675176,
+          -0.732273817
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cube.005",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -1.043233514,
+        -0.379321218,
+        -2.491323233
+      ],
+      "world_origin": [
+        -1.043233514,
+        -0.379321218,
+        -2.491323233
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.014290574,
+        0.041198775,
+        0.014290574
+      ],
+      "dimensions": [
+        0.085743442,
+        0.247192651,
+        0.085743442
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCube.005\", name=\"s_curve\", address=0x122653890>",
+        "cycles": "<bpy id prop: owner=\"OBCube.005\", name=\"cycles\", address=0x122653940>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCube.005\", name=\"cycles_visibility\", address=0x1226539f0>"
+      },
+      "base_vertices": 56,
+      "base_polygons": 54,
+      "base_triangles": 108,
+      "uv_layers": [],
+      "evaluated_vertices": 56,
+      "evaluated_triangles": 108,
+      "evaluated_world_bounds": {
+        "min": [
+          -1.086105227,
+          -0.502917528,
+          -2.534194946
+        ],
+        "max": [
+          -1.0003618,
+          -0.255724907,
+          -2.448451519
+        ],
+        "dimensions": [
+          0.085743427,
+          0.247192621,
+          0.085743427
+        ],
+        "centre": [
+          -1.043233514,
+          -0.379321218,
+          -2.491323233
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cube.003",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.78409797,
+        -0.379321218,
+        -2.491323233
+      ],
+      "world_origin": [
+        -0.78409797,
+        -0.379321218,
+        -2.491323233
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.014290574,
+        0.041198775,
+        0.014290574
+      ],
+      "dimensions": [
+        0.085743442,
+        0.247192651,
+        0.085743442
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCube.003\", name=\"s_curve\", address=0x122652cb0>",
+        "cycles": "<bpy id prop: owner=\"OBCube.003\", name=\"cycles\", address=0x122652d60>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCube.003\", name=\"cycles_visibility\", address=0x122652e10>"
+      },
+      "base_vertices": 56,
+      "base_polygons": 54,
+      "base_triangles": 108,
+      "uv_layers": [],
+      "evaluated_vertices": 56,
+      "evaluated_triangles": 108,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.826969683,
+          -0.502917528,
+          -2.534194946
+        ],
+        "max": [
+          -0.741226256,
+          -0.255724907,
+          -2.448451519
+        ],
+        "dimensions": [
+          0.085743427,
+          0.247192621,
+          0.085743427
+        ],
+        "centre": [
+          -0.78409797,
+          -0.379321218,
+          -2.491323233
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Circle.001",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.915466964,
+        -0.264822364,
+        -2.491718531
+      ],
+      "world_origin": [
+        -0.915466964,
+        -0.264822364,
+        -2.491718531
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.030842068,
+        0.030842068,
+        0.030842068
+      ],
+      "dimensions": [
+        0.359150112,
+        0.18505241,
+        0.01102604
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [
+        {
+          "name": "Mirror",
+          "type": "MIRROR",
+          "viewport": true,
+          "render": true,
+          "levels": null,
+          "render_levels": null
+        }
+      ],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCircle.001\", name=\"s_curve\", address=0x12264fe30>",
+        "cycles": "<bpy id prop: owner=\"OBCircle.001\", name=\"cycles\", address=0x12264fee0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCircle.001\", name=\"cycles_visibility\", address=0x12264ff90>"
+      },
+      "base_vertices": 48,
+      "base_polygons": 33,
+      "base_triangles": 92,
+      "uv_layers": [],
+      "evaluated_vertices": 92,
+      "evaluated_triangles": 182,
+      "evaluated_world_bounds": {
+        "min": [
+          -1.09504199,
+          -0.264822364,
+          -2.584244728
+        ],
+        "max": [
+          -0.735891938,
+          -0.253796309,
+          -2.399192333
+        ],
+        "dimensions": [
+          0.359150052,
+          0.011026055,
+          0.185052395
+        ],
+        "centre": [
+          -0.915466964,
+          -0.259309337,
+          -2.491718531
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Sphere.001",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.915466964,
+        -0.264822364,
+        -2.491718531
+      ],
+      "world_origin": [
+        -0.915466964,
+        -0.264822364,
+        -2.491718531
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.025507836,
+        0.013699944,
+        0.025507836
+      ],
+      "dimensions": [
+        0.152866781,
+        0.082231179,
+        0.152984351
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBSphere.001\", name=\"s_curve\", address=0x122667010>",
+        "cycles": "<bpy id prop: owner=\"OBSphere.001\", name=\"cycles\", address=0x1226670c0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBSphere.001\", name=\"cycles_visibility\", address=0x122667170>"
+      },
+      "base_vertices": 139,
+      "base_polygons": 236,
+      "base_triangles": 274,
+      "uv_layers": [],
+      "evaluated_vertices": 139,
+      "evaluated_triangles": 274,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.991973758,
+          -0.305906951,
+          -2.568179369
+        ],
+        "max": [
+          -0.839106977,
+          -0.223675787,
+          -2.415194988
+        ],
+        "dimensions": [
+          0.152866781,
+          0.082231164,
+          0.152984381
+        ],
+        "centre": [
+          -0.915540367,
+          -0.264791369,
+          -2.491687179
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.039",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.915466964,
+        -0.387533069,
+        -2.491718531
+      ],
+      "world_origin": [
+        -0.915466964,
+        -0.387533069,
+        -2.491718531
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.037193,
+        0.037193,
+        0.094907105
+      ],
+      "dimensions": [
+        0.074174277,
+        0.074566327,
+        0.18981421
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.039\", name=\"s_curve\", address=0x1226628f0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.039\", name=\"cycles\", address=0x1226629a0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.039\", name=\"cycles_visibility\", address=0x122662a50>"
+      },
+      "base_vertices": 19,
+      "base_polygons": 12,
+      "base_triangles": 34,
+      "uv_layers": [],
+      "evaluated_vertices": 19,
+      "evaluated_triangles": 34,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.952750146,
+          -0.482440174,
+          -2.529001713
+        ],
+        "max": [
+          -0.878575861,
+          -0.292625964,
+          -2.454435349
+        ],
+        "dimensions": [
+          0.074174285,
+          0.18981421,
+          0.074566364
+        ],
+        "centre": [
+          -0.915663004,
+          -0.387533069,
+          -2.491718531
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Sphere",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.915466964,
+        -0.510173917,
+        -2.491718531
+      ],
+      "world_origin": [
+        -0.915466964,
+        -0.510173917,
+        -2.491718531
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.025507836,
+        0.013699944,
+        0.025507836
+      ],
+      "dimensions": [
+        0.152866781,
+        0.082231179,
+        0.152924135
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBSphere\", name=\"s_curve\", address=0x122666a20>",
+        "cycles": "<bpy id prop: owner=\"OBSphere\", name=\"cycles\", address=0x122666ad0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBSphere\", name=\"cycles_visibility\", address=0x122666b80>"
+      },
+      "base_vertices": 115,
+      "base_polygons": 198,
+      "base_triangles": 226,
+      "uv_layers": [],
+      "evaluated_vertices": 115,
+      "evaluated_triangles": 226,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.991973758,
+          -0.551258504,
+          -2.568179369
+        ],
+        "max": [
+          -0.839106977,
+          -0.46902734,
+          -2.415255308
+        ],
+        "dimensions": [
+          0.152866781,
+          0.082231164,
+          0.152924061
+        ],
+        "centre": [
+          -0.915540367,
+          -0.510142922,
+          -2.491717339
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Circle",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.915466964,
+        -0.510173917,
+        -2.491718531
+      ],
+      "world_origin": [
+        -0.915466964,
+        -0.510173917,
+        -2.491718531
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.030842068,
+        0.030842068,
+        0.030842068
+      ],
+      "dimensions": [
+        0.359150112,
+        0.18505241,
+        0.01102604
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [
+        {
+          "name": "Mirror",
+          "type": "MIRROR",
+          "viewport": true,
+          "render": true,
+          "levels": null,
+          "render_levels": null
+        }
+      ],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCircle\", name=\"s_curve\", address=0x12264f2f0>",
+        "cycles": "<bpy id prop: owner=\"OBCircle\", name=\"cycles\", address=0x12264f850>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCircle\", name=\"cycles_visibility\", address=0x12264f900>"
+      },
+      "base_vertices": 48,
+      "base_polygons": 33,
+      "base_triangles": 92,
+      "uv_layers": [],
+      "evaluated_vertices": 92,
+      "evaluated_triangles": 182,
+      "evaluated_world_bounds": {
+        "min": [
+          -1.09504199,
+          -0.510173917,
+          -2.584244728
+        ],
+        "max": [
+          -0.735891938,
+          -0.499147862,
+          -2.399192333
+        ],
+        "dimensions": [
+          0.359150052,
+          0.011026055,
+          0.185052395
+        ],
+        "centre": [
+          -0.915466964,
+          -0.50466089,
+          -2.491718531
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.038",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        1.383854985,
+        -1.64e-07,
+        1.859691024
+      ],
+      "world_origin": [
+        1.383854985,
+        -1.64e-07,
+        1.859691024
+      ],
+      "rotation_euler": [
+        1e-08,
+        -0.366327137,
+        -5.2e-08
+      ],
+      "scale": [
+        0.124678835,
+        0.12467885,
+        0.023320924
+      ],
+      "dimensions": [
+        0.704721212,
+        3.000558138,
+        1.128893495
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.038\", name=\"s_curve\", address=0x122662300>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.038\", name=\"cycles\", address=0x1226623b0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.038\", name=\"cycles_visibility\", address=0x122662460>"
+      },
+      "base_vertices": 4847,
+      "base_polygons": 6162,
+      "base_triangles": 10140,
+      "uv_layers": [],
+      "evaluated_vertices": 4847,
+      "evaluated_triangles": 10140,
+      "evaluated_world_bounds": {
+        "min": [
+          1.137785316,
+          -1.500279188,
+          1.793793797
+        ],
+        "max": [
+          1.609490395,
+          1.50027895,
+          3.01290679
+        ],
+        "dimensions": [
+          0.471705079,
+          3.000558138,
+          1.219112992
+        ],
+        "centre": [
+          1.373637855,
+          -1.19e-07,
+          2.403350294
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.047",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.745485246,
+        -1.721606612,
+        2.891982555
+      ],
+      "world_origin": [
+        0.745485246,
+        -1.721606612,
+        2.891982555
+      ],
+      "rotation_euler": [
+        -1.202411771,
+        -1.857640028,
+        1.647980571
+      ],
+      "scale": [
+        0.07575649,
+        0.07575649,
+        0.271223217
+      ],
+      "dimensions": [
+        1.49480927,
+        3.705572367,
+        2.278087616
+      ],
+      "material_slots": [
+        "Gray Stainless Steel",
+        "Stainless Steel",
+        "Matte Gray"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.047\", name=\"s_curve\", address=0x122665940>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.047\", name=\"cycles\", address=0x1226659f0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.047\", name=\"cycles_visibility\", address=0x122665aa0>"
+      },
+      "base_vertices": 514,
+      "base_polygons": 560,
+      "base_triangles": 906,
+      "uv_layers": [],
+      "evaluated_vertices": 514,
+      "evaluated_triangles": 906,
+      "evaluated_world_bounds": {
+        "min": [
+          0.465506256,
+          -2.0731287,
+          2.569916964
+        ],
+        "max": [
+          1.40356195,
+          2.07043004,
+          3.077789307
+        ],
+        "dimensions": [
+          0.938055694,
+          4.143558741,
+          0.507872343
+        ],
+        "centre": [
+          0.934534103,
+          -0.00134933,
+          2.823853135
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cube.002",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -1.640711904,
+        0.007851345,
+        1.635048389
+      ],
+      "world_origin": [
+        -1.640711904,
+        0.007851345,
+        1.635048389
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.235323235,
+        0.13440299,
+        0.084043302
+      ],
+      "dimensions": [
+        1.381659269,
+        0.994913042,
+        0.543837905
+      ],
+      "material_slots": [
+        "Matte Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCube.002\", name=\"s_curve\", address=0x1226522d0>",
+        "cycles": "<bpy id prop: owner=\"OBCube.002\", name=\"cycles\", address=0x1226527a0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCube.002\", name=\"cycles_visibility\", address=0x122652850>"
+      },
+      "base_vertices": 109,
+      "base_polygons": 192,
+      "base_triangles": 214,
+      "uv_layers": [],
+      "evaluated_vertices": 109,
+      "evaluated_triangles": 214,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.328712463,
+          -0.489622623,
+          1.344835758
+        ],
+        "max": [
+          -0.947053134,
+          0.505290449,
+          1.888673663
+        ],
+        "dimensions": [
+          1.381659329,
+          0.994913071,
+          0.543837905
+        ],
+        "centre": [
+          -1.637882799,
+          0.007833913,
+          1.616754711
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.037",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -1.391473174,
+        2.1e-07,
+        1.041415215
+      ],
+      "world_origin": [
+        -1.391473174,
+        2.1e-07,
+        1.041415215
+      ],
+      "rotation_euler": [
+        8e-09,
+        -0.345218807,
+        -4.8e-08
+      ],
+      "scale": [
+        0.076228932,
+        0.076228924,
+        0.216543585
+      ],
+      "dimensions": [
+        0.15235664,
+        0.154077411,
+        0.758797705
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.037\", name=\"s_curve\", address=0x122661d10>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.037\", name=\"cycles\", address=0x122661dc0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.037\", name=\"cycles_visibility\", address=0x122661e70>"
+      },
+      "base_vertices": 51,
+      "base_polygons": 56,
+      "base_triangles": 98,
+      "uv_layers": [],
+      "evaluated_vertices": 51,
+      "evaluated_triangles": 98,
+      "evaluated_world_bounds": {
+        "min": [
+          -1.623036861,
+          -0.07694646,
+          0.784849167
+        ],
+        "max": [
+          -1.237660408,
+          0.077130936,
+          1.545125961
+        ],
+        "dimensions": [
+          0.385376453,
+          0.154077396,
+          0.760276794
+        ],
+        "centre": [
+          -1.430348635,
+          9.2238e-05,
+          1.164987564
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.036",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.402942479,
+        0.210658237,
+        -1.400513649
+      ],
+      "world_origin": [
+        -0.402942479,
+        0.210658237,
+        -1.400513649
+      ],
+      "rotation_euler": [
+        -5.3e-08,
+        2.713856697,
+        -3.141592979
+      ],
+      "scale": [
+        0.069862843,
+        0.069862843,
+        0.069862843
+      ],
+      "dimensions": [
+        0.166113839,
+        0.138893619,
+        0.830079854
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.036\", name=\"s_curve\", address=0x122661720>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.036\", name=\"cycles\", address=0x1226617d0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.036\", name=\"cycles_visibility\", address=0x122661880>"
+      },
+      "base_vertices": 60,
+      "base_polygons": 70,
+      "base_triangles": 116,
+      "uv_layers": [],
+      "evaluated_vertices": 60,
+      "evaluated_triangles": 116,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.496807784,
+          0.14121142,
+          -1.493161082
+        ],
+        "max": [
+          -0.075773858,
+          0.280105025,
+          -0.705296278
+        ],
+        "dimensions": [
+          0.421033926,
+          0.138893604,
+          0.787864804
+        ],
+        "centre": [
+          -0.286290821,
+          0.210658222,
+          -1.09922868
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cube.001",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.48256442,
+        0.205680951,
+        -1.580669403
+      ],
+      "world_origin": [
+        -0.48256442,
+        0.205680951,
+        -1.580669403
+      ],
+      "rotation_euler": [
+        -5.4e-08,
+        2.710698843,
+        -3.141592979
+      ],
+      "scale": [
+        0.02742935,
+        0.028471168,
+        0.034227517
+      ],
+      "dimensions": [
+        0.164893284,
+        0.164218724,
+        0.262024373
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [
+        {
+          "name": "Decimate",
+          "type": "DECIMATE",
+          "viewport": true,
+          "render": true,
+          "levels": null,
+          "render_levels": null
+        }
+      ],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCube.001\", name=\"s_curve\", address=0x122651fe0>",
+        "cycles": "<bpy id prop: owner=\"OBCube.001\", name=\"cycles\", address=0x122652090>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCube.001\", name=\"cycles_visibility\", address=0x122652140>"
+      },
+      "base_vertices": 1410,
+      "base_polygons": 1408,
+      "base_triangles": 2816,
+      "uv_layers": [],
+      "evaluated_vertices": 124,
+      "evaluated_triangles": 244,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.577637076,
+          0.121249773,
+          -1.682022333
+        ],
+        "max": [
+          -0.358202726,
+          0.285468489,
+          -1.418309927
+        ],
+        "dimensions": [
+          0.219434351,
+          0.164218716,
+          0.263712406
+        ],
+        "centre": [
+          -0.467919901,
+          0.203359131,
+          -1.55016613
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cube",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.496197343,
+        -0.208054468,
+        -1.624451995
+      ],
+      "world_origin": [
+        -0.496197343,
+        -0.208054468,
+        -1.624451995
+      ],
+      "rotation_euler": [
+        1.4e-08,
+        0.430893719,
+        6.2e-08
+      ],
+      "scale": [
+        0.02742935,
+        0.028471168,
+        0.034227517
+      ],
+      "dimensions": [
+        0.164893314,
+        0.164218724,
+        0.261907935
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCube\", name=\"s_curve\", address=0x1226519f0>",
+        "cycles": "<bpy id prop: owner=\"OBCube\", name=\"cycles\", address=0x122651aa0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCube\", name=\"cycles_visibility\", address=0x122651b50>"
+      },
+      "base_vertices": 108,
+      "base_polygons": 173,
+      "base_triangles": 212,
+      "uv_layers": [],
+      "evaluated_vertices": 108,
+      "evaluated_triangles": 212,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.620456815,
+          -0.287842005,
+          -1.787258029
+        ],
+        "max": [
+          -0.40095526,
+          -0.123623289,
+          -1.522019386
+        ],
+        "dimensions": [
+          0.219501555,
+          0.164218716,
+          0.265238643
+        ],
+        "centre": [
+          -0.510706037,
+          -0.205732647,
+          -1.654638708
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.035",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.580298126,
+        -0.213031769,
+        -1.802558422
+      ],
+      "world_origin": [
+        -0.580298126,
+        -0.213031769,
+        -1.802558422
+      ],
+      "rotation_euler": [
+        1.3e-08,
+        0.427735567,
+        6.1e-08
+      ],
+      "scale": [
+        0.069862843,
+        0.069862843,
+        0.069862843
+      ],
+      "dimensions": [
+        0.161474138,
+        0.138893619,
+        0.857662261
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.035\", name=\"s_curve\", address=0x122661130>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.035\", name=\"cycles\", address=0x1226611e0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.035\", name=\"cycles_visibility\", address=0x122661290>"
+      },
+      "base_vertices": 48,
+      "base_polygons": 63,
+      "base_triangles": 92,
+      "uv_layers": [],
+      "evaluated_vertices": 48,
+      "evaluated_triangles": 92,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.963279426,
+          -0.282478571,
+          -2.532711267
+        ],
+        "max": [
+          -0.487503886,
+          -0.143584937,
+          -1.7095505
+        ],
+        "dimensions": [
+          0.47577554,
+          0.138893634,
+          0.823160768
+        ],
+        "centre": [
+          -0.725391656,
+          -0.213031754,
+          -2.121130884
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.034",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.479800761,
+        -0.126869112,
+        -1.590583086
+      ],
+      "world_origin": [
+        -0.479800761,
+        -0.126869112,
+        -1.590583086
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.47758615,
+        0.47758615,
+        0.010663031
+      ],
+      "dimensions": [
+        1.04295814,
+        1.042583346,
+        0.021336839
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.034\", name=\"s_curve\", address=0x122660b40>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.034\", name=\"cycles\", address=0x122660bf0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.034\", name=\"cycles_visibility\", address=0x122660ca0>"
+      },
+      "base_vertices": 2570,
+      "base_polygons": 4818,
+      "base_triangles": 5156,
+      "uv_layers": [],
+      "evaluated_vertices": 2570,
+      "evaluated_triangles": 5156,
+      "evaluated_world_bounds": {
+        "min": [
+          -1.001634121,
+          -0.137538448,
+          -2.111874819
+        ],
+        "max": [
+          0.04132396,
+          -0.116201609,
+          -1.069291472
+        ],
+        "dimensions": [
+          1.042958081,
+          0.021336839,
+          1.042583346
+        ],
+        "centre": [
+          -0.480155081,
+          -0.126870029,
+          -1.590583146
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.033",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        1.591351509,
+        -1.64e-07,
+        1.318833709
+      ],
+      "world_origin": [
+        1.591351509,
+        -1.64e-07,
+        1.318833709
+      ],
+      "rotation_euler": [
+        1e-08,
+        -0.366327137,
+        -5.2e-08
+      ],
+      "scale": [
+        0.089690872,
+        0.089690879,
+        0.55421567
+      ],
+      "dimensions": [
+        0.179381758,
+        0.179381758,
+        1.108431458
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.033\", name=\"s_curve\", address=0x122660550>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.033\", name=\"cycles\", address=0x122660600>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.033\", name=\"cycles_visibility\", address=0x1226606b0>"
+      },
+      "base_vertices": 16,
+      "base_polygons": 18,
+      "base_triangles": 28,
+      "uv_layers": [],
+      "evaluated_vertices": 16,
+      "evaluated_triangles": 28,
+      "evaluated_world_bounds": {
+        "min": [
+          1.310706973,
+          -0.08969105,
+          0.7692644
+        ],
+        "max": [
+          1.873605132,
+          0.089690708,
+          1.867785692
+        ],
+        "dimensions": [
+          0.562898159,
+          0.179381758,
+          1.098521292
+        ],
+        "centre": [
+          1.592156053,
+          -1.71e-07,
+          1.318525046
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.032",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.634253442,
+        2.34e-07,
+        -0.571635664
+      ],
+      "world_origin": [
+        -0.634253442,
+        2.34e-07,
+        -0.571635664
+      ],
+      "rotation_euler": [
+        2.43e-07,
+        1.206352234,
+        3.52e-07
+      ],
+      "scale": [
+        0.067198336,
+        0.067198329,
+        0.094896451
+      ],
+      "dimensions": [
+        1.591378093,
+        0.135547206,
+        2.885795355
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.032\", name=\"s_curve\", address=0x12265ff60>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.032\", name=\"cycles\", address=0x122660010>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.032\", name=\"cycles_visibility\", address=0x1226600c0>"
+      },
+      "base_vertices": 82,
+      "base_polygons": 124,
+      "base_triangles": 160,
+      "uv_layers": [],
+      "evaluated_vertices": 82,
+      "evaluated_triangles": 160,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.75893575,
+          -0.067995146,
+          -0.675296605
+        ],
+        "max": [
+          1.46765244,
+          0.067552105,
+          1.823250771
+        ],
+        "dimensions": [
+          2.22658819,
+          0.135547251,
+          2.498547375
+        ],
+        "centre": [
+          0.354358345,
+          -0.000221521,
+          0.573977083
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.031",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.654599726,
+        1.97e-07,
+        -0.189672753
+      ],
+      "world_origin": [
+        0.654599726,
+        1.97e-07,
+        -0.189672753
+      ],
+      "rotation_euler": [
+        4e-08,
+        0.688671231,
+        1.11e-07
+      ],
+      "scale": [
+        0.076228932,
+        0.076228924,
+        1.602237105
+      ],
+      "dimensions": [
+        0.152457893,
+        0.152457848,
+        3.366961718
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.031\", name=\"s_curve\", address=0x12265f970>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.031\", name=\"cycles\", address=0x12265fa20>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.031\", name=\"cycles_visibility\", address=0x12265fad0>"
+      },
+      "base_vertices": 64,
+      "base_polygons": 34,
+      "base_triangles": 124,
+      "uv_layers": [],
+      "evaluated_vertices": 64,
+      "evaluated_triangles": 124,
+      "evaluated_world_bounds": {
+        "min": [
+          -0.525759399,
+          -0.076228775,
+          -1.600645542
+        ],
+        "max": [
+          1.73169601,
+          0.07622917,
+          1.095844746
+        ],
+        "dimensions": [
+          2.257455409,
+          0.152457945,
+          2.696490288
+        ],
+        "centre": [
+          0.602968305,
+          1.97e-07,
+          -0.252400398
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.030",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.90647608,
+        1.99e-07,
+        -0.307224035
+      ],
+      "world_origin": [
+        -0.90647608,
+        1.99e-07,
+        -0.307224035
+      ],
+      "rotation_euler": [
+        8e-09,
+        -0.345218807,
+        -4.8e-08
+      ],
+      "scale": [
+        0.076228932,
+        0.076228924,
+        1.189190507
+      ],
+      "dimensions": [
+        0.155027047,
+        0.161208093,
+        2.535805702
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.030\", name=\"s_curve\", address=0x12265f380>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.030\", name=\"cycles\", address=0x12265f430>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.030\", name=\"cycles_visibility\", address=0x12265f4e0>"
+      },
+      "base_vertices": 11,
+      "base_polygons": 12,
+      "base_triangles": 18,
+      "uv_layers": [],
+      "evaluated_vertices": 11,
+      "evaluated_triangles": 18,
+      "evaluated_world_bounds": {
+        "min": [
+          -1.381407976,
+          -0.07780236,
+          -1.596934676
+        ],
+        "max": [
+          -0.377404124,
+          0.083405733,
+          0.835935473
+        ],
+        "dimensions": [
+          1.004003853,
+          0.161208093,
+          2.43287015
+        ],
+        "centre": [
+          -0.87940605,
+          0.002801687,
+          -0.380499601
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.029",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.935913086,
+        2.79e-07,
+        -2.121940613
+      ],
+      "world_origin": [
+        2.935913086,
+        2.79e-07,
+        -2.121940613
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.029\", name=\"s_curve\", address=0x12265ed90>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.029\", name=\"cycles\", address=0x12265ee40>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.029\", name=\"cycles_visibility\", address=0x12265eef0>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          2.92719388,
+          -0.008157089,
+          -2.960000753
+        ],
+        "max": [
+          2.944632292,
+          0.008523637,
+          -1.283880472
+        ],
+        "dimensions": [
+          0.017438412,
+          0.016680727,
+          1.676120281
+        ],
+        "centre": [
+          2.935913086,
+          0.000183274,
+          -2.121940613
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Torus.001",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.934324741,
+        1.6e-07,
+        -1.194445252
+      ],
+      "world_origin": [
+        2.934324741,
+        1.6e-07,
+        -1.194445252
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.980742037,
+        0.980742037,
+        1.164425492
+      ],
+      "dimensions": [
+        3.722682238,
+        3.722896576,
+        0.093551852
+      ],
+      "material_slots": [
+        "Tires"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBTorus.001\", name=\"s_curve\", address=0x122668c90>",
+        "cycles": "<bpy id prop: owner=\"OBTorus.001\", name=\"cycles\", address=0x122668d40>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBTorus.001\", name=\"cycles_visibility\", address=0x122668df0>"
+      },
+      "base_vertices": 336,
+      "base_polygons": 501,
+      "base_triangles": 672,
+      "uv_layers": [],
+      "evaluated_vertices": 336,
+      "evaluated_triangles": 672,
+      "evaluated_world_bounds": {
+        "min": [
+          1.072876453,
+          -0.04652543,
+          -3.055893421
+        ],
+        "max": [
+          4.795558453,
+          0.04702656,
+          0.667003036
+        ],
+        "dimensions": [
+          3.722681999,
+          0.09355199,
+          3.722896457
+        ],
+        "centre": [
+          2.934217453,
+          0.000250565,
+          -1.194445193
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.028",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        3.399448633,
+        2.62e-07,
+        -1.996884346
+      ],
+      "world_origin": [
+        3.399448633,
+        2.62e-07,
+        -1.996884346
+      ],
+      "rotation_euler": [
+        2.1e-08,
+        -0.52359879,
+        -7.8e-08
+      ],
+      "scale": [
+        0.008332571,
+        0.008332573,
+        0.838060319
+      ],
+      "dimensions": [
+        0.01743849,
+        0.016680727,
+        1.676120639
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.028\", name=\"s_curve\", address=0x12265e7a0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.028\", name=\"cycles\", address=0x12265e850>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.028\", name=\"cycles_visibility\", address=0x12265e900>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          2.972867489,
+          -0.008157122,
+          -2.726985455
+        ],
+        "max": [
+          3.826029778,
+          0.008523636,
+          -1.266874075
+        ],
+        "dimensions": [
+          0.853162289,
+          0.016680758,
+          1.46011138
+        ],
+        "centre": [
+          3.399448633,
+          0.000183257,
+          -1.996929765
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.027",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        3.738353968,
+        2.17e-07,
+        -1.656814814
+      ],
+      "world_origin": [
+        3.738353968,
+        2.17e-07,
+        -1.656814814
+      ],
+      "rotation_euler": [
+        1.34e-07,
+        -1.04719758,
+        -2.33e-07
+      ],
+      "scale": [
+        0.008332574,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438496,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.027\", name=\"s_curve\", address=0x12265e1b0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.027\", name=\"cycles\", address=0x12265e260>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.027\", name=\"cycles_visibility\", address=0x12265e310>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          3.008212805,
+          -0.008157209,
+          -2.083326578
+        ],
+        "max": [
+          4.468494892,
+          0.008523631,
+          -1.230460286
+        ],
+        "dimensions": [
+          1.460282087,
+          0.016680839,
+          0.852866292
+        ],
+        "centre": [
+          3.738353848,
+          0.000183211,
+          -1.656893432
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.026",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        3.861819744,
+        1.54e-07,
+        -1.192853212
+      ],
+      "world_origin": [
+        3.861819744,
+        1.54e-07,
+        -1.192853212
+      ],
+      "rotation_euler": [
+        -1.34e-07,
+        -1.570796132,
+        0.0
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.026\", name=\"s_curve\", address=0x12265dbc0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.026\", name=\"cycles\", address=0x12265dc70>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.026\", name=\"cycles_visibility\", address=0x12265dd20>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          3.023759604,
+          -0.008157327,
+          -1.201572299
+        ],
+        "max": [
+          4.699880123,
+          0.008523625,
+          -1.184134126
+        ],
+        "dimensions": [
+          1.67612052,
+          0.016680952,
+          0.017438173
+        ],
+        "centre": [
+          3.861819863,
+          0.000183149,
+          -1.192853212
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.025",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        3.736763477,
+        9.2e-08,
+        -0.729317784
+      ],
+      "world_origin": [
+        3.736763477,
+        9.2e-08,
+        -0.729317784
+      ],
+      "rotation_euler": [
+        -1.7e-07,
+        -2.094394922,
+        -3.6e-08
+      ],
+      "scale": [
+        0.008332577,
+        0.008332574,
+        0.838060379
+      ],
+      "dimensions": [
+        0.017438501,
+        0.016680729,
+        1.676120877
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.025\", name=\"s_curve\", address=0x12265d5d0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.025\", name=\"cycles\", address=0x12265d680>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.025\", name=\"cycles_visibility\", address=0x12265d730>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          3.006752968,
+          -0.008157446,
+          -1.155898929
+        ],
+        "max": [
+          4.466864586,
+          0.00852362,
+          -0.30273661
+        ],
+        "dimensions": [
+          1.460111618,
+          0.016681066,
+          0.853162318
+        ],
+        "centre": [
+          3.736808777,
+          0.000183087,
+          -0.729317769
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.024",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        3.396693945,
+        4.7e-08,
+        -0.390412509
+      ],
+      "world_origin": [
+        3.396693945,
+        4.7e-08,
+        -0.390412509
+      ],
+      "rotation_euler": [
+        -2.12e-07,
+        -2.617993832,
+        -7.8e-08
+      ],
+      "scale": [
+        0.008332575,
+        0.008332574,
+        0.838060081
+      ],
+      "dimensions": [
+        0.017438497,
+        0.016680729,
+        1.676120281
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.024\", name=\"s_curve\", address=0x12265cfe0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.024\", name=\"cycles\", address=0x12265d090>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.024\", name=\"cycles_visibility\", address=0x12265d140>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          2.970339537,
+          -0.008157533,
+          -1.120553493
+        ],
+        "max": [
+          3.823205709,
+          0.008523616,
+          0.339728445
+        ],
+        "dimensions": [
+          0.852866173,
+          0.016681149,
+          1.460281938
+        ],
+        "centre": [
+          3.396772623,
+          0.000183042,
+          -0.390412524
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.023",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.932732344,
+        3e-08,
+        -0.266946733
+      ],
+      "world_origin": [
+        2.932732344,
+        3e-08,
+        -0.266946733
+      ],
+      "rotation_euler": [
+        -2.69e-07,
+        -3.141592503,
+        -1.34e-07
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.023\", name=\"s_curve\", address=0x12265c9f0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.023\", name=\"cycles\", address=0x12265caa0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.023\", name=\"cycles_visibility\", address=0x12265cb50>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          2.924013138,
+          -0.008157563,
+          -1.105006933
+        ],
+        "max": [
+          2.94145155,
+          0.008523613,
+          0.571113467
+        ],
+        "dimensions": [
+          0.017438412,
+          0.016681177,
+          1.6761204
+        ],
+        "centre": [
+          2.932732344,
+          0.000183025,
+          -0.266946733
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.022",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.469197035,
+        4.7e-08,
+        -0.392003
+      ],
+      "world_origin": [
+        2.469197035,
+        4.7e-08,
+        -0.392003
+      ],
+      "rotation_euler": [
+        -3.67e-07,
+        -3.665191412,
+        -2.33e-07
+      ],
+      "scale": [
+        0.008332574,
+        0.008332574,
+        0.838060319
+      ],
+      "dimensions": [
+        0.017438496,
+        0.016680729,
+        1.67612052
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.022\", name=\"s_curve\", address=0x12265c400>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.022\", name=\"cycles\", address=0x12265c4b0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.022\", name=\"cycles_visibility\", address=0x12265c560>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          2.042615891,
+          -0.008157533,
+          -1.122013211
+        ],
+        "max": [
+          2.895778179,
+          0.008523616,
+          0.33809799
+        ],
+        "dimensions": [
+          0.853162289,
+          0.016681149,
+          1.460111201
+        ],
+        "centre": [
+          2.469197035,
+          0.000183042,
+          -0.391957611
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.021",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.130291939,
+        9.2e-08,
+        -0.732072592
+      ],
+      "world_origin": [
+        2.130291939,
+        9.2e-08,
+        -0.732072592
+      ],
+      "rotation_euler": [
+        -6.36e-07,
+        -4.188790321,
+        -5.01e-07
+      ],
+      "scale": [
+        0.008332577,
+        0.008332573,
+        0.838060319
+      ],
+      "dimensions": [
+        0.017438501,
+        0.016680727,
+        1.67612052
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.021\", name=\"s_curve\", address=0x12265be10>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.021\", name=\"cycles\", address=0x12265bec0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.021\", name=\"cycles_visibility\", address=0x12265bf70>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          1.400150776,
+          -0.008157444,
+          -1.158427119
+        ],
+        "max": [
+          2.860433102,
+          0.008523619,
+          -0.305560946
+        ],
+        "dimensions": [
+          1.460282326,
+          0.016681063,
+          0.852866173
+        ],
+        "centre": [
+          2.130291939,
+          0.000183087,
+          -0.731994033
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.020",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.006826162,
+        1.55e-07,
+        -1.196033955
+      ],
+      "world_origin": [
+        2.006826162,
+        1.55e-07,
+        -1.196033955
+      ],
+      "rotation_euler": [
+        -1.34e-07,
+        -4.712389469,
+        0.0
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.020\", name=\"s_curve\", address=0x12265b820>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.020\", name=\"cycles\", address=0x12265b8d0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.020\", name=\"cycles_visibility\", address=0x12265b980>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          1.168765903,
+          -0.008157327,
+          -1.204753637
+        ],
+        "max": [
+          2.844886303,
+          0.008523625,
+          -1.187314272
+        ],
+        "dimensions": [
+          1.6761204,
+          0.016680952,
+          0.017439365
+        ],
+        "centre": [
+          2.006826103,
+          0.000183149,
+          -1.196033955
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.019",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.131882429,
+        2.17e-07,
+        -1.659569263
+      ],
+      "world_origin": [
+        2.131882429,
+        2.17e-07,
+        -1.659569263
+      ],
+      "rotation_euler": [
+        -9.8e-08,
+        -5.235988617,
+        -3.6e-08
+      ],
+      "scale": [
+        0.008332569,
+        0.008332574,
+        0.838059843
+      ],
+      "dimensions": [
+        0.017438486,
+        0.016680729,
+        1.676119685
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.019\", name=\"s_curve\", address=0x12265b230>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.019\", name=\"cycles\", address=0x12265b2e0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.019\", name=\"cycles_visibility\", address=0x12265b390>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          1.401782155,
+          -0.008157209,
+          -2.086150885
+        ],
+        "max": [
+          2.861891985,
+          0.008523633,
+          -1.232987642
+        ],
+        "dimensions": [
+          1.46010983,
+          0.016680841,
+          0.853163242
+        ],
+        "centre": [
+          2.13183707,
+          0.000183212,
+          -1.659569263
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.018",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.471951962,
+        2.63e-07,
+        -1.99847436
+      ],
+      "world_origin": [
+        2.471951962,
+        2.63e-07,
+        -1.99847436
+      ],
+      "rotation_euler": [
+        -5.7e-08,
+        -5.759587765,
+        -7.8e-08
+      ],
+      "scale": [
+        0.008332571,
+        0.008332574,
+        0.838059962
+      ],
+      "dimensions": [
+        0.01743849,
+        0.016680729,
+        1.676119924
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.018\", name=\"s_curve\", address=0x12265ac40>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.018\", name=\"cycles\", address=0x12265acf0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.018\", name=\"cycles_visibility\", address=0x12265ada0>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          2.045441389,
+          -0.008157122,
+          -2.728615761
+        ],
+        "max": [
+          2.898305416,
+          0.008523636,
+          -1.268332958
+        ],
+        "dimensions": [
+          0.852864027,
+          0.016680758,
+          1.460282803
+        ],
+        "centre": [
+          2.471873403,
+          0.000183257,
+          -1.99847436
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.017",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.934322834,
+        1.79e-07,
+        -1.194443583
+      ],
+      "world_origin": [
+        2.934322834,
+        1.79e-07,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.061011977,
+        0.061011977,
+        0.064047918
+      ],
+      "dimensions": [
+        0.121518485,
+        0.121419705,
+        0.127747461
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.017\", name=\"s_curve\", address=0x12265a650>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.017\", name=\"cycles\", address=0x12265a700>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.017\", name=\"cycles_visibility\", address=0x12265a7b0>"
+      },
+      "base_vertices": 47,
+      "base_polygons": 31,
+      "base_triangles": 90,
+      "uv_layers": [],
+      "evaluated_vertices": 47,
+      "evaluated_triangles": 90,
+      "evaluated_world_bounds": {
+        "min": [
+          2.873543501,
+          -0.063882373,
+          -1.255124211
+        ],
+        "max": [
+          2.995061874,
+          0.06386508,
+          -1.133704543
+        ],
+        "dimensions": [
+          0.121518373,
+          0.127747454,
+          0.121419668
+        ],
+        "centre": [
+          2.934302688,
+          -8.646e-06,
+          -1.194414377
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.016",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953828335,
+        -0.110999361,
+        -1.194443583
+      ],
+      "world_origin": [
+        -2.953828335,
+        -0.110999361,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.037927918,
+        0.037927918,
+        0.006215471
+      ],
+      "dimensions": [
+        0.075541608,
+        0.075453512,
+        0.012397134
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.016\", name=\"s_curve\", address=0x12265a060>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.016\", name=\"cycles\", address=0x12265a110>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.016\", name=\"cycles_visibility\", address=0x12265a1c0>"
+      },
+      "base_vertices": 38,
+      "base_polygons": 30,
+      "base_triangles": 72,
+      "uv_layers": [],
+      "evaluated_vertices": 38,
+      "evaluated_triangles": 72,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.991611719,
+          -0.117198788,
+          -1.232138872
+        ],
+        "max": [
+          -2.916069984,
+          -0.104801655,
+          -1.156685352
+        ],
+        "dimensions": [
+          0.075541735,
+          0.012397133,
+          0.07545352
+        ],
+        "centre": [
+          -2.953840852,
+          -0.111000221,
+          -1.194412112
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.015",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953828335,
+        -0.087890714,
+        -1.194443583
+      ],
+      "world_origin": [
+        -2.953828335,
+        -0.087890714,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.10569834,
+        0.10569834,
+        0.017321408
+      ],
+      "dimensions": [
+        0.210520983,
+        0.210349873,
+        0.034548599
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.015\", name=\"s_curve\", address=0x122659a70>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.015\", name=\"cycles\", address=0x122659b20>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.015\", name=\"cycles_visibility\", address=0x122659bd0>"
+      },
+      "base_vertices": 49,
+      "base_polygons": 32,
+      "base_triangles": 94,
+      "uv_layers": [],
+      "evaluated_vertices": 49,
+      "evaluated_triangles": 94,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.059123755,
+          -0.105167404,
+          -1.299567938
+        ],
+        "max": [
+          -2.848602772,
+          -0.070618808,
+          -1.08921802
+        ],
+        "dimensions": [
+          0.210520983,
+          0.034548596,
+          0.210349917
+        ],
+        "centre": [
+          -2.953863263,
+          -0.087893106,
+          -1.194392979
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.014",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953828335,
+        -0.063806176,
+        -1.194443583
+      ],
+      "world_origin": [
+        -2.953828335,
+        -0.063806176,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.160589516,
+        0.160589516,
+        0.013591521
+      ],
+      "dimensions": [
+        0.385017931,
+        0.385017961,
+        0.027183976
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.014\", name=\"s_curve\", address=0x122659480>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.014\", name=\"cycles\", address=0x122659530>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.014\", name=\"cycles_visibility\", address=0x1226595e0>"
+      },
+      "base_vertices": 132,
+      "base_polygons": 115,
+      "base_triangles": 260,
+      "uv_layers": [],
+      "evaluated_vertices": 132,
+      "evaluated_triangles": 260,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.146337271,
+          -0.077398129,
+          -1.386952519
+        ],
+        "max": [
+          -2.761319399,
+          -0.050214149,
+          -1.001934648
+        ],
+        "dimensions": [
+          0.385017872,
+          0.02718398,
+          0.385017872
+        ],
+        "centre": [
+          -2.953828335,
+          -0.063806139,
+          -1.194443583
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.013",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953828335,
+        0.067137629,
+        -1.194443583
+      ],
+      "world_origin": [
+        -2.953828335,
+        0.067137629,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.228366956,
+        0.228366956,
+        0.002905933
+      ],
+      "dimensions": [
+        0.454827398,
+        0.454400629,
+        0.005812066
+      ],
+      "material_slots": [
+        "Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.013\", name=\"s_curve\", address=0x122658e90>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.013\", name=\"cycles\", address=0x122658f40>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.013\", name=\"cycles_visibility\", address=0x122658ff0>"
+      },
+      "base_vertices": 73,
+      "base_polygons": 55,
+      "base_triangles": 142,
+      "uv_layers": [],
+      "evaluated_vertices": 73,
+      "evaluated_triangles": 142,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.181381941,
+          0.064231493,
+          -1.421570301
+        ],
+        "max": [
+          -2.726554394,
+          0.070043571,
+          -0.967169702
+        ],
+        "dimensions": [
+          0.454827547,
+          0.005812079,
+          0.454400599
+        ],
+        "centre": [
+          -2.953968167,
+          0.067137532,
+          -1.194370002
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.012",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953828335,
+        1.79e-07,
+        -1.194443583
+      ],
+      "world_origin": [
+        -2.953828335,
+        1.79e-07,
+        -1.194443583
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.155623585,
+        0.155623585,
+        0.064047918
+      ],
+      "dimensions": [
+        0.309699297,
+        0.311664581,
+        0.127747461
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.012\", name=\"s_curve\", address=0x1226588a0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.012\", name=\"cycles\", address=0x122658950>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.012\", name=\"cycles_visibility\", address=0x122658a00>"
+      },
+      "base_vertices": 36,
+      "base_polygons": 29,
+      "base_triangles": 68,
+      "uv_layers": [],
+      "evaluated_vertices": 36,
+      "evaluated_triangles": 68,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.108858824,
+          -0.063882373,
+          -1.351180673
+        ],
+        "max": [
+          -2.799159527,
+          0.063865073,
+          -1.039516091
+        ],
+        "dimensions": [
+          0.309699297,
+          0.127747446,
+          0.311664581
+        ],
+        "centre": [
+          -2.954009175,
+          -8.65e-06,
+          -1.195348382
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.011",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -3.416199207,
+        2.63e-07,
+        -1.99847436
+      ],
+      "world_origin": [
+        -3.416199207,
+        2.63e-07,
+        -1.99847436
+      ],
+      "rotation_euler": [
+        -5.7e-08,
+        -5.759587765,
+        -7.8e-08
+      ],
+      "scale": [
+        0.008332571,
+        0.008332574,
+        0.838059962
+      ],
+      "dimensions": [
+        0.01743849,
+        0.016680729,
+        1.676119924
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.011\", name=\"s_curve\", address=0x1226582b0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.011\", name=\"cycles\", address=0x122658360>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.011\", name=\"cycles_visibility\", address=0x122658410>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.84270978,
+          -0.008157122,
+          -2.728615761
+        ],
+        "max": [
+          -2.989845753,
+          0.008523636,
+          -1.268332958
+        ],
+        "dimensions": [
+          0.852864027,
+          0.016680758,
+          1.460282803
+        ],
+        "centre": [
+          -3.416277766,
+          0.000183257,
+          -1.99847436
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.010",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -3.75626874,
+        2.17e-07,
+        -1.659569263
+      ],
+      "world_origin": [
+        -3.75626874,
+        2.17e-07,
+        -1.659569263
+      ],
+      "rotation_euler": [
+        -9.8e-08,
+        -5.235988617,
+        -3.6e-08
+      ],
+      "scale": [
+        0.008332569,
+        0.008332574,
+        0.838059843
+      ],
+      "dimensions": [
+        0.017438486,
+        0.016680729,
+        1.676119685
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.010\", name=\"s_curve\", address=0x122657cc0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.010\", name=\"cycles\", address=0x122657d70>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.010\", name=\"cycles_visibility\", address=0x122657e20>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -4.486369133,
+          -0.008157209,
+          -2.086150885
+        ],
+        "max": [
+          -3.026259184,
+          0.008523633,
+          -1.232987642
+        ],
+        "dimensions": [
+          1.460109949,
+          0.016680841,
+          0.853163242
+        ],
+        "centre": [
+          -3.756314158,
+          0.000183212,
+          -1.659569263
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.009",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -3.881325006,
+        1.55e-07,
+        -1.196033955
+      ],
+      "world_origin": [
+        -3.881325006,
+        1.55e-07,
+        -1.196033955
+      ],
+      "rotation_euler": [
+        -1.34e-07,
+        -4.712389469,
+        0.0
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.009\", name=\"s_curve\", address=0x1226576d0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.009\", name=\"cycles\", address=0x122657780>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.009\", name=\"cycles_visibility\", address=0x122657830>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -4.719385147,
+          -0.008157327,
+          -1.204753637
+        ],
+        "max": [
+          -3.043264866,
+          0.008523625,
+          -1.187314272
+        ],
+        "dimensions": [
+          1.676120281,
+          0.016680952,
+          0.017439365
+        ],
+        "centre": [
+          -3.881325006,
+          0.000183149,
+          -1.196033955
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.008",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -3.75785923,
+        9.2e-08,
+        -0.732072592
+      ],
+      "world_origin": [
+        -3.75785923,
+        9.2e-08,
+        -0.732072592
+      ],
+      "rotation_euler": [
+        -6.36e-07,
+        -4.188790321,
+        -5.01e-07
+      ],
+      "scale": [
+        0.008332577,
+        0.008332573,
+        0.838060319
+      ],
+      "dimensions": [
+        0.017438501,
+        0.016680727,
+        1.67612052
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.008\", name=\"s_curve\", address=0x1226570e0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.008\", name=\"cycles\", address=0x122657190>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.008\", name=\"cycles_visibility\", address=0x122657240>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -4.488000393,
+          -0.008157444,
+          -1.158427119
+        ],
+        "max": [
+          -3.027718067,
+          0.008523619,
+          -0.305560946
+        ],
+        "dimensions": [
+          1.460282326,
+          0.016681063,
+          0.852866173
+        ],
+        "centre": [
+          -3.75785923,
+          0.000183087,
+          -0.731994033
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.007",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -3.418954134,
+        4.7e-08,
+        -0.392003
+      ],
+      "world_origin": [
+        -3.418954134,
+        4.7e-08,
+        -0.392003
+      ],
+      "rotation_euler": [
+        -3.67e-07,
+        -3.665191412,
+        -2.33e-07
+      ],
+      "scale": [
+        0.008332574,
+        0.008332574,
+        0.838060319
+      ],
+      "dimensions": [
+        0.017438496,
+        0.016680729,
+        1.67612052
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.007\", name=\"s_curve\", address=0x122656af0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.007\", name=\"cycles\", address=0x122656ba0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.007\", name=\"cycles_visibility\", address=0x122656c50>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.845535278,
+          -0.008157533,
+          -1.122013211
+        ],
+        "max": [
+          -2.99237299,
+          0.008523616,
+          0.33809799
+        ],
+        "dimensions": [
+          0.853162289,
+          0.016681149,
+          1.460111201
+        ],
+        "centre": [
+          -3.418954134,
+          0.000183042,
+          -0.391957611
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.006",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.955418825,
+        3e-08,
+        -0.266946733
+      ],
+      "world_origin": [
+        -2.955418825,
+        3e-08,
+        -0.266946733
+      ],
+      "rotation_euler": [
+        -2.69e-07,
+        -3.141592503,
+        -1.34e-07
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.006\", name=\"s_curve\", address=0x122656500>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.006\", name=\"cycles\", address=0x1226565b0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.006\", name=\"cycles_visibility\", address=0x122656660>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.964138031,
+          -0.008157563,
+          -1.105006933
+        ],
+        "max": [
+          -2.946699619,
+          0.008523613,
+          0.571113467
+        ],
+        "dimensions": [
+          0.017438412,
+          0.016681177,
+          1.6761204
+        ],
+        "centre": [
+          -2.955418825,
+          0.000183025,
+          -0.266946733
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.005",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.491457224,
+        4.7e-08,
+        -0.390412509
+      ],
+      "world_origin": [
+        -2.491457224,
+        4.7e-08,
+        -0.390412509
+      ],
+      "rotation_euler": [
+        -2.12e-07,
+        -2.617993832,
+        -7.8e-08
+      ],
+      "scale": [
+        0.008332575,
+        0.008332574,
+        0.838060081
+      ],
+      "dimensions": [
+        0.017438497,
+        0.016680729,
+        1.676120281
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.005\", name=\"s_curve\", address=0x122655f10>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.005\", name=\"cycles\", address=0x122655fc0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.005\", name=\"cycles_visibility\", address=0x122656070>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.917811632,
+          -0.008157533,
+          -1.120553493
+        ],
+        "max": [
+          -2.064945459,
+          0.008523616,
+          0.339728445
+        ],
+        "dimensions": [
+          0.852866173,
+          0.016681149,
+          1.460281938
+        ],
+        "centre": [
+          -2.491378546,
+          0.000183042,
+          -0.390412524
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.004",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.151387691,
+        9.2e-08,
+        -0.729317784
+      ],
+      "world_origin": [
+        -2.151387691,
+        9.2e-08,
+        -0.729317784
+      ],
+      "rotation_euler": [
+        -1.7e-07,
+        -2.094394922,
+        -3.6e-08
+      ],
+      "scale": [
+        0.008332577,
+        0.008332574,
+        0.838060379
+      ],
+      "dimensions": [
+        0.017438501,
+        0.016680729,
+        1.676120877
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.004\", name=\"s_curve\", address=0x122655920>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.004\", name=\"cycles\", address=0x1226559d0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.004\", name=\"cycles_visibility\", address=0x122655a80>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.881398201,
+          -0.008157446,
+          -1.155898929
+        ],
+        "max": [
+          -1.421286464,
+          0.00852362,
+          -0.30273661
+        ],
+        "dimensions": [
+          1.460111737,
+          0.016681066,
+          0.853162318
+        ],
+        "centre": [
+          -2.151342332,
+          0.000183087,
+          -0.729317769
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.003",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.026331425,
+        1.54e-07,
+        -1.192853212
+      ],
+      "world_origin": [
+        -2.026331425,
+        1.54e-07,
+        -1.192853212
+      ],
+      "rotation_euler": [
+        -1.34e-07,
+        -1.570796132,
+        0.0
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.003\", name=\"s_curve\", address=0x122655330>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.003\", name=\"cycles\", address=0x1226553e0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.003\", name=\"cycles_visibility\", address=0x122655490>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.864391565,
+          -0.008157327,
+          -1.201572299
+        ],
+        "max": [
+          -1.188271165,
+          0.008523625,
+          -1.184134126
+        ],
+        "dimensions": [
+          1.6761204,
+          0.016680952,
+          0.017438173
+        ],
+        "centre": [
+          -2.026331365,
+          0.000183149,
+          -1.192853212
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.002",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.149797201,
+        2.17e-07,
+        -1.656814814
+      ],
+      "world_origin": [
+        -2.149797201,
+        2.17e-07,
+        -1.656814814
+      ],
+      "rotation_euler": [
+        1.34e-07,
+        -1.04719758,
+        -2.33e-07
+      ],
+      "scale": [
+        0.008332574,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438496,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.002\", name=\"s_curve\", address=0x122654d40>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.002\", name=\"cycles\", address=0x122654df0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.002\", name=\"cycles_visibility\", address=0x122654ea0>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.879938364,
+          -0.008157209,
+          -2.083326578
+        ],
+        "max": [
+          -1.419656157,
+          0.008523631,
+          -1.230460286
+        ],
+        "dimensions": [
+          1.460282207,
+          0.016680839,
+          0.852866292
+        ],
+        "centre": [
+          -2.149797261,
+          0.000183211,
+          -1.656893432
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder.001",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.488702536,
+        2.62e-07,
+        -1.996884346
+      ],
+      "world_origin": [
+        -2.488702536,
+        2.62e-07,
+        -1.996884346
+      ],
+      "rotation_euler": [
+        2.1e-08,
+        -0.52359879,
+        -7.8e-08
+      ],
+      "scale": [
+        0.008332571,
+        0.008332573,
+        0.838060319
+      ],
+      "dimensions": [
+        0.01743849,
+        0.016680727,
+        1.676120639
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.001\", name=\"s_curve\", address=0x122654750>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder.001\", name=\"cycles\", address=0x122654800>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.001\", name=\"cycles_visibility\", address=0x1226548b0>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.91528368,
+          -0.008157122,
+          -2.726985455
+        ],
+        "max": [
+          -2.062121391,
+          0.008523636,
+          -1.266874075
+        ],
+        "dimensions": [
+          0.853162289,
+          0.016680758,
+          1.46011138
+        ],
+        "centre": [
+          -2.488702536,
+          0.000183257,
+          -1.996929765
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Torus",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.953826427,
+        1.6e-07,
+        -1.194445252
+      ],
+      "world_origin": [
+        -2.953826427,
+        1.6e-07,
+        -1.194445252
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.980742037,
+        0.980742037,
+        1.164425492
+      ],
+      "dimensions": [
+        3.720445871,
+        3.721596241,
+        0.093487963
+      ],
+      "material_slots": [
+        "Tires"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBTorus\", name=\"s_curve\", address=0x1226686a0>",
+        "cycles": "<bpy id prop: owner=\"OBTorus\", name=\"cycles\", address=0x122668750>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBTorus\", name=\"cycles_visibility\", address=0x122668800>"
+      },
+      "base_vertices": 301,
+      "base_polygons": 466,
+      "base_triangles": 602,
+      "uv_layers": [],
+      "evaluated_vertices": 301,
+      "evaluated_triangles": 602,
+      "evaluated_world_bounds": {
+        "min": [
+          -4.813038349,
+          -0.04652543,
+          -3.055893421
+        ],
+        "max": [
+          -1.092592597,
+          0.046962664,
+          0.66570282
+        ],
+        "dimensions": [
+          3.720445752,
+          0.093488093,
+          3.721596241
+        ],
+        "centre": [
+          -2.952815473,
+          0.000218617,
+          -1.195095301
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Cylinder",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.952238083,
+        2.79e-07,
+        -2.121940613
+      ],
+      "world_origin": [
+        -2.952238083,
+        2.79e-07,
+        -2.121940613
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.008332573,
+        0.008332573,
+        0.8380602
+      ],
+      "dimensions": [
+        0.017438494,
+        0.016680727,
+        1.6761204
+      ],
+      "material_slots": [
+        "Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCylinder\", name=\"s_curve\", address=0x1226541c0>",
+        "cycles": "<bpy id prop: owner=\"OBCylinder\", name=\"cycles\", address=0x122654270>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder\", name=\"cycles_visibility\", address=0x122654320>"
+      },
+      "base_vertices": 12,
+      "base_polygons": 12,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 12,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.960957289,
+          -0.008157089,
+          -2.960000753
+        ],
+        "max": [
+          -2.943518877,
+          0.008523637,
+          -1.283880472
+        ],
+        "dimensions": [
+          0.017438412,
+          0.016680727,
+          1.676120281
+        ],
+        "centre": [
+          -2.952238083,
+          0.000183274,
+          -2.121940613
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Camera",
+      "type": "CAMERA",
+      "parent": null,
+      "children": [],
+      "location": [
+        10.075359344,
+        -12.541960716,
+        2.265561342
+      ],
+      "world_origin": [
+        10.075359344,
+        -12.541960716,
+        2.265561342
+      ],
+      "rotation_euler": [
+        1.419913173,
+        -9.179e-06,
+        0.647774279
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "material_slots": [],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {},
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 1"
+      ]
+    },
+    {
+      "name": "Circle.004",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -1.142571568,
+        -0.130042687,
+        -1.95533371
+      ],
+      "world_origin": [
+        -1.142571568,
+        -0.130042687,
+        -1.95533371
+      ],
+      "rotation_euler": [
+        4e-09,
+        0.246643126,
+        3.4e-08
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        3.212615013,
+        0.086159781,
+        1.029795527
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBCircle.004\", name=\"s_curve\", address=0x122651400>",
+        "cycles": "<bpy id prop: owner=\"OBCircle.004\", name=\"cycles\", address=0x1226514b0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCircle.004\", name=\"cycles_visibility\", address=0x122651560>"
+      },
+      "base_vertices": 7222,
+      "base_polygons": 9134,
+      "base_triangles": 13040,
+      "uv_layers": [],
+      "evaluated_vertices": 7222,
+      "evaluated_triangles": 13040,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.146548986,
+          -0.141668931,
+          -2.105842829
+        ],
+        "max": [
+          0.037460312,
+          -0.05550921,
+          -0.999512494
+        ],
+        "dimensions": [
+          3.184009299,
+          0.086159721,
+          1.106330335
+        ],
+        "centre": [
+          -1.554544337,
+          -0.09858907,
+          -1.552677661
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 2"
+      ]
+    },
+    {
+      "name": "Sun",
+      "type": "LIGHT",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.930385113,
+        1.602582693,
+        10.317224503
+      ],
+      "world_origin": [
+        2.930385113,
+        1.602582693,
+        10.317224503
+      ],
+      "rotation_euler": [
+        0.376291335,
+        0.48774901,
+        0.085815236
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "material_slots": [],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBSun\", name=\"s_curve\", address=0x1226681e0>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBSun\", name=\"cycles_visibility\", address=0x122668290>"
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 5"
+      ]
+    },
+    {
+      "name": "Plane.005",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.361216784,
+        1.602582932,
+        -3.059827566
+      ],
+      "world_origin": [
+        -0.361216784,
+        1.602582932,
+        -3.059827566
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.614415228
+      ],
+      "scale": [
+        23.745225906,
+        23.745225906,
+        8.938426018
+      ],
+      "dimensions": [
+        142.471374512,
+        142.471374512,
+        25.878082275
+      ],
+      "material_slots": [],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBPlane.005\", name=\"s_curve\", address=0x1226664b0>",
+        "cycles": "<bpy id prop: owner=\"OBPlane.005\", name=\"cycles\", address=0x122666560>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBPlane.005\", name=\"cycles_visibility\", address=0x122666610>"
+      },
+      "base_vertices": 22,
+      "base_polygons": 10,
+      "base_triangles": 20,
+      "uv_layers": [],
+      "evaluated_vertices": 22,
+      "evaluated_triangles": 20,
+      "evaluated_world_bounds": {
+        "min": [
+          -99.634651184,
+          -97.670852661,
+          -3.059827566
+        ],
+        "max": [
+          98.912223816,
+          100.876022339,
+          22.818254471
+        ],
+        "dimensions": [
+          198.546875,
+          198.546875,
+          25.878082037
+        ],
+        "centre": [
+          -0.361213684,
+          1.602584839,
+          9.879213452
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 5"
+      ]
+    },
+    {
+      "name": "Torus.003",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -2.996390104,
+        -0.004307067,
+        -1.266700506
+      ],
+      "world_origin": [
+        -2.996390104,
+        -0.004307067,
+        -1.266700506
+      ],
+      "rotation_euler": [
+        1.570795536,
+        1.778984427,
+        -6.36e-07
+      ],
+      "scale": [
+        0.353615463,
+        0.353615463,
+        0.247555494
+      ],
+      "dimensions": [
+        1.950836897,
+        3.882499695,
+        0.248055711
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBTorus.003\", name=\"s_curve\", address=0x122669870>",
+        "cycles": "<bpy id prop: owner=\"OBTorus.003\", name=\"cycles\", address=0x122669920>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBTorus.003\", name=\"cycles_visibility\", address=0x1226699d0>"
+      },
+      "base_vertices": 414,
+      "base_polygons": 412,
+      "base_triangles": 824,
+      "uv_layers": [],
+      "evaluated_vertices": 414,
+      "evaluated_triangles": 824,
+      "evaluated_world_bounds": {
+        "min": [
+          -4.80278492,
+          -0.166979253,
+          -1.608428359
+        ],
+        "max": [
+          -1.020429492,
+          0.08107695,
+          0.747646809
+        ],
+        "dimensions": [
+          3.782355428,
+          0.248056203,
+          2.356075168
+        ],
+        "centre": [
+          -2.911607206,
+          -0.042951152,
+          -0.430390775
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 5"
+      ]
+    },
+    {
+      "name": "Torus.002",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        3.017729282,
+        -0.004307386,
+        -1.227553129
+      ],
+      "world_origin": [
+        3.017729282,
+        -0.004307386,
+        -1.227553129
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.353615463,
+        0.353615463,
+        0.247555494
+      ],
+      "dimensions": [
+        1.950837016,
+        2.587875366,
+        0.17076771
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBTorus.002\", name=\"s_curve\", address=0x122669280>",
+        "cycles": "<bpy id prop: owner=\"OBTorus.002\", name=\"cycles\", address=0x122669330>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBTorus.002\", name=\"cycles_visibility\", address=0x1226693e0>"
+      },
+      "base_vertices": 270,
+      "base_polygons": 268,
+      "base_triangles": 536,
+      "uv_layers": [],
+      "evaluated_vertices": 270,
+      "evaluated_triangles": 536,
+      "evaluated_world_bounds": {
+        "min": [
+          1.001162529,
+          -0.089691304,
+          -1.845615268
+        ],
+        "max": [
+          2.951999664,
+          0.08107651,
+          0.74225986
+        ],
+        "dimensions": [
+          1.950837135,
+          0.170767814,
+          2.587875128
+        ],
+        "centre": [
+          1.976581097,
+          -0.004307397,
+          -0.551677704
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 5"
+      ]
+    },
+    {
+      "name": "BezierCurve",
+      "type": "CURVE",
+      "parent": null,
+      "children": [],
+      "location": [
+        1.359765649,
+        -1.573866487,
+        2.807599306
+      ],
+      "world_origin": [
+        1.359765649,
+        -1.573866487,
+        2.807599306
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.053185642,
+        0.053185642,
+        0.053185642
+      ],
+      "dimensions": [
+        2.858500242,
+        3.165412188,
+        3.468158484
+      ],
+      "material_slots": [
+        "Matte Black"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBBezierCurve\", name=\"s_curve\", address=0x12264eda0>",
+        "cycles": "<bpy id prop: owner=\"OBBezierCurve\", name=\"cycles\", address=0x12264ee50>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBBezierCurve\", name=\"cycles_visibility\", address=0x12264ef00>"
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 5"
+      ],
+      "evaluated_vertices": 1940,
+      "evaluated_triangles": 3840,
+      "curve_data": {
+        "splines": 2,
+        "bevel_depth": 0.11429999768733978,
+        "bevel_resolution": 3,
+        "resolution_u": 12
+      },
+      "evaluated_world_bounds": {
+        "min": [
+          -0.6062606573104858,
+          -1.531875491142273,
+          -0.6133818626403809
+        ],
+        "max": [
+          2.252239465713501,
+          1.633536696434021,
+          2.8547768592834473
+        ],
+        "dimensions": [
+          2.858500123023987,
+          3.165412187576294,
+          3.468158721923828
+        ]
+      }
+    },
+    {
+      "name": "Cylinder.044",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -1.318534374,
+        -0.002594426,
+        0.476348758
+      ],
+      "world_origin": [
+        -1.318534374,
+        -0.002594426,
+        0.476348758
+      ],
+      "rotation_euler": [
+        5.5e-08,
+        0.78326422,
+        1.34e-07
+      ],
+      "scale": [
+        0.037275363,
+        0.037275366,
+        0.037275363
+      ],
+      "dimensions": [
+        0.097580642,
+        0.339475662,
+        2.380491734
+      ],
+      "material_slots": [
+        "Glossy Dark Grey"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "cycles": "<bpy id prop: owner=\"OBCylinder.044\", name=\"cycles\", address=0x122664770>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBCylinder.044\", name=\"cycles_visibility\", address=0x122664820>",
+        "s_curve": "<bpy id prop: owner=\"OBCylinder.044\", name=\"s_curve\", address=0x1226648d0>"
+      },
+      "base_vertices": 93,
+      "base_polygons": 149,
+      "base_triangles": 190,
+      "uv_layers": [],
+      "evaluated_vertices": 93,
+      "evaluated_triangles": 190,
+      "evaluated_world_bounds": {
+        "min": [
+          -2.945637226,
+          -0.176824316,
+          -1.189567089
+        ],
+        "max": [
+          -1.26565218,
+          0.162651375,
+          0.548119962
+        ],
+        "dimensions": [
+          1.679985046,
+          0.339475691,
+          1.737687051
+        ],
+        "centre": [
+          -2.105644703,
+          -0.007086471,
+          -0.320723563
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 5"
+      ]
+    },
+    {
+      "name": "Vert",
+      "type": "MESH",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.873295248,
+        -0.067125291,
+        -2.055050373
+      ],
+      "world_origin": [
+        -0.873295248,
+        -0.067125291,
+        -2.055050373
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        3.329737186,
+        0.126672402,
+        0.838256955
+      ],
+      "material_slots": [
+        "Black Stainless Steel"
+      ],
+      "modifiers": [],
+      "constraints": [],
+      "animation_data": false,
+      "drivers": [],
+      "custom_properties": {
+        "s_curve": "<bpy id prop: owner=\"OBVert\", name=\"s_curve\", address=0x122669e60>",
+        "cycles": "<bpy id prop: owner=\"OBVert\", name=\"cycles\", address=0x122669f10>",
+        "cycles_visibility": "<bpy id prop: owner=\"OBVert\", name=\"cycles_visibility\", address=0x122669fc0>"
+      },
+      "base_vertices": 49,
+      "base_polygons": 61,
+      "base_triangles": 107,
+      "uv_layers": [],
+      "evaluated_vertices": 49,
+      "evaluated_triangles": 107,
+      "evaluated_world_bounds": {
+        "min": [
+          -3.196590185,
+          -0.193765387,
+          -1.803893566
+        ],
+        "max": [
+          0.133147061,
+          -0.067092977,
+          -0.965636611
+        ],
+        "dimensions": [
+          3.329737246,
+          0.126672409,
+          0.838256955
+        ],
+        "centre": [
+          -1.531721562,
+          -0.130429182,
+          -1.384765089
+        ]
+      },
+      "hide_render": false,
+      "hide_viewport": false,
+      "collections": [
+        "Collection 5"
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "Black",
+      "users": 9,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.029246001,
+        0.029246001,
+        0.029246001,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfDiffuse"
+      ],
+      "images": []
+    },
+    {
+      "name": "Black Stainless Steel",
+      "users": 10,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.060444001,
+        0.060444001,
+        0.060444001,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled"
+      ],
+      "images": []
+    },
+    {
+      "name": "Glossy Dark Grey",
+      "users": 9,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.102237999,
+        0.102237999,
+        0.102237999,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled"
+      ],
+      "images": []
+    },
+    {
+      "name": "Gray Stainless Steel",
+      "users": 1,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.800000012,
+        0.800000012,
+        0.800000012,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled"
+      ],
+      "images": []
+    },
+    {
+      "name": "Material",
+      "users": 0,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.800000012,
+        0.800000012,
+        0.800000012,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled",
+        "ShaderNodeGroup",
+        "ShaderNodeGroup"
+      ],
+      "images": []
+    },
+    {
+      "name": "Matte Black",
+      "users": 2,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.026236,
+        0.026236,
+        0.026236,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled"
+      ],
+      "images": []
+    },
+    {
+      "name": "Matte Gray",
+      "users": 1,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.067790002,
+        0.067790002,
+        0.067790002,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled"
+      ],
+      "images": []
+    },
+    {
+      "name": "Stainless Steel",
+      "users": 38,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.800000012,
+        0.800000012,
+        0.800000012,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled"
+      ],
+      "images": []
+    },
+    {
+      "name": "Tires",
+      "users": 2,
+      "use_nodes": true,
+      "diffuse_color": [
+        0.006554,
+        0.006554,
+        0.006554,
+        1.0
+      ],
+      "node_types": [
+        "ShaderNodeOutputMaterial",
+        "ShaderNodeBsdfPrincipled"
+      ],
+      "images": []
+    }
+  ],
+  "images": [
+    {
+      "name": "Bike Reference.jpg",
+      "source": "FILE",
+      "size": [
+        0,
+        0
+      ],
+      "filepath": "//Bike Reference.jpg",
+      "packed": false,
+      "users": 0
+    },
+    {
+      "name": "graffiti_shelter_8k.hdr",
+      "source": "FILE",
+      "size": [
+        0,
+        0
+      ],
+      "filepath": "//../../HDRs/graffiti_shelter_8k.hdr",
+      "packed": false,
+      "users": 1
+    },
+    {
+      "name": "Render Result",
+      "source": "VIEWER",
+      "size": [
+        0,
+        0
+      ],
+      "filepath": "",
+      "packed": false,
+      "users": 1
+    },
+    {
+      "name": "Viewer Node",
+      "source": "VIEWER",
+      "size": [
+        256,
+        256
+      ],
+      "filepath": "",
+      "packed": false,
+      "users": 0
+    }
+  ],
+  "license": {
+    "html_filename": "92090 - LICENSE.html",
+    "license": "CC0 1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "text": "92090 - Simple Bicycle - Downloaded from Blend Swap body {background: #f0f0f0; color: #666; max-width: 960px; width: 100%; margin: auto; font-family: sans-serif; } a {color: #f80; text-decoration: none; } a:hover {color: #f50; } a:active {color: #f00; } article {background: #fff; padding: 32px; margin: 16px; } footer {margin: 16px; padding: 32px; } Blend #92090: Simple Bicycle Released under Creative Commons Zero 1.0 You are free to use this asset privately for any use you see fit. If you choose to distribute copies or modified versions of this asset you must do so under the following requirements: There are no requirements for this license. Failure to comply with these requirements, if any, is considered a severe violation of the License and the Blend Swap Terms of Use, Upload Rules and Code of Conduct. About \"Simple Bicycle\": Blender: 2.79 Render Engine: Cycles Uploaded on: 2018-07-09 19:21:56 Simple bike modeled in Blender. Medium-poly. Simple materials (no textures). Minor compositing. Help us moderate this file Blend Swap is a place to share and get awesome 3D work, if you think this blend falls into one of the following issues please file a report from http://www.blendswap.com/blends/view/92090 by clicking on the Manage panel to the left of the blend and then on Report/Flag : The blend author didn't make this blend and posted it as their own. The blend author is violating a Creative Commons License or copyright. The blend is incomplete, work in progress, or has missing textures. The blend contains simulation cache files and other unneeded media. The preview image has nothing to do with the blend's contents. Your help allows the site to stay clear of broken and stolen work. Notes: Do NOT report this blend if you dont' know how to use a feature on Blender, instead use the questions section of the site. Original file hosted by Blend Swap, LLC .",
+    "author_named_in_license": false,
+    "contains_legacy_asset_url": true
+  },
+  "assessment": {
+    "runtime_asset_adopted": false,
+    "web_export_verified": false,
+    "fit_to_target_dimensions_verified": false,
+    "notes": [
+      "No mechanical parent hierarchy, bone rig, constraints, drivers, or animation actions found. Objects are independent generic-named meshes/curves.",
+      "Some wheel origins coincide with axle centres, but spoke origins lie along their individual shafts and frame/contact points are not globally standardized pivots. Rebuild semantic roots and hinge axes before use.",
+      "Model uses unlabelled Blender units with many unapplied/nonuniform scales. Uniform scaling to 698 mm tire diameter gives wheelbase about 1104 mm and tire width about 17.5 mm, incompatible with target 1075 mm and 38 mm. Whole-bike uniform scaling cannot meet all target dimensions.",
+      "Only 12 separated spoke candidates per wheel, so wheel geometry is not a suitable direct replacement for target 32-spoke wheels.",
+      "Material node trees contain no image texture nodes. Bike Reference.jpg is an unused, unpacked missing reference; graffiti_shelter_8k.hdr is an unpacked missing environment. They are not included in the ZIP and their license is not established by this asset package.",
+      "Remove backdrop, camera, lights, missing reference/environment dependencies; rebuild glTF-compatible material assignments and verify export in a later adaptation phase.",
+      "Good candidate for geometry extraction and shape reference because of many separated CC0 pieces and moderate triangle count. Not a pre-rigged, dimension-accurate commute-bicycle runtime asset."
+    ]
+  },
+  "dimension_measurements": {
+    "source_axes_inferred_from_wheels": "X front, Y across bicycle, Z up; wheel axle is along Y",
+    "source_units_are_unlabelled_BU": true,
+    "front_wheel_mesh": "Torus.001",
+    "rear_wheel_mesh": "Torus",
+    "wheelbase_from_authored_tire_origins_BU": 5.888151168,
+    "front_tire_diameter_BU": 3.722789228,
+    "rear_tire_diameter_BU": 3.7210209965,
+    "front_tire_width_BU": 0.09355199,
+    "candidate_uniform_scale_metres_per_BU_for_front_diameter_698mm": 0.18749382714180346,
+    "after_candidate_scale": {
+      "wheelbase_mm": 1103.9919972778002,
+      "front_tire_width_mm": 17.540420641831727,
+      "bicycle_external_dimensions_mm": [
+        1801.5525878694739,
+        776.8916861494689,
+        1150.0276491462976
+      ]
+    },
+    "spoke_candidate_objects": [
+      "Cylinder.029",
+      "Cylinder.028",
+      "Cylinder.027",
+      "Cylinder.026",
+      "Cylinder.025",
+      "Cylinder.024",
+      "Cylinder.023",
+      "Cylinder.022",
+      "Cylinder.021",
+      "Cylinder.020",
+      "Cylinder.019",
+      "Cylinder.018",
+      "Cylinder.011",
+      "Cylinder.010",
+      "Cylinder.009",
+      "Cylinder.008",
+      "Cylinder.007",
+      "Cylinder.006",
+      "Cylinder.005",
+      "Cylinder.004",
+      "Cylinder.003",
+      "Cylinder.002",
+      "Cylinder.001",
+      "Cylinder"
+    ],
+    "spoke_candidate_count_per_wheel": 12,
+    "spoke_count_qualification": "24 individually separate slender cylinder candidates, 12 at each wheel centre; not 32 spokes per wheel. Identified from world position and geometry, not semantic authored names."
+  },
+  "file": "references/models/blendswap-simple-bicycle.zip",
+  "archive_member": "Bicycle.blend"
+}

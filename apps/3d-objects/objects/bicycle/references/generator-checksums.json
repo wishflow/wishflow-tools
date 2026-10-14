@@ -1,0 +1,172 @@
+{
+  "files": [
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/CHANGELOG.md",
+      "bytes": 4833,
+      "sha256": "fdbd80c7c92b79de0bd73dd18dfe4de0f071b0e0d445bb858b1c87f160958a1b",
+      "git_blob_sha": "d5d2b531bac1247b0010a928a07ebff32bc249ae",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/CHANGELOG.md"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/LICENSE",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "git_blob_sha": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/LICENSE"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/README.md",
+      "bytes": 10488,
+      "sha256": "f2d5e440a3d2b0c97d4994255cf264858881f6a8a4dd0d76eba64def0f7d2d4b",
+      "git_blob_sha": "1e8e2e4be02e2d532df26fe5b942013fa33d406c",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/README.md"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/parametric_chain_sprocket/__init__.py",
+      "bytes": 30930,
+      "sha256": "285b8b0b0b9525385f09ad832e54a73198a7c407af867df47f3a78e34298a63a",
+      "git_blob_sha": "63eb7c5cc12f84b27f6f3ac91d32d54a2e3718c8",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/parametric_chain_sprocket/__init__.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tests/run_blender_tests.py",
+      "bytes": 30141,
+      "sha256": "7714132e9db672cb4dc601ad039ce5fa11453240dc9b5f811c206c03744102bf",
+      "git_blob_sha": "e0fca8b4d024ff4205193a87a5147e4beeb756d8",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tests/run_blender_tests.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/create_demo_blend.py",
+      "bytes": 1030,
+      "sha256": "ae23b189cf639fa1752eaccaf8d92dffc194cc2fc6d0a229f4a9b7d7c938d3f3",
+      "git_blob_sha": "3dfce1e22eb7b16a98f0c30f87d15d02c27d81dc",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/create_demo_blend.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/create_presets_demo.py",
+      "bytes": 915,
+      "sha256": "fa01580c7a27f55beb59f946313ec099a0c8412dfb4f9d70126cc0d7e5a616fb",
+      "git_blob_sha": "52af90151d9dcebbba8f9c4ca5293afda93873c9",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/create_presets_demo.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/create_support_preview.py",
+      "bytes": 2538,
+      "sha256": "d0bb99fdaccdd560832b102d7128b3d4c3e72909d20cec43449a9fd6f6f53847",
+      "git_blob_sha": "a0f58c9207777422905f501cdf5f0d99148fdf3f",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/create_support_preview.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/create_support_topology_preview.py",
+      "bytes": 2217,
+      "sha256": "bd2443485b11e833550c713b6ceda67aec128a655f1d6fb1276442370edc7758",
+      "git_blob_sha": "7c653a66944d4325003325fb931b5374e4a7fce9",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/create_support_topology_preview.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/plot_chain_presets.py",
+      "bytes": 1648,
+      "sha256": "48ee683200aff44ca47ede6a39f94ebd4538ebef9bfdae5d0fa1dbfc1a8bac0c",
+      "git_blob_sha": "f6c932bdca0af4eefa65e67bd701e6d3154cdcf5",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/plot_chain_presets.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/plot_generated_profiles.py",
+      "bytes": 1210,
+      "sha256": "b96611028af577aaa2ab5a8d34ffc4a1781884a38aad68d2a1c87329c2bca6ed",
+      "git_blob_sha": "e4dea655b70b2ed86c4447a36881c0b220dcdefe",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/plot_generated_profiles.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/plot_tip_flattening.py",
+      "bytes": 1745,
+      "sha256": "169897af62bd8aba9c59b7a075b279d5708e7748de0457929b6dd9fad51fefef",
+      "git_blob_sha": "1a11591a5d6a02c25ef2fafb8d4909a4e29063f9",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/plot_tip_flattening.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/parametric-chain-sprocket-generator/tools/plot_tip_pitch.py",
+      "bytes": 3361,
+      "sha256": "5b481c540eca40e5ec7b864a2c4c9c77ec60c551d9cd879cacf0f7fc48544776",
+      "git_blob_sha": "44c30bfb40a53110af62d05b726fa051475e3d31",
+      "repository": "EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "source_url": "https://github.com/EricRorich/ParametricChainSprocketGenerator/blob/28779a74307f043059b5510c9af09618d7ad77cd/tools/plot_tip_pitch.py"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/openscad-sprockets/LICENSE.gpl-3",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "git_blob_sha": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+      "repository": "dallenwilson/OpenSCAD-Sprockets",
+      "commit": "6f9fe967066f3c9aa58237296ac43f489fe1a7f6",
+      "source_url": "https://github.com/dallenwilson/OpenSCAD-Sprockets/blob/6f9fe967066f3c9aa58237296ac43f489fe1a7f6/LICENSE.gpl-3"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/openscad-sprockets/LICENSE.ms-pl",
+      "bytes": 2629,
+      "sha256": "b50989066a63ef9662c9a88420fb5a4df603d40fbe21637a8ecc3871ff155c74",
+      "git_blob_sha": "cad91a35c144181cead3ae377f47efd7bc122d23",
+      "repository": "dallenwilson/OpenSCAD-Sprockets",
+      "commit": "6f9fe967066f3c9aa58237296ac43f489fe1a7f6",
+      "source_url": "https://github.com/dallenwilson/OpenSCAD-Sprockets/blob/6f9fe967066f3c9aa58237296ac43f489fe1a7f6/LICENSE.ms-pl"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/openscad-sprockets/README.md",
+      "bytes": 844,
+      "sha256": "11c6070447760ef21382f02b34699c052783bc155ada4d6fe4fa282be188dad4",
+      "git_blob_sha": "95a4e89205ec567f59a2f7282a6e2fc66de382a6",
+      "repository": "dallenwilson/OpenSCAD-Sprockets",
+      "commit": "6f9fe967066f3c9aa58237296ac43f489fe1a7f6",
+      "source_url": "https://github.com/dallenwilson/OpenSCAD-Sprockets/blob/6f9fe967066f3c9aa58237296ac43f489fe1a7f6/README.md"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/openscad-sprockets/Sprockets.scad",
+      "bytes": 13346,
+      "sha256": "fa7566f0b39bb068960f1dd15aaf5ac8d99f14b3fa74f6ab590df92f2580f5f1",
+      "git_blob_sha": "7a3eee6bedf14d178372152bb10464e80e783cca",
+      "repository": "dallenwilson/OpenSCAD-Sprockets",
+      "commit": "6f9fe967066f3c9aa58237296ac43f489fe1a7f6",
+      "source_url": "https://github.com/dallenwilson/OpenSCAD-Sprockets/blob/6f9fe967066f3c9aa58237296ac43f489fe1a7f6/Sprockets.scad"
+    },
+    {
+      "path": "apps/3d-objects/objects/bicycle/references/sources/openscad-sprockets/threads.scad",
+      "bytes": 15948,
+      "sha256": "ea8ce16fec92010b5efbb1ffc48fd165399517c31b0169e50cee150829f5baf5",
+      "git_blob_sha": "c62b4600ae6cec9dc92601d8152fafa2a9902f50",
+      "repository": "dallenwilson/OpenSCAD-Sprockets",
+      "commit": "6f9fe967066f3c9aa58237296ac43f489fe1a7f6",
+      "source_url": "https://github.com/dallenwilson/OpenSCAD-Sprockets/blob/6f9fe967066f3c9aa58237296ac43f489fe1a7f6/threads.scad"
+    }
+  ],
+  "bytes_total": 194121,
+  "source_versions": {
+    "EricRorich/ParametricChainSprocketGenerator": "28779a74307f043059b5510c9af09618d7ad77cd",
+    "dallenwilson/OpenSCAD-Sprockets": "6f9fe967066f3c9aa58237296ac43f489fe1a7f6"
+  },
+  "verified": "All bytes match upstream Git blob SHA and size; SHA-256 recorded. Source was not installed, executed, or modified. PNG previews and upstream .gitignore omitted."
+}

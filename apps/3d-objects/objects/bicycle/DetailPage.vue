@@ -28,6 +28,10 @@ const state = reactive({
   frontTireGroundClearanceMm: null as number | null,
   rearTireGroundClearanceMm: null as number | null,
   standGroundClearanceMm: null as number | null,
+  standFootContactErrorMm: null as number | null,
+  chainLinkArcSpacingErrorMm: null as number | null,
+  chainUpperPulleyContactErrorMm: null as number | null,
+  chainLowerPulleyContactErrorMm: null as number | null,
   fallen: false,
   steeringDegrees: 0,
   frontBrake: 0,
@@ -240,6 +244,10 @@ function onPanelToggle(event: Event) {
             :data-front-tire-clearance-mm="state.frontTireGroundClearanceMm ?? undefined"
             :data-rear-tire-clearance-mm="state.rearTireGroundClearanceMm ?? undefined"
             :data-stand-clearance-mm="state.standGroundClearanceMm ?? undefined"
+            :data-stand-foot-contact-error-mm="state.standFootContactErrorMm ?? undefined"
+            :data-chain-link-arc-spacing-error-mm="state.chainLinkArcSpacingErrorMm ?? undefined"
+            :data-chain-upper-pulley-contact-error-mm="state.chainUpperPulleyContactErrorMm ?? undefined"
+            :data-chain-lower-pulley-contact-error-mm="state.chainLowerPulleyContactErrorMm ?? undefined"
           >
             <div class="viewer-topline" aria-hidden="true">
               <span>URBAN / 700C</span><span>{{ state.mode === 'inspect' ? 'ASSEMBLY VIEW' : 'RIDE LOOP · 8 × 4 M' }}</span>
@@ -327,7 +335,7 @@ function onPanelToggle(event: Event) {
             <section class="control-section gear-section">
               <div class="section-heading">
                 <div><span class="section-index">02</span><h2>{{ text(copy.gearLabel) }}</h2></div>
-                <strong id="gear-value">{{ currentGearNumber }} / 8 <small>{{ [32, 28, 24, 21, 18, 15, 13, 11][state.gearIndex] }}T</small></strong>
+                <strong id="gear-value">{{ currentGearNumber }} / 8 <small>{{ [32, 28, 24, 21, 18, 16, 14, 12][state.gearIndex] }}T</small></strong>
               </div>
               <div class="gear-controls">
                 <button id="gear-down" type="button" :aria-label="text(copy.lowerGear)" :disabled="!canOperate || state.gearIndex === 0" @click="sceneControls?.shiftGear(-1)">−</button>

@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "modelPath": "assets/scene.glb",
+  "maxTriangles": 100000,
+  "maxGlbBytes": 8388608,
+  "maxTextureEdge": 1024,
+  "minimumMeshCount": 300,
+  "textureMaterialNames": [
+    "Satin Aluminium",
+    "Machined Aluminium",
+    "Brushed Steel",
+    "Stainless Brake Rotor",
+    "Forked Steel"
+  ],
+  "requiredObjects": [
+    "UrbanCommuterBicycle",
+    "layer.frame",
+    "layer.steering",
+    "Assembly.Frame",
+    "SteeringPivot",
+    "Assembly.FrontWheel",
+    "FrontWheelSpin",
+    "layer.rearWheel",
+    "RearWheelSpin",
+    "Assembly.Drivetrain",
+    "CassetteSpin",
+    "CrankPivot",
+    "Assembly.FrontBrake",
+    "Assembly.RearBrake",
+    "FrontRotor",
+    "RearRotor",
+    "SideStandHinge",
+    "SideStandFoot",
+    "Front.Tire.Casing",
+    "Rear.Tire.Casing",
+    "Frame.topTube",
+    "Frame.downTube",
+    "Fork.Leg.1",
+    "RackAssembly",
+    "DerailleurCage",
+    "DerailleurUpperPulleySpin",
+    "DerailleurLowerPulleySpin",
+    "Baseline.RearAxle",
+    "Baseline.FrontAxle",
+    "Baseline.BottomBracket",
+    "Baseline.HeadTop",
+    "Baseline.HeadBottom"
+  ],
+  "measurementChecks": {
+    "namePrefixCounts": {
+      "Front.Spoke.": 32,
+      "Rear.Spoke.": 32,
+      "Front.Nipple.": 32,
+      "Rear.Nipple.": 32,
+      "Cassette.Gear.": 8,
+      "CassetteSprocket.": 8,
+      "Derailleur.UpperPulley.": 1,
+      "Derailleur.LowerPulley.": 1
+    },
+    "worldLocationsMm": [
+      { "object": "Baseline.RearAxle", "browserMm": [0, 349, 0], "toleranceMm": 0.1 },
+      { "object": "Baseline.FrontAxle", "browserMm": [1075, 349, 0], "toleranceMm": 0.1 },
+      { "object": "Baseline.BottomBracket", "browserMm": [440.9365, 289, 0], "toleranceMm": 0.1 },
+      { "object": "Baseline.HeadTop", "browserMm": [850.9365, 845, 0], "toleranceMm": 0.1 },
+      { "object": "Baseline.HeadBottom", "browserMm": [893.2604, 722.0826, 0], "toleranceMm": 0.1 },
+      { "object": "Baseline.SeatTop", "browserMm": [299.1362, 752.8078, 0], "toleranceMm": 0.1 },
+      { "object": "Validation.StandFootCorner.0", "browserMm": [127.5, 0, -275], "toleranceMm": 0.1 },
+      { "object": "Validation.StandFootCorner.1", "browserMm": [172.5, 0, -275], "toleranceMm": 0.1 },
+      { "object": "Validation.StandFootCorner.2", "browserMm": [127.5, 0, -245], "toleranceMm": 0.1 },
+      { "object": "Validation.StandFootCorner.3", "browserMm": [172.5, 0, -245], "toleranceMm": 0.1 },
+      { "object": "DerailleurUpperPulleySpin", "browserMm": [-74, 270, 44.2], "toleranceMm": 0.1 },
+      { "object": "DerailleurLowerPulleySpin", "browserMm": [-20, 180, 44.2], "toleranceMm": 0.1 }
+    ],
+    "browserBoundsMm": [
+      { "object": "Front.Tire.Casing", "dimensions": [698, 698, 38], "toleranceMm": 0.1 },
+      { "object": "Rear.Tire.Casing", "dimensions": [698, 698, 38], "toleranceMm": 0.1 }
+    ],
+    "circleClearancesMm": [
+      { "first": "DerailleurUpperPulleySpin", "firstRadiusMm": 26.534, "second": "CassetteSpin", "secondRadiusMm": 64.785, "minimumClearanceMm": 10 }
+    ]
+  }
+}

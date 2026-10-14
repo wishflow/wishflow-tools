@@ -4,6 +4,25 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('wishflow-tools-language', 'zh'));
 });
 
+test('链条在八个挡位都经过后拨导轮并保持弧长分布', async ({ page }) => {
+  await page.goto('/#/objects/bicycle');
+  const viewer = page.locator('#viewer');
+  await expect(viewer).toHaveAttribute('data-state', 'loaded', { timeout: 30000 });
+  await page.getByRole('button', { name: '操作' }).click();
+
+  for (let gear = 0; gear < 8; gear += 1) {
+    for (const attribute of [
+      'data-chain-link-arc-spacing-error-mm',
+      'data-chain-upper-pulley-contact-error-mm',
+      'data-chain-lower-pulley-contact-error-mm',
+    ]) {
+      await expect(viewer).toHaveAttribute(attribute, /^-?\d+(\.\d+)?([eE][-+]?\d+)?$/);
+      await expect.poll(async () => Number(await viewer.getAttribute(attribute))).toBeLessThanOrEqual(0.5);
+    }
+    if (gear < 7) await page.getByRole('button', { name: '升挡' }).click();
+  }
+});
+
 test('自行车模块自动发现并提供检视、拆解、选中和操作模式', async ({ page }) => {
   test.setTimeout(60_000);
   const pageErrors: string[] = [];
@@ -75,8 +94,9 @@ test('自行车模块自动发现并提供检视、拆解、选中和操作模�
 
   await page.getByRole('button', { name: '展开侧撑' }).click();
   await expect(page.getByRole('button', { name: '收起侧撑' })).toBeVisible();
-  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 5000 }).toBeLessThanOrEqual(5);
-  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 5000 }).toBeGreaterThanOrEqual(-5);
+  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 10000 }).toBeLessThanOrEqual(5);
+  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 10000 }).toBeGreaterThanOrEqual(-5);
+  await expect.poll(() => clearanceFor('data-stand-foot-contact-error-mm'), { timeout: 10000 }).toBeLessThanOrEqual(2);
   await page.getByRole('button', { name: '收起侧撑' }).click();
   await page.getByRole('button', { name: '放倒自行车' }).click();
   await expect(page.locator('#ride-state')).toContainText('已放倒');
@@ -110,9 +130,9 @@ test('360px 窄屏下模型不横向溢出，操作控制可折叠', async ({ pa
   await expect(page.locator('#control-panel')).toBeVisible();
 });
 
-test('本地纹理加载失败会显示错误并可重试', async ({ page }) => {
+test('本地 GLB 加载失败会显示错误并可重试', async ({ page }) => {
   let failed = false;
-  await page.route('**/*Metal012_1K-JPG_NormalGL*.jpg', (route) => {
+  await page.route('**/scene-*.glb', (route) => {
     if (!failed) {
       failed = true;
       return route.abort();

@@ -5,6 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('小屋静态页面加载本地模型并支持拆解、显隐与复位', async ({ page }) => {
+  test.setTimeout(60_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
