@@ -10,7 +10,7 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '3D Objects' })).toBeVisible();
-  await expect(page.locator('.catalog-count strong')).toHaveText('01');
+  await expect(page.locator('.catalog-count strong')).toHaveText('02');
   await expect(page.getByRole('link', { name: /木结构小屋/ })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
   const sidebarToggle = page.getByRole('button', { name: '展开应用内导航' });

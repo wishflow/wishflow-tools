@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "ambientcg-metal012-color-1k",
+      "name": "Metal 012 1K Color map",
+      "origin": "external",
+      "sourceUrl": "https://ambientcg.com/view?id=Metal012",
+      "author": "ambientCG / Lennart Demes",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "CC0 不要求署名；项目仍在资源调研文档中记录作者和来源。",
+      "redistribution": "allowed",
+      "redistributionNotes": "CC0 允许公开静态托管、复制、修改和再分发。",
+      "localPath": "assets/textures/Metal012_1K-JPG_Color.jpg",
+      "retrievedAt": "2026-10-14",
+      "modifications": "从官方 1K-JPG 下载包中提取；像素未修改。作为 Three.js 金属部件 color map 使用。"
+    },
+    {
+      "id": "ambientcg-metal012-normalgl-1k",
+      "name": "Metal 012 1K OpenGL normal map",
+      "origin": "external",
+      "sourceUrl": "https://ambientcg.com/view?id=Metal012",
+      "author": "ambientCG / Lennart Demes",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "CC0 不要求署名；项目仍在资源调研文档中记录作者和来源。",
+      "redistribution": "allowed",
+      "redistributionNotes": "CC0 允许公开静态托管、复制、修改和再分发。",
+      "localPath": "assets/textures/Metal012_1K-JPG_NormalGL.jpg",
+      "retrievedAt": "2026-10-14",
+      "modifications": "从官方 1K-JPG 下载包中提取；像素未修改。Three.js 中按 OpenGL 法线贴图使用。"
+    },
+    {
+      "id": "ambientcg-metal012-roughness-1k",
+      "name": "Metal 012 1K Roughness map",
+      "origin": "external",
+      "sourceUrl": "https://ambientcg.com/view?id=Metal012",
+      "author": "ambientCG / Lennart Demes",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "CC0 不要求署名；项目仍在资源调研文档中记录作者和来源。",
+      "redistribution": "allowed",
+      "redistributionNotes": "CC0 允许公开静态托管、复制、修改和再分发。",
+      "localPath": "assets/textures/Metal012_1K-JPG_Roughness.jpg",
+      "retrievedAt": "2026-10-14",
+      "modifications": "从官方 1K-JPG 下载包中提取；像素未修改。作为 Three.js 金属部件 roughness map 使用。"
+    }
+  ]
+}

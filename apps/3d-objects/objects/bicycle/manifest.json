@@ -1,0 +1,9 @@
+{
+  "title": "Urban Commuter Bicycle",
+  "titleZh": "城市通勤自行车",
+  "description": "A detailed, interactive 700C commuter bicycle with inspect and ride modes.",
+  "descriptionZh": "一辆可拆解、可操作的 700C 城市通勤自行车，包含检视与骑行模式。",
+  "category": "Mechanical",
+  "categoryZh": "机械结构",
+  "thumbnail": "assets/thumbnail.svg"
+}
