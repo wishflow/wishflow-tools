@@ -29,7 +29,7 @@ export type PlantAbility =
   | 'destroy-grave'
   | 'wake';
 
-export type LevelTerrain = 'day' | 'night' | 'pool' | 'fog' | 'roof';
+export type LevelTerrain = 'day' | 'night' | 'pool' | 'fog' | 'roof' | 'boss';
 
 export type GamePhase = 'ready' | 'playing' | 'paused' | 'intermission' | 'won' | 'lost';
 
@@ -66,6 +66,10 @@ export interface ZombieDefinition {
   title: string;
   titleZh?: string;
   maxHealth: number;
+  waveCost: number;
+  startingLevel: number;
+  firstAllowedWave: number;
+  pickWeight: number;
   speedPerTick: number;
   biteDamage: number;
   biteIntervalTicks: number;
@@ -100,9 +104,31 @@ export interface LevelDefinition {
   mowerRows?: number[];
   graves?: GraveLocation[];
   intermissionAfterWaves?: boolean;
+  intermissionEveryWaves?: number;
   waveStartDelayTicks?: number;
   endlessWaveRule?: EndlessWaveRule;
+  adventureWavePlan?: AdventureWavePlan;
+  survivalWavePlan?: SurvivalWavePlan;
   waves: WaveDefinition[];
+}
+
+export interface AdventureWavePlan {
+  levelNumber: number;
+  waveCount: number;
+  eligibleZombieIds: string[];
+  introZombieId?: string;
+  afterAdventureZombieId?: string;
+  bossEncounterId?: string;
+  rewardPlantId?: string;
+  specialModeId?: 'wall-nut-bowling' | 'whack-a-zombie' | 'little-trouble' | 'scary-potter' | 'stormy-night' | 'bungee-blitz' | 'final-boss';
+  wavePointMultiplier?: number;
+}
+
+export interface SurvivalWavePlan {
+  terrain: Exclude<LevelTerrain, 'boss'>;
+  difficulty: 'normal' | 'hard' | 'endless';
+  wavesPerStage: 10 | 20;
+  totalStages?: 5;
 }
 
 export interface EndlessWaveRule {
@@ -248,4 +274,5 @@ export interface GameOptions {
   registry?: import('./registry').GameRegistry;
   allowedPlantIds?: string[];
   maxLoadoutSize?: number;
+  adventureFirstPlaythrough?: boolean;
 }

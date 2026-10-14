@@ -24,6 +24,10 @@ test('profile repository writes versioned settings and progression', () => {
   assert.deepEqual(reloaded.adventure.unlockedLevels, ['1-1', '1-2']);
 });
 
+test('a new profile starts with the original first Adventure plant only', () => {
+  assert.deepEqual(DEFAULT_PROFILE.unlockedPlants, ['peashooter']);
+});
+
 test('corrupt profile data recovers to a safe default', () => {
   const storage = new MemoryStorage();
   storage.setItem('wishflow-plants-vs-zombies-profile', '{broken');

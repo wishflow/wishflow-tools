@@ -82,6 +82,10 @@ export function registerZombie(registry: GameRegistry, definition: ZombieDefinit
   validateId(definition.id, 'Zombie');
   if (registry.zombies.has(definition.id)) throw new Error('Zombie \"' + definition.id + '\" is already registered.');
   if (!Number.isFinite(definition.maxHealth) || definition.maxHealth <= 0) throw new Error('Zombie \"' + definition.id + '\" maxHealth must be positive.');
+  if (!Number.isInteger(definition.waveCost) || definition.waveCost <= 0) throw new Error('Zombie \"' + definition.id + '\" waveCost must be a positive integer.');
+  if (!Number.isInteger(definition.startingLevel) || definition.startingLevel < 1) throw new Error('Zombie \"' + definition.id + '\" startingLevel must be a positive integer.');
+  if (!Number.isInteger(definition.firstAllowedWave) || definition.firstAllowedWave < 1) throw new Error('Zombie \"' + definition.id + '\" firstAllowedWave must be a positive integer.');
+  if (!Number.isFinite(definition.pickWeight) || definition.pickWeight < 0) throw new Error('Zombie \"' + definition.id + '\" pickWeight must be non-negative.');
   if (!Number.isFinite(definition.speedPerTick) || definition.speedPerTick <= 0) throw new Error('Zombie \"' + definition.id + '\" speedPerTick must be positive.');
   if (!Number.isFinite(definition.biteDamage) || definition.biteDamage <= 0) throw new Error('Zombie \"' + definition.id + '\" biteDamage must be positive.');
   if (!Number.isInteger(definition.biteIntervalTicks) || definition.biteIntervalTicks <= 0) throw new Error('Zombie \"' + definition.id + '\" biteIntervalTicks must be positive.');
@@ -103,6 +107,28 @@ export function registerLevel(registry: GameRegistry, definition: LevelDefinitio
   if (definition.waveStartDelayTicks !== undefined && (!Number.isInteger(definition.waveStartDelayTicks) || definition.waveStartDelayTicks < 1)) {
     throw new Error('Level ' + definition.id + ' waveStartDelayTicks must be a positive integer.');
   }
+  if (definition.intermissionEveryWaves !== undefined
+    && (!definition.intermissionAfterWaves || !Number.isInteger(definition.intermissionEveryWaves) || definition.intermissionEveryWaves < 1)) {
+    throw new Error('Level ' + definition.id + ' intermissionEveryWaves requires intermissions and must be a positive integer.');
+  }
+  if (definition.survivalWavePlan) {
+    const plan = definition.survivalWavePlan;
+    const isEndless = plan.difficulty === 'endless';
+    const expectedWavesPerStage = plan.difficulty === 'normal' ? 10 : 20;
+    const waterTerrain = plan.terrain === 'pool' || plan.terrain === 'fog';
+    const expectedRows = waterTerrain ? 6 : 5;
+    const expectedStages = isEndless ? undefined : 5;
+    const expectedWaveCount = plan.wavesPerStage * (expectedStages ?? 1);
+    const waterRows = definition.waterRows ?? [];
+    if (definition.terrain !== plan.terrain || plan.wavesPerStage !== expectedWavesPerStage
+      || definition.rows !== expectedRows || definition.intermissionAfterWaves !== true
+      || definition.intermissionEveryWaves !== plan.wavesPerStage || plan.totalStages !== expectedStages
+      || definition.waves.length !== expectedWaveCount
+      || (waterTerrain && !(waterRows.length === 2 && waterRows.includes(2) && waterRows.includes(3)))
+      || (!waterTerrain && waterRows.length > 0)) {
+      throw new Error('Level ' + definition.id + ' has an inconsistent Survival wave plan.');
+    }
+  }
   if (definition.endlessWaveRule) {
     const rule = definition.endlessWaveRule;
     if (!definition.intermissionAfterWaves || rule.zombiePool.length === 0
@@ -112,6 +138,22 @@ export function registerLevel(registry: GameRegistry, definition: LevelDefinitio
       throw new Error('Level ' + definition.id + ' has an invalid endless wave rule.');
     }
     for (const typeId of rule.zombiePool) if (!registry.zombies.has(typeId)) throw new Error('Level ' + definition.id + ' endless waves reference unknown zombie ' + typeId + '.');
+  }
+  if (definition.adventureWavePlan) {
+    const plan = definition.adventureWavePlan;
+    if (!Number.isInteger(plan.levelNumber) || plan.levelNumber < 1 || plan.levelNumber > 50
+      || !Number.isInteger(plan.waveCount) || plan.waveCount < 1 || plan.eligibleZombieIds.length === 0
+      || (plan.wavePointMultiplier !== undefined && (!Number.isFinite(plan.wavePointMultiplier) || plan.wavePointMultiplier <= 0))) {
+      throw new Error('Level ' + definition.id + ' has an invalid Adventure wave plan.');
+    }
+    const referencedZombieIds = [
+      ...plan.eligibleZombieIds,
+      ...(plan.introZombieId ? [plan.introZombieId] : []),
+      ...(plan.afterAdventureZombieId ? [plan.afterAdventureZombieId] : []),
+    ];
+    for (const typeId of referencedZombieIds) {
+      if (!registry.zombies.has(typeId)) throw new Error('Level ' + definition.id + ' Adventure plan references unknown zombie ' + typeId + '.');
+    }
   }
   if (definition.rewardPlantId && !registry.plants.has(definition.rewardPlantId)) throw new Error('Level ' + definition.id + ' references an unknown reward plant.');
   for (const row of definition.mowerRows ?? []) {
@@ -126,7 +168,9 @@ export function registerLevel(registry: GameRegistry, definition: LevelDefinitio
       throw new Error('Level "' + definition.id + '" has a grave outside the lawn.');
     }
   }
-  if (definition.waterRows?.length && definition.terrain !== 'pool' && definition.terrain !== 'fog') throw new Error('Level "' + definition.id + '" has water rows but is not a pool or fog level.');
+  if (definition.waterRows?.length && definition.terrain !== 'pool' && definition.terrain !== 'fog') {
+    throw new Error('Level "' + definition.id + '" has water rows but is not a pool or fog level.');
+  }
   let previousTick = -1;
   for (const wave of definition.waves) {
     if (!Number.isInteger(wave.atTick) || wave.atTick < previousTick) throw new Error('Level \"' + definition.id + '\" waves must use ordered non-negative ticks.');

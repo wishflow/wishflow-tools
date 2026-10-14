@@ -108,8 +108,8 @@ export class BoardScene extends Phaser.Scene {
         const x = LAWN.x + column * cellWidth;
         const y = LAWN.y + row * cellHeight;
         const water = waterRows.includes(row);
-        const roof = terrain === 'roof';
-        const night = terrain === 'night';
+        const roof = terrain === 'roof' || terrain === 'boss';
+        const night = terrain === 'night' || terrain === 'fog';
         const shade = water
           ? ((row + column) % 2 === 0 ? 0x5b9ab5 : 0x4f8eaa)
           : roof

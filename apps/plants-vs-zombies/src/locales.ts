@@ -129,6 +129,7 @@ export function terrainName(terrain: LevelTerrain): string {
     pool: { en: 'Pool', zh: '泳池' },
     fog: { en: 'Fog', zh: '浓雾' },
     roof: { en: 'Roof', zh: '屋顶' },
+    boss: { en: 'Boss', zh: '首领战' },
   };
   return localize(names[terrain]);
 }

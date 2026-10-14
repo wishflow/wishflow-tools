@@ -755,11 +755,12 @@ function renderSnapshot(): void {
     ? (isEnglish() ? runtime.level.title : runtime.level.titleZh ?? runtime.level.title)
     : modeTitle(gameSession.modeId);
   const categoryLabel = modeCategory === 'survival' ? t('survival') : modeCategory === 'mini-game' ? t('miniGames') : modeCategory === 'puzzle' ? t('puzzle') : t('adventure');
+  const endlessRun = Boolean(runtime.level.endlessWaveRule || runtime.level.survivalWavePlan?.difficulty === 'endless');
   root!.querySelector<HTMLElement>('#level-terrain')!.textContent = terrainName(runtime.level.terrain ?? 'day') + ' · ' + categoryLabel;
   root!.querySelector<HTMLElement>('#sun-count')!.textContent = isEnglish() ? 'Sun ' + snapshot.sun : '阳光 ' + snapshot.sun;
   root!.querySelector<HTMLElement>('#wave-counter')!.textContent = isEnglish()
-    ? 'Wave ' + snapshot.spawnedWaveCount + ' / ' + (runtime.level.endlessWaveRule ? '∞' : snapshot.waveCount)
-    : '波次 ' + snapshot.spawnedWaveCount + ' / ' + (runtime.level.endlessWaveRule ? '∞' : snapshot.waveCount);
+    ? 'Wave ' + snapshot.spawnedWaveCount + ' / ' + (endlessRun ? '∞' : snapshot.waveCount)
+    : '波次 ' + snapshot.spawnedWaveCount + ' / ' + (endlessRun ? '∞' : snapshot.waveCount);
   const sunPickupList = root!.querySelector<HTMLElement>('#sun-pickups')!;
   sunPickupList.replaceChildren();
   for (const sun of snapshot.suns) {
@@ -863,7 +864,14 @@ function startGame(
     .filter((id) => unlocked.has(id) && registry.plants.has(id) && (!allowed || allowed.has(id)))
     .slice(0, maxSeedSelection);
   if (plantIds.length === 0) throw new Error('A battle session requires at least one unlocked seed packet.');
-  const runtime = createGame({ registry, level: selectedLevel, seed, allowedPlantIds: plantIds, maxLoadoutSize: maxSeedSelection });
+  const runtime = createGame({
+    registry,
+    level: selectedLevel,
+    seed,
+    allowedPlantIds: plantIds,
+    maxLoadoutSize: maxSeedSelection,
+    adventureFirstPlaythrough: !repository.read().adventure.completedLevels.includes('5-10'),
+  });
   dispatchCommand(runtime, { type: 'START' });
   gameSession.runtime = runtime;
   gameSession.modeId = modeId;

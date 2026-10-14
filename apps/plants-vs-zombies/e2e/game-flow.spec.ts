@@ -20,14 +20,14 @@ test('desktop player can start a lawn and place a plant', async ({ page }) => {
   await page.getByRole('button', { name: /Almanac|图鉴/ }).click();
   await expect(page.locator('#almanac-content .almanac-section')).toHaveCount(2);
   await expect(page.locator('#almanac-content .almanac-section').nth(0).locator('.almanac-card')).toHaveCount(49);
-  await expect(page.locator('#almanac-content .almanac-section').nth(1).locator('.almanac-card')).toHaveCount(26);
+  await expect(page.locator('#almanac-content .almanac-section').nth(1).locator('.almanac-card')).toHaveCount(27);
   await page.getByRole('button', { name: /Main menu|主菜单/ }).click();
   await page.getByRole('button', { name: /Start Adventure|开始冒险/ }).click();
   await confirmSeedSelection(page);
   await expect(page.getByRole('region', { name: /Battlefield|战场/ })).toBeVisible();
   await expect(page.locator('#game-host canvas')).toBeAttached({ timeout: 15_000 });
   await page.getByRole('button', { name: /Peashooter|豌豆射手/ }).click();
-  await page.getByRole('button', { name: /Plant row 3 column 2|种植 第3行 第2列/ }).click();
+  await page.getByRole('button', { name: /Plant row 1 column 2|种植 第1行 第2列/ }).click();
   await expect(page.getByText(/Sun 50|阳光 50/)).toBeVisible();
 });
 
@@ -66,9 +66,7 @@ test('unlocked pool levels expose six lawn rows', async ({ page }) => {
   await expect(page.locator('#game-status')).toHaveText(/Place a Lily Pad or Flower Pot first|请先放置睡莲或花盆/);
   await page.getByRole('button', { name: /Lily Pad|睡莲/ }).click();
   await page.getByRole('button', { name: /Plant row 3 column 2|种植 第3行 第2列/ }).click();
-  await page.getByRole('button', { name: /Peashooter|豌豆射手/ }).click();
-  await page.getByRole('button', { name: /Plant row 3 column 2|种植 第3行 第2列/ }).click();
-  await expect(page.getByText(/Sun 75|阳光 75/)).toBeVisible();
+  await expect(page.getByText(/Sun 25|阳光 25/)).toBeVisible();
 });
 
 test('survival unlocks after Adventure and offers five-flag, ten-flag, and endless runs', async ({ page }) => {

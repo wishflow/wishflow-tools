@@ -65,26 +65,24 @@ export function createDefaultGameModeRegistry(): GameModeRegistry {
   const terrainModes = ['day', 'night', 'pool', 'fog', 'roof'] as const;
   for (const terrain of terrainModes) {
     for (const difficulty of ['normal', 'hard'] as const) {
-      const waveCount = difficulty === 'hard' ? 10 : 5;
-      const level = createSurvivalLevel(terrain, waveCount, difficulty);
+      const suffix = difficulty === 'hard' ? '-hard' : '';
       registerGameMode(registry, {
-        id: level.id,
+        id: 'survival-' + terrain + suffix,
         category: 'survival',
-        title: level.title,
-        description: difficulty === 'hard' ? 'Defend across ten increasingly difficult flags on this terrain.' : 'Defend across five flags on this terrain.',
+        title: 'Survival · ' + terrain[0]!.toUpperCase() + terrain.slice(1) + (difficulty === 'hard' ? ' · Hard' : ''),
+        description: difficulty === 'hard' ? 'Defend across ten flags on this terrain.' : 'Defend across five flags on this terrain.',
         unlockAfterLevelId: '5-10',
-        createSession: () => ({ kind: 'battle', level, progression: 'none' }),
+        createSession: (seed) => ({ kind: 'battle', level: createSurvivalLevel(terrain, difficulty, seed), progression: 'none' }),
       });
     }
   }
-  const endlessPoolLevel = createSurvivalLevel('pool', 5, 'normal', true);
   registerGameMode(registry, {
-    id: endlessPoolLevel.id,
+    id: 'survival-pool-endless',
     category: 'survival',
-    title: endlessPoolLevel.title,
+    title: 'Survival · Pool · Endless',
     description: 'Defend the pool through as many increasingly difficult flags as possible.',
     unlockAfterLevelId: '5-10',
-    createSession: () => ({ kind: 'battle', level: endlessPoolLevel, progression: 'none' }),
+    createSession: (seed) => ({ kind: 'battle', level: createSurvivalLevel('pool', 'endless', seed), progression: 'none' }),
   });
   const adventureLevel = createDefaultRegistry().levels.get('1-1');
   if (!adventureLevel) throw new Error('Default registry is missing the first adventure stage.');
@@ -141,7 +139,8 @@ export function createDefaultGameModeRegistry(): GameModeRegistry {
 
 function createMiniGameLevel(definition: MiniGameLevel, seed: string): LevelDefinition {
   const random = createRandom(seed);
-  const rows = definition.terrain === 'pool' || definition.terrain === 'fog' ? 6 : 5;
+  const waterTerrain = definition.terrain === 'pool' || definition.terrain === 'fog';
+  const rows = waterTerrain ? 6 : 5;
   const waveCount = definition.id === 'dr-zomboss-revenge' ? 1 : 3 + definition.difficulty;
   const waves = Array.from({ length: waveCount }, (_, index) => {
     const firstType = definition.zombiePool[Math.floor(random() * definition.zombiePool.length)] ?? 'basic';
@@ -159,11 +158,11 @@ function createMiniGameLevel(definition: MiniGameLevel, seed: string): LevelDefi
     title: definition.title,
     titleZh: definition.titleZh,
     terrain: definition.terrain,
-    waterRows: definition.terrain === 'pool' || definition.terrain === 'fog' ? [2, 3] : undefined,
+    waterRows: waterTerrain ? [2, 3] : undefined,
     rows,
     columns: 9,
     startingSun: definition.startingSun,
-    skySunEveryTicks: definition.terrain === 'night' ? 0 : definition.terrain === 'fog' ? 900 : 480,
+    skySunEveryTicks: definition.terrain === 'night' || definition.terrain === 'fog' ? 0 : 480,
     mowerRows: Array.from({ length: rows }, (_, row) => row),
     waves,
   };

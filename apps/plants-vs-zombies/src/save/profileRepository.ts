@@ -23,7 +23,7 @@ export const DEFAULT_PROFILE: PlayerProfile = Object.freeze({
   version: 2,
   settings: Object.freeze({ music: true, sound: true, screenShake: true }),
   adventure: Object.freeze({ unlockedLevels: ['1-1'], completedLevels: [] }),
-  unlockedPlants: Object.freeze(['sunflower', 'peashooter']) as unknown as string[],
+  unlockedPlants: Object.freeze(['peashooter']) as unknown as string[],
   unlockedModes: Object.freeze([]) as unknown as string[],
   completedModes: Object.freeze([]) as unknown as string[],
 });

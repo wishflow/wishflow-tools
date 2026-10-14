@@ -1,5 +1,7 @@
 import { createDefaultRegistry, type GameRegistry } from './registry';
 import { createRandom } from './random';
+import { createAdventureWaves } from './adventureWaves';
+import { createSurvivalStageWaves } from './survivalWaves';
 import type {
   CommandResult,
   GameCommand,
@@ -53,7 +55,7 @@ function cloneSnapshot(level: LevelDefinition, state: MutableState, registry: Ga
   return {
     levelId: level.id,
     terrain: level.terrain ?? 'day',
-    waterRows: [...(level.waterRows ?? ((level.terrain === 'pool' || level.terrain === 'fog') ? [2, 3] : []))],
+    waterRows: [...(level.waterRows ?? (level.terrain === 'pool' || level.terrain === 'fog' ? [2, 3] : []))],
     rows: level.rows,
     columns: level.columns,
     phase: state.phase,
@@ -98,14 +100,25 @@ export class GameRuntime {
     this.registry = options.registry ?? createDefaultRegistry();
     const selectedLevel = options.level ?? this.registry.levels.get(options.levelId ?? '1-1');
     if (!selectedLevel) throw new Error('Unknown level: ' + (options.levelId ?? '1-1'));
-    for (const wave of selectedLevel.waves) {
+    this.level = structuredClone(selectedLevel);
+    if (this.level.adventureWavePlan) {
+      const firstPlaythrough = options.adventureFirstPlaythrough ?? true;
+      if (!firstPlaythrough && this.level.adventureWavePlan.levelNumber === 1) this.level.rows = 5;
+      this.level.waves = createAdventureWaves(
+        this.level.adventureWavePlan,
+        this.level.rows,
+        this.seed,
+        firstPlaythrough,
+        this.registry.zombies,
+      );
+    }
+    for (const wave of this.level.waves) {
       for (const spawn of wave.zombies) {
         if (!this.registry.zombies.has(spawn.typeId)) {
-          throw new Error('Level "' + selectedLevel.id + '" references unknown zombie "' + spawn.typeId + '".');
+          throw new Error('Level "' + this.level.id + '" references unknown zombie "' + spawn.typeId + '".');
         }
       }
     }
-    this.level = structuredClone(selectedLevel);
     this.maxLoadoutSize = options.maxLoadoutSize ?? this.registry.plants.size;
     if (!Number.isInteger(this.maxLoadoutSize) || this.maxLoadoutSize < 1) throw new Error('maxLoadoutSize must be a positive integer.');
     const allowedPlantIds = [...new Set(options.allowedPlantIds ?? [...this.registry.plants.keys()])];
@@ -116,15 +129,15 @@ export class GameRuntime {
     this.state = {
       phase: 'ready',
       tick: 0,
-      sun: selectedLevel.startingSun,
+      sun: this.level.startingSun,
       selectedPlantId: null,
       allowedPlantIds,
       plants: [],
-      graves: structuredClone(selectedLevel.graves ?? []),
+      graves: structuredClone(this.level.graves ?? []),
       zombies: [],
       projectiles: [],
       suns: [],
-      mowers: (selectedLevel.mowerRows ?? Array.from({ length: selectedLevel.rows }, (_, row) => row))
+      mowers: (this.level.mowerRows ?? Array.from({ length: this.level.rows }, (_, row) => row))
         .map((row): MowerEntity => ({ row, x: -0.25, active: false, used: false })),
       spawnedWaveCount: 0,
       lastSkySunTick: 0,
@@ -173,6 +186,16 @@ export class GameRuntime {
         return { accepted: true };
       case 'CONTINUE':
         if (this.state.phase !== 'intermission') return { accepted: false, reason: 'not-intermission' };
+        if (this.level.survivalWavePlan?.difficulty === 'endless' && this.state.spawnedWaveCount === this.level.waves.length) {
+          const stageIndex = Math.floor(this.state.spawnedWaveCount / this.level.survivalWavePlan.wavesPerStage);
+          this.level.waves.push(...createSurvivalStageWaves(
+            this.level.survivalWavePlan,
+            stageIndex,
+            this.seed,
+            this.level.rows,
+            this.registry.zombies,
+          ));
+        }
         this.state.phase = 'playing';
         this.state.nextWaveEarliestTick = this.state.tick + (this.level.endlessWaveRule?.startDelayTicks ?? this.level.waveStartDelayTicks ?? 1);
         this.state.waitingForNextWave = true;
@@ -371,9 +394,9 @@ export class GameRuntime {
     const hasGrave = this.state.graves.some((grave) => grave.row === row && grave.column === column);
     if (hasGrave && definition.ability !== 'destroy-grave') return 'grave-blocks';
     if (definition.ability === 'destroy-grave' && !hasGrave) return 'no-grave';
-    const waterRows = this.level.waterRows ?? ((this.level.terrain === 'pool' || this.level.terrain === 'fog') ? [2, 3] : []);
+    const waterRows = this.level.waterRows ?? (this.level.terrain === 'pool' || this.level.terrain === 'fog' ? [2, 3] : []);
     const onWater = waterRows.includes(row);
-    const onRoof = this.level.terrain === 'roof';
+    const onRoof = this.level.terrain === 'roof' || this.level.terrain === 'boss';
     const surface = onWater ? 'water' : onRoof ? 'roof' : 'land';
     const allowedSurface = definition.plantableOn ?? 'land';
     const hasPlatform = (kind: 'water' | 'roof') => occupants.some((plant) => {
@@ -399,6 +422,7 @@ export class GameRuntime {
     while (this.state.spawnedWaveCount < this.level.waves.length) {
       const wave = this.level.waves[this.state.spawnedWaveCount];
       if (!wave) break;
+      if (this.level.survivalWavePlan && this.state.spawnedWaveCount > 0 && this.state.tick < this.state.nextWaveEarliestTick) break;
       if (this.level.intermissionAfterWaves && this.state.spawnedWaveCount > 0 && this.state.tick < this.state.nextWaveEarliestTick) break;
       if (wave.atTick > this.state.tick) break;
       for (const spawn of wave.zombies) {
@@ -411,6 +435,7 @@ export class GameRuntime {
       }
       this.state.spawnedWaveCount += 1;
       this.state.waitingForNextWave = false;
+      if (this.level.survivalWavePlan) this.state.nextWaveEarliestTick = this.state.tick + (this.level.waveStartDelayTicks ?? 1);
       this.emit({ type: 'wave-started', tick: this.state.tick, waveNumber: this.state.spawnedWaveCount });
     }
   }
@@ -764,13 +789,17 @@ export class GameRuntime {
     if (this.state.zombies.some((zombie) => zombie.team === 'zombies') || this.state.spawnedWaveCount === 0) return;
     if (this.state.waitingForNextWave) return;
     if (this.level.endlessWaveRule && this.state.spawnedWaveCount === this.level.waves.length) this.appendEndlessWave();
+    const endlessSurvival = this.level.survivalWavePlan?.difficulty === 'endless';
+    const hasNextStage = endlessSurvival && this.state.spawnedWaveCount === this.level.waves.length;
+    const hasMoreWaves = this.state.spawnedWaveCount < this.level.waves.length || Boolean(this.level.endlessWaveRule) || hasNextStage;
+    const intermissionInterval = this.level.intermissionEveryWaves ?? 1;
     if (this.level.intermissionAfterWaves && this.state.spawnedWaveCount > 0
-      && (this.state.spawnedWaveCount < this.level.waves.length || Boolean(this.level.endlessWaveRule))) {
+      && hasMoreWaves && this.state.spawnedWaveCount % intermissionInterval === 0) {
       this.state.phase = 'intermission';
       this.emit({ type: 'wave-intermission', tick: this.state.tick, nextWaveNumber: this.state.spawnedWaveCount + 1 });
       return;
     }
-    if (this.state.spawnedWaveCount === this.level.waves.length) this.end('won');
+    if (this.state.spawnedWaveCount === this.level.waves.length && !endlessSurvival && !this.level.endlessWaveRule) this.end('won');
   }
 
   private appendEndlessWave(): void {

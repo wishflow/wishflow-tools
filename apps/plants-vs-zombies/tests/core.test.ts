@@ -124,16 +124,48 @@ test('endless survival appends seeded waves and returns to intermission after ea
   assert.equal(getSnapshot(game).waveCount, 3);
 });
 
+test('GOTY Endless Survival adds the next twenty-wave stage after intermission', () => {
+  const registry = createDefaultRegistry();
+  registry.zombies.clear();
+  const level: LevelDefinition = {
+    id: 'endless-survival-contract',
+    title: 'Endless Survival Contract',
+    terrain: 'day',
+    rows: 5,
+    columns: 9,
+    startingSun: 50,
+    skySunEveryTicks: 0,
+    intermissionAfterWaves: true,
+    intermissionEveryWaves: 20,
+    waveStartDelayTicks: 1,
+    survivalWavePlan: { terrain: 'day', difficulty: 'endless', wavesPerStage: 20 },
+    waves: Array.from({ length: 20 }, (_, index) => ({ atTick: index + 1, zombies: [] })),
+  };
+  const game = createGame({ level, registry, seed: 'survival-contract' });
+  dispatchCommand(game, { type: 'START' });
+  step(game, 20);
+  assert.equal(getSnapshot(game).phase, 'intermission');
+  assert.equal(getSnapshot(game).spawnedWaveCount, 20);
+  assert.equal(getSnapshot(game).waveCount, 20);
+
+  assert.equal(dispatchCommand(game, { type: 'CONTINUE' }).accepted, true);
+  assert.equal(getSnapshot(game).waveCount, 40);
+  step(game, 20_000);
+  assert.equal(getSnapshot(game).phase, 'intermission');
+  assert.equal(getSnapshot(game).spawnedWaveCount, 40);
+});
+
 test('the registered GOTY content catalog contains stable ids and 50 adventure stages', () => {
   assert.equal(PLANTS.length, 49);
-  assert.equal(ZOMBIES.length, 26);
+  assert.equal(ZOMBIES.length, 27);
   assert.equal(ADVENTURE_LEVELS.length, 50);
   assert.equal(new Set(PLANTS.map((plant) => plant.id)).size, PLANTS.length);
   assert.equal(new Set(ZOMBIES.map((zombie) => zombie.id)).size, ZOMBIES.length);
   assert.equal(new Set(ADVENTURE_LEVELS.map((level) => level.id)).size, ADVENTURE_LEVELS.length);
-  assert.deepEqual(new Set(ADVENTURE_LEVELS.map((level) => level.terrain)), new Set(['day', 'night', 'pool', 'fog', 'roof']));
+  assert.deepEqual(new Set(ADVENTURE_LEVELS.map((level) => level.terrain)), new Set(['day', 'night', 'pool', 'fog', 'roof', 'boss']));
   const rewardedPlants = new Set(ADVENTURE_LEVELS.flatMap((level) => level.rewardPlantId ? [level.rewardPlantId] : []));
-  assert.deepEqual(rewardedPlants, new Set(PLANTS.slice(2).map((plant) => plant.id)));
+  const shopUpgrades = new Set(['gatling-pea', 'twin-sunflower', 'gloom-shroom', 'cattail', 'winter-melon', 'gold-magnet', 'spikerock', 'cob-cannon', 'imitater']);
+  assert.deepEqual(rewardedPlants, new Set(PLANTS.filter((plant) => plant.id !== 'peashooter' && !shopUpgrades.has(plant.id)).map((plant) => plant.id)));
 });
 
 test('internal rules and event hooks are composable and receive detached snapshots', () => {
@@ -215,7 +247,7 @@ test('a lane without an available mower ends the game when breached', () => {
 
 test('pool and roof planting use platform slots while support overlays stay removable', () => {
   const registry = createDefaultRegistry();
-  const poolGame = createGame({ registry, levelId: '3-1', seed: 'pool-slots' });
+  const poolGame = createGame({ registry, level: { ...registry.levels.get('3-1')!, startingSun: 500 }, seed: 'pool-slots' });
   dispatchCommand(poolGame, { type: 'START' });
   dispatchCommand(poolGame, { type: 'SELECT_PLANT', plantId: 'peashooter' });
   assert.deepEqual(dispatchCommand(poolGame, { type: 'PLANT', row: 2, column: 1 }), { accepted: false, reason: 'needs-platform' });
@@ -225,7 +257,7 @@ test('pool and roof planting use platform slots while support overlays stay remo
   assert.equal(dispatchCommand(poolGame, { type: 'PLANT', row: 2, column: 1 }).accepted, true);
   assert.deepEqual(getSnapshot(poolGame).plants.map((plant) => plant.slot), ['platform', 'base']);
 
-  const roofGame = createGame({ registry, levelId: '5-1', seed: 'roof-slots' });
+  const roofGame = createGame({ registry, level: { ...registry.levels.get('5-1')!, startingSun: 500 }, seed: 'roof-slots' });
   dispatchCommand(roofGame, { type: 'START' });
   dispatchCommand(roofGame, { type: 'SELECT_PLANT', plantId: 'cabbage-pult' });
   assert.deepEqual(dispatchCommand(roofGame, { type: 'PLANT', row: 0, column: 1 }), { accepted: false, reason: 'needs-platform' });

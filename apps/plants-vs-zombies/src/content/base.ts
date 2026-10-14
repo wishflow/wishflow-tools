@@ -1,4 +1,5 @@
-import type { LevelDefinition, PlantBehavior, PlantDefinition, WaveDefinition, ZombieDefinition } from '../core/types';
+import type { LevelDefinition, PlantBehavior, PlantDefinition, ZombieDefinition } from '../core/types';
+import { ADVENTURE_STAGE_DATA, getAdventureStageTitle } from './adventureData';
 
 type PlantExtras = Partial<Omit<PlantDefinition, 'id' | 'title' | 'titleZh' | 'cost' | 'behavior'>>;
 
@@ -82,123 +83,57 @@ function zombie(
   speedPerTick: number,
   options: Partial<ZombieDefinition> = {},
 ): ZombieDefinition {
-  return { id, title, titleZh, maxHealth, speedPerTick, biteDamage: 10, biteIntervalTicks: 30, behavior: 'walker', ...options };
-}
-
-export const ZOMBIES: ZombieDefinition[] = [
-  zombie('basic', 'Zombie', '普通僵尸', 270, 0.0065),
-  zombie('flag', 'Flag Zombie', '旗帜僵尸', 270, 0.008),
-  zombie('conehead', 'Conehead Zombie', '路障僵尸', 640, 0.006),
-  zombie('pole-vaulter', 'Pole Vaulting Zombie', '撑杆僵尸', 500, 0.009, { behavior: 'pole-vault' }),
-  zombie('buckethead', 'Buckethead Zombie', '铁桶僵尸', 300, 0.0055, { armorHealth: 800 }),
-  zombie('newspaper', 'Newspaper Zombie', '读报僵尸', 270, 0.0065, { armorHealth: 180 }),
-  zombie('screen-door', 'Screen Door Zombie', '铁网门僵尸', 270, 0.0055, { armorHealth: 1_100 }),
-  zombie('football', 'Football Zombie', '橄榄球僵尸', 270, 0.012, { armorHealth: 1_200 }),
-  zombie('dancer', 'Dancing Zombie', '舞者僵尸', 500, 0.0065, { behavior: 'dancer' }),
-  zombie('backup-dancer', 'Backup Dancer', '伴舞僵尸', 270, 0.0065),
-  zombie('duckytube', 'Ducky Tube Zombie', '鸭子救生圈僵尸', 270, 0.0065),
-  zombie('snorkel', 'Snorkel Zombie', '潜水僵尸', 270, 0.0065),
-  zombie('zamboni', 'Zomboni', '雪橇车僵尸', 1_800, 0.012, { behavior: 'carrier' }),
-  zombie('bobsled', 'Bobsled Team', '雪橇僵尸小队', 1_800, 0.012, { behavior: 'carrier' }),
-  zombie('dolphin-rider', 'Dolphin Rider Zombie', '海豚骑士僵尸', 500, 0.012, { behavior: 'jumper' }),
-  zombie('jack-in-the-box', 'Jack-in-the-Box Zombie', '玩偶匣僵尸', 500, 0.009),
-  zombie('balloon', 'Balloon Zombie', '气球僵尸', 270, 0.0065, { behavior: 'balloon' }),
-  zombie('digger', 'Digger Zombie', '矿工僵尸', 500, 0.008, { behavior: 'burrow' }),
-  zombie('pogo', 'Pogo Zombie', '跳跳僵尸', 500, 0.009, { behavior: 'jumper', jumpIntervalTicks: 180 }),
-  zombie('yeti', 'Yeti Zombie', '雪人僵尸', 1_800, 0.008),
-  zombie('bungee', 'Bungee Zombie', '蹦极僵尸', 500, 0.01, { behavior: 'jumper' }),
-  zombie('ladder', 'Ladder Zombie', '扶梯僵尸', 500, 0.0065, { armorHealth: 500 }),
-  zombie('catapult', 'Catapult Zombie', '投石车僵尸', 850, 0.004, { behavior: 'carrier' }),
-  zombie('gargantuar', 'Gargantuar', '巨人僵尸', 3_000, 0.004, { behavior: 'boss' }),
-  zombie('imp', 'Imp', '小鬼僵尸', 270, 0.012),
-  zombie('zomboss', 'Dr. Zomboss', '僵王博士', 20_000, 0.001, { behavior: 'boss' }),
-];
-
-const TERRAIN_BY_WORLD = ['day', 'night', 'pool', 'fog', 'roof'] as const;
-const TERRAIN_TITLE: Record<(typeof TERRAIN_BY_WORLD)[number], { en: string; zh: string }> = {
-  day: { en: 'Front Yard · Day', zh: '前院 · 白天' },
-  night: { en: 'Front Yard · Night', zh: '前院 · 夜晚' },
-  pool: { en: 'Backyard · Pool', zh: '后院 · 泳池' },
-  fog: { en: 'Backyard · Fog', zh: '后院 · 浓雾' },
-  roof: { en: 'Roof · Day', zh: '屋顶 · 白天' },
-};
-
-function zombiesForStage(world: number, stage: number): string[] {
-  const worldSets = [
-    ['basic', 'flag', 'conehead', 'pole-vaulter', 'buckethead', 'newspaper', 'screen-door', 'football', 'dancer', 'backup-dancer'],
-    ['basic', 'conehead', 'buckethead', 'dancer', 'backup-dancer', 'jack-in-the-box', 'balloon'],
-    ['duckytube', 'snorkel', 'dolphin-rider', 'zamboni', 'bobsled', 'conehead', 'buckethead'],
-    ['basic', 'jack-in-the-box', 'balloon', 'digger', 'pogo', 'bungee', 'ladder'],
-    ['football', 'catapult', 'gargantuar', 'imp', 'yeti', 'zomboss'],
-  ];
-  const candidates = worldSets[world - 1] ?? worldSets[0]!;
-  const count = Math.min(candidates.length, 1 + Math.floor(stage / 2));
-  return candidates.slice(0, count);
-}
-
-function createLevel(world: number, stage: number): LevelDefinition {
-  const id = world + '-' + stage;
-  const terrain = TERRAIN_BY_WORLD[world - 1] ?? 'day';
-  const title = TERRAIN_TITLE[terrain];
-  const rows = terrain === 'pool' || terrain === 'fog' ? 6 : 5;
-  const columns = 9;
-  const types = zombiesForStage(world, stage);
-  const waveCount = Math.min(8, 2 + world + Math.floor((stage - 1) / 2));
-  const rewardIndex = (world - 1) * 10 + stage - 1;
-  const rewardPlantId = PLANTS[rewardIndex + 2]?.id;
-  const waves: WaveDefinition[] = Array.from({ length: waveCount }, (_, index) => {
-    const typeId = types[(index + Math.floor(stage / 2)) % types.length] ?? 'basic';
-    const count = Math.max(1, Math.floor((world + stage + index) / 3));
-    return {
-      atTick: (index + 1) * 450,
-      zombies: [{ typeId, count, rowRange: [0, rows - 1] as [number, number] }],
-    };
-  });
-  const graves = terrain === 'night'
-    ? Array.from({ length: Math.min(5, 1 + Math.floor(stage / 2)) }, (_, index) => ({
-      row: (index * 2 + stage) % rows,
-      column: Math.min(columns - 2, 3 + index),
-    }))
-    : undefined;
-  if (world === 5 && stage === 10) {
-    waves[waves.length - 1] = { atTick: waves.length * 450, zombies: [{ typeId: 'zomboss', row: 2 }] };
-  }
   return {
-    id,
-    title: title.en,
-    titleZh: title.zh,
-    terrain,
-    waterRows: terrain === 'pool' || terrain === 'fog' ? [2, 3] : undefined,
-    rewardPlantId,
-    rows,
-    columns,
-    startingSun: world === 1 && stage === 1 ? 150 : 200,
-    skySunEveryTicks: terrain === 'night' ? 0 : terrain === 'fog' ? 900 : 480,
-    graves,
-    waves,
+    id, title, titleZh, maxHealth, waveCost: 1, startingLevel: 1, firstAllowedWave: 1, pickWeight: 0,
+    speedPerTick, biteDamage: 10, biteIntervalTicks: 30, behavior: 'walker', ...options,
   };
 }
 
-export const ADVENTURE_LEVELS: LevelDefinition[] = Array.from({ length: 50 }, (_, index) => {
-  const world = Math.floor(index / 10) + 1;
-  const stage = index % 10 + 1;
-  if (world === 1 && stage === 1) {
-    return {
-      id: '1-1',
-      title: 'Front Yard · Day',
-      titleZh: '前院 · 白天',
-      terrain: 'day',
-      rewardPlantId: 'cherry-bomb',
-      rows: 5,
-      columns: 9,
-      startingSun: 150,
-      skySunEveryTicks: 480,
-      waves: [
-        { atTick: 900, zombies: [{ typeId: 'basic', row: 2 }] },
-        { atTick: 1_800, zombies: [{ typeId: 'basic', row: 1 }, { typeId: 'basic', row: 3 }] },
-        { atTick: 2_700, zombies: [{ typeId: 'conehead', row: 2 }] },
-      ],
-    };
-  }
-  return createLevel(world, stage);
+export const ZOMBIES: ZombieDefinition[] = [
+  zombie('basic', 'Zombie', '普通僵尸', 270, 0.0065, { startingLevel: 1, firstAllowedWave: 1, pickWeight: 4_000 }),
+  zombie('flag', 'Flag Zombie', '旗帜僵尸', 270, 0.008, { startingLevel: 1, firstAllowedWave: 1 }),
+  zombie('conehead', 'Conehead Zombie', '路障僵尸', 640, 0.006, { waveCost: 2, startingLevel: 3, firstAllowedWave: 1, pickWeight: 4_000 }),
+  zombie('pole-vaulter', 'Pole Vaulting Zombie', '撑杆僵尸', 500, 0.009, { waveCost: 2, startingLevel: 6, firstAllowedWave: 5, pickWeight: 2_000, behavior: 'pole-vault' }),
+  zombie('buckethead', 'Buckethead Zombie', '铁桶僵尸', 300, 0.0055, { waveCost: 4, startingLevel: 8, firstAllowedWave: 1, pickWeight: 3_000, armorHealth: 800 }),
+  zombie('newspaper', 'Newspaper Zombie', '读报僵尸', 270, 0.0065, { waveCost: 2, startingLevel: 11, firstAllowedWave: 1, pickWeight: 1_000, armorHealth: 180 }),
+  zombie('screen-door', 'Screen Door Zombie', '铁网门僵尸', 270, 0.0055, { waveCost: 4, startingLevel: 13, firstAllowedWave: 5, pickWeight: 3_500, armorHealth: 1_100 }),
+  zombie('football', 'Football Zombie', '橄榄球僵尸', 270, 0.012, { waveCost: 7, startingLevel: 16, firstAllowedWave: 5, pickWeight: 2_000, armorHealth: 1_200 }),
+  zombie('dancer', 'Dancing Zombie', '舞者僵尸', 500, 0.0065, { waveCost: 5, startingLevel: 18, firstAllowedWave: 5, pickWeight: 1_000, behavior: 'dancer' }),
+  zombie('backup-dancer', 'Backup Dancer', '伴舞僵尸', 270, 0.0065, { startingLevel: 18, firstAllowedWave: 1 }),
+  zombie('duckytube', 'Ducky Tube Zombie', '鸭子救生圈僵尸', 270, 0.0065, { startingLevel: 21, firstAllowedWave: 5 }),
+  zombie('snorkel', 'Snorkel Zombie', '潜水僵尸', 270, 0.0065, { waveCost: 3, startingLevel: 23, firstAllowedWave: 10, pickWeight: 2_000 }),
+  zombie('zamboni', 'Zomboni', '雪橇车僵尸', 1_800, 0.012, { waveCost: 7, startingLevel: 26, firstAllowedWave: 10, pickWeight: 2_000, behavior: 'carrier' }),
+  zombie('bobsled', 'Bobsled Team', '雪橇僵尸小队', 1_800, 0.012, { waveCost: 3, startingLevel: 26, firstAllowedWave: 10, pickWeight: 2_000, behavior: 'carrier' }),
+  zombie('dolphin-rider', 'Dolphin Rider Zombie', '海豚骑士僵尸', 500, 0.012, { waveCost: 3, startingLevel: 28, firstAllowedWave: 10, pickWeight: 1_500, behavior: 'jumper' }),
+  zombie('jack-in-the-box', 'Jack-in-the-Box Zombie', '玩偶匣僵尸', 500, 0.009, { waveCost: 3, startingLevel: 31, firstAllowedWave: 10, pickWeight: 1_000 }),
+  zombie('balloon', 'Balloon Zombie', '气球僵尸', 270, 0.0065, { waveCost: 2, startingLevel: 33, firstAllowedWave: 10, pickWeight: 2_000, behavior: 'balloon' }),
+  zombie('digger', 'Digger Zombie', '矿工僵尸', 500, 0.008, { waveCost: 4, startingLevel: 36, firstAllowedWave: 10, pickWeight: 1_000, behavior: 'burrow' }),
+  zombie('pogo', 'Pogo Zombie', '跳跳僵尸', 500, 0.009, { waveCost: 4, startingLevel: 38, firstAllowedWave: 10, pickWeight: 1_000, behavior: 'jumper', jumpIntervalTicks: 180 }),
+  zombie('yeti', 'Yeti Zombie', '雪人僵尸', 1_800, 0.008, { waveCost: 4, startingLevel: 40, firstAllowedWave: 1, pickWeight: 1 }),
+  zombie('bungee', 'Bungee Zombie', '蹦极僵尸', 500, 0.01, { waveCost: 3, startingLevel: 41, firstAllowedWave: 10, pickWeight: 1_000, behavior: 'jumper' }),
+  zombie('ladder', 'Ladder Zombie', '扶梯僵尸', 500, 0.0065, { waveCost: 4, startingLevel: 43, firstAllowedWave: 10, pickWeight: 1_000, armorHealth: 500 }),
+  zombie('catapult', 'Catapult Zombie', '投石车僵尸', 850, 0.004, { waveCost: 5, startingLevel: 46, firstAllowedWave: 10, pickWeight: 1_500, behavior: 'carrier' }),
+  zombie('gargantuar', 'Gargantuar', '巨人僵尸', 3_000, 0.004, { waveCost: 10, startingLevel: 48, firstAllowedWave: 15, pickWeight: 1_500, behavior: 'boss' }),
+  zombie('imp', 'Imp', '小鬼僵尸', 270, 0.012, { waveCost: 10, startingLevel: 48, firstAllowedWave: 1 }),
+  zombie('zomboss', 'Dr. Zomboss', '僵王博士', 20_000, 0.001, { waveCost: 10, startingLevel: 50, firstAllowedWave: 1, behavior: 'boss' }),
+  zombie('red-eye-gargantuar', 'Gargantuar (Red Eyes)', '红眼巨人僵尸', 6_000, 0.004, { waveCost: 10, startingLevel: 48, firstAllowedWave: 15, pickWeight: 6_000, behavior: 'boss' }),
+];
+
+export const ADVENTURE_LEVELS: LevelDefinition[] = ADVENTURE_STAGE_DATA.map((stage) => {
+  const title = getAdventureStageTitle(stage.terrain);
+  const isWater = stage.terrain === 'pool' || stage.terrain === 'fog';
+  return {
+    id: stage.id,
+    title: title.title,
+    titleZh: title.titleZh,
+    terrain: stage.terrain,
+    waterRows: isWater ? [2, 3] : undefined,
+    rows: stage.rows,
+    columns: 9,
+    rewardPlantId: stage.rewardPlantId,
+    startingSun: stage.startingSun,
+    skySunEveryTicks: stage.terrain === 'day' || stage.terrain === 'pool' || stage.terrain === 'roof' ? 480 : 0,
+    adventureWavePlan: stage.adventureWavePlan,
+    waves: [],
+  };
 });

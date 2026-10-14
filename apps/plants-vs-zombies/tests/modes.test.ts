@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createDefaultRegistry } from '../src/core/registry';
+import { canAppearInSurvival, getSurvivalStageZombieIds } from '../src/core/survivalWaves';
 import { createDefaultGameModeRegistry, createGameModeRegistry, registerGameMode } from '../src/modes/registry';
 import { createSurvivalLevel } from '../src/modes/survival';
 import { VasebreakerRuntime } from '../src/modes/vasebreaker';
@@ -38,25 +39,65 @@ test('survival scenarios cover each terrain with registered zombie types and sta
     assert.equal(session.kind, 'battle');
     if (session.kind !== 'battle') continue;
     assert.equal(session.progression, 'none');
-    assert.equal(session.level.waves.length, 5);
+    assert.equal(session.level.waves.length, 50);
+    assert.equal(session.level.intermissionEveryWaves, 10);
+    assert.equal(session.level.survivalWavePlan?.difficulty, 'normal');
+    assert.equal(session.level.survivalWavePlan?.totalStages, 5);
+    assert.ok(session.level.waves.every((wave) => wave.zombies.every((spawn) => spawn.typeId !== 'red-eye-gargantuar')));
     const hardMode = modes.modes.get('survival-' + session.level.terrain + '-hard');
     assert.ok(hardMode);
     const hardSession = hardMode.createSession('fixed-seed');
     assert.equal(hardSession.kind, 'battle');
-    if (hardSession.kind === 'battle') assert.ok(hardSession.level.waves[1]!.atTick < session.level.waves[1]!.atTick);
+    if (hardSession.kind === 'battle') {
+      assert.equal(hardSession.level.waves.length, 100);
+      assert.equal(hardSession.level.intermissionEveryWaves, 20);
+      assert.equal(hardSession.level.survivalWavePlan?.difficulty, 'hard');
+      assert.ok(hardSession.level.waveStartDelayTicks! < session.level.waveStartDelayTicks!);
+      assert.ok(hardSession.level.waves.every((wave) => wave.zombies.every((spawn) => spawn.typeId !== 'red-eye-gargantuar')));
+    }
     assert.ok(session.level.waves.every((wave) => wave.zombies.every((spawn) => game.zombies.has(spawn.typeId))));
     assert.ok(session.level.waves.every((wave, index) => index === 0 || wave.atTick > session.level.waves[index - 1]!.atTick));
   }
   const hardPool = modes.modes.get('survival-pool-hard')?.createSession('fixed-seed');
   assert.equal(hardPool?.kind, 'battle');
-  if (hardPool?.kind === 'battle') assert.equal(hardPool.level.waves.length, 10);
+  if (hardPool?.kind === 'battle') assert.equal(hardPool.level.waves.length, 100);
   const endlessPool = modes.modes.get('survival-pool-endless')?.createSession('fixed-seed');
   assert.equal(endlessPool?.kind, 'battle');
   if (endlessPool?.kind === 'battle') {
-    assert.equal(endlessPool.level.waves.length, 5);
-    assert.ok(endlessPool.level.endlessWaveRule);
+    assert.equal(endlessPool.level.waves.length, 20);
+    assert.equal(endlessPool.level.survivalWavePlan?.difficulty, 'endless');
+    assert.equal(endlessPool.level.survivalWavePlan?.totalStages, undefined);
   }
+  assert.equal(createSurvivalLevel('fog').rows, 6);
   assert.deepEqual(createSurvivalLevel('fog').waterRows, [2, 3]);
+  assert.deepEqual(createSurvivalLevel('pool').waterRows, [2, 3]);
+});
+
+test('survival candidate sets follow GOTY stage setup and terrain exclusions', () => {
+  const zombies = createDefaultRegistry().zombies;
+  const redEye = zombies.get('red-eye-gargantuar');
+  assert.ok(redEye);
+  assert.deepEqual([redEye.maxHealth, redEye.waveCost, redEye.startingLevel, redEye.firstAllowedWave, redEye.pickWeight], [6_000, 10, 48, 15, 6_000]);
+  const normal = { terrain: 'day', difficulty: 'normal', wavesPerStage: 10, totalStages: 5 } as const;
+  const hard = { terrain: 'day', difficulty: 'hard', wavesPerStage: 20, totalStages: 5 } as const;
+  assert.deepEqual(getSurvivalStageZombieIds(normal, 0, 'candidate-seed', zombies), ['basic', 'conehead']);
+  assert.deepEqual(getSurvivalStageZombieIds(hard, 0, 'candidate-seed', zombies), ['basic', 'conehead', 'buckethead']);
+
+  const laterNormal = getSurvivalStageZombieIds(normal, 1, 'candidate-seed', zombies);
+  assert.equal(laterNormal[0], 'basic');
+  assert.ok((laterNormal[1] === 'newspaper') !== (laterNormal[1] === 'conehead'));
+  assert.ok(laterNormal.every((id) => canAppearInSurvival(id, normal, 0)));
+  assert.ok(!laterNormal.some((id) => ['backup-dancer', 'bobsled', 'duckytube', 'imp', 'yeti', 'red-eye-gargantuar'].includes(id)));
+
+  assert.equal(canAppearInSurvival('red-eye-gargantuar', hard, 9), false);
+  assert.equal(canAppearInSurvival('red-eye-gargantuar', hard, 10), true);
+  assert.equal(canAppearInSurvival('bungee', hard, 10), false);
+  assert.equal(canAppearInSurvival('bungee', { ...hard, terrain: 'roof' }, 10), true);
+  assert.equal(canAppearInSurvival('bungee', { ...normal, difficulty: 'endless' }, 10), true);
+  assert.equal(canAppearInSurvival('snorkel', normal, 10), false);
+  assert.equal(canAppearInSurvival('snorkel', { ...normal, terrain: 'fog' }, 10), true);
+  assert.equal(canAppearInSurvival('zamboni', { ...hard, terrain: 'night' }, 10), false);
+  assert.equal(canAppearInSurvival('zamboni', { ...hard, terrain: 'fog' }, 10), true);
 });
 
 test('mode registry rejects invalid identifiers and duplicate registrations', () => {
