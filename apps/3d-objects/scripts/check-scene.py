@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import bpy
+from mathutils import Vector
 
 if "--" in sys.argv and len(sys.argv) > sys.argv.index("--") + 1:
     MODULE_ROOT = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
@@ -81,6 +82,68 @@ def check_glb(glb_path, max_bytes):
         fail("GLB JSON chunk 无法解析：" + str(error))
 
 
+def check_measurements(contract):
+    checks = contract.get("measurementChecks", {})
+    if not isinstance(checks, dict):
+        fail("scene-contract.json 的 measurementChecks 必须是对象。")
+        return
+
+    objects = {obj.name: obj for obj in bpy.context.scene.objects}
+    for name, expected_count in checks.get("namePrefixCounts", {}).items():
+        if not isinstance(name, str) or type(expected_count) is not int:
+            fail("measurementChecks.namePrefixCounts 的键值无效。")
+            continue
+        actual_count = sum(obj.name.startswith(name) for obj in bpy.context.scene.objects)
+        if actual_count != expected_count:
+            fail("对象名前缀数量不符：{} 预期 {}，实际 {}。".format(name, expected_count, actual_count))
+
+    for item in checks.get("worldLocationsMm", []):
+        if not isinstance(item, dict):
+            fail("measurementChecks.worldLocationsMm 条目必须是对象。")
+            continue
+        name = item.get("object")
+        expected = item.get("browserMm")
+        tolerance = item.get("toleranceMm", 1)
+        obj = objects.get(name)
+        if obj is None:
+            fail("尺寸定位对象不存在：{}。".format(name))
+            continue
+        if not isinstance(expected, list) or len(expected) != 3:
+            fail("尺寸定位值必须是三个浏览器坐标。")
+            continue
+        bpy_point = obj.matrix_world.translation
+        actual = (bpy_point.x * 1000, bpy_point.z * 1000, -bpy_point.y * 1000)
+        errors = [abs(float(actual[index]) - float(expected[index])) for index in range(3)]
+        if max(errors) > float(tolerance):
+            fail("{} 世界坐标偏差超限：预期 {} mm，实际 {} mm，容差 {} mm。".format(name, expected, [round(value, 4) for value in actual], tolerance))
+
+    for item in checks.get("browserBoundsMm", []):
+        if not isinstance(item, dict):
+            fail("measurementChecks.browserBoundsMm 条目必须是对象。")
+            continue
+        name = item.get("object")
+        expected = item.get("dimensions")
+        tolerance = float(item.get("toleranceMm", 1))
+        obj = objects.get(name)
+        if obj is None or obj.type != "MESH":
+            fail("尺寸包络网格不存在：{}。".format(name))
+            continue
+        if not isinstance(expected, list) or len(expected) != 3:
+            fail("browserBoundsMm.dimensions 必须是三个浏览器坐标尺寸。")
+            continue
+        depsgraph = bpy.context.evaluated_depsgraph_get()
+        evaluated = obj.evaluated_get(depsgraph)
+        corners = [evaluated.matrix_world @ Vector(corner) for corner in evaluated.bound_box]
+        extents = (
+            (max(point.x for point in corners) - min(point.x for point in corners)) * 1000,
+            (max(point.z for point in corners) - min(point.z for point in corners)) * 1000,
+            (max(point.y for point in corners) - min(point.y for point in corners)) * 1000,
+        )
+        errors = [abs(extents[index] - float(expected[index])) for index in range(3)]
+        if max(errors) > tolerance:
+            fail("{} 包络尺寸偏差超限：预期 {} mm，实际 {} mm，容差 {} mm。".format(name, expected, [round(value, 4) for value in extents], tolerance))
+
+
 def check_scene(contract):
     max_triangles = positive_budget(contract, "maxTriangles")
     max_texture_edge = positive_budget(contract, "maxTextureEdge")
@@ -141,6 +204,7 @@ def check_scene(contract):
 
 contract = load_contract()
 check_scene(contract)
+check_measurements(contract)
 if errors:
     for message in errors:
         print("ERROR: " + message)

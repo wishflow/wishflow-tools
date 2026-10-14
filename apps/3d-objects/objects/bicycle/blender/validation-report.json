@@ -1,0 +1,80 @@
+{
+  "coordinateSystem": "browser=(x,y,z) mm; blender=(X,-z,y) m; glTF Y-up",
+  "baselineMm": {
+    "rearAxle": [
+      0.0,
+      349.0,
+      0.0
+    ],
+    "frontAxle": [
+      1075.0,
+      349.0,
+      0.0
+    ],
+    "bottomBracket": [
+      440.9365,
+      289.0,
+      0.0
+    ],
+    "headTop": [
+      850.9365,
+      845.0,
+      0.0
+    ],
+    "headBottom": [
+      893.2604,
+      722.0826,
+      0.0
+    ],
+    "seatTop": [
+      299.1362,
+      752.8078,
+      0.0
+    ]
+  },
+  "wheelbaseMm": 1075.0,
+  "tireOuterRadiusMm": 349,
+  "tireSectionWidthMm": 38,
+  "spokesPerWheel": 32,
+  "chainringTeeth": 40,
+  "cassetteTeeth": [
+    32,
+    28,
+    24,
+    21,
+    18,
+    16,
+    14,
+    12
+  ],
+  "sideStandFootBottomWorldCornersMm": [
+    [
+      127.5,
+      0,
+      -275
+    ],
+    [
+      172.5,
+      0,
+      -275
+    ],
+    [
+      127.5,
+      0,
+      -245
+    ],
+    [
+      172.5,
+      0,
+      -245
+    ]
+  ],
+  "dimensionGrades": {
+    "wheelbase": "F",
+    "tireOuterRadius": "D",
+    "wheelSection": "F/D",
+    "spokeCount": "F",
+    "chainringTeeth": "F",
+    "cassetteTeeth": "F"
+  }
+}

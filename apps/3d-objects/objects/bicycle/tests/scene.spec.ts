@@ -75,8 +75,9 @@ test('自行车模块自动发现并提供检视、拆解、选中和操作模�
 
   await page.getByRole('button', { name: '展开侧撑' }).click();
   await expect(page.getByRole('button', { name: '收起侧撑' })).toBeVisible();
-  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 5000 }).toBeLessThanOrEqual(5);
-  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 5000 }).toBeGreaterThanOrEqual(-5);
+  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 10000 }).toBeLessThanOrEqual(5);
+  await expect.poll(() => clearanceFor('data-stand-clearance-mm'), { timeout: 10000 }).toBeGreaterThanOrEqual(-5);
+  await expect.poll(() => clearanceFor('data-stand-foot-contact-error-mm'), { timeout: 10000 }).toBeLessThanOrEqual(2);
   await page.getByRole('button', { name: '收起侧撑' }).click();
   await page.getByRole('button', { name: '放倒自行车' }).click();
   await expect(page.locator('#ride-state')).toContainText('已放倒');
@@ -110,9 +111,9 @@ test('360px 窄屏下模型不横向溢出，操作控制可折叠', async ({ pa
   await expect(page.locator('#control-panel')).toBeVisible();
 });
 
-test('本地纹理加载失败会显示错误并可重试', async ({ page }) => {
+test('本地 GLB 加载失败会显示错误并可重试', async ({ page }) => {
   let failed = false;
-  await page.route('**/*Metal012_1K-JPG_NormalGL*.jpg', (route) => {
+  await page.route('**/scene-*.glb', (route) => {
     if (!failed) {
       failed = true;
       return route.abort();

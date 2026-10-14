@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import colorUrl from './assets/textures/Metal012_1K-JPG_Color.jpg?url';
-import normalUrl from './assets/textures/Metal012_1K-JPG_NormalGL.jpg?url';
-import roughnessUrl from './assets/textures/Metal012_1K-JPG_Roughness.jpg?url';
-import { createBicycleModel, SIDE_STAND_DEPLOYED_ANGLE, SIDE_STAND_FOLDED_ANGLE, updateChainLinks, type BicycleLayer, type BicycleMaterials, type BicycleModel } from './bicycle-model';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import sceneUrl from './assets/scene.glb?url';
+import { createBicycleModel, SIDE_STAND_AXIS, SIDE_STAND_DEPLOYED_ANGLE, SIDE_STAND_FOLDED_ANGLE, updateChainLinks, type BicycleLayer, type BicycleModel } from './bicycle-model';
 import type { BicyclePartId } from './locales';
 
 export type BicycleMode = 'inspect' | 'operate';
@@ -22,6 +21,7 @@ export type BicycleFeedback = {
   frontTireGroundClearanceMm: number | null;
   rearTireGroundClearanceMm: number | null;
   standGroundClearanceMm: number | null;
+  standFootContactErrorMm: number | null;
   fallen: boolean;
   steeringDegrees: number;
   frontBrake: number;
@@ -65,12 +65,13 @@ type DragState = {
   moved: boolean;
 };
 
-const GEAR_TEETH = [32, 28, 24, 21, 18, 15, 13, 11];
+const GEAR_TEETH = [32, 28, 24, 21, 18, 16, 14, 12];
+const CHAINRING_TEETH = 40;
 const WHEEL_RADIUS = 0.349;
 const ROUTE_A = 3.75;
 const ROUTE_B = 1.75;
 const ROUTE_LENGTH = Math.PI * (3 * (ROUTE_A + ROUTE_B) - Math.sqrt((3 * ROUTE_A + ROUTE_B) * (ROUTE_A + 3 * ROUTE_B)));
-const STEER_AXIS = new THREE.Vector3(0.326, 0.946, 0).normalize();
+const STEER_AXIS = new THREE.Vector3(0.325568, -0.945519, 0).normalize();
 
 function disposeObject(root: THREE.Object3D) {
   root.traverse((object) => {
@@ -82,45 +83,6 @@ function disposeObject(root: THREE.Object3D) {
       material.dispose();
     }
   });
-}
-
-function buildMetalMaterials(colorMap: THREE.Texture, normalMap: THREE.Texture, roughnessMap: THREE.Texture): BicycleMaterials {
-  for (const texture of [colorMap, normalMap, roughnessMap]) {
-    texture.wrapS = THREE.RepeatWrapping;
-    texture.wrapT = THREE.RepeatWrapping;
-    texture.repeat.set(2, 2);
-    texture.anisotropy = Math.min(4, renderer?.capabilities.getMaxAnisotropy() ?? 1);
-  }
-  colorMap.colorSpace = THREE.SRGBColorSpace;
-  colorMap.needsUpdate = true;
-  const silver = new THREE.MeshStandardMaterial({
-    color: '#aeb7b5',
-    metalness: 0.78,
-    roughness: 0.3,
-    map: colorMap,
-    normalMap,
-    roughnessMap,
-    normalScale: new THREE.Vector2(0.16, 0.16),
-  });
-  const metal = new THREE.MeshStandardMaterial({
-    color: '#737b79',
-    metalness: 0.86,
-    roughness: 0.34,
-    map: colorMap,
-    normalMap,
-    roughnessMap,
-    normalScale: new THREE.Vector2(0.1, 0.1),
-  });
-  return {
-    frame: new THREE.MeshPhysicalMaterial({ color: '#176b69', metalness: 0.28, roughness: 0.34, clearcoat: 0.62, clearcoatRoughness: 0.24 }),
-    silver,
-    metal,
-    rubber: new THREE.MeshStandardMaterial({ color: '#242829', roughness: 0.84, metalness: 0.04 }),
-    leather: new THREE.MeshStandardMaterial({ color: '#332820', roughness: 0.68, metalness: 0.02 }),
-    black: new THREE.MeshStandardMaterial({ color: '#252a2c', roughness: 0.43, metalness: 0.72 }),
-    reflector: new THREE.MeshStandardMaterial({ color: '#d8693d', emissive: '#5b1e08', emissiveIntensity: 0.16, roughness: 0.32 }),
-    cable: new THREE.MeshStandardMaterial({ color: '#1f2425', roughness: 0.72, metalness: 0.12 }),
-  };
 }
 
 let renderer: THREE.WebGLRenderer | null = null;
@@ -180,7 +142,6 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   const cameraDirection = new THREE.Vector3(0.85, 0.92, 3.4).normalize();
   let controls: OrbitControls | null = null;
   let model: BicycleModel | null = null;
-  let materials: BicycleMaterials | null = null;
   let bikeRoot: THREE.Group | null = null;
   let selectionHelper: THREE.Box3Helper | null = null;
   let selectedRoot: THREE.Object3D | null = null;
@@ -213,6 +174,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   let frontWheelInertia = 0;
   let chainPhase = 0;
   let standAmount = 0;
+  let standPoseAngle = SIDE_STAND_FOLDED_ANGLE;
   let layAngle = 0;
   let lastFrame = 0;
   let lastFeedback = 0;
@@ -240,6 +202,24 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     return bounds.isEmpty() ? null : Math.round(bounds.min.y * 1000);
   }
 
+  function standFootContactErrorMm(object: THREE.Object3D | undefined) {
+    if (!(object instanceof THREE.Mesh)) return null;
+    const positions = object.geometry.getAttribute('position');
+    if (!positions || positions.count < 4) return null;
+    object.updateWorldMatrix(true, false);
+    const unique = new Map<string, THREE.Vector3>();
+    const point = new THREE.Vector3();
+    for (let index = 0; index < positions.count; index += 1) {
+      point.fromBufferAttribute(positions, index).applyMatrix4(object.matrixWorld);
+      const key = `${Math.round(point.x * 1e6)},${Math.round(point.y * 1e6)},${Math.round(point.z * 1e6)}`;
+      if (!unique.has(key)) unique.set(key, point.clone());
+    }
+    const bottomCorners = [...unique.values()].sort((a, b) => a.y - b.y).slice(0, 4);
+    if (bottomCorners.length !== 4) return null;
+    const errorMm = Math.max(...bottomCorners.map((corner) => Math.abs(corner.y))) * 1000;
+    return Math.round(errorMm * 100) / 100;
+  }
+
   function publish(force = false) {
     const now = performance.now();
     if (!force && now - lastFeedback < 90) return;
@@ -258,6 +238,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       frontTireGroundClearanceMm: groundClearanceMm(model?.partRoots.get('frontTire')),
       rearTireGroundClearanceMm: groundClearanceMm(model?.partRoots.get('rearTire')),
       standGroundClearanceMm: model?.sideStand.visible && standAmount > 0.98 ? groundClearanceMm(model.sideStand) : null,
+      standFootContactErrorMm: model?.sideStand.visible && standAmount > 0.98 ? standFootContactErrorMm(model.sideStandFoot) : null,
       fallen,
       steeringDegrees,
       frontBrake,
@@ -373,8 +354,8 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   function updateLayerVisibility() {
     if (!model) return;
     for (const [layer, object] of Object.entries(model.layers) as [BicycleLayer, THREE.Group][]) object.visible = layersVisible[layer];
-    model.frontRotor.visible = layersVisible.frontBrake && layersVisible.frontWheel;
-    model.rearRotor.visible = layersVisible.rearBrake && layersVisible.rearWheel;
+    model.frontRotor.visible = layersVisible.frontBrake;
+    model.rearRotor.visible = layersVisible.rearBrake;
     if (selectedRoot && !isEffectivelyVisible(selectedRoot)) setSelection(null);
   }
 
@@ -410,52 +391,39 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       disposeObject(bikeRoot);
       bikeRoot = null;
       model = null;
-      materials = null;
     }
-    const loaded: THREE.Texture[] = [];
-    let colorMap: THREE.Texture;
-    let normalMap: THREE.Texture;
-    let roughnessMap: THREE.Texture;
+    let loadedScene: THREE.Object3D | null = null;
     try {
-      const loader = new THREE.TextureLoader();
-      const [colorResult, normalResult, roughnessResult] = await Promise.allSettled([colorUrl, normalUrl, roughnessUrl].map((url) => loader.loadAsync(url)));
-      for (const result of [colorResult, normalResult, roughnessResult]) {
-        if (result.status === 'fulfilled') loaded.push(result.value);
-      }
-      if (colorResult.status === 'rejected') throw colorResult.reason;
-      if (normalResult.status === 'rejected') throw normalResult.reason;
-      if (roughnessResult.status === 'rejected') throw roughnessResult.reason;
-      colorMap = colorResult.value;
-      normalMap = normalResult.value;
-      roughnessMap = roughnessResult.value;
+      const gltf = await new GLTFLoader().loadAsync(sceneUrl);
+      loadedScene = gltf.scene;
       if (disposed || requestId !== loadRequest) {
-        for (const texture of loaded) texture.dispose();
+        disposeObject(loadedScene);
         return;
       }
     } catch (error) {
-      for (const texture of loaded) texture.dispose();
       if (disposed || requestId !== loadRequest) return;
-      console.error('自行车本地材质加载失败', error);
-      setStatus('error', 'textures');
+      console.error('自行车 GLB 模型加载失败', error);
+      setStatus('error', 'build');
       return;
     }
 
     if (disposed || requestId !== loadRequest) {
-      for (const texture of loaded) texture.dispose();
+      if (loadedScene) disposeObject(loadedScene);
       return;
     }
 
     try {
-      materials = buildMetalMaterials(colorMap, normalMap, roughnessMap);
-      model = createBicycleModel(materials);
+      if (!loadedScene) throw new Error('GLB 没有可显示的场景。');
+      model = createBicycleModel(loadedScene);
       bikeRoot = new THREE.Group();
       bikeRoot.name = 'BicycleWorldRoot';
       bikeRoot.rotation.order = 'YXZ';
       bikeRoot.add(model.root);
       scene.add(bikeRoot);
       for (const [layer, visible] of Object.entries(layersVisible) as [BicycleLayer, boolean][]) model.layers[layer].visible = visible;
-      model.frontRotor.visible = true;
-      model.rearRotor.visible = true;
+      model.sideStand.quaternion.setFromAxisAngle(SIDE_STAND_AXIS, SIDE_STAND_FOLDED_ANGLE);
+      model.frontRotor.visible = layersVisible.frontBrake;
+      model.rearRotor.visible = layersVisible.rearBrake;
       updateChainLinks(model, gearIndex, chainPhase);
       setStatus('loaded');
       updateLayerVisibility();
@@ -464,12 +432,11 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       if (bikeRoot) {
         scene.remove(bikeRoot);
         disposeObject(bikeRoot);
+      } else if (loadedScene) {
+        disposeObject(loadedScene);
       }
       bikeRoot = null;
       model = null;
-      if (materials) for (const material of Object.values(materials)) material.dispose();
-      materials = null;
-      for (const texture of loaded) texture.dispose();
       if (disposed || requestId !== loadRequest) return;
       console.error('自行车模型构建失败', error);
       setStatus('error', 'build');
@@ -479,11 +446,15 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   function setWheelAngle(which: 'front' | 'rear', value: number) {
     if (which === 'front') {
       frontWheelAngle = value;
-      if (model) model.frontWheelSpin.rotation.z = frontWheelAngle;
+      if (model) {
+        model.frontWheelSpin.rotation.z = frontWheelAngle;
+        model.frontRotor.rotation.z = frontWheelAngle;
+      }
     } else {
       rearWheelAngle = value;
       if (model) {
         model.rearWheelSpin.rotation.z = rearWheelAngle;
+        model.rearRotor.rotation.z = rearWheelAngle;
         model.cassetteSpin.rotation.z = rearWheelAngle;
       }
     }
@@ -494,10 +465,10 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     const delta = turns * Math.PI * 2;
     crankAngle += delta;
     model.crankPivot.rotation.z = crankAngle;
-    const ratio = 42 / GEAR_TEETH[gearIndex];
+    const ratio = CHAINRING_TEETH / GEAR_TEETH[gearIndex];
     rearWheelAngle += delta * ratio;
     setWheelAngle('rear', rearWheelAngle);
-    chainPhase = (chainPhase + turns * 42 / GEAR_TEETH[gearIndex] * 0.08) % 1;
+    chainPhase = (chainPhase + turns * CHAINRING_TEETH / GEAR_TEETH[gearIndex] * 0.08) % 1;
     updateChainLinks(model, gearIndex, chainPhase);
     publish(true);
   }
@@ -527,7 +498,8 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       kickstand = false;
       standAmount = 0;
       model.sideStand.visible = false;
-      model.sideStand.rotation.z = SIDE_STAND_FOLDED_ANGLE;
+      standPoseAngle = SIDE_STAND_FOLDED_ANGLE;
+      model.sideStand.quaternion.setFromAxisAngle(SIDE_STAND_AXIS, standPoseAngle);
       routePhase = 0;
     }
     updateBikePose(0);
@@ -546,7 +518,8 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     if (speedKmh > 0 && kickstand) {
       kickstand = false;
       standAmount = 0;
-      model.sideStand.rotation.z = SIDE_STAND_FOLDED_ANGLE;
+      standPoseAngle = SIDE_STAND_FOLDED_ANGLE;
+      model.sideStand.quaternion.setFromAxisAngle(SIDE_STAND_AXIS, standPoseAngle);
       model.sideStand.visible = false;
     }
     publish(true);
@@ -575,6 +548,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     gearIndex = THREE.MathUtils.clamp(gearIndex + direction, 0, 7);
     if (model) {
       model.chainMeshes.forEach((chain, index) => { chain.visible = index === gearIndex; });
+      model.chainLinks.forEach((links, index) => { links.visible = index === gearIndex; });
       updateChainLinks(model, gearIndex, chainPhase);
     }
     publish(true);
@@ -631,6 +605,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     frontWheelInertia = 0;
     chainPhase = 0;
     standAmount = 0;
+    standPoseAngle = SIDE_STAND_FOLDED_ANGLE;
     layAngle = 0;
     for (const layer of Object.keys(layersVisible) as BicycleLayer[]) layersVisible[layer] = true;
     if (model) {
@@ -646,8 +621,12 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       model.crankPivot.rotation.z = 0;
       model.rearWheelSpin.rotation.z = 0;
       model.frontWheelSpin.rotation.z = 0;
+      model.rearRotor.rotation.z = 0;
+      model.frontRotor.rotation.z = 0;
       model.cassetteSpin.rotation.z = 0;
+      model.sideStand.quaternion.setFromAxisAngle(SIDE_STAND_AXIS, standPoseAngle);
       model.chainMeshes.forEach((chain, index) => { chain.visible = index === 0; });
+      model.chainLinks.forEach((links, index) => { links.visible = index === 0; });
       updateChainLinks(model, 0, 0);
       updateLayerVisibility();
     }
@@ -709,14 +688,16 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     const standTarget = kickstand && speedKmh === 0 && !fallen ? 1 : 0;
     standAmount += (standTarget - standAmount) * standAlpha;
     const standAngle = THREE.MathUtils.lerp(SIDE_STAND_FOLDED_ANGLE, SIDE_STAND_DEPLOYED_ANGLE, standAmount);
-    model.sideStand.rotation.z += (standAngle - model.sideStand.rotation.z) * standAlpha;
+    standPoseAngle += (standAngle - standPoseAngle) * standAlpha;
+    model.sideStand.quaternion.setFromAxisAngle(SIDE_STAND_AXIS, standPoseAngle);
     model.sideStand.visible = standAmount > 0.015;
 
     const fallTarget = fallen ? Math.PI / 2 : 0;
     const fallAlpha = 1 - Math.exp(-delta * 2.4);
     layAngle += (fallTarget - layAngle) * fallAlpha;
-    const lean = !fallen && mode === 'operate' ? -THREE.MathUtils.degToRad(steeringDegrees) * 0.11 * Math.min(speedKmh / 7, 1) : 0;
-    bikeRoot.rotation.x = fallen ? layAngle : lean;
+    const ridingLean = !fallen && mode === 'operate' ? -THREE.MathUtils.degToRad(steeringDegrees) * 0.11 * Math.min(speedKmh / 7, 1) : 0;
+    const parkedLean = !fallen && kickstand ? -THREE.MathUtils.degToRad(8) * standAmount : 0;
+    bikeRoot.rotation.x = fallen ? layAngle : parkedLean || ridingLean;
     bikeRoot.position.y = fallen ? 0.039 : 0;
 
     if (mode === 'operate' && routeBlend > 0.01) {
@@ -751,7 +732,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       frontWheelAngle += wheelDelta;
       setWheelAngle('rear', rearWheelAngle);
       setWheelAngle('front', frontWheelAngle);
-      const cadence = wheelDelta * GEAR_TEETH[gearIndex] / 42;
+      const cadence = wheelDelta * GEAR_TEETH[gearIndex] / CHAINRING_TEETH;
       crankAngle += cadence;
       model.crankPivot.rotation.z = crankAngle;
       chainPhase = (chainPhase + Math.abs(cadence) * 0.08) % 1;
@@ -770,8 +751,10 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       setWheelAngle('front', frontWheelAngle);
     }
     model.rearWheelSpin.rotation.z = rearWheelAngle;
+    model.rearRotor.rotation.z = rearWheelAngle;
     model.cassetteSpin.rotation.z = rearWheelAngle;
     model.frontWheelSpin.rotation.z = frontWheelAngle;
+    model.frontRotor.rotation.z = frontWheelAngle;
     model.crankPivot.rotation.z = crankAngle;
     updateChainLinks(model, gearIndex, chainPhase);
     publish();
@@ -1036,9 +1019,6 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       if (bikeRoot) {
         scene.remove(bikeRoot);
         disposeObject(bikeRoot);
-      }
-      if (materials) {
-        for (const material of Object.values(materials)) material.dispose();
       }
       renderer?.dispose();
       renderer?.domElement.remove();
