@@ -6,7 +6,7 @@
     "packageManager": {
       "name": "pnpm",
       "version": ">=9.0.0 <13.0.0",
-      "onFail": "download"
+      "onFail": "ignore"
     }
   },
   "scripts": {
