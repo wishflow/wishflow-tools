@@ -31,6 +31,11 @@ test('自行车模块自动发现并提供检视、拆解、选中和操作模�
   await expect(page.locator('#ride-state')).toContainText('已停车');
   await expect(page.getByRole('button', { name: '开始骑行' })).toBeEnabled({ timeout: 15000 });
 
+  await page.locator('#accelerate-control').click();
+  await expect(page.locator('#speed-value')).not.toHaveText('0.0 km/h', { timeout: 5000 });
+  await page.locator('#front-brake-control').click();
+  await expect(page.locator('#speed-value')).toHaveText('0.0 km/h', { timeout: 5000 });
+
   await page.getByRole('button', { name: '升挡' }).click();
   await expect(page.locator('#gear-value')).toContainText('7 / 8');
   const steering = page.locator('#steering-range');
