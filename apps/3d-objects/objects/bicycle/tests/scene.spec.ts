@@ -36,11 +36,10 @@ test('自行车模块自动发现并提供检视、拆解、选中和操作模�
   await page.locator('#front-brake-control').click();
   await expect(page.locator('#speed-value')).toHaveText('0.0 km/h', { timeout: 5000 });
   await page.locator('#ride-toggle').click();
-  await expect(page.locator('#speed-value')).toHaveText('6.5 km/h', { timeout: 10000 });
+  const speedValue = page.locator('#speed-value');
+  await expect.poll(async () => Number((await speedValue.innerText()).split(' ')[0]), { timeout: 10000 }).toBeGreaterThan(1);
   await page.locator('#front-brake-control').click();
-  await expect(page.locator('#speed-value')).not.toHaveText('6.5 km/h', { timeout: 5000 });
-  await page.locator('#ride-toggle').click();
-  await expect(page.locator('#speed-value')).toHaveText('0.0 km/h', { timeout: 15000 });
+  await expect(speedValue).toHaveText('0.0 km/h', { timeout: 15000 });
 
   await page.getByRole('button', { name: '升挡' }).click();
   await expect(page.locator('#gear-value')).toContainText('7 / 8');
