@@ -11,14 +11,40 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '3D Objects' })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
-  await expect(page.getByRole('navigation', { name: '本页导航' })).toBeVisible();
+  const sidebarToggle = page.getByRole('button', { name: '展开应用内导航' });
+  await expect(sidebarToggle).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '应用内导航' })).toBeHidden();
+  const initialLayout = await page.locator('wishflow-site-shell').evaluate((shell) => {
+    const root = shell.shadowRoot;
+    const workspace = root?.querySelector('.workspace');
+    const content = root?.querySelector('.page-content');
+    return {
+      sidebarExpanded: workspace?.classList.contains('sidebar-expanded'),
+      contentWidth: content?.getBoundingClientRect().width ?? 0,
+      shellWidth: shell.getBoundingClientRect().width,
+    };
+  });
+  expect(initialLayout.sidebarExpanded).toBe(false);
+  expect(initialLayout.contentWidth).toBeGreaterThan(initialLayout.shellWidth * 0.9);
   await expect(page.getByRole('link', { name: 'Poly Haven · CC0' })).toHaveAttribute('href', 'https://polyhaven.com/');
   await page.getByRole('link', { name: '打开木结构小屋 3D 场景' }).click();
   await expect(page).toHaveURL(/#\/objects\/house$/);
   await expect(page.getByRole('heading', { name: '木结构小屋' })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
-  await expect(page.getByRole('navigation', { name: '本页导航' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '应用内导航' })).toBeHidden();
   await expect(page.getByRole('link', { name: 'Poly Haven · CC0' })).toBeVisible();
+  await sidebarToggle.click();
+  const localNavigation = page.getByRole('navigation', { name: '应用内导航' });
+  await expect(localNavigation).toBeVisible();
+  await expect(localNavigation.getByRole('link', { name: '木结构小屋' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('button', { name: '收起应用内导航' })).toHaveAttribute('aria-expanded', 'true');
+  await page.getByRole('button', { name: '收起应用内导航' }).click();
+  await expect(localNavigation).toBeHidden();
+  const footerPosition = await page.locator('wishflow-site-shell').evaluate((shell) => {
+    const footer = shell.shadowRoot?.querySelector('.footer');
+    return footer ? getComputedStyle(footer).position : null;
+  });
+  expect(footerPosition).toBe('static');
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'loaded', { timeout: 15000 });
   await expect(page.locator('#viewer canvas')).toBeVisible();
   await expect(page.getByRole('button', { name: '复位视角、拆解进度和构件显隐' })).toBeEnabled();

@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
+import { notifySiteRouteChange } from '@wishflow/site-shell';
 import ObjectCatalogPage from './pages/ObjectCatalogPage.vue';
 
 export const router = createRouter({
@@ -14,3 +15,5 @@ export const router = createRouter({
   ],
   scrollBehavior: () => ({ top: 0 }),
 });
+
+router.afterEach(() => notifySiteRouteChange());

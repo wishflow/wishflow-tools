@@ -17,8 +17,14 @@ export interface LocalePattern {
   zh: (match: RegExpMatchArray) => string;
 }
 
+export declare function getAlternateDeploymentUrl(
+  currentLocation?: Pick<Location, 'hostname' | 'pathname' | 'search' | 'hash'>,
+): string | null;
+
 export declare const LANGUAGE_STORAGE_KEY: string;
 export declare const LANGUAGE_CHANGE_EVENT: string;
+export declare const SITE_ROUTE_CHANGE_EVENT: string;
+export declare function notifySiteRouteChange(): void;
 export declare function normalizeLanguage(value: unknown): Language;
 export declare function getLanguage(): Language;
 export declare function initializeLanguage(): Language;
