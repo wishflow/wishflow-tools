@@ -6,8 +6,6 @@ WishFlow Tools 将多个独立工具汇集到一个导航站。前端应用放�
 
 3D Objects 位于 `/3d-objects/`，当前收录一座可旋转、缩放和拆解观察的木结构小屋。
 
-Garden Defense 位于 `/plants-vs-zombies/`，是一款使用浏览器本地存档的模块化植物塔防游戏。
-
 ## 线上地址
 
 统一对外入口：[wishflow-tools.pages.dev](https://wishflow-tools.pages.dev/)。各应用从导航站进入，并使用自己的子路径。

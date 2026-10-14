@@ -30,13 +30,5 @@
     "description": "Browse a collection of interactive 3D object modules.",
     "descriptionZh": "浏览由独立对象模块组成的交互式 3D 物体集合。",
     "icon": "🧊"
-  },
-  {
-    "slug": "plants-vs-zombies",
-    "title": "Garden Defense",
-    "titleZh": "花园防线",
-    "description": "A deterministic, extensible browser tower-defense game with locally saved progression.",
-    "descriptionZh": "一款支持确定性模拟、内部扩展和本地进度保存的网页塔防游戏。",
-    "icon": "🌻"
   }
 ]
