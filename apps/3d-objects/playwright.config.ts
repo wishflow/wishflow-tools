@@ -3,7 +3,7 @@ import { defineConfig } from '@playwright/test';
 const executablePath = process.env.CHROME_EXEC;
 
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './objects',
   fullyParallel: true,
   reporter: 'list',
   use: {

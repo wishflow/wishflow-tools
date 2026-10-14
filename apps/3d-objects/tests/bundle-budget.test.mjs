@@ -10,12 +10,12 @@ test('JavaScript gzip budget passes under limit and blocks oversized output', as
   try {
     await mkdir(path.join(rootDir, 'dist', 'assets'), { recursive: true });
     await writeFile(path.join(rootDir, 'dist', 'assets', 'main.js'), 'export const scene = true;');
-    await writeFile(path.join(rootDir, 'scene-contract.json'), JSON.stringify({
+    await writeFile(path.join(rootDir, 'app-contract.json'), JSON.stringify({
       maxJavaScriptGzipBytes: 2048,
     }));
     assert.deepEqual(validateJavaScriptBundle(rootDir).errors, []);
 
-    await writeFile(path.join(rootDir, 'scene-contract.json'), JSON.stringify({
+    await writeFile(path.join(rootDir, 'app-contract.json'), JSON.stringify({
       maxJavaScriptGzipBytes: 1,
     }));
     assert.match(validateJavaScriptBundle(rootDir).errors.join('\n'), /JavaScript gzip 体积超出预算/);

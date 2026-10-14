@@ -1,10 +1,9 @@
 {
   "version": 1,
-  "modelPath": "public/models/scene.glb",
+  "modelPath": "assets/scene.glb",
   "maxTriangles": 100000,
   "maxGlbBytes": 8388608,
   "maxTextureEdge": 1024,
-  "maxJavaScriptGzipBytes": 262144,
   "minimumMeshCount": 20,
   "requiredObjects": [
     "Ground",

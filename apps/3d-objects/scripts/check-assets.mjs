@@ -1,23 +1,14 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { discoverObjectModules, safeModulePath } from './object-modules.mjs';
 
 const UNKNOWN_LICENSES = new Set(['unknown', 'tbd', 'pending', '未确认', '未知']);
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
-}
-
-function safeProjectFile(rootDir, localPath) {
-  if (!isNonEmptyString(localPath) || localPath.includes('\\') || path.isAbsolute(localPath)) return null;
-  const parts = localPath.split('/');
-  if (parts.some((part) => !part || part === '.' || part === '..')) return null;
-  const root = path.resolve(rootDir);
-  const resolved = path.resolve(root, ...parts);
-  if (!resolved.startsWith(root + path.sep)) return null;
-  return resolved;
 }
 
 export function validateAssetManifest(manifest, rootDir) {
@@ -69,7 +60,7 @@ export function validateAssetManifest(manifest, rootDir) {
       errors.push(label + ' 程序化原创素材的 license 必须为 project-original。');
     }
 
-    const localFile = safeProjectFile(rootDir, asset.localPath);
+    const localFile = safeModulePath(rootDir, asset.localPath);
     if (!localFile) {
       errors.push(label + ' localPath 必须是项目内安全的相对路径。');
     } else if (!existsSync(localFile)) {
@@ -80,25 +71,49 @@ export function validateAssetManifest(manifest, rootDir) {
   return errors;
 }
 
-function main() {
-  const rootDir = process.cwd();
-  const manifestPath = path.resolve(rootDir, process.argv[2] || 'assets/manifest.json');
-  let manifest;
-  try {
-    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  } catch (error) {
-    console.error('无法读取素材清单：' + error.message);
-    process.exitCode = 1;
-    return;
+export function validateModuleAssetManifests(appRoot) {
+  const { modules, errors } = discoverObjectModules(appRoot);
+  for (const module of modules) {
+    const manifestPath = path.join(module.moduleRoot, 'assets', 'manifest.json');
+    if (!existsSync(manifestPath)) continue;
+    if (!statSync(manifestPath).isFile()) {
+      errors.push(module.slug + '/assets/manifest.json 必须是文件。');
+      continue;
+    }
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      errors.push(...validateAssetManifest(manifest, module.moduleRoot).map((error) => module.slug + ': ' + error));
+    } catch (error) {
+      errors.push(module.slug + '/assets/manifest.json 无法解析：' + error.message);
+    }
   }
+  return errors;
+}
 
-  const errors = validateAssetManifest(manifest, rootDir);
+function main() {
+  const appRoot = process.cwd();
+  const selectedManifest = process.argv[2];
+  let errors;
+  if (selectedManifest) {
+    const manifestPath = path.resolve(appRoot, selectedManifest);
+    try {
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+      const moduleRoot = path.basename(path.dirname(manifestPath)) === 'assets'
+        ? path.dirname(path.dirname(manifestPath))
+        : path.dirname(manifestPath);
+      errors = validateAssetManifest(manifest, moduleRoot);
+    } catch (error) {
+      errors = ['无法读取素材清单：' + error.message];
+    }
+  } else {
+    errors = validateModuleAssetManifests(appRoot);
+  }
   if (errors.length) {
     for (const error of errors) console.error('ERROR: ' + error);
     process.exitCode = 1;
     return;
   }
-  console.log('素材清单通过：许可、来源、署名和本地路径均已记录。');
+  console.log('对象模块素材清单通过：已声明的许可、来源、署名和本地路径均已记录。');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

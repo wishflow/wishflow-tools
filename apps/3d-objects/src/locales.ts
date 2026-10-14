@@ -1,102 +1,38 @@
-import { registerMessages } from '@wishflow/site-shell';
+import { registerMessages, type LocalizedText, type LocalePattern } from '@wishflow/site-shell';
+import { objectModules } from './object-modules';
 
-const messages = {
-  '从可交互的三维模型中，观察结构、材质与细节。': { en: 'Explore structure, materials, and details in interactive 3D models.', zh: '从可交互的三维模型中，观察结构、材质与细节。' },
+type ObjectLocaleModule = {
+  messages: Record<string, LocalizedText | string>;
+  patterns?: LocalePattern[];
+};
+
+const messages: Record<string, LocalizedText | string> = {
   ' 个场景': { en: ' scenes', zh: ' 个场景' },
-  '打开木结构小屋 3D 场景': { en: 'Open the timber house 3D scene', zh: '打开木结构小屋 3D 场景' },
-  '建筑 · 场景 01': { en: 'ARCHITECTURE · SCENE 01', zh: '建筑 · 场景 01' },
-  '木结构小屋': { en: 'Timber House', zh: '木结构小屋' },
-  '旋转、缩放并拆开屋顶与墙体，查看门窗和内部木构架。': { en: 'Rotate, zoom, and separate the roof and walls to inspect the doors, windows, and timber frame.', zh: '旋转、缩放并拆开屋顶与墙体，查看门窗和内部木构架。' },
-  '约 30 m²': { en: 'about 30 m²', zh: '约 30 m²' },
-  'STUDY NO. 01': { en: 'STUDY NO. 01', zh: '房屋编号 · 01' },
-  '03 / SELECTED PART': { en: '03 / SELECTED PART', zh: '03 / 选中构件' },
+  '从可交互的三维模型中，观察结构、材质与细节。': {
+    en: 'Explore structure, materials, and details in interactive 3D models.',
+    zh: '从可交互的三维模型中，观察结构、材质与细节。',
+  },
   '打开 3D 场景': { en: 'Open 3D scene', zh: '打开 3D 场景' },
-  '场景均以本地静态资源交付，打开后可直接在浏览器中交互。': { en: 'Scenes are delivered as local static assets and run directly in your browser.', zh: '场景均以本地静态资源交付，打开后可直接在浏览器中交互。' },
-  '屋顶与屋架': { en: 'Roof and rafters', zh: '屋顶与屋架' },
-  '四面墙体': { en: 'Four walls', zh: '四面墙体' },
-  '基础与木结构': { en: 'Foundation and timber frame', zh: '基础与木结构' },
-  '门与窗': { en: 'Doors and windows', zh: '门与窗' },
-  '室内陈设': { en: 'Interior furnishings', zh: '室内陈设' },
-  '观察地台': { en: 'Ground platform', zh: '观察地台' },
-  '正在准备模型…': { en: 'Preparing the model…', zh: '正在准备模型…' },
-  '从屋面瓦片到木结构框架，沿着构造一层层观察。': { en: 'Explore the construction layer by layer, from roof tiles to the timber frame.', zh: '从屋面瓦片到木结构框架，沿着构造一层层观察。' },
-  '房屋基本信息': { en: 'House details', zh: '房屋基本信息' },
-  '单层木结构 · 约 30 m²': { en: 'Single-story timber house · about 30 m²', zh: '单层木结构 · 约 30 m²' },
-  '小屋 3D 观察与控制': { en: '3D house viewer and controls', zh: '小屋 3D 观察与控制' },
-  '模型暂时无法显示': { en: 'The model is temporarily unavailable', zh: '模型暂时无法显示' },
-  '重新加载': { en: 'Retry', zh: '重新加载' },
-  '复位视角、拆解进度和构件显隐': { en: 'Reset camera, assembly, and component visibility', zh: '复位视角、拆解进度和构件显隐' },
-  ' 复位': { en: ' Reset', zh: ' 复位' },
-  '视图快捷操作': { en: 'Quick view controls', zh: '视图快捷操作' },
-  '拖动': { en: 'Drag', zh: '拖动' },
-  ' 旋转 ': { en: ' to rotate ', zh: ' 旋转 ' },
-  ' 滚轮': { en: ' Scroll wheel', zh: ' 滚轮' },
-  ' 缩放 ': { en: ' to zoom ', zh: ' 缩放 ' },
-  ' 右键拖动平移': { en: ' Right-drag to pan', zh: ' 右键拖动平移' },
-  '缩小模型': { en: 'Zoom out', zh: '缩小模型' },
-  '放大模型': { en: 'Zoom in', zh: '放大模型' },
-  '模型控制面板': { en: 'Model controls', zh: '模型控制面板' },
-  '拆解视图': { en: 'Exploded view', zh: '拆解视图' },
-  '让屋顶与四面墙体沿构造方向移开。': { en: 'Move the roof and four walls apart along their construction axes.', zh: '让屋顶与四面墙体沿构造方向移开。' },
-  '拆解进度': { en: 'Explode amount', zh: '拆解进度' },
-  '组装': { en: 'Assembled', zh: '组装' },
-  '拆解': { en: 'Exploded', zh: '拆解' },
-  '整体': { en: 'Whole model', zh: '整体' },
-  '完全拆解': { en: 'Explode all', zh: '完全拆解' },
-  '构件显隐': { en: 'Component visibility', zh: '构件显隐' },
-  '显示全部': { en: 'Show all', zh: '显示全部' },
-  '一座紧凑的小屋': { en: 'A compact timber house', zh: '一座紧凑的小屋' },
-  '选择屋顶、墙板或木构件，查看它在房屋中的位置与作用。': { en: 'Select a roof, wall, or timber component to see its place and purpose in the house.', zh: '选择屋顶、墙板或木构件，查看它在房屋中的位置与作用。' },
-  '点击模型中的任意构件查看说明。键盘用户可通过上方显隐清单逐组检查。': { en: 'Select any component in the model for details. Keyboard users can inspect groups in the visibility list above.', zh: '点击模型中的任意构件查看说明。键盘用户可通过上方显隐清单逐组检查。' },
-  '石灰岩': { en: 'Limestone', zh: '石灰岩' },
-  '为模型提供尺度参照与柔和接触阴影。拖动时可从任意方向查看整座小屋。': { en: 'Provides a scale reference and soft contact shadows. Drag to inspect the house from any angle.', zh: '为模型提供尺度参照与柔和接触阴影。拖动时可从任意方向查看整座小屋。' },
-  '基础底座': { en: 'Foundation base', zh: '基础底座' },
-  '浅灰石材': { en: 'Light gray stone', zh: '浅灰石材' },
-  '将房屋重量传递到地面。基础略宽于墙体，形成清楚的底部收边。': { en: 'Transfers the house load to the ground. The foundation extends slightly beyond the walls for a clear base edge.', zh: '将房屋重量传递到地面。基础略宽于墙体，形成清楚的底部收边。' },
-  '木地板': { en: 'Wood floor', zh: '木地板' },
-  'Poly Haven 木板纹理': { en: 'Poly Haven wood planks', zh: 'Poly Haven 木板纹理' },
-  '由平行木板组成，板下的地板梁在拆解后可以单独观察。': { en: 'Built from parallel planks; the floor joists underneath can be inspected when exploded.', zh: '由平行木板组成，板下的地板梁在拆解后可以单独观察。' },
-  '木结构框架': { en: 'Timber frame', zh: '木结构框架' },
-  '松木与橡木': { en: 'Pine and oak', zh: '松木与橡木' },
-  '立柱、上下横梁和地板梁组成房屋骨架，支撑墙板与屋架。': { en: 'Posts, beams, and floor joists form the frame that supports the walls and roof.', zh: '立柱、上下横梁和地板梁组成房屋骨架，支撑墙板与屋架。' },
-  '正面墙板': { en: 'Front wall', zh: '正面墙板' },
-  '暖白灰泥': { en: 'Warm white plaster', zh: '暖白灰泥' },
-  '正面预留入户门和两扇窗。向外移开后，可以看到门窗开口和内部木框架。': { en: 'The front has an entry door and two windows. Move it outward to inspect the openings and inner frame.', zh: '正面预留入户门和两扇窗。向外移开后，可以看到门窗开口和内部木框架。' },
-  '后侧墙板': { en: 'Rear wall', zh: '后侧墙板' },
-  '封闭房屋后侧的外墙。爆炸视图会沿房屋纵深方向将它移开。': { en: 'Closes the rear of the house. The exploded view moves it along the depth axis.', zh: '封闭房屋后侧的外墙。爆炸视图会沿房屋纵深方向将它移开。' },
-  '左侧墙板': { en: 'Left wall', zh: '左侧墙板' },
-  '形成小屋一侧的外立面，拆开后可看到墙板厚度与内部结构。': { en: 'Forms one side of the exterior. Separate it to inspect the wall thickness and inner frame.', zh: '形成小屋一侧的外立面，拆开后可看到墙板厚度与内部结构。' },
-  '右侧墙板': { en: 'Right wall', zh: '右侧墙板' },
-  '右侧墙体设有一扇侧窗，观察室内采光与墙体构成。': { en: 'A side window brings light into the room and shows how the wall is assembled.', zh: '右侧墙体设有一扇侧窗，观察室内采光与墙体构成。' },
-  '入户门': { en: 'Entry door', zh: '入户门' },
-  '木板与黄铜把手': { en: 'Wood planks and brass handle', zh: '木板与黄铜把手' },
-  '独立门扇和门框嵌在正面墙的开口内，随墙体一起移开。': { en: 'The separate door leaf and frame fit the front wall opening and move with the wall.', zh: '独立门扇和门框嵌在正面墙的开口内，随墙体一起移开。' },
-  '正面左窗': { en: 'Front left window', zh: '正面左窗' },
-  '木框与浅蓝玻璃': { en: 'Wood frame and pale blue glass', zh: '木框与浅蓝玻璃' },
-  '由窗框、分格木条和玻璃片组成，采用简化几何便于近距离查看。': { en: 'A frame, muntins, and glass panes use simplified geometry for close inspection.', zh: '由窗框、分格木条和玻璃片组成，采用简化几何便于近距离查看。' },
-  '正面右窗': { en: 'Front right window', zh: '正面右窗' },
-  '与另一扇正面窗共同为室内提供采光，并保持立面均衡。': { en: 'Together with the other front window, it lights the interior and balances the facade.', zh: '与另一扇正面窗共同为室内提供采光，并保持立面均衡。' },
-  '侧窗': { en: 'Side window', zh: '侧窗' },
-  '位于右侧墙板中部，拆解墙体后可以观察窗框如何嵌入开口。': { en: 'Set in the center of the right wall; separate the wall to see how the frame fits the opening.', zh: '位于右侧墙板中部，拆解墙体后可以观察窗框如何嵌入开口。' },
-  '屋架': { en: 'Roof frame', zh: '屋架' },
-  '浅色木梁': { en: 'Light timber beams', zh: '浅色木梁' },
-  '成对椽条从屋脊延伸至檐口，并由屋脊梁和檩条连接。': { en: 'Paired rafters run from ridge to eaves, joined by the ridge beam and purlins.', zh: '成对椽条从屋脊延伸至檐口，并由屋脊梁和檩条连接。' },
-  '双坡屋面': { en: 'Gabled roof', zh: '双坡屋面' },
-  'Poly Haven 瓦片纹理': { en: 'Poly Haven roof tiles', zh: 'Poly Haven 瓦片纹理' },
-  '两片坡面覆盖屋架。纹理来自公开 CC0 素材，颜色在 Blender 中调为森林绿。': { en: 'Two sloped planes cover the frame. The public CC0 texture is tinted forest green in Blender.', zh: '两片坡面覆盖屋架。纹理来自公开 CC0 素材，颜色在 Blender 中调为森林绿。' },
-  '木桌椅与金属细节': { en: 'Wood furniture and metal details', zh: '木桌椅与金属细节' },
-  '简化的桌椅和壁架用于表现空间尺度；可独立隐藏，方便观察地板和框架。': { en: 'A simplified table, chairs, and shelf establish the room scale. Hide them to inspect the floor and frame.', zh: '简化的桌椅和壁架用于表现空间尺度；可独立隐藏，方便观察地板和框架。' },
-  '模型中没有可显示的几何体。': { en: 'The model has no visible geometry.', zh: '模型中没有可显示的几何体。' },
-  '正在加载小屋模型…': { en: 'Loading the house model…', zh: '正在加载小屋模型…' },
-  '场景无法加载': { en: 'The scene could not be loaded', zh: '场景无法加载' },
-  '小屋模型已就绪': { en: 'The house model is ready', zh: '小屋模型已就绪' },
-  '模型文件无法读取。请检查网络后重试；模型与贴图均随网页静态发布。': { en: 'The model file could not be read. Check your connection and retry; the model and textures are published with this static site.', zh: '模型文件无法读取。请检查网络后重试；模型与贴图均随网页静态发布。' },
-  '可旋转、缩放和拆解的小屋 3D 模型': { en: 'Interactive 3D house model. Rotate, zoom, and explode the view.', zh: '可旋转、缩放和拆解的小屋 3D 模型' },
-  '当前浏览器无法初始化 3D 视图。': { en: 'This browser could not initialize the 3D view.', zh: '当前浏览器无法初始化 3D 视图。' },
-  '小屋 WebGL 初始化失败': { en: 'The house WebGL view failed to initialize', zh: '小屋 WebGL 初始化失败' },
-} as const;
+  '场景均以本地静态资源交付，打开后可直接在浏览器中交互。': {
+    en: 'Scenes are delivered as local static assets and run directly in your browser.',
+    zh: '场景均以本地静态资源交付，打开后可直接在浏览器中交互。',
+  },
+};
+const patterns: LocalePattern[] = [];
 
-registerMessages('3d-objects', messages, [
-  { pattern: /^正在加载小屋模型 (\d+)%$/, en: (match) => `Loading the house model ${match[1]}%`, zh: (match) => `正在加载小屋模型 ${match[1]}%` },
-  { pattern: /^模型缺少可交互构件：(.+)$/, en: (match) => `Interactive components are missing: ${match[1]}`, zh: (match) => `模型缺少可交互构件：${match[1]}` },
-]);
+for (const module of objectModules) {
+  messages[module.titleZh] = { en: module.title, zh: module.titleZh };
+  messages[module.descriptionZh] = { en: module.description, zh: module.descriptionZh };
+  messages[module.categoryZh] = { en: module.category, zh: module.categoryZh };
+}
+
+const moduleLocales = import.meta.glob<ObjectLocaleModule>('../objects/*/locales.ts', {
+  eager: true,
+  import: 'default',
+});
+for (const locale of Object.values(moduleLocales)) {
+  Object.assign(messages, locale.messages);
+  if (locale.patterns) patterns.push(...locale.patterns);
+}
+
+registerMessages('3d-objects', messages, patterns);

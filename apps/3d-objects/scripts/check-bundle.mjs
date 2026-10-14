@@ -20,9 +20,9 @@ export function validateJavaScriptBundle(rootDir) {
   const errors = [];
   let contract;
   try {
-    contract = JSON.parse(readFileSync(path.join(rootDir, 'scene-contract.json'), 'utf8'));
+    contract = JSON.parse(readFileSync(path.join(rootDir, 'app-contract.json'), 'utf8'));
   } catch (error) {
-    return { errors: ['无法读取 scene-contract.json：' + error.message], gzipBytes: 0 };
+    return { errors: ['无法读取 app-contract.json：' + error.message], gzipBytes: 0 };
   }
   const bundleDirectory = path.join(rootDir, 'dist', 'assets');
   const files = findJavaScriptFiles(bundleDirectory);
@@ -31,7 +31,7 @@ export function validateJavaScriptBundle(rootDir) {
   const gzipBytes = files.reduce((total, file) => total + gzipSync(readFileSync(file)).length, 0);
   const maximum = contract.maxJavaScriptGzipBytes;
   if (!Number.isInteger(maximum) || maximum < 1) {
-    errors.push('scene-contract.json 的 maxJavaScriptGzipBytes 必须为正整数。');
+    errors.push('app-contract.json 的 maxJavaScriptGzipBytes 必须为正整数。');
   } else if (gzipBytes > maximum) {
     errors.push('JavaScript gzip 体积超出预算：' + gzipBytes + ' > ' + maximum + ' bytes。');
   }

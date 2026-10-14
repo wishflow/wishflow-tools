@@ -27,8 +27,8 @@
     "slug": "3d-objects",
     "title": "3D Objects",
     "titleZh": "3D Objects",
-    "description": "Browse interactive 3D objects and inspect a small timber house.",
-    "descriptionZh": "浏览交互式 3D 物体，旋转、缩放并拆解观察一座木结构小屋。",
-    "icon": "🏠"
+    "description": "Browse a collection of interactive 3D object modules.",
+    "descriptionZh": "浏览由独立对象模块组成的交互式 3D 物体集合。",
+    "icon": "🧊"
   }
 ]

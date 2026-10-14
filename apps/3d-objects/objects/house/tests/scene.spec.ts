@@ -10,6 +10,8 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
 
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '3D Objects' })).toBeVisible();
+  await expect(page.locator('.catalog-count strong')).toHaveText('01');
+  await expect(page.getByRole('link', { name: /木结构小屋/ })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
   const sidebarToggle = page.getByRole('button', { name: '展开应用内导航' });
   await expect(sidebarToggle).toBeVisible();
@@ -26,17 +28,17 @@ test('小屋静态页面加载本地模型并支持拆解、显隐与复位', as
   });
   expect(initialLayout.sidebarExpanded).toBe(false);
   expect(initialLayout.contentWidth).toBeGreaterThan(initialLayout.shellWidth * 0.9);
-  await expect(page.getByRole('link', { name: 'Poly Haven · CC0' })).toHaveAttribute('href', 'https://polyhaven.com/');
-  await page.getByRole('link', { name: '打开木结构小屋 3D 场景' }).click();
+  await page.getByRole('link', { name: /木结构小屋/ }).click();
   await expect(page).toHaveURL(/#\/objects\/house$/);
   await expect(page.getByRole('heading', { name: '木结构小屋' })).toBeVisible();
   await expect(page.getByRole('banner')).toBeVisible();
   await expect(page.getByRole('navigation', { name: '应用内导航' })).toBeHidden();
+  await expect(page.getByRole('link', { name: 'Poly Haven · CC0' })).toHaveAttribute('href', 'https://polyhaven.com/');
   await expect(page.getByRole('link', { name: 'Poly Haven · CC0' })).toBeVisible();
   await sidebarToggle.click();
   const localNavigation = page.getByRole('navigation', { name: '应用内导航' });
   await expect(localNavigation).toBeVisible();
-  await expect(localNavigation.getByRole('link', { name: '木结构小屋' })).toHaveAttribute('aria-current', 'page');
+  await expect(localNavigation.getByRole('link', { name: '物体目录' })).toHaveAttribute('href', '#/');
   await expect(page.getByRole('button', { name: '收起应用内导航' })).toHaveAttribute('aria-expanded', 'true');
   await page.getByRole('button', { name: '收起应用内导航' }).click();
   await expect(localNavigation).toBeHidden();
@@ -139,7 +141,7 @@ test('360px 窄屏仍可查看模型并操作控件', async ({ page }) => {
 
 test('模型加载失败时显示原因并提供重试入口', async ({ page }) => {
   let failFirstRequest = true;
-  await page.route('**/models/scene.glb', (route) => {
+  await page.route('**/*.glb', (route) => {
     if (failFirstRequest) {
       failFirstRequest = false;
       return route.abort();
@@ -152,4 +154,10 @@ test('模型加载失败时显示原因并提供重试入口', async ({ page }) 
   await page.getByRole('button', { name: '重新加载' }).click();
   await expect(page.locator('#status')).toHaveAttribute('data-state', 'loaded', { timeout: 15000 });
   await expect(page.locator('#error-message')).toBeHidden();
+});
+
+test('未知对象路由返回目录页', async ({ page }) => {
+  await page.goto('/#/objects/not-found');
+  await expect(page).toHaveURL(/#\/$/);
+  await expect(page.getByRole('heading', { name: '3D Objects' })).toBeVisible();
 });

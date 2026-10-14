@@ -1,35 +1,57 @@
 # 3D Objects
 
-一个由 Blender 场景驱动的 Vue 3 静态 3D 物体库。页面使用仓库公共页头、项目侧栏、页脚与中英文语言状态；当前房屋模型支持旋转、缩放、平移和分层爆炸拆解，可切换构件组并点选查看说明。
+3D Objects 是一个静态对象模块集合。应用公共层自动发现 `objects/<slug>/` 下的模块，并据清单生成目录卡片和 `#/objects/<slug>` 详情路由；每个对象自行设计详情页面、交互和所需资源。应用使用仓库公共页头、侧栏、页脚和中英文语言状态，不新增运行时后端。
 
-模型目录位于应用首页，房屋详情使用 `#/objects/house` 路由，以兼容 GitHub Pages 和 Cloudflare Pages 的静态托管。
+现有木结构小屋保留 `#/objects/house` 路由。新增对象不需要修改小屋模块、应用路由注册表、目录卡片或根部署 workflow。
 
-## 本地运行
+## 本地运行与检查
 
 ~~~sh
 ./scripts/install.sh
 pnpm run dev
 ~~~
 
-打开浏览器提示的本地地址。模型生成和质量检查需要本机安装 Blender：
+应用代码改动运行完整 CI 检查：
 
 ~~~sh
-pnpm run generate:scene
-pnpm run check:assets
-pnpm run check:scene
 pnpm run test:ci
 ~~~
 
-## 公开素材
+`test:ci` 检查对象模块清单、素材许可、单元测试、类型、静态构建和 Playwright 浏览器回归，不需要安装 Blender。对象声明了 Blender 场景生成流程时，使用 Blender 运行发布检查：
 
-- 屋面瓦片： [Grey Roof 01](https://polyhaven.com/a/grey_roof_01)，作者 Rob Tuytel / Poly Haven，CC0。
-- 室内地板： [Wooden Planks](https://polyhaven.com/a/wooden_planks)，作者 Charlotte Baglioni、Dario Barresi / Poly Haven，CC0。
-- 本项目仅打包 1K 漫反射图，纹理由 Blender 导出器嵌入 `public/models/scene.glb`；页面运行时无需访问素材站。完整许可、署名和文件信息见 `assets/manifest.json`。
+~~~sh
+pnpm run check:release
+~~~
 
-## 项目文件
+## 新增对象
 
-- `blender/generate_scene.py`：可重复生成 Blender 源场景与网页 GLB。
-- `blender/scene.blend`：已生成的源场景。
-- `scene-contract.json`：模型路径、对象名及性能预算。
-- `assets/manifest.json`：外部贴图来源与再分发记录。
-- `public/models/scene.glb`：网页加载的本地模型。
+在 `objects/<slug>/` 新建模块。目录名是稳定 ID，必须由小写字母、数字和连字符组成。至少添加：
+
+~~~text
+objects/<slug>/
+├── manifest.json       # 双语目录信息和模块内缩略图路径
+├── DetailPage.vue      # 模块详情入口
+└── assets/
+    └── thumbnail.svg   # 或 PNG、JPEG、WebP
+~~~
+
+清单字段如下：
+
+| 字段 | 说明 |
+| --- | --- |
+| `title`、`titleZh` | 英文和中文名称 |
+| `description`、`descriptionZh` | 英文和中文目录简介 |
+| `category`、`categoryZh` | 英文和中文分类 |
+| `thumbnail` | 相对模块根目录的 `thumbnail.svg`、`thumbnail.png`、`thumbnail.jpg` 或 `thumbnail.webp` 路径 |
+
+模块还可以自带 `locales.ts`、`assets/manifest.json`、`scene-contract.json`、`blender/`、`docs/` 和 `tests/`。详情页不必使用统一查看器；只有确实需要三维场景时才增加模型或 Blender 工作流。新模块会自动加入目录、详情路由、本地化和对应检查。
+
+完整接口约束与开发发布顺序见 [AGENTS.md](./AGENTS.md)。
+
+## 当前模块
+
+`objects/house/` 包含木结构小屋的详情页面、Three.js 场景、GLB 与贴图、Blender 源文件、素材许可清单、场景合同、规格文档和浏览器回归。素材来源、许可与再分发记录见该模块的 `assets/manifest.json`。
+
+## 部署
+
+应用仍登记在根目录 `apps/catalog.json`，由现有共享静态站点 workflow 按应用级变更范围构建和发布。对象模块不配置独立部署工作流。
