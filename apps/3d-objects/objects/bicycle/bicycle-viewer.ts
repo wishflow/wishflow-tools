@@ -522,6 +522,10 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
 
   function setBrake(which: 'front' | 'rear', active: boolean) {
     if (mode !== 'operate' || transitioning || fallen) return;
+    if (active) {
+      throttle = false;
+      cruise = false;
+    }
     if (which === 'front') frontBrakeTarget = active ? 1 : 0;
     else rearBrakeTarget = active ? 1 : 0;
   }

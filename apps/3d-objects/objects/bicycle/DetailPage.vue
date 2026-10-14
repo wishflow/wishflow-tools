@@ -48,6 +48,7 @@ type OperationControl = 'accelerator' | 'front' | 'rear';
 const operationControlPresses = new Map<OperationControl, number>();
 const operationControlReleaseTimers = new Map<OperationControl, number>();
 const minimumOperationPressMs = 180;
+let quickRideStartTimer: number | undefined;
 const isReady = computed(() => state.status === 'loaded');
 const canInspect = computed(() => isReady.value && state.mode === 'inspect' && !state.transitioning && !state.fallen);
 const canOperate = computed(() => isReady.value && state.mode === 'operate' && !state.transitioning && !state.fallen);
@@ -159,7 +160,7 @@ function startOperationControl(control: OperationControl) {
   setOperationControl(control, true);
 }
 
-function endOperationControl(control: OperationControl, cancelled = false) {
+function endOperationControl(control: OperationControl) {
   const startedAt = operationControlPresses.get(control);
   if (startedAt === undefined) return;
   operationControlPresses.delete(control);
@@ -168,18 +169,25 @@ function endOperationControl(control: OperationControl, cancelled = false) {
     operationControlReleaseTimers.delete(control);
     setOperationControl(control, false);
   };
-  const remainingMs = cancelled ? 0 : minimumOperationPressMs - (performance.now() - startedAt);
+  const remainingMs = minimumOperationPressMs - (performance.now() - startedAt);
   if (remainingMs <= 0) release();
   else operationControlReleaseTimers.set(control, window.setTimeout(release, remainingMs));
 }
 
 function tapOperationControl(control: OperationControl) {
+  if (control === 'accelerator' && state.speedKmh <= 0.2 && quickRideStartTimer === undefined) {
+    sceneControls?.toggleRide();
+    quickRideStartTimer = window.setTimeout(() => { quickRideStartTimer = undefined; }, 500);
+    return;
+  }
   if (operationControlPresses.has(control) || operationControlReleaseTimers.has(control)) return;
   startOperationControl(control);
   endOperationControl(control);
 }
 
 function clearOperationControlPresses() {
+  if (quickRideStartTimer !== undefined) window.clearTimeout(quickRideStartTimer);
+  quickRideStartTimer = undefined;
   for (const control of ['accelerator', 'front', 'rear'] as const) {
     const releaseTimer = operationControlReleaseTimers.get(control);
     if (releaseTimer !== undefined) window.clearTimeout(releaseTimer);
@@ -317,12 +325,12 @@ function onPanelToggle(event: Event) {
             <section class="control-section action-section">
               <div class="section-heading"><div><span class="section-index">03</span><h2>{{ text(copy.accelerate) }} / {{ text(copy.brake) }}</h2></div></div>
               <div class="two-button-row">
-                <button id="accelerate-control" type="button" class="touch-control accelerate-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('accelerator')" @pointerup="endOperationControl('accelerator')" @pointercancel="endOperationControl('accelerator', true)" @pointerleave="endOperationControl('accelerator')" @click="tapOperationControl('accelerator')">{{ text(copy.accelerate) }}</button>
+                <button id="accelerate-control" type="button" class="touch-control accelerate-control" :disabled="!canOperate" @pointerdown="startOperationControl('accelerator')" @pointerup="endOperationControl('accelerator')" @pointercancel="endOperationControl('accelerator')" @pointerleave="endOperationControl('accelerator')" @click="tapOperationControl('accelerator')">{{ text(copy.accelerate) }}</button>
                 <button id="pedal-control" type="button" class="touch-control pedal-control" :disabled="!canOperate" @click="sceneControls?.pedal(1)">{{ text(copy.pedalOnce) }}</button>
               </div>
               <div class="two-button-row brake-row">
-                <button id="front-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('front')" @pointerup="endOperationControl('front')" @pointercancel="endOperationControl('front', true)" @pointerleave="endOperationControl('front')" @click="tapOperationControl('front')">{{ text(copy.frontBrake) }}</button>
-                <button id="rear-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('rear')" @pointerup="endOperationControl('rear')" @pointercancel="endOperationControl('rear', true)" @pointerleave="endOperationControl('rear')" @click="tapOperationControl('rear')">{{ text(copy.rearBrake) }}</button>
+                <button id="front-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown="startOperationControl('front')" @pointerup="endOperationControl('front')" @pointercancel="endOperationControl('front')" @pointerleave="endOperationControl('front')" @click="tapOperationControl('front')">{{ text(copy.frontBrake) }}</button>
+                <button id="rear-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown="startOperationControl('rear')" @pointerup="endOperationControl('rear')" @pointercancel="endOperationControl('rear')" @pointerleave="endOperationControl('rear')" @click="tapOperationControl('rear')">{{ text(copy.rearBrake) }}</button>
               </div>
             </section>
 
