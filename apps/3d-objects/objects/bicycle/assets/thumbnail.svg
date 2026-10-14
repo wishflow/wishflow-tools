@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" role="img" aria-labelledby="title desc">
+  <title id="title">Urban commuter bicycle</title>
+  <desc id="desc">Teal 700C commuter bicycle with fenders, rack, silver spokes, and dark tires.</desc>
+  <rect width="720" height="420" fill="#eeece4"/>
+  <ellipse cx="358" cy="344" rx="270" ry="20" fill="#d7d5cb" opacity=".6"/>
+  <g fill="none" stroke="#282d2e" stroke-width="17">
+    <circle cx="172" cy="278" r="92"/>
+    <circle cx="548" cy="278" r="92"/>
+  </g>
+  <g fill="none" stroke="#a9b2ae" stroke-width="3" opacity=".95">
+    <circle cx="172" cy="278" r="79"/>
+    <circle cx="548" cy="278" r="79"/>
+  </g>
+  <g stroke="#88918c" stroke-width="2" opacity=".85">
+    <path d="M172 186v184m-92-92h184m-157-65 130 130m0-130L107 343m441-157v184m-92-92h184m-157-65 130 130m0-130L483 343"/>
+  </g>
+  <g fill="none" stroke="#176b69" stroke-width="15" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m172 278 128 13-35-123 164 2-102 121-27-120"/>
+    <path d="m429 170 22-36 36-1"/>
+  </g>
+  <g fill="none" stroke="#b7bfbc" stroke-width="8" stroke-linecap="round">
+    <path d="m429 170 119 108m-119-108 30-57"/>
+  </g>
+  <g fill="none" stroke="#9b795b" stroke-width="13" stroke-linecap="round">
+    <path d="m276 159 45-3m110 7 37-2"/>
+  </g>
+  <g fill="none" stroke="#725a42" stroke-width="8" stroke-linecap="round">
+    <path d="m297 170 65-10 20 16 72-2m-282 104q44-118 112-118"/>
+  </g>
+  <path d="M91 224q76-74 162 1M466 224q75-74 163 1" fill="none" stroke="#b7bfbc" stroke-width="8" stroke-linecap="round"/>
+  <path d="m438 113 25-2m-16-7 4 14m-116 47h-51" fill="none" stroke="#292e2f" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="300" cy="291" r="18" fill="#aab1ae"/>
+  <circle cx="300" cy="291" r="7" fill="#353b3a"/>
+  <path d="m300 291-45 27m45-27 46 28" stroke="#3d4241" stroke-width="8" stroke-linecap="round"/>
+  <path d="m177 366 10 13m-15-8 19 0m356-6 10 13m-15-8 19 0" stroke="#d97747" stroke-width="7" stroke-linecap="round"/>
+</svg>
