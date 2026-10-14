@@ -50,6 +50,8 @@ const RIM_RADIUS = 0.311;
 const REAR_AXLE = V(0, WHEEL_RADIUS, 0);
 const FRONT_AXLE = V(1.08, WHEEL_RADIUS, 0);
 const BOTTOM_BRACKET = V(0.43, 0.279, 0);
+export const SIDE_STAND_FOLDED_ANGLE = -2.0;
+export const SIDE_STAND_DEPLOYED_ANGLE = -0.22;
 const SEAT_TOP = V(0.278, 0.776, 0);
 const HEAD_TOP = V(0.828, 0.84, 0);
 const HEAD_BOTTOM = V(0.78, 0.70, 0);
@@ -264,8 +266,8 @@ function createBrake(
   leverRest.push(0);
 
   const cablePoints = which === 'front'
-    ? [V(0.82, 1.0, sign * 0.27), V(0.72, 0.88, 0.18), V(0.78, 0.7, 0.1), V(0.91, 0.52, 0.07), V(1.08, 0.39, 0.075)]
-    : [V(0.82, 1.0, sign * 0.27), V(0.62, 0.92, 0.16), V(0.54, 0.5, 0.12), V(0.33, 0.3, 0.09), V(0.04, 0.45, 0.075)];
+    ? [V(0.82, 1.0, sign * 0.27), V(0.82, 0.93, 0.18), V(0.81, 0.79, 0.1), V(0.91, 0.55, 0.075), V(1.08, 0.39, 0.075)]
+    : [V(0.82, 1.0, sign * 0.27), V(0.78, 0.94, -0.18), V(0.68, 0.82, -0.12), V(0.48, 0.81, -0.075), V(0.32, 0.72, -0.06), V(0.16, 0.54, -0.055), V(0.04, 0.39, -0.055)];
   tubeBetween(parent, cablePoints.map(toParent), 0.0045, materials.cable, 'brakeCable', partRoots, 38);
   return { pads, levers: leverGroups, leverRest, padRest };
 }
@@ -303,10 +305,12 @@ export function createBicycleModel(materials: BicycleMaterials) {
   root.add(rearBrakeLayer);
 
   // Main frame, built from individually selectable tubes and junctions.
-  cylinderBetween(frame, REAR_AXLE, BOTTOM_BRACKET, 0.014, materials.frame, 'chainStay', partRoots);
-  cylinderBetween(frame, V(REAR_AXLE.x, REAR_AXLE.y + 0.012, -0.035), V(BOTTOM_BRACKET.x, BOTTOM_BRACKET.y + 0.02, -0.035), 0.012, materials.frame, 'chainStay', partRoots);
-  cylinderBetween(frame, REAR_AXLE, SEAT_TOP, 0.013, materials.frame, 'seatStay', partRoots);
-  cylinderBetween(frame, V(REAR_AXLE.x, REAR_AXLE.y + 0.012, -0.035), V(SEAT_TOP.x, SEAT_TOP.y, -0.035), 0.011, materials.frame, 'seatStay', partRoots);
+  for (const side of [-1, 1]) {
+    const chainStayZ = side * 0.04;
+    const seatStayZ = side * 0.035;
+    cylinderBetween(frame, V(REAR_AXLE.x, REAR_AXLE.y + 0.012, chainStayZ), V(BOTTOM_BRACKET.x, BOTTOM_BRACKET.y + 0.02, chainStayZ), 0.012, materials.frame, 'chainStay', partRoots);
+    cylinderBetween(frame, V(REAR_AXLE.x, REAR_AXLE.y + 0.012, seatStayZ), V(SEAT_TOP.x, SEAT_TOP.y, seatStayZ), 0.011, materials.frame, 'seatStay', partRoots);
+  }
   cylinderBetween(frame, BOTTOM_BRACKET, SEAT_TOP, 0.023, materials.frame, 'seatTube', partRoots);
   cylinderBetween(frame, SEAT_TOP, HEAD_TOP, 0.021, materials.frame, 'topTube', partRoots);
   cylinderBetween(frame, BOTTOM_BRACKET, HEAD_BOTTOM, 0.027, materials.frame, 'downTube', partRoots);
@@ -317,7 +321,8 @@ export function createBicycleModel(materials: BicycleMaterials) {
   bracket.position.copy(BOTTOM_BRACKET);
   for (const endpoint of [REAR_AXLE, SEAT_TOP, HEAD_TOP, HEAD_BOTTOM]) {
     const dropout = group(frame, endpoint === REAR_AXLE ? 'dropout' : 'frame', partRoots);
-    const lug = mesh(dropout, new THREE.SphereGeometry(0.032, 14, 10), materials.frame);
+    const lugRadius = endpoint === REAR_AXLE ? 0.016 : 0.019;
+    const lug = mesh(dropout, new THREE.SphereGeometry(lugRadius, 14, 10), materials.frame);
     lug.position.copy(endpoint);
   }
 
@@ -373,6 +378,7 @@ export function createBicycleModel(materials: BicycleMaterials) {
   cylinderBetween(seatPost, V(SEAT_TOP.x, SEAT_TOP.y - 0.03, 0), V(SEAT_TOP.x - 0.037, 0.894, 0), 0.014, materials.silver, 'seatPost', partRoots);
   const saddle = group(seatAccessories, 'saddle', partRoots);
   const saddleBody = mesh(saddle, new THREE.CapsuleGeometry(0.072, 0.13, 4, 12), materials.leather);
+  saddleBody.scale.set(0.36, 1, 0.82);
   saddleBody.rotation.z = -Math.PI / 2;
   saddleBody.position.set(SEAT_TOP.x - 0.037, 0.9, 0);
   const saddleRails = group(seatAccessories, 'saddle', partRoots);
@@ -492,9 +498,10 @@ export function createBicycleModel(materials: BicycleMaterials) {
   const interactiveTargets: THREE.Object3D[] = [];
   const transparentHitMaterial = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide });
   const addHit = (parent: THREE.Object3D, geometry: THREE.BufferGeometry, position: THREE.Vector3, control: string, partId: BicyclePartId) => {
-    const target = mesh(parent, geometry, transparentHitMaterial, partId, partRoots);
+    const target = mesh(parent, geometry, transparentHitMaterial);
     target.position.copy(position);
     target.userData.control = control;
+    target.userData.partId = partId;
     target.userData.hitTarget = true;
     interactiveTargets.push(target);
     return target;

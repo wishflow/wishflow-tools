@@ -20,11 +20,14 @@ const state = reactive({
   selectedPartId: null as BicyclePartId | null,
   explosion: 0,
   mode: 'inspect' as BicycleMode,
-  transitioning: false,
   speedKmh: 0,
+  routePhase: 0,
   gearIndex: 0,
   riding: false,
   kickstand: false,
+  frontTireGroundClearanceMm: null as number | null,
+  rearTireGroundClearanceMm: null as number | null,
+  standGroundClearanceMm: null as number | null,
   fallen: false,
   steeringDegrees: 0,
   frontBrake: 0,
@@ -44,22 +47,20 @@ const state = reactive({
 
 let sceneControls: BicycleSceneControls | undefined;
 let unsubscribeLanguage: (() => void) | undefined;
-type OperationControl = 'accelerator' | 'front' | 'rear';
+type OperationControl = 'front' | 'rear';
 const operationControlPresses = new Map<OperationControl, number>();
 const operationControlReleaseTimers = new Map<OperationControl, number>();
 const minimumOperationPressMs = 180;
-let quickRideStartTimer: number | undefined;
 const isReady = computed(() => state.status === 'loaded');
-const canInspect = computed(() => isReady.value && state.mode === 'inspect' && !state.transitioning && !state.fallen);
-const canOperate = computed(() => isReady.value && state.mode === 'operate' && !state.transitioning && !state.fallen);
-const canRecover = computed(() => isReady.value && state.mode === 'operate' && !state.transitioning && state.fallen && state.speedKmh <= 0.35);
+const canInspect = computed(() => isReady.value && state.mode === 'inspect' && !state.fallen);
+const canOperate = computed(() => isReady.value && state.mode === 'operate' && !state.fallen);
+const canRecover = computed(() => isReady.value && state.mode === 'operate' && state.fallen && state.speedKmh === 0);
 const selectedPart = computed(() => state.selectedPartId ? partDetails[state.selectedPartId] : null);
 const currentGearNumber = computed(() => 8 - state.gearIndex);
 const rideStateCopy = computed(() => state.fallen ? copy.fallen : state.riding ? copy.riding : copy.stopped);
 const disabledReason = computed(() => {
-  if (state.transitioning) return copy.reasonTransition;
   if (state.fallen) return copy.reasonFallen;
-  if (state.speedKmh > 0.35) return copy.reasonMoving;
+  if (state.speedKmh > 0) return copy.reasonMoving;
   if (state.mode !== 'inspect') return copy.reasonOperating;
   return copy.reasonReady;
 });
@@ -129,7 +130,6 @@ function reset() {
   clearOperationControlPresses();
   state.explosion = 0;
   state.mode = 'inspect';
-  state.transitioning = false;
   state.speedKmh = 0;
   state.gearIndex = 0;
   state.riding = false;
@@ -148,8 +148,7 @@ function setLayerVisibility(layer: BicycleLayer, event: Event) {
 }
 
 function setOperationControl(control: OperationControl, active: boolean) {
-  if (control === 'accelerator') sceneControls?.setThrottle(active);
-  else sceneControls?.setBrake(control, active);
+  sceneControls?.setBrake(control, active);
 }
 
 function startOperationControl(control: OperationControl) {
@@ -175,26 +174,23 @@ function endOperationControl(control: OperationControl) {
 }
 
 function tapOperationControl(control: OperationControl) {
-  if (control === 'accelerator' && state.speedKmh <= 0.2 && quickRideStartTimer === undefined) {
-    sceneControls?.toggleRide();
-    quickRideStartTimer = window.setTimeout(() => { quickRideStartTimer = undefined; }, 500);
-    return;
-  }
   if (operationControlPresses.has(control) || operationControlReleaseTimers.has(control)) return;
   startOperationControl(control);
   endOperationControl(control);
 }
 
 function clearOperationControlPresses() {
-  if (quickRideStartTimer !== undefined) window.clearTimeout(quickRideStartTimer);
-  quickRideStartTimer = undefined;
-  for (const control of ['accelerator', 'front', 'rear'] as const) {
+  for (const control of ['front', 'rear'] as const) {
     const releaseTimer = operationControlReleaseTimers.get(control);
     if (releaseTimer !== undefined) window.clearTimeout(releaseTimer);
     operationControlReleaseTimers.delete(control);
     operationControlPresses.delete(control);
     setOperationControl(control, false);
   }
+}
+
+function setSpeed(event: Event) {
+  sceneControls?.setSpeedKmh(Number((event.currentTarget as HTMLInputElement).value));
 }
 
 function setSteering(event: Event) {
@@ -234,7 +230,17 @@ function onPanelToggle(event: Event) {
     <section class="workbench" :aria-label="text(copy.title)">
       <div class="viewer-column">
         <div class="viewer-frame">
-          <div id="viewer" ref="viewerHost" class="viewer" :data-state="state.status" :data-mode="state.mode">
+          <div
+            id="viewer"
+            ref="viewerHost"
+            class="viewer"
+            :data-state="state.status"
+            :data-mode="state.mode"
+            :data-route-phase="state.routePhase"
+            :data-front-tire-clearance-mm="state.frontTireGroundClearanceMm ?? undefined"
+            :data-rear-tire-clearance-mm="state.rearTireGroundClearanceMm ?? undefined"
+            :data-stand-clearance-mm="state.standGroundClearanceMm ?? undefined"
+          >
             <div class="viewer-topline" aria-hidden="true">
               <span>URBAN / 700C</span><span>{{ state.mode === 'inspect' ? 'ASSEMBLY VIEW' : 'RIDE LOOP · 8 × 4 M' }}</span>
             </div>
@@ -260,6 +266,10 @@ function onPanelToggle(event: Event) {
       </div>
 
       <aside class="inspector" :aria-label="text(copy.panelTitle)">
+        <div id="mode-guide" class="mode-guide" role="note" aria-live="polite">
+          <strong>{{ text(copy.quickGuide) }}</strong>
+          <p>{{ text(state.mode === 'inspect' ? copy.inspectGuide : copy.operateGuide) }}</p>
+        </div>
         <details id="control-panel" class="control-panel" :open="state.panelOpen" @toggle="onPanelToggle">
           <summary><span>{{ text(state.mode === 'inspect' ? copy.panelTitle : copy.controlsTitle) }}</span><span class="summary-mark" aria-hidden="true">⌄</span></summary>
           <div v-if="state.mode === 'inspect'" class="inspect-controls">
@@ -304,10 +314,14 @@ function onPanelToggle(event: Event) {
                 <strong id="speed-value">{{ state.speedKmh.toFixed(1) }} km/h</strong>
                 <span>{{ text(copy.speedLabel) }} · {{ text(copy.track) }}</span>
               </div>
+              <label class="range-label speed-range-label" for="speed-range">
+                <span class="speed-range-caption">{{ text(copy.setSpeed) }}</span>
+                <input id="speed-range" type="range" min="0" max="12" step="0.5" :value="state.speedKmh" :disabled="!canOperate" @input="setSpeed" />
+              </label>
+              <div class="range-scale"><span>0 · {{ text(copy.zeroSpeed) }}</span><span>12 km/h</span></div>
               <div class="speed-meter" role="meter" :aria-valuenow="state.speedKmh" aria-valuemin="0" aria-valuemax="12" :aria-label="text(copy.speedLabel)">
                 <span :style="{ width: `${(state.speedKmh / 12) * 100}%` }"></span>
               </div>
-              <button id="ride-toggle" type="button" class="primary-control" :disabled="!canOperate || state.fallen" @click="sceneControls?.toggleRide()">{{ text(state.riding ? copy.park : copy.ride) }}</button>
             </section>
 
             <section class="control-section gear-section">
@@ -323,9 +337,8 @@ function onPanelToggle(event: Event) {
             </section>
 
             <section class="control-section action-section">
-              <div class="section-heading"><div><span class="section-index">03</span><h2>{{ text(copy.accelerate) }} / {{ text(copy.brake) }}</h2></div></div>
+              <div class="section-heading"><div><span class="section-index">03</span><h2>{{ text(copy.pedalOnce) }} / {{ text(copy.brake) }}</h2></div></div>
               <div class="two-button-row">
-                <button id="accelerate-control" type="button" class="touch-control accelerate-control" :disabled="!canOperate" @pointerdown="startOperationControl('accelerator')" @pointerup="endOperationControl('accelerator')" @pointercancel="endOperationControl('accelerator')" @pointerleave="endOperationControl('accelerator')" @click="tapOperationControl('accelerator')">{{ text(copy.accelerate) }}</button>
                 <button id="pedal-control" type="button" class="touch-control pedal-control" :disabled="!canOperate" @click="sceneControls?.pedal(1)">{{ text(copy.pedalOnce) }}</button>
               </div>
               <div class="two-button-row brake-row">
@@ -347,8 +360,8 @@ function onPanelToggle(event: Event) {
 
             <section class="control-section park-section">
               <div class="two-button-row">
-                <button id="kickstand-toggle" type="button" class="secondary-control" :disabled="!canOperate || state.speedKmh > 0.35 || state.fallen" @click="sceneControls?.toggleKickstand()">{{ text(state.kickstand ? copy.raiseStand : copy.lowerStand) }}</button>
-                <button id="fall-toggle" type="button" class="secondary-control" :disabled="state.fallen ? !canRecover : !canOperate || state.speedKmh > 0.35" @click="sceneControls?.toggleFall()">{{ text(state.fallen ? copy.getUp : copy.layDown) }}</button>
+                <button id="kickstand-toggle" type="button" class="secondary-control" :disabled="!canOperate || state.speedKmh > 0 || state.fallen" @click="sceneControls?.toggleKickstand()">{{ text(state.kickstand ? copy.raiseStand : copy.lowerStand) }}</button>
+                <button id="fall-toggle" type="button" class="secondary-control" :disabled="state.fallen ? !canRecover : !canOperate || state.speedKmh > 0" @click="sceneControls?.toggleFall()">{{ text(state.fallen ? copy.getUp : copy.layDown) }}</button>
               </div>
             </section>
           </div>

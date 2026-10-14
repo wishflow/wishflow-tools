@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import colorUrl from './assets/textures/Metal012_1K-JPG_Color.jpg?url';
 import normalUrl from './assets/textures/Metal012_1K-JPG_NormalGL.jpg?url';
 import roughnessUrl from './assets/textures/Metal012_1K-JPG_Roughness.jpg?url';
-import { createBicycleModel, updateChainLinks, type BicycleLayer, type BicycleMaterials, type BicycleModel } from './bicycle-model';
+import { createBicycleModel, SIDE_STAND_DEPLOYED_ANGLE, SIDE_STAND_FOLDED_ANGLE, updateChainLinks, type BicycleLayer, type BicycleMaterials, type BicycleModel } from './bicycle-model';
 import type { BicyclePartId } from './locales';
 
 export type BicycleMode = 'inspect' | 'operate';
@@ -14,11 +14,14 @@ export type BicycleFeedback = {
   selectedPartId: BicyclePartId | null;
   explosion: number;
   mode: BicycleMode;
-  transitioning: boolean;
   speedKmh: number;
+  routePhase: number;
   gearIndex: number;
   riding: boolean;
   kickstand: boolean;
+  frontTireGroundClearanceMm: number | null;
+  rearTireGroundClearanceMm: number | null;
+  standGroundClearanceMm: number | null;
   fallen: boolean;
   steeringDegrees: number;
   frontBrake: number;
@@ -33,12 +36,11 @@ export type BicycleSceneControls = {
   showAll(): void;
   reset(): void;
   zoom(factor: number): void;
-  setThrottle(active: boolean): void;
+  setSpeedKmh(speed: number): void;
   setBrake(which: 'front' | 'rear', active: boolean): void;
   setSteering(degrees: number): void;
   pedal(turns: number): void;
   shiftGear(direction: -1 | 1): void;
-  toggleRide(): void;
   toggleKickstand(): void;
   toggleFall(): void;
   retry(): void;
@@ -175,7 +177,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   const camera = new THREE.PerspectiveCamera(37, 1, 0.05, 80);
   camera.up.set(0, 1, 0);
   const defaultTarget = new THREE.Vector3(0.55, 0.52, 0);
-  const cameraDirection = new THREE.Vector3(1.4, 1.0, 2.8).normalize();
+  const cameraDirection = new THREE.Vector3(0.85, 0.92, 3.4).normalize();
   let controls: OrbitControls | null = null;
   let model: BicycleModel | null = null;
   let materials: BicycleMaterials | null = null;
@@ -189,7 +191,6 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   let currentStatus: ViewerStatus = 'loading';
   let errorCode: BicycleFeedback['errorCode'] = '';
   let mode: BicycleMode = 'inspect';
-  let transitioning = false;
   let speedKmh = 0;
   let gearIndex = 0;
   let riding = false;
@@ -201,14 +202,9 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   let rearBrake = 0;
   let frontBrakeTarget = 0;
   let rearBrakeTarget = 0;
-  let throttle = false;
-  let cruise = false;
-  let parkingRequest = false;
-  let pendingFall = false;
   let explosion = 0;
   let explosionTarget = 0;
   let routeBlend = 0;
-  let routeBlendTarget = 0;
   let routePhase = 0;
   let crankAngle = 0;
   let rearWheelAngle = 0;
@@ -237,6 +233,13 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     if (renderer) renderer.render(scene, camera);
   }
 
+  function groundClearanceMm(object: THREE.Object3D | undefined) {
+    if (!object) return null;
+    object.updateWorldMatrix(true, true);
+    const bounds = new THREE.Box3().setFromObject(object);
+    return bounds.isEmpty() ? null : Math.round(bounds.min.y * 1000);
+  }
+
   function publish(force = false) {
     const now = performance.now();
     if (!force && now - lastFeedback < 90) return;
@@ -247,11 +250,14 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       selectedPartId: selectedRoot?.userData.partId ?? null,
       explosion: Math.round(explosionTarget),
       mode,
-      transitioning,
       speedKmh,
+      routePhase,
       gearIndex,
       riding,
       kickstand,
+      frontTireGroundClearanceMm: groundClearanceMm(model?.partRoots.get('frontTire')),
+      rearTireGroundClearanceMm: groundClearanceMm(model?.partRoots.get('rearTire')),
+      standGroundClearanceMm: model?.sideStand.visible && standAmount > 0.98 ? groundClearanceMm(model.sideStand) : null,
       fallen,
       steeringDegrees,
       frontBrake,
@@ -322,7 +328,11 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   function findPartRoot(object: THREE.Object3D | undefined) {
     let current: THREE.Object3D | null = object ?? null;
     while (current && current !== bikeRoot) {
-      if (current.userData.partId) return current;
+      if (current.userData.hitTarget && current.userData.partId) {
+        const partRoot = model?.partRoots.get(current.userData.partId as BicyclePartId);
+        if (partRoot) return partRoot;
+      }
+      if (current.userData.partId && !current.userData.hitTarget) return current;
       current = current.parent;
     }
     return null;
@@ -480,7 +490,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   }
 
   function addPedalTurns(turns: number) {
-    if (!model || mode !== 'operate' || fallen || transitioning) return;
+    if (!model || mode !== 'operate' || fallen) return;
     const delta = turns * Math.PI * 2;
     crankAngle += delta;
     model.crankPivot.rotation.z = crankAngle;
@@ -493,50 +503,75 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   }
 
   function setMode(nextMode: BicycleMode) {
-    if (!model || nextMode === mode || fallen || transitioning) return;
+    if (!model || nextMode === mode || fallen) return;
     mode = nextMode;
-    transitioning = true;
-    throttle = false;
-    cruise = false;
-    parkingRequest = nextMode === 'inspect' && speedKmh > 0.15;
-    frontBrakeTarget = parkingRequest ? 1 : 0;
-    rearBrakeTarget = parkingRequest ? 1 : 0;
+    speedKmh = 0;
+    riding = false;
+    rearWheelInertia = 0;
+    frontWheelInertia = 0;
+    steeringDegrees = 0;
+    frontBrakeTarget = 0;
+    rearBrakeTarget = 0;
     steeringTarget = 0;
+    frontBrake = 0;
+    rearBrake = 0;
+    explosion = 0;
     explosionTarget = 0;
-    routeBlendTarget = nextMode === 'operate' ? 1 : 0;
+    routeBlend = nextMode === 'operate' ? 1 : 0;
+    model.steeringPivot.quaternion.setFromAxisAngle(STEER_AXIS, 0);
+    updateBrakeMechanism('front', 0);
+    updateBrakeMechanism('rear', 0);
+    applyExplosion();
     setSelection(null);
     if (nextMode === 'operate') {
       kickstand = false;
       standAmount = 0;
-      if (model) model.sideStand.visible = false;
+      model.sideStand.visible = false;
+      model.sideStand.rotation.z = SIDE_STAND_FOLDED_ANGLE;
+      routePhase = 0;
+    }
+    updateBikePose(0);
+    if (nextMode === 'inspect') resetCamera();
+    publish(true);
+  }
+
+  function setSpeedKmh(speed: number) {
+    if (!model || mode !== 'operate' || fallen) return;
+    speedKmh = THREE.MathUtils.clamp(Number.isFinite(speed) ? speed : 0, 0, 12);
+    riding = speedKmh > 0;
+    rearWheelInertia = 0;
+    frontWheelInertia = 0;
+    frontBrakeTarget = 0;
+    rearBrakeTarget = 0;
+    if (speedKmh > 0 && kickstand) {
+      kickstand = false;
+      standAmount = 0;
+      model.sideStand.rotation.z = SIDE_STAND_FOLDED_ANGLE;
+      model.sideStand.visible = false;
     }
     publish(true);
   }
 
-  function setThrottle(active: boolean) {
-    if (!model || mode !== 'operate' || transitioning || fallen) return;
-    throttle = active;
-    if (active && kickstand) toggleKickstand();
-    if (active) cruise = false;
-  }
-
   function setBrake(which: 'front' | 'rear', active: boolean) {
-    if (mode !== 'operate' || transitioning || fallen) return;
+    if (mode !== 'operate' || fallen) return;
     if (active) {
-      throttle = false;
-      cruise = false;
+      speedKmh = 0;
+      riding = false;
+      rearWheelInertia = 0;
+      frontWheelInertia = 0;
     }
     if (which === 'front') frontBrakeTarget = active ? 1 : 0;
     else rearBrakeTarget = active ? 1 : 0;
+    publish(true);
   }
 
   function setSteering(degrees: number) {
-    if (mode !== 'operate' || transitioning || fallen) return;
+    if (mode !== 'operate' || fallen) return;
     steeringTarget = THREE.MathUtils.clamp(degrees, -35, 35);
   }
 
   function shiftGear(direction: -1 | 1) {
-    if (mode !== 'operate' || transitioning || fallen) return;
+    if (mode !== 'operate' || fallen) return;
     gearIndex = THREE.MathUtils.clamp(gearIndex + direction, 0, 7);
     if (model) {
       model.chainMeshes.forEach((chain, index) => { chain.visible = index === gearIndex; });
@@ -545,56 +580,28 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     publish(true);
   }
 
-  function toggleRide() {
-    if (mode !== 'operate' || transitioning || fallen) return;
-    if (riding || cruise || speedKmh > 0.2) {
-      cruise = false;
-      throttle = false;
-      parkingRequest = true;
-      frontBrakeTarget = 1;
-      rearBrakeTarget = 1;
-    } else {
-      kickstand = false;
-      parkingRequest = false;
-      cruise = true;
-      frontBrakeTarget = 0;
-      rearBrakeTarget = 0;
-    }
-  }
-
   function toggleKickstand() {
-    if (mode !== 'operate' || transitioning || fallen) return;
-    if (speedKmh > 0.35 || riding) {
-      toggleRide();
-      return;
-    }
+    if (mode !== 'operate' || fallen) return;
+    if (speedKmh > 0) return;
     if (kickstand) {
       kickstand = false;
     } else {
-      throttle = false;
-      cruise = false;
       kickstand = true;
     }
     publish(true);
   }
 
   function toggleFall() {
-    if (mode !== 'operate' || transitioning) return;
+    if (mode !== 'operate') return;
     if (fallen) {
-      if (speedKmh > 0.35) return;
+      if (speedKmh > 0) return;
       fallen = false;
       kickstand = false;
       layAngle = 0;
       publish(true);
       return;
     }
-    if (speedKmh > 0.35) {
-      pendingFall = true;
-      toggleRide();
-      return;
-    }
-    throttle = false;
-    cruise = false;
+    if (speedKmh > 0) return;
     kickstand = false;
     fallen = true;
     publish(true);
@@ -602,16 +609,11 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
 
   function reset() {
     mode = 'inspect';
-    transitioning = false;
     speedKmh = 0;
     gearIndex = 0;
     riding = false;
     kickstand = false;
     fallen = false;
-    throttle = false;
-    cruise = false;
-    parkingRequest = false;
-    pendingFall = false;
     steeringDegrees = 0;
     steeringTarget = 0;
     frontBrake = 0;
@@ -620,7 +622,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     rearBrakeTarget = 0;
     explosion = 0;
     explosionTarget = 0;
-    routeBlendTarget = 0;
+    routeBlend = 0;
     routePhase = 0;
     crankAngle = 0;
     rearWheelAngle = 0;
@@ -650,7 +652,10 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       updateLayerVisibility();
     }
     road.visible = false;
-    if (bikeRoot) bikeRoot.rotation.set(0, 0, 0, 'YXZ');
+    if (bikeRoot) {
+      bikeRoot.position.set(0, 0, 0);
+      bikeRoot.rotation.set(0, 0, 0, 'YXZ');
+    }
     setSelection(null);
     resetCamera();
     publish(true);
@@ -689,9 +694,6 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     if (Math.abs(explosionTarget - explosion) < 0.08) explosion = explosionTarget;
     applyExplosion();
 
-    const routeAlpha = 1 - Math.exp(-delta * 2.8);
-    routeBlend += (routeBlendTarget - routeBlend) * routeAlpha;
-    if (Math.abs(routeBlendTarget - routeBlend) < 0.002) routeBlend = routeBlendTarget;
     if (mode === 'operate' || routeBlend > 0.001) {
       const point = moveTargetToRoute(routePhase);
       bikeRoot.position.x = point.x * routeBlend;
@@ -704,9 +706,10 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     }
 
     const standAlpha = 1 - Math.exp(-delta * 7);
-    const standTarget = kickstand && speedKmh < 0.35 && !fallen ? 1 : 0;
+    const standTarget = kickstand && speedKmh === 0 && !fallen ? 1 : 0;
     standAmount += (standTarget - standAmount) * standAlpha;
-    model.sideStand.rotation.z += ((-2.0 + standAmount * 0.85) - model.sideStand.rotation.z) * standAlpha;
+    const standAngle = THREE.MathUtils.lerp(SIDE_STAND_FOLDED_ANGLE, SIDE_STAND_DEPLOYED_ANGLE, standAmount);
+    model.sideStand.rotation.z += (standAngle - model.sideStand.rotation.z) * standAlpha;
     model.sideStand.visible = standAmount > 0.015;
 
     const fallTarget = fallen ? Math.PI / 2 : 0;
@@ -733,48 +736,12 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       previousBikePosition.copy(defaultTarget);
     }
 
-    if (transitioning) {
-      const neutral = Math.abs(explosion) < 0.08
-        && Math.abs(steeringDegrees) < 0.5
-        && Math.abs(frontBrake) < 0.02
-        && Math.abs(rearBrake) < 0.02
-        && Math.abs(layAngle) < 0.01
-        && (mode === 'operate' ? routeBlend > 0.995 : routeBlend < 0.005)
-        && speedKmh < 0.06;
-      if (neutral) {
-        transitioning = false;
-        parkingRequest = false;
-        publish(true);
-      }
-    }
   }
 
   function updateMotion(delta: number) {
     if (!model) return;
     const dt = Math.min(delta, 0.05);
-    if (mode === 'operate' && !transitioning && !fallen) {
-      if (throttle) speedKmh += 3.4 * dt;
-      else if (cruise) speedKmh += THREE.MathUtils.clamp(6.5 - speedKmh, -1.8, 1.8) * dt;
-      else speedKmh -= 0.42 * dt;
-      const brakeForce = Math.max(frontBrake, rearBrake, parkingRequest ? 1 : 0);
-      if (brakeForce > 0.015) speedKmh -= (3.8 + brakeForce * 7.2) * dt;
-    } else if (mode === 'inspect') {
-      speedKmh = Math.max(0, speedKmh - 6.5 * dt);
-    }
-    speedKmh = THREE.MathUtils.clamp(speedKmh, 0, 12);
-    if (speedKmh < 0.04) speedKmh = 0;
-    riding = speedKmh > 0.28;
-
-    if (parkingRequest && speedKmh === 0) {
-      parkingRequest = false;
-      frontBrakeTarget = 0;
-      rearBrakeTarget = 0;
-      if (pendingFall) {
-        pendingFall = false;
-        fallen = true;
-        kickstand = false;
-      }
-    }
+    riding = speedKmh > 0;
 
     if (mode === 'operate' && routeBlend > 0.01 && !fallen) {
       const distance = (speedKmh / 3.6) * dt;
@@ -832,7 +799,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     if (!hit) return;
     const interaction = findInteraction(hit.object);
     if (!interaction || !['inspect', 'operate'].includes(mode)) return;
-    if (mode === 'inspect' || transitioning || fallen) {
+    if (mode === 'inspect' || fallen) {
       setSelection(findPartRoot(hit.object));
       return;
     }
@@ -917,7 +884,8 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   }
 
   function releaseKeyboardControls() {
-    if (keysDown.delete('w') || keysDown.delete('arrowup')) throttle = false;
+    keysDown.delete('w');
+    keysDown.delete('arrowup');
     if (keysDown.delete('s') || keysDown.delete('arrowdown')) {
       frontBrakeTarget = 0;
       rearBrakeTarget = 0;
@@ -931,23 +899,21 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     const handled = ['w', 'arrowup', 's', 'arrowdown', 'a', 'arrowleft', 'd', 'arrowright', '[', ']', 'p', 'l', 'r'].includes(key);
     if (!handled) return;
     event.preventDefault();
-    if (event.repeat && ['p', 'l', 'r', '[', ']'].includes(key)) return;
+    if (event.repeat && ['w', 'arrowup', 'p', 'l', 'r', '[', ']'].includes(key)) return;
     if (key === 'r') {
       onCommand('reset');
       return;
     }
     if (key === '[') shiftGear(-1);
     else if (key === ']') shiftGear(1);
-    else if (key === 'p') {
-      if (speedKmh > 0.35 || riding) toggleRide();
-      else toggleKickstand();
-    } else if (key === 'l') toggleFall();
-    else if (mode === 'operate' && !transitioning && !fallen) {
+    else if (key === 'p') toggleKickstand();
+    else if (key === 'l') toggleFall();
+    else if (mode === 'operate' && !fallen) {
       keysDown.add(key);
-      if (key === 'w' || key === 'arrowup') setThrottle(true);
+      if (key === 'w' || key === 'arrowup') setSpeedKmh(speedKmh + 1);
       else if (key === 's' || key === 'arrowdown') {
-        frontBrakeTarget = 1;
-        rearBrakeTarget = 1;
+        setBrake('front', true);
+        setBrake('rear', true);
       } else if (key === 'a' || key === 'arrowleft') steeringTarget = -35;
       else if (key === 'd' || key === 'arrowright') steeringTarget = 35;
     }
@@ -957,7 +923,6 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
     if (!renderer || event.target !== renderer.domElement) return;
     const key = event.key.toLowerCase();
     if (!keysDown.delete(key)) return;
-    if (key === 'w' || key === 'arrowup') throttle = false;
     if (key === 's' || key === 'arrowdown') {
       frontBrakeTarget = 0;
       rearBrakeTarget = 0;
@@ -1012,32 +977,31 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   return {
     setMode,
     setExplosion(amount) {
-      if (mode !== 'inspect' || transitioning || fallen) return;
+      if (mode !== 'inspect' || fallen) return;
       explosionTarget = THREE.MathUtils.clamp(amount, 0, 100);
       publish(true);
     },
     setLayer(layer, visible) {
-      if (mode !== 'inspect' || transitioning || fallen) return;
+      if (mode !== 'inspect' || fallen) return;
       layersVisible[layer] = visible;
       updateLayerVisibility();
       publish(true);
     },
     showAll() {
-      if (mode !== 'inspect' || transitioning || fallen) return;
+      if (mode !== 'inspect' || fallen) return;
       for (const layer of Object.keys(layersVisible) as BicycleLayer[]) layersVisible[layer] = true;
       updateLayerVisibility();
       publish(true);
     },
     reset,
     zoom,
-    setThrottle,
+    setSpeedKmh,
     setBrake(which, active) {
       setBrake(which, active);
     },
     setSteering,
     pedal: addPedalTurns,
     shiftGear,
-    toggleRide,
     toggleKickstand,
     toggleFall,
     retry() {

@@ -208,6 +208,9 @@
 .canvas-instructions { margin: 10px 1px 0; color: #7a8078; font-size: 10px; line-height: 1.6; }
 .inspector { min-width: 0; display: flex; flex-direction: column; border: 1px solid var(--bike-border); background: var(--bike-panel); }
 .control-panel { min-width: 0; }
+.mode-guide { margin-bottom: 10px; padding: 11px 14px; border: 1px solid #d7d8cf; background: #f7f6f0; }
+.mode-guide strong { color: #638575; font-size: 8px; letter-spacing: 0.14em; }
+.mode-guide p { margin: 5px 0 0; color: #69746b; font-size: 10px; line-height: 1.55; }
 .control-panel > summary {
   min-height: 48px;
   display: flex;
@@ -255,7 +258,6 @@
 .preset-button:disabled,
 .text-button:disabled,
 .touch-control:disabled,
-.primary-control:disabled,
 .secondary-control:disabled,
 .gear-controls button:disabled { cursor: not-allowed; opacity: 0.44; }
 .text-button { border: 0; padding: 5px 1px; background: transparent; color: #527968; cursor: pointer; font-size: 9px; }
@@ -276,10 +278,10 @@
 .speed-display { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin: 15px 0 7px; }
 .speed-display strong { color: #2e3f37; font-size: 23px; font-weight: 600; letter-spacing: -0.045em; font-variant-numeric: tabular-nums; }
 .speed-display span { color: #848980; font-size: 8px; text-align: right; }
+.speed-range-label { margin: 8px 0 2px; }
+.speed-range-caption { display: block; margin-bottom: 2px; color: #68746b; font-size: 9px; }
 .speed-meter { height: 4px; overflow: hidden; border-radius: 99px; background: #e3e2da; }
 .speed-meter span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #78a28a, #276958); transition: width 100ms linear; }
-.primary-control { width: 100%; min-height: 41px; margin-top: 13px; border: 0; background: #316e5d; color: white; cursor: pointer; font-size: 11px; font-weight: 680; }
-.primary-control:hover:not(:disabled) { background: #275c4e; }
 #gear-value { color: #3b4b41; font-size: 14px; font-weight: 710; font-variant-numeric: tabular-nums; }
 #gear-value small { margin-left: 3px; color: #838a80; font-size: 9px; font-weight: 560; }
 .gear-controls { display: grid; grid-template-columns: 37px 1fr 37px; align-items: center; gap: 10px; margin-top: 13px; }
@@ -291,8 +293,8 @@
 .action-section .section-heading { margin-bottom: 12px; }
 .touch-control,
 .secondary-control { min-height: 42px; padding: 0 8px; border: 1px solid #d5d8cf; background: #f1f0e9; color: #506158; cursor: pointer; font-size: 10px; font-weight: 630; touch-action: none; user-select: none; }
-.accelerate-control { border-color: #bdd0c2; background: #e9f0e7; color: #37654d; }
 .pedal-control { background: #f3eee5; color: #806542; }
+.pedal-control { width: 100%; grid-column: 1 / -1; background: #f3eee5; color: #806542; }
 .brake-row { margin-top: 8px; }
 .brake-control { border-color: #dec9be; background: #f6ece7; color: #81584c; }
 .steering-section .section-heading { margin-bottom: 9px; }
@@ -366,6 +368,8 @@
   .reset-button { top: 8px; right: 8px; min-height: 31px; padding: 0 8px; font-size: 8px; }
   .canvas-instructions { margin-top: 7px; font-size: 9px; }
   .control-section { padding-right: 14px; padding-left: 14px; }
+  .mode-guide { margin-bottom: 8px; padding: 10px 12px; }
+  .mode-guide p { font-size: 9px; }
   .component-card { margin-right: 10px; margin-left: 10px; }
   .control-reason,
   .instruction-list { margin-right: 12px; margin-left: 12px; }
