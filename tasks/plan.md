@@ -1,6 +1,6 @@
 # 网页版《植物大战僵尸》GOTY 复刻实施计划
 
-**状态：** 用户要求开始完整实现、测试、合并、发布和线上验证。当前已把应用入口切换到 PvZ-Portable WebAssembly 0.2.5，完整项目验收仍未完成。
+**状态：** PvZ-Portable WebAssembly 0.2.5 已完成实现、测试、合并、Pages 发布和线上静态资源验收。使用真实 GOTY 资源启动原版标题页、关卡与存档的人工冒烟尚未完成；当前网页要求玩家在浏览器本地导入自己的游戏文件。
 **目标版本：** PC《Plants vs. Zombies: Game of the Year Edition》。
 **产品形态：** 纯静态前端；游戏资源由玩家在自己的浏览器中导入；不新增后端服务。
 
@@ -145,12 +145,12 @@ flowchart TB
 
 以下均需以本地命令输出、CI 记录或真实线上浏览器行为为证：
 
-- [ ] pnpm run test:ci 通过。
-- [ ] 仓库 test:catalog 与 build:site 通过。
-- [ ] 所有发布运行时文件与许可证都进入 _site/plants-vs-zombies/portable/。
-- [ ] git diff --check 通过，变更只包含本任务内容；功能分支提交完成。
-- [ ] 按仓库交付规则合并到最新 master，裸 git push origin master 后 Pages workflow 成功。
-- [ ] 在公网地址检查页面、HTML/JS/WASM/许可证 HTTP 响应和资源导入界面。
+- [x] pnpm run test:ci 通过：50 个 Node 单测和 2 个 Playwright 生产预览测试通过。
+- [x] 仓库 test:catalog（14 项）与 build:site 通过。
+- [x] 所有发布运行时文件与许可证都进入 _site/plants-vs-zombies/portable/。
+- [x] git diff --check 通过，PvZ 变更提交为 a1dbfc8 并合入最新 master。
+- [x] 裸 git push origin master 成功；Pages workflow run 38567893266 结论为 success。
+- [x] 公网浏览器加载资源导入界面；页面、HTML、JS、WASM（7,212,747 字节）和 LGPL 许可证均返回 HTTP 200。
 - [ ] 使用真实游戏资源启动原作标题/菜单和至少一个实际关卡；若用户未提供本地资源，线上“真实游戏画面”这一项保持未验证，不能报告为完成。
 
 ## 9. 风险和处理
