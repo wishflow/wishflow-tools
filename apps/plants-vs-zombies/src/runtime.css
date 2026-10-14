@@ -1,0 +1,38 @@
+html,
+body {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+  background: #000;
+}
+
+body {
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+  height: calc(100dvh - 112px);
+  min-height: 320px;
+  background: #000;
+}
+
+.runtime-frame,
+#pvz-portable-runtime {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#pvz-portable-runtime {
+  border: 0;
+  background: #1a1a2e;
+}
+
+@media (max-width: 760px) {
+  #root {
+    height: calc(100dvh - 106px);
+    min-height: 260px;
+  }
+}

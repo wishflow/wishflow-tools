@@ -1,0 +1,24 @@
+PvZ-Portable WebAssembly 0.2.5
+Copyright (C) 2026 Zhou Qiankang <wszqkzqk@qq.com>
+License: GNU Lesser General Public License version 3 or later (LGPL-3.0-or-later)
+Source and corresponding upstream release: https://github.com/wszqkzqk/PvZ-Portable/tree/0.2.5
+License text: licenses/PVZ-PORTABLE-LICENSE
+Additional license text supplied by upstream: licenses/PVZ-PORTABLE-COPYING
+
+The upstream HTML, JavaScript, and WebAssembly files are from the 0.2.5 release.
+The only local change to pvz-portable.html replaces the unpinned jsDelivr JSZip
+URL with ./jszip.min.js. The upstream code does not include PopCap or EA game
+resources. Users import their own game files locally; this site does not host
+or receive those files.
+
+JSZip 3.10.1 browser bundle
+Copyright (c) 2009-2016 Stuart Knightley, David Duponchel, Franz Buchinger,
+António Afonso
+License: MIT (the upstream package is also offered under GPLv3 at the user's
+choice)
+License text: licenses/JSZIP-LICENSE.markdown
+Source: https://www.npmjs.com/package/jszip/v/3.10.1
+
+The Plants vs. Zombies name and original game resources belong to their
+respective rights holders. This project is unofficial and is not affiliated
+with or endorsed by PopCap Games or Electronic Arts.

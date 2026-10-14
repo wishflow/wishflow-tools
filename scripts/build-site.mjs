@@ -13,8 +13,13 @@ if (indexTemplate.split(marker).length !== 2) {
   throw new Error(`site/index.html must contain exactly one ${marker} marker.`);
 }
 
+function usagiWidgetEnabled(html) {
+  return !/data-usagi-widget=(?:"off"|'off')/i.test(html);
+}
+
 async function attachUsagiWidget(pagePath, relativePrefix, isPetPage) {
   const html = await readFile(pagePath, 'utf8');
+  if (!usagiWidgetEnabled(html)) return false;
   if (html.includes('id="usagi-widget-script"')) {
     throw new Error(`Usagi widget is already installed in ${pagePath}.`);
   }
@@ -28,6 +33,7 @@ async function attachUsagiWidget(pagePath, relativePrefix, isPetPage) {
     `    <script id="usagi-widget-script" src="${relativePrefix}usagi-widget.js" data-pet-href="${petHref}" data-sprite="${relativePrefix}pet/pets/uu-usagi/spritesheet.webp" data-pet-page="${isPetPage}" defer></script>`,
   ].join('\n');
   await writeFile(pagePath, html.replace('</head>', `${widgetTags}\n  </head>`));
+  return true;
 }
 
 async function configureSiteShell(pagePath) {
@@ -83,13 +89,16 @@ await configureSiteShell(path.join(siteRoot, 'index.html'));
 for (const project of projects) {
   await configureSiteShell(path.join(siteRoot, project.slug, 'index.html'));
 }
-await attachUsagiWidget(path.join(siteRoot, 'index.html'), './', false);
-for (const project of projects) {
-  await attachUsagiWidget(
-    path.join(siteRoot, project.slug, 'index.html'),
-    '../',
-    project.slug === 'pet',
-  );
+const sitePages = [
+  { pagePath: path.join(siteRoot, 'index.html'), relativePrefix: './', isPetPage: false },
+  ...projects.map((project) => ({
+    pagePath: path.join(siteRoot, project.slug, 'index.html'),
+    relativePrefix: '../',
+    isPetPage: project.slug === 'pet',
+  })),
+];
+for (const { pagePath, relativePrefix, isPetPage } of sitePages) {
+  await attachUsagiWidget(pagePath, relativePrefix, isPetPage);
 }
 await writeFile(path.join(siteRoot, '.nojekyll'), '');
 await verifySiteOutput(projects, siteRoot);
@@ -101,12 +110,12 @@ const spriteStats = await stat(spritePath).catch(() => null);
 if (!widgetCss?.isFile() || !widgetJs?.isFile() || !spriteStats?.isFile()) {
   throw new Error('The shared Usagi widget or its sprite sheet is missing from the built site.');
 }
-for (const pagePath of [
-  path.join(siteRoot, 'index.html'),
-  ...projects.map(({ slug }) => path.join(siteRoot, slug, 'index.html')),
-]) {
+for (const { pagePath } of sitePages) {
   const html = await readFile(pagePath, 'utf8');
-  if (!html.includes('id="usagi-widget-script"') || !html.includes('id="usagi-widget-style"')) {
-    throw new Error(`The shared Usagi widget was not installed in ${pagePath}.`);
+  const hasWidgetScript = html.includes('id="usagi-widget-script"');
+  const hasWidgetStyle = html.includes('id="usagi-widget-style"');
+  const expected = usagiWidgetEnabled(html);
+  if (hasWidgetScript !== expected || hasWidgetStyle !== expected) {
+    throw new Error(`Usagi widget installation does not match the page opt-in setting in ${pagePath}.`);
   }
 }

@@ -1,0 +1,25 @@
+{
+  "runtime": {
+    "name": "PvZ-Portable WebAssembly",
+    "version": "0.2.5",
+    "source": "https://github.com/wszqkzqk/PvZ-Portable/tree/0.2.5",
+    "release": "https://github.com/wszqkzqk/PvZ-Portable/releases/tag/0.2.5",
+    "releaseArchiveSha256": "9542ca7fe4aa5804e3cc409a8679d3e03771cc6522920a9220cf58c2366b3f84",
+    "license": "LGPL-3.0-or-later",
+    "patches": [
+      "Replace upstream's unpinned jsDelivr JSZip script with the adjacent pinned jszip.min.js file."
+    ]
+  },
+  "jszip": {
+    "version": "3.10.1",
+    "source": "https://www.npmjs.com/package/jszip/v/3.10.1",
+    "license": "MIT",
+    "licenseFile": "licenses/JSZIP-LICENSE.markdown"
+  },
+  "files": {
+    "pvz-portable.html": "ce7cf75893d2beee01c47aa5edefcc0b8e1914079e3637f257821ad835b56ab4",
+    "pvz-portable.js": "e52b4b438b91826f4fd0f9539729d6f9053e06bf2b24792e6b0a9b2d30387e10",
+    "pvz-portable.wasm": "f905f2a40db10f2c39c6aa823fa1fed21db557d17d0b4c08788707a1fbd10b4a",
+    "jszip.min.js": "acc7e41455a80765b5fd9c7ee1b8078a6d160bbbca455aeae854de65c947d59e"
+  }
+}

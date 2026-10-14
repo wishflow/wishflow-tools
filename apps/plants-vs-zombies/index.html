@@ -4,13 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#18241a" />
-    <meta name="description" content="A deterministic, browser-based garden defense game." />
-    <title>Garden Defense · WishFlow Tools</title>
+    <meta name="description" content="Plants vs. Zombies GOTY in the browser. Import your own game files locally." />
+    <title>Plants vs. Zombies GOTY · WishFlow Tools</title>
   </head>
   <body>
-    <wishflow-site-shell data-app="plants-vs-zombies" data-base="../" data-home-href="../" data-title-en="Garden Defense" data-title-zh="花园防线">
-      <main id="root" slot="content"></main>
+    <wishflow-site-shell data-usagi-widget="off" data-app="plants-vs-zombies" data-base="../" data-home-href="../" data-title-en="Plants vs. Zombies GOTY" data-title-zh="植物大战僵尸 GOTY">
+      <main id="root" slot="content">
+        <div class="runtime-frame">
+          <iframe
+            id="pvz-portable-runtime"
+            src="./portable/pvz-portable.html"
+            title="Plants vs. Zombies GOTY — PvZ-Portable"
+            allow="fullscreen; gamepad"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </main>
+      <a slot="footer-extra" href="./portable/licenses/PVZ-PORTABLE-LICENSE">PvZ-Portable 0.2.5 · LGPL-3.0-or-later</a>
+      <a slot="footer-extra" href="https://github.com/wszqkzqk/PvZ-Portable/tree/0.2.5" target="_blank" rel="noopener noreferrer">Runtime source</a>
+      <a slot="footer-extra" href="./portable/THIRD-PARTY-NOTICES.txt">Third-party notices</a>
     </wishflow-site-shell>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="./src/launcher.ts"></script>
   </body>
 </html>
