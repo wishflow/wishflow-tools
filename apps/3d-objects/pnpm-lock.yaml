@@ -15,10 +15,10 @@ importers:
         specifier: ^0.186.1
         version: 0.186.1
       vue:
-        specifier: 3.5.43
+        specifier: ^3.5.43
         version: 3.5.43(typescript@6.0.3)
       vue-router:
-        specifier: 4.6.4
+        specifier: ^4.6.4
         version: 4.6.4(vue@3.5.43(typescript@6.0.3))
     devDependencies:
       '@playwright/test':
@@ -31,7 +31,7 @@ importers:
         specifier: ^6.0.10
         version: 6.0.10(vite@8.3.3)(vue@3.5.43(typescript@6.0.3))
       '@vue/compiler-sfc':
-        specifier: 3.5.43
+        specifier: ^3.5.43
         version: 3.5.43
       typescript:
         specifier: ^6.0.3
@@ -41,9 +41,6 @@ importers:
         version: 8.3.3
 
 packages:
-
-  '@wishflow/site-shell@file:../../packages/site-shell':
-    resolution: {directory: ../../packages/site-shell, type: directory}
 
   '@babel/helper-string-parser@7.29.7':
     resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
@@ -217,6 +214,9 @@ packages:
 
   '@vue/shared@3.5.43':
     resolution: {integrity: sha512-uksS7YGMR5NZyr4JNq0Rp+QyLns0ueaz20KwzIPW9R0LH1Vnt4E+XUM29PNseEbf1www2gOuhuDi5AKOIXag9Q==}
+
+  '@wishflow/site-shell@file:../../packages/site-shell':
+    resolution: {directory: ../../packages/site-shell, type: directory}
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
@@ -430,8 +430,6 @@ packages:
 
 snapshots:
 
-  '@wishflow/site-shell@file:../../packages/site-shell': {}
-
   '@babel/helper-string-parser@7.29.7': {}
 
   '@babel/helper-validator-identifier@7.29.7': {}
@@ -578,6 +576,8 @@ snapshots:
       '@vue/shared': 3.5.43
 
   '@vue/shared@3.5.43': {}
+
+  '@wishflow/site-shell@file:../../packages/site-shell': {}
 
   csstype@3.2.3: {}
 

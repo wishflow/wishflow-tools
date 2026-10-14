@@ -20,14 +20,14 @@
   "dependencies": {
     "@wishflow/site-shell": "file:../../packages/site-shell",
     "three": "^0.186.1",
-    "vue": "3.5.43",
-    "vue-router": "4.6.4"
+    "vue": "^3.5.43",
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/three": "^0.185.4",
     "@vitejs/plugin-vue": "^6.0.10",
-    "@vue/compiler-sfc": "3.5.43",
+    "@vue/compiler-sfc": "^3.5.43",
     "typescript": "^6.0.3",
     "vite": "^8.0.14"
   }

@@ -2,7 +2,13 @@
   "name": "wishflow-tools",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.11.2",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": ">=9.0.0 <13.0.0",
+      "onFail": "download"
+    }
+  },
   "scripts": {
     "init": "node scripts/init.mjs",
     "dev": "pnpm --dir apps/duolingo-avatar run dev",
