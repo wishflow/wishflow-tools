@@ -110,8 +110,16 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v6
+      - name: Read pnpm version range
+        id: pnpm-version
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          "version=$($package.devEngines.packageManager.version)" >> $env:GITHUB_OUTPUT
+
+      - uses: pnpm/action-setup@v5
         with:
+          version: ${{ steps.pnpm-version.outputs.version }}
           run_install: false
 
       - uses: actions/setup-node@v6
