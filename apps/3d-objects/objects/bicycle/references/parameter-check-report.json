@@ -1,0 +1,212 @@
+{
+  "date": "2026-10-14",
+  "scope": "仅文档参数的公式与一致性复算；不是新模型网格、接地、机构或浏览器验收。链节闭合未求解。",
+  "units": "mm，角度字段明确标deg",
+  "headset_and_stem": {
+    "Cr": [
+      897.1671812981967,
+      710.736362264897,
+      0
+    ],
+    "K": [
+      838.5649134959085,
+      880.9297058727741,
+      0
+    ],
+    "handlebar_clamp_centre": [
+      913.1782950258623,
+      931.2570671851413,
+      0
+    ],
+    "crown_to_axle_distance": 403.08523564138295,
+    "cut_steerer_length": 197
+  },
+  "saddle": {
+    "rail_clamp_centre": [
+      258.44905610247946,
+      848.4382822383757,
+      0
+    ],
+    "top_reference_height": 901.4382822383757
+  },
+  "chain": {
+    "plate_envelope_width": 6.18125,
+    "pin_extension_each_side": 0.5593749999999997
+  },
+  "cassette": {
+    "stack_length": 35.4,
+    "HG_mount_length": 34.9,
+    "small_sprocket_overhang": 0.5
+  },
+  "fork_bezier": {
+    "C1_continuous": true,
+    "first_segment_end_tangent": [
+      69,
+      -189,
+      6
+    ],
+    "second_segment_start_tangent": [
+      69,
+      -189,
+      6
+    ]
+  },
+  "brake": {
+    "arm_radius": 20,
+    "sweep_deg": 10,
+    "cable_tip_chord": 3.4862297099063264,
+    "visible_pad_travel": 0.5,
+    "design_ratio": 0.1434214155708732
+  },
+  "crank": {
+    "axis_line_distance": 170,
+    "boss_to_pedal_middle_3d_distance": 171.61657845324848,
+    "Q_factor": 178,
+    "pedal_platform_centre_distance": 279
+  },
+  "derailleur_seed": {
+    "F1": [
+      15.0,
+      261.16116523516814,
+      35.36116523516816
+    ],
+    "F2": [
+      15.0,
+      278.83883476483186,
+      53.03883476483185
+    ],
+    "all_link_lengths_and_plane_alignment_passed": true,
+    "minimum_ideal_tooth_tip_clearance": 9.120395637428665,
+    "gears": [
+      {
+        "gear_index": 0,
+        "teeth": 12,
+        "theta_deg": 31.86860490635054,
+        "upper_pulley_seed_mm": [
+          53.21675025430603,
+          289.8,
+          61.0
+        ],
+        "lower_pulley_seed_mm": [
+          53.21675025430603,
+          204.8,
+          61.0
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 22.52167103051226
+      },
+      {
+        "gear_index": 1,
+        "teeth": 14,
+        "theta_deg": 22.155626264439505,
+        "upper_pulley_seed_mm": [
+          56.677331968349414,
+          285.0,
+          56.2
+        ],
+        "lower_pulley_seed_mm": [
+          56.677331968349414,
+          200.0,
+          56.2
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 24.28458193309484
+      },
+      {
+        "gear_index": 2,
+        "teeth": 16,
+        "theta_deg": 13.07781525170515,
+        "upper_pulley_seed_mm": [
+          58.83286438278932,
+          280.2,
+          51.4
+        ],
+        "lower_pulley_seed_mm": [
+          58.83286438278932,
+          195.2,
+          51.4
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 25.21826748377979
+      },
+      {
+        "gear_index": 3,
+        "teeth": 18,
+        "theta_deg": 4.325626282247346,
+        "upper_pulley_seed_mm": [
+          59.871817435891764,
+          275.4,
+          46.6
+        ],
+        "lower_pulley_seed_mm": [
+          59.871817435891764,
+          190.39999999999998,
+          46.6
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 25.481131018989963
+      },
+      {
+        "gear_index": 4,
+        "teeth": 21,
+        "theta_deg": -4.32562628224736,
+        "upper_pulley_seed_mm": [
+          59.87181743589176,
+          270.6,
+          41.8
+        ],
+        "lower_pulley_seed_mm": [
+          59.87181743589176,
+          185.60000000000002,
+          41.8
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 23.134357088054685
+      },
+      {
+        "gear_index": 5,
+        "teeth": 24,
+        "theta_deg": -13.077815251705164,
+        "upper_pulley_seed_mm": [
+          58.83286438278931,
+          265.8,
+          37.0
+        ],
+        "lower_pulley_seed_mm": [
+          58.83286438278931,
+          180.8,
+          37.0
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 20.28368428034836
+      },
+      {
+        "gear_index": 6,
+        "teeth": 28,
+        "theta_deg": -22.155626264439505,
+        "upper_pulley_seed_mm": [
+          56.677331968349414,
+          261.0,
+          32.2
+        ],
+        "lower_pulley_seed_mm": [
+          56.677331968349414,
+          176.0,
+          32.2
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 14.93166975881364
+      },
+      {
+        "gear_index": 7,
+        "teeth": 32,
+        "theta_deg": -31.868604906350548,
+        "upper_pulley_seed_mm": [
+          53.21675025430603,
+          256.2,
+          27.4
+        ],
+        "lower_pulley_seed_mm": [
+          53.21675025430603,
+          171.2,
+          27.4
+        ],
+        "ideal_tooth_tip_seed_clearance_mm": 9.120395637428665
+      }
+    ]
+  },
+  "mesh_or_runtime_tested": false
+}

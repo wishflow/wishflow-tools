@@ -4,6 +4,8 @@
 
 本规格说明产品行为和整车基准。使用 Blender MCP 制作精细零件时，同时读取 [blender-modeling-spec.md](./blender-modeling-spec.md) 的坐标、逐件参数、运动树和交付合同；核对原厂/通用件数据时读取 [component-reference-research.md](./component-reference-research.md)；选社区模型或外部素材时读取 [resource-research.md](./resource-research.md)。未公开原厂形状使用明确的展示设计值，不能从“参数完整”推论成“实车精确复刻”。
 
+本轮已将模型与生成器源文件下载到 [references/](../references/LICENSES.md)，记录许可证、校验和和源文件检查结果；同类车资料与推测尺寸见 [similar-bike-dimensions.md](./similar-bike-dimensions.md) 及零件研究第10节。制作时以 Blender 建模规格中的最终选值为准，研究范围用于解释选择，不由 Agent 自行随机挑值。下载完成不表示这些模型已经接入网页；实现仍待确认。
+
 ## Problem Statement
 
 当前自行车模型以等截面管件和简化的零件形状为主，整体比例、管件连接、机械细节和接地关系不足以支撑近距离观察。用户需要一个尺寸有依据、曲面可信、零件连接清楚，同时保留现有拆解和操作能力的城市通勤自行车。

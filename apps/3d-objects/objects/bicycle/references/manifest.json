@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "purpose": "建模源资源与研究材料；不属于已采用的网页运行时资产",
+  "retrievedAt": "2026-10-14",
+  "runtimeIncluded": false,
+  "assets": [
+    {
+      "id": "blenderkit:4c1a83c1-829f-4c00-878e-9e73c6b89c3b",
+      "name": "Pink city bicycle",
+      "author": "Kin Chen",
+      "sourceUrl": "https://www.blendkit.com/asset-gallery-detail/4c1a83c1-829f-4c00-878e-9e73c6b89c3b/",
+      "sourceFileUrl": "https://assets.blenderkit.com/assets/fd1ba44f023a4df69c4a07eccd991fc4/files/blend_5137f012-5f32-462d-96b3-aebcb62f0351.blend",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "localPath": "references/models/pink-city-bicycle.blend",
+      "status": "downloaded-inspected",
+      "usage": "建模源文件检查与部件参考，尚未适配或采用到网页",
+      "bytes": 4058371,
+      "sha256": "282a34596564f80c947f8fc29fd930e31a498972119f6c2f7dca1269a56f2b54"
+    },
+    {
+      "id": "blenderkit:ef778d6c-78cc-49fd-9f34-2347c23fd915",
+      "name": "Blue Bicycle",
+      "author": "Salman Ramezani",
+      "sourceUrl": "https://www.blendkit.com/asset-gallery-detail/ef778d6c-78cc-49fd-9f34-2347c23fd915/",
+      "sourceFileUrl": "https://assets.blenderkit.com/assets/78f9edc6f82048038541d8c268363d1c/files/blend_743e238b-ed95-4b5d-b80e-c28493cddf3e.blend",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "localPath": "references/models/blue-bicycle.blend",
+      "status": "downloaded-inspected",
+      "usage": "建模源文件检查与部件参考，尚未适配或采用到网页",
+      "bytes": 2923029,
+      "sha256": "a84d9859549f7f6f233fbca2fefa8734a2e65402580971ebb293c66fea45994d"
+    },
+    {
+      "id": "opengameart:free-bicycle-wheel-0",
+      "name": "Free Bicycle Wheel",
+      "author": "Rakshi Games",
+      "sourceUrl": "https://opengameart.org/content/free-bicycle-wheel-0",
+      "sourceFileUrl": "https://opengameart.org/sites/default/files/BicycleWheel.zip",
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "localPath": "references/models/bicycle-wheel.zip",
+      "status": "downloaded-inspected",
+      "usage": "建模源文件检查与部件参考，尚未适配或采用到网页",
+      "bytes": 4248217,
+      "sha256": "c78167f3f06b1048d06f649337af6a36010caf48971b636785171fba00a1b22f",
+      "archiveMembers": [
+        {
+          "path": "BicycleWheel.obj",
+          "bytes": 26236
+        },
+        {
+          "path": "ao.png",
+          "bytes": 276702
+        },
+        {
+          "path": "BaseMaterial_albedom1.tga",
+          "bytes": 4194348
+        },
+        {
+          "path": "BaseMaterial_normal.tga",
+          "bytes": 3145772
+        }
+      ]
+    },
+    {
+      "id": "opengameart:bicycle",
+      "name": "Bicycle",
+      "author": "Clint Bellanger",
+      "sourceUrl": "https://opengameart.org/content/bicycle",
+      "sourceFileUrl": "https://opengameart.org/sites/default/files/bicycle.zip",
+      "license": "CC-BY-3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "localPath": "references/models/rigged-bicycle.zip",
+      "status": "downloaded-inspected",
+      "usage": "建模源文件检查与部件参考，尚未适配或采用到网页",
+      "bytes": 249566,
+      "sha256": "c6a7cab95a0992a63de31257ac8c9e0150f20d88073c4abed2b9124717b9563f",
+      "archiveMembers": [
+        {
+          "path": "bicycle.blend",
+          "bytes": 597104
+        },
+        {
+          "path": "bicycle_diffuse.png",
+          "bytes": 11590
+        },
+        {
+          "path": "bicycle_specular.png",
+          "bytes": 11575
+        },
+        {
+          "path": "bicycle_uv.png",
+          "bytes": 1051119
+        }
+      ]
+    },
+    {
+      "id": "blendswap:22015",
+      "name": "Bicycle front wheel",
+      "author": "piergi",
+      "sourceUrl": "https://blendswap.com/blend/22015",
+      "sourceFileUrl": "https://blendswap.com/blend/22015/download",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "localPath": "references/models/blendswap-front-wheel.zip",
+      "status": "downloaded-inspected",
+      "usage": "源文件与部件造型参考，尚未适配或接入网页",
+      "bytes": 4935693,
+      "sha256": "7ab6383a3e3dc30c8907c40c40b63e91865743ac99fa31ae693d9004ae2ca7b8",
+      "downloadMethod": "已登录的Codex内置浏览器公开文件下载",
+      "archiveMembers": [
+        {
+          "path": "BicycleWheel_blendswap.blend",
+          "bytes": 5061451
+        },
+        {
+          "path": "92493 - LICENSE.html",
+          "bytes": 3012
+        }
+      ],
+      "inspectionReportPath": "references/inspections/blendswap-front-wheel.json"
+    },
+    {
+      "id": "blendswap:25745",
+      "name": "Chain Assets",
+      "author": "A_W_O_L__",
+      "sourceUrl": "https://blendswap.com/blend/25745",
+      "sourceFileUrl": "https://blendswap.com/blend/25745/download",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "localPath": "references/models/blendswap-chain-assets.blend",
+      "status": "downloaded-inspected-not-bicycle-chain",
+      "usage": "研究参考，未接入网页；Chain Assets已确认为非自行车滚子链",
+      "bytes": 1133924,
+      "sha256": "965f80b679efccd1407cf1c703a958cfe6a80d305ae9e3e06a098b0fd515c8b9",
+      "downloadMethod": "已登录的Codex内置浏览器公开文件下载",
+      "inspectionReportPath": "references/inspections/blendswap-chain.json"
+    },
+    {
+      "id": "blendswap:21760",
+      "name": "Simple Bicycle",
+      "author": "brodysean1899",
+      "sourceUrl": "https://blendswap.com/blend/21760",
+      "sourceFileUrl": "https://blendswap.com/blend/21760/download",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "localPath": "references/models/blendswap-simple-bicycle.zip",
+      "status": "downloaded-inspected",
+      "usage": "源文件与部件造型参考，尚未适配或接入网页",
+      "bytes": 1035057,
+      "sha256": "141457b79509817e839d73a71e0717be27966223688fd3cca4de6d10a2e0a18c",
+      "downloadMethod": "已登录的Codex内置浏览器公开文件下载",
+      "archiveMembers": [
+        {
+          "path": "Bicycle.blend",
+          "bytes": 3180576
+        },
+        {
+          "path": "92090 - LICENSE.html",
+          "bytes": 2732
+        }
+      ],
+      "inspectionReportPath": "references/inspections/blendswap-simple.json"
+    },
+    {
+      "id": "blendswap:26933",
+      "name": "Old Bicycle",
+      "author": "5thElement",
+      "sourceUrl": "https://blendswap.com/blend/26933",
+      "sourceFileUrl": "https://blendswap.com/blend/26933/download",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "localPath": "references/models/blendswap-old-bicycle.blend",
+      "status": "downloaded-inspected",
+      "usage": "源文件与部件造型参考，尚未适配或接入网页",
+      "bytes": 32175384,
+      "sha256": "6975eb4e1f97619f513de85ed055d00f26d2b1d82138ee1d117301c6b9859a84",
+      "downloadMethod": "已登录的Codex内置浏览器公开文件下载",
+      "inspectionReportPath": "references/inspections/blendswap-old.json"
+    }
+  ],
+  "sources": [
+    {
+      "id": "parametric-chain-sprocket-generator",
+      "author": "Eric Roehrich / Hermes Agent",
+      "repository": "https://github.com/EricRorich/ParametricChainSprocketGenerator",
+      "commit": "28779a74307f043059b5510c9af09618d7ad77cd",
+      "localPath": "references/sources/parametric-chain-sprocket-generator",
+      "license": "GPL-3.0-or-later",
+      "licenseFiles": [
+        "LICENSE"
+      ],
+      "usage": "生成器源码参考；未安装、未执行、未接入运行时"
+    },
+    {
+      "id": "openscad-sprockets",
+      "author": "Dallen Wilson / Shawn Steele; threads.scad: Dan Kirshner",
+      "repository": "https://github.com/dallenwilson/OpenSCAD-Sprockets",
+      "commit": "6f9fe967066f3c9aa58237296ac43f489fe1a7f6",
+      "localPath": "references/sources/openscad-sprockets",
+      "license": "Sprockets.scad: MS-PL; threads.scad: GPL-3.0-or-later",
+      "licenseFiles": [
+        "LICENSE.ms-pl",
+        "LICENSE.gpl-3"
+      ],
+      "usage": "几何推断参考；未执行，默认自行车厚度不直接采用"
+    }
+  ],
+  "generatorChecksumsPath": "references/generator-checksums.json",
+  "inspectionReportPath": "references/inspection-report.json",
+  "parameterCheckReportPath": "references/parameter-check-report.json"
+}

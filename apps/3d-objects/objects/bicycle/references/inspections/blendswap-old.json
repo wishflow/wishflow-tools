@@ -1,0 +1,1118 @@
+{
+  "source_sha256": "6975eb4e1f97619f513de85ed055d00f26d2b1d82138ee1d117301c6b9859a84",
+  "file": "references/models/blendswap-old-bicycle.blend",
+  "blender_version": "5.2.2 LTS",
+  "blend_version": [
+    2,
+    91,
+    10
+  ],
+  "scenes": [
+    {
+      "name": "Scene",
+      "objects": [
+        "Camera",
+        "Frame (Reposition)",
+        "FrameFront(MakeTurn)",
+        "FrontWheel(Rotation)",
+        "RearWheel(Rotation)",
+        "Plane"
+      ],
+      "collections": [
+        "Collection"
+      ],
+      "frame": 0
+    }
+  ],
+  "objects": [
+    {
+      "name": "Camera",
+      "type": "CAMERA",
+      "data": "Camera",
+      "parent": null,
+      "children": [],
+      "location": [
+        2.237882614135742,
+        -1.6677709817886353,
+        1.1195263862609863
+      ],
+      "world_origin": [
+        2.237882614135742,
+        -1.6677709817886353,
+        1.1195263862609863
+      ],
+      "rotation_euler": [
+        1.493335247039795,
+        -1.747188775880204e-07,
+        -5.412416458129883
+      ],
+      "rotation_mode": "XYZ",
+      "scale": [
+        1.0,
+        1.0,
+        0.9999999403953552
+      ],
+      "dimensions": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "matrix_world": [
+        [
+          0.6442387104034424,
+          -0.05918501317501068,
+          0.7625309824943542,
+          2.237882614135742
+        ],
+        [
+          0.7648245096206665,
+          0.049853403121232986,
+          -0.6423068046569824,
+          -1.6677709817886353
+        ],
+        [
+          1.747188775880204e-07,
+          0.9970014095306396,
+          0.0773836299777031,
+          1.1195263862609863
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "materials": [],
+      "constraints": [],
+      "modifiers": []
+    },
+    {
+      "name": "Frame (Reposition)",
+      "type": "MESH",
+      "data": "OldBike1",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        1.5707964897155762,
+        -0.0,
+        0.0
+      ],
+      "rotation_mode": "XYZ",
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        1.3482420444488525,
+        0.9099589586257935,
+        0.2974559962749481
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -1.6292068494294654e-07,
+          -1.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          -1.6292068494294654e-07,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "materials": [
+        "BikeTex"
+      ],
+      "constraints": [],
+      "modifiers": [],
+      "evaluated": {
+        "vertices": 9959,
+        "polygons": 9480,
+        "triangles": 18924,
+        "world_bounds": {
+          "min": [
+            -0.738332986831665,
+            -0.14872820675373077,
+            0.4207580089569092
+          ],
+          "max": [
+            0.6099089980125427,
+            0.14872778952121735,
+            1.3307169675827026
+          ],
+          "dimensions": [
+            1.3482419848442078,
+            0.2974559962749481,
+            0.9099589586257935
+          ]
+        },
+        "local_bounds": {
+          "min": [
+            -0.738332986831665,
+            0.4207580089569092,
+            -0.14872799813747406
+          ],
+          "max": [
+            0.6099089980125427,
+            1.3307169675827026,
+            0.14872799813747406
+          ],
+          "dimensions": [
+            1.3482419848442078,
+            0.9099589586257935,
+            0.2974559962749481
+          ]
+        },
+        "uv_layers": [
+          "UVMap"
+        ]
+      },
+      "connected_component_vertex_counts": [
+        1046,
+        693,
+        669,
+        608,
+        608,
+        608,
+        448,
+        386,
+        352,
+        339,
+        336,
+        272,
+        272,
+        272,
+        272,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        208,
+        144,
+        144,
+        80,
+        65,
+        65,
+        65,
+        65,
+        57,
+        57,
+        57
+      ]
+    },
+    {
+      "name": "FrameFront(MakeTurn)",
+      "type": "MESH",
+      "data": "OldBike2",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.5794646739959717,
+        -7.299240678548813e-08,
+        0.44691285490989685
+      ],
+      "world_origin": [
+        0.5794646739959717,
+        -7.299240678548813e-08,
+        0.44691285490989685
+      ],
+      "rotation_euler": [
+        1.5707964897155762,
+        -0.0,
+        0.0
+      ],
+      "rotation_mode": "XYZ",
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        0.6859390139579773,
+        1.3061909675598145,
+        1.2095600366592407
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.5794646739959717
+        ],
+        [
+          0.0,
+          -1.6292068494294654e-07,
+          -1.0,
+          -7.299240678548813e-08
+        ],
+        [
+          0.0,
+          1.0,
+          -1.6292068494294654e-07,
+          0.44691285490989685
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "materials": [
+        "BikeTex"
+      ],
+      "constraints": [
+        {
+          "name": "Child Of",
+          "type": "CHILD_OF",
+          "target": "Frame (Reposition)",
+          "influence": 1.0,
+          "axes": {
+            "use_location_x": true,
+            "use_location_y": true,
+            "use_location_z": true,
+            "use_rotation_x": true,
+            "use_rotation_y": true,
+            "use_rotation_z": true,
+            "use_scale_x": true,
+            "use_scale_y": true,
+            "use_scale_z": true
+          }
+        }
+      ],
+      "modifiers": [],
+      "evaluated": {
+        "vertices": 10120,
+        "polygons": 9762,
+        "triangles": 19512,
+        "world_bounds": {
+          "min": [
+            0.13513100147247314,
+            -0.6047802567481995,
+            0.4199169874191284
+          ],
+          "max": [
+            0.8210700154304504,
+            0.6047797799110413,
+            1.7261079549789429
+          ],
+          "dimensions": [
+            0.6859390139579773,
+            1.2095600366592407,
+            1.3061909675598145
+          ]
+        },
+        "local_bounds": {
+          "min": [
+            -0.44433367252349854,
+            -0.026995867490768433,
+            -0.6047800183296204
+          ],
+          "max": [
+            0.24160534143447876,
+            1.2791950702667236,
+            0.6047800183296204
+          ],
+          "dimensions": [
+            0.6859390139579773,
+            1.306190937757492,
+            1.2095600366592407
+          ]
+        },
+        "uv_layers": [
+          "UVMap"
+        ]
+      },
+      "connected_component_vertex_counts": [
+        3408,
+        706,
+        685,
+        608,
+        449,
+        449,
+        424,
+        409,
+        359,
+        339,
+        311,
+        253,
+        253,
+        253,
+        231,
+        158,
+        151,
+        135,
+        120,
+        105,
+        65,
+        65,
+        65,
+        57,
+        54,
+        4,
+        4
+      ]
+    },
+    {
+      "name": "FrontWheel(Rotation)",
+      "type": "MESH",
+      "data": "OldBike3",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.5794646739959717,
+        -7.299240678548813e-08,
+        0.44691285490989685
+      ],
+      "world_origin": [
+        0.5794646739959717,
+        -7.299240678548813e-08,
+        0.44691285490989685
+      ],
+      "rotation_euler": [
+        1.5707964897155762,
+        -0.0,
+        0.0
+      ],
+      "rotation_mode": "XYZ",
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        0.8975549936294556,
+        0.8975540399551392,
+        0.4634249806404114
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.5794646739959717
+        ],
+        [
+          0.0,
+          -1.6292068494294654e-07,
+          -1.0,
+          -7.299240678548813e-08
+        ],
+        [
+          0.0,
+          1.0,
+          -1.6292068494294654e-07,
+          0.44691285490989685
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "materials": [
+        "BikeTex"
+      ],
+      "constraints": [
+        {
+          "name": "Child Of",
+          "type": "CHILD_OF",
+          "target": "FrameFront(MakeTurn)",
+          "influence": 1.0,
+          "axes": {
+            "use_location_x": true,
+            "use_location_y": true,
+            "use_location_z": true,
+            "use_rotation_x": true,
+            "use_rotation_y": true,
+            "use_rotation_z": true,
+            "use_scale_x": true,
+            "use_scale_y": true,
+            "use_scale_z": true
+          }
+        }
+      ],
+      "modifiers": [],
+      "evaluated": {
+        "vertices": 8689,
+        "polygons": 8106,
+        "triangles": 16212,
+        "world_bounds": {
+          "min": [
+            0.13068699836730957,
+            -0.23431506752967834,
+            -0.0018639862537384033
+          ],
+          "max": [
+            1.0282419919967651,
+            0.22910992801189423,
+            0.8956900238990784
+          ],
+          "dimensions": [
+            0.8975549936294556,
+            0.46342499554157257,
+            0.8975540101528168
+          ]
+        },
+        "local_bounds": {
+          "min": [
+            -0.4487776756286621,
+            -0.44877684116363525,
+            -0.2291100025177002
+          ],
+          "max": [
+            0.44877731800079346,
+            0.4487771689891815,
+            0.23431499302387238
+          ],
+          "dimensions": [
+            0.8975549936294556,
+            0.8975540101528168,
+            0.46342499554157257
+          ]
+        },
+        "uv_layers": [
+          "UVMap"
+        ]
+      },
+      "connected_component_vertex_counts": [
+        1792,
+        1152,
+        1152,
+        384,
+        384,
+        262,
+        262,
+        253,
+        253,
+        253,
+        253,
+        253,
+        253,
+        112,
+        112,
+        112,
+        112,
+        89,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        4
+      ]
+    },
+    {
+      "name": "Plane",
+      "type": "MESH",
+      "data": "Plane",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "world_origin": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.8129063844680786
+      ],
+      "rotation_mode": "XYZ",
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        4.885346412658691,
+        2.5852603912353516,
+        2.961247444152832
+      ],
+      "matrix_world": [
+        [
+          0.6873904466629028,
+          -0.7262880802154541,
+          0.0,
+          0.0
+        ],
+        [
+          0.7262880802154541,
+          0.6873904466629028,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "materials": [
+        "Background"
+      ],
+      "constraints": [],
+      "modifiers": [],
+      "evaluated": {
+        "vertices": 20,
+        "polygons": 9,
+        "triangles": 18,
+        "world_bounds": {
+          "min": [
+            -2.4839351177215576,
+            -2.7894086837768555,
+            0.0
+          ],
+          "max": [
+            2.7518491744995117,
+            2.5358433723449707,
+            2.961247444152832
+          ],
+          "dimensions": [
+            5.235784292221069,
+            5.325252056121826,
+            2.961247444152832
+          ]
+        },
+        "local_bounds": {
+          "min": [
+            -2.4426732063293457,
+            -1.4770708084106445,
+            0.0
+          ],
+          "max": [
+            2.4426732063293457,
+            1.108189582824707,
+            2.961247444152832
+          ],
+          "dimensions": [
+            4.885346412658691,
+            2.5852603912353516,
+            2.961247444152832
+          ]
+        },
+        "uv_layers": [
+          "UVMap"
+        ]
+      },
+      "connected_component_vertex_counts": [
+        20
+      ]
+    },
+    {
+      "name": "RearWheel(Rotation)",
+      "type": "MESH",
+      "data": "OldBike4",
+      "parent": null,
+      "children": [],
+      "location": [
+        -0.5794651508331299,
+        -7.299240678548813e-08,
+        0.446912944316864
+      ],
+      "world_origin": [
+        -0.5794651508331299,
+        -7.299240678548813e-08,
+        0.446912944316864
+      ],
+      "rotation_euler": [
+        1.5707964897155762,
+        -0.0,
+        0.0
+      ],
+      "rotation_mode": "XYZ",
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions": [
+        0.8975550532341003,
+        0.8975540399551392,
+        0.09916999936103821
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -0.5794651508331299
+        ],
+        [
+          0.0,
+          -1.6292068494294654e-07,
+          -1.0,
+          -7.299240678548813e-08
+        ],
+        [
+          0.0,
+          1.0,
+          -1.6292068494294654e-07,
+          0.446912944316864
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "hide_render": false,
+      "hide_viewport": false,
+      "materials": [
+        "BikeTex"
+      ],
+      "constraints": [
+        {
+          "name": "Child Of",
+          "type": "CHILD_OF",
+          "target": "Frame (Reposition)",
+          "influence": 1.0,
+          "axes": {
+            "use_location_x": true,
+            "use_location_y": true,
+            "use_location_z": true,
+            "use_rotation_x": true,
+            "use_rotation_y": true,
+            "use_rotation_z": true,
+            "use_scale_x": true,
+            "use_scale_y": true,
+            "use_scale_z": true
+          }
+        }
+      ],
+      "modifiers": [],
+      "evaluated": {
+        "vertices": 4857,
+        "polygons": 4428,
+        "triangles": 8856,
+        "world_bounds": {
+          "min": [
+            -1.0291850566864014,
+            -0.04958507418632507,
+            -0.0018639862537384033
+          ],
+          "max": [
+            -0.13163000345230103,
+            0.04958492890000343,
+            0.8956900238990784
+          ],
+          "dimensions": [
+            0.8975550532341003,
+            0.0991700030863285,
+            0.8975540101528168
+          ]
+        },
+        "local_bounds": {
+          "min": [
+            -0.4497199058532715,
+            -0.4487769305706024,
+            -0.049584999680519104
+          ],
+          "max": [
+            0.44783514738082886,
+            0.44877707958221436,
+            0.049584999680519104
+          ],
+          "dimensions": [
+            0.8975550532341003,
+            0.8975540101528168,
+            0.09916999936103821
+          ]
+        },
+        "uv_layers": [
+          "UVMap"
+        ]
+      },
+      "connected_component_vertex_counts": [
+        1792,
+        1152,
+        528,
+        89,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54,
+        54
+      ]
+    }
+  ],
+  "images": [
+    {
+      "name": "BikeTex_Base_Color.png",
+      "filepath": "//Textures/BikeTex_Base_Color.png",
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE",
+      "packed": true,
+      "packed_files": 1,
+      "filepath_exists": false,
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "BikeTex_Metallic.png",
+      "filepath": "//Textures/BikeTex_Metallic.png",
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE",
+      "packed": true,
+      "packed_files": 1,
+      "filepath_exists": false,
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "BikeTex_Normal_OpenGL.png",
+      "filepath": "//Textures/BikeTex_Normal_OpenGL.png",
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE",
+      "packed": true,
+      "packed_files": 1,
+      "filepath_exists": false,
+      "colorspace": "Non-Color"
+    },
+    {
+      "name": "BikeTex_Roughness.png",
+      "filepath": "//Textures/BikeTex_Roughness.png",
+      "size": [
+        4096,
+        4096
+      ],
+      "source": "FILE",
+      "packed": true,
+      "packed_files": 1,
+      "filepath_exists": false,
+      "colorspace": "sRGB"
+    },
+    {
+      "name": "Render Result",
+      "filepath": "",
+      "size": [
+        0,
+        0
+      ],
+      "source": "VIEWER",
+      "packed": false,
+      "packed_files": 0,
+      "filepath_exists": null,
+      "colorspace": ""
+    },
+    {
+      "name": "Viewer Node",
+      "filepath": "",
+      "size": [
+        256,
+        256
+      ],
+      "source": "VIEWER",
+      "packed": false,
+      "packed_files": 0,
+      "filepath_exists": null,
+      "colorspace": ""
+    }
+  ],
+  "materials": [
+    {
+      "name": "Background",
+      "use_nodes": true,
+      "nodes": [
+        {
+          "name": "Principled BSDF",
+          "type": "ShaderNodeBsdfPrincipled",
+          "image": null
+        },
+        {
+          "name": "Material Output",
+          "type": "ShaderNodeOutputMaterial",
+          "image": null
+        }
+      ]
+    },
+    {
+      "name": "BikeTex",
+      "use_nodes": true,
+      "nodes": [
+        {
+          "name": "Principled BSDF",
+          "type": "ShaderNodeBsdfPrincipled",
+          "image": null
+        },
+        {
+          "name": "Material Output",
+          "type": "ShaderNodeOutputMaterial",
+          "image": null
+        },
+        {
+          "name": "Normal Map",
+          "type": "ShaderNodeNormalMap",
+          "image": null
+        },
+        {
+          "name": "RGB Curves",
+          "type": "ShaderNodeRGBCurve",
+          "image": null
+        },
+        {
+          "name": "Image Texture",
+          "type": "ShaderNodeTexImage",
+          "image": "BikeTex_Base_Color.png"
+        },
+        {
+          "name": "Image Texture.001",
+          "type": "ShaderNodeTexImage",
+          "image": "BikeTex_Metallic.png"
+        },
+        {
+          "name": "Image Texture.003",
+          "type": "ShaderNodeTexImage",
+          "image": "BikeTex_Normal_OpenGL.png"
+        },
+        {
+          "name": "Image Texture.002",
+          "type": "ShaderNodeTexImage",
+          "image": "BikeTex_Roughness.png"
+        }
+      ]
+    }
+  ],
+  "libraries": [],
+  "raw_meshes": [
+    {
+      "name": "OldBike1",
+      "vertices": 9959,
+      "edges": 19415,
+      "polygons": 9480,
+      "uv_layers": [
+        "UVMap"
+      ],
+      "users": 1
+    },
+    {
+      "name": "OldBike2",
+      "vertices": 10120,
+      "edges": 19862,
+      "polygons": 9762,
+      "uv_layers": [
+        "UVMap"
+      ],
+      "users": 1
+    },
+    {
+      "name": "OldBike3",
+      "vertices": 8689,
+      "edges": 16786,
+      "polygons": 8106,
+      "uv_layers": [
+        "UVMap"
+      ],
+      "users": 1
+    },
+    {
+      "name": "OldBike4",
+      "vertices": 4857,
+      "edges": 9284,
+      "polygons": 4428,
+      "uv_layers": [
+        "UVMap"
+      ],
+      "users": 1
+    },
+    {
+      "name": "Plane",
+      "vertices": 20,
+      "edges": 28,
+      "polygons": 9,
+      "uv_layers": [
+        "UVMap"
+      ],
+      "users": 1
+    }
+  ],
+  "units": {
+    "system": "METRIC",
+    "scale_length": 1.0,
+    "length_unit": "METERS"
+  },
+  "evaluated_totals": {
+    "vertices": 33645,
+    "polygons": 31785,
+    "triangles": 63522
+  },
+  "instance_count": 6,
+  "animation_data": {
+    "Camera": {
+      "action": null,
+      "drivers": [],
+      "bones": []
+    },
+    "Frame (Reposition)": {
+      "action": null,
+      "drivers": [],
+      "bones": []
+    },
+    "FrameFront(MakeTurn)": {
+      "action": null,
+      "drivers": [],
+      "bones": []
+    },
+    "FrontWheel(Rotation)": {
+      "action": null,
+      "drivers": [],
+      "bones": []
+    },
+    "Plane": {
+      "action": null,
+      "drivers": [],
+      "bones": []
+    },
+    "RearWheel(Rotation)": {
+      "action": null,
+      "drivers": [],
+      "bones": []
+    }
+  },
+  "worlds": [
+    {
+      "name": "World",
+      "nodes": [
+        {
+          "name": "World Output",
+          "type": "ShaderNodeOutputWorld",
+          "image": null
+        },
+        {
+          "name": "Sky Texture",
+          "type": "ShaderNodeTexSky",
+          "image": null
+        },
+        {
+          "name": "Background",
+          "type": "ShaderNodeBackground",
+          "image": null
+        }
+      ]
+    }
+  ],
+  "derived_observations": {
+    "vehicle_mesh_objects": [
+      "Frame (Reposition)",
+      "FrameFront(MakeTurn)",
+      "FrontWheel(Rotation)",
+      "RearWheel(Rotation)"
+    ],
+    "vehicle_totals": {
+      "vertices": 33625,
+      "polygons": 31776,
+      "triangles": 63504
+    },
+    "connected_components": {
+      "Frame (Reposition)": 33,
+      "FrameFront(MakeTurn)": 27,
+      "FrontWheel(Rotation)": 42,
+      "RearWheel(Rotation)": 28
+    },
+    "wheel_origin_spacing_mm": 1158.9298248291016,
+    "wheel_mesh_envelope_diameter_mm": 897.555,
+    "unit_warning": "File is METRIC at scale1; unit label does not validate dimensions. Front/rear wheel envelopes approx897.555mm and axle origin spacing1158.930mm differ from target698mm nominal diameter /1075mm wheelbase. FrontWheel includes geometry with axial envelope463.425mm; wheel diameter measurement is envelope only, not identified tyre surface semantic measurement.",
+    "hierarchy_warning": "Four controllable mesh objects, all direct parents null. Child Of constraints connect FrameFront to Frame, FrontWheel to FrameFront, and RearWheel to Frame. Detailed components are merged inside these meshes; loose components counts are stored but not semantically named.",
+    "pivot_warning": "Wheel origins are near wheel centres; FrameFront origin equals front wheel centre, so not independently verified steering-axis origin. Frame origin is world0. No armature, bones, Actions, or Drivers on any object.",
+    "texture_observation": "Four4096x4096 PNG PBR maps are packed. External relative texture paths missing do not imply unresolved dependencies because packed pixels are present. Roughness and Metallic are set sRGB in source; review and use Non-Color if reused. Normal is Non-Color. One shared vehicle atlas material.",
+    "adaptation_suggestion": "Use as CC0 offline appearance reference or extract/rework generic saddle/fender/chain/crank/fastener shapes after semantic segmentation, dimension and pivot correction. Entire-bike adoption is not ready: mismatch in scale/proportions and missing 8-assembly/independent-part hierarchy; high 4K texture pack for static browser. No modifiers, final63,504 vehicle triangles."
+  },
+  "source_sha256_after_inspection": "6975eb4e1f97619f513de85ed055d00f26d2b1d82138ee1d117301c6b9859a84",
+  "source_unchanged": true
+}

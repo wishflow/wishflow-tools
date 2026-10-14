@@ -1,0 +1,6120 @@
+{
+  "file": "references/models/blendswap-chain-assets.blend",
+  "blender_version": "5.3.0 Beta",
+  "scenes": [
+    {
+      "name": "Scene",
+      "unit_settings": {
+        "system": "METRIC",
+        "system_rotation": "DEGREES",
+        "scale_length": 1.0,
+        "length_unit": "METERS"
+      },
+      "frame_current": 1,
+      "frame_start": 1,
+      "frame_end": 250,
+      "world": "World",
+      "objects": [
+        "Light",
+        "Camera",
+        "Link classic",
+        "Chain Offset",
+        "Chain Classic Path",
+        "Chain Classic Core",
+        "Link.001",
+        "Torus.001",
+        "Chain Heavy Link",
+        "chain offset",
+        "Chain Heavy Path",
+        "Chain Heavy Core",
+        "Jewelry chain link",
+        "Torus.002",
+        "jewelry chain path",
+        "Jewelry chain core",
+        "Cuban Chain Link",
+        "link core",
+        "Cuban Chain Path",
+        "Cuban Chain Core"
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "name": "Camera",
+      "type": "CAMERA",
+      "data": "Camera.001",
+      "parent": null,
+      "children": [],
+      "location": [
+        10.718710899,
+        -13.37713623,
+        7.628421783
+      ],
+      "rotation_euler": [
+        1.236276388,
+        -0.006982442,
+        0.824377298
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          0.678997695,
+          -0.245503172,
+          0.691874504,
+          10.718710899
+        ],
+        [
+          0.734107196,
+          0.218089268,
+          -0.643058062,
+          -13.37713623
+        ],
+        [
+          0.006982386,
+          0.944545031,
+          0.328307748,
+          7.628421783
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Scene Collection"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": []
+    },
+    {
+      "name": "Chain Classic Core",
+      "type": "ARMATURE",
+      "data": "Armature",
+      "parent": null,
+      "children": [
+        "Chain Classic Path",
+        "Link classic"
+      ],
+      "location": [
+        -12.015727043,
+        -2.097349167,
+        0.0
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -12.015727043
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          -1.0,
+          -2.097349167
+        ],
+        [
+          0.0,
+          1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        2.889986992,
+        0.0,
+        3.758192062
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Classic"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "bones": [
+        {
+          "name": "Bone",
+          "parent": null,
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "use_deform": true
+        }
+      ],
+      "pose_constraints": [
+        {
+          "bone": "Bone",
+          "constraints": []
+        }
+      ]
+    },
+    {
+      "name": "Chain Classic Path",
+      "type": "CURVE",
+      "data": "NurbsPath",
+      "parent": "Chain Classic Core",
+      "children": [
+        "Chain Offset"
+      ],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        1.570796371
+      ],
+      "scale": [
+        4.911966801,
+        4.911966801,
+        4.911966801
+      ],
+      "matrix_world": [
+        [
+          -2.15e-07,
+          -4.911966801,
+          0.0,
+          -12.015727043
+        ],
+        [
+          4.911966801,
+          -2.15e-07,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          4.911966801,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        19.647867203,
+        0.0,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": true,
+      "collections": [
+        "Chain Classic"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "curve": {
+        "dimensions": "3D",
+        "resolution_u": 12,
+        "render_resolution_u": 0,
+        "bevel_depth": 0.0,
+        "bevel_resolution": 4,
+        "use_path": true,
+        "path_duration": 100,
+        "splines": [
+          {
+            "type": "NURBS",
+            "use_cyclic_u": false,
+            "resolution_u": 12,
+            "order_u": 5,
+            "points": [
+              [
+                -0.421349525,
+                -6.9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                0.578650475,
+                -6.9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                1.578650475,
+                -6.9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                2.578650475,
+                -6.9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                3.578650475,
+                -6.9e-08,
+                0.0,
+                1.0
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Chain Heavy Core",
+      "type": "ARMATURE",
+      "data": "Armature.001",
+      "parent": null,
+      "children": [
+        "Chain Heavy Link",
+        "Chain Heavy Path",
+        "chain offset"
+      ],
+      "location": [
+        -7.531875134,
+        -2.212973595,
+        0.0
+      ],
+      "rotation_euler": [
+        1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -7.531875134
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          -1.0,
+          -2.212973595
+        ],
+        [
+          0.0,
+          1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        1.756981492,
+        0.0,
+        2.390111208
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Heavy"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "bones": [
+        {
+          "name": "Bone",
+          "parent": null,
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "use_deform": true
+        }
+      ],
+      "pose_constraints": [
+        {
+          "bone": "Bone",
+          "constraints": []
+        }
+      ]
+    },
+    {
+      "name": "Chain Heavy Link",
+      "type": "MESH",
+      "data": "Torus.002",
+      "parent": "Chain Heavy Core",
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -7.531875134
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -2.212973595
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        1.651349783,
+        20.489374161,
+        1.695341945
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Heavy"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [
+        {
+          "name": "Array",
+          "type": "ARRAY",
+          "show_viewport": true,
+          "show_render": true,
+          "fit_type": "FIT_CURVE",
+          "count": 11,
+          "fit_length": 0.0,
+          "curve": "Chain Heavy Path",
+          "use_relative_offset": false,
+          "relative_offset_displace": [
+            0.0,
+            0.49000001,
+            0.0
+          ],
+          "use_constant_offset": false,
+          "constant_offset_displace": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "use_object_offset": true,
+          "offset_object": "chain offset",
+          "use_merge_vertices": false,
+          "merge_threshold": 0.009999999776482582
+        },
+        {
+          "name": "Curve",
+          "type": "CURVE",
+          "show_viewport": true,
+          "show_render": true,
+          "deform_axis": "POS_X",
+          "object": "Chain Heavy Path",
+          "vertex_group": ""
+        },
+        {
+          "name": "Subdivision",
+          "type": "SUBSURF",
+          "show_viewport": true,
+          "show_render": true,
+          "levels": 1,
+          "render_levels": 2
+        }
+      ],
+      "source_mesh_world": {
+        "vertices": 96,
+        "edges": 192,
+        "polygons": 96,
+        "triangles": 192,
+        "bounds": {
+          "min": [
+            -8.337475777,
+            -3.277329445,
+            -0.263792187
+          ],
+          "max": [
+            -6.772650242,
+            -1.148617625,
+            0.263792187
+          ],
+          "dimensions": [
+            1.564825535,
+            2.12871182,
+            0.527584374
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 96
+        },
+        "connected_components_count": 1,
+        "connected_components": [
+          {
+            "vertices": 96,
+            "bounds": {
+              "min": [
+                -8.337475777,
+                -3.277329445,
+                -0.263792187
+              ],
+              "max": [
+                -6.772650242,
+                -1.148617625,
+                0.263792187
+              ],
+              "dimensions": [
+                1.564825535,
+                2.12871182,
+                0.527584374
+              ]
+            },
+            "center": [
+              -7.657125105,
+              -2.212973595,
+              -0.0
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 6912,
+        "edges": 13824,
+        "polygons": 6912,
+        "triangles": 13824,
+        "bounds": {
+          "min": [
+            -8.302920341,
+            -3.153301239,
+            -0.825654209
+          ],
+          "max": [
+            -6.753287792,
+            17.110176086,
+            0.767602324
+          ],
+          "dimensions": [
+            1.549632549,
+            20.263477325,
+            1.593256533
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 6912
+        },
+        "connected_components_count": 18,
+        "connected_components": [
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.293614388,
+                -3.153301239,
+                -0.245282993
+              ],
+              "max": [
+                -6.822621346,
+                -1.250608444,
+                0.260278851
+              ],
+              "dimensions": [
+                1.470993042,
+                1.902692795,
+                0.505561844
+              ]
+            },
+            "center": [
+              -7.663891235,
+              -2.203050316,
+              0.007300999
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.796583176,
+                -2.073269367,
+                -0.703411341
+              ],
+              "max": [
+                -7.291013241,
+                -0.170523643,
+                0.767602324
+              ],
+              "dimensions": [
+                0.505569935,
+                1.902745724,
+                1.471013665
+              ]
+            },
+            "center": [
+              -7.543650088,
+              -1.122669453,
+              0.137836427
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.263159752,
+                -0.993203521,
+                -0.236915365
+              ],
+              "max": [
+                -6.79218626,
+                0.90957427,
+                0.268659174
+              ],
+              "dimensions": [
+                1.470973492,
+                1.902777791,
+                0.505574539
+              ]
+            },
+            "center": [
+              -7.421564257,
+              -0.041409984,
+              0.015644773
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.801145554,
+                0.086885691,
+                -0.738162994
+              ],
+              "max": [
+                -7.295569897,
+                1.989675999,
+                0.732824624
+              ],
+              "dimensions": [
+                0.505575657,
+                1.902790308,
+                1.470987618
+              ]
+            },
+            "center": [
+              -7.548198288,
+              1.038227702,
+              -0.108784576
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.302920341,
+                1.166985512,
+                -0.237441599
+              ],
+              "max": [
+                -6.831900597,
+                3.069768429,
+                0.268132329
+              ],
+              "dimensions": [
+                1.471019745,
+                1.902782917,
+                0.505573928
+              ]
+            },
+            "center": [
+              -7.673230013,
+              2.118551776,
+              0.015161425
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.799293995,
+                2.247084618,
+                -0.704098642
+              ],
+              "max": [
+                -7.293719769,
+                4.149848461,
+                0.766919076
+              ],
+              "dimensions": [
+                0.505574226,
+                1.902763844,
+                1.471017718
+              ]
+            },
+            "center": [
+              -7.54641788,
+              3.199216489,
+              0.137194271
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.260053635,
+                3.32717514,
+                -0.245536983
+              ],
+              "max": [
+                -6.789069653,
+                5.229915619,
+                0.260028273
+              ],
+              "dimensions": [
+                1.470983982,
+                1.902740479,
+                0.505565256
+              ]
+            },
+            "center": [
+              -7.418551032,
+              4.277986476,
+              0.007114205
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.793244362,
+                4.407252312,
+                -0.753723323
+              ],
+              "max": [
+                -7.287673473,
+                6.309968948,
+                0.717218935
+              ],
+              "dimensions": [
+                0.505570889,
+                1.902716637,
+                1.470942259
+              ]
+            },
+            "center": [
+              -7.540376397,
+              5.357384412,
+              -0.124284913
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.291211128,
+                5.487315655,
+                -0.25893712
+              ],
+              "max": [
+                -6.820213318,
+                7.39000988,
+                0.246618584
+              ],
+              "dimensions": [
+                1.47099781,
+                1.902694225,
+                0.505555704
+              ]
+            },
+            "center": [
+              -7.661608874,
+              6.439440907,
+              -0.006245931
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.784733295,
+                6.567368507,
+                -0.730375648
+              ],
+              "max": [
+                -7.279164314,
+                8.470044136,
+                0.740567148
+              ],
+              "dimensions": [
+                0.505568981,
+                1.902675629,
+                1.470942795
+              ]
+            },
+            "center": [
+              -7.531952273,
+              7.520235086,
+              0.1109732
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.243502617,
+                7.647407532,
+                -0.275648654
+              ],
+              "max": [
+                -6.772517681,
+                9.550068855,
+                0.229900092
+              ],
+              "dimensions": [
+                1.470984936,
+                1.902661324,
+                0.505548745
+              ]
+            },
+            "center": [
+              -7.402067453,
+              8.597876161,
+              -0.022911171
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.775360107,
+                8.727437973,
+                -0.786748588
+              ],
+              "max": [
+                -7.26979208,
+                10.63008976,
+                0.684167027
+              ],
+              "dimensions": [
+                0.505568027,
+                1.902651787,
+                1.470915616
+              ]
+            },
+            "center": [
+              -7.522544783,
+              9.677070205,
+              -0.157249978
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.272512436,
+                9.807460785,
+                -0.294190556
+              ],
+              "max": [
+                -6.801527023,
+                11.710108757,
+                0.211353987
+              ],
+              "dimensions": [
+                1.470985413,
+                1.902647972,
+                0.505544543
+              ]
+            },
+            "center": [
+              -7.642952076,
+              10.759668683,
+              -0.041440887
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.765621185,
+                10.887481689,
+                -0.767241478
+              ],
+              "max": [
+                -7.260053635,
+                12.790122032,
+                0.703675449
+              ],
+              "dimensions": [
+                0.505567551,
+                1.902640343,
+                1.470916927
+              ]
+            },
+            "center": [
+              -7.512870104,
+              11.840584954,
+              0.07412894
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.224275589,
+                11.967497826,
+                -0.313713431
+              ],
+              "max": [
+                -6.753287792,
+                13.870135307,
+                0.191829011
+              ],
+              "dimensions": [
+                1.470987797,
+                1.902637482,
+                0.505542442
+              ]
+            },
+            "center": [
+              -7.38285735,
+              12.917951775,
+              -0.06094885
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.756227493,
+                13.047513008,
+                -0.825654209
+              ],
+              "max": [
+                -7.250658989,
+                14.950148582,
+                0.645255804
+              ],
+              "dimensions": [
+                0.505568504,
+                1.902635574,
+                1.470910013
+              ]
+            },
+            "center": [
+              -7.503423328,
+              13.997009389,
+              -0.196129896
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -8.253624916,
+                14.127524376,
+                -0.333651125
+              ],
+              "max": [
+                -6.782637119,
+                16.030162811,
+                0.171890453
+              ],
+              "dimensions": [
+                1.470987797,
+                1.902638435,
+                0.505541578
+              ]
+            },
+            "center": [
+              -7.6240725,
+              15.079670417,
+              -0.080886958
+            ]
+          },
+          {
+            "vertices": 384,
+            "bounds": {
+              "min": [
+                -7.747084618,
+                15.207537651,
+                -0.807054579
+              ],
+              "max": [
+                -7.241515636,
+                17.110176086,
+                0.663854241
+              ],
+              "dimensions": [
+                0.505568981,
+                1.902638435,
+                1.470908821
+              ]
+            },
+            "center": [
+              -7.49434222,
+              16.160687869,
+              0.034326175
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Chain Heavy Path",
+      "type": "CURVE",
+      "data": "NurbsPath.001",
+      "parent": "Chain Heavy Core",
+      "children": [],
+      "location": [
+        -0.0,
+        -1.097441554,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        1.570796371
+      ],
+      "scale": [
+        3.882704735,
+        3.094888687,
+        3.094888687
+      ],
+      "matrix_world": [
+        [
+          -1.7e-07,
+          -3.094888687,
+          0.0,
+          -7.531875134
+        ],
+        [
+          3.882704735,
+          -1.35e-07,
+          0.0,
+          -3.310415268
+        ],
+        [
+          0.0,
+          0.0,
+          3.094888687,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        21.559808731,
+        0.062189557,
+        0.127122059
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Heavy"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "curve": {
+        "dimensions": "3D",
+        "resolution_u": 12,
+        "render_resolution_u": 0,
+        "bevel_depth": 0.0,
+        "bevel_resolution": 4,
+        "use_path": true,
+        "path_duration": 100,
+        "splines": [
+          {
+            "type": "NURBS",
+            "use_cyclic_u": false,
+            "resolution_u": 12,
+            "order_u": 4,
+            "points": [
+              [
+                0.002853766,
+                -8.5e-08,
+                0.0,
+                1.0
+              ],
+              [
+                1.450566173,
+                0.013041207,
+                0.014117944,
+                1.0
+              ],
+              [
+                2.48281765,
+                -1.12e-07,
+                0.0,
+                1.0
+              ],
+              [
+                5.555634975,
+                -0.0148242,
+                -0.035676278,
+                1.0
+              ]
+            ]
+          },
+          {
+            "type": "NURBS",
+            "use_cyclic_u": false,
+            "resolution_u": 12,
+            "order_u": 2,
+            "points": [
+              [
+                3.532738209,
+                -1.69e-07,
+                0.0,
+                1.0
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Chain Offset",
+      "type": "EMPTY",
+      "data": null,
+      "parent": "Chain Classic Path",
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        -0.0,
+        1.570796251,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          7.5e-08,
+          -0.0,
+          1.0,
+          -12.015727043
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          2.38e-07
+        ],
+        [
+          -1.0,
+          0.0,
+          7.5e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Classic"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": null,
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": []
+    },
+    {
+      "name": "chain offset",
+      "type": "EMPTY",
+      "data": null,
+      "parent": "Chain Heavy Core",
+      "children": [],
+      "location": [
+        0.0,
+        1.080101609,
+        0.0
+      ],
+      "rotation_euler": [
+        -0.0,
+        1.570796251,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          7.5e-08,
+          0.0,
+          1.0,
+          -7.531875134
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -1.132871985
+        ],
+        [
+          -1.0,
+          0.0,
+          7.5e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Heavy"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": null,
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": []
+    },
+    {
+      "name": "Cuban Chain Core",
+      "type": "ARMATURE",
+      "data": "Armature.003",
+      "parent": null,
+      "children": [
+        "Cuban Chain Link",
+        "Cuban Chain Path"
+      ],
+      "location": [
+        0.0,
+        -2.663923025,
+        0.0
+      ],
+      "rotation_euler": [
+        -1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          1.0,
+          -2.663923025
+        ],
+        [
+          0.0,
+          -1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.800093532,
+        0.319152415,
+        0.472474873
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Cuban Chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "bones": [
+        {
+          "name": "Bone",
+          "parent": null,
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "use_deform": true
+        }
+      ],
+      "pose_constraints": [
+        {
+          "bone": "Bone",
+          "constraints": []
+        }
+      ]
+    },
+    {
+      "name": "Cuban Chain Link",
+      "type": "MESH",
+      "data": "BezierCircle",
+      "parent": "Cuban Chain Core",
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -2.663923025
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.508918107,
+        4.413506031,
+        0.206132546
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Cuban Chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [
+        {
+          "name": "Subdivision",
+          "type": "SUBSURF",
+          "show_viewport": true,
+          "show_render": true,
+          "levels": 1,
+          "render_levels": 2
+        },
+        {
+          "name": "Array",
+          "type": "ARRAY",
+          "show_viewport": true,
+          "show_render": true,
+          "fit_type": "FIT_CURVE",
+          "count": 10,
+          "fit_length": 0.0,
+          "curve": "Cuban Chain Path",
+          "use_relative_offset": true,
+          "relative_offset_displace": [
+            0.0,
+            0.479999989,
+            0.0
+          ],
+          "use_constant_offset": false,
+          "constant_offset_displace": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "use_object_offset": false,
+          "offset_object": null,
+          "use_merge_vertices": false,
+          "merge_threshold": 0.009999999776482582
+        },
+        {
+          "name": "Curve",
+          "type": "CURVE",
+          "show_viewport": true,
+          "show_render": true,
+          "deform_axis": "POS_X",
+          "object": "Cuban Chain Path",
+          "vertex_group": ""
+        }
+      ],
+      "source_mesh_world": {
+        "vertices": 657,
+        "edges": 1311,
+        "polygons": 654,
+        "triangles": 1314,
+        "bounds": {
+          "min": [
+            -0.258298039,
+            -2.921437263,
+            -0.103066333
+          ],
+          "max": [
+            0.259359896,
+            -2.404886246,
+            0.103066333
+          ],
+          "dimensions": [
+            0.517657936,
+            0.516551018,
+            0.206132665
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 654
+        },
+        "connected_components_count": 1,
+        "connected_components": [
+          {
+            "vertices": 657,
+            "bounds": {
+              "min": [
+                -0.258298039,
+                -2.921437263,
+                -0.103066333
+              ],
+              "max": [
+                0.259359896,
+                -2.404886246,
+                0.103066333
+              ],
+              "dimensions": [
+                0.517657936,
+                0.516551018,
+                0.206132665
+              ]
+            },
+            "center": [
+              -0.000889041,
+              -2.664895083,
+              0.004097365
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 44574,
+        "edges": 89148,
+        "polygons": 44574,
+        "triangles": 89148,
+        "bounds": {
+          "min": [
+            -0.254477412,
+            -2.862586021,
+            -0.1030664
+          ],
+          "max": [
+            0.254440695,
+            1.550919771,
+            0.103066146
+          ],
+          "dimensions": [
+            0.508918107,
+            4.413505793,
+            0.206132546
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 44574
+        },
+        "connected_components_count": 17,
+        "connected_components": [
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                -2.862586021,
+                -0.103066377
+              ],
+              "max": [
+                0.254440635,
+                -2.35411787,
+                0.103066131
+              ],
+              "dimensions": [
+                0.508917987,
+                0.508468151,
+                0.206132509
+              ]
+            },
+            "center": [
+              -0.000766817,
+              -2.609221826,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                -2.618521214,
+                -0.103066385
+              ],
+              "max": [
+                0.254440635,
+                -2.110053062,
+                0.103066117
+              ],
+              "dimensions": [
+                0.508917987,
+                0.508468151,
+                0.206132501
+              ]
+            },
+            "center": [
+              -0.000766818,
+              -2.365157016,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477382,
+                -2.374456406,
+                -0.10306637
+              ],
+              "max": [
+                0.254440606,
+                -1.865988135,
+                0.103066124
+              ],
+              "dimensions": [
+                0.508917987,
+                0.50846827,
+                0.206132494
+              ]
+            },
+            "center": [
+              -0.000766819,
+              -2.121092188,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477382,
+                -2.130391598,
+                -0.103066385
+              ],
+              "max": [
+                0.254440606,
+                -1.621923327,
+                0.103066124
+              ],
+              "dimensions": [
+                0.508917987,
+                0.50846827,
+                0.206132509
+              ]
+            },
+            "center": [
+              -0.000766818,
+              -1.877027335,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477412,
+                -1.88632679,
+                -0.103066385
+              ],
+              "max": [
+                0.254440576,
+                -1.3778584,
+                0.103066131
+              ],
+              "dimensions": [
+                0.508917987,
+                0.50846839,
+                0.206132516
+              ]
+            },
+            "center": [
+              -0.000766818,
+              -1.632962529,
+              0.003871481
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477412,
+                -1.642261982,
+                -0.103066385
+              ],
+              "max": [
+                0.254440635,
+                -1.133793592,
+                0.103066146
+              ],
+              "dimensions": [
+                0.508918047,
+                0.50846839,
+                0.206132531
+              ]
+            },
+            "center": [
+              -0.000766819,
+              -1.38889766,
+              0.003871481
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477412,
+                -1.398197174,
+                -0.1030664
+              ],
+              "max": [
+                0.254440695,
+                -0.889728785,
+                0.103066139
+              ],
+              "dimensions": [
+                0.508918107,
+                0.50846839,
+                0.206132539
+              ]
+            },
+            "center": [
+              -0.000766819,
+              -1.144832852,
+              0.003871481
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477382,
+                -1.154132366,
+                -0.103066385
+              ],
+              "max": [
+                0.254440606,
+                -0.645663977,
+                0.103066131
+              ],
+              "dimensions": [
+                0.508917987,
+                0.50846839,
+                0.206132516
+              ]
+            },
+            "center": [
+              -0.000766818,
+              -0.900768046,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477382,
+                -0.910067558,
+                -0.103066385
+              ],
+              "max": [
+                0.254440665,
+                -0.401599169,
+                0.103066131
+              ],
+              "dimensions": [
+                0.508918047,
+                0.50846839,
+                0.206132516
+              ]
+            },
+            "center": [
+              -0.000766818,
+              -0.656703237,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477382,
+                -0.666002512,
+                -0.10306637
+              ],
+              "max": [
+                0.254440665,
+                -0.157534361,
+                0.103066131
+              ],
+              "dimensions": [
+                0.508918047,
+                0.508468151,
+                0.206132501
+              ]
+            },
+            "center": [
+              -0.000766819,
+              -0.412638308,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                -0.421937704,
+                -0.103066385
+              ],
+              "max": [
+                0.254440635,
+                0.086530447,
+                0.103066117
+              ],
+              "dimensions": [
+                0.508917987,
+                0.508468151,
+                0.206132501
+              ]
+            },
+            "center": [
+              -0.000766818,
+              -0.168573497,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                -0.177872896,
+                -0.10306637
+              ],
+              "max": [
+                0.254440635,
+                0.330595255,
+                0.103066117
+              ],
+              "dimensions": [
+                0.508917987,
+                0.508468151,
+                0.206132486
+              ]
+            },
+            "center": [
+              -0.000766817,
+              0.075491308,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                0.066191912,
+                -0.10306637
+              ],
+              "max": [
+                0.254440635,
+                0.574660063,
+                0.103066117
+              ],
+              "dimensions": [
+                0.508917987,
+                0.508468151,
+                0.206132486
+              ]
+            },
+            "center": [
+              -0.000766819,
+              0.319556114,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                0.31025672,
+                -0.10306637
+              ],
+              "max": [
+                0.254440606,
+                0.818724871,
+                0.103066117
+              ],
+              "dimensions": [
+                0.508917958,
+                0.508468151,
+                0.206132486
+              ]
+            },
+            "center": [
+              -0.000766819,
+              0.563620927,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                0.554321527,
+                -0.10306637
+              ],
+              "max": [
+                0.254440606,
+                1.062789679,
+                0.103066124
+              ],
+              "dimensions": [
+                0.508917958,
+                0.508468151,
+                0.206132494
+              ]
+            },
+            "center": [
+              -0.000766818,
+              0.807685732,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                0.798386335,
+                -0.10306637
+              ],
+              "max": [
+                0.254440606,
+                1.306854486,
+                0.103066124
+              ],
+              "dimensions": [
+                0.508917958,
+                0.508468151,
+                0.206132494
+              ]
+            },
+            "center": [
+              -0.000766818,
+              1.051750539,
+              0.00387148
+            ]
+          },
+          {
+            "vertices": 2622,
+            "bounds": {
+              "min": [
+                -0.254477352,
+                1.042451143,
+                -0.10306637
+              ],
+              "max": [
+                0.254440576,
+                1.550919771,
+                0.103066117
+              ],
+              "dimensions": [
+                0.508917928,
+                0.508468628,
+                0.206132486
+              ]
+            },
+            "center": [
+              -0.000766819,
+              1.295815348,
+              0.00387148
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Cuban Chain Path",
+      "type": "CURVE",
+      "data": "NurbsPath.003",
+      "parent": "Cuban Chain Core",
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        1.570796371
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          -4.4e-08,
+          -1.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          -4.4e-08,
+          0.0,
+          -2.663923025
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        4.0,
+        0.0,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Cuban Chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "curve": {
+        "dimensions": "3D",
+        "resolution_u": 12,
+        "render_resolution_u": 0,
+        "bevel_depth": 0.0,
+        "bevel_resolution": 4,
+        "use_path": true,
+        "path_duration": 100,
+        "splines": [
+          {
+            "type": "NURBS",
+            "use_cyclic_u": false,
+            "resolution_u": 12,
+            "order_u": 5,
+            "points": [
+              [
+                0.055674545,
+                -9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                1.055674553,
+                -9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                2.055674553,
+                -9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                3.055674553,
+                -9e-08,
+                0.0,
+                1.0
+              ],
+              [
+                4.055674553,
+                -9e-08,
+                0.0,
+                1.0
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Jewelry chain core",
+      "type": "ARMATURE",
+      "data": "Armature.002",
+      "parent": null,
+      "children": [
+        "Jewelry chain link",
+        "jewelry chain path"
+      ],
+      "location": [
+        -3.509776831,
+        -2.479733706,
+        0.0
+      ],
+      "rotation_euler": [
+        -1.570796371,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -3.509776831
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          1.0,
+          -2.479733706
+        ],
+        [
+          0.0,
+          -1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.673230171,
+        0.647734165,
+        1.215838194
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "jewelry chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "bones": [
+        {
+          "name": "Bone",
+          "parent": null,
+          "head": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "tail": [
+            0.0,
+            0.0,
+            1.0
+          ],
+          "use_deform": true
+        }
+      ],
+      "pose_constraints": [
+        {
+          "bone": "Bone",
+          "constraints": []
+        }
+      ]
+    },
+    {
+      "name": "Jewelry chain link",
+      "type": "MESH",
+      "data": "Torus.004",
+      "parent": "Jewelry chain core",
+      "children": [],
+      "location": [
+        -0.017640198,
+        -0.505146682,
+        -1.29e-07
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        0.465586424,
+        0.465586424,
+        0.465586424
+      ],
+      "matrix_world": [
+        [
+          0.465586424,
+          0.0,
+          0.0,
+          -3.527416945
+        ],
+        [
+          0.0,
+          0.465586424,
+          0.0,
+          -2.984880447
+        ],
+        [
+          0.0,
+          0.0,
+          0.465586424,
+          -1.29e-07
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.488829881,
+        10.391232491,
+        0.466946274
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "jewelry chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [
+        {
+          "name": "Subdivision",
+          "type": "SUBSURF",
+          "show_viewport": true,
+          "show_render": true,
+          "levels": 1,
+          "render_levels": 2
+        },
+        {
+          "name": "Array",
+          "type": "ARRAY",
+          "show_viewport": true,
+          "show_render": true,
+          "fit_type": "FIT_CURVE",
+          "count": 34,
+          "fit_length": 0.0,
+          "curve": "jewelry chain path",
+          "use_relative_offset": true,
+          "relative_offset_displace": [
+            0.0,
+            0.540000021,
+            0.0
+          ],
+          "use_constant_offset": false,
+          "constant_offset_displace": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "use_object_offset": false,
+          "offset_object": null,
+          "use_merge_vertices": false,
+          "merge_threshold": 0.009999999776482582
+        },
+        {
+          "name": "Curve",
+          "type": "CURVE",
+          "show_viewport": true,
+          "show_render": true,
+          "deform_axis": "POS_X",
+          "object": "jewelry chain path",
+          "vertex_group": ""
+        }
+      ],
+      "source_mesh_world": {
+        "vertices": 48,
+        "edges": 96,
+        "polygons": 48,
+        "triangles": 96,
+        "bounds": {
+          "min": [
+            -3.817575693,
+            -3.4801898,
+            -0.279493779
+          ],
+          "max": [
+            -3.237258196,
+            -2.530879974,
+            0.279493541
+          ],
+          "dimensions": [
+            0.580317497,
+            0.949309826,
+            0.558987319
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 48
+        },
+        "connected_components_count": 1,
+        "connected_components": [
+          {
+            "vertices": 48,
+            "bounds": {
+              "min": [
+                -3.817575693,
+                -3.4801898,
+                -0.279493779
+              ],
+              "max": [
+                -3.237258196,
+                -2.530879974,
+                0.279493541
+              ],
+              "dimensions": [
+                0.580317497,
+                0.949309826,
+                0.558987319
+              ]
+            },
+            "center": [
+              -3.527416959,
+              -3.000371238,
+              -1.29e-07
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 4224,
+        "edges": 8448,
+        "polygons": 4224,
+        "triangles": 8448,
+        "bounds": {
+          "min": [
+            -3.775463343,
+            -2.898790836,
+            -0.233545542
+          ],
+          "max": [
+            -3.286633492,
+            7.492442131,
+            0.233400747
+          ],
+          "dimensions": [
+            0.488829851,
+            10.391232967,
+            0.466946289
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 4224
+        },
+        "connected_components_count": 22,
+        "connected_components": [
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.76819396,
+                -2.898790836,
+                -0.233404428
+              ],
+              "max": [
+                -3.286633492,
+                -2.056717157,
+                0.233400747
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842073679,
+                0.466805175
+              ]
+            },
+            "center": [
+              -3.527467965,
+              -2.472589908,
+              -1.138e-06
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.768351078,
+                -2.444070339,
+                -0.233411148
+              ],
+              "max": [
+                -3.286790848,
+                -1.601997614,
+                0.233393997
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842072725,
+                0.466805145
+              ]
+            },
+            "center": [
+              -3.527723835,
+              -2.017870528,
+              -6.176e-06
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.76876235,
+                -1.989351273,
+                -0.233422294
+              ],
+              "max": [
+                -3.287201881,
+                -1.147277474,
+                0.233382866
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842073798,
+                0.46680516
+              ]
+            },
+            "center": [
+              -3.528203136,
+              -1.563150911,
+              -1.5614e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.769369602,
+                -1.53463161,
+                -0.23343648
+              ],
+              "max": [
+                -3.287809372,
+                -0.692557096,
+                0.233368799
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842074513,
+                0.466805279
+              ]
+            },
+            "center": [
+              -3.528858991,
+              -1.108430852,
+              -2.8526e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.77011323,
+                -1.07991147,
+                -0.23345238
+              ],
+              "max": [
+                -3.288552999,
+                -0.237836123,
+                0.23335287
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842075348,
+                0.466805249
+              ]
+            },
+            "center": [
+              -3.529631431,
+              -0.65371025,
+              -4.3734e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.770938635,
+                -0.625190735,
+                -0.233469024
+              ],
+              "max": [
+                -3.289378405,
+                0.216885567,
+                0.233336106
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842076302,
+                0.46680513
+              ]
+            },
+            "center": [
+              -3.530464428,
+              -0.198989188,
+              -6.0134e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.77179122,
+                -0.170469999,
+                -0.233485684
+              ],
+              "max": [
+                -3.290230989,
+                0.671607256,
+                0.233319521
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842077255,
+                0.466805205
+              ]
+            },
+            "center": [
+              -3.531309011,
+              0.255732402,
+              -7.6764e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.772624969,
+                0.284251928,
+                -0.23350133
+              ],
+              "max": [
+                -3.291064501,
+                1.126329422,
+                0.23330389
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842077494,
+                0.46680522
+              ]
+            },
+            "center": [
+              -3.532121632,
+              0.710454373,
+              -9.2761e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.773401737,
+                0.738974094,
+                -0.233515382
+              ],
+              "max": [
+                -3.291841507,
+                1.581052303,
+                0.233289912
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842078209,
+                0.466805294
+              ]
+            },
+            "center": [
+              -3.532864973,
+              1.165176569,
+              -0.000107397
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.774089813,
+                1.193695545,
+                -0.233527228
+              ],
+              "max": [
+                -3.292529345,
+                2.035774708,
+                0.233278111
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842079163,
+                0.466805339
+              ]
+            },
+            "center": [
+              -3.533507131,
+              1.619898769,
+              -0.000120039
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.774656296,
+                1.64841795,
+                -0.233536348
+              ],
+              "max": [
+                -3.293095827,
+                2.490497589,
+                0.233268842
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842079639,
+                0.46680519
+              ]
+            },
+            "center": [
+              -3.534023821,
+              2.07462131,
+              -0.000130212
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.775081158,
+                2.103139877,
+                -0.233542651
+              ],
+              "max": [
+                -3.293520689,
+                2.945220947,
+                0.233262658
+              ],
+              "dimensions": [
+                0.481560469,
+                0.84208107,
+                0.466805309
+              ]
+            },
+            "center": [
+              -3.534395244,
+              2.529344047,
+              -0.000137524
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.775352955,
+                2.557863235,
+                -0.233545542
+              ],
+              "max": [
+                -3.293792486,
+                3.399942875,
+                0.233259678
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842079639,
+                0.46680522
+              ]
+            },
+            "center": [
+              -3.534609027,
+              2.984066832,
+              -0.000141732
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.775463343,
+                3.012586117,
+                -0.233545214
+              ],
+              "max": [
+                -3.293902874,
+                3.854666233,
+                0.233259991
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842080116,
+                0.466805205
+              ]
+            },
+            "center": [
+              -3.534657629,
+              3.438789668,
+              -0.000142689
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.775408745,
+                3.467308521,
+                -0.233541712
+              ],
+              "max": [
+                -3.293848276,
+                4.309389114,
+                0.233263567
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842080593,
+                0.466805279
+              ]
+            },
+            "center": [
+              -3.53453995,
+              3.893512537,
+              -0.000140371
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.77518177,
+                3.922030449,
+                -0.233535081
+              ],
+              "max": [
+                -3.293621302,
+                4.764111519,
+                0.233270168
+              ],
+              "dimensions": [
+                0.481560469,
+                0.84208107,
+                0.466805249
+              ]
+            },
+            "center": [
+              -3.53426114,
+              4.348235463,
+              -0.000134882
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.774800301,
+                4.376754761,
+                -0.233525455
+              ],
+              "max": [
+                -3.293239832,
+                5.218833923,
+                0.23327972
+              ],
+              "dimensions": [
+                0.481560469,
+                0.842079163,
+                0.466805175
+              ]
+            },
+            "center": [
+              -3.533830994,
+              4.80295794,
+              -0.000126414
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.774278879,
+                4.831477642,
+                -0.233513296
+              ],
+              "max": [
+                -3.292718649,
+                5.673555374,
+                0.233291849
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842077732,
+                0.466805145
+              ]
+            },
+            "center": [
+              -3.533266029,
+              5.257679949,
+              -0.000115291
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.773636341,
+                5.286198616,
+                -0.23349914
+              ],
+              "max": [
+                -3.292076111,
+                6.128276825,
+                0.233306006
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842078209,
+                0.466805145
+              ]
+            },
+            "center": [
+              -3.532586794,
+              5.712401728,
+              -0.000101918
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.772893906,
+                5.740921021,
+                -0.233483493
+              ],
+              "max": [
+                -3.291333675,
+                6.582999229,
+                0.233321592
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842078209,
+                0.466805086
+              ]
+            },
+            "center": [
+              -3.531821262,
+              6.167123924,
+              -8.6846e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.772083044,
+                6.195642471,
+                -0.233467028
+              ],
+              "max": [
+                -3.290522814,
+                7.037719727,
+                0.233338088
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842077255,
+                0.466805115
+              ]
+            },
+            "center": [
+              -3.531001385,
+              6.621845548,
+              -7.0705e-05
+            ]
+          },
+          {
+            "vertices": 192,
+            "bounds": {
+              "min": [
+                -3.771242619,
+                6.650364876,
+                -0.233450547
+              ],
+              "max": [
+                -3.289682388,
+                7.492442131,
+                0.233354628
+              ],
+              "dimensions": [
+                0.48156023,
+                0.842077255,
+                0.466805175
+              ]
+            },
+            "center": [
+              -3.530165294,
+              7.076566791,
+              -5.4243e-05
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "jewelry chain path",
+      "type": "CURVE",
+      "data": "NurbsPath.002",
+      "parent": "Jewelry chain core",
+      "children": [],
+      "location": [
+        0.0,
+        -0.667988718,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        1.570796371
+      ],
+      "scale": [
+        0.481769741,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          -2.1e-08,
+          -1.0,
+          0.0,
+          -3.509776831
+        ],
+        [
+          0.481769741,
+          -4.4e-08,
+          0.0,
+          -3.147722483
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        11.97377491,
+        0.007272881,
+        0.000143192
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "jewelry chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "curve": {
+        "dimensions": "3D",
+        "resolution_u": 12,
+        "render_resolution_u": 0,
+        "bevel_depth": 0.0,
+        "bevel_resolution": 4,
+        "use_path": true,
+        "path_duration": 100,
+        "splines": [
+          {
+            "type": "NURBS",
+            "use_cyclic_u": false,
+            "resolution_u": 12,
+            "order_u": 5,
+            "points": [
+              [
+                1.095507622,
+                -2.85e-07,
+                0.0,
+                1.0
+              ],
+              [
+                7.308940411,
+                -2.85e-07,
+                0.0,
+                1.0
+              ],
+              [
+                13.39453125,
+                0.019394064,
+                -0.000381844,
+                1.0
+              ],
+              [
+                19.735805511,
+                -2.85e-07,
+                0.0,
+                1.0
+              ],
+              [
+                25.949237823,
+                -2.85e-07,
+                0.0,
+                1.0
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Light",
+      "type": "LIGHT",
+      "data": "Light",
+      "parent": null,
+      "children": [],
+      "location": [
+        4.076245308,
+        1.005453944,
+        5.903862
+      ],
+      "rotation_euler": [
+        0.650327981,
+        0.055217113,
+        1.866390824
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          -0.290864646,
+          -0.771100819,
+          0.566393197,
+          4.076245308
+        ],
+        [
+          0.955171168,
+          -0.199883357,
+          0.218391195,
+          1.005453944
+        ],
+        [
+          -0.055189058,
+          0.604524732,
+          0.794672251,
+          5.903862
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Scene Collection"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": []
+    },
+    {
+      "name": "Link classic",
+      "type": "MESH",
+      "data": "Torus",
+      "parent": "Chain Classic Core",
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -12.015727043
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        2.500000954,
+        21.196821213,
+        2.500001192
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Classic"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [
+        {
+          "name": "Array",
+          "type": "ARRAY",
+          "show_viewport": true,
+          "show_render": true,
+          "fit_type": "FIT_CURVE",
+          "count": 8,
+          "fit_length": 0.0,
+          "curve": "Chain Classic Path",
+          "use_relative_offset": true,
+          "relative_offset_displace": [
+            0.0,
+            0.689999998,
+            0.0
+          ],
+          "use_constant_offset": false,
+          "constant_offset_displace": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "use_object_offset": true,
+          "offset_object": "Chain Offset",
+          "use_merge_vertices": false,
+          "merge_threshold": 0.009999999776482582
+        },
+        {
+          "name": "Curve",
+          "type": "CURVE",
+          "show_viewport": true,
+          "show_render": true,
+          "deform_axis": "POS_X",
+          "object": "Chain Classic Path",
+          "vertex_group": ""
+        },
+        {
+          "name": "Subdivision",
+          "type": "SUBSURF",
+          "show_viewport": true,
+          "show_render": true,
+          "levels": 1,
+          "render_levels": 2
+        }
+      ],
+      "source_mesh_world": {
+        "vertices": 160,
+        "edges": 320,
+        "polygons": 160,
+        "triangles": 320,
+        "bounds": {
+          "min": [
+            -13.265727043,
+            -1.625522971,
+            -0.25
+          ],
+          "max": [
+            -10.765727043,
+            1.625522971,
+            0.25
+          ],
+          "dimensions": [
+            2.5,
+            3.251045942,
+            0.5
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 160
+        },
+        "connected_components_count": 1,
+        "connected_components": [
+          {
+            "vertices": 160,
+            "bounds": {
+              "min": [
+                -13.265727043,
+                -1.625522971,
+                -0.25
+              ],
+              "max": [
+                -10.765727043,
+                1.625522971,
+                0.25
+              ],
+              "dimensions": [
+                2.5,
+                3.251045942,
+                0.5
+              ]
+            },
+            "center": [
+              -12.015727019,
+              0.0,
+              0.0
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 5760,
+        "edges": 11520,
+        "polygons": 5760,
+        "triangles": 11520,
+        "bounds": {
+          "min": [
+            -13.241319656,
+            -3.639672518,
+            -1.225592852
+          ],
+          "max": [
+            -10.79013443,
+            17.446140289,
+            1.225592852
+          ],
+          "dimensions": [
+            2.451185226,
+            21.085812807,
+            2.451185703
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 5760
+        },
+        "connected_components_count": 9,
+        "connected_components": [
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -13.241319656,
+                -3.639672518,
+                -0.225592315
+              ],
+              "max": [
+                -10.79013443,
+                -0.499637187,
+                0.225592315
+              ],
+              "dimensions": [
+                2.451185226,
+                3.140035331,
+                0.45118463
+              ]
+            },
+            "center": [
+              -12.015726571,
+              -2.06965502,
+              -0.0
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -12.241318703,
+                -1.39645052,
+                -1.225592613
+              ],
+              "max": [
+                -11.79013443,
+                1.74358511,
+                1.225592613
+              ],
+              "dimensions": [
+                0.451184273,
+                3.140035629,
+                2.451185226
+              ]
+            },
+            "center": [
+              -12.015726599,
+              0.173567336,
+              -8e-09
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -13.241319656,
+                0.846771777,
+                -0.225592464
+              ],
+              "max": [
+                -10.79013443,
+                3.986807585,
+                0.225592464
+              ],
+              "dimensions": [
+                2.451185226,
+                3.140035808,
+                0.451184928
+              ]
+            },
+            "center": [
+              -12.015726624,
+              2.416789385,
+              1e-09
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -12.241319656,
+                3.089992762,
+                -1.225592852
+              ],
+              "max": [
+                -11.79013443,
+                6.230028629,
+                1.225592852
+              ],
+              "dimensions": [
+                0.451185226,
+                3.140035868,
+                2.451185703
+              ]
+            },
+            "center": [
+              -12.015726611,
+              4.660011422,
+              6e-09
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -13.241319656,
+                5.33321619,
+                -0.225592613
+              ],
+              "max": [
+                -10.79013443,
+                8.473251343,
+                0.225592613
+              ],
+              "dimensions": [
+                2.451185226,
+                3.140035152,
+                0.451185226
+              ]
+            },
+            "center": [
+              -12.015726595,
+              6.903233989,
+              0.0
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -12.241319656,
+                7.576438904,
+                -1.225592852
+              ],
+              "max": [
+                -11.790133476,
+                10.716474533,
+                1.225592732
+              ],
+              "dimensions": [
+                0.45118618,
+                3.140035629,
+                2.451185584
+              ]
+            },
+            "center": [
+              -12.015726621,
+              9.146456558,
+              -1.1e-08
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -13.241319656,
+                9.819662094,
+                -0.225592703
+              ],
+              "max": [
+                -10.79013443,
+                12.959695816,
+                0.225592732
+              ],
+              "dimensions": [
+                2.451185226,
+                3.140033722,
+                0.451185435
+              ]
+            },
+            "center": [
+              -12.015726626,
+              11.389679305,
+              4e-09
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -12.241319656,
+                12.062883377,
+                -1.225592613
+              ],
+              "max": [
+                -11.790133476,
+                15.20291996,
+                1.225592613
+              ],
+              "dimensions": [
+                0.45118618,
+                3.140036583,
+                2.451185226
+              ]
+            },
+            "center": [
+              -12.015726613,
+              13.632901855,
+              7e-09
+            ]
+          },
+          {
+            "vertices": 640,
+            "bounds": {
+              "min": [
+                -13.241319656,
+                14.306106567,
+                -0.225592911
+              ],
+              "max": [
+                -10.79013443,
+                17.446140289,
+                0.225592941
+              ],
+              "dimensions": [
+                2.451185226,
+                3.140033722,
+                0.451185852
+              ]
+            },
+            "center": [
+              -12.015726617,
+              15.876123255,
+              4e-09
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "link core",
+      "type": "MESH",
+      "data": "BezierCircle.001",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.800093532,
+        0.472474873,
+        0.319152415
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Cuban Chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [
+        {
+          "name": "Subdivision",
+          "type": "SUBSURF",
+          "show_viewport": true,
+          "show_render": true,
+          "levels": 2,
+          "render_levels": 2
+        }
+      ],
+      "source_mesh_world": {
+        "vertices": 64,
+        "edges": 62,
+        "polygons": 0,
+        "triangles": 0,
+        "bounds": {
+          "min": [
+            -0.392797232,
+            -0.341837198,
+            -0.16288349
+          ],
+          "max": [
+            0.4072963,
+            0.130637661,
+            0.156268939
+          ],
+          "dimensions": [
+            0.800093532,
+            0.472474858,
+            0.31915243
+          ]
+        },
+        "material_polygon_counts": {},
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 32,
+            "bounds": {
+              "min": [
+                -0.256244034,
+                -0.25722611,
+                -0.102604933
+              ],
+              "max": [
+                0.259359896,
+                0.047250651,
+                0.103066333
+              ],
+              "dimensions": [
+                0.51560393,
+                0.30447676,
+                0.205671266
+              ]
+            },
+            "center": [
+              -0.008305409,
+              -0.099350369,
+              0.006442484
+            ]
+          },
+          {
+            "vertices": 32,
+            "bounds": {
+              "min": [
+                -0.392797232,
+                -0.341837198,
+                -0.16288349
+              ],
+              "max": [
+                0.4072963,
+                0.130637661,
+                0.156268939
+              ],
+              "dimensions": [
+                0.800093532,
+                0.472474858,
+                0.31915243
+              ]
+            },
+            "center": [
+              -0.008055994,
+              -0.096851938,
+              0.00633192
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 250,
+        "edges": 248,
+        "polygons": 0,
+        "triangles": 0,
+        "bounds": {
+          "min": [
+            -0.389537305,
+            -0.339096516,
+            -0.16288349
+          ],
+          "max": [
+            0.403939843,
+            0.130637661,
+            0.156268433
+          ],
+          "dimensions": [
+            0.793477148,
+            0.469734177,
+            0.319151923
+          ]
+        },
+        "material_polygon_counts": {},
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 125,
+            "bounds": {
+              "min": [
+                -0.254143208,
+                -0.255459964,
+                -0.102604933
+              ],
+              "max": [
+                0.257196903,
+                0.047250651,
+                0.103065997
+              ],
+              "dimensions": [
+                0.511340111,
+                0.302710615,
+                0.20567093
+              ]
+            },
+            "center": [
+              -0.008661333,
+              -0.102620831,
+              0.006521139
+            ]
+          },
+          {
+            "vertices": 125,
+            "bounds": {
+              "min": [
+                -0.389537305,
+                -0.339096516,
+                -0.16288349
+              ],
+              "max": [
+                0.403939843,
+                0.130637661,
+                0.156268433
+              ],
+              "dimensions": [
+                0.793477148,
+                0.469734177,
+                0.319151923
+              ]
+            },
+            "center": [
+              -0.008608302,
+              -0.101926909,
+              0.006453975
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Link.001",
+      "type": "MESH",
+      "data": "Torus.001",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.684246778,
+        2.055713654,
+        -2.171048403
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.684246778
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          2.055713654
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          -2.171048403
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        2.889986992,
+        3.758192062,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Classic"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [],
+      "source_mesh_world": {
+        "vertices": 60,
+        "edges": 80,
+        "polygons": 20,
+        "triangles": 40,
+        "bounds": {
+          "min": [
+            -0.760746717,
+            0.176617622,
+            -2.171048403
+          ],
+          "max": [
+            2.129240274,
+            3.934809685,
+            -2.171048403
+          ],
+          "dimensions": [
+            2.889986992,
+            3.758192062,
+            0.0
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 20
+        },
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 40,
+            "bounds": {
+              "min": [
+                -0.565753222,
+                0.430190682,
+                -2.171048403
+              ],
+              "max": [
+                1.934246778,
+                3.681236744,
+                -2.171048403
+              ],
+              "dimensions": [
+                2.5,
+                3.251046062,
+                0.0
+              ]
+            },
+            "center": [
+              0.684246773,
+              2.055713648,
+              -2.171048403
+            ]
+          },
+          {
+            "vertices": 20,
+            "bounds": {
+              "min": [
+                -0.760746717,
+                0.176617622,
+                -2.171048403
+              ],
+              "max": [
+                2.129240274,
+                3.934809685,
+                -2.171048403
+              ],
+              "dimensions": [
+                2.889986992,
+                3.758192062,
+                0.0
+              ]
+            },
+            "center": [
+              0.684246755,
+              2.055713642,
+              -2.171048403
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 60,
+        "edges": 80,
+        "polygons": 20,
+        "triangles": 40,
+        "bounds": {
+          "min": [
+            -0.760746717,
+            0.176617622,
+            -2.171048403
+          ],
+          "max": [
+            2.129240274,
+            3.934809685,
+            -2.171048403
+          ],
+          "dimensions": [
+            2.889986992,
+            3.758192062,
+            0.0
+          ]
+        },
+        "material_polygon_counts": {
+          "0": 20
+        },
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 40,
+            "bounds": {
+              "min": [
+                -0.565753222,
+                0.430190682,
+                -2.171048403
+              ],
+              "max": [
+                1.934246778,
+                3.681236744,
+                -2.171048403
+              ],
+              "dimensions": [
+                2.5,
+                3.251046062,
+                0.0
+              ]
+            },
+            "center": [
+              0.684246773,
+              2.055713648,
+              -2.171048403
+            ]
+          },
+          {
+            "vertices": 20,
+            "bounds": {
+              "min": [
+                -0.760746717,
+                0.176617622,
+                -2.171048403
+              ],
+              "max": [
+                2.129240274,
+                3.934809685,
+                -2.171048403
+              ],
+              "dimensions": [
+                2.889986992,
+                3.758192062,
+                0.0
+              ]
+            },
+            "center": [
+              0.684246755,
+              2.055713642,
+              -2.171048403
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Torus.001",
+      "type": "MESH",
+      "data": "Torus.003",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        1.756981492,
+        2.390111208,
+        0.0
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "Chain Heavy"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [
+        {
+          "name": "Subdivision",
+          "type": "SUBSURF",
+          "show_viewport": true,
+          "show_render": true,
+          "levels": 2,
+          "render_levels": 2
+        }
+      ],
+      "source_mesh_world": {
+        "vertices": 32,
+        "edges": 32,
+        "polygons": 0,
+        "triangles": 0,
+        "bounds": {
+          "min": [
+            -0.88015151,
+            -1.195055604,
+            -1e-09
+          ],
+          "max": [
+            0.876829982,
+            1.195055604,
+            -1e-09
+          ],
+          "dimensions": [
+            1.756981492,
+            2.390111208,
+            0.0
+          ]
+        },
+        "material_polygon_counts": {},
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 16,
+            "bounds": {
+              "min": [
+                -0.805600882,
+                -1.064355969,
+                -1e-09
+              ],
+              "max": [
+                0.759224892,
+                1.064355969,
+                -1e-09
+              ],
+              "dimensions": [
+                1.564825773,
+                2.128711939,
+                0.0
+              ]
+            },
+            "center": [
+              -0.198495858,
+              0.0,
+              -1e-09
+            ]
+          },
+          {
+            "vertices": 16,
+            "bounds": {
+              "min": [
+                -0.88015151,
+                -1.195055604,
+                -1e-09
+              ],
+              "max": [
+                0.876829982,
+                1.195055604,
+                -1e-09
+              ],
+              "dimensions": [
+                1.756981492,
+                2.390111208,
+                0.0
+              ]
+            },
+            "center": [
+              -0.198495863,
+              -0.0,
+              -1e-09
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 128,
+        "edges": 128,
+        "polygons": 0,
+        "triangles": 0,
+        "bounds": {
+          "min": [
+            -0.880133867,
+            -1.1118294,
+            -1e-09
+          ],
+          "max": [
+            0.876829982,
+            1.1118294,
+            -1e-09
+          ],
+          "dimensions": [
+            1.756963849,
+            2.2236588,
+            0.0
+          ]
+        },
+        "material_polygon_counts": {},
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 64,
+            "bounds": {
+              "min": [
+                -0.805585265,
+                -0.990231931,
+                -1e-09
+              ],
+              "max": [
+                0.759224892,
+                0.990231931,
+                -1e-09
+              ],
+              "dimensions": [
+                1.564810157,
+                1.980463862,
+                0.0
+              ]
+            },
+            "center": [
+              -0.198495848,
+              -0.0,
+              -1e-09
+            ]
+          },
+          {
+            "vertices": 64,
+            "bounds": {
+              "min": [
+                -0.880133867,
+                -1.1118294,
+                -1e-09
+              ],
+              "max": [
+                0.876829982,
+                1.1118294,
+                -1e-09
+              ],
+              "dimensions": [
+                1.756963849,
+                2.2236588,
+                0.0
+              ]
+            },
+            "center": [
+              -0.198495855,
+              -0.0,
+              -1e-09
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "Torus.002",
+      "type": "MESH",
+      "data": "Torus.005",
+      "parent": null,
+      "children": [],
+      "location": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "rotation_euler": [
+        0.0,
+        -0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "dimensions": [
+        0.673230171,
+        1.215838194,
+        0.647734165
+      ],
+      "hide_viewport": false,
+      "hide_render": false,
+      "collections": [
+        "jewelry chain"
+      ],
+      "animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "data_animation": {
+        "drivers": [],
+        "action": null,
+        "nla_tracks": []
+      },
+      "vertex_groups": [],
+      "constraints": [],
+      "modifiers": [
+        {
+          "name": "Subdivision",
+          "type": "SUBSURF",
+          "show_viewport": true,
+          "show_render": true,
+          "levels": 2,
+          "render_levels": 2
+        }
+      ],
+      "source_mesh_world": {
+        "vertices": 16,
+        "edges": 16,
+        "polygons": 0,
+        "triangles": 0,
+        "bounds": {
+          "min": [
+            -0.336615086,
+            -0.630023181,
+            -0.323867053
+          ],
+          "max": [
+            0.336615115,
+            0.585814953,
+            0.323867083
+          ],
+          "dimensions": [
+            0.673230201,
+            1.215838134,
+            0.647734135
+          ]
+        },
+        "material_polygon_counts": {},
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 8,
+            "bounds": {
+              "min": [
+                -0.262824446,
+                -0.495309263,
+                -0.252870947
+              ],
+              "max": [
+                0.262824446,
+                0.454000503,
+                0.252870977
+              ],
+              "dimensions": [
+                0.525648892,
+                0.949309766,
+                0.505741924
+              ]
+            },
+            "center": [
+              -2.6e-08,
+              -0.015490785,
+              -1e-09
+            ]
+          },
+          {
+            "vertices": 8,
+            "bounds": {
+              "min": [
+                -0.336615086,
+                -0.630023181,
+                -0.323867053
+              ],
+              "max": [
+                0.336615115,
+                0.585814953,
+                0.323867083
+              ],
+              "dimensions": [
+                0.673230201,
+                1.215838134,
+                0.647734135
+              ]
+            },
+            "center": [
+              -2.3e-08,
+              -0.015490785,
+              -2e-09
+            ]
+          }
+        ]
+      },
+      "evaluated_mesh_world": {
+        "vertices": 64,
+        "edges": 64,
+        "polygons": 0,
+        "triangles": 0,
+        "bounds": {
+          "min": [
+            -0.316481054,
+            -0.585306466,
+            -0.30401361
+          ],
+          "max": [
+            0.316480935,
+            0.541098237,
+            0.30401364
+          ],
+          "dimensions": [
+            0.632961988,
+            1.126404703,
+            0.60802725
+          ]
+        },
+        "material_polygon_counts": {},
+        "connected_components_count": 2,
+        "connected_components": [
+          {
+            "vertices": 32,
+            "bounds": {
+              "min": [
+                -0.247104079,
+                -0.460395098,
+                -0.237369671
+              ],
+              "max": [
+                0.247103974,
+                0.419086337,
+                0.237369686
+              ],
+              "dimensions": [
+                0.494208053,
+                0.879481435,
+                0.474739358
+              ]
+            },
+            "center": [
+              -2.6e-08,
+              -0.015490781,
+              -2e-09
+            ]
+          },
+          {
+            "vertices": 32,
+            "bounds": {
+              "min": [
+                -0.316481054,
+                -0.585306466,
+                -0.30401361
+              ],
+              "max": [
+                0.316480935,
+                0.541098237,
+                0.30401364
+              ],
+              "dimensions": [
+                0.632961988,
+                1.126404703,
+                0.60802725
+              ]
+            },
+            "center": [
+              -2.3e-08,
+              -0.015490784,
+              -2e-09
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "collections": [
+    {
+      "name": "Chain Classic",
+      "objects": [
+        "Link classic",
+        "Chain Offset",
+        "Chain Classic Path",
+        "Chain Classic Core",
+        "Link.001"
+      ],
+      "children": []
+    },
+    {
+      "name": "Chain Heavy",
+      "objects": [
+        "Torus.001",
+        "Chain Heavy Link",
+        "chain offset",
+        "Chain Heavy Path",
+        "Chain Heavy Core"
+      ],
+      "children": []
+    },
+    {
+      "name": "Cuban Chain",
+      "objects": [
+        "Cuban Chain Link",
+        "link core",
+        "Cuban Chain Path",
+        "Cuban Chain Core"
+      ],
+      "children": []
+    },
+    {
+      "name": "jewelry chain",
+      "objects": [
+        "Jewelry chain link",
+        "Torus.002",
+        "jewelry chain path",
+        "Jewelry chain core"
+      ],
+      "children": []
+    }
+  ],
+  "materials": [
+    {
+      "name": "Chain Classic Mat",
+      "diffuse_color": [
+        0.800000012,
+        0.800000012,
+        0.800000012,
+        1.0
+      ],
+      "nodes": [
+        {
+          "name": "Material Output",
+          "type": "OUTPUT_MATERIAL"
+        },
+        {
+          "name": "Principled BSDF",
+          "type": "BSDF_PRINCIPLED"
+        },
+        {
+          "name": "Glossy BSDF.001",
+          "type": "BSDF_GLOSSY"
+        },
+        {
+          "name": "Glossy BSDF",
+          "type": "BSDF_GLOSSY"
+        },
+        {
+          "name": "Mix Shader",
+          "type": "MIX_SHADER"
+        },
+        {
+          "name": "Mix",
+          "type": "MIX"
+        },
+        {
+          "name": "RGB Curves",
+          "type": "CURVE_RGB"
+        },
+        {
+          "name": "Layer Weight",
+          "type": "LAYER_WEIGHT"
+        },
+        {
+          "name": "Shader to RGB",
+          "type": "SHADERTORGB"
+        },
+        {
+          "name": "Layer Weight.001",
+          "type": "LAYER_WEIGHT"
+        }
+      ]
+    },
+    {
+      "name": "Chain Heavy",
+      "diffuse_color": [
+        0.800000012,
+        0.800000012,
+        0.800000012,
+        1.0
+      ],
+      "nodes": [
+        {
+          "name": "Material Output",
+          "type": "OUTPUT_MATERIAL"
+        },
+        {
+          "name": "Principled BSDF.001",
+          "type": "BSDF_PRINCIPLED"
+        },
+        {
+          "name": "Chain Color",
+          "type": "GROUP"
+        },
+        {
+          "name": "Mix.001",
+          "type": "MIX"
+        },
+        {
+          "name": "Rust Pits Node",
+          "type": "GROUP"
+        },
+        {
+          "name": "Rust Pits Color",
+          "type": "VALTORGB"
+        }
+      ]
+    },
+    {
+      "name": "Cuban Chain Mat",
+      "diffuse_color": [
+        0.800000012,
+        0.800000012,
+        0.800000012,
+        1.0
+      ],
+      "nodes": [
+        {
+          "name": "Principled BSDF",
+          "type": "BSDF_PRINCIPLED"
+        },
+        {
+          "name": "Glossy BSDF.001",
+          "type": "BSDF_GLOSSY"
+        },
+        {
+          "name": "Glossy BSDF",
+          "type": "BSDF_GLOSSY"
+        },
+        {
+          "name": "Mix Shader",
+          "type": "MIX_SHADER"
+        },
+        {
+          "name": "Mix",
+          "type": "MIX"
+        },
+        {
+          "name": "RGB Curves",
+          "type": "CURVE_RGB"
+        },
+        {
+          "name": "Layer Weight",
+          "type": "LAYER_WEIGHT"
+        },
+        {
+          "name": "Shader to RGB",
+          "type": "SHADERTORGB"
+        },
+        {
+          "name": "Layer Weight.001",
+          "type": "LAYER_WEIGHT"
+        },
+        {
+          "name": "Material Output",
+          "type": "OUTPUT_MATERIAL"
+        }
+      ]
+    }
+  ],
+  "texts": [],
+  "actions": [],
+  "meshes": [
+    {
+      "vertices": 657,
+      "edges": 1311,
+      "polygons": 654,
+      "triangles": 1314,
+      "bounds": {
+        "min": [
+          -0.258298039,
+          -0.257514268,
+          -0.103066333
+        ],
+        "max": [
+          0.259359896,
+          0.25903666,
+          0.103066333
+        ],
+        "dimensions": [
+          0.517657936,
+          0.516550928,
+          0.206132665
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 654
+      },
+      "connected_components_count": 1,
+      "connected_components": [
+        {
+          "vertices": 657,
+          "bounds": {
+            "min": [
+              -0.258298039,
+              -0.257514268,
+              -0.103066333
+            ],
+            "max": [
+              0.259359896,
+              0.25903666,
+              0.103066333
+            ],
+            "dimensions": [
+              0.517657936,
+              0.516550928,
+              0.206132665
+            ]
+          },
+          "center": [
+            -0.000889041,
+            -0.000972056,
+            0.004097365
+          ]
+        }
+      ],
+      "name": "BezierCircle",
+      "users": 1
+    },
+    {
+      "vertices": 64,
+      "edges": 62,
+      "polygons": 0,
+      "triangles": 0,
+      "bounds": {
+        "min": [
+          -0.392797232,
+          -0.341837198,
+          -0.16288349
+        ],
+        "max": [
+          0.4072963,
+          0.130637661,
+          0.156268939
+        ],
+        "dimensions": [
+          0.800093532,
+          0.472474858,
+          0.31915243
+        ]
+      },
+      "material_polygon_counts": {},
+      "connected_components_count": 2,
+      "connected_components": [
+        {
+          "vertices": 32,
+          "bounds": {
+            "min": [
+              -0.256244034,
+              -0.25722611,
+              -0.102604933
+            ],
+            "max": [
+              0.259359896,
+              0.047250651,
+              0.103066333
+            ],
+            "dimensions": [
+              0.51560393,
+              0.30447676,
+              0.205671266
+            ]
+          },
+          "center": [
+            -0.008305409,
+            -0.099350369,
+            0.006442484
+          ]
+        },
+        {
+          "vertices": 32,
+          "bounds": {
+            "min": [
+              -0.392797232,
+              -0.341837198,
+              -0.16288349
+            ],
+            "max": [
+              0.4072963,
+              0.130637661,
+              0.156268939
+            ],
+            "dimensions": [
+              0.800093532,
+              0.472474858,
+              0.31915243
+            ]
+          },
+          "center": [
+            -0.008055994,
+            -0.096851938,
+            0.00633192
+          ]
+        }
+      ],
+      "name": "BezierCircle.001",
+      "users": 1
+    },
+    {
+      "vertices": 160,
+      "edges": 320,
+      "polygons": 160,
+      "triangles": 320,
+      "bounds": {
+        "min": [
+          -1.25,
+          -1.625522971,
+          -0.25
+        ],
+        "max": [
+          1.25,
+          1.625522971,
+          0.25
+        ],
+        "dimensions": [
+          2.5,
+          3.251045942,
+          0.5
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 160
+      },
+      "connected_components_count": 1,
+      "connected_components": [
+        {
+          "vertices": 160,
+          "bounds": {
+            "min": [
+              -1.25,
+              -1.625522971,
+              -0.25
+            ],
+            "max": [
+              1.25,
+              1.625522971,
+              0.25
+            ],
+            "dimensions": [
+              2.5,
+              3.251045942,
+              0.5
+            ]
+          },
+          "center": [
+            6e-09,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "name": "Torus",
+      "users": 1
+    },
+    {
+      "vertices": 60,
+      "edges": 80,
+      "polygons": 20,
+      "triangles": 40,
+      "bounds": {
+        "min": [
+          -1.444993496,
+          -1.879096031,
+          0.0
+        ],
+        "max": [
+          1.444993496,
+          1.879096031,
+          0.0
+        ],
+        "dimensions": [
+          2.889986992,
+          3.758192062,
+          0.0
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 20
+      },
+      "connected_components_count": 2,
+      "connected_components": [
+        {
+          "vertices": 40,
+          "bounds": {
+            "min": [
+              -1.25,
+              -1.625522971,
+              0.0
+            ],
+            "max": [
+              1.25,
+              1.625522971,
+              0.0
+            ],
+            "dimensions": [
+              2.5,
+              3.251045942,
+              0.0
+            ]
+          },
+          "center": [
+            -8e-09,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "vertices": 20,
+          "bounds": {
+            "min": [
+              -1.444993496,
+              -1.879096031,
+              0.0
+            ],
+            "max": [
+              1.444993496,
+              1.879096031,
+              0.0
+            ],
+            "dimensions": [
+              2.889986992,
+              3.758192062,
+              0.0
+            ]
+          },
+          "center": [
+            -1.2e-08,
+            -4e-09,
+            0.0
+          ]
+        }
+      ],
+      "name": "Torus.001",
+      "users": 1
+    },
+    {
+      "vertices": 96,
+      "edges": 192,
+      "polygons": 96,
+      "triangles": 192,
+      "bounds": {
+        "min": [
+          -0.805600882,
+          -1.064355969,
+          -0.263792187
+        ],
+        "max": [
+          0.759224892,
+          1.064355969,
+          0.263792187
+        ],
+        "dimensions": [
+          1.564825773,
+          2.128711939,
+          0.527584374
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 96
+      },
+      "connected_components_count": 1,
+      "connected_components": [
+        {
+          "vertices": 96,
+          "bounds": {
+            "min": [
+              -0.805600882,
+              -1.064355969,
+              -0.263792187
+            ],
+            "max": [
+              0.759224892,
+              1.064355969,
+              0.263792187
+            ],
+            "dimensions": [
+              1.564825773,
+              2.128711939,
+              0.527584374
+            ]
+          },
+          "center": [
+            -0.125249999,
+            0.0,
+            -0.0
+          ]
+        }
+      ],
+      "name": "Torus.002",
+      "users": 1
+    },
+    {
+      "vertices": 32,
+      "edges": 32,
+      "polygons": 0,
+      "triangles": 0,
+      "bounds": {
+        "min": [
+          -0.88015151,
+          -1.195055604,
+          -1e-09
+        ],
+        "max": [
+          0.876829982,
+          1.195055604,
+          -1e-09
+        ],
+        "dimensions": [
+          1.756981492,
+          2.390111208,
+          0.0
+        ]
+      },
+      "material_polygon_counts": {},
+      "connected_components_count": 2,
+      "connected_components": [
+        {
+          "vertices": 16,
+          "bounds": {
+            "min": [
+              -0.805600882,
+              -1.064355969,
+              -1e-09
+            ],
+            "max": [
+              0.759224892,
+              1.064355969,
+              -1e-09
+            ],
+            "dimensions": [
+              1.564825773,
+              2.128711939,
+              0.0
+            ]
+          },
+          "center": [
+            -0.198495858,
+            0.0,
+            -1e-09
+          ]
+        },
+        {
+          "vertices": 16,
+          "bounds": {
+            "min": [
+              -0.88015151,
+              -1.195055604,
+              -1e-09
+            ],
+            "max": [
+              0.876829982,
+              1.195055604,
+              -1e-09
+            ],
+            "dimensions": [
+              1.756981492,
+              2.390111208,
+              0.0
+            ]
+          },
+          "center": [
+            -0.198495863,
+            -0.0,
+            -1e-09
+          ]
+        }
+      ],
+      "name": "Torus.003",
+      "users": 1
+    },
+    {
+      "vertices": 48,
+      "edges": 96,
+      "polygons": 48,
+      "triangles": 96,
+      "bounds": {
+        "min": [
+          -0.623211563,
+          -1.063839555,
+          -0.600304604
+        ],
+        "max": [
+          0.623211563,
+          0.975115418,
+          0.600304604
+        ],
+        "dimensions": [
+          1.246423125,
+          2.038954973,
+          1.200609207
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 48
+      },
+      "connected_components_count": 1,
+      "connected_components": [
+        {
+          "vertices": 48,
+          "bounds": {
+            "min": [
+              -0.623211563,
+              -1.063839555,
+              -0.600304604
+            ],
+            "max": [
+              0.623211563,
+              0.975115418,
+              0.600304604
+            ],
+            "dimensions": [
+              1.246423125,
+              2.038954973,
+              1.200609207
+            ]
+          },
+          "center": [
+            -3.7e-08,
+            -0.033271549,
+            -0.0
+          ]
+        }
+      ],
+      "name": "Torus.004",
+      "users": 1
+    },
+    {
+      "vertices": 16,
+      "edges": 16,
+      "polygons": 0,
+      "triangles": 0,
+      "bounds": {
+        "min": [
+          -0.336615086,
+          -0.630023181,
+          -0.323867053
+        ],
+        "max": [
+          0.336615115,
+          0.585814953,
+          0.323867083
+        ],
+        "dimensions": [
+          0.673230201,
+          1.215838134,
+          0.647734135
+        ]
+      },
+      "material_polygon_counts": {},
+      "connected_components_count": 2,
+      "connected_components": [
+        {
+          "vertices": 8,
+          "bounds": {
+            "min": [
+              -0.262824446,
+              -0.495309263,
+              -0.252870947
+            ],
+            "max": [
+              0.262824446,
+              0.454000503,
+              0.252870977
+            ],
+            "dimensions": [
+              0.525648892,
+              0.949309766,
+              0.505741924
+            ]
+          },
+          "center": [
+            -2.6e-08,
+            -0.015490785,
+            -1e-09
+          ]
+        },
+        {
+          "vertices": 8,
+          "bounds": {
+            "min": [
+              -0.336615086,
+              -0.630023181,
+              -0.323867053
+            ],
+            "max": [
+              0.336615115,
+              0.585814953,
+              0.323867083
+            ],
+            "dimensions": [
+              0.673230201,
+              1.215838134,
+              0.647734135
+            ]
+          },
+          "center": [
+            -2.3e-08,
+            -0.015490785,
+            -2e-09
+          ]
+        }
+      ],
+      "name": "Torus.005",
+      "users": 1
+    }
+  ],
+  "total_evaluated_mesh_triangles": 122980,
+  "source_file_sha256": "965f80b679efccd1407cf1c703a958cfe6a80d305ae9e3e06a098b0fd515c8b9",
+  "note": "Read-only inspection; automatic Python execution disabled; no blend save.",
+  "object_instances": [
+    {
+      "name": "Link classic",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -12.015727043
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Chain Classic Core",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -12.015727043
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          -1.0,
+          -2.097349167
+        ],
+        [
+          0.0,
+          1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Chain Classic Path",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          -2.15e-07,
+          -4.911966801,
+          0.0,
+          -12.015727043
+        ],
+        [
+          4.911966801,
+          -2.15e-07,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          4.911966801,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Chain Offset",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          7.5e-08,
+          -0.0,
+          1.0,
+          -12.015727043
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          2.38e-07
+        ],
+        [
+          -1.0,
+          0.0,
+          7.5e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Chain Heavy Link",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -7.531875134
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -2.212973595
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Chain Heavy Core",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -7.531875134
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          -1.0,
+          -2.212973595
+        ],
+        [
+          0.0,
+          1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Chain Heavy Path",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          -1.7e-07,
+          -3.094888687,
+          0.0,
+          -7.531875134
+        ],
+        [
+          3.882704735,
+          -1.35e-07,
+          0.0,
+          -3.310415268
+        ],
+        [
+          0.0,
+          0.0,
+          3.094888687,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "chain offset",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          7.5e-08,
+          0.0,
+          1.0,
+          -7.531875134
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -1.132871985
+        ],
+        [
+          -1.0,
+          0.0,
+          7.5e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Jewelry chain link",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          0.465586424,
+          0.0,
+          0.0,
+          -3.527416945
+        ],
+        [
+          0.0,
+          0.465586424,
+          0.0,
+          -2.984880447
+        ],
+        [
+          0.0,
+          0.0,
+          0.465586424,
+          -1.29e-07
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Jewelry chain core",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          -3.509776831
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          1.0,
+          -2.479733706
+        ],
+        [
+          0.0,
+          -1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "jewelry chain path",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          -2.1e-08,
+          -1.0,
+          0.0,
+          -3.509776831
+        ],
+        [
+          0.481769741,
+          -4.4e-08,
+          0.0,
+          -3.147722483
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Cuban Chain Link",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          1.0,
+          0.0,
+          -2.663923025
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Cuban Chain Core",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          -4.4e-08,
+          1.0,
+          -2.663923025
+        ],
+        [
+          0.0,
+          -1.0,
+          -4.4e-08,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Cuban Chain Path",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          -4.4e-08,
+          -1.0,
+          0.0,
+          0.0
+        ],
+        [
+          1.0,
+          -4.4e-08,
+          0.0,
+          -2.663923025
+        ],
+        [
+          0.0,
+          0.0,
+          1.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Light",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          -0.290864646,
+          -0.771100819,
+          0.566393197,
+          4.076245308
+        ],
+        [
+          0.955171168,
+          -0.199883357,
+          0.218391195,
+          1.005453944
+        ],
+        [
+          -0.055189058,
+          0.604524732,
+          0.794672251,
+          5.903862
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    },
+    {
+      "name": "Camera",
+      "is_instance": false,
+      "parent": null,
+      "matrix_world": [
+        [
+          0.678997695,
+          -0.245503172,
+          0.691874504,
+          10.718710899
+        ],
+        [
+          0.734107196,
+          0.218089268,
+          -0.643058062,
+          -13.37713623
+        ],
+        [
+          0.006982386,
+          0.944545031,
+          0.328307748,
+          7.628421783
+        ],
+        [
+          0.0,
+          0.0,
+          0.0,
+          1.0
+        ]
+      ]
+    }
+  ],
+  "chain_repeat_analysis": [
+    {
+      "object": "Chain Heavy Link",
+      "evaluated_component_count": 18,
+      "component_center_distances_m": [
+        1.0948608315816415,
+        1.0949693099536528,
+        1.0941372737144581,
+        1.0945755562245691,
+        1.0949016186407992,
+        1.0940820075478799,
+        1.0941695718715734,
+        1.095206269669251,
+        1.094836616219768,
+        1.0936660266240583,
+        1.094176168043878,
+        1.0954127652778882,
+        1.0948322653560987,
+        1.0935577682708832,
+        1.0941551099273463,
+        1.095441490456325,
+        1.0948528408389526
+      ],
+      "mean_center_distance_m": 1.094578440601119,
+      "min_center_distance_m": 1.0935577682708832,
+      "max_center_distance_m": 1.095441490456325,
+      "note": "Geometric ring-repeat distance, not roller-chain pin pitch."
+    },
+    {
+      "object": "Cuban Chain Link",
+      "evaluated_component_count": 17,
+      "component_center_distances_m": [
+        0.24406481000000024,
+        0.24406482799999996,
+        0.24406485300000003,
+        0.2440648059999999,
+        0.24406486900000002,
+        0.24406480800000008,
+        0.2440648059999999,
+        0.24406480900000005,
+        0.24406492899999999,
+        0.24406481100000002,
+        0.244064805,
+        0.24406480600000005,
+        0.244064813,
+        0.24406480500000005,
+        0.24406480699999988,
+        0.24406480900000016
+      ],
+      "mean_center_distance_m": 0.24406482337500002,
+      "min_center_distance_m": 0.244064805,
+      "max_center_distance_m": 0.24406492899999999,
+      "note": "Geometric ring-repeat distance, not roller-chain pin pitch."
+    },
+    {
+      "object": "Jewelry chain link",
+      "evaluated_component_count": 22,
+      "component_center_distances_m": [
+        0.45471945201676,
+        0.4547198697034815,
+        0.45472053216174907,
+        0.45472125833094623,
+        0.4547218252727374,
+        0.45472237465197257,
+        0.4547226973870102,
+        0.45472280381031827,
+        0.4547226536027836,
+        0.45472283466474683,
+        0.45472288875015016,
+        0.4547228352733504,
+        0.45472283859836343,
+        0.45472288423314605,
+        0.45472301150826616,
+        0.45472268052770765,
+        0.4547223601035785,
+        0.45472228649577645,
+        0.4547228406419355,
+        0.45472236341752953,
+        0.45472201195304307
+      ],
+      "mean_center_distance_m": 0.45472215729073107,
+      "min_center_distance_m": 0.45471945201676,
+      "max_center_distance_m": 0.45472301150826616,
+      "note": "Geometric ring-repeat distance, not roller-chain pin pitch."
+    },
+    {
+      "object": "Link classic",
+      "evaluated_component_count": 9,
+      "component_center_distances_m": [
+        2.243222356,
+        2.243222049,
+        2.2432220370000002,
+        2.243222567,
+        2.2432225690000007,
+        2.243222746999999,
+        2.2432225500000005,
+        2.2432213999999995
+      ],
+      "mean_center_distance_m": 2.243222284375,
+      "min_center_distance_m": 2.2432213999999995,
+      "max_center_distance_m": 2.243222746999999,
+      "note": "Geometric ring-repeat distance, not roller-chain pin pitch."
+    }
+  ],
+  "render_level_mesh_evaluation": [
+    {
+      "object": "Chain Heavy Link",
+      "vertices": 27648,
+      "edges": 55296,
+      "polygons": 27648,
+      "triangles": 55296,
+      "bounds": {
+        "min": [
+          -8.302920341,
+          -3.153301239,
+          -0.825661302
+        ],
+        "max": [
+          -6.753287792,
+          17.110176086,
+          0.767602324
+        ],
+        "dimensions": [
+          1.549632549,
+          20.263477325,
+          1.593263626
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 27648
+      }
+    },
+    {
+      "object": "Cuban Chain Link",
+      "vertices": 178296,
+      "edges": 356592,
+      "polygons": 178296,
+      "triangles": 356592,
+      "bounds": {
+        "min": [
+          -0.254477412,
+          -2.862586021,
+          -0.1030664
+        ],
+        "max": [
+          0.254505008,
+          1.55484271,
+          0.103066146
+        ],
+        "dimensions": [
+          0.50898242,
+          4.417428732,
+          0.206132546
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 178296
+      }
+    },
+    {
+      "object": "Jewelry chain link",
+      "vertices": 16896,
+      "edges": 33792,
+      "polygons": 16896,
+      "triangles": 33792,
+      "bounds": {
+        "min": [
+          -3.776727438,
+          -2.898790836,
+          -0.233565167
+        ],
+        "max": [
+          -3.285385847,
+          7.492442131,
+          0.233421192
+        ],
+        "dimensions": [
+          0.491341591,
+          10.391232967,
+          0.466986358
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 16896
+      }
+    },
+    {
+      "object": "Link classic",
+      "vertices": 23040,
+      "edges": 46080,
+      "polygons": 23040,
+      "triangles": 46080,
+      "bounds": {
+        "min": [
+          -13.241319656,
+          -3.639672518,
+          -1.225592852
+        ],
+        "max": [
+          -10.79013443,
+          17.446140289,
+          1.225592852
+        ],
+        "dimensions": [
+          2.451185226,
+          21.085812807,
+          2.451185703
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 23040
+      }
+    },
+    {
+      "object": "link core",
+      "vertices": 250,
+      "edges": 248,
+      "polygons": 0,
+      "triangles": 0,
+      "bounds": {
+        "min": [
+          -0.389537305,
+          -0.339096516,
+          -0.16288349
+        ],
+        "max": [
+          0.403939843,
+          0.130637661,
+          0.156268433
+        ],
+        "dimensions": [
+          0.793477148,
+          0.469734177,
+          0.319151923
+        ]
+      },
+      "material_polygon_counts": {}
+    },
+    {
+      "object": "Link.001",
+      "vertices": 60,
+      "edges": 80,
+      "polygons": 20,
+      "triangles": 40,
+      "bounds": {
+        "min": [
+          -0.760746717,
+          0.176617622,
+          -2.171048403
+        ],
+        "max": [
+          2.129240274,
+          3.934809685,
+          -2.171048403
+        ],
+        "dimensions": [
+          2.889986992,
+          3.758192062,
+          0.0
+        ]
+      },
+      "material_polygon_counts": {
+        "0": 20
+      }
+    },
+    {
+      "object": "Torus.001",
+      "vertices": 128,
+      "edges": 128,
+      "polygons": 0,
+      "triangles": 0,
+      "bounds": {
+        "min": [
+          -0.880133867,
+          -1.1118294,
+          -1e-09
+        ],
+        "max": [
+          0.876829982,
+          1.1118294,
+          -1e-09
+        ],
+        "dimensions": [
+          1.756963849,
+          2.2236588,
+          0.0
+        ]
+      },
+      "material_polygon_counts": {}
+    },
+    {
+      "object": "Torus.002",
+      "vertices": 64,
+      "edges": 64,
+      "polygons": 0,
+      "triangles": 0,
+      "bounds": {
+        "min": [
+          -0.316481054,
+          -0.585306466,
+          -0.30401361
+        ],
+        "max": [
+          0.316480935,
+          0.541098237,
+          0.30401364
+        ],
+        "dimensions": [
+          0.632961988,
+          1.126404703,
+          0.60802725
+        ]
+      },
+      "material_polygon_counts": {}
+    }
+  ],
+  "render_evaluation_note": "Subdivision levels were temporarily set to render_levels in background-process memory for counting, then restored. No source file was saved.",
+  "source_file_sha256_after": "965f80b679efccd1407cf1c703a958cfe6a80d305ae9e3e06a098b0fd515c8b9",
+  "archive_member": null
+}
