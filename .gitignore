@@ -1,5 +1,5 @@
 node_modules/
-/.agents/skills/
+/.agents/skills
 skills-lock.json
 .venv/
 .cache/
