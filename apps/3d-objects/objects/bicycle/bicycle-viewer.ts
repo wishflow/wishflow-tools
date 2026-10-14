@@ -22,6 +22,9 @@ export type BicycleFeedback = {
   rearTireGroundClearanceMm: number | null;
   standGroundClearanceMm: number | null;
   standFootContactErrorMm: number | null;
+  chainLinkArcSpacingErrorMm: number | null;
+  chainUpperPulleyContactErrorMm: number | null;
+  chainLowerPulleyContactErrorMm: number | null;
   fallen: boolean;
   steeringDegrees: number;
   frontBrake: number;
@@ -124,16 +127,11 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
   const inner = new THREE.Path();
   inner.absellipse(0, 0, 3.5, 1.5, 0, Math.PI * 2, true, 0);
   roadShape.holes.push(inner);
-  const roadSurface = new THREE.Mesh(new THREE.ShapeGeometry(roadShape, 64), new THREE.MeshStandardMaterial({ color: '#b9b8af', roughness: 0.94, side: THREE.DoubleSide }));
+  const roadSurface = new THREE.Mesh(new THREE.ShapeGeometry(roadShape, 64), new THREE.MeshStandardMaterial({ color: '#b9b8af', roughness: 0.94 }));
   roadSurface.rotation.x = -Math.PI / 2;
   roadSurface.position.y = 0.002;
   roadSurface.receiveShadow = true;
   road.add(roadSurface);
-  const routeCurve = new THREE.EllipseCurve(0, 0, ROUTE_A, ROUTE_B, 0, Math.PI * 2, false, 0);
-  const routePoints = routeCurve.getPoints(192).map((point) => new THREE.Vector3(point.x, 0.012, point.y));
-  const routeMarking = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(routePoints), new THREE.LineDashedMaterial({ color: '#f5f1e8', dashSize: 0.16, gapSize: 0.12, linewidth: 1, transparent: true, opacity: 0.88 }));
-  routeMarking.computeLineDistances();
-  road.add(routeMarking);
   scene.add(road);
 
   const camera = new THREE.PerspectiveCamera(37, 1, 0.05, 80);
@@ -239,6 +237,9 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       rearTireGroundClearanceMm: groundClearanceMm(model?.partRoots.get('rearTire')),
       standGroundClearanceMm: model?.sideStand.visible && standAmount > 0.98 ? groundClearanceMm(model.sideStand) : null,
       standFootContactErrorMm: model?.sideStand.visible && standAmount > 0.98 ? standFootContactErrorMm(model.sideStandFoot) : null,
+      chainLinkArcSpacingErrorMm: model?.chainArcSpacingErrorsMm[gearIndex] ?? null,
+      chainUpperPulleyContactErrorMm: model?.chainContactErrorsMm.gearIndex === gearIndex ? model.chainContactErrorsMm.upper : null,
+      chainLowerPulleyContactErrorMm: model?.chainContactErrorsMm.gearIndex === gearIndex ? model.chainContactErrorsMm.lower : null,
       fallen,
       steeringDegrees,
       frontBrake,
@@ -684,11 +685,10 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
       bikeRoot.rotation.y = 0;
     }
 
-    const standAlpha = 1 - Math.exp(-delta * 7);
     const standTarget = kickstand && speedKmh === 0 && !fallen ? 1 : 0;
-    standAmount += (standTarget - standAmount) * standAlpha;
+    standAmount = standTarget;
     const standAngle = THREE.MathUtils.lerp(SIDE_STAND_FOLDED_ANGLE, SIDE_STAND_DEPLOYED_ANGLE, standAmount);
-    standPoseAngle += (standAngle - standPoseAngle) * standAlpha;
+    standPoseAngle = standAngle;
     model.sideStand.quaternion.setFromAxisAngle(SIDE_STAND_AXIS, standPoseAngle);
     model.sideStand.visible = standAmount > 0.015;
 
@@ -721,7 +721,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
 
   function updateMotion(delta: number) {
     if (!model) return;
-    const dt = Math.min(delta, 0.05);
+    const dt = delta;
     riding = speedKmh > 0;
 
     if (mode === 'operate' && routeBlend > 0.01 && !fallen) {
@@ -762,7 +762,7 @@ export function mountBicycleScene(viewer: HTMLElement, onFeedback: FeedbackListe
 
   function animate(now: number) {
     if (disposed || !renderer) return;
-    const delta = lastFrame ? Math.min((now - lastFrame) / 1000, 0.05) : 1 / 60;
+    const delta = lastFrame ? Math.max(0, (now - lastFrame) / 1000) : 1 / 60;
     lastFrame = now;
     updateMotion(delta);
     updateBikePose(delta);

@@ -88,17 +88,15 @@ Blendkit 的 [Licensing FAQ](https://www.blendkit.com/docs/licenses/licensing-fa
 
 下载与许可投递规则见 [LICENSES.md](../references/LICENSES.md)。这些文件属于开发研究参考，未从应用源码导入，构建不复制它们到网页。未来提取CC BY几何时须在采用清单/用户可见署名中附作者、作品和许可，并说明改动；厂商技术PDF仅临时读取和引用尺寸事实，不复制到可公开资产目录。
 
-### 获批实施时的优先复用路线
+### 本轮实现中的素材采用结果
 
-| 部位 | 优先源/方法 | 必须适配的条件 |
+| 部位 | 检查结论 | 当前实现 |
 | --- | --- | --- |
-| 座垫、把横、挡泥板、通用五金 | Simple Bicycle分离部件，其次Pink/Old外形 | 映射语义partId，按P/D尺寸改形，补连接实体/安装孔，移除缺环境或品牌参考依赖 |
-| 辐条J弯、帽、气门、双层圈细节 | piergi专项前轮 | 将4×9阵列重建为32孔三交叉，按指定法兰/圈截面与698×38胎体重做，添加碟刹接口，降低细分并重定局部轴 |
-| 40T牙盘/8片飞轮 | 已下载参数化源码作齿廓算法参考 | 应用本规格齿数/内宽/滚子与薄片厚，单独做蜘蛛/HG接口；不把默认孔径或专有坡道当原车事实 |
-| 自行车链条 | 依据零件研究10.1生成内外链板/滚子/销，Pink只供外观组织参考 | 固定12.7欧氏销距、7.3销长与全挡同一偶数节数；排除Chain Assets互扣环链 |
-| 后拨/机械碟刹/侧撑 | 固定D装配合同与同类P参考 | 实际网格求接触/避让/接地，按指定轴心运动；原模型V刹、低模骨架或错误pivot不能直接沿用 |
+| 自行车几何 | 检查了候选整车、前轮、链条与参数化链轮源码；因网格、层级、尺寸或形态不匹配，没有复用几何 | Blender 生成器创建本车型展示几何；下载件保存在 references，仅供研究，不进入运行时包 |
+| 金属表面 | ambientCG Metal012 三张1K贴图为CC0，保留原像素 | 颜色、OpenGL法线和粗糙度图嵌入GLB，用于五种小型裸露金属材质；平面UV按12次/米重复；大面积挡泥板用无纹理抛光铝材避免表面噪点 |
+| 其他表面 | 车架涂装、轮胎、座垫/把套与塑料件未使用外部贴图 | 使用生成器内的颜色、粗糙度、金属度与清漆参数 |
 
-以上是可审阅的制作路线，尚未提取、改编或接入模型；性能和浏览器验收在实现阶段执行。
+几何候选未被打包或从源码抽取；GLB场景检查器验证五种金属材质的贴图节点、UV层和导出贴图槽。资源许可与源文件检查记录仍保留在本页和 references 中。
 
 ## 资源库检查记录
 
@@ -106,7 +104,7 @@ Blendkit 的 [Licensing FAQ](https://www.blendkit.com/docs/licenses/licensing-fa
 | --- | --- | --- |
 | [Poly Haven 模型库](https://polyhaven.com/models) | 模型列表包含 521 项，Vehicles & Transport 分类为 11 项；通过目录/关键词检索未找到合适自行车。该库资产统一 CC0，但无适配的整车候选。 | 不选自行车模型。继续使用其公开 CC0 纹理目录作为备用来源。 |
 | [Poly Haven Studio HDRI](https://polyhaven.com/a/studio_small_09) | Studio Small 09；作者 Sergej Majboroda；官方页注明 CC0，提供 1K 到 16K 等分辨率；柔和大面积灯光、白色无缝背景，适合作产品高光参考。 | **暂不采用。** 当前查看器已用 Hemisphere、主光、补光和轮廓光形成棚拍照明；本轮首要问题是几何而非反射环境。先复核管件、零件、接地点和材质分配；如金属反射仍不足，再比较 1K 本地 HDRI 的画面收益与贴图/处理成本，并登记实际采用文件。 |
-| [ambientCG Metal 012](https://ambientcg.com/view?id=Metal012) | 单项页注明程序化资产、标签 Brushed / Bumpy / Metal / Scratches / Silver / Steel，并提供 1K JPG 下载。作者为 ambientCG / Lennart Demes。下载的 1K ZIP 为 3.8 MiB；本模块只保留三张所需贴图，合计约 1.4 MiB。 | **采用。** [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) 允许复制、修改和再分发；无需署名。本地资源路径、用途和处理记录见 `assets/manifest.json`。 |
+| [ambientCG Metal 012](https://ambientcg.com/view?id=Metal012) | 单项页注明程序化资产、标签 Brushed / Bumpy / Metal / Scratches / Silver / Steel，并提供 1K JPG 下载。作者为 ambientCG / Lennart Demes。下载的 1K ZIP 为 3.8 MiB；本模块只保留三张所需贴图，合计约 1.4 MiB。 | **采用并嵌入GLB。** [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) 允许复制、修改和再分发；无需署名。生成器将颜色、OpenGL法线与粗糙度接入五种裸露金属材质，使用平面UV按12次/米重复；大面积挡泥板为无纹理抛光铝；素材清单和校验和见 `assets/manifest.json`。 |
 | [Sketchfab](https://sketchfab.com/3d-models) | 逐项检查上表 3 个可下载自行车模型。许可从每个作品页核验；各自适用的 CC BY 4.0 或 CC BY-SA 4.0 不限制公开再分发，但候选结构/风格不够适合。 | 仅前两项许可条件可接受；Carbon Frame Bike 的 ShareAlike 条件及车型不合适。均未打包。 |
 | [Blendkit 授权说明](https://www.blendkit.com/docs/licenses/) | 已下载Pink与Blue两份CC0；City bike model only Blender curves、Vintage Bicycle及另一Bicycle候选为Royalty free。免费计划与许可是两个独立字段。 | CC0两份已做源文件检查但未采用；Royalty free候选未公开打包。 |
 | [Kenney 资产库](https://kenney.nl/assets) | 检查了 City Kit、Racing Kit、Train Kit 等可下载 CC0 方向；是低多边形城市/汽车/轨道交通资源，没有满足该写实自行车模块要求的独立自行车。 | 不采用；造型语言与产品展示模型不符。 |
@@ -116,8 +114,8 @@ Blendkit 的 [Licensing FAQ](https://www.blendkit.com/docs/licenses/licensing-fa
 
 | 本地文件 | 来源文件 | 修改情况 | 用途 |
 | --- | --- | --- | --- |
-| `assets/textures/Metal012_1K-JPG_Color.jpg` | `Metal012_1K-JPG_Color.jpg` | 原始 1K JPEG；未改像素 | 金属部件底色纹理 |
-| `assets/textures/Metal012_1K-JPG_NormalGL.jpg` | `Metal012_1K-JPG_NormalGL.jpg` | 原始 1K OpenGL 法线 JPEG；未改像素 | 金属部件表面细节 |
-| `assets/textures/Metal012_1K-JPG_Roughness.jpg` | `Metal012_1K-JPG_Roughness.jpg` | 原始 1K JPEG；未改像素 | 金属部件粗糙度变化 |
+| `assets/textures/Metal012_1K-JPG_Color.jpg` | `Metal012_1K-JPG_Color.jpg` | 原始 1K JPEG；未改像素；嵌入GLB | 五种小型裸露金属材质的底色纹理 |
+| `assets/textures/Metal012_1K-JPG_NormalGL.jpg` | `Metal012_1K-JPG_NormalGL.jpg` | 原始 1K OpenGL 法线 JPEG；未改像素；嵌入GLB | 五种小型裸露金属材质的表面细节 |
+| `assets/textures/Metal012_1K-JPG_Roughness.jpg` | `Metal012_1K-JPG_Roughness.jpg` | 原始 1K JPEG；未改像素；嵌入GLB | 五种小型裸露金属材质的粗糙度变化 |
 
 下载包还含有其他贴图、预览和源工程，但本页不需要它们，因此不发布。站点不调用外部 URL 加载素材。

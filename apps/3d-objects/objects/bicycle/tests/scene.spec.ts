@@ -4,6 +4,25 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem('wishflow-tools-language', 'zh'));
 });
 
+test('链条在八个挡位都经过后拨导轮并保持弧长分布', async ({ page }) => {
+  await page.goto('/#/objects/bicycle');
+  const viewer = page.locator('#viewer');
+  await expect(viewer).toHaveAttribute('data-state', 'loaded', { timeout: 30000 });
+  await page.getByRole('button', { name: '操作' }).click();
+
+  for (let gear = 0; gear < 8; gear += 1) {
+    for (const attribute of [
+      'data-chain-link-arc-spacing-error-mm',
+      'data-chain-upper-pulley-contact-error-mm',
+      'data-chain-lower-pulley-contact-error-mm',
+    ]) {
+      await expect(viewer).toHaveAttribute(attribute, /^-?\d+(\.\d+)?([eE][-+]?\d+)?$/);
+      await expect.poll(async () => Number(await viewer.getAttribute(attribute))).toBeLessThanOrEqual(0.5);
+    }
+    if (gear < 7) await page.getByRole('button', { name: '升挡' }).click();
+  }
+});
+
 test('自行车模块自动发现并提供检视、拆解、选中和操作模式', async ({ page }) => {
   test.setTimeout(60_000);
   const pageErrors: string[] = [];

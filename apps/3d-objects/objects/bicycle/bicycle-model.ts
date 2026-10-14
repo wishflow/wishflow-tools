@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { CHAIN_LINK_COUNT, CHAIN_PITCH, CASSETTE_TEETH, DERAILLEUR_BASE_Z, DERAILLEUR_PULLEY_RADIUS, makeChainRoute, solveDerailleurCageAngle, chainCircleContactErrorMm } from './chain-geometry';
 import type { BicyclePartId } from './locales';
 
 export type BicycleLayer = 'frame' | 'steering' | 'frontWheel' | 'rearWheel' | 'drivetrain' | 'frontBrake' | 'rearBrake' | 'seatAccessories';
@@ -19,7 +20,15 @@ export type BicycleModel = {
   rearWheelSpin: THREE.Group;
   cassetteSpin: THREE.Group;
   crankPivot: THREE.Group;
-  chainCurves: THREE.CatmullRomCurve3[];
+  chainCurves: THREE.Curve<THREE.Vector3>[];
+  chainCageAngles: number[];
+  chainArcSpacingErrorsMm: number[];
+  chainContactErrorsMm: { gearIndex: number; upper: number; lower: number };
+  derailleurCage: THREE.Group;
+  derailleurCageRestPosition: THREE.Vector3;
+  derailleurUpperPulley: THREE.Group;
+  derailleurLowerPulley: THREE.Group;
+  derailleurPulleyRestRotations: number[];
   chainMeshes: THREE.Mesh[];
   chainLinks: THREE.InstancedMesh[];
   frontBrakeMechanism: BrakeMechanism;
@@ -39,11 +48,6 @@ const V = (x: number, y: number, z = 0) => new THREE.Vector3(x, y, z);
 const REAR_AXLE = V(0, 0.349, 0);
 const FRONT_AXLE = V(1.075, 0.349, 0);
 const BOTTOM_BRACKET = V(0.4409365, 0.289, 0);
-const CHAINRING_TEETH = 40;
-const CASSETTE_TEETH = [32, 28, 24, 21, 18, 16, 14, 12];
-const CHAIN_PITCH = 0.0127;
-const CHAIN_COUNT = 108;
-const CHAINRING_RADIUS = CHAIN_PITCH / (2 * Math.sin(Math.PI / CHAINRING_TEETH));
 const CHAINLINE = 0.05;
 
 export const SIDE_STAND_AXIS = V(0, 0.63289, -0.774242).normalize();
@@ -64,43 +68,6 @@ function byRole(root: THREE.Object3D, role: string, which?: string) {
     matches.push(object as THREE.Group);
   });
   return matches;
-}
-
-function makeChainCurve(gearIndex: number) {
-  const rearRadius = CHAIN_PITCH / (2 * Math.sin(Math.PI / CASSETTE_TEETH[gearIndex]));
-  const front = BOTTOM_BRACKET.clone();
-  const rear = REAR_AXLE.clone();
-  const centreLine = new THREE.Vector2(rear.x - front.x, rear.y - front.y);
-  const distance = centreLine.length();
-  const deltaRadius = CHAINRING_RADIUS - rearRadius;
-  const sine = deltaRadius / distance;
-  const cosine = Math.sqrt(Math.max(0, 1 - sine * sine));
-  const direction = centreLine.normalize();
-  const topNormal = new THREE.Vector2(direction.x * sine + direction.y * cosine, direction.y * sine - direction.x * cosine);
-  const bottomNormal = new THREE.Vector2(direction.x * sine - direction.y * cosine, direction.y * sine + direction.x * cosine);
-  const frontTop = new THREE.Vector2(front.x + topNormal.x * CHAINRING_RADIUS, front.y + topNormal.y * CHAINRING_RADIUS);
-  const frontBottom = new THREE.Vector2(front.x + bottomNormal.x * CHAINRING_RADIUS, front.y + bottomNormal.y * CHAINRING_RADIUS);
-  const rearTop = new THREE.Vector2(rear.x + topNormal.x * rearRadius, rear.y + topNormal.y * rearRadius);
-  const rearBottom = new THREE.Vector2(rear.x + bottomNormal.x * rearRadius, rear.y + bottomNormal.y * rearRadius);
-  const arcPoints = (center: THREE.Vector3, radius: number, start: THREE.Vector2, end: THREE.Vector2, clockwise: boolean, z: number) => {
-    const from = Math.atan2(start.y - center.y, start.x - center.x);
-    let to = Math.atan2(end.y - center.y, end.x - center.x);
-    if (clockwise) while (to > from) to -= Math.PI * 2;
-    else while (to < from) to += Math.PI * 2;
-    const count = Math.max(12, Math.ceil(Math.abs(to - from) / (Math.PI / 36)));
-    return Array.from({ length: count + 1 }, (_, index) => {
-      const angle = from + ((to - from) * index) / count;
-      return V(center.x + Math.cos(angle) * radius, center.y + Math.sin(angle) * radius, z);
-    });
-  };
-  const rearZ = 0.061 - (7 - gearIndex) * 0.0048;
-  const points: THREE.Vector3[] = [];
-  points.push(V(rearTop.x, rearTop.y, rearZ));
-  points.push(V(frontTop.x, frontTop.y, CHAINLINE));
-  points.push(...arcPoints(front, CHAINRING_RADIUS, frontTop, frontBottom, true, CHAINLINE).slice(1));
-  points.push(V(rearBottom.x, rearBottom.y, rearZ));
-  points.push(...arcPoints(rear, rearRadius, rearBottom, rearTop, true, rearZ).slice(1));
-  return new THREE.CatmullRomCurve3(points, true, 'centripetal', 0.25);
 }
 
 function createChainLinkGeometry() {
@@ -167,6 +134,9 @@ export function createBicycleModel(source: THREE.Object3D) {
   const sideStandFoot = required<THREE.Object3D>(root, 'SideStandFoot');
   const frontRotor = required<THREE.Group>(root, 'FrontRotor');
   const rearRotor = required<THREE.Group>(root, 'RearRotor');
+  const derailleurCage = required<THREE.Group>(root, 'DerailleurCage');
+  const derailleurUpperPulley = required<THREE.Group>(root, 'DerailleurUpperPulleySpin');
+  const derailleurLowerPulley = required<THREE.Group>(root, 'DerailleurLowerPulleySpin');
   const frontBrakeMechanism = createBrakeMechanism(root, 'front');
   const rearBrakeMechanism = createBrakeMechanism(root, 'rear');
   const chainRoot = new THREE.Group();
@@ -174,7 +144,9 @@ export function createBicycleModel(source: THREE.Object3D) {
   chainRoot.userData.partId = 'chain';
   chainRoot.userData.control = 'chain';
   layers.drivetrain.add(chainRoot);
-  const chainCurves = CASSETTE_TEETH.map((_, index) => makeChainCurve(index));
+  const chainCageAngles = CASSETTE_TEETH.map((teeth, index) => solveDerailleurCageAngle(teeth, 0.061 - (7 - index) * 0.0048));
+  const chainRoutes = CASSETTE_TEETH.map((teeth, index) => makeChainRoute(teeth, 0.061 - (7 - index) * 0.0048, chainCageAngles[index]));
+  const chainCurves = chainRoutes.map((route) => route.curve);
   const chainMeshes = chainCurves.map((curve, index) => {
     const object = new THREE.Mesh(new THREE.TubeGeometry(curve, 256, 0.0015, 5, true), new THREE.MeshStandardMaterial({ color: '#111616', roughness: 0.6, metalness: 0.35 }));
     object.name = `Chain.Path.${CASSETTE_TEETH[index]}T`;
@@ -185,7 +157,7 @@ export function createBicycleModel(source: THREE.Object3D) {
   });
   const chainLinkGeometry = createChainLinkGeometry();
   const chainLinks = chainCurves.map((_, index) => {
-    const links = new THREE.InstancedMesh(chainLinkGeometry, new THREE.MeshStandardMaterial({ color: '#7f8987', roughness: 0.31, metalness: 0.82 }), CHAIN_COUNT);
+    const links = new THREE.InstancedMesh(chainLinkGeometry, new THREE.MeshStandardMaterial({ color: '#7f8987', roughness: 0.31, metalness: 0.82 }), CHAIN_LINK_COUNT);
     links.name = `Chain.Links.${CASSETTE_TEETH[index]}T`;
     links.userData.partId = 'chain';
     links.userData.motionRole = 'chainMotion';
@@ -231,6 +203,14 @@ export function createBicycleModel(source: THREE.Object3D) {
     cassetteSpin,
     crankPivot,
     chainCurves,
+    chainCageAngles,
+    chainArcSpacingErrorsMm: chainRoutes.map((route) => route.arcSpacingErrorMm),
+    chainContactErrorsMm: { gearIndex: -1, upper: Number.POSITIVE_INFINITY, lower: Number.POSITIVE_INFINITY },
+    derailleurCage,
+    derailleurCageRestPosition: derailleurCage.position.clone(),
+    derailleurUpperPulley,
+    derailleurLowerPulley,
+    derailleurPulleyRestRotations: [derailleurUpperPulley.rotation.z, derailleurLowerPulley.rotation.z],
     chainMeshes,
     chainLinks,
     frontBrakeMechanism,
@@ -256,6 +236,24 @@ export function updateChainLinks(model: BicycleModel, gearIndex: number, phase: 
   const dummy = new THREE.Object3D();
   const tangent = new THREE.Vector3();
   const xAxis = V(1, 0, 0);
+  const rearZ = 0.061 - (7 - gearIndex) * 0.0048;
+  model.derailleurCage.rotation.z = model.chainCageAngles[gearIndex];
+  model.derailleurCage.position.z = model.derailleurCageRestPosition.z + rearZ - DERAILLEUR_BASE_Z;
+  const pulleyRotation = phase * Math.PI * 2 * CHAIN_LINK_COUNT / 13;
+  model.derailleurUpperPulley.rotation.z = model.derailleurPulleyRestRotations[0] + pulleyRotation;
+  model.derailleurLowerPulley.rotation.z = model.derailleurPulleyRestRotations[1] + pulleyRotation;
+  if (model.chainContactErrorsMm.gearIndex !== gearIndex) {
+    model.root.updateMatrixWorld(true);
+    const localCenter = (pulley: THREE.Group) => model.root.worldToLocal(pulley.getWorldPosition(new THREE.Vector3()));
+    const upper = localCenter(model.derailleurUpperPulley);
+    const lower = localCenter(model.derailleurLowerPulley);
+    const curve = model.chainCurves[gearIndex];
+    model.chainContactErrorsMm = {
+      gearIndex,
+      upper: chainCircleContactErrorMm(curve, new THREE.Vector2(upper.x, upper.y), DERAILLEUR_PULLEY_RADIUS),
+      lower: chainCircleContactErrorMm(curve, new THREE.Vector2(lower.x, lower.y), DERAILLEUR_PULLEY_RADIUS),
+    };
+  }
   for (let index = 0; index < links.count; index += 1) {
     const position = ((index / links.count + phase) % 1 + 1) % 1;
     curve.getPointAt(position, dummy.position);

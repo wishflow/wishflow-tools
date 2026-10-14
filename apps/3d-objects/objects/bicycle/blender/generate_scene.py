@@ -13,6 +13,12 @@ MODULE_ROOT = Path(__file__).resolve().parents[1]
 BLEND_PATH = MODULE_ROOT / "blender" / "scene.blend"
 GLB_PATH = MODULE_ROOT / "assets" / "scene.glb"
 REPORT_PATH = MODULE_ROOT / "blender" / "validation-report.json"
+TEXTURE_PATHS = {
+    "color": MODULE_ROOT / "assets" / "textures" / "Metal012_1K-JPG_Color.jpg",
+    "normal": MODULE_ROOT / "assets" / "textures" / "Metal012_1K-JPG_NormalGL.jpg",
+    "roughness": MODULE_ROOT / "assets" / "textures" / "Metal012_1K-JPG_Roughness.jpg",
+}
+UV_REPEAT_PER_METER = 12.0
 
 # Browser coordinates are millimetres: x forward, y up, z drive side.
 REAR = (0.0, 349.0, 0.0)
@@ -61,7 +67,7 @@ def clear_scene():
             if datablock.users == 0: datablocks.remove(datablock)
 
 
-def make_material(name, color, roughness=0.38, metallic=0.0, coat=0.0):
+def make_material(name, color, roughness=0.38, metallic=0.0, coat=0.0, use_metal_texture=False):
     material = bpy.data.materials.new(name)
     material.diffuse_color = (*color, 1.0)
     material.use_nodes = True
@@ -70,6 +76,38 @@ def make_material(name, color, roughness=0.38, metallic=0.0, coat=0.0):
     shader.inputs["Metallic"].default_value = metallic
     shader.inputs["Roughness"].default_value = roughness
     if "Coat Weight" in shader.inputs: shader.inputs["Coat Weight"].default_value = coat
+    if use_metal_texture:
+        for key, path in TEXTURE_PATHS.items():
+            if not path.is_file(): raise FileNotFoundError("Metal012 map is missing: " + str(path))
+        nodes = material.node_tree.nodes
+        links = material.node_tree.links
+        color_image = bpy.data.images.load(str(TEXTURE_PATHS["color"]), check_existing=True)
+        normal_image = bpy.data.images.load(str(TEXTURE_PATHS["normal"]), check_existing=True)
+        roughness_image = bpy.data.images.load(str(TEXTURE_PATHS["roughness"]), check_existing=True)
+        color_image.colorspace_settings.name = "sRGB"
+        normal_image.colorspace_settings.name = "Non-Color"
+        roughness_image.colorspace_settings.name = "Non-Color"
+        for image in (color_image, normal_image, roughness_image): image.pack()
+        color_node = nodes.new("ShaderNodeTexImage")
+        color_node.name = "Metal012 Color"
+        color_node.image = color_image
+        color_node.location = (-650, 180)
+        roughness_node = nodes.new("ShaderNodeTexImage")
+        roughness_node.name = "Metal012 Roughness"
+        roughness_node.image = roughness_image
+        roughness_node.location = (-650, -70)
+        normal_node = nodes.new("ShaderNodeTexImage")
+        normal_node.name = "Metal012 NormalGL"
+        normal_node.image = normal_image
+        normal_node.location = (-650, -320)
+        normal_map = nodes.new("ShaderNodeNormalMap")
+        normal_map.space = "TANGENT"
+        normal_map.inputs["Strength"].default_value = 0.12
+        normal_map.location = (-360, -300)
+        links.new(color_node.outputs["Color"], shader.inputs["Base Color"])
+        links.new(roughness_node.outputs["Color"], shader.inputs["Roughness"])
+        links.new(normal_node.outputs["Color"], normal_map.inputs["Color"])
+        links.new(normal_map.outputs["Normal"], shader.inputs["Normal"])
     return material
 
 
@@ -118,6 +156,19 @@ def make_mesh(name, vertices, faces, material, parent=None, part_id=None, assemb
     bm.to_mesh(mesh)
     bm.free()
     mesh.update()
+    has_image_texture = material.use_nodes and any(node.type == "TEX_IMAGE" and node.image for node in material.node_tree.nodes)
+    if has_image_texture:
+        uv = mesh.uv_layers.new(name="Metal012 planar microdetail")
+        for polygon in mesh.polygons:
+            normal = polygon.normal
+            dominant_axis = max(range(3), key=lambda axis: abs(normal[axis]))
+            projected_axes = [axis for axis in range(3) if axis != dominant_axis]
+            for loop_index in polygon.loop_indices:
+                vertex = mesh.vertices[mesh.loops[loop_index].vertex_index].co
+                uv.data[loop_index].uv = (
+                    vertex[projected_axes[0]] * UV_REPEAT_PER_METER,
+                    vertex[projected_axes[1]] * UV_REPEAT_PER_METER,
+                )
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.scene.collection.objects.link(obj)
     mesh.materials.append(material)
@@ -528,15 +579,16 @@ def add_drivetrain(layers, materials):
         box("Drivetrain.Pedal.Platform."+str(side),end,(100,18,85),materials["blackMetal"],pedal,"pedal","drivetrain",grade="D",source="blender-modeling-spec.md#5.2",bevel=5)
         cylinder_between("Drivetrain.Pedal.Axle."+str(side),(end[0],end[1],side*82),(end[0],end[1],side*97),4.5,materials["metal"],pedal,"pedal","drivetrain",12,grade="D")
         pedal_hinges.append(pedal)
-    # Rear derailleur fixed mount and two 13T pulleys are positioned on the selected chain line.
+    # The upper jockey wheel sits behind the cassette, clear of even the 32T sprocket.
+    # The cage pivots around that wheel; the lower wheel position is solved per gear in Three.js.
     derailleur=make_empty("DerailleurFixedMount",(15,318,76),root,"derailleur","drivetrain",role="derailleurMount",control="chain")
     cylinder_between("Derailleur.HangerBolt",(15,318,68),(15,318,82),5,materials["metal"],derailleur,"derailleur","drivetrain",12,grade="D",source="similar-bike-dimensions.md#7")
-    cage=make_empty("DerailleurCage",(15,270,44.2),derailleur,"derailleur","drivetrain",role="cageHinge",axis=(0,0,1))
-    upper=(0,340,44.2); lower=(-24,255,44.2)
+    upper=(-74,270,44.2); lower=(-20,180,44.2)
+    cage=make_empty("DerailleurCage",upper,derailleur,"derailleur","drivetrain",role="cageHinge",axis=(0,0,1))
     for label,point in (("Upper",upper),("Lower",lower)):
         r=13*PITCH/(2*math.pi)
-        annulus("Derailleur."+label+"Pulley.Teeth",point,r+2,r-3,7,materials["darkMetal"],cage,"derailleur","drivetrain",48,grade="P",source="component-reference-research.md#10.3",teeth=13)
         pulley=make_empty("Derailleur"+label+"PulleySpin",point,cage,"derailleur","drivetrain",role="pulleySpin",axis=(0,0,1))
+        annulus("Derailleur."+label+"Pulley.Teeth",point,r+2,r-3,7,materials["darkMetal"],pulley,"derailleur","drivetrain",48,grade="P",source="component-reference-research.md#10.3",teeth=13)
         cylinder_between("Derailleur."+label+"PulleyAxle",(point[0],point[1],point[2]-5),(point[0],point[1],point[2]+5),4,materials["metal"],pulley,"derailleur","drivetrain",12)
     cylinder_between("Derailleur.CagePlate.Left",(upper[0],upper[1],36),(lower[0],lower[1],36),2,materials["blackMetal"],cage,"derailleur","drivetrain",8)
     cylinder_between("Derailleur.CagePlate.Right",(upper[0],upper[1],52),(lower[0],lower[1],52),2,materials["blackMetal"],cage,"derailleur","drivetrain",8)
@@ -609,18 +661,18 @@ def main():
     scene.render.film_transparent=False
     materials={
         "frame":make_material("Frame · Deep Teal Enamel",(0.025,0.24,0.23),0.24,0.33,0.55),
-        "silver":make_material("Satin Aluminium",(0.52,0.56,0.55),0.26,0.78),
-        "alloy":make_material("Machined Aluminium",(0.34,0.38,0.37),0.31,0.84),
-        "metal":make_material("Brushed Steel",(0.62,0.65,0.63),0.29,0.82),
+        "silver":make_material("Satin Aluminium",(0.52,0.56,0.55),0.26,0.78,use_metal_texture=True),
+        "alloy":make_material("Machined Aluminium",(0.34,0.38,0.37),0.31,0.84,use_metal_texture=True),
+        "metal":make_material("Brushed Steel",(0.62,0.65,0.63),0.29,0.82,use_metal_texture=True),
         "darkMetal":make_material("Graphite Steel",(0.055,0.065,0.063),0.31,0.83),
         "blackMetal":make_material("Black Anodised Aluminium",(0.045,0.052,0.052),0.32,0.74),
         "rubber":make_material("Tyre Rubber",(0.028,0.032,0.032),0.82,0.02),
         "spoke":make_material("Stainless Spokes",(0.72,0.74,0.72),0.24,0.9),
-        "rotor":make_material("Stainless Brake Rotor",(0.66,0.69,0.68),0.22,0.88),
+        "rotor":make_material("Stainless Brake Rotor",(0.66,0.69,0.68),0.22,0.88,use_metal_texture=True),
         "pad":make_material("Resin Brake Pad",(0.10,0.12,0.11),0.78,0.02),
-        "steel":make_material("Forked Steel",(0.19,0.21,0.20),0.28,0.8),
+        "steel":make_material("Forked Steel",(0.19,0.21,0.20),0.28,0.8,use_metal_texture=True),
         "leather":make_material("Saddle · Dark Brown",(0.13,0.076,0.047),0.62,0.02),
-        "fender":make_material("Brushed Fender Alloy",(0.40,0.44,0.43),0.35,0.74),
+        "fender":make_material("Polished Fender Alloy",(0.56,0.59,0.58),0.24,0.78),
         "cable":make_material("Brake Cable Housing",(0.025,0.029,0.029),0.68,0.05),
         "red":make_material("Rear Lamp Red",(0.65,0.035,0.025),0.24,0.1),
         "lamp":make_material("Front Lamp Lens",(0.82,0.69,0.36),0.21,0.08),

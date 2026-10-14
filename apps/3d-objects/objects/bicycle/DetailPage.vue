@@ -29,6 +29,9 @@ const state = reactive({
   rearTireGroundClearanceMm: null as number | null,
   standGroundClearanceMm: null as number | null,
   standFootContactErrorMm: null as number | null,
+  chainLinkArcSpacingErrorMm: null as number | null,
+  chainUpperPulleyContactErrorMm: null as number | null,
+  chainLowerPulleyContactErrorMm: null as number | null,
   fallen: false,
   steeringDegrees: 0,
   frontBrake: 0,
@@ -242,6 +245,9 @@ function onPanelToggle(event: Event) {
             :data-rear-tire-clearance-mm="state.rearTireGroundClearanceMm ?? undefined"
             :data-stand-clearance-mm="state.standGroundClearanceMm ?? undefined"
             :data-stand-foot-contact-error-mm="state.standFootContactErrorMm ?? undefined"
+            :data-chain-link-arc-spacing-error-mm="state.chainLinkArcSpacingErrorMm ?? undefined"
+            :data-chain-upper-pulley-contact-error-mm="state.chainUpperPulleyContactErrorMm ?? undefined"
+            :data-chain-lower-pulley-contact-error-mm="state.chainLowerPulleyContactErrorMm ?? undefined"
           >
             <div class="viewer-topline" aria-hidden="true">
               <span>URBAN / 700C</span><span>{{ state.mode === 'inspect' ? 'ASSEMBLY VIEW' : 'RIDE LOOP · 8 × 4 M' }}</span>
