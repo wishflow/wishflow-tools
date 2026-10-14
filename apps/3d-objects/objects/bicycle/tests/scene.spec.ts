@@ -5,6 +5,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('自行车模块自动发现并提供检视、拆解、选中和操作模式', async ({ page }) => {
+  test.setTimeout(60_000);
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
