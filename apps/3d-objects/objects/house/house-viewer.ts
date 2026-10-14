@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import sceneUrl from './assets/scene.glb?url';
 
 export type HouseLayer = 'roof' | 'walls' | 'structure' | 'openings' | 'interior' | 'ground';
 export type ViewerStatus = 'loading' | 'loaded' | 'error';
@@ -267,7 +268,7 @@ export function mountHouseScene(viewer: HTMLElement, onFeedback: FeedbackListene
 
     const loader = new GLTFLoader();
     loader.load(
-      import.meta.env.BASE_URL + 'models/scene.glb',
+      sceneUrl,
       (gltf) => {
         if (disposed) {
           disposeModel(gltf.scene);

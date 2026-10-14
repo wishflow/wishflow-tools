@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import './styles.css';
 import {
   mountHouseScene,
   type ComponentDetail,
   type HouseLayer,
   type HouseSceneControls,
   type ViewerStatus,
-} from '../scene/house-viewer';
+} from './house-viewer';
 
 const viewerHost = ref<HTMLDivElement | null>(null);
 const layerItems: Array<{ key: HouseLayer; label: string; count: string; swatch: string }> = [
@@ -162,5 +163,6 @@ function zoom(factor: number) {
         <div class="inspector-footnote"><span class="footnote-mark">i</span><p>点击模型中的任意构件查看说明。键盘用户可通过上方显隐清单逐组检查。</p></div>
       </aside>
     </section>
+    <p class="asset-credit"><a href="https://polyhaven.com/" target="_blank" rel="noopener noreferrer">Poly Haven · CC0</a></p>
   </div>
 </template>

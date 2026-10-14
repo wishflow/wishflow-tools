@@ -6,7 +6,7 @@
 
 - **场景主题：** 一座紧凑、单层、木结构小屋的建筑拆解模型。
 - **视觉关键词：** 温暖、清楚、模型展示。
-- **公开纹理：** [Grey Roof 01](https://polyhaven.com/a/grey_roof_01) 的 1K 漫反射图用于屋面并调成森林绿；[Wooden Planks](https://polyhaven.com/a/wooden_planks) 的 1K 漫反射图用于地板。两者均为 CC0，详情见 `assets/manifest.json`。
+- **公开纹理：** [Grey Roof 01](https://polyhaven.com/a/grey_roof_01) 的 1K 漫反射图用于屋面并调成森林绿；[Wooden Planks](https://polyhaven.com/a/wooden_planks) 的 1K 漫反射图用于地板。两者均为 CC0，详情见本模块 `assets/manifest.json`。
 - **画面层级：** 房屋整体轮廓优先；其次是屋顶分层、墙体框架、门窗和室内简化陈设。
 - **风格假设：** 象牙白墙面、浅色木框架、深森林绿双坡瓦屋顶；材质哑光，边缘清晰。屋面以 Poly Haven Grey Roof 01 CC0 纹理着色为绿，地板使用 Wooden Planks CC0 纹理。
 
@@ -68,8 +68,8 @@
 | 最大三角面数 | 100,000 |
 | GLB 最大体积 | 8 MiB（8,388,608 字节） |
 | 纹理最长边 | 1,024 px；仅使用两张 1K 漫反射贴图 |
-| JavaScript 总 gzip 体积 | 256 KiB |
-| 必需对象名 | 与同目录 `scene-contract.json` 一致 |
+| JavaScript 总 gzip 体积 | 256 KiB，见应用根目录 `app-contract.json` |
+| 必需对象名 | 与模块根目录 `scene-contract.json` 一致 |
 
 ## 禁止项和实施约束
 

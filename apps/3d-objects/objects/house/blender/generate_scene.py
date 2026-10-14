@@ -6,10 +6,10 @@ import bmesh
 from mathutils import Vector
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-BLEND_PATH = PROJECT_ROOT / "blender" / "scene.blend"
-GLB_PATH = PROJECT_ROOT / "public" / "models" / "scene.glb"
-TEXTURE_DIR = PROJECT_ROOT / "assets" / "textures"
+MODULE_ROOT = Path(__file__).resolve().parents[1]
+BLEND_PATH = MODULE_ROOT / "blender" / "scene.blend"
+GLB_PATH = MODULE_ROOT / "assets" / "scene.glb"
+TEXTURE_DIR = MODULE_ROOT / "assets" / "textures"
 
 WIDTH = 6.0
 DEPTH = 5.0
@@ -306,7 +306,7 @@ def build_scene():
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
     scene.render.film_transparent = False
-    scene.render.filepath = str(PROJECT_ROOT / "blender" / "preview.png")
+    scene.render.filepath = str(MODULE_ROOT / "blender" / "preview.png")
     scene.view_settings.view_transform = "AgX"
 
     global materials

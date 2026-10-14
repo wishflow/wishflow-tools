@@ -6,9 +6,12 @@ from pathlib import Path
 
 import bpy
 
+if "--" in sys.argv and len(sys.argv) > sys.argv.index("--") + 1:
+    MODULE_ROOT = Path(sys.argv[sys.argv.index("--") + 1]).resolve()
+else:
+    raise SystemExit("必须通过 check:scene 指定对象模块目录。")
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-CONTRACT_PATH = PROJECT_ROOT / "scene-contract.json"
+CONTRACT_PATH = MODULE_ROOT / "scene-contract.json"
 errors = []
 
 
@@ -36,15 +39,15 @@ def positive_budget(contract, key):
     return value
 
 
-def resolve_project_path(relative_path):
+def resolve_module_path(relative_path):
     if not isinstance(relative_path, str) or not relative_path or "\\" in relative_path:
-        fail("scene-contract.json 的 modelPath 必须是项目内相对路径。")
-        return PROJECT_ROOT / "public" / "models" / "scene.glb"
+        fail("scene-contract.json 的 modelPath 必须是模块内相对路径。")
+        return MODULE_ROOT / "assets" / "scene.glb"
     parts = relative_path.split("/")
     if Path(relative_path).is_absolute() or any(part in ("", ".", "..") for part in parts):
-        fail("scene-contract.json 的 modelPath 不得逃出项目目录。")
-        return PROJECT_ROOT / "public" / "models" / "scene.glb"
-    return PROJECT_ROOT.joinpath(*parts)
+        fail("scene-contract.json 的 modelPath 不得逃出模块目录。")
+        return MODULE_ROOT / "assets" / "scene.glb"
+    return MODULE_ROOT.joinpath(*parts)
 
 
 def check_number(value, label):
@@ -54,7 +57,7 @@ def check_number(value, label):
 
 def check_glb(glb_path, max_bytes):
     if not glb_path.is_file():
-        fail("找不到网页模型：" + str(glb_path.relative_to(PROJECT_ROOT)))
+        fail("找不到网页模型：" + str(glb_path.relative_to(MODULE_ROOT)))
         return
     file_size = glb_path.stat().st_size
     if file_size > max_bytes:
@@ -132,7 +135,7 @@ def check_scene(contract):
         if width > 0 and height > 0 and max(width, height) > max_texture_edge:
             fail("贴图超出最长边预算：" + image.name + " " + str(width) + "x" + str(height))
 
-    model_path = resolve_project_path(contract.get("modelPath", "public/models/scene.glb"))
+    model_path = resolve_module_path(contract.get("modelPath", "assets/scene.glb"))
     check_glb(model_path, max_glb_bytes)
 
 

@@ -1,6 +1,7 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { notifySiteRouteChange } from '@wishflow/site-shell';
 import ObjectCatalogPage from './pages/ObjectCatalogPage.vue';
+import { objectModules } from './object-modules';
 
 export const router = createRouter({
   history: createWebHashHistory(),
@@ -10,7 +11,11 @@ export const router = createRouter({
       name: 'catalog',
       component: ObjectCatalogPage,
     },
-    { path: '/objects/house', name: 'house', component: () => import('./pages/HouseDetailPage.vue') },
+    ...objectModules.map((module) => ({
+      path: module.route,
+      name: 'object-' + module.slug,
+      component: module.loadPage,
+    })),
     { path: '/:pathMatch(.*)*', redirect: { name: 'catalog' } },
   ],
   scrollBehavior: () => ({ top: 0 }),
