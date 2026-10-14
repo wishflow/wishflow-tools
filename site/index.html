@@ -24,12 +24,12 @@
       .icon-image img { position: absolute; top: 0; left: 0; display: block; width: 800%; max-width: none; height: 900%; animation: usagi-idle 1250ms steps(5, end) infinite; }
       .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: usagi-card-jumping 1250ms steps(4, end) infinite; }
       @keyframes usagi-idle { to { transform: translateX(-62.5%); } }
-      @keyframes usagi-card-jumping { to { transform: translate(-50%, -50%); } }
+      @keyframes usagi-card-jumping { from { transform: translate(0, -44.444444%); } to { transform: translate(-50%, -44.444444%); } }
       h2 { margin: 22px 0 8px; font-size: 21px; letter-spacing: -.02em; }
       .description { margin: 0; color: #657066; line-height: 1.55; }
       .open { margin-top: auto; padding-top: 24px; color: #438215; font-size: 14px; font-weight: 700; }
       @media (max-width: 600px) { .home-content { width: min(100% - 28px, 960px); padding-top: 38px; } .card { min-height: 210px; padding: 22px; } }
-      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .icon-image img { animation: none !important; transform: none !important; } .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: none !important; transform: translate(0, -50%); } }
+      @media (prefers-reduced-motion: reduce) { .card { transition: none; } .card:hover { transform: none; } .icon-image img { animation: none !important; transform: none !important; } .card:hover .icon-image img, .card:focus-visible .icon-image img { animation: none !important; transform: translate(0, -44.444444%); } }
     </style>
     <script type="module" src="./site.js"></script>
   </head>

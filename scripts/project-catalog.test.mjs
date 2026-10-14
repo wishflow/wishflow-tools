@@ -43,7 +43,8 @@ test('navigation cards include both languages and render the configured Usagi im
   assert.match(homePage, /@keyframes usagi-idle/);
   assert.match(homePage, /@keyframes usagi-card-jumping/);
   assert.match(homePage, /\.card:hover \.icon-image img, \.card:focus-visible \.icon-image img/);
-  assert.match(homePage, /translate\(-50%, -50%\)/);
+  assert.match(homePage, /@keyframes usagi-card-jumping \{ from \{ transform: translate\(0, -44\.444444%\); \} to \{ transform: translate\(-50%, -44\.444444%\); \} \}/);
+  assert.match(homePage, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?transform: translate\(0, -44\.444444%\)/);
   assert.doesNotMatch(homePage, /usagi-card-staff-spin|icon-image::after/);
   assert.match(homePage, /prefers-reduced-motion: reduce/);
 
