@@ -173,6 +173,12 @@ function endOperationControl(control: OperationControl, cancelled = false) {
   else operationControlReleaseTimers.set(control, window.setTimeout(release, remainingMs));
 }
 
+function tapOperationControl(control: OperationControl) {
+  if (operationControlPresses.has(control) || operationControlReleaseTimers.has(control)) return;
+  startOperationControl(control);
+  endOperationControl(control);
+}
+
 function clearOperationControlPresses() {
   for (const control of ['accelerator', 'front', 'rear'] as const) {
     const releaseTimer = operationControlReleaseTimers.get(control);
@@ -311,12 +317,12 @@ function onPanelToggle(event: Event) {
             <section class="control-section action-section">
               <div class="section-heading"><div><span class="section-index">03</span><h2>{{ text(copy.accelerate) }} / {{ text(copy.brake) }}</h2></div></div>
               <div class="two-button-row">
-                <button id="accelerate-control" type="button" class="touch-control accelerate-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('accelerator')" @pointerup="endOperationControl('accelerator')" @pointercancel="endOperationControl('accelerator', true)" @pointerleave="endOperationControl('accelerator')">{{ text(copy.accelerate) }}</button>
+                <button id="accelerate-control" type="button" class="touch-control accelerate-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('accelerator')" @pointerup="endOperationControl('accelerator')" @pointercancel="endOperationControl('accelerator', true)" @pointerleave="endOperationControl('accelerator')" @click="tapOperationControl('accelerator')">{{ text(copy.accelerate) }}</button>
                 <button id="pedal-control" type="button" class="touch-control pedal-control" :disabled="!canOperate" @click="sceneControls?.pedal(1)">{{ text(copy.pedalOnce) }}</button>
               </div>
               <div class="two-button-row brake-row">
-                <button id="front-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('front')" @pointerup="endOperationControl('front')" @pointercancel="endOperationControl('front', true)" @pointerleave="endOperationControl('front')">{{ text(copy.frontBrake) }}</button>
-                <button id="rear-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('rear')" @pointerup="endOperationControl('rear')" @pointercancel="endOperationControl('rear', true)" @pointerleave="endOperationControl('rear')">{{ text(copy.rearBrake) }}</button>
+                <button id="front-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('front')" @pointerup="endOperationControl('front')" @pointercancel="endOperationControl('front', true)" @pointerleave="endOperationControl('front')" @click="tapOperationControl('front')">{{ text(copy.frontBrake) }}</button>
+                <button id="rear-brake-control" type="button" class="touch-control brake-control" :disabled="!canOperate" @pointerdown.prevent="startOperationControl('rear')" @pointerup="endOperationControl('rear')" @pointercancel="endOperationControl('rear', true)" @pointerleave="endOperationControl('rear')" @click="tapOperationControl('rear')">{{ text(copy.rearBrake) }}</button>
               </div>
             </section>
 
