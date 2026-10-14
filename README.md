@@ -12,6 +12,14 @@ WishFlow Tools 将多个独立工具汇集到一个导航站。前端应用放�
 
 ## 本地开发
 
+首次初始化本地开发环境，或刷新仓库级 AI skills 时，在仓库根目录运行：
+
+```bash
+pnpm run init
+```
+
+该命令会安装已登记应用的依赖，并从上游获取最新 skills。目录约定、上游来源和更新方式见 [`docs/skills-setup.md`](docs/skills-setup.md)。CI 发布仍使用 `pnpm run install:apps`，只安装应用依赖。
+
 安装应用自己的依赖，并启动要开发的应用：
 
 ```bash

@@ -59,3 +59,17 @@
 - commit 只包含相关文件，信息应简洁明确。
 - 提交前检查 `git status` 和 `git diff`，避免混入无关改动。
 - 能用轻量检查确认的文档变更，应至少运行 `git diff --check`。
+
+## Agent skills
+
+### Issue tracker
+
+本仓库使用 GitHub Issues 跟踪任务，见 `docs/agents/issue-tracker.md`。
+
+### Triage labels
+
+Triage 使用标准标签 `needs-triage`、`needs-info`、`ready-for-agent`、`ready-for-human` 和 `wontfix`，见 `docs/agents/triage-labels.md`。
+
+### Domain docs
+
+本仓库采用多上下文领域文档布局，见 `docs/agents/domain.md`。
