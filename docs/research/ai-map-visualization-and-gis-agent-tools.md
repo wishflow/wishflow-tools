@@ -1,207 +1,167 @@
-# AI 地图可视化与 GIS 分析工具调研
+# AI 辅助地图开发与地图制品生成工具调研
 
-> 调研快照：2026-10-26。价格、版本、测试阶段和可用性会变化；涉及动态信息时在正文标注检查日期。
+> 调研快照：2026-10-26。项目版本、产品功能、价格和 Beta 状态会变化，动态信息以链接到的当前官方页面为准。
 >
-> 调研范围：GitHub、npm/PyPI、官方产品文档和社区目录，覆盖 Skill、CLI、MCP、桌面 GIS、在线 GIS、遥感分析和可参考的完整项目。三路并行调研分别聚焦 GIS/MCP 工具、Agent 项目与完整应用、在线地图产品与 AI 能力；报告对关键功能和限制优先引用项目或厂商的一手资料。未对这些项目逐一安装、运行或做性能基准测试。
+> 范围：调研 GitHub 项目、Agent Skills、CLI、MCP、QGIS 插件、地图/GIS 产品和研究原型。三位子 Agent 分别调研地图产品和制图平台、开发期工具链、完整项目和可复用的地图产物工作流；总报告按项目仓库、官方文档和插件目录校准关键描述。未逐项安装、运行或做性能测试。
 
-## 一、结论摘要
+## 一、结论：把 AI 放在开发和制图过程里，交付物可以是普通地图
 
-目前没有一个通用 AI 地图工具能同时做到“读懂任意本地 GIS 数据、正确选择空间算法、运行分析、生成可靠地图并适配所有数据服务”。比较实用的工具大致分成三类：
+这次调研的重点是：**开发者或制图者使用 Agent/AI 来理解需求、编写地图应用、组织 GIS 操作、生成内容和检查结果；最终用户拿到的地图产品不必带 Agent，也不一定是可搜索的交互地图。**
 
-1. **让 Agent 操作已有 GIS 软件**：QGIS MCP、GeoAgent、AgenticGIS。适合已有矢量/栅格数据和 QGIS 工作流的人；空间处理仍由 QGIS、GDAL、GeoPandas 等确定性工具执行。
-2. **面向团队在线制图和空间分析的平台**：Felt AI、CARTO for Agents。更接近完整产品，通常要把数据放在平台或连接的数据仓库中，并受订阅、权限和用量限制。
-3. **给 Agent 提供地点、路线等地图服务**：高德、Mapbox、Google Maps、ArcGIS Location Services 等 MCP/CLI。接入容易，但大多是 LBS 服务接口，不等同于对用户本地数据做叠加、栅格计算或空间统计。
+最后交付可以是：
 
-按常见需求，优先看这些：
-
-| 需求 | 优先调研对象 | 适用边界 |
+| 地图制品 | 常见形式 | 适合的用途 |
 |---|---|---|
-| 在本机 QGIS 中用自然语言做图层、处理、布局 | [QGIS MCP Plugin](https://plugins.qgis.org/plugins/qgis_mcp_plugin/)、[GeoAgent](https://github.com/opengeos/GeoAgent) | 需要本机 QGIS 及 MCP/Agent 配置；执行结果仍需人工核对 |
-| 让 Agent 查地点、规划路线、做旅行地图 | [高德地图 MCP/CLI/Skill](https://lbs.amap.com/api/mcp-server/summary)、[Mapbox MCP](https://github.com/mapbox/mcp-server) | 主要面向在线地点与路线 API；需 API Key，可能产生用量费用 |
-| 团队协作、自然语言查数据并发布 Web 地图 | [Felt AI](https://felt.com/platform/felt-ai)、[CARTO for Agents](https://carto.com/carto-for-agents/) | 商业平台；数据、权限、AI 配额和 MCP 能力依订阅方案而定 |
-| 自建 Web 地图，允许 Agent 改变地图状态 | [CARTO Agentic DeckGL](https://github.com/CartoDB/carto-agentic-deckgl)、[ArcGIS Maps SDK AI Components](https://developers.arcgis.com/javascript/latest/references/ai-components/) | 前者偏开发库；后者处于 Beta，当前数据能力有限 |
-| 遥感/卫星影像代码分析 | [Earth Engine Code Editor Assistant](https://developers.google.com/earth-engine/guides/code_editor_assistant)、[AWS Geospatial Power Pack](https://github.com/aws-samples/sample-geospatial-kiro-power-pack) | 前者辅助编写 Earth Engine 脚本；后者是 AWS 架构样例，需要自行部署和承担云成本 |
-| 需要完整应用或架构范例 | [OpenGIS](https://github.com/ATFfang/OpenGIS)、[AutoGIS](https://github.com/THU-ESIS/AutoGIS)、[AWS Geospatial Agent](https://github.com/aws-samples/sample-geospatial-agent-on-aws) | 开源完整项目成熟度不一；研究原型和云部署样例不宜直接视为生产替代品 |
+| 静态地图 | PNG、SVG、PDF、印刷版面、专题图集 | 报告、论文、会议、展板、打印地图 |
+| 可编辑 GIS 工程 | QGIS 项目与图层、打印布局、地图册 | 后续继续分析、改图例和符号、批量出图 |
+| 普通网页地图 | HTML、Leaflet/MapLibre/ArcGIS 应用、静态托管页面 | 展示位置、分层浏览、业务专题地图 |
+| 故事地图 | 图文叙事、滚动章节、地图游览、PDF 手册 | 新闻、教育、旅行、城市与环境叙事 |
+| 仪表板与地图产品 | 在线地图、数据图表、筛选器、地图工具 | 运营分析、选址、监测、协作 |
+| 时间与动画地图 | 时间轴、动态路径、场景动画、视频片段 | 迁移、交通、灾害演变、历史变化 |
+| 三维地图与地理场景 | 地球、地形、建筑、点云、3D Tiles | 城市数字孪生、地形观察、三维规划 |
+| 遥感与 GIS 分析成果 | 分类栅格、指数图、矢量结果、空间统计表 | 环境监测、土地覆盖、选址和科学分析 |
+| 艺术地图 | 插画、风格化路线图、虚构地理视觉 | 旅行纪念、内容配图、创意表达；未必适合测量或导航 |
 
-**最重要的区分**：地图渲染、POI/路线查询、GIS 空间分析是不同能力。评估时要先确认要处理的是在线地图服务数据，还是本地/仓库中的真实空间数据；再看产品是否提供空间 SQL、GIS 算法、栅格处理和坐标系支持。
+可把一条常见工作流理解为：
 
-## 二、工具类型与能力边界
+需求与空间数据 → AI 辅助建模/写代码/执行制图流程 → QGIS、GIS 库或地图 SDK 负责确定性运算和渲染 → 人工检查数据与视觉结果 → 导出项目、网页、图片、报告或动画
 
-| 类型 | 实际提供什么 | 典型例子 | 常见误区 |
+**Skill** 提供开发规则与领域知识；**MCP/CLI** 让开发 Agent 操作已有 GIS、运行工具或预览地图；**QGIS、GeoPandas、MapLibre、CesiumJS 等** 才负责实际的空间计算、渲染或应用运行。除非产品需求明确要求运行时自然语言交互，否则这些开发工具无需随最终地图一起部署。
+
+## 二、按目标选工具
+
+| 目标 | 优先候选 | 典型产物 | 判断 |
 |---|---|---|---|
-| Skill | 提示词、工作流程、API/代码知识，帮助 Agent 按约定完成任务 | Google Maps Agent Skills、Mapbox Agent Skills、CARTO Skills | 安装 Skill 不代表新增了可调用的地图数据或 GIS 执行环境 |
-| MCP Server | 将服务或软件功能包装成 Agent 可调用的结构化工具 | 高德 MCP、Mapbox MCP、QGIS MCP、CARTO MCP | MCP 工具列表决定实际能力；“支持地图”不代表支持任意空间分析 |
-| CLI | 可脚本化的命令行入口，适合本机自动化和组合流程 | 高德地图 CLI、CARTO CLI | CLI 可能控制浏览器地图状态，也可能调用数据服务，需看具体命令 |
-| Agent 产品 | 组合模型、工具、数据源、执行环境和地图 UI | Felt AI、GeoAgent、OpenGIS | Agent 输出仍可能选错图层、字段、算法、坐标系或参数 |
-| 地图/空间分析平台 | 提供确定性渲染、数据存储和分析算子 | QGIS、CARTO、ArcGIS、Google Earth Engine | 平台有 AI 助手不等于 AI 已覆盖所有平台能力 |
+| 从已有空间文件快速得到网页地图和报告图 | [Interactive Map Builder](https://github.com/xlbaoxl/interactive-map-builder) | 单文件 HTML、16:9 演示图、PNG/SVG/PDF、构建报告 | 与“AI 做开发/制图，交付普通文件”最匹配；新项目，先用样例数据验证 |
+| 要交付可继续编辑的 GIS 工程和印刷版式 | [QGIS + TerraLab AI Agent](https://plugins.qgis.org/plugins/AI_Agent/) 或 [QGIS Map Workflow Skill](https://github.com/maydengximin-sketch/qgis-map-workflow) | QGIS 工程、图层、打印布局、地图册、PNG/PDF | 适合桌面 GIS；插件和 Skill 需检查模型数据流、权限和版本 |
+| 已有 Web 项目，要 AI 正确写地图应用代码 | [MapLibre Agent Skills](https://github.com/maplibre/maplibre-agent-skills) + 可选 [MapLibre MCP](https://github.com/birkskyum/maplibre-mcp) | 普通 MapLibre/React/Vue/TS 代码、样式、预览图 | 开源栈；Skills 是知识文件，MCP 是开发期校验和预览 |
+| 选定商业地图 SDK | [Mapbox Agent Skills](https://github.com/mapbox/mapbox-agent-skills)、[Google Maps Agent Skills](https://github.com/googlemaps/agent-skills)、[Esri AI 开发指南](https://developers.arcgis.com/javascript/latest/ai-assisted-development/) | 常规 Web、移动端或空间分析应用代码 | 按现有平台选择；留意 API Key、使用费和官方支持边界 |
+| 做三维地球或 3D Tiles 应用 | [CesiumJS Agent Skills](https://github.com/CesiumGS/cesiumjs-skills) | 常规 CesiumJS 应用、三维场景和数据图层 | 官方领域 Skill；运行时 Agent 可选 |
+| 用现成 AI 产品快速做地图、图表或空间分析 | [Mappt](https://mappt.ai/)、[Felt AI](https://felt.com/platform/felt-ai)、[Mundi](https://docs.mundi.ai/)、[Scribble Maps](https://www.scribblemaps.com/) | 可分享的地图、地图仪表板、数据层和部分导出文件 | 节省搭建成本；SaaS 能力、额度、数据处理方式和可移植性各异 |
+| 做地图故事或图文内容 | [ArcGIS StoryMaps Assistant](https://doc.esri.com/en/arcgis-storymaps/latest/learn/arcgis-storymaps-assistant.html)、[GeoLibre Story Maps](https://geolibre.app/user-guide/storymaps/) | 发布故事地图、章节地图、PDF 手册或 HTML | 前者在成熟产品内辅助内容创作；后者适合项目文件和自托管工作流 |
+| 做遥感或时间序列空间分析 | [Earth Engine Code Editor Assistant](https://developers.google.com/earth-engine/guides/code_editor_assistant) | Earth Engine 脚本、地图图层、图表、影像导出或 Apps | AI 协助写脚本，计算仍由 Earth Engine 执行 |
+| 做地图动画或场景故事 | [MapStory](https://adigunturu.github.io/MapStory-UIST25/) | 可编辑地图动画序列 | UIST 2025 研究原型，适合参考，不应当作成熟生产软件 |
+| 做创意/插画式地图 | [MapToki](https://maptoki.com/en/about) | 风格化路线图、PNG/PDF 等视觉制品 | 适合创意表达；官方注明坐标为虚构，不能用于导航或地理分析 |
 
-可把所需能力粗分为三层：
+## 三、可直接使用 AI 辅助制图的产品
 
-| 能力层 | 例子 | 代表工具 |
+这些产品本身可能带有自然语言助手，但它们生成的地图仍可作为普通地图、图片、网页或可编辑项目交付；用户不一定需要在最终产品里保留对话 Agent。
+
+### 3.1 Interactive Map Builder：数据到 HTML 和报告图
+
+[Interactive Map Builder](https://github.com/xlbaoxl/interactive-map-builder) 是 Agent Skill 加 Python 确定性构建器。它接收 GeoJSON、GeoPackage、Shapefile、CSV、Excel 或 ArcGIS 数据，先检查输入和字段，再生成可检查的 MapSpec，最后通过引擎构建并验证地图。项目 README 当前列出 v0.7.0，并描述了离线诊断、构建报告、文件清单和验证步骤。
+
+- **交付**：包含数据的 Leaflet HTML；可选 16:9 PNG；出版用途 PNG、SVG、PDF；MapSpec、输入检查、构建报告和文件 manifest。
+- **适合**：把已有数据转成搜索/筛选地图、分层地图、演示用地图或出版插图；由 AI 产出需求与规格，由确定性程序完成地图。
+- **优势**：同一个 visual plan 驱动 HTML 与静态图，产物和构建检查可一起交付。交付网页不用携带聊天模型。
+- **限制**：项目较新，地图类型集中在现有数据驱动的地图展示，不是通用 Web GIS，也不负责复杂缓冲、路径规划、空间统计或 3D 地形；在线底图仍需网络。HTML 嵌入的要素包括隐藏和筛选掉的数据，分享前要检查敏感字段和数据公开范围。
+
+### 3.2 QGIS AI 插件：把自然语言转成工程和布局操作
+
+[AI Agent by TerraLab](https://plugins.qgis.org/plugins/AI_Agent/) 是 QGIS 插件目录中一个较完整的 AI 制图插件。目录页面当前列出 1.9.0，兼容 QGIS 3.28–4.x。厂商说明列有 227 个工具，覆盖数据查找、图层检查、Processing、样式、标签、几何编辑和打印布局；操作步骤可逐项查看、批准，并支持撤销。
+
+- **交付**：本机 QGIS 项目内的普通图层、符号、标签、布局和导出文件。
+- **适合**：已有 QGIS 工程，想用自然语言加快地图准备和处理流程。
+- **限制**：该插件和服务仍较新，结果要按 GIS 方法核验。插件页说明用户请求和打开项目描述会发给欧盟的服务，图层与文件留在本机；这属于厂商说明，敏感项目应复核其隐私条款和组织政策。
+
+另一个社区插件 [QGIS AI Agent（mzarov）](https://plugins.qgis.org/plugins/ai_agent/) 当前版本为 0.4.1，QGIS 要求 4.x。它读取项目、样式图层、运行 Processing、载入开放数据、建立打印布局；变更可先放在计划里，用户按 Apply 后再执行。插件页说明图层属性值、范围和地图渲染图等上下文会发往配置的模型，也可使用本地模型服务器。它更适合愿意检查项目上下文发送范围、并且能运行 QGIS 4 的用户。
+
+### 3.3 在线 AI 地图产品
+
+| 产品 | AI 在哪一步帮忙 | 地图/其他产物 | 适合与边界 |
+|---|---|---|---|
+| [Mappt](https://mappt.ai/how-it-works) | 上传文件、提供公开数据 URL 或描述目标后，识别地理字段、选择地图类型并设置样式 | 可分享的交互地图、多图层地图、图表/仪表板；官网列出 PNG、CSV、KML、Shapefile 导出 | 适合快速从表格和公开数据做地图；地图类型包括点、分级设色、热力和 3D 柱。它是较新的 SaaS，分析深度、导出和分享限制按当前产品套餐核实 |
+| [Felt AI](https://felt.com/platform/felt-ai) | 自然语言找数据、执行 buffer/join/SQL/旅行时间区等空间工作，生成地图样式、标签、弹窗、dashboard charts 或扩展 | 可分享、继续编辑的地图和仪表板，也可由 SDK/API 扩展地图应用 | 适合团队 Web GIS 和数据仓库工作流；厂商说明 SQL 查询步骤可审阅。商业平台，计划等级会影响连接、AI 使用和功能 |
+| [Mundi](https://docs.mundi.ai/) | 在开源 Web GIS 内用 LLM 调用地理处理算法、查询 PostGIS、编辑符号系统 | 可保存/分享的 Web GIS 地图；API 可创建地图、上传数据和渲染 | 支持矢量、栅格和点云；AGPLv3，可自托管并接本地 LLM。适合希望掌控部署的团队，但自托管需要维护运行环境 |
+| [Scribble Maps AI](https://help.scribblemaps.com/help/a/what-can-scribble-do-ai-capabilities-overview) | 对话帮助使用编辑工具、定位、绘制标记/形状/路线、改样式、过滤数据、创建缓冲区/服务区、添加数据 | 继续在 Scribble Maps 编辑和分享的地图；该产品提供多种地图数据导出 | 偏轻量地图编辑、区域划定和位置分析；它是完整 SaaS 编辑器，不等于可直接嵌入自己代码库的 GIS SDK |
+
+这类 SaaS 最好用自己的代表性数据做一轮试用，重点看：地理字段是否识别正确、分级方法是否可解释、样式和图例能否复用、输出是否可离线或自托管、数据是否会上传，以及更换平台时地图和数据能否迁出。
+
+### 3.4 故事、遥感与艺术地图
+
+- **ArcGIS StoryMaps Assistant**：辅助将图片转换为交互图表/表格，生成替代文本，分析故事的摘要、关键词、语言、地点、语气和可读性，并按关键词、描述或图片生成主题。输出仍是正常的 StoryMaps 故事、briefing 或 collection；AI 功能目前可能为 Preview/Beta，需要 ArcGIS Online 组织账户与管理员授权，部分能力只支持英文。官方提醒 AI 建议可能不准确。[功能和限制](https://doc.esri.com/en/arcgis-storymaps/latest/learn/arcgis-storymaps-assistant.html)
+- **Google Earth Engine Code Editor Assistant**：Gemini 辅助写、解释、调试和优化 GEE 脚本，可协助生成影像合成、NDVI、分类、图表和 Earth Engine App。实际空间计算由 GEE 执行，结果可以是图层、图表、导出影像或普通 GEE 应用；需提供 Gemini API key。每次请求会带上完整当前脚本、导入资产/几何及会话记录，需先评估上下文数据。[官方说明](https://developers.google.com/earth-engine/guides/code_editor_assistant)
+- **MapToki**：把文字或行程图转成风格化路线/旅行地图，适合海报、纪念品或内容配图。它属于创意制图，不应把视觉上像地图的输出当成真实测量、导航或 GIS 分析结果。[项目说明](https://maptoki.com/en/about)
+
+## 四、开发 Agent Skills、CLI 与 MCP
+
+这组适合让 AI 编写或审查地图产品代码。Skill 通常是 Markdown 说明，不直接负责地图渲染；MCP/CLI 可接文档、地图样式或测试预览。
+
+### 4.1 地图 Web 与移动端 SDK
+
+| 工具 | 开发期用途 | 安装/入口 | 适用边界 |
+|---|---|---|---|
+| [MapLibre Agent Skills](https://github.com/maplibre/maplibre-agent-skills) | 给代码 Agent 提供 MapLibre GL JS 制图、字体/glyph、数据源、PMTiles、地形、图标和版本迁移知识 | npx skills add maplibre/maplibre-agent-skills | 社区维护，生成的是普通 MapLibre 应用代码；自身不提供底图数据或 GIS 算法 |
+| [MapLibre MCP](https://github.com/birkskyum/maplibre-mcp) | 检查 MapLibre Style Spec、source/layer schema、渲染 PNG、查看图标缺失，并比较修改前后样式 | 可通过 npx 启动；支持 MCP 客户端时加入 Agent 的地图预览/校验环节 | 社区项目，适合“写代码→渲染检查→改代码”；不负责需求到产品的完整生成 |
+| [Mapbox Agent Skills](https://github.com/mapbox/mapbox-agent-skills) | Mapbox 官方 20 个 Markdown Skill，涵盖制图、token 安全、空间操作、样式质量、Web/移动 SDK | npx skills add mapbox/mapbox-agent-skills 或 Mapbox CLI 的 agent-skills install | 技能仓库公开且安装不需要 Mapbox token；应用使用 Mapbox 服务时仍需账号、API Key 并遵循其定价 |
+| [Google Maps Platform Agent Skills](https://github.com/googlemaps/agent-skills) | Maps/Places/Geocoding/Routes/3D/静态地图、聚合、样式、绘图等 Web、Android、iOS 和服务端开发指导 | npx skills add googlemaps/agent-skills | 该仓库明确声明不是 Google 官方支持产品。可结合 [Google Maps Code Assist MCP](https://developers.google.com/maps/ai/code-assist) 获取官方文档 grounding；该 MCP 仍是 experimental/pre-GA |
+| [CesiumJS Agent Skills](https://github.com/CesiumGS/cesiumjs-skills) | 14 类 CesiumJS 开发指导，覆盖 Viewer、相机、Entity、3D Tiles、地形、影像、空间计算、时间和 Shader | GitHub Skills 仓库/Agent Skills 客户端 | CesiumGS 领域技能；生成的是普通三维地球/场景应用，外部 Agent 不需要进入最终应用 |
+| [Esri AI-assisted development](https://developers.arcgis.com/javascript/latest/ai-assisted-development/) | Esri 官方按新建应用、扩展、SDK 升级和架构迁移组织 AI 开发流程，提供项目指令模板和验证清单 | 可给 Codex/Claude/Copilot 加项目级 instructions | 更像官方开发手册而非独立 Skill 包或开发 MCP；适用于 ArcGIS Maps SDK for JavaScript |
+
+### 4.2 CARTO 开发工具链
+
+[CARTO Agent Skills](https://github.com/CartoDB/agent-skills) 含应用开发、Builder 地图和空间分析等技能；例如 carto-develop-app 指导开发者用 TypeScript/JavaScript、deck.gl 和 CARTO 服务构建应用。[CARTO for Agents](https://carto.com/carto-for-agents/) 还组合 CLI 与 MCP，可协助在 CARTO 上构建地图、workflow 和应用。
+
+- **可得到的结果**：发布到 CARTO Builder 的普通地图、空间分析流程和应用；最终地图是否包含聊天 UI 由项目选择决定。
+- **适合**：数据已在 CARTO 支持的数据仓库/平台中，团队需要受权限治理的空间分析和可分享结果。
+- **限制**：商业平台、账号和仓库接入是前提；不等于可离线安装的通用制图工具。
+
+## 五、可参考的完整项目与输出流水线
+
+### 5.1 输出地图文件、图片和网页
+
+**Interactive Map Builder** 是目前调研中与“AI 帮助完成制图，但用户收到普通产物”最直接对应的开源实现。它的重点不是让最终读者和 Agent 对话，而是把需求压缩成可审核的 MapSpec，再用稳定构建器完成导出。适合作为输出目录结构、输入检查、构建报告和地图验收机制的参考。[仓库](https://github.com/xlbaoxl/interactive-map-builder)
+
+**QGIS Map Workflow** 是一份使用 QGIS MCP 驱动 QGIS 的社区 Skill。README 描述的工作流是检查坐标和数据、选择地图类型、应用制图规范、渲染截图自检，并交付可编辑 .qgz 工程、打印 layout 或 atlas。它支持专题图、比例符号、热力/hexbin、插值、地形、缓冲、流线和时间图等地图工作流；当前仓库体量很小（调研时 2 commits、3 stars），宜作为可参考的细致工作流草案，先在测试数据上验证，不能把 Skill 文档当成工具兼容性保证。[仓库](https://github.com/maydengximin-sketch/qgis-map-workflow)
+
+**GeoLibre** 是开源 GIS 应用而非单纯 AI 插件，支持浏览器、桌面、移动端和 Notebook。项目文档列出 AI Assistant、打印布局、Story Map、处理工具和多渲染器。Story Map 可以导出 HTML 和 PDF handout；也能把项目 JSON/外部 Skill 作为 Agent 开发入口。它适合需要从项目文件继续编辑、同时生成网页或故事手册的地图工作台参考。[GitHub](https://github.com/opengeos/GeoLibre) · [Story Maps 导出说明](https://geolibre.app/user-guide/storymaps/)
+
+**RustGIS** 是另一款开源 GIS 应用，附带 CLI、Agent Skill 和 MCP Relay。README 描述的常规 GIS 输出包括可编辑项目、PNG 地图、含图例/比例尺/地图系列的 PDF、HTML slideshow、独立网页地图及常见矢量/栅格格式。这里可以把 RustGIS 当成桌面 GIS/自动化工具直接使用，也可以借鉴“Agent 负责调度、GIS 工具负责空间运算和导出”的架构；调研时最新发行版为 0.3.0（2026-10-16），仍处于早期 0.x，应对重要成果做独立 GIS 核验。[GitHub](https://github.com/opengeos/RustGIS) · [Releases](https://github.com/opengeos/RustGIS/releases) · [CLI](https://github.com/opengeos/RustGIS/blob/main/docs/cli.md) · [布局与分享](https://rustgis.app/user-guide/layouts/)
+
+### 5.2 设计阶段生成普通网页地图
+
+| 项目 | 产物与可借鉴点 | 成熟度判断 |
 |---|---|---|
-| LBS/地图服务 | 地点搜索、正逆地理编码、路线、距离矩阵、天气、地图图片 | 高德、Mapbox、Google Maps、ArcGIS Location Services |
-| 交互式地图 | 图层样式、筛选、聚合、地图状态、弹窗、地图分享 | Felt、CARTO、Kepler.gl、MapLibre/Mapbox/ArcGIS SDK |
-| GIS 分析 | 缓冲区、叠加、空间连接、坐标变换、栅格计算、空间统计、网络可达性 | QGIS/GDAL、GeoPandas、PostGIS、CARTO Workflows、Earth Engine |
+| [LLMaps](https://github.com/greadr71/LLMaps) | 面向 LLM 代码生成的 Python MapLibre 接口；输出 HTML 地图，可组合 GeoJSON/API/矢量瓦片、H3、图例、弹窗、侧栏、搜索和故事文本 | 轻量社区项目；适合快速原型，不能当通用 GIS 或大数据平台 |
+| [json-maps](https://github.com/milind-soni/json-maps) | 用 schema 约束 JSON 地图配置，再由 React MapRenderer 渲染；可借鉴“让模型产出地图规格，而不是任意操作 DOM/JS”的做法 | 早期小项目；采用前需检查维护、数据规模和 API 稳定性 |
+| [QGIS2Web](https://github.com/qgis2web/qgis2web) | 将 QGIS 工程导出为 Leaflet 或 OpenLayers 网页地图，不需要服务端软件；可作为 AI 生成/修改 QGIS 工程后的确定性发布步骤 | 本身不是 AI 工具，但把可编辑 GIS 工程转成普通网页的路径成熟、清晰 |
+| [MapLibre + deck.gl](https://deck.gl/) | MapLibre 负责底图和应用，deck.gl 负责大规模点、轨迹、热图和专题层；适合作为 Agent 生成 Web 代码后的运行时引擎 | 底层技术栈，不是 AI 产品；仍要自己实现界面、业务逻辑和发布 |
+| [Kepler.gl](https://github.com/keplergl/kepler.gl) | 成熟的开源大数据地理可视化应用/React 组件，适合点、轨迹、热力及 H3/S2 聚合场景 | 本体成熟；其 AI Assistant 文档仍标注开发中，AI 特性不应假设稳定 |
 
-## 三、桌面 GIS 与本地数据 Agent
+### 5.3 故事动画、三维地球和带运行时 Agent 的参考项目
 
-### 3.1 QGIS MCP Plugin（nkarasiak）
+- **MapStory** 是 UIST 2025 论文中的研究原型：从脚本组织地图动画序列，将视角移动、地图高亮和动画元素放到可编辑时间线。适合参考“文本 → 场景 → 地图动画”的制作者工作流；目前是研究原型，不是常规可安装工具。[项目页](https://adigunturu.github.io/MapStory-UIST25/) · [论文](https://keiichiihara.github.io/paper/uist2025-mapstory.pdf)
+- **CesiumJS AI Starter App** 展示 Cesium 地球、聊天 Agent、工具调用和 CZML 场景生成。若最终产品不需要 Agent，可只参考 CesiumJS 场景与数据集成结构，不照搬聊天后端和模型调用。[仓库](https://github.com/CesiumGS/cesiumjs-ai-starter-app)
+- **CARTO agentic-deckgl** 展示运行时 Agent 如何以结构化工具操作 deck.gl 图层和地图状态。它是 Agent UI 集成参考，不是静态地图导出器；可以取其图层状态模型，最终产品照样只保留普通地图控件。[仓库](https://github.com/CartoDB/carto-agentic-deckgl)
+- **GeoAgent** 包含 QGIS、GeoPandas、leafmap/MapLibre 等地理空间 Agent 连接方式，适合参考数据与 GIS 工具编排；如果需求只是在开发期用代码 Agent 写地图，可复用数据适配和地图组件思路，不必引入运行时对话界面。[仓库](https://github.com/opengeos/GeoAgent)
 
-[GitHub 项目](https://github.com/nkarasiak/qgis-mcp) 与 [QGIS 官方插件目录](https://plugins.qgis.org/plugins/qgis_mcp_plugin/) 提供 QGIS 插件和 MCP Server 的组合。官方插件目录在 2026-10-17 标注版本 0.15.2，兼容 QGIS 3.28 至 4.x，并列出 118 个 MCP 工具。工具覆盖图层、要素、处理算法、渲染和布局等常见操作。
+## 六、实用工作流建议
 
-- **适合**：已有 QGIS 项目，想让 Claude、Codex 等 MCP 客户端查看图层、执行处理和输出地图。
-- **结构**：QGIS 插件连接正在运行的桌面应用，MCP Server 暴露操作；这是操控现有 GIS 的桥接方案，不是独立 GIS 平台。
-- **注意**：插件、Server 和客户端需正确连接；工具可能修改当前工程或文件，涉及覆盖、导出、批处理时应确认目标和参数。
-- **成熟度判断**：有官方 QGIS 插件目录发布记录，可作为优先试用对象；具体工具是否满足团队流程仍需在目标 QGIS 版本和数据上验证。
+1. **先确定交付形态**：打印地图、GIS 工程、故事地图、普通 HTML、数据仪表板、动画、3D 场景还是影像分析结果。不要先假设一定需要一个在线搜索地图。
+2. **再决定 AI 参与的位置**：
+   - 只需要开发者写应用代码：使用通用代码 Agent 加对应 SDK Skill。
+   - 需要操作真实空间数据和出版布局：以 QGIS/GeoLibre/RustGIS 为执行环境，用 Skill/MCP/插件辅助。
+   - 希望自然语言直接生成可分享地图：先试 Mappt、Felt、Mundi 等平台产品，检查能否导出所需文件。
+   - 需要可复现批量制图：把输入、数据字段映射、投影、地图类型、样式和导出参数存成 JSON/MapSpec/脚本。
+3. **用确定性引擎做核心空间计算**：让 AI 选择算法和生成参数，但缓冲、叠加、统计、栅格计算和最终渲染交给 QGIS/GDAL、GeoPandas、PostGIS、Earth Engine 或地图 SDK。
+4. **让 AI 预览，再由人检查**：地图样式 MCP、截图或 StoryMaps 预览可发现空图层、比例尺、图例遮挡和标签问题；空间结果仍要核验投影、单位、统计口径、分类断点与数据来源。
+5. **保留可复现的交付信息**：源数据版本、CRS、算法/参数、图例说明、地图主题、构建报告、导出文件和许可/署名信息。
+6. **检查公开与隐私边界**：本地工程是否将属性发送给模型、HTML 是否内嵌全量数据、第三方底图是否能离线、地图分享是否公开、平台是否允许导出和自托管。
 
-### 3.2 GeoAgent（OpenGeo）
+## 七、主要局限与成熟度说明
 
-[GeoAgent](https://github.com/opengeos/GeoAgent) 是 Python 地理空间 Agent 库，也有 [PyPI 包](https://pypi.org/project/GeoAgent/) 和 QGIS 插件。项目连接 QGIS、leafmap/anymap、STAC 和 NASA Earthdata 等地理空间工作流，并支持多种模型提供方。GitHub Releases 页面可查到 1.9.0 的发布记录；版本号以仓库当前 release 页面为准。
-
-- **适合**：希望在自己的 Python、Notebook、浏览器地图或 QGIS 里嵌入 Agent 工作流。
-- **优点**：比只提供 POI 查询的 MCP 更靠近 GIS 数据和地图应用开发；可把相同 Agent 思路接到不同地图界面。
-- **限制**：模型和数据连接需要自行配置；“支持某数据源”不代表开箱即用地获得其访问权限。QGIS 插件文档提到权限配置，其中信任模式可能允许自动批准，使用前应按最小权限配置。
-- **入口**：项目 README 提供 Python 安装与 UI 启动说明；安装命令和额外依赖以 [PyPI 安装说明](https://pypi.org/project/GeoAgent/) 为准。
-
-### 3.3 AgenticGIS 与其他 QGIS MCP 候选
-
-- [AgenticGIS](https://github.com/ultramenid/AgenticGIS)：面向 QGIS 的内部助手及本地 MCP 桥接，项目列出图层、处理算法、地图截图、栅格统计、布局导出等能力。其工具集包括执行 PyQGIS 代码的入口；README 描述 MCP 服务监听本机地址，但未提供认证机制。适合检查和试验，不要把“本地监听”误认为有完整权限隔离。
-- [QGIS-MCP（Aaa2122）](https://github.com/Aaa2122/QGIS-MCP)：较新的插件与桥接项目，声称提供 100 多个专业工具及可恢复的可视化流程。与官方插件目录中的项目是不同实现；先检查最近维护、工具 schema、文件副作用和执行模型，再决定是否用于真实工程。
-
-本地 QGIS 方案的共同优势是可以复用成熟 GIS 算子和已有数据；共同风险是 Agent 对本地工程和任意文件的操作边界。优先选择可枚举的类型化工具，避免不加审核地开放任意代码执行。
-
-## 四、在线 GIS 与团队产品
-
-### 4.1 Felt AI 与 Felt MCP
-
-[Felt AI](https://felt.com/platform/felt-ai) 面向在线地图与团队数据工作流，支持自然语言探索图层/数据、执行 SQL、解释查询，并制作地图、Dashboard 或扩展。其 [MCP Server 介绍](https://felt.com/blog/introducing-felt-mcp-server) 描述了约 30 个围绕地图、数据、SQL、分析、样式和协作的工具。产品说明强调 Agent 使用当前用户可访问的数据和权限；产品页还描述 SQL 为只读。
-
-- **适合**：需要协作式 Web GIS，数据已在 Felt 或可连接的数据源中，希望让 Agent 探索和整理地图。
-- **限制**：它是平台型产品，并非本地 QGIS 的 MCP 替代；不同 AI 配额和 MCP 能力受订阅方案影响。
-- **价格快照**：Felt [定价页](https://felt.com/pricing) 于 2026-10-24 检查时列出 Business 和 Enterprise 方案提供 MCP；Team 展示 AI 配额但不包含 MCP。页面列示的年付价格分别约为 Business 599 美元/月、Enterprise 起价 1,250 美元/月；该页面可能调整，采购前请重查。
-
-### 4.2 CARTO for Agents、Workflows 与 Agentic DeckGL
-
-[CARTO for Agents](https://carto.com/carto-for-agents/) 将 CARTO 的云 GIS、数据仓库连接、Agent Skills、CLI 和托管 MCP 组合起来；[官方文档](https://docs.carto.com/carto-mcp-server/carto-mcp-server) 说明 MCP 可将 CARTO Workflows 暴露成 Agent 工具。这样团队可把空间分析流程做成有明确输入/输出的可复用工具，而不只依赖提示词临时拼查询。官方 [Agent Skills 仓库](https://github.com/CartoDB/agent-skills) 提供 20 多个技能，覆盖 Builder 地图、空间分析和常见地理工作流。
-
-- **适合**：空间数据已在支持的数据仓库/平台中，团队要治理查询权限、共享工作流和复用空间分析。
-- **特点**：CARTO 文档把模型、语义层、工具和数据访问视为 Agent 组成部分；Workflows 可用作同步或异步 MCP 工具。厂商说明查询在客户数据仓库内执行，实际权限仍取决于连接账号和仓库配置。
-- **限制**：商业平台，需评估仓库兼容、部署、权限、费用和数据连接；不是一个可离线运行的通用 GIS Agent。
-
-若要在自建前端中允许 Agent 调整地图，[@carto/agentic-deckgl](https://github.com/CartoDB/carto-agentic-deckgl) 是相对小而聚焦的 TypeScript 库：把自然语言操作收敛成地图状态、标记和遮罩图层等结构化动作，并提供多种 Agent 框架适配示例。官方文档强调地图状态由前端执行，模型不直接访问用户数据；它解决的是“安全地控制地图 UI”，不负责完整 GIS 运算。
-
-## 五、地图服务的 MCP、CLI 和 Skill
-
-| 工具 | 形式 | 已公开的主要能力 | 关键限制 |
-|---|---|---|---|
-| [高德地图](https://lbs.amap.com/api/mcp-server/summary) | 托管/本地 MCP、CLI、Skill | POI、地理编码、天气、步行/骑行/驾车/公交路线、距离、行程链接 | 面向中国 LBS 和地图展示；不是本地矢量/栅格分析环境 |
-| [Mapbox](https://github.com/mapbox/mcp-server) | MCP、CLI、20 个官方 Agent Skills | Geocoding、Places、Directions、Matrix、Route Optimization、Map Matching、Isochrone、静态/交互地图 | 需 Mapbox Token；请求会调用 Mapbox 服务并按服务条款/用量计费 |
-| [Google Maps Grounding Lite](https://developers.google.com/maps/ai/grounding-lite?hl=en) | Gemini API 工具 | 地点搜索、天气、步行/驾车路线和距离/耗时 | 不提供通用 GIS，也不等同于实时导航、逐向语音和实时交通产品 |
-| [ArcGIS Location Services MCP](https://www.esri.com/arcgis-blog/products/platform/developers/mcp-support-beta-and-arcgis-static-maps-service-in-arcgis-location-platform-release) | 托管 MCP（Beta/Early Access） | 地理编码、路线、高程、静态地图等 Location Services | 2026-06 公告时为早期测试阶段；服务调用仍按 ArcGIS 服务规则计费 |
-| [Cesium ion MCP](https://cesium.com/learn/ion/mcp/) | 托管 MCP | 搜索、查看、上传和管理 3D 地理资产，处理 tiling/标签及 Bentley iModels | 面向 3D 地理资产平台管理，不是通用 GIS 空间分析器 |
-
-### 5.1 高德地图
-
-高德提供相对完整的国内地图 Agent 入口：[MCP 快速开始](https://lbs.amap.com/api/mcp-server/gettingstarted)、[能力列表](https://lbs.amap.com/api/mcp-server/summary)、[地图 CLI 安装](https://lbs.amap.com/api/cli/map-cli/install)、[CLI 命令参考](https://lbs.amap.com/api/cli/map-cli/reference) 和 [Skill 说明](https://lbs.amap.com/api/skill/ready-to-use/summary)。官方文档列出的本地 MCP 包为 @amap/amap-maps-mcp-server；托管 MCP 使用 API Key。CLI 可控制地图 UI、POI 和路线，Skills 分别偏向 JSAPI 开发和 LBS 搜索/路线/出行规划。
-
-适合中文地点查询、国内出行和高德地图页面操作。API Key 和安全密钥需要按官方要求配置，确认调用额度与费用；地图 UI 自动化和空间数据分析是两回事。
-
-### 5.2 Mapbox
-
-[Mapbox MCP Server](https://github.com/mapbox/mcp-server) 提供本地 npm 包和托管 MCP，覆盖搜索、地理编码、路线、等时圈、匹配及地图输出。官方 [CLI MCP 文档](https://docs.mapbox.com/cli/reference/mcp/) 可配置托管端点，[Agent Skills 文档](https://docs.mapbox.com/cli/reference/agent-skills/)列出官方技能。npm 页面在 2026-10-24 显示 @mapbox/mcp-server 0.16.0；版本变化应以 [npm 包页](https://www.npmjs.com/package/@mapbox/mcp-server) 和 GitHub 为准。
-
-适合面向全球的在线地点/路线和 Mapbox 前端开发。它的 isochrone、矩阵和优化能力属于服务 API；若要在任意本地数据上做叠加、栅格运算或空间统计，仍需另接 GIS 引擎。
-
-### 5.3 Google Maps、ArcGIS 与 Cesium
-
-- Google Maps [Grounding Lite](https://developers.google.com/maps/ai/grounding-lite?hl=en) 是给 Gemini Agent 提供地图 grounding 的服务工具，不是通用地图分析桌面软件。[Agentic UI Toolkit](https://developers.google.com/maps/ai/agentic-ui-toolkit?hl=en) 可为 Agent 输出地点卡片、地图和路线 UI，目前官方标为实验性；Google Maps [Agent Skills](https://github.com/googlemaps/agent-skills) 主要提供开发知识，仓库声明它不是 Google 官方支持产品。
-- Esri 的 [ArcGIS Maps SDK AI Components](https://developers.arcgis.com/javascript/latest/references/ai-components/) 可为 Web Map 加入导航、数据探索和帮助类 Agent UI，目前为 Beta；官方 setup 文档说明当前面向 Feature Layer，并依赖图层/字段说明与 embeddings。它适合 ArcGIS Web 应用开发，不代表 ArcGIS Pro 的全部工具已经可以由 Agent 调用。
-- [Cesium ion MCP](https://cesium.com/blog/2026/10/12/introducing-the-cesium-ion-mcp-server/) 于 2026-10 发布，适合 3D Tiles、资产发现和 Cesium ion 管理流程。将它看作 3D 地理资产工作台集成，而不是分析能力全面的 GIS Agent。
-
-### 5.4 可直接参考的接入入口
-
-安装/配置入口以官方文档为准，以下仅列调研时看到的官方路径：
-
-| 用途 | 入口 |
-|---|---|
-| 高德本地 MCP | npm 包 @amap/amap-maps-mcp-server；官方 MCP 文档还提供托管端点 |
-| 高德地图 UI CLI | npm 包 @amap-lbs/amap-gui；全局安装后按官方文档配置 AMAP_KEY 和安全密钥，再运行 amap-gui start |
-| Google Maps API 编码辅助 Skill | npx skills add googlemaps/agent-skills；它提供 API 开发指导，不会自动提供地图数据权限 |
-| Mapbox MCP/Skills | 官方 npm 包 @mapbox/mcp-server；使用 Mapbox CLI 的 MCP 和 Skills 文档配置 Token 与客户端 |
-| GeoAgent Python | PyPI GeoAgent；项目文档给出 UI、地图适配器及模型提供方的可选依赖 |
-| QGIS MCP | 先在 QGIS 插件管理器中安装 QGIS MCP Plugin，再按 GitHub README 配置 MCP Server 和 Agent 客户端 |
-| CARTO Skills/CLI/MCP | 按 CARTO 官方 Agent Skills、CLI 和 MCP 文档安装；使用前确认平台/仓库连接和订阅能力 |
-
-## 六、遥感与开发者工具
-
-### 6.1 Google Earth Engine Code Editor Assistant
-
-[Earth Engine Code Editor Assistant](https://developers.google.com/earth-engine/guides/code_editor_assistant) 在 Code Editor 中提供 Gemini 助手，可编写、解释、调试和优化 Earth Engine 脚本，并查询文档或数据目录。它能看到当前脚本、导入资产和对话上下文；官方说明需要用户提供 Gemini API Key。生成的代码仍要检查后运行，数据集筛选、云掩膜、投影、时间窗和统计口径不能只靠自然语言描述。
-
-适合已经使用 Earth Engine 的遥感工作者加速脚本迭代；不是任意本地卫星影像的自动处理器，也不是通用 Web 地图制作 Agent。
-
-### 6.2 AWS Geospatial Kiro Power Pack
-
-[AWS Geospatial Power Pack](https://github.com/aws-samples/sample-geospatial-kiro-power-pack) 是模块化 Agent 工具与 Skills 样例，包含 MCP Server、共享地理空间代码、Skills/Steering 和 AWS 执行环境，涉及 STAC、矢量处理及基础模型等模块。仓库说明部分包通过本地仓库路径调用，未发布到 PyPI；应按仓库指引克隆并运行，不要把它当成可直接从公共包仓库安装的成品。
-
-适合参考如何把地理空间工具拆成 MCP 模块并与云执行环境集成。需要评估 AWS 资源、权限、部署和费用，不适合只想快速本机画图的用户。
-
-## 七、完整项目与地图项目参考
-
-| 项目 | 项目形态 | 适合参考的部分 | 成熟度/限制 |
-|---|---|---|---|
-| [OpenGIS](https://github.com/ATFfang/OpenGIS) | Electron + React/TypeScript + MapLibre，配 Python FastAPI sidecar 和模型层 | 桌面地图、Python 空间分析、工作流 DAG、可复用操作、后台任务、权限和报告/布局 | README 表示仍在积极开发；架构参考价值高，不能默认替代 QGIS/ArcGIS |
-| [AutoGIS](https://github.com/THU-ESIS/AutoGIS) | 研究型自然语言 GIS 应用 | 数据检索、OSM/边界/遥感数据获取、PyQGIS 生成执行、FastAPI/WebSocket 和 Vue/MapLibre | 研究/教育原型；生成代码可访问本机文件和进程，部署边界要严格 |
-| [GeoAgents](https://github.com/juaquicar/GeoAgents) | Django Agent 后端 | 计划—执行—验证—重规划循环、工具调用记录、空间查询/邻近/相交/网络追踪 | 实验项目，偏后端 Agent 编排，没有完整地图编辑 UI |
-| [GeoSpark](https://github.com/Maz2580/geospark) | Python 库、CLI、REST、MCP 和 Web Playground | 把几何、路由、可达性、STAC 等工具暴露给多种 Agent 入口 | PyPI 页面显示 0.9.0 Alpha（2026-10-23）；适合作为早期试用候选，不应仅凭功能清单认为稳定 |
-| [AWS Geospatial Agent on AWS](https://github.com/aws-samples/sample-geospatial-agent-on-aws) | 完整云端遥感 Agent 样例 | Sentinel-2 NDVI/NDWI/NBR、OSM、Amazon Location MCP、TiTiler、React/MapLibre 与 Bedrock/AgentCore | 需要 AWS 部署和资源，样例涉及云成本；适合架构参考或云端原型 |
-| [Kepler.gl](https://github.com/keplergl/kepler.gl) | 成熟开源大数据地图可视化应用/组件 | 点、轨迹、热力、H3/S2 聚合、MapLibre/deck.gl 与 React 嵌入 | 核心是地图可视化，不是完整 AI GIS Agent；官方 AI Assistant 文档标注仍在开发中 |
-
-### 7.1 项目选择建议
-
-- **要改造现有 QGIS 流程**：先验证官方目录中的 QGIS MCP Plugin；需要 Python Agent/多地图后端时再评估 GeoAgent。
-- **要做独立桌面 GIS Agent**：OpenGIS 的模块划分值得参考；AutoGIS 的自然语言到 PyQGIS 链路值得作为研究范例，但不应直接放宽执行权限。
-- **要遥感云工作流**：用 AWS Geospatial Agent 或 Power Pack 学架构；若目标就是 Earth Engine 数据分析，先从 Code Editor Assistant 开始，部署面更小。
-- **要数据量大的交互式专题地图**：Kepler.gl 是成熟渲染和交互参考；AI 能力需自己接入，不能假设其 AI Assistant 已成熟可用。
-- **要 MCP 几何算子快速试验**：GeoSpark 等 Alpha 项目可以用于沙箱评估，先检查依赖、工具 schema、数据写入行为和版本维护。
-
-## 八、按场景选型
-
-| 用户实际目标 | 推荐起点 | 第二选择 | 先确认的问题 |
-|---|---|---|---|
-| “帮我理解本地 GeoPackage/Shapefile 并做缓冲/叠加” | QGIS MCP Plugin + QGIS | GeoAgent | 是否本机运行、是否需要写回原文件、坐标系和单位是否明确 |
-| “按中文描述找店、规划出行并显示到地图” | 高德 MCP/CLI | Google Maps Grounding Lite、Mapbox | 覆盖地区、地图服务账号、实时交通/路线需求、API 预算 |
-| “分析数仓里的门店和订单空间分布” | CARTO Workflows/MCP | Felt AI | 数据仓库、SQL 权限、数据驻留、订阅价格、查询成本 |
-| “做一个能听 Agent 指令改图层和视角的前端” | CARTO Agentic DeckGL | ArcGIS JS AI Components（Beta） | 地图 SDK、Agent 框架、是否需要用户数据进入模型上下文 |
-| “分析卫星影像并生成 NDVI 图” | Google Earth Engine Assistant | AWS Geospatial Agent 样例 | 影像源、云掩膜、时间窗口、运行额度、数据/代码是否上传 |
-| “想建完整的开源地图 Agent 产品” | 参考 OpenGIS 的前后端/工作流切分 | AutoGIS、AWS Agent 样例 | 数据获取、GIS 引擎、代码执行隔离、权限、成本和回滚设计 |
-
-## 九、试用前的核对清单
-
-1. **先列出要操作的数据和工具**：在线 POI/路线还是本地文件/数据库；是否要栅格、空间统计、空间 SQL；输出是地图、报表还是可复现分析。
-2. **核实数据与坐标系**：字段含义、坐标参考系、单位、无效几何、时间范围、空间分辨率和数据许可。Agent 可以辅助解释，但这些元数据应由数据本身或权威目录确认。
-3. **核实执行边界**：哪些调用只读，哪些会修改工程、覆盖文件、执行任意代码或产生云任务；本机 MCP 是否有鉴权；是否需要先确认再写入/导出。
-4. **核实模型上下文与密钥**：发送给模型的可能包括提示、字段名、查询、地址、坐标、脚本或地图状态。使用前看产品隐私/数据处理说明，API Key 只按官方方式存放。
-5. **检查空间结果而非只看地图效果**：对照原数据、坐标系、参数和统计口径；抽样核验缓冲距离、路线、空间连接数量、栅格统计和聚合结果。
-6. **记录可复现信息**：保留输入数据版本、工具/算法名、参数、查询或脚本、输出坐标系和时间戳。地图“看起来合理”不等于空间分析结果正确。
-
-## 十、社区发现入口与调研方法
-
-[Sparkgeo geo-mcp-servers](https://github.com/sparkgeo/geo-mcp-servers) 是社区维护的地理空间 MCP 目录。README 在调研时列出 109 个 Server、12 个分类，并标注活跃状态/检查信息。它适合继续发现候选项目，但目录收录不构成代码审计、质量背书或维护承诺。可用它筛选后再检查仓库的最近提交、发布记录、许可证、MCP schema、依赖和安全说明。
-
-本报告优先选取能找到官方仓库、插件目录、npm/PyPI 页面或厂商文档的项目。报告中的“适合”是依据公开能力描述做的选型建议，不代表已在本机实测；项目数量、安装命令、套餐和 Beta 状态可能快速变化。开始集成前，请再次检查对应项目的发布页和官方文档。
+- **“会画图”不等于“分析正确”**：Agent 可误判经纬度列、投影单位、分类字段和数值分布。要复核原始数据与空间方法，尤其是距离、面积、插值和时序分析。
+- **图面质量与数据正确性是两道检查**：即使截图整洁，也可能有错位、遗漏、错误比例尺、误导性的分类断点或缺失数据。
+- **产品能力存在平台边界**：SaaS 导出、共享、数据连接和 AI 配额常与套餐关联；地图 SDK 的服务 token、瓦片和 API 调用也可能计费。
+- **Skill 与 MCP 不是魔法执行器**：Skill 的质量取决于指令和适用版本；MCP 工具需看 schema 和副作用；地图 Agent 是否能操作本地文件，取决于接入方式和执行权限。
+- **社区项目不应用 star 数当质量背书**：本报告将成熟度描述为“官方支持/社区维护/早期/研究原型”等。Interactive Map Builder、QGIS Map Workflow 等公开仓库提供了较具体的构建流程，但仍需在目标数据和环境实测。
+- **不要求运行时 AI**：只把需求分析、地图配置生成、样式检查和数据准备放在开发阶段时，最终网页可不请求模型、不部署 Agent 服务，也不要求最终用户安装 MCP。
 
 ## 主要来源
 
-- QGIS MCP Plugin：[GitHub](https://github.com/nkarasiak/qgis-mcp) · [QGIS 官方插件目录](https://plugins.qgis.org/plugins/qgis_mcp_plugin/)
-- GeoAgent：[GitHub](https://github.com/opengeos/GeoAgent) · [PyPI](https://pypi.org/project/GeoAgent/) · [Releases](https://github.com/opengeos/GeoAgent/releases)
-- AgenticGIS：[GitHub](https://github.com/ultramenid/AgenticGIS)；QGIS-MCP：[GitHub](https://github.com/Aaa2122/QGIS-MCP)
-- Felt：[AI 产品介绍](https://felt.com/platform/felt-ai) · [MCP 介绍](https://felt.com/blog/introducing-felt-mcp-server) · [定价](https://felt.com/pricing)
-- CARTO：[For Agents](https://carto.com/carto-for-agents/) · [MCP 文档](https://docs.carto.com/carto-mcp-server/carto-mcp-server) · [Agent Skills](https://github.com/CartoDB/agent-skills) · [Agentic DeckGL](https://github.com/CartoDB/carto-agentic-deckgl)
-- 高德：[MCP 能力](https://lbs.amap.com/api/mcp-server/summary) · [MCP 快速开始](https://lbs.amap.com/api/mcp-server/gettingstarted) · [CLI 安装](https://lbs.amap.com/api/cli/map-cli/install) · [Skills](https://lbs.amap.com/api/skill/ready-to-use/summary)
-- Mapbox：[MCP Server](https://github.com/mapbox/mcp-server) · [MCP CLI 文档](https://docs.mapbox.com/cli/reference/mcp/) · [Agent Skills](https://docs.mapbox.com/cli/reference/agent-skills/) · [npm](https://www.npmjs.com/package/@mapbox/mcp-server)
-- Google：[Maps Grounding Lite](https://developers.google.com/maps/ai/grounding-lite?hl=en) · [Agentic UI Toolkit](https://developers.google.com/maps/ai/agentic-ui-toolkit?hl=en) · [Maps Agent Skills](https://github.com/googlemaps/agent-skills) · [Earth Engine Assistant](https://developers.google.com/earth-engine/guides/code_editor_assistant)
-- Esri：[ArcGIS JS AI Components](https://developers.arcgis.com/javascript/latest/references/ai-components/) · [Web Map 配置](https://developers.arcgis.com/javascript/latest/agentic-apps/ai-webmap-setup/) · [Location Services MCP 公告](https://www.esri.com/arcgis-blog/products/platform/developers/mcp-support-beta-and-arcgis-static-maps-service-in-arcgis-location-platform-release)
-- Cesium：[ion MCP](https://cesium.com/learn/ion/mcp/) · [发布公告](https://cesium.com/blog/2026/10/12/introducing-the-cesium-ion-mcp-server/)
-- 参考项目：[OpenGIS](https://github.com/ATFfang/OpenGIS) · [AutoGIS](https://github.com/THU-ESIS/AutoGIS) · [GeoAgents](https://github.com/juaquicar/GeoAgents) · [GeoSpark](https://github.com/Maz2580/geospark) · [AWS Geospatial Agent](https://github.com/aws-samples/sample-geospatial-agent-on-aws) · [AWS Power Pack](https://github.com/aws-samples/sample-geospatial-kiro-power-pack) · [Kepler.gl](https://github.com/keplergl/kepler.gl)
-- 社区目录：[Sparkgeo geo-mcp-servers](https://github.com/sparkgeo/geo-mcp-servers)
+- 直接生成网页和出版图：[Interactive Map Builder](https://github.com/xlbaoxl/interactive-map-builder) · [GeoLibre](https://github.com/opengeos/GeoLibre) · [RustGIS](https://github.com/opengeos/RustGIS)
+- QGIS 助手：[TerraLab QGIS 插件](https://plugins.qgis.org/plugins/AI_Agent/) · [mzarov QGIS 插件](https://plugins.qgis.org/plugins/ai_agent/) · [QGIS Map Workflow Skill](https://github.com/maydengximin-sketch/qgis-map-workflow) · [QGIS2Web](https://github.com/qgis2web/qgis2web)
+- 地图开发 Skills：[MapLibre](https://github.com/maplibre/maplibre-agent-skills) · [Mapbox](https://github.com/mapbox/mapbox-agent-skills) · [Google Maps](https://github.com/googlemaps/agent-skills) · [CesiumJS](https://github.com/CesiumGS/cesiumjs-skills) · [Esri AI 开发指南](https://developers.arcgis.com/javascript/latest/ai-assisted-development/)
+- 地图预览与应用：[MapLibre MCP](https://github.com/birkskyum/maplibre-mcp) · [CARTO Agent Skills](https://github.com/CartoDB/agent-skills) · [CARTO for Agents](https://carto.com/carto-for-agents/) · [Kepler.gl](https://github.com/keplergl/kepler.gl)
+- AI 制图产品：[Mappt](https://mappt.ai/how-it-works) · [Felt AI](https://felt.com/platform/felt-ai) · [Mundi](https://docs.mundi.ai/) · [Scribble Maps](https://help.scribblemaps.com/help/a/what-can-scribble-do-ai-capabilities-overview) · [ArcGIS StoryMaps Assistant](https://doc.esri.com/en/arcgis-storymaps/latest/learn/arcgis-storymaps-assistant.html)
+- 遥感、动画与三维：[Earth Engine Assistant](https://developers.google.com/earth-engine/guides/code_editor_assistant) · [MapStory](https://adigunturu.github.io/MapStory-UIST25/) · [CesiumJS AI Starter App](https://github.com/CesiumGS/cesiumjs-ai-starter-app) · [CARTO agentic-deckgl](https://github.com/CartoDB/carto-agentic-deckgl) · [MapToki](https://maptoki.com/en/about)
