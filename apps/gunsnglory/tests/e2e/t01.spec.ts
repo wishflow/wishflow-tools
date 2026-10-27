@@ -12,7 +12,7 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   const colorCount = await canvas.evaluate((element) => {
     const context = (element as HTMLCanvasElement).getContext('2d');
     if (!context) return 0;
-    const pixels = context.getImageData(240, 16, 544, 544).data;
+    const pixels = context.getImageData(0, 0, 1024, 576).data;
     const colors = new Set<string>();
     for (let index = 0; index < pixels.length; index += 64) {
       colors.add([pixels[index], pixels[index + 1], pixels[index + 2]].join(','));

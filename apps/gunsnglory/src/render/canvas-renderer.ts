@@ -1,4 +1,5 @@
 import type { Direction, EnemyView, GameView, RenderTile } from '../game';
+import { calculateMapViewport, type MapViewport } from './map-viewport';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
@@ -15,21 +16,21 @@ export function resizeCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2
   return context;
 }
 
-export function getMapOrigin(view: GameView): { x: number; y: number } {
-  const worldWidth = view.map.width * view.map.tileSize;
-  const worldHeight = view.map.height * view.map.tileSize;
-  return {
-    x: (GAME_VIEWPORT.width - worldWidth) / 2,
-    y: (GAME_VIEWPORT.height - worldHeight) / 2,
-  };
+export function getMapViewport(view: GameView): MapViewport {
+  return calculateMapViewport(
+    view.map.width,
+    view.map.height,
+    GAME_VIEWPORT.width,
+    GAME_VIEWPORT.height,
+    view.map.tileSize,
+  );
 }
 
 function drawTiles(
   context: CanvasRenderingContext2D,
   tiles: readonly RenderTile[],
   images: GameImages,
-  tileSize: number,
-  origin: { x: number; y: number },
+  viewport: MapViewport,
 ): void {
   for (const tile of tiles) {
     const image = images[tile.asset];
@@ -40,10 +41,10 @@ function drawTiles(
       tile.source.y,
       tile.source.width,
       tile.source.height,
-      origin.x + tile.x * tileSize,
-      origin.y + tile.y * tileSize,
-      tile.width * tileSize,
-      tile.height * tileSize,
+      viewport.origin.x + tile.x * viewport.tileSize,
+      viewport.origin.y + tile.y * viewport.tileSize,
+      tile.width * viewport.tileSize,
+      tile.height * viewport.tileSize,
     );
   }
 }
@@ -58,26 +59,29 @@ function drawEnemy(
   context: CanvasRenderingContext2D,
   enemy: EnemyView,
   images: GameImages,
-  origin: { x: number; y: number },
+  viewport: MapViewport,
 ): void {
   const image = images[enemy.asset];
   if (!image) throw new Error('Missing game image: ' + enemy.asset);
 
-  const width = 16;
-  const height = 24;
-  const centerX = origin.x + (enemy.positionFine.x / 240) + 16;
-  const feetY = origin.y + (enemy.positionFine.y / 240) + 16;
+  const sourceWidth = 16;
+  const sourceHeight = 24;
+  const tileScale = viewport.scaleFactor;
+  const width = sourceWidth * tileScale;
+  const height = sourceHeight * tileScale;
+  const centerX = viewport.origin.x + (enemy.positionFine.x / 240 + 16) * tileScale;
+  const feetY = viewport.origin.y + (enemy.positionFine.y / 240 + 16) * tileScale;
   const left = centerX - width / 2;
   const top = feetY - height;
-  const sourceX = (enemy.animationFrame % 3) * width;
-  const sourceY = spriteRow(enemy.direction) * height;
+  const sourceX = (enemy.animationFrame % 3) * sourceWidth;
+  const sourceY = spriteRow(enemy.direction) * sourceHeight;
 
   context.save();
   if (enemy.direction === 'west') {
     context.translate((left * 2) + width, 0);
     context.scale(-1, 1);
   }
-  context.drawImage(image, sourceX, sourceY, width, height, left, top, width, height);
+  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, width, height);
   context.restore();
 }
 
@@ -91,20 +95,22 @@ export function drawGame(
   context.fillStyle = '#1a1712';
   context.fillRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
 
-  const origin = getMapOrigin(view);
-  const tileSize = view.map.tileSize;
-  drawTiles(context, view.map.background, images, tileSize, origin);
-  drawTiles(context, view.map.streets, images, tileSize, origin);
+  const viewport = getMapViewport(view);
+  context.beginPath();
+  context.rect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
+  context.clip();
+  drawTiles(context, view.map.background, images, viewport);
+  drawTiles(context, view.map.streets, images, viewport);
 
   for (const unit of view.units) {
-    const left = origin.x + unit.render.x * tileSize;
-    const top = origin.y + unit.render.y * tileSize;
-    const width = unit.render.width * tileSize;
-    const height = unit.render.height * tileSize;
+    const left = viewport.origin.x + unit.render.x * viewport.tileSize;
+    const top = viewport.origin.y + unit.render.y * viewport.tileSize;
+    const width = unit.render.width * viewport.tileSize;
+    const height = unit.render.height * viewport.tileSize;
 
     if (unit.selected) {
       context.beginPath();
-      context.ellipse(left + width / 2, top + height - 1, width * 0.6, tileSize * 0.2, 0, 0, Math.PI * 2);
+      context.ellipse(left + width / 2, top + height - 1, width * 0.6, viewport.tileSize * 0.2, 0, 0, Math.PI * 2);
       context.fillStyle = 'rgba(255, 196, 70, 0.8)';
       context.fill();
     }
@@ -128,15 +134,15 @@ export function drawGame(
       context.lineWidth = 2;
       context.setLineDash([5, 3]);
       context.strokeRect(
-        origin.x + unit.hitArea.x * tileSize,
-        origin.y + unit.hitArea.y * tileSize,
-        unit.hitArea.width * tileSize,
-        unit.hitArea.height * tileSize,
+        viewport.origin.x + unit.hitArea.x * viewport.tileSize,
+        viewport.origin.y + unit.hitArea.y * viewport.tileSize,
+        unit.hitArea.width * viewport.tileSize,
+        unit.hitArea.height * viewport.tileSize,
       );
       context.setLineDash([]);
     }
   }
 
-  for (const enemy of view.enemies) drawEnemy(context, enemy, images, origin);
+  for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
   context.restore();
 }

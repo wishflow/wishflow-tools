@@ -1,8 +1,10 @@
 import '@wishflow/site-shell';
 import { getLanguage, registerMessages, subscribeLanguage } from '@wishflow/site-shell';
-import { createBrowserGame } from './bootstrap/browser';
-import { drawGame, GAME_VIEWPORT, getMapOrigin, resizeCanvas } from './render/canvas-renderer';
+import { createBrowserGame, createBrowserProgress } from './bootstrap/browser';
+import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
+import { screenToMapCell } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
+import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import type { GameIntent } from './game';
 import { messages } from './locales';
 import './styles.css';
@@ -25,6 +27,12 @@ app.innerHTML = [
   '    <div class="game-controls">',
   '      <p data-testid="selection-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="wave-status" role="status" aria-live="polite"></p>',
+  '      <label class="simulation-speed-control" for="simulation-speed">',
+  '        <span id="simulation-speed-label">Simulation speed</span>',
+  '        <input id="simulation-speed" data-testid="simulation-speed" aria-labelledby="simulation-speed-label" type="range" min="0.25" max="4" step="0.25" value="1" disabled>',
+  '        <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
+  '      </label>',
+  '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="start-wave">Start one pioneer sample</button>',
   '      <button type="button" data-action="clear-selection">Clear selection</button>',
   '    </div>',
@@ -38,20 +46,32 @@ registerMessages('gunsnglory', messages);
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const statusElement = app.querySelector<HTMLElement>('[data-testid="selection-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
+const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
+const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
+const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
-if (!canvasElement || !statusElement || !waveStatusElement || !clearButton || !startWaveButton) {
+if (!canvasElement || !statusElement || !waveStatusElement || !settingsStatusElement
+  || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
 const status: HTMLElement = statusElement;
 const waveStatus: HTMLElement = waveStatusElement;
+const settingsStatus: HTMLElement = settingsStatusElement;
+const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
+const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
 
 const game = createBrowserGame();
+const progress = createBrowserProgress();
 const session = await game.open({ scenarioId: 'cow-gulch' });
 let view = session.observe();
 let context: CanvasRenderingContext2D | undefined;
+let simulationSpeed = DEFAULT_SIMULATION_SPEED;
+let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | undefined;
+let settingsSaveSequence = 0;
+const simulationTime = new SimulationTimeAccumulator();
 const languageMessages = {
   en: {
     none: 'No unit selected',
@@ -60,6 +80,9 @@ const languageMessages = {
     waiting: (lives: number, number: number) => `Wave ${number} ready · Lives ${lives}`,
     active: (lives: number, number: number, enemies: number) => `Wave ${number} · Lives ${lives} · Enemies ${enemies}`,
     complete: (lives: number, number: number, escaped: number) => `Wave ${number} complete · Lives ${lives} · Escaped ${escaped}`,
+    'load-failed': 'Speed preference unavailable; using 1× for this session.',
+    saved: 'Speed preference saved.',
+    'save-failed': 'Speed is active for this session, but could not be saved.',
   },
   zh: {
     none: '尚未选择单位',
@@ -68,6 +91,9 @@ const languageMessages = {
     waiting: (lives: number, number: number) => `第 ${number} 波待开始 · 生命 ${lives}`,
     active: (lives: number, number: number, enemies: number) => `第 ${number} 波 · 生命 ${lives} · 敌人 ${enemies}`,
     complete: (lives: number, number: number, escaped: number) => `第 ${number} 波完成 · 生命 ${lives} · 逃脱 ${escaped}`,
+    'load-failed': '无法读取倍速设置，本次暂用 1×。',
+    saved: '倍速设置已保存。',
+    'save-failed': '本次使用所选倍速，但保存失败。',
   },
 };
 
@@ -79,6 +105,9 @@ function renderStatus(): void {
     ? messages.selected + ' · Cell (' + (unit.cell.x + 1) + ', ' + (unit.cell.y + 1) + ')'
     : messages.none;
   if (status.textContent !== selectionText) status.textContent = selectionText;
+  simulationSpeedValue.textContent = simulationSpeed + '×';
+  const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
+  if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
   if (view.wave) {
     const wave = view.wave;
     const waveText = wave.phase === 'not-started'
@@ -107,6 +136,19 @@ const assetNames = new Set([
 ]);
 const images: Record<string, HTMLImageElement> = {};
 
+async function loadSettings(): Promise<void> {
+  try {
+    const settings = await progress.loadSettings();
+    simulationSpeed = settings.simulationSpeed;
+    simulationSpeedInput.value = String(simulationSpeed);
+  } catch {
+    settingsStatusKey = 'load-failed';
+  } finally {
+    simulationSpeedInput.disabled = false;
+    renderStatus();
+  }
+}
+
 async function loadImage(assetName: string): Promise<void> {
   const image = new Image();
   image.src = new URL(import.meta.env.BASE_URL + 'assets/' + assetName + '.png', window.location.href).toString();
@@ -115,7 +157,7 @@ async function loadImage(assetName: string): Promise<void> {
 }
 
 try {
-  await Promise.all([...assetNames].map(loadImage));
+  await Promise.all([...assetNames].map(loadImage).concat(loadSettings()));
   redraw(true);
   renderStatus();
 } catch (error) {
@@ -132,19 +174,59 @@ window.addEventListener('resize', () => redraw(true));
 let animationFrame = 0;
 let previousTimestamp: number | undefined;
 
+simulationSpeedInput.addEventListener('input', () => {
+  settingsSaveSequence += 1;
+  simulationSpeed = normalizeSimulationSpeed(Number(simulationSpeedInput.value));
+  simulationSpeedInput.value = String(simulationSpeed);
+  settingsStatusKey = undefined;
+  renderStatus();
+});
+
+simulationSpeedInput.addEventListener('change', () => {
+  const sequence = ++settingsSaveSequence;
+  const requestedSpeed = normalizeSimulationSpeed(Number(simulationSpeedInput.value));
+  simulationSpeed = requestedSpeed;
+  void progress.saveSettings({ simulationSpeed: requestedSpeed }).then((saved) => {
+    if (sequence !== settingsSaveSequence) return;
+    simulationSpeed = saved.simulationSpeed;
+    settingsStatusKey = 'saved';
+    renderStatus();
+  }).catch(() => {
+    if (sequence !== settingsSaveSequence) return;
+    settingsStatusKey = 'save-failed';
+    renderStatus();
+  });
+});
+
+document.addEventListener('visibilitychange', () => {
+  previousTimestamp = undefined;
+  simulationTime.reset();
+});
+
 function startWaveLoop(): void {
   if (animationFrame !== 0) return;
   const tick = (timestamp: number) => {
     if (view.wave?.phase !== 'active') {
       animationFrame = 0;
       previousTimestamp = undefined;
+      simulationTime.reset();
+      return;
+    }
+
+    if (document.hidden) {
+      previousTimestamp = undefined;
+      simulationTime.reset();
+      animationFrame = window.requestAnimationFrame(tick);
       return;
     }
 
     const currentTimestamp = Math.trunc(timestamp);
     const deltaMs = previousTimestamp === undefined ? 0 : currentTimestamp - previousTimestamp;
     previousTimestamp = currentTimestamp;
-    view = session.advance({ deltaMs });
+    for (const stepMs of simulationTime.advanceElapsed(deltaMs, simulationSpeed)) {
+      view = session.advance({ deltaMs: stepMs });
+      if (view.wave?.phase !== 'active') break;
+    }
     renderStatus();
     redraw();
     animationFrame = window.requestAnimationFrame(tick);
@@ -166,22 +248,22 @@ clearButton.addEventListener('click', () => dispatch({ type: 'clear-selection' }
 canvas.addEventListener('pointerup', (event: PointerEvent) => {
   if (event.pointerType === 'mouse' && event.button !== 0) return;
   const bounds = canvas.getBoundingClientRect();
-  const viewport = fitAspectViewport(bounds.width, bounds.height, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
+  const logicalViewport = fitAspectViewport(bounds.width, bounds.height, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   const point = toLogicalPoint(
     event.clientX - bounds.left,
     event.clientY - bounds.top,
-    viewport,
+    logicalViewport,
     GAME_VIEWPORT.width,
     GAME_VIEWPORT.height,
   );
   if (!point) return;
 
-  const origin = getMapOrigin(view);
-  const tileSize = view.map.tileSize;
+  const mapViewport = getMapViewport(view);
+  const mapCell = screenToMapCell(mapViewport, point.x, point.y);
   dispatch({
     type: 'select-at',
-    x: (point.x - origin.x) / tileSize,
-    y: (point.y - origin.y) / tileSize,
+    x: mapCell.x,
+    y: mapCell.y,
   });
 });
 

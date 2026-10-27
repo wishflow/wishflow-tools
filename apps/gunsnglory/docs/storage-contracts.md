@@ -4,7 +4,7 @@
 
 本文件定义 `Progress`、`Experiments` 及共享内部 `content` Module 隐藏的存储与内容读取语义。三个面向消费者的深 Module 为 `Game`、`Progress`、`Experiments`；本文的 Repository 和 Source 是所属 Module 的内部 Seam，不是 UI、AI 或脚本需要调用的另一套公共 Interface。模块关系见[架构设计](architecture.md)，交付顺序见[实施计划](implementation-plan.md)。
 
-当前为已确定的设计契约，具体接口、Adapter 和测试尚未实现。存储替换保持公共业务行为不变，不能要求调用者理解保存时的内部调用链。
+本文主体描述完整的目标契约，正式档案、结算、并发修订、实验存储和内容来源尚未实现。当前只有一个窄切片：`Progress` 读取与保存测试倍速设置，浏览器使用 IndexedDB。它不代表 T05 正式档案能力已完成；存储替换保持公共业务行为不变，不能要求调用者理解保存时的内部调用链。
 
 目标是让 IndexedDB、localStorage、远程数据库或对象存储的替换只影响适配器及启动装配。接口替换成立的条件是新实现通过同一套契约测试；类型签名相同但原子性、冲突或失败语义不同，不算兼容实现。
 
@@ -113,6 +113,12 @@ localStorage 适配器的锁协议必须覆盖本应用所有写入者。环境�
 保存失败时，`Progress` 保留“尚未保存”的档案状态，UI 根据公共状态明确展示。游戏可继续运行，但不显示保存成功，不自动覆盖原持久化档案，也不把临时内存 Adapter 伪装成已持久化存储。
 
 重试、导出或放弃变更由 `Progress` 提供可用恢复操作，调用者只选择操作，不实现内部修订检查与合并。关闭页面可能丢失未保存变更；关键保存不能只依赖页面退出回调。
+
+### 4.6 当前已实现：测试倍速设置
+
+`Progress` 当前只暴露 `loadSettings()` 与 `saveSettings()`。浏览器 Adapter 使用 `gunsnglory-profile` 数据库、`profiles` 对象仓库和 `default` 记录；设置作为记录的 `settings` 字段读写。缺少档案或 `simulationSpeed` 时返回 `1×`，有效范围为 `0.25×–4×`、步进 `0.25×`。写入在同一个 IndexedDB 读写事务中合并 `simulationSpeed`，保留其他设置，并在事务提交后报告成功。
+
+此切片未实现 `profileId`、完整档案读写、`revision`/CAS、结算去重、进度解锁、迁移与保存恢复状态。它只证明设置接口和此场景所需的 IndexedDB 持久化，不满足本节其他档案契约，也不应将 T05 标记为完成。
 
 ## 5. 内容读取契约
 
