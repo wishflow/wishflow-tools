@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { cowGulchContent } from '../src/content/cow-gulch';
 import { createGame, type ScenarioContent } from '../src/game';
 
 const scenario: ScenarioContent = {
@@ -68,4 +69,145 @@ test('keeps sessions independent and rejects unknown scenarios', async () => {
   assert.equal(first.observe().units[0]?.selected, true);
   assert.equal(second.observe().units[0]?.selected, false);
   await assert.rejects(() => game.open({ scenarioId: 'missing' }), /unknown scenario/i);
+});
+
+test('does not create the controlled wave until the start intent advances', async () => {
+  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+    scenarioId: 'cow-gulch',
+    randomSeed: 1234,
+  });
+  const before = session.observe();
+
+  assert.equal(before.wave?.phase, 'not-started');
+  assert.equal(before.enemies.length, 0);
+  assert.equal(before.wave?.lives, 50);
+  assert.equal(session.submitIntent({ type: 'start-wave' }), true);
+  assert.equal(session.observe().enemies.length, 0);
+
+  const started = session.advance({ deltaMs: 1000 });
+  assert.equal(started.wave?.phase, 'active');
+  assert.equal(started.enemies.length, 1);
+  assert.deepEqual(started.enemies[0]?.positionFine, { x: -15360, y: 76800 });
+  assert.equal(started.enemies[0]?.speed, 490, 'seed 1234 uses Java Random nextInt(20) = 8');
+  assert.equal(started.wave?.lives, 50);
+  assert.equal(session.startRecord.randomSeed, 1234);
+
+  const moved = session.advance({ deltaMs: 1000 });
+  assert.equal(moved.enemies[0]?.positionFine.x, -15360 + started.enemies[0]!.speed);
+  assert.equal(moved.elapsedMs, 200);
+});
+
+test('replays the Cow Gulch preview and applies the escape penalty exactly once', async () => {
+  const run = async () => {
+    const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+      scenarioId: 'cow-gulch',
+      randomSeed: 42,
+    });
+    session.submitIntent({ type: 'start-wave' });
+    let view = session.advance({ deltaMs: 0 });
+    let steps = 0;
+    while (view.wave?.phase === 'active' && steps < 2000) {
+      view = session.advance({ deltaMs: 100 });
+      steps += 1;
+    }
+    return { view, steps };
+  };
+
+  const first = await run();
+  const replay = await run();
+
+  assert.ok(first.steps < 2000, 'the controlled enemy should reach the Cow Gulch exit');
+  assert.deepEqual(first, replay);
+  assert.equal(first.view.wave?.phase, 'complete');
+  assert.equal(first.view.wave?.lives, 49);
+  assert.equal(first.view.wave?.escapedEnemies, 1);
+  assert.equal(first.view.enemies.length, 0);
+
+  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({ scenarioId: 'cow-gulch', randomSeed: 42 });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  for (let index = 0; index < 2000 && view.wave?.phase !== 'complete'; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  const after = session.advance({ deltaMs: 100 });
+  assert.equal(after.wave?.lives, 49);
+  assert.equal(after.wave?.escapedEnemies, 1);
+});
+
+test('observing a running wave does not advance time, position, or its random stream', async () => {
+  const createSession = () => createGame({ scenarios: { 'cow-gulch': cowGulchContent } })
+    .open({ scenarioId: 'cow-gulch', randomSeed: 9876 });
+  const observed = await createSession();
+  const control = await createSession();
+
+  for (const session of [observed, control]) {
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+  }
+  for (let index = 0; index < 50; index += 1) observed.observe();
+
+  assert.deepEqual(observed.advance({ deltaMs: 37 }), control.advance({ deltaMs: 37 }));
+  assert.deepEqual(observed.advance({ deltaMs: 100 }), control.advance({ deltaMs: 100 }));
+});
+
+test('keeps preview waves and random streams isolated between sessions', async () => {
+  const game = createGame({ scenarios: { 'cow-gulch': cowGulchContent } });
+  const first = await game.open({ scenarioId: 'cow-gulch', randomSeed: 77 });
+  const second = await game.open({ scenarioId: 'cow-gulch', randomSeed: 77 });
+
+  first.submitIntent({ type: 'start-wave' });
+  const firstStarted = first.advance({ deltaMs: 0 });
+  assert.equal(second.observe().wave?.phase, 'not-started');
+  assert.equal(second.observe().enemies.length, 0);
+
+  second.submitIntent({ type: 'start-wave' });
+  const secondStarted = second.advance({ deltaMs: 0 });
+  assert.deepEqual(firstStarted, secondStarted);
+  assert.deepEqual(first.advance({ deltaMs: 37 }), second.advance({ deltaMs: 37 }));
+});
+
+test('follows the first Cow Gulch redirect and clamps variable time to the original 100 ms bound', async () => {
+  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+    scenarioId: 'cow-gulch',
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  const startX = view.enemies[0]!.positionFine.x;
+
+  view = session.advance({ deltaMs: 0.9 });
+  assert.equal(view.enemies[0]!.positionFine.x, startX, 'sub-millisecond time truncates to zero');
+
+  const variableSession = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+    scenarioId: 'cow-gulch',
+    randomSeed: 1234,
+  });
+  variableSession.submitIntent({ type: 'start-wave' });
+  const variableStart = variableSession.advance({ deltaMs: 0 });
+  const variableSpeed = variableStart.enemies[0]!.speed;
+  const variableStartX = variableStart.enemies[0]!.positionFine.x;
+  const expectedAfter37 = Math.trunc(Math.fround(
+    variableStartX + Math.fround((variableSpeed * 37) / 100),
+  ));
+  const after37 = variableSession.advance({ deltaMs: 37 });
+  assert.equal(after37.enemies[0]!.positionFine.x, expectedAfter37);
+  const expectedAfter100 = Math.trunc(Math.fround(
+    expectedAfter37 + Math.fround((variableSpeed * 63) / 100),
+  ));
+  const after100 = variableSession.advance({ deltaMs: 63 });
+  assert.equal(after100.enemies[0]!.positionFine.x, expectedAfter100);
+  assert.equal(after100.enemies[0]!.positionFine.x - variableStartX, 491);
+
+  let steps = 0;
+  while (view.enemies[0]?.direction === 'east' && steps < 1000) {
+    view = session.advance({ deltaMs: 100 });
+    steps += 1;
+  }
+  assert.ok(steps < 1000, 'enemy should reach the first route redirect');
+  assert.equal(view.enemies[0]?.direction, 'south');
+  assert.equal(Math.trunc(view.enemies[0]!.positionFine.x / 7680), 4);
+
+  const before = view.enemies[0]!.positionFine.y;
+  view = session.advance({ deltaMs: 1000 });
+  assert.equal(view.enemies[0]!.positionFine.y - before, view.enemies[0]!.speed);
 });

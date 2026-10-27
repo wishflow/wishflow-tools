@@ -145,3 +145,18 @@ pi --no-extensions --no-skills --no-prompt-templates --no-themes \
 CI 依赖策略：首次 GitHub workflow 因 `postcss@8.5.32` 发布不足 24 小时而拒绝安装；随后尝试把 `postcss` 固定到仓库内已有的 `8.5.29`，但 CI 的 pnpm 12 不再读取 `package.json` 中的 `pnpm.overrides`，冻结安装因此报告配置与锁文件不匹配。现已将 `overrides` 移到应用自己的 `pnpm-workspace.yaml`，并沿用其他独立应用的 `allowBuilds.esbuild` 配置。pnpm 12.15.0 的 supply-chain 检查、冻结安装及完整 `test:ci` 均通过。
 
 公网实测发现，共享站点的浮动宠物位置保存在浏览器中；当宠物位于地图上时，它会遮住枪手并截获点击。游戏画布已置于该叠层之上，保留宠物原位置并让地图操作优先。正式 CI 测试及 Cloudflare Pages、GitHub Pages 部署通过；Codex 内置浏览器在这一保存位置下验证地图选中/取消和中英切换均正常。触屏选择与取消由 `test:e2e` 的移动端场景验证。
+
+## 7. T02 单个拓荒者离场扣命验收
+
+交付范围是 Cow Gulch 首波中的一个男性拓荒者样本：开波前不生成，确认后从地图生成点进入；按反解析路线和原版时间步长移动，抵达出口后扣 1 点生命。样本使用 APK 的 `pioneer_male` mdpi 图集。完整首波调度、攻击、结算和存档仍未实现。
+
+自动验证覆盖固定随机种子与启动记录、Java `Random` 的有界抽样、不同战局隔离、`0–100 ms` 可变步长、每步截断、首个路线转向、出口扣命仅一次，以及观察不推进游戏时间或随机流。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `./scripts/install.sh` | 按锁文件安装成功；未改依赖清单或锁文件。 |
+| `pnpm run test:ci` | TypeScript 检查通过；13 项内容、Game 与视口测试通过；Vite 生产构建通过；4 个 Playwright 场景通过，覆盖桌面开波和 Canvas 变化、触屏选择与开波。 |
+| Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:4173/` 检查中文待开波状态；鼠标确认后画布出现并移动拓荒者。约 60 秒内，状态显示“第 1 波完成 · 生命 49 · 逃脱 1”。切换到英文显示 `Wave 1 complete · Lives 49 · Escaped 1`，再恢复原中文偏好。 |
+| 变更范围 | 仅修改 Guns’n’Glory 应用代码、T02 测试和任务/验证文档；没有新增依赖、存档或发布。 |
+
+Playwright 的触屏场景仅覆盖手机视口下触摸开波；完整路线和扣命由确定性 Game 行为测试及 Codex 内置浏览器实测覆盖。

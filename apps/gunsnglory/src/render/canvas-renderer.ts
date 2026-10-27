@@ -1,4 +1,4 @@
-import type { GameView, RenderTile } from '../game';
+import type { Direction, EnemyView, GameView, RenderTile } from '../game';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
@@ -46,6 +46,39 @@ function drawTiles(
       tile.height * tileSize,
     );
   }
+}
+
+function spriteRow(direction: Direction): number {
+  if (direction === 'south') return 1;
+  if (direction === 'north') return 2;
+  return 0;
+}
+
+function drawEnemy(
+  context: CanvasRenderingContext2D,
+  enemy: EnemyView,
+  images: GameImages,
+  origin: { x: number; y: number },
+): void {
+  const image = images[enemy.asset];
+  if (!image) throw new Error('Missing game image: ' + enemy.asset);
+
+  const width = 16;
+  const height = 24;
+  const centerX = origin.x + (enemy.positionFine.x / 240) + 16;
+  const feetY = origin.y + (enemy.positionFine.y / 240) + 16;
+  const left = centerX - width / 2;
+  const top = feetY - height;
+  const sourceX = (enemy.animationFrame % 3) * width;
+  const sourceY = spriteRow(enemy.direction) * height;
+
+  context.save();
+  if (enemy.direction === 'west') {
+    context.translate((left * 2) + width, 0);
+    context.scale(-1, 1);
+  }
+  context.drawImage(image, sourceX, sourceY, width, height, left, top, width, height);
+  context.restore();
 }
 
 export function drawGame(
@@ -103,5 +136,7 @@ export function drawGame(
       context.setLineDash([]);
     }
   }
+
+  for (const enemy of view.enemies) drawEnemy(context, enemy, images, origin);
   context.restore();
 }

@@ -1,10 +1,15 @@
 import { createGame } from '../game';
-import cowGulch from '../content/cow-gulch.json';
+import { cowGulchContent } from '../content/cow-gulch';
 
 export function createBrowserGame() {
   return createGame({
     scenarios: {
-      [cowGulch.id]: cowGulch,
+      [cowGulchContent.id]: cowGulchContent,
+    },
+    randomSeedSource: () => {
+      const seed = new Uint32Array(1);
+      globalThis.crypto.getRandomValues(seed);
+      return seed[0]!;
     },
   });
 }

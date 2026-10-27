@@ -72,6 +72,11 @@ body {
   gap: 1rem;
 }
 
+.game-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .scene-heading h2 {
   margin: 0;
   color: #f6d29c;
@@ -114,6 +119,7 @@ body {
 
 .game-controls p {
   min-height: 1.5em;
+  min-width: 0;
   margin: 0;
   color: #ffe0a3;
   font-weight: 650;
@@ -133,6 +139,12 @@ body {
 
 .game-controls button:hover {
   background: #67482b;
+}
+
+.game-controls button:disabled {
+  color: #b4a48a;
+  background: #30271f;
+  cursor: default;
 }
 
 .game-controls button:focus-visible {
@@ -164,7 +176,9 @@ body {
   }
 
   .game-controls {
-    align-items: flex-start;
+    align-items: center;
+    column-gap: 0.5rem;
+    row-gap: 0.35rem;
   }
 
   .game-controls button {
