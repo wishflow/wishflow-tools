@@ -86,6 +86,8 @@ body {
 }
 
 .game-frame {
+  position: relative;
+  z-index: 81;
   width: min(100%, 1024px);
   aspect-ratio: 16 / 9;
   margin: 0 auto;
