@@ -208,4 +208,7 @@ Game 行为测试验证生命耗尽优先级、结算只发生一次、胜败两
 | 实际介质失败 | Playwright 在档案 `put` 后中止真实 IndexedDB 读写事务；界面显示“Result is not saved”，提供重试；重试成功后档案只登记一份结算。 |
 | 调试结果隔离 | Progress 拒绝 debug、experiment、replay 模式；实际一条命败北样本显示为调试结算，不写入档案。 |
 | Codex 内置浏览器本地实测 | `http://127.0.0.1:5174/` 设为 4× 启动 Cow Gulch 样本，画面显示胜利、Cash $66、Displayed score $50、High-score saved $50、Result saved to this browser、Cow Gulch sample complete · Best $50。切换中文后各项结算和档案状态正确翻译。 |
-| 发布状态 | 本地实现和验收已完成；本次变更尚未合入 `gunsnglory`/`master`，也尚未推送或验证公网版本。 |
+| 公网结算与刷新 | 发布后在 `https://wishflow-tools.pages.dev/gunsnglory/` 以 4× 运行样本，胜利结算显示已保存最高分 $50；刷新后仍显示样本已完成和最高分 $50。4× 设置也经刷新恢复，验收结束后恢复为原先的 1×。 |
+| 调试败北隔离 | 公网一条生命败北样本显示“调试结果 · 不会写入已保存档案”；再次刷新后，胜利样本完成状态和最高分 $50 仍保留。 |
+| 发布流水线 | [workflow 40535910442](https://github.com/wishflow/wishflow-tools/actions/runs/40535910442) 成功；Guns’n’Glory 与共享站点测试通过，Cloudflare Pages 和 GitHub Pages 部署通过，Worker 未触发。 |
+| 发布状态 | T05 已合入本地 `gunsnglory` 与 `master`；`master` 已推送，线上行为已按上述路径实测。 |
