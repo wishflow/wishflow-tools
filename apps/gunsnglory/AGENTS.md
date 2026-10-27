@@ -8,7 +8,7 @@
 | --- | --- |
 | 确定功能范围、验收用户行为 | [产品规格](docs/spec.md)的相关用户故事与范围 |
 | 定义或使用战局、场景、实验等领域概念 | [领域术语](docs/GLOSSARY.md)；定义只在该处维护 |
-| 新增 Module、修改 Interface、调整依赖或测试 Seam | [架构设计](docs/architecture.md)；检查消费者、隐藏复杂性及变更影响 |
+| 修改 Game、Progress、Experiments 的 Interface，新增 Module、依赖或测试 Seam | [架构设计](docs/architecture.md)；检查消费者、隐藏复杂性及变更影响 |
 | 档案保存、内容读取、实验持久化或替换存储 Adapter | [存储契约](docs/storage-contracts.md)的对应契约与验证要求 |
 | 战局控制、时间随机、回放、策略、AI 或批量运行 | [模拟与自动化契约](docs/simulation-and-automation.md)的对应行为与格式 |
 | 选择实现任务、并行协作、集成或发布 | [实施计划](docs/implementation-plan.md)的目标任务、真实前置项与完成条件 |
@@ -18,7 +18,7 @@
 
 ## 稳定约束
 
-- 用深 Module 组织能力：Interface 包括调用者需要知道的输入、结果、不变量、顺序、错误和性能要求。内部实现与测试共享公共 Seam，避免让调用者掌握内部调用链。
+- 用深 Module 组织能力：Interface 包括调用者需要知道的输入、结果、不变量、顺序、错误和性能要求。行为测试与真实消费者共享公共 Seam，内部实现封装其调用链。
 - 游戏规则由单个战局实例拥有，同步计算；环境 Adapter 提供显式输入，I/O 放在步进之外。公共查询提供隔离值，表现层只读。
 - 存储通过所属 Module 的内部 Seam 替换；上层依赖业务行为与统一失败语义。Adapter 的选择集中在装配入口。
 - 原版基线和实验分别管理；数值、时间与随机语义的变更必须可追溯。正式档案只接受正式游戏的结算。

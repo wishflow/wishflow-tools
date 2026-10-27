@@ -1,5 +1,7 @@
 # 设计文档交付验证
 
+最新状态见第 5 节：用户已确认三个公共 Module 和纵向切片，文档已统一更新。第 1–4 节保留历史交付证据，其中的候选状态不代表当前设计状态。
+
 日期：2026-10-26。范围为本批 [AGENTS.md](../AGENTS.md)、[架构设计](architecture.md)及其存储、模拟和[实施计划](implementation-plan.md)文档。当前没有游戏代码、CLI、MCP 或后端实现。
 
 ## 1. 文档检查
@@ -80,3 +82,44 @@ Game / Progress / Experiments：候选，尚未确认
 ```
 
 这是文档与上下文加载验证，不是游戏、存储或模拟实现验证。实现尚不存在，未运行相应构建、行为测试、真实介质测试或部署。
+
+## 5. 2026-10-27：确认后统一契约与任务图
+
+用户明确接受 Game、Progress、Experiments 三个公共深 Module，以及首五个纵向小切片的粒度。本轮移除旧技术层级和 P 阶段执行方案，统一公共 Interface、内部存储 Seam、内容与运行数据归属，并将规格及阅读指针更新为已确认状态。
+
+实施任务图列出 T01–T26、B01–B05，并为完整内容定义逐项实例化的行为模板。27 条用户故事都有验收责任映射；具名任务的已列出依赖检查无环，内容模板实例化后仍须检查新增依赖。所有游戏任务仍未实现。
+
+交叉审查补齐了三项契约：独立数值准备与普通开局复用同一实现；浏览器和 Node runner 有界让出以响应取消；回放使用新会话身份并拒绝正式结算。任务审查另补齐声音设置恢复、多波转场、生成与拾取的责任，首个单场景不依赖后续数值编辑能力。
+
+### 文档与真实上下文检查
+
+- 检查 10 份 Markdown、55 个相对文件链接、代码围栏、尾空白及 CLAUDE 单行导入。
+- 检查旧分层、未确认状态和旧任务编号不再作为当前契约；历史验证记录保留其时间语境。
+- 检查 27 条故事映射、具名任务依赖、Module 数据归属和错误/取消语义。
+- 提交前执行 `git diff --check` 和暂存差异检查，只提交本应用文档。
+
+在应用目录通过下列命令真实加载上下文并读取文档：
+
+```sh
+pi --no-extensions --no-skills --no-prompt-templates --no-themes \
+  --no-session --no-approve --offline --tools read --mode json \
+  -p '这是只读的最终文档验收，不是游戏实现任务。先列出启动上下文已加载的仓库与应用 AGENTS.md，不要通过 read 读取它们代替启动加载。按照应用指针实际 read docs/architecture.md、docs/implementation-plan.md 和 docs/spec.md。依据文档回答：公共 Module 与主要测试 Seam 是否已确认，分别是什么；普通意图是否需要调用者提供帧号；保存数值方案如何获得完整基线而不创建战局；替换存储时谁承担内部修订及重试；首五任务是什么且当前首个可执行任务是谁；任务分支基于哪里；是否已实现游戏。给出读取标题与结论，不修改文件、不运行命令。' \
+  > /tmp/gunsnglory-pi-approved-design.jsonl \
+  2> /tmp/gunsnglory-pi-approved-design.stderr
+```
+
+退出码为 0，stderr 为空。日志中三次真实 read 分别读取架构、任务图和规格，均为 `isError: false`，未使用 read 补读 AGENTS。关键返回归一如下：
+
+```text
+启动加载：仓库 AGENTS.md、apps/gunsnglory/AGENTS.md
+实际读取：游戏架构设计、Guns’n’Glory 实施任务图、Guns’n’Glory 产品规格
+公共 Module 与行为测试 Seam：Game / Progress / Experiments，已确认
+普通意图：调用者不提供帧号，由 Game 内部排序
+数值方案：Game.prepare 返回完整参数与精确版本，不创建战局或取样
+正式保存：Progress 内部处理修订、合并与重试
+首五切片：展示选中 → 单波移动扣命 → 击杀得金 → 胜败重开 → 保存恢复
+首个可执行任务：T01；任务基于 gunsnglory 最新已验收提交
+游戏实现：尚未开始
+```
+
+以上验证覆盖文档及 agent 上下文使用。没有游戏代码，因此未运行游戏构建、行为测试、真实存储或线上部署检查。Markdown 成品使用 cp 按相对路径复制到 `/tmp/var/wishflow-tools/`，并逐文件核对内容一致。
