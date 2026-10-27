@@ -13,6 +13,11 @@
   "dependencies": {
     "@wishflow/site-shell": "file:../../packages/site-shell"
   },
+  "pnpm": {
+    "overrides": {
+      "postcss": "8.5.29"
+    }
+  },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4",
