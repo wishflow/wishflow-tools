@@ -42,7 +42,10 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
     units: [{
       id: 'gunslinger-1', type: 'gunslinger', asset: 'unit',
       cell: { x: 8, y: 8 },
+      movementSpeedFinePer100Ms: 1500,
       selected: false,
+      moving: false,
+      positionFine: { x: (8 * 7680) + 3840, y: (8 * 7680) + 5760 },
       frame: { x: 0, y: 0, width: 32, height: 44 },
       render: { x: 8, y: 7.625, width: 1, height: 1.375 },
       hitArea: { x: 8, y: 7.625, width: 1, height: 1.375 },

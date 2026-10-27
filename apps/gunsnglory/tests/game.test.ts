@@ -19,6 +19,7 @@ const scenario: ScenarioContent = {
     id: 'gunslinger-1',
     type: 'gunslinger',
     cell: { x: 8, y: 8 },
+    movementSpeedFinePer100Ms: 1500,
     asset: 'player_gunslinger',
     frame: { x: 0, y: 0, width: 32, height: 44 },
     render: { x: 8, y: 7.625, width: 1, height: 1.375 },
@@ -93,6 +94,103 @@ test('selects a unit only inside its hit area and clears selection on empty grou
   const cleared = session.advance();
   assert.equal(cleared.units[0]?.selected, false);
   assert.equal(cleared.frame, 2);
+});
+
+test('moves the selected unit at its configured speed and stops on release', async () => {
+  const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.advance({ deltaMs: 0 });
+
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 8.75 }), true);
+  const moved = session.advance({ deltaMs: 100 });
+  assert.deepEqual(moved.units[0]?.positionFine, { x: (8 * 7680) + 3840 + 1500, y: (8 * 7680) + 3840 + 1920 });
+  assert.equal(moved.units[0]?.moving, true);
+  assert.equal(moved.units[0]?.cell.x, 8);
+  assert.equal(moved.units[0]?.render.x, 8 + (1500 / 7680));
+
+  assert.equal(session.submitIntent({ type: 'stop-moving' }), true);
+  const stopped = session.advance({ deltaMs: 100 });
+  assert.deepEqual(stopped.units[0]?.positionFine, moved.units[0]?.positionFine);
+  assert.equal(stopped.units[0]?.moving, false);
+});
+
+test('rejects movement unless its target unit is selected and the coordinates are finite', async () => {
+  const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 9, targetY: 9 }), false);
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.advance({ deltaMs: 0 });
+
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: Number.POSITIVE_INFINITY, targetY: 9 }), false);
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 9, targetY: 9 }), true);
+  session.submitIntent({ type: 'clear-selection' });
+  const cleared = session.advance({ deltaMs: 100 });
+  assert.equal(cleared.units[0]?.selected, false);
+  assert.equal(cleared.units[0]?.moving, false);
+  assert.deepEqual(cleared.units[0]?.positionFine, { x: (8 * 7680) + 3840, y: (8 * 7680) + 3840 + 1920 });
+});
+
+test('blocks the original collision terrain and slides along it one axis at a time', async () => {
+  const originalTileGrid = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 0));
+  originalTileGrid[1]![2] = 32;
+  const wallScenario: ScenarioContent = {
+    id: 'wall-fixture',
+    title: { en: 'Wall', zh: '墙体' },
+    map: { width: 4, height: 4, tileSize: 32, background: [], streets: [] },
+    originalTileGrid,
+    units: [{
+      ...scenario.units[0]!,
+      cell: { x: 1, y: 1 },
+      render: { x: 1, y: 0.625, width: 1, height: 1.375 },
+      hitArea: { x: 1, y: 0.625, width: 1, height: 1.375 },
+    }],
+  };
+  const session = await createGame({ scenarios: { [wallScenario.id]: wallScenario } }).open({ scenarioId: wallScenario.id });
+  session.submitIntent({ type: 'select-at', x: 1.5, y: 1 });
+  session.advance({ deltaMs: 0 });
+  session.submitIntent({ type: 'move-unit', targetX: 3.5, targetY: 3.5 });
+
+  let view = session.advance({ deltaMs: 100 });
+  view = session.advance({ deltaMs: 100 });
+  assert.ok(view.units[0]!.positionFine.x / 7680 < 1.67, 'the collider cannot enter raw wall tile 32');
+  assert.ok(view.units[0]!.positionFine.y > (1.75 * 7680), 'vertical motion slides while horizontal motion is blocked');
+});
+
+test('treats a researched street overlay as walkable over blocking canyon terrain', async () => {
+  const originalTileGrid = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 0));
+  originalTileGrid[1]![2] = 80;
+  const bridgeScenario: ScenarioContent = {
+    id: 'bridge-fixture',
+    title: { en: 'Bridge', zh: '桥' },
+    map: { width: 4, height: 4, tileSize: 32, background: [], streets: [] },
+    originalTileGrid,
+    units: [{
+      ...scenario.units[0]!,
+      cell: { x: 1, y: 1 },
+      render: { x: 1, y: 0.625, width: 1, height: 1.375 },
+      hitArea: { x: 1, y: 0.625, width: 1, height: 1.375 },
+    }],
+  };
+  const session = await createGame({ scenarios: { [bridgeScenario.id]: bridgeScenario } }).open({ scenarioId: bridgeScenario.id });
+  session.submitIntent({ type: 'select-at', x: 1.5, y: 1 });
+  session.advance({ deltaMs: 0 });
+  session.submitIntent({ type: 'move-unit', targetX: 3.5, targetY: 1.75 });
+
+  let view = session.advance({ deltaMs: 100 });
+  for (let index = 0; index < 12; index += 1) view = session.advance({ deltaMs: 100 });
+  assert.ok(view.units[0]!.positionFine.x / 7680 > 2, 'street tile 80 is not blocked by its background collision code');
+});
+
+test('keeps the same movement result for the same intents and frame sequence', async () => {
+  const run = async () => {
+    const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture', randomSeed: 7 });
+    session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+    session.advance({ deltaMs: 0 });
+    session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 9.75 });
+    return Array.from({ length: 8 }, () => session.advance({ deltaMs: 100 }).units[0]?.positionFine);
+  };
+  const first = await run();
+  assert.ok(first.at(-1)!.x !== (8 * 7680) + 3840, 'the deterministic run actually moves the unit');
+  assert.deepEqual(first, await run());
 });
 
 test('rejects malformed coordinates without enqueuing a command', async () => {

@@ -11,11 +11,15 @@ const firstMapGunslingerWeapon = Object.freeze({
   damageStyle: 0,
 } as const);
 
+const firstMapGunslingerMovementSpeedFinePer100Ms = 1500;
+
 export const cowGulchContent: ScenarioContent = {
   ...cowGulchMap,
   formalSettlementSupported: true,
-  units: cowGulchMap.units.map((unit) => unit.id === 'gunslinger-1'
-    ? { ...unit, weapon: firstMapGunslingerWeapon }
-    : unit),
+  units: cowGulchMap.units.map((unit) => ({
+    ...unit,
+    movementSpeedFinePer100Ms: firstMapGunslingerMovementSpeedFinePer100Ms,
+    ...(unit.id === 'gunslinger-1' ? { weapon: firstMapGunslingerWeapon } : {}),
+  })),
   previewWave: cowGulchPreviewWave,
 };

@@ -369,6 +369,11 @@ let animationFrame = 0;
 let previousTimestamp: number | undefined;
 let loopGeneration = 0;
 let replacingSession = false;
+let activePointerId: number | undefined;
+let activePointerOrigin: { x: number; y: number } | undefined;
+let activeDragUnitId: string | undefined;
+let dragStarted = false;
+const DRAG_START_TOLERANCE = 20;
 
 function stopGameLoop(): void {
   loopGeneration += 1;
@@ -426,18 +431,30 @@ simulationSpeedInput.addEventListener('change', () => {
   });
 });
 
+function finishPointerMovement(pointerId?: number): void {
+  if (pointerId !== undefined && pointerId !== activePointerId) return;
+  const wasDragging = dragStarted;
+  activePointerId = undefined;
+  activePointerOrigin = undefined;
+  activeDragUnitId = undefined;
+  dragStarted = false;
+  if (wasDragging) dispatch({ type: 'stop-moving' });
+}
+
 document.addEventListener('visibilitychange', () => {
   previousTimestamp = undefined;
   simulationTime.reset();
+  if (document.hidden) finishPointerMovement();
 });
 
-function startWaveLoop(): void {
+function startGameLoop(): void {
+  if (view.wave?.phase !== 'active' && !view.units.some((unit) => unit.moving)) return;
   if (animationFrame !== 0 || replacingSession) return;
   const loopSession = session;
   const generation = loopGeneration;
   const tick = (timestamp: number) => {
     if (generation !== loopGeneration || loopSession !== session) return;
-    if (view.wave?.phase !== 'active') {
+    if (view.wave?.phase !== 'active' && !view.units.some((unit) => unit.moving)) {
       animationFrame = 0;
       previousTimestamp = undefined;
       simulationTime.reset();
@@ -472,7 +489,7 @@ function dispatch(intent: GameIntent): void {
   view = session.advance();
   renderStatus();
   redraw();
-  if (intent.type === 'start-wave' && view.wave?.phase === 'active') startWaveLoop();
+  if (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)) startGameLoop();
 }
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
@@ -493,8 +510,7 @@ window.addEventListener('pagehide', () => {
   session.close();
 }, { once: true });
 
-canvas.addEventListener('pointerup', (event: PointerEvent) => {
-  if (event.pointerType === 'mouse' && event.button !== 0) return;
+function pointerMapPosition(event: PointerEvent): { x: number; y: number; mapX: number; mapY: number } | undefined {
   const bounds = canvas.getBoundingClientRect();
   const logicalViewport = fitAspectViewport(bounds.width, bounds.height, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   const point = toLogicalPoint(
@@ -504,15 +520,60 @@ canvas.addEventListener('pointerup', (event: PointerEvent) => {
     GAME_VIEWPORT.width,
     GAME_VIEWPORT.height,
   );
-  if (!point) return;
+  if (!point) return undefined;
 
   const mapViewport = getMapViewport(view, getDisplayPixelScale());
   const mapCell = screenToMapCell(mapViewport, point.x, point.y);
-  dispatch({
-    type: 'select-at',
-    x: mapCell.x,
-    y: mapCell.y,
-  });
+  return { x: point.x, y: point.y, mapX: mapCell.x, mapY: mapCell.y };
+}
+
+canvas.addEventListener('pointerdown', (event: PointerEvent) => {
+  if (activePointerId !== undefined) {
+    if (event.pointerId !== activePointerId) finishPointerMovement();
+    return;
+  }
+  if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
+  const point = pointerMapPosition(event);
+  if (!point) return;
+
+  event.preventDefault();
+  activePointerId = event.pointerId;
+  activePointerOrigin = { x: point.x, y: point.y };
+  dragStarted = false;
+  try {
+    canvas.setPointerCapture(event.pointerId);
+  } catch {
+    finishPointerMovement();
+    return;
+  }
+  dispatch({ type: 'select-at', x: point.mapX, y: point.mapY });
+  activeDragUnitId = view.units.find((unit) => unit.selected)?.id;
 });
+
+canvas.addEventListener('pointermove', (event: PointerEvent) => {
+  if (event.pointerId !== activePointerId || !activePointerOrigin) return;
+  const point = pointerMapPosition(event);
+  if (!point) {
+    finishPointerMovement(event.pointerId);
+    return;
+  }
+  if (!dragStarted
+    && Math.abs(point.x - activePointerOrigin.x) <= DRAG_START_TOLERANCE
+    && Math.abs(point.y - activePointerOrigin.y) <= DRAG_START_TOLERANCE) return;
+  if (!activeDragUnitId || !view.units.some((unit) => unit.id === activeDragUnitId && unit.selected)) return;
+
+  dragStarted = true;
+  dispatch({ type: 'move-unit', targetX: point.mapX, targetY: point.mapY });
+});
+
+canvas.addEventListener('pointerup', (event: PointerEvent) => {
+  if (event.pointerId !== activePointerId) return;
+  event.preventDefault();
+  finishPointerMovement(event.pointerId);
+});
+
+canvas.addEventListener('pointercancel', (event: PointerEvent) => finishPointerMovement(event.pointerId));
+canvas.addEventListener('lostpointercapture', (event: PointerEvent) => finishPointerMovement(event.pointerId));
+window.addEventListener('blur', () => finishPointerMovement());
 
 subscribeLanguage(() => renderStatus());

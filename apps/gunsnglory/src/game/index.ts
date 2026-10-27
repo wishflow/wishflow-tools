@@ -18,6 +18,8 @@ export interface ScenarioUnit {
   id: string;
   type: string;
   cell: { x: number; y: number };
+  /** Recovered GameDesignData speed value, applied as fine units per 100 ms. */
+  movementSpeedFinePer100Ms: number;
   asset: string;
   frame: Rectangle;
   render: Rectangle;
@@ -82,17 +84,23 @@ export interface ScenarioContent {
     background: readonly RenderTile[];
     streets: readonly RenderTile[];
   };
+  /** Original TDM terrain codes, indexed as [row][column]. */
+  originalTileGrid?: readonly (readonly number[])[];
   units: readonly ScenarioUnit[];
   previewWave?: PreviewWaveDefinition;
 }
 
 export type GameIntent =
   | { type: 'select-at'; x: number; y: number }
+  | { type: 'move-unit'; targetX: number; targetY: number }
+  | { type: 'stop-moving' }
   | { type: 'clear-selection' }
   | { type: 'start-wave' };
 
 export interface UnitView extends ScenarioUnit {
   selected: boolean;
+  moving: boolean;
+  positionFine: { x: number; y: number };
 }
 
 export interface EnemyView {
@@ -220,6 +228,8 @@ interface MutableShot {
 interface MutableUnit {
   definition: ScenarioUnit;
   selected: boolean;
+  positionFine: { x: number; y: number };
+  movementTargetFine?: { x: number; y: number };
   weaponCooldownMs: number;
 }
 
@@ -239,7 +249,23 @@ interface MutableWave {
 const FINE_UNITS_PER_CELL = 7680;
 const FIELD_CENTER_OFFSET = 15360;
 const FIELD_CENTER_HALF = 3840;
+const UNIT_PLACEMENT_OFFSET_Y = 1920;
+const UNIT_COLLIDER_START_X = -2534;
+const UNIT_COLLIDER_START_Y = -5376;
+const UNIT_COLLIDER_WIDTH = 5068;
+const UNIT_COLLIDER_HEIGHT = 4608;
+const UNIT_STOP_TOLERANCE_FINE = 2400;
 const MAX_DELTA_MS = 100;
+
+const BACKGROUND_BLOCKING_TILES = new Set([
+  32, 40, 41, 42, 43, 44, 45, 46, 48,
+  52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66,
+  80, 81, 110,
+]);
+
+const STREET_LAYER_TILES = new Set([
+  16, 80, 81, 82, 83, 84, 85, 88, 89, 90, 91, 92, 93, 112, 113, 114, 150,
+]);
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -259,6 +285,105 @@ function contains(rectangle: Rectangle, x: number, y: number): boolean {
     && y >= rectangle.y
     && x < rectangle.x + rectangle.width
     && y < rectangle.y + rectangle.height;
+}
+
+function initialUnitPosition(definition: ScenarioUnit): { x: number; y: number } {
+  return {
+    x: (definition.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+    y: (definition.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + UNIT_PLACEMENT_OFFSET_Y,
+  };
+}
+
+function unitView(unit: MutableUnit): UnitView {
+  const { definition, positionFine } = unit;
+  const offsetX = (positionFine.x - initialUnitPosition(definition).x) / FINE_UNITS_PER_CELL;
+  const offsetY = (positionFine.y - initialUnitPosition(definition).y) / FINE_UNITS_PER_CELL;
+  const render = { ...definition.render, x: definition.render.x + offsetX, y: definition.render.y + offsetY };
+  const hitArea = { ...definition.hitArea, x: definition.hitArea.x + offsetX, y: definition.hitArea.y + offsetY };
+
+  return {
+    ...clone(definition),
+    cell: {
+      x: Math.floor(positionFine.x / FINE_UNITS_PER_CELL),
+      y: Math.floor((positionFine.y - FIELD_CENTER_HALF) / FINE_UNITS_PER_CELL),
+    },
+    render,
+    hitArea,
+    selected: unit.selected,
+    moving: unit.movementTargetFine !== undefined,
+    positionFine: { ...positionFine },
+  };
+}
+
+function isBackgroundCollisionCode(code: number): boolean {
+  return (code >= 12 && code <= 14)
+    || (code >= 20 && code <= 23)
+    || (code >= 48 && code <= 75)
+    || code === 96;
+}
+
+function backgroundCollisionCode(rawTile: number, grid: ScenarioContent['originalTileGrid'], x: number, y: number): number {
+  if (rawTile >= 120 && rawTile <= 126) return 96;
+  if (BACKGROUND_BLOCKING_TILES.has(rawTile)) return 48;
+  if (rawTile === 88 || rawTile === 89) {
+    const above = y > 0 ? grid?.[y - 1]?.[x] : undefined;
+    return above === 88 || above === 89 ? 48 : 0;
+  }
+  return rawTile === 160 ? 160 : 0;
+}
+
+function terrainBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: number): boolean {
+  const grid = scenario.originalTileGrid;
+  const width = scenario.map.width;
+  const height = scenario.map.height;
+  const corners = [
+    { x: fineX + UNIT_COLLIDER_START_X, y: fineY + UNIT_COLLIDER_START_Y },
+    { x: fineX + UNIT_COLLIDER_START_X + UNIT_COLLIDER_WIDTH, y: fineY + UNIT_COLLIDER_START_Y + UNIT_COLLIDER_HEIGHT },
+    { x: fineX + UNIT_COLLIDER_START_X, y: fineY + UNIT_COLLIDER_START_Y + UNIT_COLLIDER_HEIGHT },
+    { x: fineX + UNIT_COLLIDER_START_X + UNIT_COLLIDER_WIDTH, y: fineY + UNIT_COLLIDER_START_Y },
+  ];
+
+  for (const corner of corners) {
+    if (corner.x < 0 || corner.y < 0) return true;
+    const x = Math.floor(corner.x / FINE_UNITS_PER_CELL);
+    const y = Math.floor(corner.y / FINE_UNITS_PER_CELL);
+    if (x >= width || y >= height) return true;
+    if (!grid) continue;
+    const rawTile = grid[y]?.[x];
+    if (rawTile === undefined) return true;
+    const streetLayerCode = STREET_LAYER_TILES.has(rawTile) ? 16 : 0;
+    if (isBackgroundCollisionCode(backgroundCollisionCode(rawTile, grid, x, y)) && streetLayerCode === 0) return true;
+  }
+
+  return false;
+}
+
+function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number): void {
+  const target = unit.movementTargetFine;
+  if (!target || deltaMs === 0) return;
+
+  const dx = target.x - unit.positionFine.x;
+  const dy = target.y - unit.positionFine.y;
+  if (Math.abs(dx) < UNIT_STOP_TOLERANCE_FINE && Math.abs(dy) < UNIT_STOP_TOLERANCE_FINE) {
+    unit.movementTargetFine = undefined;
+    return;
+  }
+
+  const distance = Math.hypot(dx, dy);
+  const speed = unit.definition.movementSpeedFinePer100Ms;
+  const directionX = Math.round((dx / distance) * speed);
+  const directionY = Math.round((dy / distance) * speed);
+  const moveX = Math.trunc((directionX * deltaMs) / 100);
+  const moveY = Math.trunc((directionY * deltaMs) / 100);
+  const nextX = unit.positionFine.x + moveX;
+  const nextY = unit.positionFine.y + moveY;
+
+  if (moveX !== 0 && !terrainBlocksUnit(scenario, nextX, unit.positionFine.y)) {
+    unit.positionFine.x = nextX;
+  }
+  if (moveY !== 0 && !terrainBlocksUnit(scenario, unit.positionFine.x, nextY)) {
+    unit.positionFine.y = nextY;
+  }
 }
 
 function validSeed(seed: number): boolean {
@@ -368,9 +493,9 @@ function createPreviewEnemy(
   };
 }
 
-function unitEnemyDistanceSquare(unit: ScenarioUnit, enemy: MutableEnemy): number {
-  const unitX = tenthTileCoordinate((unit.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF);
-  const unitY = tenthTileCoordinate((unit.cell.y * FINE_UNITS_PER_CELL) + 1920);
+function unitEnemyDistanceSquare(unit: MutableUnit, enemy: MutableEnemy): number {
+  const unitX = tenthTileCoordinate(unit.positionFine.x);
+  const unitY = tenthTileCoordinate(unit.positionFine.y - FIELD_CENTER_HALF);
   const enemyX = tenthTileCoordinate(enemy.positionFine.x);
   const enemyY = tenthTileCoordinate(enemy.positionFine.y);
   const dx = unitX - enemyX;
@@ -394,8 +519,8 @@ function projectileTravelTime(
   return Math.trunc(((baseTimePercent * baseSteps) + distanceSteps) / 100) * 10;
 }
 
-function selectTarget(unit: ScenarioUnit, enemies: readonly MutableEnemy[]): MutableEnemy | undefined {
-  const weapon = unit.weapon;
+function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[]): MutableEnemy | undefined {
+  const weapon = unit.definition.weapon;
   if (!weapon) return undefined;
   const maxSquareRange = maxWeaponSquareRange(weapon);
   let bestTarget: MutableEnemy | undefined;
@@ -488,6 +613,7 @@ export function createGame(options: {
       const units: MutableUnit[] = scenario.units.map((definition) => ({
         definition,
         selected: false,
+        positionFine: initialUnitPosition(definition),
         weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
       }));
       const pending: PendingIntent[] = [];
@@ -521,7 +647,7 @@ export function createGame(options: {
           elapsedMs,
           scenarioId: scenario.id,
           map: scenario.map,
-          units: units.map(({ definition, selected }) => ({ ...clone(definition), selected })),
+          units: units.map(unitView),
           enemies: (wave?.enemies ?? []).map((enemy) => ({
             id: enemy.id,
             type: enemy.type,
@@ -580,9 +706,26 @@ export function createGame(options: {
             return true;
           }
 
+          if (intent.type === 'stop-moving') {
+            pending.push({ sequence: nextIntentSequence, intent: { type: 'stop-moving' } });
+            nextIntentSequence += 1;
+            return true;
+          }
+
           if (intent.type === 'start-wave') {
             if (!wave || !scenario.previewWave || wave.phase !== 'not-started') return false;
             pending.push({ sequence: nextIntentSequence, intent: { type: 'start-wave' } });
+            nextIntentSequence += 1;
+            return true;
+          }
+
+          if (intent.type === 'move-unit') {
+            if (!Number.isFinite(intent.targetX) || !Number.isFinite(intent.targetY)
+              || !units.some((unit) => unit.selected && unit.definition.movementSpeedFinePer100Ms > 0)) return false;
+            pending.push({
+              sequence: nextIntentSequence,
+              intent: { type: 'move-unit', targetX: intent.targetX, targetY: intent.targetY },
+            });
             nextIntentSequence += 1;
             return true;
           }
@@ -612,7 +755,15 @@ export function createGame(options: {
           pending.sort((left, right) => left.sequence - right.sequence);
           for (const command of pending.splice(0)) {
             if (command.intent.type === 'clear-selection') {
-              for (const unit of units) unit.selected = false;
+              for (const unit of units) {
+                unit.selected = false;
+                unit.movementTargetFine = undefined;
+              }
+              continue;
+            }
+
+            if (command.intent.type === 'stop-moving') {
+              for (const unit of units) unit.movementTargetFine = undefined;
               continue;
             }
 
@@ -630,12 +781,30 @@ export function createGame(options: {
               continue;
             }
 
+            if (command.intent.type === 'move-unit') {
+              const selectedUnit = units.find((unit) => unit.selected);
+              if (selectedUnit) {
+                selectedUnit.movementTargetFine = {
+                  x: Math.round(Math.max(-0.5, Math.min(scenario.map.width + 0.5, command.intent.targetX)) * FINE_UNITS_PER_CELL),
+                  y: Math.round(Math.max(-0.5, Math.min(scenario.map.height + 0.5, command.intent.targetY)) * FINE_UNITS_PER_CELL),
+                };
+              }
+              continue;
+            }
+
             const selection = command.intent;
             if (selection.type !== 'select-at') continue;
-            const target = [...units].reverse().find(({ definition }) =>
-              contains(definition.hitArea, selection.x, selection.y));
-            for (const unit of units) unit.selected = unit === target;
+            const target = [...units].reverse().find((unit) => {
+              const current = unitView(unit);
+              return contains(current.hitArea, selection.x, selection.y);
+            });
+            for (const unit of units) {
+              unit.selected = unit === target;
+              unit.movementTargetFine = undefined;
+            }
           }
+
+          for (const unit of units) moveUnit(unit, scenario, deltaMs);
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
             for (const enemy of [...wave.enemies]) {
@@ -657,13 +826,13 @@ export function createGame(options: {
               if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
               if (unit.weaponCooldownMs > 0) continue;
 
-              const target = selectTarget(unit.definition, wave.enemies);
+              const target = selectTarget(unit, wave.enemies);
               if (!target) continue;
-              const distanceSquare = unitEnemyDistanceSquare(unit.definition, target);
+              const distanceSquare = unitEnemyDistanceSquare(unit, target);
               const maxSquareRange = maxWeaponSquareRange(weapon);
               const startFine = {
-                x: (unit.definition.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
-                y: (unit.definition.cell.y * FINE_UNITS_PER_CELL) + 1920,
+                x: unit.positionFine.x,
+                y: unit.positionFine.y - FIELD_CENTER_HALF,
               };
               const travelMs = projectileTravelTime(distanceSquare, maxSquareRange, weapon);
               wave.shots.push({
@@ -715,6 +884,7 @@ export function createGame(options: {
               && wave.shots.length === 0
               && (wave.escapedEnemies > 0 || wave.defeatedEnemies > 0);
             if (wave.lives <= 0 || waveCleared) {
+              for (const unit of units) unit.movementTargetFine = undefined;
               wave.phase = 'complete';
               const difficultyScorePercent = scenario.previewWave.difficultyScorePercent ?? 100;
               wave.settlement = calculateSettlement(wave, difficultyScorePercent);
