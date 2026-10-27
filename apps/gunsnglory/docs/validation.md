@@ -51,4 +51,32 @@ pi --no-extensions --no-skills --no-prompt-templates --no-themes \
 
 ## 3. 提交与成品范围
 
-本轮交付采用独立功能分支 `codex/gunsnglory-architecture-docs`，不合并 master，不登记导航或发布游戏。Markdown 成品按仓库相对路径复制到 `/tmp/var/wishflow-tools/`；精确文件和提交以本记录所在 Git 提交为准。
+2026-10-26 的首次交付采用独立功能分支 `codex/gunsnglory-architecture-docs`。2026-10-27 按用户要求将本地及远端分支重命名为 `gunsnglory`，后续实现以该分支为集成分支。未合并 master、登记导航或发布游戏。Markdown 成品按仓库相对路径复制到 `/tmp/var/wishflow-tools/`；精确文件和提交以 Git 历史为准。
+
+## 4. 2026-10-27：Matt 文档原则复核与讨论稿
+
+本轮核对仓库内的 `writing-for-agents`、`codebase-design`、`domain-modeling`，并参考 `to-spec`、`to-tickets` 与 `implement-spec` 的规格、纵向切片和单集成分支要求。没有调用发布 Issue 或执行游戏实现的流程。
+
+已完成产品规格与领域词汇的职责拆分、AGENTS 条件式指针与约束精简、时间随机规则去重，以及 `gunsnglory` 分支约定。三个公共 Module 与首批纵向切片是等待用户确认的候选；旧技术布局及阶段表明确标为待收敛，不报告整套架构已完成确认。
+
+本轮检查了 10 份 Markdown 的相对链接、围栏与尾空白，`CLAUDE.md` 仍只导入 AGENTS；差异检查通过。首次 pi 检查发现根默认分支规则可能产生歧义，补充明确的用户指定优先规则后再次运行：
+
+```sh
+pi --no-extensions --no-skills --no-prompt-templates --no-themes \
+  --no-session --no-approve --offline --tools read --mode json \
+  -p '只读验证修订后的 AGENTS.md。列出启动已加载的两份 AGENTS.md，不用 read 读取它们代替启动加载。实际 read docs/spec.md 和 docs/architecture.md；说明后续任务分支应从哪里创建、为何不同于根规则，以及 Game/Progress/Experiments 是候选还是已确认。不要修改文件或运行命令。' \
+  > /tmp/gunsnglory-pi-matt-doc-check-final.jsonl \
+  2> /tmp/gunsnglory-pi-matt-doc-check-final.stderr
+```
+
+工作目录为应用目录；退出码 0，stderr 为空。日志确认两次真实 `read` 均返回 `isError: false`，没有使用 `read` 补读 AGENTS 代替启动加载。返回路径在下列摘录中归一为仓库相对路径：
+
+```text
+启动加载：AGENTS.md、apps/gunsnglory/AGENTS.md
+实际读取：apps/gunsnglory/docs/spec.md、apps/gunsnglory/docs/architecture.md
+后续任务：基于 gunsnglory 最新已验证提交创建 worktree
+规则优先：本应用用户指定优先于根默认分支规则
+Game / Progress / Experiments：候选，尚未确认
+```
+
+这是文档与上下文加载验证，不是游戏、存储或模拟实现验证。实现尚不存在，未运行相应构建、行为测试、真实介质测试或部署。
