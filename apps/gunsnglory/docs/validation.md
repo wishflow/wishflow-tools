@@ -140,4 +140,4 @@ pi --no-extensions --no-skills --no-prompt-templates --no-themes \
 
 本地复跑提示：多个应用的 Playwright 配置复用 `4173` 端口，先停止旧预览再启动测试矩阵，避免测试连到错误应用。Duolingo Avatar 的 Python 依赖要求较新版本；本机默认 Python 3.9 不满足，需要显式用 Python 3.11 建立应用自己的 `.venv`，不改全局 Python；仓库 CI 使用 Python 3.12。
 
-CI 依赖策略：首次 GitHub workflow 因 `postcss@8.5.32` 发布不足 24 小时而拒绝安装。应用通过 `pnpm.overrides` 固定到兼容的 `postcss@8.5.29`（仓库内另一应用已使用该版本）；冻结安装、T01 测试及全站构建在本地重新通过。修复后的 GitHub workflow 结果和公网实测仍待完成。
+CI 依赖策略：首次 GitHub workflow 因 `postcss@8.5.32` 发布不足 24 小时而拒绝安装；随后尝试把 `postcss` 固定到仓库内已有的 `8.5.29`，但 CI 的 pnpm 12 不再读取 `package.json` 中的 `pnpm.overrides`，因此冻结安装报告配置与锁文件不匹配。现已将 `overrides` 移到应用自己的 `pnpm-workspace.yaml`，并沿用其他独立应用的 `allowBuilds.esbuild` 配置。使用 pnpm 12.15.0 的 supply-chain 检查、冻结安装及完整 `test:ci` 均通过。修复后的 GitHub workflow 结果和公网实测仍待完成。
