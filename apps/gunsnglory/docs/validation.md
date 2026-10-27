@@ -190,4 +190,7 @@ Game 行为测试验证生命耗尽优先级、结算只发生一次、胜败两
 | Codex 内置浏览器本地败北实测 | 重开后启动单生命样例；显示 Defeat、Lives 0、Escaped 1、Defeated 0、Cash $65、画面分数 $49、高分候选 $48。 |
 | 窄屏实测 | 内置浏览器 390×844 视口下，标准样例胜利结算正常显示；Canvas 比例 1.786，页面宽度为视口宽度 390px，结算面板左右边界约为 45px 和 345px。Playwright 的触屏用例以 `hasTouch` 和 `tap()` 验证结算及重开。 |
 | 浏览器运行时 | 实测期间没有捕获到 console error；将本地倍速恢复为 1×，恢复默认视口。 |
-| 集成与发布 | 本节记录的是任务分支本地验收；尚未合入 `gunsnglory`/`master`，也未触发 CI 或公开部署。 |
+| 集成分支与提交 | `2684438` 已 fast-forward 到 `gunsnglory` 和 `master`。 |
+| GitHub Actions 与 Pages | [workflow 40524750429](https://github.com/wishflow/wishflow-tools/actions/runs/40524750429) 成功；Guns’n’Glory 与共享站点测试通过，Cloudflare Pages、GitHub Pages 部署通过。Worker 未触发（本次未改 Worker）。 |
+| Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后，中文标准样例显示胜利、50 条命、0 逃脱、击败 1 名、现金 $66、画面分数 $50、高分候选 $50；单生命样例显示败北、0 条命、逃脱 1 名、现金 $65、画面分数 $49、高分候选 $48。测试后刷新回标准样例，恢复原中文和 1×，结算页面无 console error。 |
+| 交互观察 | 当前公网浏览器保存的 Usagi 浮层位置覆盖倍速滑杆中段；本次可访问性控件操作通过，浮层遮挡下的鼠标/触屏命中尚未验证，作为共享页面叠层问题单独跟进。 |
