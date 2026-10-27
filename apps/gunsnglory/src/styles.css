@@ -1,0 +1,177 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: dark;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #f5ead4;
+  background: #17130f;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 50% -15%, rgba(130, 72, 34, 0.36), transparent 56%),
+    #17130f;
+}
+
+.game-page {
+  display: grid;
+  gap: 1.2rem;
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2.5rem);
+}
+
+.game-heading {
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 0.45rem;
+  color: #e0a752;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.game-heading h1 {
+  margin: 0;
+  color: #ffe1a8;
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.intro {
+  margin: 0.45rem 0 0;
+  color: #c6b89f;
+  font-size: clamp(0.85rem, 1.6vw, 1rem);
+}
+
+.game-panel {
+  display: grid;
+  gap: 0.75rem;
+  width: 100%;
+  padding: clamp(0.75rem, 2vw, 1.25rem);
+  border: 1px solid rgba(217, 170, 99, 0.33);
+  border-radius: 1rem;
+  background: linear-gradient(160deg, rgba(59, 43, 30, 0.94), rgba(30, 25, 20, 0.98));
+  box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.3);
+}
+
+.scene-heading,
+.game-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.scene-heading h2 {
+  margin: 0;
+  color: #f6d29c;
+  font-size: 1.05rem;
+}
+
+.scene-heading span {
+  color: #a99a84;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.game-frame {
+  width: min(100%, 1024px);
+  aspect-ratio: 16 / 9;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 225, 168, 0.42);
+  border-radius: 0.55rem;
+  background: #1a1712;
+  box-shadow: inset 0 0 0.5rem rgba(0, 0, 0, 0.55);
+}
+
+.game-frame canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  touch-action: none;
+  outline: none;
+}
+
+.game-frame canvas:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: -3px;
+}
+
+.game-controls p {
+  min-height: 1.5em;
+  margin: 0;
+  color: #ffe0a3;
+  font-weight: 650;
+}
+
+.game-controls button {
+  min-height: 2.6rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid rgba(237, 191, 117, 0.65);
+  border-radius: 0.6rem;
+  color: #ffe8c1;
+  background: #513821;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.game-controls button:hover {
+  background: #67482b;
+}
+
+.game-controls button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 3px;
+}
+
+.scene-caption {
+  margin: 0;
+  color: #a99a84;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .game-page {
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .game-panel {
+    gap: 0.65rem;
+    padding: 0.65rem;
+    border-radius: 0.75rem;
+  }
+
+  .scene-heading span {
+    font-size: 0.6rem;
+  }
+
+  .game-controls {
+    align-items: flex-start;
+  }
+
+  .game-controls button {
+    min-height: 2.35rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.85rem;
+  }
+
+  .game-controls p {
+    font-size: 0.85rem;
+  }
+}

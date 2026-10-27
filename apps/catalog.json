@@ -16,6 +16,14 @@
     "icon": "🟠"
   },
   {
+    "slug": "gunsnglory",
+    "title": "Guns’n’Glory Learning Edition",
+    "titleZh": "Guns’n’Glory 学习版",
+    "description": "Explore Cow Gulch and select a gunslinger in the first playable browser slice.",
+    "descriptionZh": "在首个可玩网页切片中探索牛溪谷地图并选择枪手。",
+    "icon": "🤠"
+  },
+  {
     "slug": "pet",
     "title": "Usagi animated pet",
     "titleZh": "Usagi 动画宠物",

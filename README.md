@@ -2,7 +2,7 @@
 
 WishFlow Tools 将多个独立工具汇集到一个导航站。前端应用放在 `apps/<slug>/`，入口卡片、标题、简介和图标统一登记在 [`apps/catalog.json`](apps/catalog.json)；`slug` 决定应用子路径。
 
-头像编辑器位于 `/duolingo-avatar/`；球群生长实验室位于 `/ball-growth-lab/`；Usagi 宠物包预览与安装说明位于 `/pet/`。应用路径和 Worker 部署说明见 [`apps/duolingo-avatar/docs/deployment-plan.md`](apps/duolingo-avatar/docs/deployment-plan.md)。
+头像编辑器位于 `/duolingo-avatar/`；球群生长实验室位于 `/ball-growth-lab/`；Guns’n’Glory 学习版位于 [`/gunsnglory/`](https://wishflow-tools.pages.dev/gunsnglory/)；Usagi 宠物包预览与安装说明位于 `/pet/`。Guns’n’Glory 当前公开的是 Cow Gulch 首个可玩切片，不代表完整关卡。应用路径和 Worker 部署说明见 [`apps/duolingo-avatar/docs/deployment-plan.md`](apps/duolingo-avatar/docs/deployment-plan.md)。
 
 3D Objects 位于 `/3d-objects/`，当前收录一座可旋转、缩放和拆解观察的木结构小屋。
 
@@ -38,13 +38,14 @@ pnpm run build:site
 python3 -m http.server 8769 --directory _site
 ```
 
-访问 `http://127.0.0.1:8769/` 查看导航页，或访问 `/duolingo-avatar/`、`/ball-growth-lab/`、`/pet/` 打开应用。新增已登记应用后，先在该应用目录运行其 `scripts/install.sh`。
+访问 `http://127.0.0.1:8769/` 查看导航页，或访问 `/duolingo-avatar/`、`/ball-growth-lab/`、`/gunsnglory/`、`/pet/` 打开应用。新增已登记应用后，先在该应用目录运行其 `scripts/install.sh`。
 
 ## 验证与发布
 
 ```bash
 pnpm run test:catalog
 pnpm --dir apps/ball-growth-lab run test:ci
+pnpm --dir apps/gunsnglory run test:ci
 pnpm --dir apps/duolingo-avatar run test:ci
 pnpm --dir apps/pet run test:ci
 ```

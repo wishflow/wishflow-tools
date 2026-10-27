@@ -64,7 +64,7 @@
 
 用户已确认三个公共深 Module：Game 提供战局能力，Progress 提供正式进度能力，Experiments 提供模拟与比较能力；内部细节及所有权由[架构设计](architecture.md)统一维护。用户同时确认以首关展示与选中、单波移动扣命、击杀得金、胜败重开、保存恢复作为首批纵向切片粒度，具体依赖和验收由实施计划维护。
 
-存储细节由[存储契约](storage-contracts.md)维护，命令、时间、回放和运行协议由[模拟与自动化契约](simulation-and-automation.md)维护。本轮确定设计，不代表游戏能力已经实现。
+存储细节由[存储契约](storage-contracts.md)维护，命令、时间、回放和运行协议由[模拟与自动化契约](simulation-and-automation.md)维护。本文描述产品目标，不代表所有游戏能力已经实现；当前交付状态见[实施计划](implementation-plan.md)。
 
 ## 5. 测试决策（Testing Decisions）
 

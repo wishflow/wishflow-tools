@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#17130f" />
+    <meta name="description" content="Explore the first browser recreation slice of Guns’n’Glory." />
+    <title>Guns’n’Glory · Learning Edition</title>
+  </head>
+  <body>
+    <wishflow-site-shell
+      data-app="gunsnglory"
+      data-base="../"
+      data-home-href="../"
+      data-title-en="Guns’n’Glory · Learning Edition"
+      data-title-zh="Guns’n’Glory 学习版"
+      data-sidebar-enabled="true"
+      data-local-nav='[{"href":"#game","en":"Game preview","zh":"游戏预览","icon":"✦"}]'
+    >
+      <main id="app" slot="content"></main>
+    </wishflow-site-shell>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
