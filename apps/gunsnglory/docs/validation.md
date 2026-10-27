@@ -243,4 +243,6 @@ Cow Gulch 的正式样本初始现金为 $65，低于原版 $75 报价；页面�
 | Playwright 桌面与触屏 | 桌面核对 $75 报价、$65 余额拒绝、现金与生成池保持不变及中英文文案；390×844 触屏视口可操作招募并获得同一拒绝结果。 |
 | Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5174/` 查看 Cow Gulch 地图和 HUD，点击“招募枪手 · $75”后显示“现金不足，无法招募枪手：需要 $75，当前 $65”；现金仍为 $65、预备单位仍为空。切换到英文确认 `Not enough cash for Gunslinger: need $75, have $65`，然后恢复原中文偏好；没有启动波次或写入结算。 |
 | 存档边界 | 未修改 IndexedDB schema、Progress 或正式结算流程；招募只存在于 GameSession。 |
-| 集成与发布 | 待合入 `gunsnglory`、合入并推送 `master`，再记录 CI/CD 与公网浏览器实测结果。 |
+| 集成分支与提交 | `832a7d9` 已快进合入本地 `gunsnglory` 和 `master`；`master` 已推送至 origin。 |
+| GitHub Actions 与发布 | [workflow 40555388204](https://github.com/wishflow/wishflow-tools/actions/runs/40555388204) 成功；Guns’n’Glory 与共享站点测试通过，Cloudflare Pages 和 GitHub Pages 部署通过，Worker 未触发。 |
+| Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后看到 T07 招募控件；Cow Gulch 初始现金 $65，点击“招募枪手 · $75”显示“现金不足，无法招募枪手：需要 $75，当前 $65”，现金未扣、预备单位为空。没有启动战斗或写入结算。 |
