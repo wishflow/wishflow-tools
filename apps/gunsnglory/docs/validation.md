@@ -262,3 +262,17 @@ Cow Gulch 的正式样本初始现金为 $65，低于原版 $75 报价；页面�
 | 集成分支与提交 | `9fcf8db` 已快进合入本地 `gunsnglory` 和 `master`。 |
 | GitHub Actions 与发布 | [workflow 40563999941](https://github.com/wishflow/wishflow-tools/actions/runs/40563999941) 成功；Guns’n’Glory 测试、共享站点检查、Cloudflare Pages 和 GitHub Pages 部署均通过，Worker 未触发。 |
 | Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后打开升级规则调试样本，点击画布中心选中枪手，确认升级框显示等级 0→1、速度 1500→1750、伤害与射程不变、普通装填 500→400 ms、特殊装填 1500→1250 ms、价格/现金 $25。取消后现金仍为 $25；再次确认后现金为 $0，界面显示升至等级 1。档案最高分仍为 $50；返回正式 Cow Gulch 后现金为 $65、未选择单位且正式升级上限为 0。全程未开始波次或正式结算。 |
+
+
+## 14. T09 暂停恢复及后台返回验收
+
+T09 将暂停状态纳入 `Game` 的公开会话行为，并由浏览器控制处理手动暂停、后台自动暂停和返回。暂停期间帧、战斗时间与画面冻结，游戏意图不入队；恢复时重设浏览器计时基准，不追补后台经过的时间。人工暂停在切换到后台再返回后仍保持暂停；后台触发的暂停则在页面恢复可见时自动恢复。未暂停时，只有活动战斗或单位移动阶段才能手动暂停；进入暂停状态后，恢复按钮保持可用。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、58 项单元测试、Vite 生产构建及 27 个 Playwright 场景。新增 3 个 T09 场景覆盖暂停画面冻结、手动暂停的后台往返、后台自动暂停与恢复、以及 390×844 触屏操作。 |
+| 暂停规则变异检查 | 临时反转 Game 的暂停推进保护后，专门的暂停回归测试按预期失败；文件已自动恢复。 |
+| `pnpm run test:catalog` 与 `pnpm run build:site` | 通过：14 项仓库目录/变更分类测试通过；共享站点及全部登记应用完成生产构建。 |
+| Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5179/` 的升级规则调试样本中以 4× 开始单个敌人，点击暂停后显示“战斗已暂停。”和“继续战斗”；等待后画面保持不变，点击继续后恢复“暂停战斗”控件，画面重新推进。 |
+| 集成与部署 | `e6b1105` 已快进合入本地 `gunsnglory` 和 `master` 并推送。 [GitHub Actions workflow 40569651906](https://github.com/wishflow/wishflow-tools/actions/runs/40569651906) 成功；Guns’n’Glory 测试、共享站点检查、Cloudflare Pages 和 GitHub Pages 部署通过，Worker 未触发。 |
+| Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/`，打开不写入正式档案的升级规则调试样本并开始一个拓荒者。暂停后状态提示和“继续战斗”可见，等待 500 ms 后画面不变；恢复后提示消失、按钮回到“暂停战斗”，等待后战斗画面继续变化。档案最高分仍显示 $50；未完成正式关卡或写入结算。 |
