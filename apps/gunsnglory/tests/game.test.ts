@@ -67,6 +67,28 @@ const recruitmentScenario: ScenarioContent = {
     spawnLocationType: 1,
   }],
 };
+const gunslingerUpgradeLevelOne = {
+  price: 25,
+  movementSpeedFinePer100Ms: 1750,
+  weapon: {
+    ...combatScenario.units[0]!.weapon!,
+    reloadTimeMs: 400,
+    specialReloadTimeMs: 1250,
+    specialReloadFrequency: 6,
+  },
+};
+const upgradeScenario: ScenarioContent = {
+  ...combatScenario,
+  id: 'upgrade-fixture',
+  maxUpgrades: 1,
+  previewWave: {
+    ...combatScenario.previewWave!,
+    initialCash: 25,
+    spawn: { cell: { x: 12, y: 8 }, direction: 'east' },
+    enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 1000 },
+  },
+  units: combatScenario.units.map((unit) => ({ ...unit, upgradeLevels: [gunslingerUpgradeLevelOne] })),
+};
 const noCombatCowGulch: ScenarioContent = { ...cowGulchContent, units: [] };
 
 function advanceFor(session: GameSession, durationMs: number) {
@@ -201,6 +223,108 @@ test('insufficient cash rejects recruitment without changing cash or the pool', 
   const retried = session.advance({ deltaMs: 0 });
   assert.equal(retried.wave?.cash, 74);
   assert.equal(retried.recruitPool[0]?.count, 0);
+});
+
+test('upgrades a selected Gunslinger once, charges the next-level price, and applies its researched stats', async () => {
+  const session = await createGame({ scenarios: { [upgradeScenario.id]: upgradeScenario } }).open({
+    scenarioId: upgradeScenario.id,
+  });
+  assert.equal(session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 }), true);
+  session.advance({ deltaMs: 0 });
+  const command = { type: 'upgrade-unit', unitId: 'gunslinger-1', commandId: 'upgrade-gunslinger-1' } as const;
+
+  assert.equal(session.submitIntent(command), true);
+  assert.equal(session.submitIntent(command), true, 'a duplicate retry is acknowledged without queuing another upgrade');
+  const upgraded = session.advance({ deltaMs: 0 });
+
+  assert.equal(upgraded.wave?.cash, 0);
+  assert.equal(upgraded.units[0]?.upgradeLevel, 1);
+  assert.equal(upgraded.units[0]?.movementSpeedFinePer100Ms, 1750);
+  assert.deepEqual(upgraded.units[0]?.weapon, gunslingerUpgradeLevelOne.weapon);
+  assert.equal(upgraded.units[0]?.nextUpgrade, undefined, 'the scenario upgrade cap hides later levels');
+  assert.deepEqual(upgraded.events, [{
+    type: 'unit-upgraded',
+    unitId: 'gunslinger-1',
+    level: 1,
+    price: 25,
+  }]);
+
+  assert.equal(session.submitIntent(command), true, 'a retry after processing remains idempotent');
+  assert.equal(session.submitIntent({ ...command, commandId: 'upgrade-gunslinger-2' }), false, 'a unit cannot pass the scenario cap');
+  const retried = session.advance({ deltaMs: 0 });
+  assert.equal(retried.wave?.cash, 0);
+  assert.equal(retried.units[0]?.upgradeLevel, 1);
+  assert.equal(retried.events.length, 0);
+
+  const positionBeforeMove = retried.units[0]!.positionFine;
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 10, targetY: 8.75 }), true);
+  const moved = session.advance({ deltaMs: 100 });
+  assert.equal(moved.units[0]?.positionFine.x, positionBeforeMove.x + 1750);
+});
+
+test('insufficient upgrade funds leave the unit level, stats, and cash unchanged', async () => {
+  const poorScenario: ScenarioContent = {
+    ...upgradeScenario,
+    id: 'poor-upgrade-fixture',
+    previewWave: { ...upgradeScenario.previewWave!, initialCash: 24 },
+  };
+  const session = await createGame({ scenarios: { [poorScenario.id]: poorScenario } }).open({
+    scenarioId: poorScenario.id,
+  });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.advance({ deltaMs: 0 });
+
+  assert.equal(session.submitIntent({ type: 'upgrade-unit', unitId: 'gunslinger-1', commandId: 'too-poor' }), true);
+  const rejected = session.advance({ deltaMs: 0 });
+
+  assert.equal(rejected.wave?.cash, 24);
+  assert.equal(rejected.units[0]?.upgradeLevel, 0);
+  assert.equal(rejected.units[0]?.movementSpeedFinePer100Ms, 1500);
+  assert.equal(rejected.units[0]?.weapon?.reloadTimeMs, 500);
+  assert.deepEqual(rejected.events, [{
+    type: 'unit-upgrade-rejected',
+    unitId: 'gunslinger-1',
+    reason: 'insufficient-funds',
+    price: 25,
+    availableCash: 24,
+  }]);
+});
+
+test('the original Cow Gulch cap prevents upgrades even though the Gunslinger has later level data', async () => {
+  const session = await createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } }).open({
+    scenarioId: cowGulchContent.id,
+  });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  const selected = session.advance({ deltaMs: 0 });
+
+  assert.equal(cowGulchContent.maxUpgrades, 0);
+  assert.equal(selected.units[0]?.upgradeLevel, 0);
+  assert.equal(selected.units[0]?.nextUpgrade, undefined);
+  assert.equal(session.submitIntent({ type: 'upgrade-unit', unitId: 'gunslinger-1', commandId: 'blocked-by-level-cap' }), false);
+});
+
+test('the upgraded Gunslinger fires on the researched faster reload while the base level is still cooling down', async () => {
+  const upgraded = await createGame({ scenarios: { [upgradeScenario.id]: upgradeScenario } }).open({
+    scenarioId: upgradeScenario.id,
+  });
+  upgraded.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  upgraded.advance({ deltaMs: 0 });
+  upgraded.submitIntent({ type: 'upgrade-unit', unitId: 'gunslinger-1', commandId: 'reload-upgrade' });
+  upgraded.advance({ deltaMs: 0 });
+  upgraded.submitIntent({ type: 'start-wave' });
+  upgraded.advance({ deltaMs: 0 });
+  upgraded.advance({ deltaMs: 100 });
+  assert.equal(upgraded.observe().events.some((event) => event.type === 'enemy-hit'), false);
+  const upgradedShot = upgraded.advance({ deltaMs: 100 });
+  assert.equal(upgradedShot.shots.length, 1, 'the upgraded cooldown expires at 200 ms and creates a shot');
+
+  const baseScenario: ScenarioContent = { ...upgradeScenario, id: 'base-reload-fixture', maxUpgrades: 0 };
+  const base = await createGame({ scenarios: { [baseScenario.id]: baseScenario } }).open({ scenarioId: baseScenario.id });
+  base.submitIntent({ type: 'start-wave' });
+  base.advance({ deltaMs: 0 });
+  base.advance({ deltaMs: 100 });
+  const baseCooling = base.advance({ deltaMs: 100 });
+  assert.equal(baseCooling.shots.length, 0, 'the base cooldown still has 50 ms remaining at 200 ms');
 });
 
 test('selects a unit only inside its hit area and clears selection on empty ground', async () => {

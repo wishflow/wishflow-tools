@@ -45,6 +45,7 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
       movementSpeedFinePer100Ms: 1500,
       selected: false,
       moving: false,
+      upgradeLevel: 0,
       positionFine: { x: (8 * 7680) + 3840, y: (8 * 7680) + 5760 },
       frame: { x: 0, y: 0, width: 32, height: 44 },
       render: { x: 8, y: 7.625, width: 1, height: 1.375 },

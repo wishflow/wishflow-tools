@@ -246,3 +246,17 @@ Cow Gulch 的正式样本初始现金为 $65，低于原版 $75 报价；页面�
 | 集成分支与提交 | `832a7d9` 已快进合入本地 `gunsnglory` 和 `master`；`master` 已推送至 origin。 |
 | GitHub Actions 与发布 | [workflow 40555388204](https://github.com/wishflow/wishflow-tools/actions/runs/40555388204) 成功；Guns’n’Glory 与共享站点测试通过，Cloudflare Pages 和 GitHub Pages 部署通过，Worker 未触发。 |
 | Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后看到 T07 招募控件；Cow Gulch 初始现金 $65，点击“招募枪手 · $75”显示“现金不足，无法招募枪手：需要 $75，当前 $65”，现金未扣、预备单位为空。没有启动战斗或写入结算。 |
+
+## 13. T08 升级 Cow Gulch Gunslinger
+
+升级属性来自 APK 1.8.6 的 `GameDesignData.unitDataDesperado` 后续等级数据：等级 0 的移动速度为 1500 fine units/100 ms、普通装填 500 ms、特殊装填 1500 ms；等级 1 升级价 $25，移动速度 1750、普通装填 400 ms、特殊装填 1250 ms，伤害 140 与射程 38400 不变。原版 `GameObjectUnit.isUpgradePossible(max)` 同时受关卡 `maxUpgrades` 与单位数据等级数限制；Cow Gulch 的 `maxUpgrades` 为 0，因此正式 Cow Gulch 样本必须保持不可升级。
+
+为验证升级行为而不篡改正式关卡，浏览器额外提供明确标注的 debug rules sample：复用 Cow Gulch 地图与 Gunslinger，升级上限为 1、初始现金 $25，运行模式为 debug，且不支持正式结算。成功后扣款、升级等级、移动速度、武器与冷却在 Game 内一起更新；余额不足时不部分扣款；相同命令重试不会再次扣款。此样本不写入 Progress / IndexedDB，返回 Cow Gulch 会重新打开其 $65、升级上限 0 的标准状态。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、57 项单元测试、Vite 生产构建和 24 个 Playwright 场景。新增覆盖升级价格与扣款、命令重试幂等、余额不足无部分变更、原关卡上限、移动速度、普通攻击冷却、桌面取消/确认及 390×844 触屏操作。 |
+| 余额边界变异检查 | 临时将“现金少于价格才拒绝”改为“现金少于或等于价格就拒绝”；两个升级测试按预期失败，证明刚好 $25 的成功路径受测试保护。源文件已恢复后继续验证。 |
+| 仓库集成验证 | `pnpm run test:catalog` 的 14 项测试通过；冻结安装登记应用依赖后，`pnpm run build:site` 完整构建通过，包含所有静态应用。 |
+| Codex 内置浏览器本地实测 | `http://127.0.0.1:5174/` 中打开调试规则样本，选择枪手并核对升级框：等级 0→1、速度 1500→1750、普通装填 500→400 ms、特殊装填 1500→1250 ms、价格/现金 $25。取消后现金未变；确认后余额为 $0、显示升至等级 1。档案高分仍为 $50；返回原样本后现金恢复 $65，Cow Gulch 升级上限仍为 0。未开始波次或结算。 |
+| 本地发布状态 | T08 的本地实现与验证通过；当前提交前，集成分支、远端 CI 和公网发布实测仍待完成。 |

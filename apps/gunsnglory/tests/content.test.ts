@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { cowGulchContent } from '../src/content/cow-gulch';
+import { cowGulchContent, cowGulchUpgradeSampleContent } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
@@ -24,7 +24,28 @@ test('contains the researched Cow Gulch scenario and exactly its first-map unit'
     reloadTimeMs: 500,
     projectileSpeed: 600,
     damageStyle: 0,
+    specialReloadTimeMs: 1500,
+    specialReloadFrequency: 6,
   });
+  assert.equal(cowGulchContent.maxUpgrades, 0, 'the original first level does not allow upgrades');
+  assert.deepEqual(cowGulchContent.units[0]?.upgradeLevels?.[0], {
+    price: 25,
+    movementSpeedFinePer100Ms: 1750,
+    weapon: {
+      damage: 140,
+      damageType: 'light',
+      rangeFine: 38400,
+      reloadTimeMs: 400,
+      projectileSpeed: 600,
+      damageStyle: 0,
+      specialReloadTimeMs: 1250,
+      specialReloadFrequency: 6,
+    },
+  });
+  assert.equal(cowGulchUpgradeSampleContent.id, 'cow-gulch-upgrade-sample');
+  assert.equal(cowGulchUpgradeSampleContent.formalSettlementSupported, false);
+  assert.equal(cowGulchUpgradeSampleContent.maxUpgrades, 1);
+  assert.equal(cowGulchUpgradeSampleContent.previewWave?.initialCash, 25);
   assert.equal(cowGulchContent.previewWave?.initialCash, 65);
   assert.equal(cowGulchContent.previewWave?.enemy?.hitPoints, 126);
   assert.equal(cowGulchContent.previewWave?.enemy?.cashReward, 1);

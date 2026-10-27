@@ -21,7 +21,7 @@ app.innerHTML = [
   '    <p class="intro">Use the Cow Gulch map to defeat a pioneer and collect the reward.</p>',
   '  </header>',
   '  <section class="game-panel" aria-labelledby="scene-title">',
-  '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span>NEW MEXICO · 01</span></div>',
+  '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span></div>',
   '    <div class="game-frame">',
   '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
   '      <section class="settlement-panel" data-testid="settlement" aria-labelledby="settlement-title" aria-live="polite" hidden>',
@@ -46,10 +46,15 @@ app.innerHTML = [
   '        <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
   '      </label>',
   '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
+  '      <p data-testid="upgrade-sample-status" role="status" aria-live="polite"></p>',
+  '      <p data-testid="upgrade-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="recruit-pool-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="start-wave">Start one pioneer sample</button>',
   '      <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
+  '      <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
+  '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
+  '      <button type="button" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <button type="button" data-action="clear-selection">Clear selection</button>',
   '    </div>',
@@ -58,6 +63,14 @@ app.innerHTML = [
   '      <div class="recruit-confirmation-actions">',
   '        <button type="button" data-action="confirm-recruit">Recruit</button>',
   '        <button type="button" data-action="cancel-recruit">Cancel</button>',
+  '      </div>',
+  '    </dialog>',
+  '    <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" aria-labelledby="upgrade-confirmation-title">',
+  '      <h2 id="upgrade-confirmation-title"></h2>',
+  '      <p data-testid="upgrade-confirmation-details"></p>',
+  '      <div class="recruit-confirmation-actions">',
+  '        <button type="button" data-action="confirm-upgrade">Confirm upgrade</button>',
+  '        <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
   '      </div>',
   '    </dialog>',
   '    <p class="scene-caption">The normal sample resolves a victory; the one-life test verifies defeat. Later waves and the campaign are out of scope.</p>',
@@ -72,6 +85,10 @@ const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profi
 const statusElement = app.querySelector<HTMLElement>('[data-testid="selection-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
 const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
+const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
+const sceneContextElement = app.querySelector<HTMLElement>('[data-testid="scene-context"]');
+const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-sample-status"]');
+const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-status"]');
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
 const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
@@ -80,10 +97,18 @@ const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
 const recruitButton = app.querySelector<HTMLButtonElement>('[data-action="recruit-unit"]');
+const upgradeButton = app.querySelector<HTMLButtonElement>('[data-action="upgrade-unit"]');
+const startUpgradeSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-upgrade-sample"]');
+const returnCowGulchButton = app.querySelector<HTMLButtonElement>('[data-action="return-cow-gulch"]');
 const recruitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="recruit-confirmation"]');
 const recruitConfirmationTitleElement = app.querySelector<HTMLElement>('#recruit-confirmation-title');
 const confirmRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-recruit"]');
 const cancelRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-recruit"]');
+const upgradeConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="upgrade-confirmation"]');
+const upgradeConfirmationTitleElement = app.querySelector<HTMLElement>('#upgrade-confirmation-title');
+const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="upgrade-confirmation-details"]');
+const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
+const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
 const startDefeatButton = app.querySelector<HTMLButtonElement>('[data-action="start-defeat-sample"]');
 const settlementPanelElement = app.querySelector<HTMLElement>('[data-testid="settlement"]');
 const settlementTitleElement = app.querySelector<HTMLElement>('#settlement-title');
@@ -95,7 +120,10 @@ const settlementSaveStatusElement = app.querySelector<HTMLElement>('[data-testid
 const retrySettlementButton = app.querySelector<HTMLButtonElement>('[data-action="retry-settlement-save"]');
 const restartButton = app.querySelector<HTMLButtonElement>('[data-action="restart-sample"]');
 if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement
+  || !sceneTitleElement || !sceneContextElement || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
+  || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
+  || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
@@ -108,6 +136,10 @@ const profileStatus: HTMLElement = profileStatusElement;
 const status: HTMLElement = statusElement;
 const waveStatus: HTMLElement = waveStatusElement;
 const combatStatus: HTMLElement = combatStatusElement;
+const sceneTitle: HTMLElement = sceneTitleElement;
+const sceneContext: HTMLElement = sceneContextElement;
+const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
+const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
 const recruitStatus: HTMLElement = recruitStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
@@ -115,10 +147,18 @@ const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
 const recruitControl: HTMLButtonElement = recruitButton;
+const upgradeControl: HTMLButtonElement = upgradeButton;
+const startUpgradeSampleControl: HTMLButtonElement = startUpgradeSampleButton;
+const returnCowGulchControl: HTMLButtonElement = returnCowGulchButton;
 const recruitConfirmation: HTMLDialogElement = recruitConfirmationElement;
 const recruitConfirmationTitle: HTMLElement = recruitConfirmationTitleElement;
 const confirmRecruitControl: HTMLButtonElement = confirmRecruitButton;
 const cancelRecruitControl: HTMLButtonElement = cancelRecruitButton;
+const upgradeConfirmation: HTMLDialogElement = upgradeConfirmationElement;
+const upgradeConfirmationTitle: HTMLElement = upgradeConfirmationTitleElement;
+const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElement;
+const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
+const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
 const startDefeatControl: HTMLButtonElement = startDefeatButton;
 const clearSelectionControl: HTMLButtonElement = clearButton;
 const restartControl: HTMLButtonElement = restartButton;
@@ -150,6 +190,9 @@ let lastDefeatReward: number | undefined;
 let lastRecruitmentEvent: Extract<GameEvent, { type: 'unit-recruited' | 'unit-recruitment-rejected' }> | undefined;
 let pendingRecruitmentType: string | undefined;
 let recruitmentCommandNumber = 0;
+let lastUpgradeEvent: Extract<GameEvent, { type: 'unit-upgraded' | 'unit-upgrade-rejected' }> | undefined;
+let pendingUpgradeUnitId: string | undefined;
+let upgradeCommandNumber = 0;
 let settingsSaveSequence = 0;
 const simulationTime = new SimulationTimeAccumulator();
 const languageMessages = {
@@ -170,6 +213,24 @@ const languageMessages = {
     confirmRecruit: (name: string, price: number) => `Recruit ${name} for $${price}?`,
     confirmRecruitButton: 'Recruit',
     cancelRecruitButton: 'Cancel',
+    upgradeSceneTitle: 'Cow Gulch · upgrade test',
+    upgradeSceneContext: 'DEBUG RULE TEST',
+    originalUpgradeLimit: 'Original Cow Gulch has an upgrade limit of 0. This separate debug fixture sets the limit to 1 and starts with $25; it never saves progress.',
+    debugUpgradeFixture: 'Debug-only fixture · upgrade limit 1 · $25 starting cash · no profile writes.',
+    upgradeButton: (price: number) => `Upgrade Gunslinger · $${price}`,
+    upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
+      `Level ${level} → ${level + 1} · Speed ${speed} → ${nextSpeed} · Reload ${reload} → ${nextReload} ms`,
+    upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
+      range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
+      nextSpecialReload: number, price: number, cash: number) =>
+      `Level ${level} → ${level + 1} · Speed ${speed} → ${nextSpeed} · Damage ${damage} → ${nextDamage} · Range ${range} → ${nextRange} fine units · Reload ${reload} → ${nextReload} ms · Special reload ${specialReload} → ${nextSpecialReload} ms · Price $${price} · Cash $${cash}`,
+    confirmUpgrade: (name: string, price: number) => `Upgrade ${name} for $${price}?`,
+    confirmUpgradeButton: 'Confirm upgrade',
+    cancelUpgradeButton: 'Cancel upgrade',
+    upgraded: (name: string, level: number, price: number) => `${name} upgraded to level ${level} for $${price}.`,
+    insufficientUpgradeCash: (price: number, cash: number) => `Not enough cash to upgrade: need $${price}, have $${cash}.`,
+    upgradeLimitReached: 'This unit has reached the upgrade limit for this level.',
+    noUpgradeAvailable: 'No upgrade is available for this unit in this level.',
     'load-failed': 'Speed preference unavailable; using 1× for this session.',
     saved: 'Speed preference saved.',
     'save-failed': 'Speed is active for this session, but could not be saved.',
@@ -208,6 +269,24 @@ const languageMessages = {
     confirmRecruit: (name: string, price: number) => `花费 $${price} 招募${name}？`,
     confirmRecruitButton: '确认招募',
     cancelRecruitButton: '取消',
+    upgradeSceneTitle: '牛溪谷 · 升级测试',
+    upgradeSceneContext: '规则测试 · 调试场景',
+    originalUpgradeLimit: '原版牛溪谷的升级上限为 0。此独立调试样本将上限设为 1、初始现金设为 $25；不会写入存档。',
+    debugUpgradeFixture: '仅供规则测试 · 升级上限 1 · 初始现金 $25 · 不写入档案。',
+    upgradeButton: (price: number) => `升级枪手 · $${price}`,
+    upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
+      `等级 ${level} → ${level + 1} · 移动速度 ${speed} → ${nextSpeed} · 装填 ${reload} → ${nextReload} 毫秒`,
+    upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
+      range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
+      nextSpecialReload: number, price: number, cash: number) =>
+      `等级 ${level} → ${level + 1} · 移动速度 ${speed} → ${nextSpeed} · 伤害 ${damage} → ${nextDamage} · 射程 ${range} → ${nextRange} 细单位 · 装填 ${reload} → ${nextReload} 毫秒 · 特殊装填 ${specialReload} → ${nextSpecialReload} 毫秒 · 价格 $${price} · 当前现金 $${cash}`,
+    confirmUpgrade: (name: string, price: number) => `花费 $${price} 升级${name}？`,
+    confirmUpgradeButton: '确认升级',
+    cancelUpgradeButton: '取消升级',
+    upgraded: (name: string, level: number, price: number) => `已花费 $${price} 将${name}升至等级 ${level}。`,
+    insufficientUpgradeCash: (price: number, cash: number) => `升级资金不足：需要 $${price}，当前 $${cash}。`,
+    upgradeLimitReached: '该单位已达到本关升级上限。',
+    noUpgradeAvailable: '该单位在本关没有可用升级。',
     'load-failed': '无法读取倍速设置，本次暂用 1×。',
     saved: '倍速设置已保存。',
     'save-failed': '本次使用所选倍速，但保存失败。',
@@ -298,6 +377,11 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (recruitmentEvent?.type === 'unit-recruited' || recruitmentEvent?.type === 'unit-recruitment-rejected') {
     lastRecruitmentEvent = recruitmentEvent;
   }
+  const upgradeEvent = [...events].reverse().find((event) =>
+    event.type === 'unit-upgraded' || event.type === 'unit-upgrade-rejected');
+  if (upgradeEvent?.type === 'unit-upgraded' || upgradeEvent?.type === 'unit-upgrade-rejected') {
+    lastUpgradeEvent = upgradeEvent;
+  }
   const selectionText = unit
     ? messages.selected + ' · Cell (' + (unit.cell.x + 1) + ', ' + (unit.cell.y + 1) + ')'
     : messages.none;
@@ -340,20 +424,59 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     const recruitLabel = messages.recruitButton(recruitDefinition.name[language], recruitDefinition.price);
     if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
   }
+  const upgradeScenario = view.scenarioId === 'cow-gulch-upgrade-sample';
+  sceneTitle.textContent = upgradeScenario ? messages.upgradeSceneTitle : 'Cow Gulch';
+  sceneContext.textContent = upgradeScenario ? messages.upgradeSceneContext : 'NEW MEXICO · 01';
+  upgradeSampleStatus.textContent = upgradeScenario ? messages.debugUpgradeFixture : messages.originalUpgradeLimit;
+  const selectedUnit = unit;
+  const nextUpgrade = selectedUnit?.nextUpgrade;
+  let upgradeText = '';
+  if (lastUpgradeEvent?.type === 'unit-upgraded') {
+    const unitName = language === 'zh' ? '枪手' : 'Gunslinger';
+    upgradeText = messages.upgraded(unitName, lastUpgradeEvent.level, lastUpgradeEvent.price);
+  } else if (lastUpgradeEvent?.type === 'unit-upgrade-rejected') {
+    upgradeText = lastUpgradeEvent.reason === 'insufficient-funds'
+      ? messages.insufficientUpgradeCash(lastUpgradeEvent.price, lastUpgradeEvent.availableCash)
+      : messages.upgradeLimitReached;
+  } else if (selectedUnit && nextUpgrade && selectedUnit.weapon) {
+    upgradeText = messages.upgradeSummary(
+      selectedUnit.upgradeLevel,
+      selectedUnit.movementSpeedFinePer100Ms,
+      nextUpgrade.movementSpeedFinePer100Ms,
+      selectedUnit.weapon.reloadTimeMs,
+      nextUpgrade.weapon.reloadTimeMs,
+    );
+  } else if (selectedUnit) {
+    upgradeText = messages.noUpgradeAvailable;
+  }
+  if (upgradeStatus.textContent !== upgradeText) upgradeStatus.textContent = upgradeText;
+  if (nextUpgrade) {
+    upgradeControl.textContent = messages.upgradeButton(nextUpgrade.price);
+  } else {
+    upgradeControl.textContent = messages.upgradeButton(0);
+  }
   confirmRecruitControl.textContent = messages.confirmRecruitButton;
   cancelRecruitControl.textContent = messages.cancelRecruitButton;
+  confirmUpgradeControl.textContent = messages.confirmUpgradeButton;
+  cancelUpgradeControl.textContent = messages.cancelUpgradeButton;
   if (pendingRecruitmentType) {
     const pendingRecruit = view.recruitPool.find((entry) => entry.unitType === pendingRecruitmentType);
     if (pendingRecruit) recruitConfirmationTitle.textContent = messages.confirmRecruit(
       pendingRecruit.name[language], pendingRecruit.price,
     );
   }
+  if (pendingUpgradeUnitId) renderUpgradeConfirmation(language);
   const settlement = view.wave?.settlement;
   const newSettlement = Boolean(settlement) && settlementPanel.hidden;
   settlementPanel.hidden = !settlement;
   if (settlement && recruitConfirmation.open) {
     pendingRecruitmentType = undefined;
     recruitConfirmation.close();
+  }
+  if (settlement && upgradeConfirmation.open) {
+    pendingUpgradeUnitId = undefined;
+    upgradeConfirmation.close();
+    confirmUpgradeControl.hidden = false;
   }
   if (settlement && view.wave) {
     if (newSettlement) {
@@ -389,10 +512,53 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const waveNotStarted = view.wave?.phase === 'not-started';
   startWaveControl.disabled = !waveNotStarted;
   recruitControl.disabled = Boolean(settlement) || !recruitDefinition;
+  upgradeControl.hidden = !nextUpgrade;
+  upgradeControl.disabled = Boolean(settlement) || !nextUpgrade;
+  startUpgradeSampleControl.hidden = upgradeScenario;
+  returnCowGulchControl.hidden = !upgradeScenario;
   startDefeatControl.disabled = !waveNotStarted || view.scenarioId !== 'cow-gulch';
   clearSelectionControl.disabled = Boolean(settlement);
-  const canvasLabel = language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
+  const canvasLabel = upgradeScenario
+    ? language === 'zh' ? '牛溪谷升级规则测试地图' : 'Cow Gulch upgrade rules test map'
+    : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
   if (canvas.getAttribute('aria-label') !== canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
+}
+
+function renderUpgradeConfirmation(language: keyof typeof languageMessages): void {
+  const unit = view.units.find((candidate) => candidate.id === pendingUpgradeUnitId);
+  const nextUpgrade = unit?.nextUpgrade;
+  const cash = view.wave?.cash;
+  if (!unit || !nextUpgrade || !unit.weapon || cash === undefined) {
+    pendingUpgradeUnitId = undefined;
+    if (upgradeConfirmation.open) upgradeConfirmation.close();
+    confirmUpgradeControl.hidden = false;
+    return;
+  }
+
+  const messages = languageMessages[language];
+  const unitName = language === 'zh' ? '枪手' : 'Gunslinger';
+  upgradeConfirmationTitle.textContent = messages.confirmUpgrade(unitName, nextUpgrade.price);
+  const details = messages.upgradeDetails(
+    unit.upgradeLevel,
+    unit.movementSpeedFinePer100Ms,
+    nextUpgrade.movementSpeedFinePer100Ms,
+    unit.weapon.damage,
+    nextUpgrade.weapon.damage,
+    unit.weapon.rangeFine,
+    nextUpgrade.weapon.rangeFine,
+    unit.weapon.reloadTimeMs,
+    nextUpgrade.weapon.reloadTimeMs,
+    unit.weapon.specialReloadTimeMs ?? 0,
+    nextUpgrade.weapon.specialReloadTimeMs ?? 0,
+    nextUpgrade.price,
+    cash,
+  );
+  const affordable = cash >= nextUpgrade.price;
+  upgradeConfirmationDetails.textContent = affordable
+    ? details
+    : `${details} · ${messages.insufficientUpgradeCash(nextUpgrade.price, cash)}`;
+  confirmUpgradeControl.hidden = !affordable;
+  confirmUpgradeControl.disabled = !affordable;
 }
 
 function redraw(resize = false): void {
@@ -483,7 +649,12 @@ async function replaceSession(scenarioId: string, randomSeed: number, mode: Game
     lastRecruitmentEvent = undefined;
     pendingRecruitmentType = undefined;
     recruitmentCommandNumber = 0;
+    lastUpgradeEvent = undefined;
+    pendingUpgradeUnitId = undefined;
+    upgradeCommandNumber = 0;
     if (recruitConfirmation.open) recruitConfirmation.close();
+    if (upgradeConfirmation.open) upgradeConfirmation.close();
+    confirmUpgradeControl.hidden = false;
     activeSettlementRecord = undefined;
     settlementSaveState = undefined;
     renderStatus();
@@ -620,6 +791,44 @@ cancelRecruitControl.addEventListener('click', () => {
 });
 recruitConfirmation.addEventListener('cancel', () => {
   pendingRecruitmentType = undefined;
+});
+startUpgradeSampleControl.addEventListener('click', () => {
+  const randomSeed = session.startRecord.randomSeed;
+  void replaceSession('cow-gulch-upgrade-sample', randomSeed, 'debug');
+});
+returnCowGulchControl.addEventListener('click', () => {
+  const randomSeed = session.startRecord.randomSeed;
+  void replaceSession('cow-gulch', randomSeed, 'formal');
+});
+upgradeControl.addEventListener('click', () => {
+  const unit = view.units.find((candidate) => candidate.selected && candidate.nextUpgrade);
+  if (!unit || upgradeConfirmation.open || view.wave?.cash === undefined) return;
+  pendingUpgradeUnitId = unit.id;
+  renderUpgradeConfirmation(getLanguage());
+  upgradeConfirmation.showModal();
+  (confirmUpgradeControl.hidden ? cancelUpgradeControl : confirmUpgradeControl).focus();
+});
+confirmUpgradeControl.addEventListener('click', () => {
+  const unitId = pendingUpgradeUnitId;
+  pendingUpgradeUnitId = undefined;
+  upgradeConfirmation.close();
+  confirmUpgradeControl.hidden = false;
+  if (!unitId) return;
+  dispatch({
+    type: 'upgrade-unit',
+    unitId,
+    commandId: `${session.id}:upgrade:${++upgradeCommandNumber}`,
+  });
+  if (upgradeControl.hidden) canvas.focus({ preventScroll: true });
+});
+cancelUpgradeControl.addEventListener('click', () => {
+  pendingUpgradeUnitId = undefined;
+  upgradeConfirmation.close();
+  confirmUpgradeControl.hidden = false;
+});
+upgradeConfirmation.addEventListener('cancel', () => {
+  pendingUpgradeUnitId = undefined;
+  confirmUpgradeControl.hidden = false;
 });
 clearSelectionControl.addEventListener('click', () => dispatch({ type: 'clear-selection' }));
 startDefeatControl.addEventListener('click', () => {

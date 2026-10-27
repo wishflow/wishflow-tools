@@ -25,6 +25,14 @@ export interface ScenarioUnit {
   render: Rectangle;
   hitArea: Rectangle;
   weapon?: UnitWeaponDefinition;
+  /** Upgrade rows are indexed by resulting level: entry 0 is level 1. */
+  upgradeLevels?: readonly UnitUpgradeDefinition[];
+}
+
+export interface UnitUpgradeDefinition {
+  price: number;
+  movementSpeedFinePer100Ms: number;
+  weapon: UnitWeaponDefinition;
 }
 
 export interface RecruitableUnitDefinition {
@@ -44,6 +52,8 @@ export interface UnitWeaponDefinition {
   reloadTimeMs: number;
   projectileSpeed: number;
   damageStyle: 0;
+  specialReloadTimeMs?: number;
+  specialReloadFrequency?: number;
 }
 
 export interface PreviewEnemyDefinition {
@@ -95,6 +105,8 @@ export interface ScenarioContent {
   /** Original TDM terrain codes, indexed as [row][column]. */
   originalTileGrid?: readonly (readonly number[])[];
   units: readonly ScenarioUnit[];
+  /** Maximum upgrade level available in this scene; matches original level data. */
+  maxUpgrades?: number;
   recruitableUnits?: readonly RecruitableUnitDefinition[];
   previewWave?: PreviewWaveDefinition;
 }
@@ -105,12 +117,15 @@ export type GameIntent =
   | { type: 'stop-moving' }
   | { type: 'clear-selection' }
   | { type: 'start-wave' }
-  | { type: 'recruit-unit'; unitType: string; commandId: string };
+  | { type: 'recruit-unit'; unitType: string; commandId: string }
+  | { type: 'upgrade-unit'; unitId: string; commandId: string };
 
 export interface UnitView extends ScenarioUnit {
   selected: boolean;
   moving: boolean;
   positionFine: { x: number; y: number };
+  upgradeLevel: number;
+  nextUpgrade?: UnitUpgradeDefinition;
 }
 
 export interface EnemyView {
@@ -141,6 +156,8 @@ export type GameEvent =
   | { type: 'enemy-defeated'; enemyId: string; cashReward: number }
   | { type: 'unit-recruited'; unitType: string; price: number; count: number }
   | { type: 'unit-recruitment-rejected'; unitType: string; reason: 'insufficient-funds'; price: number; availableCash: number }
+  | { type: 'unit-upgraded'; unitId: string; level: number; price: number }
+  | { type: 'unit-upgrade-rejected'; unitId: string; reason: 'insufficient-funds' | 'upgrade-limit'; price: number; availableCash: number }
   | { type: 'wave-settled'; settlement: WaveSettlement };
 
 export interface RecruitPoolEntry {
@@ -251,6 +268,9 @@ interface MutableUnit {
   selected: boolean;
   positionFine: { x: number; y: number };
   movementTargetFine?: { x: number; y: number };
+  upgradeLevel: number;
+  movementSpeedFinePer100Ms: number;
+  weapon?: UnitWeaponDefinition;
   weaponCooldownMs: number;
 }
 
@@ -316,8 +336,14 @@ function initialUnitPosition(definition: ScenarioUnit): { x: number; y: number }
   };
 }
 
-function unitView(unit: MutableUnit): UnitView {
+function nextUpgrade(unit: MutableUnit, maxUpgrades: number): UnitUpgradeDefinition | undefined {
+  if (unit.upgradeLevel >= maxUpgrades) return undefined;
+  return unit.definition.upgradeLevels?.[unit.upgradeLevel];
+}
+
+function unitView(unit: MutableUnit, maxUpgrades: number): UnitView {
   const { definition, positionFine } = unit;
+  const upgrade = nextUpgrade(unit, maxUpgrades);
   const offsetX = (positionFine.x - initialUnitPosition(definition).x) / FINE_UNITS_PER_CELL;
   const offsetY = (positionFine.y - initialUnitPosition(definition).y) / FINE_UNITS_PER_CELL;
   const render = { ...definition.render, x: definition.render.x + offsetX, y: definition.render.y + offsetY };
@@ -325,6 +351,8 @@ function unitView(unit: MutableUnit): UnitView {
 
   return {
     ...clone(definition),
+    movementSpeedFinePer100Ms: unit.movementSpeedFinePer100Ms,
+    ...(unit.weapon ? { weapon: clone(unit.weapon) } : { weapon: undefined }),
     cell: {
       x: Math.floor(positionFine.x / FINE_UNITS_PER_CELL),
       y: Math.floor((positionFine.y - FIELD_CENTER_HALF) / FINE_UNITS_PER_CELL),
@@ -334,6 +362,8 @@ function unitView(unit: MutableUnit): UnitView {
     selected: unit.selected,
     moving: unit.movementTargetFine !== undefined,
     positionFine: { ...positionFine },
+    upgradeLevel: unit.upgradeLevel,
+    ...(upgrade ? { nextUpgrade: clone(upgrade) } : {}),
   };
 }
 
@@ -392,7 +422,7 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number)
   }
 
   const distance = Math.hypot(dx, dy);
-  const speed = unit.definition.movementSpeedFinePer100Ms;
+  const speed = unit.movementSpeedFinePer100Ms;
   const directionX = Math.round((dx / distance) * speed);
   const directionY = Math.round((dy / distance) * speed);
   const moveX = Math.trunc((directionX * deltaMs) / 100);
@@ -542,7 +572,7 @@ function projectileTravelTime(
 }
 
 function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[]): MutableEnemy | undefined {
-  const weapon = unit.definition.weapon;
+  const weapon = unit.weapon;
   if (!weapon) return undefined;
   const maxSquareRange = maxWeaponSquareRange(weapon);
   let bestTarget: MutableEnemy | undefined;
@@ -636,10 +666,14 @@ export function createGame(options: {
         definition,
         selected: false,
         positionFine: initialUnitPosition(definition),
+        upgradeLevel: 0,
+        movementSpeedFinePer100Ms: definition.movementSpeedFinePer100Ms,
+        ...(definition.weapon ? { weapon: clone(definition.weapon) } : {}),
         weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
       }));
       const recruitableUnits = new Map((scenario.recruitableUnits ?? []).map((definition) => [definition.id, definition]));
       const recruitmentCommands = new Map<string, string>();
+      const upgradeCommands = new Map<string, string>();
       const pending: PendingIntent[] = [];
       let nextIntentSequence = 1;
       let nextShotNumber = 1;
@@ -672,7 +706,7 @@ export function createGame(options: {
           elapsedMs,
           scenarioId: scenario.id,
           map: scenario.map,
-          units: units.map(unitView),
+          units: units.map((unit) => unitView(unit, scenario.maxUpgrades ?? 0)),
           enemies: (wave?.enemies ?? []).map((enemy) => ({
             id: enemy.id,
             type: enemy.type,
@@ -767,9 +801,27 @@ export function createGame(options: {
             return true;
           }
 
+          if (intent.type === 'upgrade-unit') {
+            if (!wave || typeof intent.unitId !== 'string' || typeof intent.commandId !== 'string'
+              || !intent.commandId.trim() || intent.commandId.length > 128) return false;
+            const unit = units.find((candidate) => candidate.definition.id === intent.unitId);
+            if (!unit) return false;
+            const existingUnitId = upgradeCommands.get(intent.commandId);
+            if (existingUnitId !== undefined) return existingUnitId === intent.unitId;
+            const upgrade = nextUpgrade(unit, scenario.maxUpgrades ?? 0);
+            if (!unit.selected || !upgrade || !Number.isSafeInteger(upgrade.price) || upgrade.price < 0) return false;
+            upgradeCommands.set(intent.commandId, intent.unitId);
+            pending.push({
+              sequence: nextIntentSequence,
+              intent: { type: 'upgrade-unit', unitId: intent.unitId, commandId: intent.commandId },
+            });
+            nextIntentSequence += 1;
+            return true;
+          }
+
           if (intent.type === 'move-unit') {
             if (!Number.isFinite(intent.targetX) || !Number.isFinite(intent.targetY)
-              || !units.some((unit) => unit.selected && unit.definition.movementSpeedFinePer100Ms > 0)) return false;
+              || !units.some((unit) => unit.selected && unit.movementSpeedFinePer100Ms > 0)) return false;
             pending.push({
               sequence: nextIntentSequence,
               intent: { type: 'move-unit', targetX: intent.targetX, targetY: intent.targetY },
@@ -853,6 +905,45 @@ export function createGame(options: {
               continue;
             }
 
+            if (command.intent.type === 'upgrade-unit') {
+              const unitId = command.intent.unitId;
+              const unit = units.find((candidate) => candidate.definition.id === unitId);
+              if (!wave || !unit || !unit.selected) continue;
+              const upgrade = nextUpgrade(unit, scenario.maxUpgrades ?? 0);
+              if (!upgrade) {
+                wave.events.push({
+                  type: 'unit-upgrade-rejected',
+                  unitId: unit.definition.id,
+                  reason: 'upgrade-limit',
+                  price: 0,
+                  availableCash: wave.cash,
+                });
+                continue;
+              }
+              if (wave.cash < upgrade.price) {
+                wave.events.push({
+                  type: 'unit-upgrade-rejected',
+                  unitId: unit.definition.id,
+                  reason: 'insufficient-funds',
+                  price: upgrade.price,
+                  availableCash: wave.cash,
+                });
+                continue;
+              }
+              wave.cash -= upgrade.price;
+              unit.upgradeLevel += 1;
+              unit.movementSpeedFinePer100Ms = upgrade.movementSpeedFinePer100Ms;
+              unit.weapon = clone(upgrade.weapon);
+              unit.weaponCooldownMs = Math.trunc(upgrade.weapon.reloadTimeMs / 2);
+              wave.events.push({
+                type: 'unit-upgraded',
+                unitId: unit.definition.id,
+                level: unit.upgradeLevel,
+                price: upgrade.price,
+              });
+              continue;
+            }
+
             if (command.intent.type === 'move-unit') {
               const selectedUnit = units.find((unit) => unit.selected);
               if (selectedUnit) {
@@ -867,7 +958,7 @@ export function createGame(options: {
             const selection = command.intent;
             if (selection.type !== 'select-at') continue;
             const target = [...units].reverse().find((unit) => {
-              const current = unitView(unit);
+              const current = unitView(unit, scenario.maxUpgrades ?? 0);
               return contains(current.hitArea, selection.x, selection.y);
             });
             for (const unit of units) {
@@ -893,7 +984,7 @@ export function createGame(options: {
             }
 
             for (const unit of units) {
-              const weapon = unit.definition.weapon;
+              const weapon = unit.weapon;
               if (!weapon) continue;
               if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
               if (unit.weaponCooldownMs > 0) continue;

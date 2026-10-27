@@ -273,6 +273,12 @@ body {
   font-size: 1.1rem;
 }
 
+.upgrade-confirmation p {
+  margin: 0 0 1rem;
+  color: #f0d5a8;
+  line-height: 1.5;
+}
+
 .recruit-confirmation-actions {
   display: flex;
   flex-wrap: wrap;

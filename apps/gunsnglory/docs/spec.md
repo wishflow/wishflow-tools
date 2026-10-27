@@ -1,6 +1,6 @@
 # Guns’n’Glory 产品规格
 
-本文是产品目标、用户可见行为和范围的单一真源。当前处于设计阶段，本文不代表能力已经实现；阶段状态和交付顺序见[实施计划](implementation-plan.md)。领域用语统一采用[领域词汇表](GLOSSARY.md)。
+本文是产品目标、用户可见行为和范围的单一真源；本文不代表所有目标能力已经实现，阶段状态和交付顺序见[实施计划](implementation-plan.md)。领域用语统一采用[领域词汇表](GLOSSARY.md)。
 
 ## 1. 问题陈述（Problem Statement）
 
