@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('keeps the original off-map spawn outside the scaled Cow Gulch viewport', async ({ page }) => {
+test('keeps the full map visible and clips the pioneer until it enters the map bounds', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   const canvas = page.getByTestId('game-canvas');
@@ -8,13 +8,42 @@ test('keeps the original off-map spawn outside the scaled Cow Gulch viewport', a
   await expect(canvas).toBeVisible();
   await expect(waveStatus).toContainText('Wave 1 ready · Lives 50');
 
-  const before = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL());
+  const simulationSpeed = page.getByRole('slider', { name: 'Simulation speed' });
+  await simulationSpeed.focus();
+  await simulationSpeed.press('End');
+  await expect(simulationSpeed).toHaveValue('4');
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(waveStatus).toContainText('Wave 1 · Lives 50 · Enemies 1');
-  await page.waitForTimeout(300);
 
-  const after = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL());
-  expect(after).toBe(before);
+  const leftViewportPixels = () => canvas.evaluate((element) => {
+    const canvasElement = element as HTMLCanvasElement;
+    const context = canvasElement.getContext('2d');
+    if (!context) throw new Error('Canvas 2D is unavailable');
+    const pixels = context.getImageData(200, 300, 150, 100).data;
+    let hash = 2166136261;
+    for (const channel of pixels) hash = Math.imul(hash ^ channel, 16777619);
+    return hash >>> 0;
+  });
+
+  await page.waitForTimeout(500);
+  const offMapSpawnPixels = await canvas.evaluate((element) => {
+    const canvasElement = element as HTMLCanvasElement;
+    const context = canvasElement.getContext('2d');
+    if (!context) throw new Error('Canvas 2D is unavailable');
+    const pixels = context.getImageData(210, 324, 20, 32).data;
+    let nonBackgroundPixels = 0;
+    for (let index = 0; index < pixels.length; index += 4) {
+      if (pixels[index] !== 26 || pixels[index + 1] !== 23 || pixels[index + 2] !== 18) {
+        nonBackgroundPixels += 1;
+      }
+    }
+    return nonBackgroundPixels;
+  });
+  expect(offMapSpawnPixels).toBe(0);
+  const beforePioneerEnters = await leftViewportPixels();
+  await page.waitForTimeout(800);
+  const afterPioneerEnters = await leftViewportPixels();
+  expect(afterPioneerEnters).not.toBe(beforePioneerEnters);
 });
 
 test('loads legacy profile settings, saves the selected speed to IndexedDB, and restores it after reload', async ({ page }) => {
@@ -187,7 +216,9 @@ test('applies the selected speed to an active wave', async ({ page }) => {
   await speed.focus();
   await speed.press('End');
   await expect(speed).toHaveValue('4');
-  await page.waitForTimeout(1500);
+  // At 4× the pioneer briefly passes beneath the western bridge overlay; wait
+  // until it reappears on the lower canyon route before comparing the canvas.
+  await page.waitForTimeout(2500);
 
   const acceleratedImage = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL());
   expect(acceleratedImage).not.toBe(initialImage);

@@ -124,8 +124,15 @@ function renderStatus(): void {
 }
 
 function redraw(resize = false): void {
-  if (resize || !context) context = resizeCanvas(canvas);
-  drawGame(context, view, images);
+  const displayPixelScale = getDisplayPixelScale();
+  if (resize || !context) context = resizeCanvas(canvas, displayPixelScale);
+  drawGame(context, view, images, displayPixelScale);
+}
+
+function getDisplayPixelScale(): number {
+  const cssWidth = canvas.getBoundingClientRect().width;
+  const cssScale = cssWidth > 0 ? cssWidth / GAME_VIEWPORT.width : 1;
+  return cssScale * Math.max(1, window.devicePixelRatio || 1);
 }
 
 const assetNames = new Set([
@@ -258,7 +265,7 @@ canvas.addEventListener('pointerup', (event: PointerEvent) => {
   );
   if (!point) return;
 
-  const mapViewport = getMapViewport(view);
+  const mapViewport = getMapViewport(view, getDisplayPixelScale());
   const mapCell = screenToMapCell(mapViewport, point.x, point.y);
   dispatch({
     type: 'select-at',

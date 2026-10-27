@@ -215,6 +215,7 @@ body {
     align-items: center;
     column-gap: 0.5rem;
     row-gap: 0.35rem;
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
   }
 
   .game-controls button {

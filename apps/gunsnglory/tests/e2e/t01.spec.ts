@@ -10,9 +10,10 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await expect(status).toContainText('No unit selected');
 
   const colorCount = await canvas.evaluate((element) => {
-    const context = (element as HTMLCanvasElement).getContext('2d');
+    const canvasElement = element as HTMLCanvasElement;
+    const context = canvasElement.getContext('2d');
     if (!context) return 0;
-    const pixels = context.getImageData(0, 0, 1024, 576).data;
+    const pixels = context.getImageData(0, 0, canvasElement.width, canvasElement.height).data;
     const colors = new Set<string>();
     for (let index = 0; index < pixels.length; index += 64) {
       colors.add([pixels[index], pixels[index + 1], pixels[index + 2]].join(','));
@@ -42,6 +43,8 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
     return bounds.width / bounds.height;
   });
   expect(Math.abs(ratio - 16 / 9)).toBeLessThan(0.02);
+  const startButtonBox = await page.getByRole('button', { name: 'Start one pioneer sample' }).boundingBox();
+  expect(startButtonBox?.width).toBeGreaterThan(170);
 
   await clickWorld(512, 288);
   await expect(status).toContainText('Gunslinger selected');

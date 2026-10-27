@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cowGulchContent } from '../src/content/cow-gulch';
+import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { createGame, type ScenarioContent } from '../src/game';
 
 const scenario: ScenarioContent = {
@@ -87,13 +88,13 @@ test('does not create the controlled wave until the start intent advances', asyn
   const started = session.advance({ deltaMs: 1000 });
   assert.equal(started.wave?.phase, 'active');
   assert.equal(started.enemies.length, 1);
-  assert.deepEqual(started.enemies[0]?.positionFine, { x: -15360, y: 76800 });
+  assert.deepEqual(started.enemies[0]?.positionFine, { x: -11520, y: 80640 });
   assert.equal(started.enemies[0]?.speed, 490, 'seed 1234 uses Java Random nextInt(20) = 8');
   assert.equal(started.wave?.lives, 50);
   assert.equal(session.startRecord.randomSeed, 1234);
 
   const moved = session.advance({ deltaMs: 1000 });
-  assert.equal(moved.enemies[0]?.positionFine.x, -15360 + started.enemies[0]!.speed);
+  assert.equal(moved.enemies[0]?.positionFine.x, -11520 + started.enemies[0]!.speed);
   assert.equal(moved.elapsedMs, 200);
 });
 
@@ -132,6 +133,48 @@ test('replays the Cow Gulch preview and applies the escape penalty exactly once'
   const after = session.advance({ deltaMs: 100 });
   assert.equal(after.wave?.lives, 49);
   assert.equal(after.wave?.escapedEnemies, 1);
+});
+
+test('keeps the pioneer inside the TDM route cells from spawn through the exit', async () => {
+  const definition = cowGulchPreviewWave;
+  const waypoints = [definition.spawn.cell, ...definition.redirects.map(({ cell }) => cell), definition.exit];
+  const routeCells = new Set<string>();
+
+  for (let index = 1; index < waypoints.length; index += 1) {
+    const from = waypoints[index - 1]!;
+    const to = waypoints[index]!;
+    const stepX = Math.sign(to.x - from.x);
+    const stepY = Math.sign(to.y - from.y);
+    let x = from.x;
+    let y = from.y;
+    while (true) {
+      routeCells.add(`${x},${y}`);
+      if (x === to.x && y === to.y) break;
+      x += stepX;
+      y += stepY;
+    }
+  }
+
+  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+    scenarioId: 'cow-gulch',
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+
+  for (let step = 0; step < 2000 && view.wave?.phase === 'active'; step += 1) {
+    const enemy = view.enemies[0];
+    if (enemy) {
+      const x = Math.floor(enemy.positionFine.x / 7680);
+      const y = Math.floor(enemy.positionFine.y / 7680);
+      if (x >= 0 && x < cowGulchContent.map.width && y >= 0 && y < cowGulchContent.map.height) {
+        assert.ok(routeCells.has(`${x},${y}`), `enemy must stay on the TDM route at (${x}, ${y})`);
+      }
+    }
+    view = session.advance({ deltaMs: 100 });
+  }
+
+  assert.equal(view.wave?.phase, 'complete', 'the sample should leave the map through its TDM exit');
 });
 
 test('observing a running wave does not advance time, position, or its random stream', async () => {
@@ -206,8 +249,92 @@ test('follows the first Cow Gulch redirect and clamps variable time to the origi
   assert.ok(steps < 1000, 'enemy should reach the first route redirect');
   assert.equal(view.enemies[0]?.direction, 'south');
   assert.equal(Math.trunc(view.enemies[0]!.positionFine.x / 7680), 4);
+  assert.deepEqual(view.enemies[0]?.positionFine, {
+    x: (4 * 7680) + 3840,
+    y: (10 * 7680) + 3840 + 2,
+  }, 'the redirect snaps to the native field center before continuing');
 
   const before = view.enemies[0]!.positionFine.y;
   view = session.advance({ deltaMs: 1000 });
   assert.equal(view.enemies[0]!.positionFine.y - before, view.enemies[0]!.speed);
+});
+
+test('does not snap an enemy back when a route marker keeps its current direction', async () => {
+  const sameDirectionScenario: ScenarioContent = {
+    ...cowGulchContent,
+    id: 'same-direction-marker',
+    previewWave: {
+      ...cowGulchContent.previewWave!,
+      redirects: [{ cell: { x: 4, y: 10 }, directions: ['east'] }],
+    },
+  };
+  const session = await createGame({ scenarios: { [sameDirectionScenario.id]: sameDirectionScenario } }).open({
+    scenarioId: sameDirectionScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  const center = (4 * 7680) + 3840;
+  let crossed = false;
+
+  for (let step = 0; step < 1000; step += 1) {
+    const previousX = view.enemies[0]!.positionFine.x;
+    view = session.advance({ deltaMs: 100 });
+    const enemy = view.enemies[0]!;
+    if (previousX < center && enemy.positionFine.x > center) {
+      assert.equal(enemy.direction, 'east');
+      assert.equal(enemy.positionFine.x, previousX + enemy.speed);
+      assert.ok(enemy.positionFine.x > center + 2, 'same-direction markers do not reset the fine position');
+      crossed = true;
+      break;
+    }
+  }
+
+  assert.equal(crossed, true, 'enemy reaches the same-direction route marker');
+});
+
+test('follows every Cow Gulch route turn at its native field center', async () => {
+  const expectedTurns = [
+    { direction: 'south', cell: { x: 4, y: 10 } },
+    { direction: 'east', cell: { x: 4, y: 13 } },
+    { direction: 'north', cell: { x: 12, y: 13 } },
+    { direction: 'west', cell: { x: 12, y: 6 } },
+    { direction: 'north', cell: { x: 9, y: 6 } },
+    { direction: 'east', cell: { x: 9, y: 2 } },
+    { direction: 'south', cell: { x: 12, y: 2 } },
+    { direction: 'east', cell: { x: 12, y: 3 } },
+  ] as const;
+  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+    scenarioId: 'cow-gulch',
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  let nextTurnIndex = 0;
+
+  for (let step = 0; step < 2000 && view.wave?.phase === 'active'; step += 1) {
+    view = session.advance({ deltaMs: 100 });
+    const enemy = view.enemies[0];
+    if (!enemy) continue;
+
+    const expected = expectedTurns[nextTurnIndex];
+    if (!expected) continue;
+    const vector = {
+      east: { x: 1, y: 0 },
+      south: { x: 0, y: 1 },
+      west: { x: -1, y: 0 },
+      north: { x: 0, y: -1 },
+    }[expected.direction];
+    const expectedPosition = {
+      x: (expected.cell.x * 7680) + 3840 + (vector.x * 2),
+      y: (expected.cell.y * 7680) + 3840 + (vector.y * 2),
+    };
+    if (enemy.positionFine.x === expectedPosition.x && enemy.positionFine.y === expectedPosition.y) {
+      assert.equal(enemy.direction, expected.direction);
+      nextTurnIndex += 1;
+    }
+  }
+
+  assert.equal(view.wave?.phase, 'complete');
+  assert.equal(nextTurnIndex, expectedTurns.length);
 });

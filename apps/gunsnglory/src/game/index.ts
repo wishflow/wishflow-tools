@@ -237,7 +237,17 @@ function moveEnemy(enemy: MutableEnemy, deltaMs: number, definition: PreviewWave
 
   const redirect = definition.redirects.find((candidate) =>
     candidate.cell.x === cell.x && candidate.cell.y === cell.y);
-  if (redirect) enemy.direction = redirect.directions[random.nextInt(redirect.directions.length)]!;
+  if (redirect) {
+    const nextDirection = redirect.directions[random.nextInt(redirect.directions.length)]!;
+    if (nextDirection !== enemy.direction) {
+      enemy.direction = nextDirection;
+      const nextVector = directionVector(enemy.direction);
+      enemy.positionFine = {
+        x: (cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.x * 2),
+        y: (cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.y * 2),
+      };
+    }
+  }
   return false;
 }
 
@@ -367,8 +377,8 @@ export function createGame(options: {
                 speed,
                 direction: scenario.previewWave.spawn.direction,
                 positionFine: {
-                  x: (scenario.previewWave.spawn.cell.x - 2) * FINE_UNITS_PER_CELL,
-                  y: scenario.previewWave.spawn.cell.y * FINE_UNITS_PER_CELL,
+                  x: ((scenario.previewWave.spawn.cell.x - 2) * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+                  y: (scenario.previewWave.spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
                 },
               });
               wave.phase = 'active';

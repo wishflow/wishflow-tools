@@ -5,25 +5,39 @@ export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
 export type GameImages = Readonly<Record<string, HTMLImageElement>>;
 
-export function resizeCanvas(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-  const pixelRatio = Math.max(1, window.devicePixelRatio || 1);
-  canvas.width = Math.round(GAME_VIEWPORT.width * pixelRatio);
-  canvas.height = Math.round(GAME_VIEWPORT.height * pixelRatio);
+function snapToDevicePixel(value: number, displayPixelScale: number): number {
+  return Math.round(value * displayPixelScale) / displayPixelScale;
+}
+
+export function resizeCanvas(
+  canvas: HTMLCanvasElement,
+  displayPixelScale = Math.max(1, window.devicePixelRatio || 1),
+): CanvasRenderingContext2D {
+  canvas.width = Math.round(GAME_VIEWPORT.width * displayPixelScale);
+  canvas.height = Math.round(GAME_VIEWPORT.height * displayPixelScale);
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Canvas 2D is unavailable');
-  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  context.setTransform(displayPixelScale, 0, 0, displayPixelScale, 0, 0);
   context.imageSmoothingEnabled = false;
   return context;
 }
 
-export function getMapViewport(view: GameView): MapViewport {
-  return calculateMapViewport(
+export function getMapViewport(view: GameView, displayPixelScale = 1): MapViewport {
+  const viewport = calculateMapViewport(
     view.map.width,
     view.map.height,
     GAME_VIEWPORT.width,
     GAME_VIEWPORT.height,
     view.map.tileSize,
+    displayPixelScale,
   );
+  return {
+    ...viewport,
+    origin: {
+      x: snapToDevicePixel(viewport.origin.x, displayPixelScale),
+      y: snapToDevicePixel(viewport.origin.y, displayPixelScale),
+    },
+  };
 }
 
 function drawTiles(
@@ -69,8 +83,8 @@ function drawEnemy(
   const tileScale = viewport.scaleFactor;
   const width = sourceWidth * tileScale;
   const height = sourceHeight * tileScale;
-  const centerX = viewport.origin.x + (enemy.positionFine.x / 240 + 16) * tileScale;
-  const feetY = viewport.origin.y + (enemy.positionFine.y / 240 + 16) * tileScale;
+  const centerX = viewport.origin.x + (enemy.positionFine.x / 240) * tileScale;
+  const feetY = viewport.origin.y + (enemy.positionFine.y / 240) * tileScale;
   const left = centerX - width / 2;
   const top = feetY - height;
   const sourceX = (enemy.animationFrame % 3) * sourceWidth;
@@ -89,17 +103,22 @@ export function drawGame(
   context: CanvasRenderingContext2D,
   view: GameView,
   images: GameImages,
+  displayPixelScale = 1,
 ): void {
   context.save();
   context.clearRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   context.fillStyle = '#1a1712';
   context.fillRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
 
-  const viewport = getMapViewport(view);
+  const viewport = getMapViewport(view, displayPixelScale);
   context.beginPath();
   context.rect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   context.clip();
+  context.beginPath();
+  context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
+  context.clip();
   drawTiles(context, view.map.background, images, viewport);
+  for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
   drawTiles(context, view.map.streets, images, viewport);
 
   for (const unit of view.units) {
@@ -143,6 +162,5 @@ export function drawGame(
     }
   }
 
-  for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
   context.restore();
 }

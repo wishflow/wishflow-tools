@@ -9,7 +9,6 @@ export interface MapViewport {
 
 export const LOGICAL_TILE_SIZE = 32;
 export const BASE_VIEWPORT_WIDTH = 1024;
-export const MIN_SCALE_RATIO = 0.85;
 export const MAX_SCALE_RATIO = 2;
 
 function assertPositiveFinite(name: string, value: number): void {
@@ -25,19 +24,25 @@ export function calculateMapViewport(
   viewportWidth: number,
   viewportHeight: number,
   logicalTileSize = LOGICAL_TILE_SIZE,
+  displayPixelScale = 1,
 ): MapViewport {
   assertPositiveFinite('Map width', mapWidthTiles);
   assertPositiveFinite('Map height', mapHeightTiles);
   assertPositiveFinite('Viewport width', viewportWidth);
   assertPositiveFinite('Viewport height', viewportHeight);
   assertPositiveFinite('Logical tile size', logicalTileSize);
+  assertPositiveFinite('Display pixel scale', displayPixelScale);
 
   const splashScale = viewportWidth / BASE_VIEWPORT_WIDTH;
-  const minScale = splashScale * MIN_SCALE_RATIO;
   const maxScale = Math.max(splashScale * MAX_SCALE_RATIO, 1);
-  const targetScale = viewportWidth / (mapWidthTiles * logicalTileSize);
-  const scale = Math.round(Math.min(maxScale, Math.max(minScale, targetScale)) * 100) / 100;
-  const tileSize = Math.trunc(scale * logicalTileSize);
+  const tilePixels = Math.floor(Math.min(
+    (viewportWidth * displayPixelScale) / mapWidthTiles,
+    (viewportHeight * displayPixelScale) / mapHeightTiles,
+    maxScale * logicalTileSize * displayPixelScale,
+  ));
+  if (tilePixels < 1) throw new RangeError('Map tiles are too small for the display pixel scale');
+  const tileSize = tilePixels / displayPixelScale;
+  const scale = tileSize / logicalTileSize;
   const mapWidth = mapWidthTiles * tileSize;
   const mapHeight = mapHeightTiles * tileSize;
 
