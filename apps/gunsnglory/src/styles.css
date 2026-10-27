@@ -146,6 +146,70 @@ body {
   outline-offset: -3px;
 }
 
+.settlement-panel {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  gap: 0.7rem;
+  width: min(88%, 30rem);
+  max-height: 90%;
+  overflow: auto;
+  padding: clamp(1rem, 4vw, 1.75rem);
+  border: 1px solid rgba(255, 225, 168, 0.7);
+  border-radius: 0.8rem;
+  background: rgba(30, 25, 20, 0.96);
+  box-shadow: 0 0.8rem 3rem rgba(0, 0, 0, 0.65);
+  transform: translate(-50%, -50%);
+}
+
+.settlement-panel[hidden] {
+  display: none;
+}
+
+.settlement-panel h2,
+.settlement-panel p {
+  margin: 0;
+}
+
+.settlement-panel h2 {
+  color: #ffe1a8;
+  font-size: 1.2rem;
+}
+
+.settlement-panel p {
+  color: #f0d5a8;
+  line-height: 1.4;
+}
+
+.settlement-panel [data-testid="settlement-outcome"] {
+  color: #e0a752;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.settlement-panel button {
+  min-height: 2.6rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(237, 191, 117, 0.65);
+  border-radius: 0.6rem;
+  color: #ffe8c1;
+  background: #513821;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settlement-panel button:hover {
+  background: #67482b;
+}
+
+.settlement-panel button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 3px;
+}
+
 .game-controls p {
   min-height: 1.5em;
   min-width: 0;

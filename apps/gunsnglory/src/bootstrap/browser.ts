@@ -1,5 +1,6 @@
 import { createGame } from '../game';
 import { cowGulchContent } from '../content/cow-gulch';
+import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
 import { createProgress } from '../progress';
 import { createIndexedDbSettingsRepository } from '../progress/indexeddb-settings-repository';
 
@@ -7,6 +8,7 @@ export function createBrowserGame() {
   return createGame({
     scenarios: {
       [cowGulchContent.id]: cowGulchContent,
+      [cowGulchDefeatContent.id]: cowGulchDefeatContent,
     },
     randomSeedSource: () => {
       const seed = new Uint32Array(1);

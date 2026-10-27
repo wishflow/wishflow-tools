@@ -176,3 +176,18 @@ Game 公共行为测试覆盖射程边界、同分目标的稳定次序、非致
 | Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:4173/` 用中文启动 Cow Gulch 样本并调到 4×；页面显示“第 1 波完成 · 生命 50 · 逃脱 0 · 击败 1 · 现金 $66”和“拓荒者被击败 · +$1”。英文说明及结果正常，再恢复中文和 1×。 |
 | GitHub Actions 与部署 | [workflow 40515083324](https://github.com/wishflow/wishflow-tools/actions/runs/40515083324) 对 commit `a095873` 完成且成功；Guns’n’Glory 测试、Cloudflare Pages 与 GitHub Pages 部署通过。Worker 未触发（本次未改 Worker）。 |
 | Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后，中文说明及 65 初始现金可见；调至 4×并启动样本，显示“第 1 波完成 · 生命 50 · 逃脱 0 · 击败 1 · 现金 $66”与“拓荒者被击败 · +$1”。测试后恢复原有中文和 1× 设置。 |
+
+## 9. T04 胜败结算与干净重开验收
+
+交付范围是单波开发样例的胜利/败北结算以及重开。结算显示波次状态、现金、画面分数和原版高分文件候选值；候选值明确标注尚未保存。T05 才负责正式档案、进度和高分写入。
+
+Game 行为测试验证生命耗尽优先级、结算只发生一次、胜败两种结果、分数舍入，以及相同随机种子重开后恢复初态并关闭旧战局。浏览器测试还覆盖中英文切换、键盘焦点、手机触屏重开和 `pagehide` 关闭。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、36 项单元/规则测试、Vite 生产构建、14 个 Playwright 场景。 |
+| Codex 内置浏览器本地胜利实测 | 在 `http://127.0.0.1:4174/` 调至 4× 并启动样例；显示 Victory、Lives 50、Escaped 0、Defeated 1、Cash $66、画面分数 $50、高分候选 $50。结算焦点落在重开按钮。 |
+| Codex 内置浏览器本地败北实测 | 重开后启动单生命样例；显示 Defeat、Lives 0、Escaped 1、Defeated 0、Cash $65、画面分数 $49、高分候选 $48。 |
+| 窄屏实测 | 内置浏览器 390×844 视口下，标准样例胜利结算正常显示；Canvas 比例 1.786，页面宽度为视口宽度 390px，结算面板左右边界约为 45px 和 345px。Playwright 的触屏用例以 `hasTouch` 和 `tap()` 验证结算及重开。 |
+| 浏览器运行时 | 实测期间没有捕获到 console error；将本地倍速恢复为 1×，恢复默认视口。 |
+| 集成与发布 | 本节记录的是任务分支本地验收；尚未合入 `gunsnglory`/`master`，也未触发 CI 或公开部署。 |

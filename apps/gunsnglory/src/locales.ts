@@ -1,8 +1,8 @@
 export const messages = {
   'FIRST COMBAT SLICE': { en: 'FIRST COMBAT SLICE', zh: '首个战斗切片' },
   'Use the Cow Gulch map to defeat a pioneer and collect the reward.': {
-    en: 'Use the Cow Gulch map to defeat a pioneer and collect the reward.',
-    zh: '在牛溪谷使用枪手击败一名拓荒者并获得奖励。',
+    en: 'Finish a Cow Gulch combat sample, review the result, and restart from a clean state.',
+    zh: '结束牛溪谷战斗样本，查看结算，并从干净状态重新开始。',
   },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
   'Click the gunslinger to select it. Click empty ground to clear selection.': {
@@ -11,10 +11,17 @@ export const messages = {
   },
   'Clear selection': { en: 'Clear selection', zh: '取消选择' },
   'Start one pioneer sample': { en: 'Start one pioneer sample', zh: '开始单个拓荒者样本' },
+  'Test defeat with one life': { en: 'Test defeat with one life', zh: '测试一条生命耗尽败北' },
+  'Restart this sample': { en: 'Restart this sample', zh: '重新开始本样本' },
+  'Battle result': { en: 'Battle result', zh: '战斗结算' },
+  'One-life test: no defender is deployed, so the pioneer reaches the exit.': {
+    en: 'One-life test: no defender is deployed, so the pioneer reaches the exit.',
+    zh: '一条生命测试：不部署防守单位，让拓荒者抵达出口。',
+  },
   'Simulation speed': { en: 'Simulation speed', zh: '模拟速度' },
-  'This sample covers one pioneer’s movement, combat, and reward; later waves and the campaign are out of scope.': {
-    en: 'This sample covers one pioneer’s movement, combat, and reward; later waves and the campaign are out of scope.',
-    zh: '本样本覆盖一名拓荒者的移动、战斗与奖励；不包含后续波次或战役。',
+  'The normal sample resolves a victory; the one-life test verifies defeat. Later waves and the campaign are out of scope.': {
+    en: 'The normal sample resolves a victory; the one-life test verifies defeat. Later waves and the campaign are out of scope.',
+    zh: '普通样本验证胜利结算，一条生命测试验证败北；不包含后续波次或战役。',
   },
   'Cow Gulch game map': { en: 'Cow Gulch game map', zh: '牛溪谷游戏地图' },
 };

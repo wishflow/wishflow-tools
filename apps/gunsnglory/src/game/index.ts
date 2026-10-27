@@ -58,6 +58,7 @@ export interface PreviewWaveDefinition {
   number: number;
   initialLives: number;
   initialCash?: number;
+  difficultyScorePercent?: number;
   spawn: WaveSpawn;
   additionalSpawns?: readonly WaveSpawn[];
   enemy?: PreviewEnemyDefinition;
@@ -118,7 +119,15 @@ export interface ShotView {
 
 export type GameEvent =
   | { type: 'enemy-hit'; enemyId: string; damage: number; hitPoints: number }
-  | { type: 'enemy-defeated'; enemyId: string; cashReward: number };
+  | { type: 'enemy-defeated'; enemyId: string; cashReward: number }
+  | { type: 'wave-settled'; settlement: WaveSettlement };
+
+export interface WaveSettlement {
+  outcome: 'victory' | 'defeat';
+  scoreBase: number;
+  displayScore: number;
+  highScoreCandidate: number;
+}
 
 export interface WaveView {
   number: number;
@@ -128,6 +137,7 @@ export interface WaveView {
   defeatedEnemies: number;
   cash: number;
   activeEnemies: number;
+  settlement?: WaveSettlement;
 }
 
 export interface GameView {
@@ -206,6 +216,8 @@ interface MutableWave {
   escapedEnemies: number;
   defeatedEnemies: number;
   cash: number;
+  cashMade: number;
+  settlement?: WaveSettlement;
   enemies: MutableEnemy[];
   shots: MutableShot[];
   events: GameEvent[];
@@ -238,6 +250,21 @@ function contains(rectangle: Rectangle, x: number, y: number): boolean {
 
 function validSeed(seed: number): boolean {
   return Number.isInteger(seed) && seed >= 0 && seed <= 0xffff_ffff;
+}
+
+function calculateSettlement(wave: MutableWave, difficultyScorePercent: number): WaveSettlement {
+  // The original game keeps both the score base and saved high score in Java int arithmetic.
+  const scoreBase = Math.imul(1, wave.cashMade + wave.cash);
+  const displayMultiplier = Math.fround(difficultyScorePercent / 100);
+  const displayScore = Math.round(Math.fround(Math.fround(scoreBase) * displayMultiplier));
+  const highScoreCandidate = Math.trunc(Math.imul(scoreBase, difficultyScorePercent) / 100);
+
+  return {
+    outcome: wave.lives <= 0 ? 'defeat' : 'victory',
+    scoreBase,
+    displayScore,
+    highScoreCandidate,
+  };
 }
 
 /** Java's 48-bit LCG and bounded nextInt, used by the recovered game. */
@@ -451,6 +478,7 @@ export function createGame(options: {
           escapedEnemies: 0,
           defeatedEnemies: 0,
           cash: scenario.previewWave.initialCash ?? 0,
+          cashMade: 0,
           enemies: [],
           shots: [],
           events: [],
@@ -500,6 +528,7 @@ export function createGame(options: {
               defeatedEnemies: wave.defeatedEnemies,
               cash: wave.cash,
               activeEnemies: wave.enemies.filter((enemy) => enemy.alive).length,
+              ...(wave.settlement ? { settlement: clone(wave.settlement) } : {}),
             },
           } : {}),
         });
@@ -517,6 +546,7 @@ export function createGame(options: {
         submitIntent(intent: GameIntent): boolean {
           assertOpen();
           if (!intent || typeof intent !== 'object') return false;
+          if (wave?.settlement) return false;
 
           if (intent.type === 'clear-selection') {
             pending.push({ sequence: nextIntentSequence, intent: { type: 'clear-selection' } });
@@ -544,6 +574,10 @@ export function createGame(options: {
         },
         advance(input: { deltaMs?: number } = {}): GameView {
           assertOpen();
+          if (wave?.settlement) {
+            wave.events = [];
+            return observe();
+          }
           frame += 1;
           const deltaMs = normalizedDelta(input.deltaMs);
           elapsedMs += deltaMs;
@@ -643,6 +677,7 @@ export function createGame(options: {
                 target.alive = false;
                 target.deathRemainingMs = 799;
                 wave.cash += target.cashReward;
+                wave.cashMade += target.cashReward;
                 wave.defeatedEnemies += 1;
                 wave.events.push({ type: 'enemy-defeated', enemyId: target.id, cashReward: target.cashReward });
               }
@@ -650,8 +685,15 @@ export function createGame(options: {
             }
 
             wave.enemies = wave.enemies.filter((enemy) => enemy.alive || enemy.deathRemainingMs > 0);
-            if (wave.enemies.length === 0 && wave.shots.length === 0
-              && (wave.escapedEnemies > 0 || wave.defeatedEnemies > 0)) wave.phase = 'complete';
+            const waveCleared = wave.enemies.length === 0
+              && wave.shots.length === 0
+              && (wave.escapedEnemies > 0 || wave.defeatedEnemies > 0);
+            if (wave.lives <= 0 || waveCleared) {
+              wave.phase = 'complete';
+              const difficultyScorePercent = scenario.previewWave.difficultyScorePercent ?? 100;
+              wave.settlement = calculateSettlement(wave, difficultyScorePercent);
+              wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
+            }
           }
           return observe();
         },

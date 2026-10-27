@@ -507,3 +507,108 @@ test('follows every Cow Gulch route turn at its native field center', async () =
   assert.equal(view.wave?.phase, 'complete');
   assert.equal(nextTurnIndex, expectedTurns.length);
 });
+
+test('settles a cleared wave as victory and scores displayed and saved values independently', async () => {
+  const scoredWave = Object.assign({}, combatScenario.previewWave, { difficultyScorePercent: 75 });
+  const scoredScenario: ScenarioContent = { ...combatScenario, previewWave: scoredWave };
+  const session = await createGame({ scenarios: { [scoredScenario.id]: scoredScenario } }).open({
+    scenarioId: scoredScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+
+  for (let step = 0; step < 100 && view.wave?.phase === 'active'; step += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+
+  assert.equal(view.wave?.phase, 'complete');
+  const settlement = (view.wave as unknown as {
+    settlement?: {
+      outcome: string;
+      scoreBase: number;
+      displayScore: number;
+      highScoreCandidate: number;
+    };
+  }).settlement;
+  assert.deepEqual(settlement, {
+    outcome: 'victory',
+    scoreBase: 67,
+    displayScore: 50,
+    highScoreCandidate: 50,
+  });
+  assert.equal(view.wave?.cash, 66);
+  assert.equal(view.wave?.defeatedEnemies, 1);
+  assert.equal((view.events as unknown as readonly { type: string }[]).filter((event) => event.type === 'wave-settled').length, 1);
+});
+
+test('settles zero lives as defeat before wave clear and does not advance or replay settlement afterward', async () => {
+  const defeatWave = Object.assign({}, cowGulchPreviewWave, {
+    initialLives: 1,
+    difficultyScorePercent: 75,
+  });
+  const defeatScenario: ScenarioContent = {
+    ...noCombatCowGulch,
+    id: 'cow-gulch-defeat-fixture',
+    previewWave: defeatWave,
+  };
+  const session = await createGame({ scenarios: { [defeatScenario.id]: defeatScenario } }).open({
+    scenarioId: defeatScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+
+  for (let step = 0; step < 2000 && view.wave?.phase === 'active'; step += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+
+  assert.equal(view.wave?.phase, 'complete');
+  assert.equal(view.wave?.lives, 0);
+  const settlement = (view.wave as unknown as {
+    settlement?: {
+      outcome: string;
+      scoreBase: number;
+      displayScore: number;
+      highScoreCandidate: number;
+    };
+  }).settlement;
+  assert.deepEqual(settlement, {
+    outcome: 'defeat',
+    scoreBase: 65,
+    displayScore: 49,
+    highScoreCandidate: 48,
+  });
+  assert.equal((view.events as unknown as readonly { type: string }[]).filter((event) => event.type === 'wave-settled').length, 1);
+
+  const settledFrame = view.frame;
+  assert.equal(session.submitIntent({ type: 'clear-selection' }), false);
+  const afterSettlement = session.advance({ deltaMs: 100 });
+  assert.equal(afterSettlement.frame, settledFrame);
+  assert.equal(afterSettlement.elapsedMs, view.elapsedMs);
+  assert.equal(afterSettlement.events.length, 0);
+  assert.deepEqual(
+    (afterSettlement.wave as unknown as { settlement?: unknown }).settlement,
+    settlement,
+  );
+});
+
+test('reopens a clean session from the same seed and leaves the previous session closed', async () => {
+  const game = createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } });
+  const previous = await game.open({ scenarioId: cowGulchContent.id, randomSeed: 42 });
+  previous.submitIntent({ type: 'start-wave' });
+  const firstStartedView = previous.advance({ deltaMs: 0 });
+  const restartSeed = previous.startRecord.randomSeed;
+  previous.close();
+  previous.close();
+
+  assert.throws(() => previous.advance({ deltaMs: 100 }), /session is closed/i);
+  const restarted = await game.open({ scenarioId: cowGulchContent.id, randomSeed: restartSeed });
+  assert.notEqual(restarted.id, previous.id);
+  assert.equal(restarted.observe().frame, 0);
+  assert.equal(restarted.observe().wave?.phase, 'not-started');
+  assert.equal(restarted.observe().enemies.length, 0);
+
+  restarted.submitIntent({ type: 'start-wave' });
+  assert.deepEqual(restarted.advance({ deltaMs: 0 }), firstStartedView);
+});

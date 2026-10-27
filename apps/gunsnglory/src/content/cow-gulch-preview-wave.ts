@@ -5,6 +5,7 @@ export const cowGulchPreviewWave = Object.freeze({
   number: 1,
   initialLives: 50,
   initialCash: 65,
+  difficultyScorePercent: 75,
   enemy: {
     // Base HP 18 × difficulty 1000 × (Easy 100 × wave 70 / 100) / 10000.
     hitPoints: 126,
