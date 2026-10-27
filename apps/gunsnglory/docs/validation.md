@@ -193,7 +193,7 @@ Game 行为测试验证生命耗尽优先级、结算只发生一次、胜败两
 | 集成分支与提交 | `2684438` 已 fast-forward 到 `gunsnglory` 和 `master`。 |
 | GitHub Actions 与 Pages | [workflow 40524750429](https://github.com/wishflow/wishflow-tools/actions/runs/40524750429) 成功；Guns’n’Glory 与共享站点测试通过，Cloudflare Pages、GitHub Pages 部署通过。Worker 未触发（本次未改 Worker）。 |
 | Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后，中文标准样例显示胜利、50 条命、0 逃脱、击败 1 名、现金 $66、画面分数 $50、高分候选 $50；单生命样例显示败北、0 条命、逃脱 1 名、现金 $65、画面分数 $49、高分候选 $48。测试后刷新回标准样例，恢复原中文和 1×，结算页面无 console error。 |
-| 交互观察 | 当前公网浏览器保存的 Usagi 浮层位置覆盖倍速滑杆中段；本次可访问性控件操作通过，浮层遮挡下的鼠标/触屏命中尚未验证，作为共享页面叠层问题单独跟进。 |
+| 交互观察 | 公网浏览器保存的 Usagi 浮层会随视口覆盖不同控件：此前桌面视口中段覆盖倍速滑杆，T06 的 390×844 视口中覆盖调试败北按钮。当前截图中地图和拖动区域未被覆盖；遮挡下鼠标/触屏命中仍未验证，作为共享页面叠层问题单独跟进。 |
 
 ## 10. T05 样本结算档案验收
 
@@ -226,4 +226,7 @@ Game 行为测试覆盖速度、移动位置、释放、无选择与非法坐标
 | `pnpm run test:ci` | 通过：TypeScript 检查、48 项单元测试、Vite 生产构建及 20 个 Playwright 场景；含 3 个 T06 桌面/触屏输入场景。 |
 | Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5174/` 以中文及原有 4× 设置启动 Cow Gulch 样本，鼠标拖动枪手后看到其从初始位置向峡谷壁移动并停在壁边；样本随即完成。最高分仍为 $50，速度恢复为 4×，浏览器控制台无错误。释放后的稳定状态由 Playwright Canvas 像素回归验证。 |
 | 变更边界 | 只增加首图枪手移动与碰撞规则；没有修改 Progress、存档结构、关卡路线或资源贴图。 |
-| 集成与发布 | T06 代码与本地文档已验收，集成分支、正式 CI/CD 和公网实测待完成。 |
+| 集成分支与提交 | `db7283d` 已快进合入本地 `gunsnglory` 和 `master`。 |
+| GitHub Actions 与发布 | [workflow 40547256881](https://github.com/wishflow/wishflow-tools/actions/runs/40547256881) 成功；Guns’n’Glory 测试、共享站点检查、Cloudflare Pages 和 GitHub Pages 部署均通过，Worker 未触发。 |
+| Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后，以 4× 在 Cow Gulch 未开波样本中连续鼠标拖动枪手至右侧墙边；状态停在 `Cell (12, 8)`，再向墙外拖动仍不能穿过，释放后 Canvas 稳定。保存最高分仍为 $50，未启动战斗或写入新结算。将速度恢复至原有 1×、重载回未选择单位的初态，并恢复浏览器视口；控制台无错误。 |
+| 手机视口与触屏 | 内置浏览器在 390×844 视口下检查地图比例和 HUD 换行；Usagi 浮层覆盖调试败北按钮，但未覆盖地图拖动区。触屏拖动、释放及状态由同一发布提交的 Playwright 移动端真实触摸场景验证。检查后恢复内置浏览器视口。 |
