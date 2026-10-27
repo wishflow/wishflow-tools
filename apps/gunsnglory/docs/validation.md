@@ -137,7 +137,11 @@ pi --no-extensions --no-skills --no-prompt-templates --no-themes \
 | catalog 触发的应用测试矩阵 | Guns’n’Glory、Duolingo Avatar、Ball Growth Lab、3D Objects、Pet 五个已登记应用的 `test:ci` 均通过。 |
 | `pnpm run build:site` | 所有已登记应用构建成功；完整 `_site` 通过目录与产物校验。 |
 | Codex 内置浏览器本地实测 | 从导航卡片进入 `/gunsnglory/`，地图和枪手可见；选择显示 `Gunslinger selected · Cell (9, 9)`，取消恢复未选状态；共享语言切换后中文文案与选中/取消行为正常。 |
+| Codex 内置浏览器公网实测 | 从导航页进入正式 `/gunsnglory/`；当共享浮动宠物已保存在地图中心时，地图仍可选中枪手并显示 `Cell (9, 9)`，取消选择正常；中英文切换及两种语言下选中/取消均正常。测试后恢复原中文偏好，没有改动宠物保存位置。 |
+| 正式 CI 与发布 | Guns’n’Glory 测试、共享检查、Cloudflare Pages 和 GitHub Pages 部署均通过；[发布 workflow](https://github.com/wishflow/wishflow-tools/actions/runs/40461901062)。 |
 
 本地复跑提示：多个应用的 Playwright 配置复用 `4173` 端口，先停止旧预览再启动测试矩阵，避免测试连到错误应用。Duolingo Avatar 的 Python 依赖要求较新版本；本机默认 Python 3.9 不满足，需要显式用 Python 3.11 建立应用自己的 `.venv`，不改全局 Python；仓库 CI 使用 Python 3.12。
 
-CI 依赖策略：首次 GitHub workflow 因 `postcss@8.5.32` 发布不足 24 小时而拒绝安装；随后尝试把 `postcss` 固定到仓库内已有的 `8.5.29`，但 CI 的 pnpm 12 不再读取 `package.json` 中的 `pnpm.overrides`，因此冻结安装报告配置与锁文件不匹配。现已将 `overrides` 移到应用自己的 `pnpm-workspace.yaml`，并沿用其他独立应用的 `allowBuilds.esbuild` 配置。使用 pnpm 12.15.0 的 supply-chain 检查、冻结安装及完整 `test:ci` 均通过。修复后的 GitHub workflow 结果和公网实测仍待完成。
+CI 依赖策略：首次 GitHub workflow 因 `postcss@8.5.32` 发布不足 24 小时而拒绝安装；随后尝试把 `postcss` 固定到仓库内已有的 `8.5.29`，但 CI 的 pnpm 12 不再读取 `package.json` 中的 `pnpm.overrides`，冻结安装因此报告配置与锁文件不匹配。现已将 `overrides` 移到应用自己的 `pnpm-workspace.yaml`，并沿用其他独立应用的 `allowBuilds.esbuild` 配置。pnpm 12.15.0 的 supply-chain 检查、冻结安装及完整 `test:ci` 均通过。
+
+公网实测发现，共享站点的浮动宠物位置保存在浏览器中；当宠物位于地图上时，它会遮住枪手并截获点击。游戏画布已置于该叠层之上，保留宠物原位置并让地图操作优先。正式 CI 测试及 Cloudflare Pages、GitHub Pages 部署通过；Codex 内置浏览器在这一保存位置下验证地图选中/取消和中英切换均正常。触屏选择与取消由 `test:e2e` 的移动端场景验证。
