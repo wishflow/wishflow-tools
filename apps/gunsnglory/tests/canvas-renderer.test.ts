@@ -25,6 +25,7 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
   const view: GameView = {
     frame: 0,
     elapsedMs: 0,
+    paused: false,
     scenarioId: 'cow-gulch',
     map: {
       width: 17,

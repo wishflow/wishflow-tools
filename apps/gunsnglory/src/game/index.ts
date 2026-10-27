@@ -199,6 +199,7 @@ export interface WaveView {
 export interface GameView {
   frame: number;
   elapsedMs: number;
+  paused: boolean;
   scenarioId: string;
   map: ScenarioContent['map'];
   units: readonly UnitView[];
@@ -220,6 +221,8 @@ export interface GameSession {
     mode: GameMode;
   }>;
   submitIntent(intent: GameIntent): boolean;
+  pause(): GameView;
+  resume(): GameView;
   advance(input?: { deltaMs?: number }): GameView;
   observe(): GameView;
   terminalRecord(): GameSettlementRecord | undefined;
@@ -680,6 +683,7 @@ export function createGame(options: {
       let frame = 0;
       let elapsedMs = 0;
       let closed = false;
+      let paused = false;
       let wave: MutableWave | undefined = scenario.previewWave
         ? {
           phase: 'not-started',
@@ -704,6 +708,7 @@ export function createGame(options: {
         return freezeDeep({
           frame,
           elapsedMs,
+          paused,
           scenarioId: scenario.id,
           map: scenario.map,
           units: units.map((unit) => unitView(unit, scenario.maxUpgrades ?? 0)),
@@ -761,9 +766,19 @@ export function createGame(options: {
           randomSeed: resolvedSeed,
           mode,
         }),
+        pause(): GameView {
+          assertOpen();
+          paused = true;
+          return observe();
+        },
+        resume(): GameView {
+          assertOpen();
+          paused = false;
+          return observe();
+        },
         submitIntent(intent: GameIntent): boolean {
           assertOpen();
-          if (!intent || typeof intent !== 'object') return false;
+          if (paused || !intent || typeof intent !== 'object') return false;
           if (wave?.settlement) return false;
 
           if (intent.type === 'clear-selection') {
@@ -843,6 +858,7 @@ export function createGame(options: {
         },
         advance(input: { deltaMs?: number } = {}): GameView {
           assertOpen();
+          if (paused) return observe();
           if (wave?.settlement) {
             wave.events = [];
             return observe();

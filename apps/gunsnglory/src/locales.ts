@@ -5,6 +5,8 @@ export const messages = {
     zh: '结束牛溪谷战斗样本，查看结算，并从干净状态重新开始。',
   },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
+  'Pause battle': { en: 'Pause battle', zh: '暂停战斗' },
+  'Resume battle': { en: 'Resume battle', zh: '继续战斗' },
   'Click the gunslinger to select it. Click empty ground to clear selection.': {
     en: 'Click the gunslinger to select it. Click empty ground to clear selection.',
     zh: '点击枪手进行选择；点击空地取消选择。',

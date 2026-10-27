@@ -706,6 +706,35 @@ test('observing a running wave does not advance time, position, or its random st
   assert.deepEqual(observed.advance({ deltaMs: 100 }), control.advance({ deltaMs: 100 }));
 });
 
+test('pausing freezes frames and rejects new intents until resume without catching up elapsed time', async () => {
+  const createSession = () => createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } })
+    .open({ scenarioId: 'cow-gulch', randomSeed: 9876 });
+  const paused = await createSession();
+  const control = await createSession();
+
+  for (const session of [paused, control]) {
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+    session.advance({ deltaMs: 37 });
+  }
+  const beforePause = control.observe();
+
+  const pausedView = paused.pause();
+  assert.equal(pausedView.paused, true);
+  assert.equal(pausedView.frame, beforePause.frame);
+  assert.equal(pausedView.elapsedMs, beforePause.elapsedMs);
+  assert.equal(paused.submitIntent({ type: 'select-at', x: 0, y: 0 }), false);
+  assert.deepEqual(paused.advance({ deltaMs: 1000 }), pausedView);
+  assert.deepEqual(paused.observe(), pausedView);
+  assert.deepEqual(paused.pause(), pausedView, 'repeated pause requests are idempotent');
+
+  const resumedView = paused.resume();
+  assert.equal(resumedView.paused, false);
+  assert.equal(resumedView.frame, beforePause.frame);
+  assert.equal(resumedView.elapsedMs, beforePause.elapsedMs);
+  assert.deepEqual(paused.advance({ deltaMs: 37 }), control.advance({ deltaMs: 37 }));
+});
+
 test('keeps preview waves and random streams isolated between sessions', async () => {
   const game = createGame({ scenarios: { 'cow-gulch': cowGulchContent } });
   const first = await game.open({ scenarioId: 'cow-gulch', randomSeed: 77 });

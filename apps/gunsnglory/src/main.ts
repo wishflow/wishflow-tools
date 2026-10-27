@@ -57,6 +57,8 @@ app.innerHTML = [
   '      <button type="button" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <button type="button" data-action="clear-selection">Clear selection</button>',
+  '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
+  '      <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
   '    </div>',
   '    <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-labelledby="recruit-confirmation-title">',
   '      <h2 id="recruit-confirmation-title"></h2>',
@@ -92,6 +94,8 @@ const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgra
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
 const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
+const pauseStatusElement = app.querySelector<HTMLElement>('[data-testid="pause-status"]');
+const pauseButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-toggle"]');
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
@@ -125,6 +129,7 @@ if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElem
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
+  || !pauseStatusElement || !pauseButtonElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
@@ -143,6 +148,8 @@ const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
 const recruitStatus: HTMLElement = recruitStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
+const pauseStatus: HTMLElement = pauseStatusElement;
+const pauseControl: HTMLButtonElement = pauseButtonElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
@@ -182,6 +189,8 @@ let profile: ProfileView = {
 };
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
+let pauseReason: 'manual' | 'background' | undefined;
+let pageLeaving = false;
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | undefined;
 let profileLoadFailed = false;
 let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | undefined;
@@ -201,6 +210,10 @@ const languageMessages = {
     none: 'No unit selected',
     selected: 'Gunslinger selected',
     failed: 'Game scene failed to load',
+    pauseBattle: 'Pause battle',
+    resumeBattle: 'Resume battle',
+    battlePaused: 'Battle paused.',
+    battlePausedInBackground: 'Battle paused automatically while this tab was in the background.',
     waiting: (lives: number, number: number, cash: number) => `Wave ${number} ready · Lives ${lives} · Cash $${cash}`,
     active: (lives: number, number: number, enemies: number, cash: number) => `Wave ${number} · Lives ${lives} · Enemies ${enemies} · Cash $${cash}`,
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `Wave ${number} complete · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
@@ -257,6 +270,10 @@ const languageMessages = {
     none: '尚未选择单位',
     selected: '已选择枪手',
     failed: '游戏场景加载失败',
+    pauseBattle: '暂停战斗',
+    resumeBattle: '继续战斗',
+    battlePaused: '战斗已暂停。',
+    battlePausedInBackground: '切换到后台时已自动暂停战斗。',
     waiting: (lives: number, number: number, cash: number) => `第 ${number} 波待开始 · 生命 ${lives} · 现金 $${cash}`,
     active: (lives: number, number: number, enemies: number, cash: number) => `第 ${number} 波 · 生命 ${lives} · 敌人 ${enemies} · 现金 $${cash}`,
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `第 ${number} 波完成 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
@@ -387,6 +404,15 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.none;
   if (status.textContent !== selectionText) status.textContent = selectionText;
   simulationSpeedValue.textContent = simulationSpeed + '×';
+  const pauseMessage = view.paused
+    ? pauseReason === 'background' ? messages.battlePausedInBackground : messages.battlePaused
+    : '';
+  pauseStatus.textContent = pauseMessage;
+  pauseStatus.hidden = !view.paused;
+  pauseControl.textContent = view.paused ? messages.resumeBattle : messages.pauseBattle;
+  pauseControl.disabled = !view.paused
+    && view.wave?.phase !== 'active'
+    && !view.units.some((candidate) => candidate.moving);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
   if (view.wave) {
@@ -510,14 +536,14 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     retrySettlementControl.hidden = true;
   }
   const waveNotStarted = view.wave?.phase === 'not-started';
-  startWaveControl.disabled = !waveNotStarted;
-  recruitControl.disabled = Boolean(settlement) || !recruitDefinition;
+  startWaveControl.disabled = !waveNotStarted || view.paused;
+  recruitControl.disabled = Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
-  upgradeControl.disabled = Boolean(settlement) || !nextUpgrade;
+  upgradeControl.disabled = Boolean(settlement) || !nextUpgrade || view.paused;
   startUpgradeSampleControl.hidden = upgradeScenario;
   returnCowGulchControl.hidden = !upgradeScenario;
-  startDefeatControl.disabled = !waveNotStarted || view.scenarioId !== 'cow-gulch';
-  clearSelectionControl.disabled = Boolean(settlement);
+  startDefeatControl.disabled = !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
+  clearSelectionControl.disabled = Boolean(settlement) || view.paused;
   const canvasLabel = upgradeScenario
     ? language === 'zh' ? '牛溪谷升级规则测试地图' : 'Cow Gulch upgrade rules test map'
     : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
@@ -644,6 +670,7 @@ async function replaceSession(scenarioId: string, randomSeed: number, mode: Game
   try {
     session = await game.open({ scenarioId, randomSeed, mode });
     view = session.observe();
+    pauseReason = undefined;
     previousSession.close();
     lastDefeatReward = undefined;
     lastRecruitmentEvent = undefined;
@@ -703,14 +730,46 @@ function finishPointerMovement(pointerId?: number): void {
   if (wasDragging) dispatch({ type: 'stop-moving' });
 }
 
-document.addEventListener('visibilitychange', () => {
+function pauseForBackground(): void {
   previousTimestamp = undefined;
   simulationTime.reset();
-  if (document.hidden) finishPointerMovement();
-});
+  if (view.paused) {
+    stopGameLoop();
+    return;
+  }
+  finishPointerMovement();
+  pauseReason = 'background';
+  stopGameLoop();
+  view = session.pause();
+  renderStatus();
+  redraw();
+}
+
+function handleVisibilityChange(): void {
+  if (pageLeaving || replacingSession) return;
+  previousTimestamp = undefined;
+  simulationTime.reset();
+  if (document.hidden) {
+    pauseForBackground();
+    return;
+  }
+
+  if (pauseReason === 'background' && view.paused) {
+    pauseReason = undefined;
+    view = session.resume();
+    renderStatus();
+    redraw();
+  }
+  if (!view.paused && (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving))) {
+    startGameLoop();
+  }
+}
+
+document.addEventListener('visibilitychange', handleVisibilityChange);
 
 function startGameLoop(): void {
-  if (view.wave?.phase !== 'active' && !view.units.some((unit) => unit.moving)) return;
+  if (view.paused || document.hidden
+    || (view.wave?.phase !== 'active' && !view.units.some((unit) => unit.moving))) return;
   if (animationFrame !== 0 || replacingSession) return;
   const loopSession = session;
   const generation = loopGeneration;
@@ -724,9 +783,15 @@ function startGameLoop(): void {
     }
 
     if (document.hidden) {
+      pauseForBackground();
+      animationFrame = 0;
+      return;
+    }
+
+    if (view.paused) {
       previousTimestamp = undefined;
       simulationTime.reset();
-      animationFrame = window.requestAnimationFrame(tick);
+      animationFrame = 0;
       return;
     }
 
@@ -753,6 +818,27 @@ function dispatch(intent: GameIntent): void {
   redraw();
   if (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)) startGameLoop();
 }
+
+pauseControl.addEventListener('click', () => {
+  if (document.hidden) return;
+  previousTimestamp = undefined;
+  simulationTime.reset();
+  if (view.paused) {
+    pauseReason = undefined;
+    view = session.resume();
+    renderStatus();
+    redraw();
+    startGameLoop();
+    return;
+  }
+
+  finishPointerMovement();
+  pauseReason = 'manual';
+  stopGameLoop();
+  view = session.pause();
+  renderStatus();
+  redraw();
+});
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
 recruitControl.addEventListener('click', () => {
@@ -843,6 +929,7 @@ restartControl.addEventListener('click', () => {
 });
 
 window.addEventListener('pagehide', () => {
+  pageLeaving = true;
   stopGameLoop();
   session.close();
 }, { once: true });
