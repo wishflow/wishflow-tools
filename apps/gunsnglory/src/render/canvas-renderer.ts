@@ -1,4 +1,4 @@
-import type { Direction, EnemyView, GameView, RenderTile } from '../game';
+import type { Direction, EnemyView, GameView, RenderTile, ShotView } from '../game';
 import { calculateMapViewport, type MapViewport } from './map-viewport';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
@@ -91,12 +91,34 @@ function drawEnemy(
   const sourceY = spriteRow(enemy.direction) * sourceHeight;
 
   context.save();
+  if (!enemy.alive) context.globalAlpha = Math.max(0.15, enemy.deathRemainingMs / 799);
   if (enemy.direction === 'west') {
     context.translate((left * 2) + width, 0);
     context.scale(-1, 1);
   }
   context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, width, height);
   context.restore();
+
+  if (enemy.hitFlashMs > 0 || !enemy.alive) {
+    context.beginPath();
+    context.ellipse(centerX, feetY - height * 0.45, width * 0.38, height * 0.34, 0, 0, Math.PI * 2);
+    context.strokeStyle = enemy.alive ? '#ffe28a' : '#d85b42';
+    context.lineWidth = Math.max(1, 1.5 * tileScale);
+    context.stroke();
+  }
+}
+
+function drawShot(context: CanvasRenderingContext2D, shot: ShotView, viewport: MapViewport): void {
+  const tileScale = viewport.scaleFactor;
+  const x = viewport.origin.x + (shot.positionFine.x / 240) * tileScale;
+  const y = viewport.origin.y + (shot.positionFine.y / 240) * tileScale;
+  context.beginPath();
+  context.arc(x, y, Math.max(1.5, 2.2 * tileScale), 0, Math.PI * 2);
+  context.fillStyle = '#8f2118';
+  context.fill();
+  context.strokeStyle = '#f5cf79';
+  context.lineWidth = Math.max(1, tileScale);
+  context.stroke();
 }
 
 export function drawGame(
@@ -120,6 +142,7 @@ export function drawGame(
   drawTiles(context, view.map.background, images, viewport);
   for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
   drawTiles(context, view.map.streets, images, viewport);
+  for (const shot of view.shots) drawShot(context, shot, viewport);
 
   for (const unit of view.units) {
     const left = viewport.origin.x + unit.render.x * viewport.tileSize;

@@ -4,6 +4,13 @@ import type { PreviewWaveDefinition } from '../game';
 export const cowGulchPreviewWave = Object.freeze({
   number: 1,
   initialLives: 50,
+  initialCash: 65,
+  enemy: {
+    // Base HP 18 × difficulty 1000 × (Easy 100 × wave 70 / 100) / 10000.
+    hitPoints: 126,
+    cashReward: 1,
+    penetration: { light: 100, fire: 50, heavy: 25, poison: 75 },
+  },
   spawn: { cell: { x: 0, y: 10 }, direction: 'east' },
   baseEnemySpeed: 500,
   speedMultiplierMin: 90,

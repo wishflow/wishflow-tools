@@ -22,6 +22,29 @@ export interface ScenarioUnit {
   frame: Rectangle;
   render: Rectangle;
   hitArea: Rectangle;
+  weapon?: UnitWeaponDefinition;
+}
+
+export type DamageType = 'light' | 'fire' | 'heavy' | 'poison';
+
+export interface UnitWeaponDefinition {
+  damage: number;
+  damageType: DamageType;
+  rangeFine: number;
+  reloadTimeMs: number;
+  projectileSpeed: number;
+  damageStyle: 0;
+}
+
+export interface PreviewEnemyDefinition {
+  hitPoints: number;
+  cashReward: number;
+  penetration: Readonly<Record<DamageType, number>>;
+}
+
+export interface WaveSpawn {
+  cell: { x: number; y: number };
+  direction: Direction;
 }
 
 export type Direction = 'east' | 'south' | 'west' | 'north';
@@ -34,7 +57,10 @@ export interface WaveRedirect {
 export interface PreviewWaveDefinition {
   number: number;
   initialLives: number;
-  spawn: { cell: { x: number; y: number }; direction: Direction };
+  initialCash?: number;
+  spawn: WaveSpawn;
+  additionalSpawns?: readonly WaveSpawn[];
+  enemy?: PreviewEnemyDefinition;
   baseEnemySpeed: number;
   speedMultiplierMin: number;
   speedMultiplierCount: number;
@@ -74,14 +100,33 @@ export interface EnemyView {
   speed: number;
   direction: Direction;
   positionFine: { x: number; y: number };
+  hitPoints: number;
+  maxHitPoints: number;
+  alive: boolean;
+  deathRemainingMs: number;
+  hitFlashMs: number;
   animationFrame: number;
 }
+
+export interface ShotView {
+  id: string;
+  shooterId: string;
+  targetId: string;
+  positionFine: { x: number; y: number };
+  remainingMs: number;
+}
+
+export type GameEvent =
+  | { type: 'enemy-hit'; enemyId: string; damage: number; hitPoints: number }
+  | { type: 'enemy-defeated'; enemyId: string; cashReward: number };
 
 export interface WaveView {
   number: number;
   phase: 'not-started' | 'active' | 'complete';
   lives: number;
   escapedEnemies: number;
+  defeatedEnemies: number;
+  cash: number;
   activeEnemies: number;
 }
 
@@ -92,6 +137,8 @@ export interface GameView {
   map: ScenarioContent['map'];
   units: readonly UnitView[];
   enemies: readonly EnemyView[];
+  shots: readonly ShotView[];
+  events: readonly GameEvent[];
   wave?: WaveView;
 }
 
@@ -126,13 +173,42 @@ interface MutableEnemy {
   speed: number;
   direction: Direction;
   positionFine: { x: number; y: number };
+  hitPoints: number;
+  maxHitPoints: number;
+  cashReward: number;
+  penetration: Readonly<Record<DamageType, number>>;
+  alive: boolean;
+  deathRemainingMs: number;
+  hitFlashMs: number;
+}
+
+interface MutableShot {
+  id: string;
+  shooterId: string;
+  targetId: string;
+  damage: number;
+  damageType: DamageType;
+  startFine: { x: number; y: number };
+  positionFine: { x: number; y: number };
+  totalTravelTimeMs: number;
+  remainingMs: number;
+}
+
+interface MutableUnit {
+  definition: ScenarioUnit;
+  selected: boolean;
+  weaponCooldownMs: number;
 }
 
 interface MutableWave {
   phase: WaveView['phase'];
   lives: number;
   escapedEnemies: number;
+  defeatedEnemies: number;
+  cash: number;
   enemies: MutableEnemy[];
+  shots: MutableShot[];
+  events: GameEvent[];
 }
 
 const FINE_UNITS_PER_CELL = 7680;
@@ -216,6 +292,91 @@ function normalizedDelta(deltaMs: number | undefined): number {
   return Math.trunc(Math.max(0, Math.min(MAX_DELTA_MS, deltaMs)));
 }
 
+function tenthTileCoordinate(fine: number): number {
+  return Math.trunc((fine * 10) / FINE_UNITS_PER_CELL);
+}
+
+function damagePenetration(enemy: MutableEnemy, damageType: DamageType): number {
+  return enemy.penetration[damageType];
+}
+
+function createPreviewEnemy(
+  id: string,
+  spawn: WaveSpawn,
+  definition: PreviewWaveDefinition,
+  speed: number,
+): MutableEnemy {
+  const enemyDefinition = definition.enemy;
+  const hitPoints = enemyDefinition?.hitPoints ?? 1;
+  return {
+    id,
+    type: 1,
+    asset: 'pioneer_male',
+    speed,
+    direction: spawn.direction,
+    positionFine: {
+      x: ((spawn.cell.x - 2) * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+      y: (spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+    },
+    hitPoints,
+    maxHitPoints: hitPoints,
+    cashReward: enemyDefinition?.cashReward ?? 0,
+    penetration: enemyDefinition?.penetration ?? { light: 0, fire: 0, heavy: 0, poison: 0 },
+    alive: true,
+    deathRemainingMs: 0,
+    hitFlashMs: 0,
+  };
+}
+
+function unitEnemyDistanceSquare(unit: ScenarioUnit, enemy: MutableEnemy): number {
+  const unitX = tenthTileCoordinate((unit.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF);
+  const unitY = tenthTileCoordinate((unit.cell.y * FINE_UNITS_PER_CELL) + 1920);
+  const enemyX = tenthTileCoordinate(enemy.positionFine.x);
+  const enemyY = tenthTileCoordinate(enemy.positionFine.y);
+  const dx = unitX - enemyX;
+  const dy = unitY - enemyY;
+  return (dx * dx) + (dy * dy);
+}
+
+function maxWeaponSquareRange(weapon: UnitWeaponDefinition): number {
+  const rangeInTenthTiles = Math.trunc((weapon.rangeFine * 10) / FINE_UNITS_PER_CELL);
+  return rangeInTenthTiles * rangeInTenthTiles;
+}
+
+function projectileTravelTime(
+  distanceSquare: number,
+  maxSquareRange: number,
+  weapon: UnitWeaponDefinition,
+): number {
+  const baseTimePercent = 10;
+  const baseSteps = Math.trunc(weapon.projectileSpeed / 10);
+  const distanceSteps = Math.trunc(((100 - baseTimePercent) * baseSteps * distanceSquare) / maxSquareRange);
+  return Math.trunc(((baseTimePercent * baseSteps) + distanceSteps) / 100) * 10;
+}
+
+function selectTarget(unit: ScenarioUnit, enemies: readonly MutableEnemy[]): MutableEnemy | undefined {
+  const weapon = unit.weapon;
+  if (!weapon) return undefined;
+  const maxSquareRange = maxWeaponSquareRange(weapon);
+  let bestTarget: MutableEnemy | undefined;
+  let bestScore = -1;
+
+  for (const enemy of enemies) {
+    if (!enemy.alive) continue;
+    const distanceSquare = unitEnemyDistanceSquare(unit, enemy);
+    if (distanceSquare <= 50 || distanceSquare >= maxSquareRange) continue;
+
+    // This sample has one enemy type and no per-enemy priority-map variation.
+    // Strict greater-than preserves the recovered Vector order for equal scores.
+    const score = damagePenetration(enemy, weapon.damageType) + 1400;
+    if (score > bestScore) {
+      bestTarget = enemy;
+      bestScore = score;
+    }
+  }
+  return bestTarget;
+}
+
 function moveEnemy(enemy: MutableEnemy, deltaMs: number, definition: PreviewWaveDefinition, random: JavaRandom): boolean {
   if (deltaMs === 0) return false;
 
@@ -272,14 +433,28 @@ export function createGame(options: {
       const random = new JavaRandom(resolvedSeed);
       const sessionId = 'game-session-' + nextSessionNumber;
       nextSessionNumber += 1;
-      const units = scenario.units.map((definition) => ({ definition, selected: false }));
+      const units: MutableUnit[] = scenario.units.map((definition) => ({
+        definition,
+        selected: false,
+        weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
+      }));
       const pending: PendingIntent[] = [];
       let nextIntentSequence = 1;
+      let nextShotNumber = 1;
       let frame = 0;
       let elapsedMs = 0;
       let closed = false;
       let wave: MutableWave | undefined = scenario.previewWave
-        ? { phase: 'not-started', lives: scenario.previewWave.initialLives, escapedEnemies: 0, enemies: [] }
+        ? {
+          phase: 'not-started',
+          lives: scenario.previewWave.initialLives,
+          escapedEnemies: 0,
+          defeatedEnemies: 0,
+          cash: scenario.previewWave.initialCash ?? 0,
+          enemies: [],
+          shots: [],
+          events: [],
+        }
         : undefined;
 
       const assertOpen = () => {
@@ -301,15 +476,30 @@ export function createGame(options: {
             speed: enemy.speed,
             direction: enemy.direction,
             positionFine: { ...enemy.positionFine },
+            hitPoints: enemy.hitPoints,
+            maxHitPoints: enemy.maxHitPoints,
+            alive: enemy.alive,
+            deathRemainingMs: enemy.deathRemainingMs,
+            hitFlashMs: enemy.hitFlashMs,
             animationFrame: Math.floor(elapsedMs / 128) % 3,
           })),
+          shots: (wave?.shots ?? []).map((shot) => ({
+            id: shot.id,
+            shooterId: shot.shooterId,
+            targetId: shot.targetId,
+            positionFine: { ...shot.positionFine },
+            remainingMs: shot.remainingMs,
+          })),
+          events: clone(wave?.events ?? []),
           ...(wave && scenario.previewWave ? {
             wave: {
               number: scenario.previewWave.number,
               phase: wave.phase,
               lives: wave.lives,
               escapedEnemies: wave.escapedEnemies,
-              activeEnemies: wave.enemies.length,
+              defeatedEnemies: wave.defeatedEnemies,
+              cash: wave.cash,
+              activeEnemies: wave.enemies.filter((enemy) => enemy.alive).length,
             },
           } : {}),
         });
@@ -357,6 +547,7 @@ export function createGame(options: {
           frame += 1;
           const deltaMs = normalizedDelta(input.deltaMs);
           elapsedMs += deltaMs;
+          if (wave) wave.events = [];
           let waveStarted = false;
           pending.sort((left, right) => left.sequence - right.sequence);
           for (const command of pending.splice(0)) {
@@ -367,20 +558,13 @@ export function createGame(options: {
 
             if (command.intent.type === 'start-wave') {
               if (wave?.phase !== 'not-started' || !scenario.previewWave) continue;
-              const speedMultiplier = scenario.previewWave.speedMultiplierMin
-                + random.nextInt(scenario.previewWave.speedMultiplierCount);
-              const speed = Math.trunc((scenario.previewWave.baseEnemySpeed * speedMultiplier) / 100);
-              wave.enemies.push({
-                id: 'preview-pioneer-1',
-                type: 1,
-                asset: 'pioneer_male',
-                speed,
-                direction: scenario.previewWave.spawn.direction,
-                positionFine: {
-                  x: ((scenario.previewWave.spawn.cell.x - 2) * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
-                  y: (scenario.previewWave.spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
-                },
-              });
+              const spawns = [scenario.previewWave.spawn, ...(scenario.previewWave.additionalSpawns ?? [])];
+              for (const [index, spawn] of spawns.entries()) {
+                const speedMultiplier = scenario.previewWave.speedMultiplierMin
+                  + random.nextInt(scenario.previewWave.speedMultiplierCount);
+                const speed = Math.trunc((scenario.previewWave.baseEnemySpeed * speedMultiplier) / 100);
+                wave.enemies.push(createPreviewEnemy('preview-pioneer-' + (index + 1), spawn, scenario.previewWave, speed));
+              }
               wave.phase = 'active';
               waveStarted = true;
               continue;
@@ -395,12 +579,79 @@ export function createGame(options: {
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
             for (const enemy of [...wave.enemies]) {
+              if (!enemy.alive) {
+                enemy.deathRemainingMs = Math.max(0, enemy.deathRemainingMs - deltaMs);
+                enemy.hitFlashMs = Math.max(0, enemy.hitFlashMs - deltaMs);
+                continue;
+              }
+              enemy.hitFlashMs = Math.max(0, enemy.hitFlashMs - deltaMs);
               if (!moveEnemy(enemy, deltaMs, scenario.previewWave, random)) continue;
               wave.enemies = wave.enemies.filter((candidate) => candidate !== enemy);
               wave.lives = Math.max(0, wave.lives - scenario.previewWave.escapePenalty);
               wave.escapedEnemies += 1;
             }
-            if (wave.enemies.length === 0 && wave.escapedEnemies > 0) wave.phase = 'complete';
+
+            for (const unit of units) {
+              const weapon = unit.definition.weapon;
+              if (!weapon) continue;
+              if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
+              if (unit.weaponCooldownMs > 0) continue;
+
+              const target = selectTarget(unit.definition, wave.enemies);
+              if (!target) continue;
+              const distanceSquare = unitEnemyDistanceSquare(unit.definition, target);
+              const maxSquareRange = maxWeaponSquareRange(weapon);
+              const startFine = {
+                x: (unit.definition.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+                y: (unit.definition.cell.y * FINE_UNITS_PER_CELL) + 1920,
+              };
+              const travelMs = projectileTravelTime(distanceSquare, maxSquareRange, weapon);
+              wave.shots.push({
+                id: 'preview-shot-' + nextShotNumber,
+                shooterId: unit.definition.id,
+                targetId: target.id,
+                damage: weapon.damage,
+                damageType: weapon.damageType,
+                startFine,
+                positionFine: { ...startFine },
+                totalTravelTimeMs: travelMs,
+                remainingMs: travelMs,
+              });
+              nextShotNumber += 1;
+              unit.weaponCooldownMs = weapon.reloadTimeMs;
+            }
+
+            for (const shot of [...wave.shots]) {
+              const target = wave.enemies.find((enemy) => enemy.id === shot.targetId);
+              if (!target || !target.alive) {
+                wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+                continue;
+              }
+              shot.remainingMs = Math.max(0, shot.remainingMs - deltaMs);
+              const elapsedShotMs = shot.totalTravelTimeMs - shot.remainingMs;
+              shot.positionFine = {
+                x: Math.trunc(((shot.startFine.x * shot.remainingMs) + (target.positionFine.x * elapsedShotMs)) / shot.totalTravelTimeMs),
+                y: Math.trunc(((shot.startFine.y * shot.remainingMs) + (target.positionFine.y * elapsedShotMs)) / shot.totalTravelTimeMs),
+              };
+              if (shot.remainingMs > 0) continue;
+
+              const damage = Math.trunc((shot.damage * damagePenetration(target, shot.damageType)) / 100);
+              target.hitPoints -= damage;
+              target.hitFlashMs = 120;
+              wave.events.push({ type: 'enemy-hit', enemyId: target.id, damage, hitPoints: target.hitPoints });
+              if (target.hitPoints <= 0 && target.alive) {
+                target.alive = false;
+                target.deathRemainingMs = 799;
+                wave.cash += target.cashReward;
+                wave.defeatedEnemies += 1;
+                wave.events.push({ type: 'enemy-defeated', enemyId: target.id, cashReward: target.cashReward });
+              }
+              wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+            }
+
+            wave.enemies = wave.enemies.filter((enemy) => enemy.alive || enemy.deathRemainingMs > 0);
+            if (wave.enemies.length === 0 && wave.shots.length === 0
+              && (wave.escapedEnemies > 0 || wave.defeatedEnemies > 0)) wave.phase = 'complete';
           }
           return observe();
         },

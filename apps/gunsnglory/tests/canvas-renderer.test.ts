@@ -54,8 +54,15 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
       speed: 5,
       direction: 'south',
       positionFine: { x: (4 * 7680) + 3840, y: (6 * 7680) + 3840 },
+      hitPoints: 18,
+      maxHitPoints: 18,
+      alive: true,
+      deathRemainingMs: 0,
+      hitFlashMs: 0,
       animationFrame: 2,
     }],
+    shots: [],
+    events: [],
   };
 
   drawGame(context, view, {

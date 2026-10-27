@@ -2,7 +2,7 @@
 
 ## 1. 决策与阅读范围
 
-用户已确认采用 **Game、Progress、Experiments 三个公共深 Module**，以它们的 Interface 作为主要行为测试 Seam。本文是该决策的统一架构定义，取代按全局 `core / application / ports / simulation` 划分公共能力的方案。T01、T02 的受控玩法已实现；本次补充地图视口和测试倍速。Progress 目前仅实现倍速设置及其 IndexedDB 适配，正式档案、结算、解锁和恢复仍待后续切片；Experiments 与完整架构契约也仍待实现，交付状态见[实施计划](implementation-plan.md)。
+用户已确认采用 **Game、Progress、Experiments 三个公共深 Module**，以它们的 Interface 作为主要行为测试 Seam。本文是该决策的统一架构定义，取代按全局 `core / application / ports / simulation` 划分公共能力的方案。T01–T03 的受控玩法已实现，覆盖地图视口、测试倍速、首波移动与离场，以及单枪手击败一个拓荒者并取得现金。Progress 目前仅实现倍速设置及其 IndexedDB 适配，正式档案、结算、解锁和恢复仍待后续切片；Experiments 与完整架构契约也仍待实现，交付状态见[实施计划](implementation-plan.md)。
 
 产品目标与范围见[产品规格](spec.md)，领域用语见[领域词汇](GLOSSARY.md)。本文负责能力封装、依赖和状态归属；时间与回放细节见[模拟契约](simulation-and-automation.md)，持久化细节见[存储契约](storage-contracts.md)。
 

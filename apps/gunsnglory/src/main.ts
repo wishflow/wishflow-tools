@@ -5,7 +5,7 @@ import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/
 import { screenToMapCell } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
-import type { GameIntent } from './game';
+import type { GameEvent, GameIntent } from './game';
 import { messages } from './locales';
 import './styles.css';
 
@@ -15,9 +15,9 @@ if (!app) throw new Error('Game root is missing');
 app.innerHTML = [
   '<section class="game-page" id="game">',
   '  <header class="game-heading">',
-  '    <p class="eyebrow">FIRST PLAYABLE SLICE</p>',
+  '    <p class="eyebrow">FIRST COMBAT SLICE</p>',
   '    <h1>Guns’n’Glory</h1>',
-  '    <p class="intro">A recovered map, a controlled enemy sample, and the first browser wave.</p>',
+  '    <p class="intro">Use the Cow Gulch map to defeat a pioneer and collect the reward.</p>',
   '  </header>',
   '  <section class="game-panel" aria-labelledby="scene-title">',
   '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span>NEW MEXICO · 01</span></div>',
@@ -27,6 +27,7 @@ app.innerHTML = [
   '    <div class="game-controls">',
   '      <p data-testid="selection-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="wave-status" role="status" aria-live="polite"></p>',
+  '      <p data-testid="combat-status" role="status" aria-live="polite"></p>',
   '      <label class="simulation-speed-control" for="simulation-speed">',
   '        <span id="simulation-speed-label">Simulation speed</span>',
   '        <input id="simulation-speed" data-testid="simulation-speed" aria-labelledby="simulation-speed-label" type="range" min="0.25" max="4" step="0.25" value="1" disabled>',
@@ -36,7 +37,7 @@ app.innerHTML = [
   '      <button type="button" data-action="start-wave">Start one pioneer sample</button>',
   '      <button type="button" data-action="clear-selection">Clear selection</button>',
   '    </div>',
-  '    <p class="scene-caption">The preview follows one Cow Gulch pioneer to the exit; it does not run the full wave or campaign.</p>',
+  '    <p class="scene-caption">This sample covers one pioneer’s movement, combat, and reward; later waves and the campaign are out of scope.</p>',
   '  </section>',
   '</section>',
 ].join('');
@@ -46,18 +47,20 @@ registerMessages('gunsnglory', messages);
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const statusElement = app.querySelector<HTMLElement>('[data-testid="selection-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
+const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
-if (!canvasElement || !statusElement || !waveStatusElement || !settingsStatusElement
+if (!canvasElement || !statusElement || !waveStatusElement || !combatStatusElement || !settingsStatusElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
 const status: HTMLElement = statusElement;
 const waveStatus: HTMLElement = waveStatusElement;
+const combatStatus: HTMLElement = combatStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
@@ -70,6 +73,7 @@ let view = session.observe();
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | undefined;
+let lastDefeatReward: number | undefined;
 let settingsSaveSequence = 0;
 const simulationTime = new SimulationTimeAccumulator();
 const languageMessages = {
@@ -77,9 +81,10 @@ const languageMessages = {
     none: 'No unit selected',
     selected: 'Gunslinger selected',
     failed: 'Game scene failed to load',
-    waiting: (lives: number, number: number) => `Wave ${number} ready · Lives ${lives}`,
-    active: (lives: number, number: number, enemies: number) => `Wave ${number} · Lives ${lives} · Enemies ${enemies}`,
-    complete: (lives: number, number: number, escaped: number) => `Wave ${number} complete · Lives ${lives} · Escaped ${escaped}`,
+    waiting: (lives: number, number: number, cash: number) => `Wave ${number} ready · Lives ${lives} · Cash $${cash}`,
+    active: (lives: number, number: number, enemies: number, cash: number) => `Wave ${number} · Lives ${lives} · Enemies ${enemies} · Cash $${cash}`,
+    complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `Wave ${number} complete · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
+    defeated: (cashReward: number) => `Pioneer defeated · +$${cashReward}`,
     'load-failed': 'Speed preference unavailable; using 1× for this session.',
     saved: 'Speed preference saved.',
     'save-failed': 'Speed is active for this session, but could not be saved.',
@@ -88,19 +93,22 @@ const languageMessages = {
     none: '尚未选择单位',
     selected: '已选择枪手',
     failed: '游戏场景加载失败',
-    waiting: (lives: number, number: number) => `第 ${number} 波待开始 · 生命 ${lives}`,
-    active: (lives: number, number: number, enemies: number) => `第 ${number} 波 · 生命 ${lives} · 敌人 ${enemies}`,
-    complete: (lives: number, number: number, escaped: number) => `第 ${number} 波完成 · 生命 ${lives} · 逃脱 ${escaped}`,
+    waiting: (lives: number, number: number, cash: number) => `第 ${number} 波待开始 · 生命 ${lives} · 现金 $${cash}`,
+    active: (lives: number, number: number, enemies: number, cash: number) => `第 ${number} 波 · 生命 ${lives} · 敌人 ${enemies} · 现金 $${cash}`,
+    complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `第 ${number} 波完成 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
+    defeated: (cashReward: number) => `拓荒者被击败 · +$${cashReward}`,
     'load-failed': '无法读取倍速设置，本次暂用 1×。',
     saved: '倍速设置已保存。',
     'save-failed': '本次使用所选倍速，但保存失败。',
   },
 };
 
-function renderStatus(): void {
+function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
+  const defeatEvent = events.find((event) => event.type === 'enemy-defeated');
+  if (defeatEvent?.type === 'enemy-defeated') lastDefeatReward = defeatEvent.cashReward;
   const selectionText = unit
     ? messages.selected + ' · Cell (' + (unit.cell.x + 1) + ', ' + (unit.cell.y + 1) + ')'
     : messages.none;
@@ -111,14 +119,16 @@ function renderStatus(): void {
   if (view.wave) {
     const wave = view.wave;
     const waveText = wave.phase === 'not-started'
-      ? messages.waiting(wave.lives, wave.number)
+      ? messages.waiting(wave.lives, wave.number, wave.cash)
       : wave.phase === 'active'
-        ? messages.active(wave.lives, wave.number, wave.activeEnemies)
-        : messages.complete(wave.lives, wave.number, wave.escapedEnemies);
+        ? messages.active(wave.lives, wave.number, wave.activeEnemies, wave.cash)
+        : messages.complete(wave.lives, wave.number, wave.escapedEnemies, wave.defeatedEnemies, wave.cash);
     if (waveStatus.textContent !== waveText) waveStatus.textContent = waveText;
     const startDisabled = wave.phase !== 'not-started';
     if (startWaveControl.disabled !== startDisabled) startWaveControl.disabled = startDisabled;
   }
+  const combatText = lastDefeatReward === undefined ? '' : messages.defeated(lastDefeatReward);
+  if (combatStatus.textContent !== combatText) combatStatus.textContent = combatText;
   const canvasLabel = language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
   if (canvas.getAttribute('aria-label') !== canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
 }
@@ -230,11 +240,13 @@ function startWaveLoop(): void {
     const currentTimestamp = Math.trunc(timestamp);
     const deltaMs = previousTimestamp === undefined ? 0 : currentTimestamp - previousTimestamp;
     previousTimestamp = currentTimestamp;
+    const frameEvents: GameEvent[] = [];
     for (const stepMs of simulationTime.advanceElapsed(deltaMs, simulationSpeed)) {
       view = session.advance({ deltaMs: stepMs });
+      frameEvents.push(...view.events);
       if (view.wave?.phase !== 'active') break;
     }
-    renderStatus();
+    renderStatus(frameEvents);
     redraw();
     animationFrame = window.requestAnimationFrame(tick);
   };
@@ -274,4 +286,4 @@ canvas.addEventListener('pointerup', (event: PointerEvent) => {
   });
 });
 
-subscribeLanguage(renderStatus);
+subscribeLanguage(() => renderStatus());

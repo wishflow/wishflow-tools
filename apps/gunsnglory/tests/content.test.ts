@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import { cowGulchContent } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
@@ -16,6 +17,17 @@ test('contains the researched Cow Gulch scenario and exactly its first-map unit'
   assert.equal(content.units.length, 1);
   assert.equal(content.units[0].type, 'gunslinger');
   assert.deepEqual(content.units[0].cell, { x: 8, y: 8 });
+  assert.deepEqual(cowGulchContent.units[0]?.weapon, {
+    damage: 140,
+    damageType: 'light',
+    rangeFine: 38400,
+    reloadTimeMs: 500,
+    projectileSpeed: 600,
+    damageStyle: 0,
+  });
+  assert.equal(cowGulchContent.previewWave?.initialCash, 65);
+  assert.equal(cowGulchContent.previewWave?.enemy?.hitPoints, 126);
+  assert.equal(cowGulchContent.previewWave?.enemy?.cashReward, 1);
   assert.equal(content.map.background.length, 289);
   assert.ok(content.map.streets.length > 30);
   assert.match(content.source.variationPolicy, /first candidate/i);

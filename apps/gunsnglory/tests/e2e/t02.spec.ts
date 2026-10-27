@@ -204,24 +204,20 @@ test('preserves malformed IndexedDB settings when a user tries to save a new spe
   }
 });
 
-test('applies the selected speed to an active wave', async ({ page }) => {
+test('applies the selected speed to an active combat wave', async ({ page }) => {
+  const startedAt = Date.now();
   await page.goto('/');
-  const canvas = page.getByTestId('game-canvas');
+  const waveStatus = page.getByTestId('wave-status');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await expect(speed).toBeEnabled();
-  const initialImage = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL());
 
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
-  await expect(page.getByTestId('wave-status')).toContainText('Wave 1 · Lives 50 · Enemies 1');
+  await expect(waveStatus).toContainText('Wave 1 · Lives 50 · Enemies 1');
   await speed.focus();
   await speed.press('End');
   await expect(speed).toHaveValue('4');
-  // At 4× the pioneer briefly passes beneath the western bridge overlay; wait
-  // until it reappears on the lower canyon route before comparing the canvas.
-  await page.waitForTimeout(2500);
-
-  const acceleratedImage = await canvas.evaluate((element) => (element as HTMLCanvasElement).toDataURL());
-  expect(acceleratedImage).not.toBe(initialImage);
+  await expect(waveStatus).toContainText('Wave 1 complete · Lives 50 · Escaped 0 · Defeated 1 · Cash $66', { timeout: 10000 });
+  expect(Date.now() - startedAt).toBeLessThan(10000);
 });
 
 test('starts the preview wave from a mobile touch control', async ({ browser }) => {
@@ -238,4 +234,42 @@ test('starts the preview wave from a mobile touch control', async ({ browser }) 
   await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
   await expect(waveStatus).toContainText('Wave 1 · Lives 50 · Enemies 1');
   await context.close();
+});
+
+test('keeps defeat feedback when accelerated time is processed in multiple game steps', async ({ page }) => {
+  await page.goto('/');
+  const waveStatus = page.getByTestId('wave-status');
+  const speed = page.getByRole('slider', { name: 'Simulation speed' });
+  await speed.focus();
+  await speed.press('End');
+  await expect(speed).toHaveValue('4');
+  await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
+  await expect(waveStatus).toContainText('Wave 1 · Lives 50 · Enemies 1');
+
+  await page.waitForTimeout(100);
+  await page.evaluate(() => {
+    const deadline = performance.now() + 3000;
+    while (performance.now() < deadline) { /* force one delayed animation frame */ }
+  });
+
+  await expect(waveStatus).toContainText('Wave 1 complete · Lives 50 · Escaped 0 · Defeated 1 · Cash $66');
+  await expect(page.getByTestId('combat-status')).toContainText('Pioneer defeated · +$1');
+});
+
+test('the Cow Gulch gunslinger kills the pioneer and updates the cash display', async ({ page }) => {
+  test.setTimeout(45000);
+  await page.goto('/');
+  const waveStatus = page.getByTestId('wave-status');
+  const combatStatus = page.getByTestId('combat-status');
+  await expect(waveStatus).toContainText('Cash $65');
+
+  const speed = page.getByRole('slider', { name: 'Simulation speed' });
+  await speed.focus();
+  await speed.press('End');
+  await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
+  await expect(waveStatus).toContainText('Enemies 1');
+  await expect(combatStatus).toContainText('Pioneer defeated · +$1', { timeout: 30000 });
+  await expect(waveStatus).toContainText('Defeated 1');
+  await expect(waveStatus).toContainText('Cash $66');
+  await expect(waveStatus).toContainText('Wave 1 complete');
 });

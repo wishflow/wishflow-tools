@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cowGulchContent } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
-import { createGame, type ScenarioContent } from '../src/game';
+import { createGame, type GameSession, type ScenarioContent } from '../src/game';
 
 const scenario: ScenarioContent = {
   id: 'fixture',
@@ -24,6 +24,48 @@ const scenario: ScenarioContent = {
     hitArea: { x: 8, y: 7.625, width: 1, height: 1.375 },
   }],
 };
+
+const combatScenario: ScenarioContent = {
+  ...scenario,
+  id: 'combat-fixture',
+  units: [{
+    ...scenario.units[0]!,
+    weapon: {
+      damage: 140,
+      damageType: 'light',
+      rangeFine: 38400,
+      reloadTimeMs: 500,
+      projectileSpeed: 600,
+      damageStyle: 0,
+    },
+  }],
+  previewWave: {
+    ...cowGulchPreviewWave,
+    initialCash: 65,
+    spawn: { cell: { x: 14, y: 8 }, direction: 'east' },
+    baseEnemySpeed: 0,
+    speedMultiplierMin: 100,
+    speedMultiplierCount: 1,
+    redirects: [],
+    enemy: {
+      hitPoints: 126,
+      cashReward: 1,
+      penetration: { light: 100, fire: 50, heavy: 25, poison: 75 },
+    },
+  },
+};
+const noCombatCowGulch: ScenarioContent = { ...cowGulchContent, units: [] };
+
+function advanceFor(session: GameSession, durationMs: number) {
+  let view = session.observe();
+  let remainingMs = durationMs;
+  while (remainingMs > 0) {
+    const deltaMs = Math.min(100, remainingMs);
+    view = session.advance({ deltaMs });
+    remainingMs -= deltaMs;
+  }
+  return view;
+}
 
 test('opens a controlled scene with one unselected unit and isolates observations', async () => {
   const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
@@ -98,9 +140,136 @@ test('does not create the controlled wave until the start intent advances', asyn
   assert.equal(moved.elapsedMs, 200);
 });
 
-test('replays the Cow Gulch preview and applies the escape penalty exactly once', async () => {
+test('the first in-range Desperado shot follows its target, deals damage, kills once, and awards its cash once', async () => {
+  const session = await createGame({ scenarios: { [combatScenario.id]: combatScenario } }).open({
+    scenarioId: combatScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+
+  assert.equal(view.wave?.cash, 65);
+  assert.equal(view.enemies[0]?.hitPoints, 126);
+  view = advanceFor(session, 249);
+  assert.equal(view.shots.length, 0, 'the first shot waits for the initial half-reload cooldown');
+  assert.equal(view.enemies[0]?.hitPoints, 126);
+
+  view = session.advance({ deltaMs: 1 });
+  assert.equal(view.shots.length, 1);
+  assert.equal(view.shots[0]?.targetId, 'preview-pioneer-1');
+  assert.equal(view.shots[0]?.remainingMs, 399, 'the projectile advances in its firing frame');
+
+  view = advanceFor(session, 398);
+  assert.equal(view.enemies[0]?.hitPoints, 126);
+  assert.equal(view.wave?.cash, 65);
+  view = session.advance({ deltaMs: 1 });
+  assert.equal(view.shots.length, 0);
+  assert.equal(view.enemies[0]?.hitPoints, -14, 'the recovered damage rule subtracts the full integer damage');
+  assert.equal(view.enemies[0]?.alive, false);
+  assert.equal(view.wave?.cash, 66);
+  assert.equal(view.wave?.defeatedEnemies, 1);
+  assert.deepEqual(view.events, [
+    { type: 'enemy-hit', enemyId: 'preview-pioneer-1', damage: 140, hitPoints: -14 },
+    { type: 'enemy-defeated', enemyId: 'preview-pioneer-1', cashReward: 1 },
+  ]);
+
+  for (let index = 0; index < 10; index += 1) view = session.advance({ deltaMs: 100 });
+  assert.equal(view.wave?.cash, 66, 'a dead enemy cannot pay twice');
+  assert.equal(view.wave?.defeatedEnemies, 1);
+  assert.equal(view.wave?.phase, 'complete');
+});
+
+test('does not attack at or beyond the strict outer range boundary', async () => {
+  const outOfRangeScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'out-of-range-fixture',
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 15, y: 8 }, direction: 'east' },
+    },
+  };
+  const session = await createGame({ scenarios: { [outOfRangeScenario.id]: outOfRangeScenario } }).open({
+    scenarioId: outOfRangeScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  for (let index = 0; index < 10; index += 1) view = session.advance({ deltaMs: 100 });
+
+  assert.equal(view.shots.length, 0);
+  assert.equal(view.enemies[0]?.hitPoints, 126);
+  assert.equal(view.wave?.cash, 65);
+});
+
+test('truncates damage percent multiplication toward zero and keeps equal-score targets in enemy order', async () => {
+  const fractionalScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'fractional-damage-fixture',
+    units: [{
+      ...combatScenario.units[0]!,
+      weapon: { ...combatScenario.units[0]!.weapon!, damage: 141 },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      additionalSpawns: [{ cell: { x: 14, y: 8 }, direction: 'east' }],
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 80, penetration: {
+        ...combatScenario.previewWave!.enemy!.penetration,
+        light: 50,
+      } },
+    },
+  };
+  const session = await createGame({ scenarios: { [fractionalScenario.id]: fractionalScenario } }).open({
+    scenarioId: fractionalScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+  advanceFor(session, 249);
+  const fired = session.advance({ deltaMs: 1 });
+  assert.equal(fired.shots[0]?.targetId, 'preview-pioneer-1', 'strict greater-than keeps the first equal-score enemy');
+
+  advanceFor(session, 398);
+  const hit = session.advance({ deltaMs: 1 });
+  assert.equal(hit.enemies[0]?.hitPoints, 10, '141 × 50 / 100 truncates to 70 damage');
+  assert.equal(hit.enemies[1]?.hitPoints, 80, 'the tied second enemy remains untouched');
+  assert.equal(hit.wave?.cash, 65, 'nonlethal damage awards no money');
+  assert.deepEqual(hit.events, [
+    { type: 'enemy-hit', enemyId: 'preview-pioneer-1', damage: 70, hitPoints: 10 },
+  ]);
+});
+
+test('the researched Cow Gulch sample is killed before escape and pays its configured reward', async () => {
   const run = async () => {
     const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+      scenarioId: 'cow-gulch',
+      randomSeed: 1234,
+    });
+    session.submitIntent({ type: 'start-wave' });
+    let view = session.advance({ deltaMs: 0 });
+    let steps = 0;
+    while (steps < 2000 && view.wave?.phase === 'active') {
+      view = session.advance({ deltaMs: 100 });
+      steps += 1;
+    }
+    return { view, steps };
+  };
+  const first = await run();
+  const replay = await run();
+  const { view } = first;
+
+  assert.deepEqual(first, replay, 'the same start record and time inputs replay the same combat');
+  assert.ok(first.steps < 2000, 'the controlled sample reaches a terminal state');
+
+  assert.equal(view.wave?.phase, 'complete');
+  assert.equal(view.wave?.lives, 50);
+  assert.equal(view.wave?.escapedEnemies, 0);
+  assert.equal(view.wave?.defeatedEnemies, 1);
+  assert.equal(view.wave?.cash, 66);
+});
+
+test('replays the Cow Gulch preview and applies the escape penalty exactly once', async () => {
+  const run = async () => {
+    const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({
       scenarioId: 'cow-gulch',
       randomSeed: 42,
     });
@@ -124,7 +293,7 @@ test('replays the Cow Gulch preview and applies the escape penalty exactly once'
   assert.equal(first.view.wave?.escapedEnemies, 1);
   assert.equal(first.view.enemies.length, 0);
 
-  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({ scenarioId: 'cow-gulch', randomSeed: 42 });
+  const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({ scenarioId: 'cow-gulch', randomSeed: 42 });
   session.submitIntent({ type: 'start-wave' });
   let view = session.advance({ deltaMs: 0 });
   for (let index = 0; index < 2000 && view.wave?.phase !== 'complete'; index += 1) {
@@ -155,7 +324,7 @@ test('keeps the pioneer inside the TDM route cells from spawn through the exit',
     }
   }
 
-  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+  const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({
     scenarioId: 'cow-gulch',
     randomSeed: 42,
   });
@@ -210,7 +379,7 @@ test('keeps preview waves and random streams isolated between sessions', async (
 });
 
 test('follows the first Cow Gulch redirect and clamps variable time to the original 100 ms bound', async () => {
-  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+  const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({
     scenarioId: 'cow-gulch',
     randomSeed: 42,
   });
@@ -221,7 +390,7 @@ test('follows the first Cow Gulch redirect and clamps variable time to the origi
   view = session.advance({ deltaMs: 0.9 });
   assert.equal(view.enemies[0]!.positionFine.x, startX, 'sub-millisecond time truncates to zero');
 
-  const variableSession = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+  const variableSession = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({
     scenarioId: 'cow-gulch',
     randomSeed: 1234,
   });
@@ -261,7 +430,7 @@ test('follows the first Cow Gulch redirect and clamps variable time to the origi
 
 test('does not snap an enemy back when a route marker keeps its current direction', async () => {
   const sameDirectionScenario: ScenarioContent = {
-    ...cowGulchContent,
+    ...noCombatCowGulch,
     id: 'same-direction-marker',
     previewWave: {
       ...cowGulchContent.previewWave!,
@@ -304,7 +473,7 @@ test('follows every Cow Gulch route turn at its native field center', async () =
     { direction: 'south', cell: { x: 12, y: 2 } },
     { direction: 'east', cell: { x: 12, y: 3 } },
   ] as const;
-  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+  const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({
     scenarioId: 'cow-gulch',
     randomSeed: 42,
   });
