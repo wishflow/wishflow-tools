@@ -174,4 +174,5 @@ Game 公共行为测试覆盖射程边界、同分目标的稳定次序、非致
 | `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、33 项单元测试、生产构建和 10 个 Playwright 场景。 |
 | 死亡条件变异检查 | 在 `/tmp` 临时副本中反转死亡判断；击杀/奖励公共行为测试按预期失败，证明该测试能检测此回归。原工作树未被变异。 |
 | Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:4173/` 用中文启动 Cow Gulch 样本并调到 4×；页面显示“第 1 波完成 · 生命 50 · 逃脱 0 · 击败 1 · 现金 $66”和“拓荒者被击败 · +$1”。英文说明及结果正常，再恢复中文和 1×。 |
-| CI、发布及公网实测 | 本地验收完成；待合并、推送后记录 workflow 与公网检查结果。 |
+| GitHub Actions 与部署 | [workflow 40515083324](https://github.com/wishflow/wishflow-tools/actions/runs/40515083324) 对 commit `a095873` 完成且成功；Guns’n’Glory 测试、Cloudflare Pages 与 GitHub Pages 部署通过。Worker 未触发（本次未改 Worker）。 |
+| Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后，中文说明及 65 初始现金可见；调至 4×并启动样本，显示“第 1 波完成 · 生命 50 · 逃脱 0 · 击败 1 · 现金 $66”与“拓荒者被击败 · +$1”。测试后恢复原有中文和 1× 设置。 |
