@@ -65,6 +65,7 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
       animationFrame: 2,
     }],
     shots: [],
+    recruitPool: [],
     events: [],
   };
 

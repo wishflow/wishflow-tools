@@ -14,6 +14,7 @@ test('shows a victory settlement and restarts the same sample from clean state',
   await setFourTimesSpeed(page);
 
   const canvas = page.getByTestId('game-canvas');
+  await canvas.scrollIntoViewIfNeeded();
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('Game canvas has no layout box');
   await page.mouse.click(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);

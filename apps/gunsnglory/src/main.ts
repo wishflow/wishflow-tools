@@ -46,10 +46,20 @@ app.innerHTML = [
   '        <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
   '      </label>',
   '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
+  '      <p data-testid="recruit-pool-status" role="status" aria-live="polite"></p>',
+  '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="start-wave">Start one pioneer sample</button>',
+  '      <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <button type="button" data-action="clear-selection">Clear selection</button>',
   '    </div>',
+  '    <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-labelledby="recruit-confirmation-title">',
+  '      <h2 id="recruit-confirmation-title"></h2>',
+  '      <div class="recruit-confirmation-actions">',
+  '        <button type="button" data-action="confirm-recruit">Recruit</button>',
+  '        <button type="button" data-action="cancel-recruit">Cancel</button>',
+  '      </div>',
+  '    </dialog>',
   '    <p class="scene-caption">The normal sample resolves a victory; the one-life test verifies defeat. Later waves and the campaign are out of scope.</p>',
   '  </section>',
   '</section>',
@@ -62,11 +72,18 @@ const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profi
 const statusElement = app.querySelector<HTMLElement>('[data-testid="selection-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
 const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
+const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
+const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
+const recruitButton = app.querySelector<HTMLButtonElement>('[data-action="recruit-unit"]');
+const recruitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="recruit-confirmation"]');
+const recruitConfirmationTitleElement = app.querySelector<HTMLElement>('#recruit-confirmation-title');
+const confirmRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-recruit"]');
+const cancelRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-recruit"]');
 const startDefeatButton = app.querySelector<HTMLButtonElement>('[data-action="start-defeat-sample"]');
 const settlementPanelElement = app.querySelector<HTMLElement>('[data-testid="settlement"]');
 const settlementTitleElement = app.querySelector<HTMLElement>('#settlement-title');
@@ -77,7 +94,9 @@ const settlementHighScoreElement = app.querySelector<HTMLElement>('[data-testid=
 const settlementSaveStatusElement = app.querySelector<HTMLElement>('[data-testid="settlement-save-status"]');
 const retrySettlementButton = app.querySelector<HTMLButtonElement>('[data-action="retry-settlement-save"]');
 const restartButton = app.querySelector<HTMLButtonElement>('[data-action="restart-sample"]');
-if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement || !settingsStatusElement
+if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement
+  || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
+  || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
@@ -89,10 +108,17 @@ const profileStatus: HTMLElement = profileStatusElement;
 const status: HTMLElement = statusElement;
 const waveStatus: HTMLElement = waveStatusElement;
 const combatStatus: HTMLElement = combatStatusElement;
+const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
+const recruitStatus: HTMLElement = recruitStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
+const recruitControl: HTMLButtonElement = recruitButton;
+const recruitConfirmation: HTMLDialogElement = recruitConfirmationElement;
+const recruitConfirmationTitle: HTMLElement = recruitConfirmationTitleElement;
+const confirmRecruitControl: HTMLButtonElement = confirmRecruitButton;
+const cancelRecruitControl: HTMLButtonElement = cancelRecruitButton;
 const startDefeatControl: HTMLButtonElement = startDefeatButton;
 const clearSelectionControl: HTMLButtonElement = clearButton;
 const restartControl: HTMLButtonElement = restartButton;
@@ -121,6 +147,9 @@ let profileLoadFailed = false;
 let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | undefined;
 let activeSettlementRecord: GameSettlementRecord | undefined;
 let lastDefeatReward: number | undefined;
+let lastRecruitmentEvent: Extract<GameEvent, { type: 'unit-recruited' | 'unit-recruitment-rejected' }> | undefined;
+let pendingRecruitmentType: string | undefined;
+let recruitmentCommandNumber = 0;
 let settingsSaveSequence = 0;
 const simulationTime = new SimulationTimeAccumulator();
 const languageMessages = {
@@ -133,6 +162,14 @@ const languageMessages = {
     active: (lives: number, number: number, enemies: number, cash: number) => `Wave ${number} · Lives ${lives} · Enemies ${enemies} · Cash $${cash}`,
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `Wave ${number} complete · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
     defeated: (cashReward: number) => `Pioneer defeated · +$${cashReward}`,
+    recruitButton: (name: string, price: number) => `Hire ${name} · $${price}`,
+    recruitPool: (units: string) => `Recruit pool: ${units}`,
+    recruitPoolEmpty: 'Recruit pool: empty',
+    recruited: (name: string, price: number) => `${name} recruited for $${price}; held in the spawn pool.`,
+    insufficientCash: (name: string, price: number, cash: number) => `Not enough cash for ${name}: need $${price}, have $${cash}.`,
+    confirmRecruit: (name: string, price: number) => `Recruit ${name} for $${price}?`,
+    confirmRecruitButton: 'Recruit',
+    cancelRecruitButton: 'Cancel',
     'load-failed': 'Speed preference unavailable; using 1× for this session.',
     saved: 'Speed preference saved.',
     'save-failed': 'Speed is active for this session, but could not be saved.',
@@ -163,6 +200,14 @@ const languageMessages = {
     active: (lives: number, number: number, enemies: number, cash: number) => `第 ${number} 波 · 生命 ${lives} · 敌人 ${enemies} · 现金 $${cash}`,
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `第 ${number} 波完成 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
     defeated: (cashReward: number) => `拓荒者被击败 · +$${cashReward}`,
+    recruitButton: (name: string, price: number) => `招募${name} · $${price}`,
+    recruitPool: (units: string) => `预备单位：${units}`,
+    recruitPoolEmpty: '预备单位：无',
+    recruited: (name: string, price: number) => `已花费 $${price} 招募${name}，现存于生成池。`,
+    insufficientCash: (name: string, price: number, cash: number) => `现金不足，无法招募${name}：需要 $${price}，当前 $${cash}。`,
+    confirmRecruit: (name: string, price: number) => `花费 $${price} 招募${name}？`,
+    confirmRecruitButton: '确认招募',
+    cancelRecruitButton: '取消',
     'load-failed': '无法读取倍速设置，本次暂用 1×。',
     saved: '倍速设置已保存。',
     'save-failed': '本次使用所选倍速，但保存失败。',
@@ -248,6 +293,11 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (profileStatus.textContent !== profileText) profileStatus.textContent = profileText;
   const defeatEvent = events.find((event) => event.type === 'enemy-defeated');
   if (defeatEvent?.type === 'enemy-defeated') lastDefeatReward = defeatEvent.cashReward;
+  const recruitmentEvent = [...events].reverse().find((event) =>
+    event.type === 'unit-recruited' || event.type === 'unit-recruitment-rejected');
+  if (recruitmentEvent?.type === 'unit-recruited' || recruitmentEvent?.type === 'unit-recruitment-rejected') {
+    lastRecruitmentEvent = recruitmentEvent;
+  }
   const selectionText = unit
     ? messages.selected + ' · Cell (' + (unit.cell.x + 1) + ', ' + (unit.cell.y + 1) + ')'
     : messages.none;
@@ -266,9 +316,45 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   }
   const combatText = lastDefeatReward === undefined ? '' : messages.defeated(lastDefeatReward);
   if (combatStatus.textContent !== combatText) combatStatus.textContent = combatText;
+  const poolEntries = view.recruitPool.filter((entry) => entry.count > 0);
+  const poolText = poolEntries.length === 0
+    ? messages.recruitPoolEmpty
+    : messages.recruitPool(poolEntries.map((entry) => `${entry.name[language]} ×${entry.count}`).join(' · '));
+  if (recruitPoolStatus.textContent !== poolText) recruitPoolStatus.textContent = poolText;
+  const recruitDefinition = view.recruitPool[0];
+  let recruitText = '';
+  if (lastRecruitmentEvent?.type === 'unit-recruited') {
+    recruitText = messages.recruited(
+      recruitDefinition?.name[language] ?? lastRecruitmentEvent.unitType,
+      lastRecruitmentEvent.price,
+    );
+  } else if (lastRecruitmentEvent?.type === 'unit-recruitment-rejected') {
+    recruitText = messages.insufficientCash(
+      recruitDefinition?.name[language] ?? lastRecruitmentEvent.unitType,
+      lastRecruitmentEvent.price,
+      lastRecruitmentEvent.availableCash,
+    );
+  }
+  if (recruitStatus.textContent !== recruitText) recruitStatus.textContent = recruitText;
+  if (recruitDefinition) {
+    const recruitLabel = messages.recruitButton(recruitDefinition.name[language], recruitDefinition.price);
+    if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
+  }
+  confirmRecruitControl.textContent = messages.confirmRecruitButton;
+  cancelRecruitControl.textContent = messages.cancelRecruitButton;
+  if (pendingRecruitmentType) {
+    const pendingRecruit = view.recruitPool.find((entry) => entry.unitType === pendingRecruitmentType);
+    if (pendingRecruit) recruitConfirmationTitle.textContent = messages.confirmRecruit(
+      pendingRecruit.name[language], pendingRecruit.price,
+    );
+  }
   const settlement = view.wave?.settlement;
   const newSettlement = Boolean(settlement) && settlementPanel.hidden;
   settlementPanel.hidden = !settlement;
+  if (settlement && recruitConfirmation.open) {
+    pendingRecruitmentType = undefined;
+    recruitConfirmation.close();
+  }
   if (settlement && view.wave) {
     if (newSettlement) {
       activeSettlementRecord = session.terminalRecord();
@@ -302,6 +388,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   }
   const waveNotStarted = view.wave?.phase === 'not-started';
   startWaveControl.disabled = !waveNotStarted;
+  recruitControl.disabled = Boolean(settlement) || !recruitDefinition;
   startDefeatControl.disabled = !waveNotStarted || view.scenarioId !== 'cow-gulch';
   clearSelectionControl.disabled = Boolean(settlement);
   const canvasLabel = language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
@@ -393,6 +480,10 @@ async function replaceSession(scenarioId: string, randomSeed: number, mode: Game
     view = session.observe();
     previousSession.close();
     lastDefeatReward = undefined;
+    lastRecruitmentEvent = undefined;
+    pendingRecruitmentType = undefined;
+    recruitmentCommandNumber = 0;
+    if (recruitConfirmation.open) recruitConfirmation.close();
     activeSettlementRecord = undefined;
     settlementSaveState = undefined;
     renderStatus();
@@ -493,6 +584,43 @@ function dispatch(intent: GameIntent): void {
 }
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
+recruitControl.addEventListener('click', () => {
+  const recruit = view.recruitPool[0];
+  const cash = view.wave?.cash;
+  if (!recruit || cash === undefined || recruitConfirmation.open) return;
+  if (cash < recruit.price) {
+    dispatch({
+      type: 'recruit-unit',
+      unitType: recruit.unitType,
+      commandId: `${session.id}:recruit:${++recruitmentCommandNumber}`,
+    });
+    return;
+  }
+  pendingRecruitmentType = recruit.unitType;
+  recruitConfirmationTitle.textContent = languageMessages[getLanguage()].confirmRecruit(
+    recruit.name[getLanguage()], recruit.price,
+  );
+  recruitConfirmation.showModal();
+  confirmRecruitControl.focus();
+});
+confirmRecruitControl.addEventListener('click', () => {
+  const unitType = pendingRecruitmentType;
+  pendingRecruitmentType = undefined;
+  recruitConfirmation.close();
+  if (!unitType) return;
+  dispatch({
+    type: 'recruit-unit',
+    unitType,
+    commandId: `${session.id}:recruit:${++recruitmentCommandNumber}`,
+  });
+});
+cancelRecruitControl.addEventListener('click', () => {
+  pendingRecruitmentType = undefined;
+  recruitConfirmation.close();
+});
+recruitConfirmation.addEventListener('cancel', () => {
+  pendingRecruitmentType = undefined;
+});
 clearSelectionControl.addEventListener('click', () => dispatch({ type: 'clear-selection' }));
 startDefeatControl.addEventListener('click', () => {
   const randomSeed = session.startRecord.randomSeed;

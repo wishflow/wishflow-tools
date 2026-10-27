@@ -27,6 +27,14 @@ export interface ScenarioUnit {
   weapon?: UnitWeaponDefinition;
 }
 
+export interface RecruitableUnitDefinition {
+  id: string;
+  name: { en: string; zh: string };
+  price: number;
+  /** Original spawn-building kind: saloon, fort, or tipi. */
+  spawnLocationType: 1 | 2 | 3;
+}
+
 export type DamageType = 'light' | 'fire' | 'heavy' | 'poison';
 
 export interface UnitWeaponDefinition {
@@ -87,6 +95,7 @@ export interface ScenarioContent {
   /** Original TDM terrain codes, indexed as [row][column]. */
   originalTileGrid?: readonly (readonly number[])[];
   units: readonly ScenarioUnit[];
+  recruitableUnits?: readonly RecruitableUnitDefinition[];
   previewWave?: PreviewWaveDefinition;
 }
 
@@ -95,7 +104,8 @@ export type GameIntent =
   | { type: 'move-unit'; targetX: number; targetY: number }
   | { type: 'stop-moving' }
   | { type: 'clear-selection' }
-  | { type: 'start-wave' };
+  | { type: 'start-wave' }
+  | { type: 'recruit-unit'; unitType: string; commandId: string };
 
 export interface UnitView extends ScenarioUnit {
   selected: boolean;
@@ -129,7 +139,17 @@ export interface ShotView {
 export type GameEvent =
   | { type: 'enemy-hit'; enemyId: string; damage: number; hitPoints: number }
   | { type: 'enemy-defeated'; enemyId: string; cashReward: number }
+  | { type: 'unit-recruited'; unitType: string; price: number; count: number }
+  | { type: 'unit-recruitment-rejected'; unitType: string; reason: 'insufficient-funds'; price: number; availableCash: number }
   | { type: 'wave-settled'; settlement: WaveSettlement };
+
+export interface RecruitPoolEntry {
+  unitType: string;
+  name: RecruitableUnitDefinition['name'];
+  price: number;
+  spawnLocationType: RecruitableUnitDefinition['spawnLocationType'];
+  count: number;
+}
 
 export interface WaveSettlement {
   outcome: 'victory' | 'defeat';
@@ -167,6 +187,7 @@ export interface GameView {
   units: readonly UnitView[];
   enemies: readonly EnemyView[];
   shots: readonly ShotView[];
+  recruitPool: readonly RecruitPoolEntry[];
   events: readonly GameEvent[];
   wave?: WaveView;
 }
@@ -243,6 +264,7 @@ interface MutableWave {
   settlement?: WaveSettlement;
   enemies: MutableEnemy[];
   shots: MutableShot[];
+  recruitPool: Record<string, number>;
   events: GameEvent[];
 }
 
@@ -616,6 +638,8 @@ export function createGame(options: {
         positionFine: initialUnitPosition(definition),
         weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
       }));
+      const recruitableUnits = new Map((scenario.recruitableUnits ?? []).map((definition) => [definition.id, definition]));
+      const recruitmentCommands = new Map<string, string>();
       const pending: PendingIntent[] = [];
       let nextIntentSequence = 1;
       let nextShotNumber = 1;
@@ -632,6 +656,7 @@ export function createGame(options: {
           cashMade: 0,
           enemies: [],
           shots: [],
+          recruitPool: {},
           events: [],
         }
         : undefined;
@@ -668,6 +693,13 @@ export function createGame(options: {
             targetId: shot.targetId,
             positionFine: { ...shot.positionFine },
             remainingMs: shot.remainingMs,
+          })),
+          recruitPool: (scenario.recruitableUnits ?? []).map((definition) => ({
+            unitType: definition.id,
+            name: clone(definition.name),
+            price: definition.price,
+            spawnLocationType: definition.spawnLocationType,
+            count: wave?.recruitPool[definition.id] ?? 0,
           })),
           events: clone(wave?.events ?? []),
           ...(wave && scenario.previewWave ? {
@@ -715,6 +747,22 @@ export function createGame(options: {
           if (intent.type === 'start-wave') {
             if (!wave || !scenario.previewWave || wave.phase !== 'not-started') return false;
             pending.push({ sequence: nextIntentSequence, intent: { type: 'start-wave' } });
+            nextIntentSequence += 1;
+            return true;
+          }
+
+          if (intent.type === 'recruit-unit') {
+            if (!wave || typeof intent.unitType !== 'string' || typeof intent.commandId !== 'string'
+              || !intent.commandId.trim() || intent.commandId.length > 128) return false;
+            const definition = recruitableUnits.get(intent.unitType);
+            if (!definition || !Number.isSafeInteger(definition.price) || definition.price < 0) return false;
+            const existingUnitType = recruitmentCommands.get(intent.commandId);
+            if (existingUnitType !== undefined) return existingUnitType === intent.unitType;
+            recruitmentCommands.set(intent.commandId, intent.unitType);
+            pending.push({
+              sequence: nextIntentSequence,
+              intent: { type: 'recruit-unit', unitType: intent.unitType, commandId: intent.commandId },
+            });
             nextIntentSequence += 1;
             return true;
           }
@@ -778,6 +826,30 @@ export function createGame(options: {
               }
               wave.phase = 'active';
               waveStarted = true;
+              continue;
+            }
+
+            if (command.intent.type === 'recruit-unit') {
+              const recruitable = recruitableUnits.get(command.intent.unitType);
+              if (!wave || !recruitable) continue;
+              if (wave.cash < recruitable.price) {
+                wave.events.push({
+                  type: 'unit-recruitment-rejected',
+                  unitType: recruitable.id,
+                  reason: 'insufficient-funds',
+                  price: recruitable.price,
+                  availableCash: wave.cash,
+                });
+                continue;
+              }
+              wave.cash -= recruitable.price;
+              wave.recruitPool[recruitable.id] = (wave.recruitPool[recruitable.id] ?? 0) + 1;
+              wave.events.push({
+                type: 'unit-recruited',
+                unitType: recruitable.id,
+                price: recruitable.price,
+                count: wave.recruitPool[recruitable.id],
+              });
               continue;
             }
 

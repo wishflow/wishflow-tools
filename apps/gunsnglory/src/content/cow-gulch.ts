@@ -16,6 +16,12 @@ const firstMapGunslingerMovementSpeedFinePer100Ms = 1500;
 export const cowGulchContent: ScenarioContent = {
   ...cowGulchMap,
   formalSettlementSupported: true,
+  recruitableUnits: [{
+    id: 'gunslinger',
+    name: { en: 'Gunslinger', zh: '枪手' },
+    price: 75,
+    spawnLocationType: 1,
+  }],
   units: cowGulchMap.units.map((unit) => ({
     ...unit,
     movementSpeedFinePer100Ms: firstMapGunslingerMovementSpeedFinePer100Ms,

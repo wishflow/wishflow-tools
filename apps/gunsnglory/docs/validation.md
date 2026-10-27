@@ -230,3 +230,17 @@ Game 行为测试覆盖速度、移动位置、释放、无选择与非法坐标
 | GitHub Actions 与发布 | [workflow 40547256881](https://github.com/wishflow/wishflow-tools/actions/runs/40547256881) 成功；Guns’n’Glory 测试、共享站点检查、Cloudflare Pages 和 GitHub Pages 部署均通过，Worker 未触发。 |
 | Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后，以 4× 在 Cow Gulch 未开波样本中连续鼠标拖动枪手至右侧墙边；状态停在 `Cell (12, 8)`，再向墙外拖动仍不能穿过，释放后 Canvas 稳定。保存最高分仍为 $50，未启动战斗或写入新结算。将速度恢复至原有 1×、重载回未选择单位的初态，并恢复浏览器视口；控制台无错误。 |
 | 手机视口与触屏 | 内置浏览器在 390×844 视口下检查地图比例和 HUD 换行；Usagi 浮层覆盖调试败北按钮，但未覆盖地图拖动区。触屏拖动、释放及状态由同一发布提交的 Playwright 移动端真实触摸场景验证。检查后恢复内置浏览器视口。 |
+
+## 12. T07 招募 Gunslinger 验收
+
+本切片增加首关 Gunslinger 的招募报价（$75）、确认操作、余额拒绝、生成池计数和幂等命令。价格来自 Guns’n’Glory FREE 1.8.6 的 `GameDesignData.unitDataDesperado[0]`；原版 `GameObjectUnit.hire()` 扣除 `costs` 并调用 `SpawnPoolManager.addUnitToSpawnPool()`，单位由匹配的 `GameObjectSpawnLocation` 后续生成。Cow Gulch 原始地图没有 tile 112–114 的酒馆、堡垒或 tipi 生成点，因此本切片只把招募结果保留在生成池，不把单位摆到未经证据支持的地图位置。
+
+Cow Gulch 的正式样本初始现金为 $65，低于原版 $75 报价；页面保留可操作的招募按钮，点击后明确显示所需与现有现金，现金和生成池不变。成功路径通过 Game 公共 Interface 的 $75 余额夹具验证。购买只属于当前未完成战局；不写入 Progress 或 IndexedDB，重开会恢复 $65 和空生成池。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `pnpm run test:ci` | 通过：53 项单元测试、Vite 生产构建、22 个 Playwright 场景；包含资金刚好足够、余额不足无部分扣款、重复命令去重、不同命令分别扣款、命令 ID 与载荷冲突拒绝、重开清空生成池。 |
+| Playwright 桌面与触屏 | 桌面核对 $75 报价、$65 余额拒绝、现金与生成池保持不变及中英文文案；390×844 触屏视口可操作招募并获得同一拒绝结果。 |
+| Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5174/` 查看 Cow Gulch 地图和 HUD，点击“招募枪手 · $75”后显示“现金不足，无法招募枪手：需要 $75，当前 $65”；现金仍为 $65、预备单位仍为空。切换到英文确认 `Not enough cash for Gunslinger: need $75, have $65`，然后恢复原中文偏好；没有启动波次或写入结算。 |
+| 存档边界 | 未修改 IndexedDB schema、Progress 或正式结算流程；招募只存在于 GameSession。 |
+| 集成与发布 | 待合入 `gunsnglory`、合入并推送 `master`，再记录 CI/CD 与公网浏览器实测结果。 |

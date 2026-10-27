@@ -56,6 +56,17 @@ const combatScenario: ScenarioContent = {
     },
   },
 };
+const recruitmentScenario: ScenarioContent = {
+  ...combatScenario,
+  id: 'recruitment-fixture',
+  previewWave: { ...combatScenario.previewWave!, initialCash: 75 },
+  recruitableUnits: [{
+    id: 'gunslinger',
+    name: { en: 'Gunslinger', zh: '枪手' },
+    price: 75,
+    spawnLocationType: 1,
+  }],
+};
 const noCombatCowGulch: ScenarioContent = { ...cowGulchContent, units: [] };
 
 function advanceFor(session: GameSession, durationMs: number) {
@@ -80,6 +91,116 @@ test('opens a controlled scene with one unselected unit and isolates observation
     (initial.units[0] as { selected: boolean }).selected = true;
   }, TypeError);
   assert.equal(session.observe().units[0]?.selected, false);
+});
+
+test('a retried recruitment command charges once and adds one unit to the spawn pool', async () => {
+  const game = createGame({ scenarios: { [recruitmentScenario.id]: recruitmentScenario } });
+  const session = await game.open({
+    scenarioId: recruitmentScenario.id,
+  });
+  const command = { type: 'recruit-unit', unitType: 'gunslinger', commandId: 'hire-gunslinger-1' } as const;
+
+  assert.equal(session.submitIntent(command), true);
+  assert.equal(session.submitIntent(command), true, 'a duplicate retry is acknowledged without another queued purchase');
+  const hired = session.advance({ deltaMs: 0 });
+
+  assert.equal(hired.wave?.cash, 0);
+  assert.deepEqual(hired.recruitPool, [{
+    unitType: 'gunslinger', name: { en: 'Gunslinger', zh: '枪手' }, price: 75, spawnLocationType: 1, count: 1,
+  }]);
+  assert.equal(hired.events.filter((event) => event.type === 'unit-recruited').length, 1);
+  assert.equal(hired.units.length, 1, 'a purchase remains in the pool until a matching original spawn site deploys it');
+
+  assert.equal(session.submitIntent(command), true, 'retry after processing is acknowledged');
+  const retried = session.advance({ deltaMs: 0 });
+  assert.equal(retried.wave?.cash, 0);
+  assert.equal(retried.recruitPool[0]?.count, 1);
+  assert.equal(retried.events.length, 0);
+
+  session.close();
+  const restarted = await game.open({ scenarioId: recruitmentScenario.id });
+  assert.equal(restarted.observe().wave?.cash, 75);
+  assert.equal(restarted.observe().recruitPool[0]?.count, 0, 'an unfinished scene restarts without saving purchases');
+});
+
+test('Cow Gulch uses the researched first-level Gunslinger offer and keeps it in reserve without a spawn site', async () => {
+  const offer = cowGulchContent.recruitableUnits?.[0];
+  assert.deepEqual(offer, {
+    id: 'gunslinger',
+    name: { en: 'Gunslinger', zh: '枪手' },
+    price: 75,
+    spawnLocationType: 1,
+  });
+  assert.equal(cowGulchContent.previewWave?.initialCash, 65);
+  assert.equal(cowGulchContent.originalTileGrid?.flat().some((tile) => tile >= 112 && tile <= 114), false);
+});
+
+test('separate valid recruitment commands each charge the listed unit price', async () => {
+  const fundedScenario: ScenarioContent = {
+    ...recruitmentScenario,
+    id: 'funded-recruitment-fixture',
+    previewWave: { ...recruitmentScenario.previewWave!, initialCash: 200 },
+  };
+  const session = await createGame({ scenarios: { [fundedScenario.id]: fundedScenario } }).open({
+    scenarioId: fundedScenario.id,
+  });
+
+  assert.equal(session.submitIntent({ type: 'recruit-unit', unitType: 'gunslinger', commandId: 'hire-1' }), true);
+  assert.equal(session.submitIntent({ type: 'recruit-unit', unitType: 'gunslinger', commandId: 'hire-2' }), true);
+  const view = session.advance({ deltaMs: 0 });
+
+  assert.equal(view.wave?.cash, 50);
+  assert.equal(view.recruitPool[0]?.count, 2);
+  assert.equal(view.events.filter((event) => event.type === 'unit-recruited').length, 2);
+});
+
+test('rejects reuse of a recruitment command ID with a different unit payload', async () => {
+  const scenarioWithTwoOffers: ScenarioContent = {
+    ...recruitmentScenario,
+    id: 'conflicting-recruitment-fixture',
+    recruitableUnits: [
+      ...recruitmentScenario.recruitableUnits!,
+      { id: 'mexican', name: { en: 'Mexican', zh: '墨西哥人' }, price: 100, spawnLocationType: 1 },
+    ],
+  };
+  const session = await createGame({ scenarios: { [scenarioWithTwoOffers.id]: scenarioWithTwoOffers } }).open({
+    scenarioId: scenarioWithTwoOffers.id,
+  });
+
+  assert.equal(session.submitIntent({ type: 'recruit-unit', unitType: 'gunslinger', commandId: 'same-command' }), true);
+  assert.equal(session.submitIntent({ type: 'recruit-unit', unitType: 'mexican', commandId: 'same-command' }), false);
+  const view = session.advance({ deltaMs: 0 });
+  assert.equal(view.wave?.cash, 0);
+  assert.equal(view.recruitPool.find((unit) => unit.unitType === 'gunslinger')?.count, 1);
+  assert.equal(view.recruitPool.find((unit) => unit.unitType === 'mexican')?.count, 0);
+});
+
+test('insufficient cash rejects recruitment without changing cash or the pool', async () => {
+  const poorScenario: ScenarioContent = {
+    ...recruitmentScenario,
+    id: 'poor-recruitment-fixture',
+    previewWave: { ...recruitmentScenario.previewWave!, initialCash: 74 },
+  };
+  const session = await createGame({ scenarios: { [poorScenario.id]: poorScenario } }).open({
+    scenarioId: poorScenario.id,
+  });
+
+  assert.equal(session.submitIntent({ type: 'recruit-unit', unitType: 'gunslinger', commandId: 'too-poor' }), true);
+  const rejected = session.advance({ deltaMs: 0 });
+  assert.equal(rejected.wave?.cash, 74);
+  assert.equal(rejected.recruitPool[0]?.count, 0);
+  assert.deepEqual(rejected.events, [{
+    type: 'unit-recruitment-rejected',
+    unitType: 'gunslinger',
+    reason: 'insufficient-funds',
+    price: 75,
+    availableCash: 74,
+  }]);
+
+  assert.equal(session.submitIntent({ type: 'recruit-unit', unitType: 'gunslinger', commandId: 'too-poor' }), true);
+  const retried = session.advance({ deltaMs: 0 });
+  assert.equal(retried.wave?.cash, 74);
+  assert.equal(retried.recruitPool[0]?.count, 0);
 });
 
 test('selects a unit only inside its hit area and clears selection on empty ground', async () => {

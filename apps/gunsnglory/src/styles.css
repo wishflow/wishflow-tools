@@ -252,6 +252,50 @@ body {
   outline-offset: 3px;
 }
 
+.recruit-confirmation {
+  width: min(28rem, calc(100% - 2rem));
+  margin: auto;
+  padding: 1.25rem;
+  border: 1px solid rgba(237, 191, 117, 0.8);
+  border-radius: 0.75rem;
+  color: #ffe8c1;
+  background: #211b15;
+  box-shadow: 0 0.8rem 3rem rgba(0, 0, 0, 0.65);
+}
+
+.recruit-confirmation::backdrop {
+  background: rgba(10, 8, 6, 0.72);
+}
+
+.recruit-confirmation h2 {
+  margin: 0 0 1rem;
+  color: #ffe1a8;
+  font-size: 1.1rem;
+}
+
+.recruit-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.recruit-confirmation button {
+  min-height: 2.6rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(237, 191, 117, 0.65);
+  border-radius: 0.6rem;
+  color: #ffe8c1;
+  background: #513821;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.recruit-confirmation button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 3px;
+}
+
 .scene-caption {
   margin: 0;
   color: #a99a84;
