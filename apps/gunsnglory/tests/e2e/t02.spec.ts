@@ -96,11 +96,18 @@ test('loads legacy profile settings, saves the selected speed to IndexedDB, and 
       transaction.oncomplete = () => database.close();
     };
   }));
-  expect(savedProfile).toEqual({
+  expect(savedProfile).toMatchObject({
     id: 'default',
-    schemaVersion: 1,
+    schemaVersion: 2,
     settings: { soundEnabled: false, simulationSpeed: 2.25 },
+    completedScenarios: [],
+    highScores: {},
+    appliedSettlementIds: [],
   });
+  expect(savedProfile.revision as number).toBeGreaterThan(0);
+  expect(savedProfile.lastOperationId as string).toMatch(/^settings:\d+:2\.25$/);
+  expect(typeof savedProfile.lastRequestDigest).toBe('string');
+  expect((savedProfile.lastRequestDigest as string).length).toBeGreaterThan(0);
 
   await page.reload();
   await expect(page.getByRole('slider', { name: 'Simulation speed' })).toHaveValue('2.25');

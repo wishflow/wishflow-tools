@@ -5,6 +5,7 @@ import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
 export const cowGulchDefeatContent = {
   ...cowGulchContent,
   id: 'cow-gulch-defeat',
+  formalSettlementSupported: false,
   units: [],
   previewWave: {
     ...cowGulchPreviewWave,

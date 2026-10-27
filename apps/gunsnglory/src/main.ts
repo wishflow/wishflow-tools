@@ -5,7 +5,8 @@ import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/
 import { screenToMapCell } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
-import type { GameEvent, GameIntent } from './game';
+import type { GameEvent, GameIntent, GameMode, GameSettlementRecord } from './game';
+import type { ProfileView, SettlementSaveResult } from './progress';
 import { messages } from './locales';
 import './styles.css';
 
@@ -29,10 +30,13 @@ app.innerHTML = [
   '        <p data-testid="settlement-summary"></p>',
   '        <p data-testid="settlement-score"></p>',
   '        <p data-testid="settlement-high-score"></p>',
+  '        <p data-testid="settlement-save-status" role="status" aria-live="polite"></p>',
+  '        <button type="button" data-action="retry-settlement-save" hidden>Retry saving result</button>',
   '        <button type="button" data-action="restart-sample">Restart this sample</button>',
   '      </section>',
   '    </div>',
   '    <div class="game-controls">',
+  '      <p data-testid="profile-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="selection-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="wave-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="combat-status" role="status" aria-live="polite"></p>',
@@ -54,6 +58,7 @@ app.innerHTML = [
 registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
+const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
 const statusElement = app.querySelector<HTMLElement>('[data-testid="selection-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
 const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
@@ -69,14 +74,18 @@ const settlementOutcomeElement = app.querySelector<HTMLElement>('[data-testid="s
 const settlementSummaryElement = app.querySelector<HTMLElement>('[data-testid="settlement-summary"]');
 const settlementScoreElement = app.querySelector<HTMLElement>('[data-testid="settlement-score"]');
 const settlementHighScoreElement = app.querySelector<HTMLElement>('[data-testid="settlement-high-score"]');
+const settlementSaveStatusElement = app.querySelector<HTMLElement>('[data-testid="settlement-save-status"]');
+const retrySettlementButton = app.querySelector<HTMLButtonElement>('[data-action="retry-settlement-save"]');
 const restartButton = app.querySelector<HTMLButtonElement>('[data-action="restart-sample"]');
-if (!canvasElement || !statusElement || !waveStatusElement || !combatStatusElement || !settingsStatusElement
+if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement || !settingsStatusElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
-  || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement || !restartButton) {
+  || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
+  || !settlementSaveStatusElement || !retrySettlementButton || !restartButton) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
+const profileStatus: HTMLElement = profileStatusElement;
 const status: HTMLElement = statusElement;
 const waveStatus: HTMLElement = waveStatusElement;
 const combatStatus: HTMLElement = combatStatusElement;
@@ -93,14 +102,24 @@ const settlementOutcome: HTMLElement = settlementOutcomeElement;
 const settlementSummary: HTMLElement = settlementSummaryElement;
 const settlementScore: HTMLElement = settlementScoreElement;
 const settlementHighScore: HTMLElement = settlementHighScoreElement;
+const settlementSaveStatus: HTMLElement = settlementSaveStatusElement;
+const retrySettlementControl: HTMLButtonElement = retrySettlementButton;
 
 const game = createBrowserGame();
 const progress = createBrowserProgress();
-let session = await game.open({ scenarioId: 'cow-gulch' });
+let session = await game.open({ scenarioId: 'cow-gulch', mode: 'formal' });
 let view = session.observe();
+let profile: ProfileView = {
+  settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED },
+  completedScenarios: [],
+  highScores: {},
+};
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | undefined;
+let profileLoadFailed = false;
+let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | undefined;
+let activeSettlementRecord: GameSettlementRecord | undefined;
 let lastDefeatReward: number | undefined;
 let settingsSaveSequence = 0;
 const simulationTime = new SimulationTimeAccumulator();
@@ -117,12 +136,23 @@ const languageMessages = {
     'load-failed': 'Speed preference unavailable; using 1× for this session.',
     saved: 'Speed preference saved.',
     'save-failed': 'Speed is active for this session, but could not be saved.',
+    noSavedProfile: 'Saved profile: no Cow Gulch result yet.',
+    profileLoadFailed: 'Saved profile could not be read.',
+    profileSaved: (completed: boolean, score: number | undefined) =>
+      `Saved profile: Cow Gulch${completed ? ' sample complete' : ''}${score === undefined ? '' : ` · Best $${score}`}.`,
+    settlementSaving: 'Saving result to this browser…',
+    settlementSaved: 'Result saved to this browser.',
+    settlementFailed: 'Result is not saved. Retry to save it.',
+    settlementConflict: 'A newer profile exists. Retry to merge this result.',
+    settlementDebug: 'Debug result · not added to the saved profile.',
+    scoreCandidate: (score: number) => `High-score candidate: $${score}`,
+    scoreSaved: (score: number) => `High-score saved: $${score}`,
+    retrySave: 'Retry saving result',
     victory: 'Victory',
     defeat: 'Defeat',
     settlementSummary: (number: number, lives: number, escaped: number, defeated: number, cash: number) =>
       `Wave ${number} · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
     displayScore: (score: number) => `Displayed score: $${score}`,
-    highScoreCandidate: (score: number) => `High-score file value (not saved yet): $${score}`,
   },
   zh: {
     result: '战斗结算',
@@ -136,19 +166,86 @@ const languageMessages = {
     'load-failed': '无法读取倍速设置，本次暂用 1×。',
     saved: '倍速设置已保存。',
     'save-failed': '本次使用所选倍速，但保存失败。',
+    noSavedProfile: '已保存档案：尚无牛溪谷结算。',
+    profileLoadFailed: '无法读取已保存档案。',
+    profileSaved: (completed: boolean, score: number | undefined) =>
+      `已保存档案：牛溪谷${completed ? '样本已完成' : ''}${score === undefined ? '' : ` · 最高分 $${score}`}。`,
+    settlementSaving: '正在将结算保存到此浏览器…',
+    settlementSaved: '结算已保存到此浏览器。',
+    settlementFailed: '结算尚未保存。请重试保存。',
+    settlementConflict: '档案已有更新版本。重试可合并本次结果。',
+    settlementDebug: '调试结果 · 不会写入已保存档案。',
+    scoreCandidate: (score: number) => `高分候选值：$${score}`,
+    scoreSaved: (score: number) => `已保存高分：$${score}`,
+    retrySave: '重试保存结算',
     victory: '胜利',
     defeat: '败北',
     settlementSummary: (number: number, lives: number, escaped: number, defeated: number, cash: number) =>
       `第 ${number} 波 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
     displayScore: (score: number) => `画面分数：$${score}`,
-    highScoreCandidate: (score: number) => `高分文件值（尚未保存）：$${score}`,
   },
 };
+
+function profileMessage(language: keyof typeof languageMessages): string {
+  if (profileLoadFailed) return languageMessages[language].profileLoadFailed;
+  const completed = profile.completedScenarios.includes('cow-gulch');
+  const score = profile.highScores['cow-gulch'];
+  if (!completed && score === undefined) return languageMessages[language].noSavedProfile;
+  return languageMessages[language].profileSaved(completed, score);
+}
+
+function settlementSaveMessage(language: keyof typeof languageMessages): string {
+  const messages = languageMessages[language];
+  switch (settlementSaveState) {
+    case 'saving': return messages.settlementSaving;
+    case 'saved': return messages.settlementSaved;
+    case 'failed': return messages.settlementFailed;
+    case 'conflict': return messages.settlementConflict;
+    case 'debug': return messages.settlementDebug;
+    default: return '';
+  }
+}
+
+async function applyFormalSettlement(record: GameSettlementRecord): Promise<void> {
+  try {
+    const result = await progress.applySettlement(record);
+    profile = result.profile;
+    profileLoadFailed = false;
+    settlementSaveState = result.status;
+  } catch {
+    settlementSaveState = 'failed';
+    try {
+      profile = await progress.loadProfile();
+      profileLoadFailed = false;
+    } catch {
+      profileLoadFailed = true;
+    }
+  }
+  renderStatus();
+}
+
+async function retryFormalSettlement(): Promise<void> {
+  const settlementId = activeSettlementRecord?.settlementId;
+  if (!settlementId || (settlementSaveState !== 'failed' && settlementSaveState !== 'conflict')) return;
+  settlementSaveState = 'saving';
+  renderStatus();
+  try {
+    const result = await progress.retrySettlement(settlementId);
+    profile = result.profile;
+    profileLoadFailed = false;
+    settlementSaveState = result.status;
+  } catch {
+    settlementSaveState = 'failed';
+  }
+  renderStatus();
+}
 
 function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
+  const profileText = profileMessage(language);
+  if (profileStatus.textContent !== profileText) profileStatus.textContent = profileText;
   const defeatEvent = events.find((event) => event.type === 'enemy-defeated');
   if (defeatEvent?.type === 'enemy-defeated') lastDefeatReward = defeatEvent.cashReward;
   const selectionText = unit
@@ -173,6 +270,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const newSettlement = Boolean(settlement) && settlementPanel.hidden;
   settlementPanel.hidden = !settlement;
   if (settlement && view.wave) {
+    if (newSettlement) {
+      activeSettlementRecord = session.terminalRecord();
+      settlementSaveState = activeSettlementRecord?.mode === 'formal' ? 'saving' : 'debug';
+    }
     settlementTitle.textContent = messages.result;
     settlementOutcome.textContent = messages[settlement.outcome];
     settlementSummary.textContent = messages.settlementSummary(
@@ -183,8 +284,21 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       view.wave.cash,
     );
     settlementScore.textContent = messages.displayScore(settlement.displayScore);
-    settlementHighScore.textContent = messages.highScoreCandidate(settlement.highScoreCandidate);
+    const savedHighScore = profile.highScores[view.scenarioId];
+    settlementHighScore.textContent = settlementSaveState === 'saved' && savedHighScore !== undefined
+      ? messages.scoreSaved(savedHighScore)
+      : messages.scoreCandidate(settlement.highScoreCandidate);
+    const saveMessage = settlementSaveMessage(language);
+    if (settlementSaveStatus.textContent !== saveMessage) settlementSaveStatus.textContent = saveMessage;
+    retrySettlementControl.hidden = settlementSaveState !== 'failed' && settlementSaveState !== 'conflict';
+    retrySettlementControl.textContent = messages.retrySave;
     if (newSettlement) restartControl.focus();
+    if (newSettlement && activeSettlementRecord?.mode === 'formal') {
+      void applyFormalSettlement(activeSettlementRecord);
+    }
+  } else {
+    settlementSaveStatus.textContent = '';
+    retrySettlementControl.hidden = true;
   }
   const waveNotStarted = view.wave?.phase === 'not-started';
   startWaveControl.disabled = !waveNotStarted;
@@ -216,11 +330,13 @@ const images: Record<string, HTMLImageElement> = {};
 
 async function loadSettings(): Promise<void> {
   try {
-    const settings = await progress.loadSettings();
-    simulationSpeed = settings.simulationSpeed;
+    profile = await progress.loadProfile();
+    profileLoadFailed = false;
+    simulationSpeed = profile.settings.simulationSpeed;
     simulationSpeedInput.value = String(simulationSpeed);
   } catch {
     settingsStatusKey = 'load-failed';
+    profileLoadFailed = true;
   } finally {
     simulationSpeedInput.disabled = false;
     renderStatus();
@@ -262,16 +378,18 @@ function stopGameLoop(): void {
   simulationTime.reset();
 }
 
-async function replaceSession(scenarioId: string, randomSeed: number): Promise<boolean> {
+async function replaceSession(scenarioId: string, randomSeed: number, mode: GameMode): Promise<boolean> {
   if (replacingSession) return false;
   replacingSession = true;
   stopGameLoop();
   const previousSession = session;
   try {
-    session = await game.open({ scenarioId, randomSeed });
+    session = await game.open({ scenarioId, randomSeed, mode });
     view = session.observe();
     previousSession.close();
     lastDefeatReward = undefined;
+    activeSettlementRecord = undefined;
+    settlementSaveState = undefined;
     renderStatus();
     redraw();
     return true;
@@ -361,12 +479,13 @@ startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }
 clearSelectionControl.addEventListener('click', () => dispatch({ type: 'clear-selection' }));
 startDefeatControl.addEventListener('click', () => {
   const randomSeed = session.startRecord.randomSeed;
-  void replaceSession('cow-gulch-defeat', randomSeed).then((replaced) => {
+  void replaceSession('cow-gulch-defeat', randomSeed, 'debug').then((replaced) => {
     if (replaced) dispatch({ type: 'start-wave' });
   });
 });
+retrySettlementControl.addEventListener('click', () => { void retryFormalSettlement(); });
 restartControl.addEventListener('click', () => {
-  void replaceSession(session.startRecord.scenarioId, session.startRecord.randomSeed);
+  void replaceSession(session.startRecord.scenarioId, session.startRecord.randomSeed, session.startRecord.mode);
 });
 
 window.addEventListener('pagehide', () => {

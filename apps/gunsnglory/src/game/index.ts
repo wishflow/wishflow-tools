@@ -73,6 +73,7 @@ export interface PreviewWaveDefinition {
 export interface ScenarioContent {
   id: string;
   contentVersion?: string;
+  formalSettlementSupported?: boolean;
   title: { en: string; zh: string };
   map: {
     width: number;
@@ -129,6 +130,16 @@ export interface WaveSettlement {
   highScoreCandidate: number;
 }
 
+export type GameMode = 'formal' | 'debug' | 'experiment' | 'replay';
+
+export interface GameSettlementRecord extends WaveSettlement {
+  settlementId: string;
+  sessionId: string;
+  scenarioId: string;
+  mode: GameMode;
+  waveNumber: number;
+}
+
 export interface WaveView {
   number: number;
   phase: 'not-started' | 'active' | 'complete';
@@ -160,15 +171,17 @@ export interface GameSession {
     contentVersion: string;
     randomAlgorithm: 'java.util.Random';
     randomSeed: number;
+    mode: GameMode;
   }>;
   submitIntent(intent: GameIntent): boolean;
   advance(input?: { deltaMs?: number }): GameView;
   observe(): GameView;
+  terminalRecord(): GameSettlementRecord | undefined;
   close(): void;
 }
 
 export interface Game {
-  open(options: { scenarioId: string; randomSeed?: number }): Promise<GameSession>;
+  open(options: { scenarioId: string; randomSeed?: number; mode?: GameMode }): Promise<GameSession>;
 }
 
 interface PendingIntent {
@@ -442,6 +455,7 @@ function moveEnemy(enemy: MutableEnemy, deltaMs: number, definition: PreviewWave
 export function createGame(options: {
   scenarios: Readonly<Record<string, ScenarioContent>>;
   randomSeedSource?: () => number;
+  sessionIdSource?: () => string;
 }): Game {
   const scenarios = new Map<string, ScenarioContent>();
   for (const [key, scenario] of Object.entries(options.scenarios)) {
@@ -451,14 +465,25 @@ export function createGame(options: {
   let nextSessionNumber = 1;
 
   return Object.freeze({
-    async open({ scenarioId, randomSeed }: { scenarioId: string; randomSeed?: number }): Promise<GameSession> {
+    async open({ scenarioId, randomSeed, mode = 'debug' }: {
+      scenarioId: string;
+      randomSeed?: number;
+      mode?: GameMode;
+    }): Promise<GameSession> {
       const scenario = scenarios.get(scenarioId);
       if (!scenario) throw new Error('Unknown scenario: ' + scenarioId);
+      if (mode === 'formal' && scenario.formalSettlementSupported !== true) {
+        throw new Error('Formal mode is not supported for scenario: ' + scenarioId);
+      }
+      if (mode === 'formal' && !scenario.previewWave) {
+        throw new Error('Formal mode requires a settleable scenario: ' + scenarioId);
+      }
 
       const resolvedSeed = randomSeed ?? options.randomSeedSource?.() ?? 1;
       if (!validSeed(resolvedSeed)) throw new RangeError('Random seed must be an unsigned 32-bit integer');
       const random = new JavaRandom(resolvedSeed);
-      const sessionId = 'game-session-' + nextSessionNumber;
+      const sessionId = options.sessionIdSource?.() ?? 'game-session-' + nextSessionNumber;
+      if (!sessionId || typeof sessionId !== 'string') throw new Error('Game session ID is invalid');
       nextSessionNumber += 1;
       const units: MutableUnit[] = scenario.units.map((definition) => ({
         definition,
@@ -542,6 +567,7 @@ export function createGame(options: {
           contentVersion: scenario.contentVersion ?? 'unversioned',
           randomAlgorithm: 'java.util.Random',
           randomSeed: resolvedSeed,
+          mode,
         }),
         submitIntent(intent: GameIntent): boolean {
           assertOpen();
@@ -698,6 +724,18 @@ export function createGame(options: {
           return observe();
         },
         observe,
+        terminalRecord(): GameSettlementRecord | undefined {
+          assertOpen();
+          if (!wave?.settlement || !scenario.previewWave) return undefined;
+          return freezeDeep({
+            ...clone(wave.settlement),
+            settlementId: `${sessionId}:${scenario.id}:${scenario.previewWave.number}`,
+            sessionId,
+            scenarioId: scenario.id,
+            mode,
+            waveNumber: scenario.previewWave.number,
+          });
+        },
         close(): void {
           if (closed) return;
           closed = true;

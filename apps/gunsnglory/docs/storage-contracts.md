@@ -4,7 +4,7 @@
 
 本文件定义 `Progress`、`Experiments` 及共享内部 `content` Module 隐藏的存储与内容读取语义。三个面向消费者的深 Module 为 `Game`、`Progress`、`Experiments`；本文的 Repository 和 Source 是所属 Module 的内部 Seam，不是 UI、AI 或脚本需要调用的另一套公共 Interface。模块关系见[架构设计](architecture.md)，交付顺序见[实施计划](implementation-plan.md)。
 
-本文主体描述完整的目标契约，正式档案、结算、并发修订、实验存储和内容来源尚未实现。当前只有一个窄切片：`Progress` 读取与保存测试倍速设置，浏览器使用 IndexedDB。它不代表 T05 正式档案能力已完成；存储替换保持公共业务行为不变，不能要求调用者理解保存时的内部调用链。
+本文同时记录长期契约和已实现范围。T05 已实现 Progress 的小型档案聚合、Cow Gulch 受支持样本的正式结算、内存与 IndexedDB 存储、条件写入、去重及页面内重试；完整六区域战役进度、关卡解锁、损坏档案恢复、实验存储和内容来源仍是后续目标。当前窄实现不能被视作完整战役档案。
 
 目标是让 IndexedDB、localStorage、远程数据库或对象存储的替换只影响适配器及启动装配。接口替换成立的条件是新实现通过同一套契约测试；类型签名相同但原子性、冲突或失败语义不同，不算兼容实现。
 
@@ -71,8 +71,8 @@ Module 的公共状态必须说明数据保留范围：仅当前会话可用与�
 
 | 操作 | 输入与输出 | 保证 |
 | --- | --- | --- |
-| `loadProfile(profileId)` | 返回 `{ profile, revision }` 或 `null` | 返回完整且已验证的档案；修订号只用于相等比较 |
-| `saveProfile(request)` | 输入完整档案、`expectedRevision`、`operationId`；返回新修订号 | 在单档案范围内原子地校验修订号并替换内容 |
+| `readProfile()` | 返回 `{ data, revision }` 或 `null` | 返回完整且已验证的档案；修订号只用于相等比较 |
+| `writeProfile(request)` | 输入完整档案、`expectedRevision`、`operationId`；返回新修订号 | 在单档案范围内原子地校验修订号并替换内容 |
 
 `expectedRevision = null` 表示仅当记录不存在时创建。更新必须携带读取到的修订号，禁止无条件覆盖。修订号不是时间戳；`Progress` 内部只比较其相等性，不解析、排序或自行递增，公共 Interface 不暴露它。
 
@@ -92,7 +92,7 @@ Module 的公共状态必须说明数据保留范围：仅当前会话可用与�
 
 这防止重复保存产生额外业务效果，但不承诺永久保存所有请求收据。若原请求提交后又有新提交，重试可能返回冲突；冲突不证明原请求从未成功。`Progress` 必须重读，并依据结算标识和业务合并规则判断下一步，不能盲目加钱、推进关卡或覆盖设置。
 
-结算幂等属于 `Progress` 的公共行为：同一战局的终局结果只应用一次。结算标识保留周期必须覆盖该版本允许的重试与待保存生命周期；超过范围的旧请求明确拒绝，不假装仍能去重。普通设置保存不重新执行结算。内部 `operationId` 的生成与重试由 `Progress` 隐藏，UI 或脚本不管理它。
+结算幂等属于 `Progress` 的公共行为：同一战局的终局结果只应用一次。当前 T05 将所有已应用的样本结算 ID 保存在档案中，只要该档案保留，旧结算就仍可去重；删除档案会同时删除这些收据。普通设置保存不重新执行结算。内部 `operationId` 的生成与重试由 `Progress` 隐藏，UI 或脚本不管理它。
 
 ### 4.4 各介质如何满足契约
 
@@ -114,11 +114,15 @@ localStorage 适配器的锁协议必须覆盖本应用所有写入者。环境�
 
 重试、导出或放弃变更由 `Progress` 提供可用恢复操作，调用者只选择操作，不实现内部修订检查与合并。关闭页面可能丢失未保存变更；关键保存不能只依赖页面退出回调。
 
-### 4.6 当前已实现：测试倍速设置
+### 4.6 当前已实现：倍速设置与样本结算档案
 
-`Progress` 当前只暴露 `loadSettings()` 与 `saveSettings()`。浏览器 Adapter 使用 `gunsnglory-profile` 数据库、`profiles` 对象仓库和 `default` 记录；设置作为记录的 `settings` 字段读写。缺少档案或 `simulationSpeed` 时返回 `1×`，有效范围为 `0.25×–4×`、步进 `0.25×`。写入在同一个 IndexedDB 读写事务中合并 `simulationSpeed`，保留其他设置，并在事务提交后报告成功。
+`Progress` 公共 Interface 提供 `loadProfile()`、`loadSettings()`、`saveSettings()`、`applySettlement()` 和 `retrySettlement()`。公开档案视图仅返回设置、已完成样本 ID 和各样本高分；不暴露修订号、结算收据或存储介质。浏览器使用 `gunsnglory-profile` 数据库、`profiles` 对象仓库和 `default` 记录，实时战局本身不写入档案。
 
-此切片未实现 `profileId`、完整档案读写、`revision`/CAS、结算去重、进度解锁、迁移与保存恢复状态。它只证明设置接口和此场景所需的 IndexedDB 持久化，不满足本节其他档案契约，也不应将 T05 标记为完成。
+当前记录格式 `schemaVersion: 2` 包含 `settings`、`completedScenarios`、`highScores`、`appliedSettlementIds`、`revision`，以及最近一次存储操作的 ID 和请求摘要。对象仓库结构仍为数据库版本 1，以保持与既有记录兼容。旧 `schemaVersion: 1` 记录在读取时映射为默认的空样本进度和修订 0；首次成功写入时升级为格式 2，原有声音设置及其他设置字段原样保留。缺少倍速时使用 `1×`，有效范围为 `0.25×–4×`、步进 `0.25×`。
+
+内存和 IndexedDB Repository 共用相同条件写入契约。IndexedDB 在同一个读写事务内读取、比较修订并替换完整档案；只有事务提交后才报告成功。同一操作 ID 与相同请求可幂等重试；同 ID 的不同请求返回 `invalid-input`，过期修订返回 `conflict`。Progress 保留已应用的结算 ID，避免重复应用；刷新后重新读取样本完成状态和高分。刷新时没有活动战局续玩数据，未完成波次回到初态。
+
+Cow Gulch 样本明确标记为当前唯一支持正式结算的内容。调试败北样本、实验和回放不能写正式档案。写入失败或修订冲突会在结算界面显示未保存状态；用户可在当前页面重试，失败期间待处理结算只保存在内存，关闭或刷新页面会丢失待重试请求。此切片没有完整战役解锁、跨标签页自动合并、档案重置/导出或损坏数据恢复 UI；它们仍由 T18、T20 和后续切片覆盖。
 
 ## 5. 内容读取契约
 

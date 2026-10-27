@@ -194,3 +194,18 @@ Game 行为测试验证生命耗尽优先级、结算只发生一次、胜败两
 | GitHub Actions 与 Pages | [workflow 40524750429](https://github.com/wishflow/wishflow-tools/actions/runs/40524750429) 成功；Guns’n’Glory 与共享站点测试通过，Cloudflare Pages、GitHub Pages 部署通过。Worker 未触发（本次未改 Worker）。 |
 | Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/` 后，中文标准样例显示胜利、50 条命、0 逃脱、击败 1 名、现金 $66、画面分数 $50、高分候选 $50；单生命样例显示败北、0 条命、逃脱 1 名、现金 $65、画面分数 $49、高分候选 $48。测试后刷新回标准样例，恢复原中文和 1×，结算页面无 console error。 |
 | 交互观察 | 当前公网浏览器保存的 Usagi 浮层位置覆盖倍速滑杆中段；本次可访问性控件操作通过，浮层遮挡下的鼠标/触屏命中尚未验证，作为共享页面叠层问题单独跟进。 |
+
+## 10. T05 样本结算档案验收
+
+本切片只将已标记支持正式结算的 Cow Gulch 单波样本写入档案，并不表示完整关卡或战役已经完成。正式终局记录包含会话、场景、模式和波次标识；Progress 将胜利样本的最高分及完成标记写入默认档案。调试败北样本不写档。未完成战局不持久化，刷新后从初态开始。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、43 项单元测试、Vite 生产构建、17 个 Playwright 场景。 |
+| 双 Adapter 契约 | 内存和真实 IndexedDB 均执行相同 `ProfileRepository` 契约；验证新建、往返、条件写入并发、冲突、相同操作重试幂等、同 ID 不同内容拒绝。 |
+| 旧档兼容 | Playwright 以旧 `schemaVersion: 1` 档案写入 `soundEnabled: false`，保存倍速后转为格式 2；既有声音字段保留，刷新后倍速恢复。 |
+| 实际刷新行为 | Playwright 在 Cow Gulch 波次进行中刷新，验证回到 Wave 1 初态且档案仍无结算；完成样本后验证最高分 $50 与完成标记在刷新后仍存在。 |
+| 实际介质失败 | Playwright 在档案 `put` 后中止真实 IndexedDB 读写事务；界面显示“Result is not saved”，提供重试；重试成功后档案只登记一份结算。 |
+| 调试结果隔离 | Progress 拒绝 debug、experiment、replay 模式；实际一条命败北样本显示为调试结算，不写入档案。 |
+| Codex 内置浏览器本地实测 | `http://127.0.0.1:5174/` 设为 4× 启动 Cow Gulch 样本，画面显示胜利、Cash $66、Displayed score $50、High-score saved $50、Result saved to this browser、Cow Gulch sample complete · Best $50。切换中文后各项结算和档案状态正确翻译。 |
+| 发布状态 | 本地实现和验收已完成；本次变更尚未合入 `gunsnglory`/`master`，也尚未推送或验证公网版本。 |

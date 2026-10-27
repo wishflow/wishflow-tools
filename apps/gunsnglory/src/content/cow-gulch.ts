@@ -13,6 +13,7 @@ const firstMapGunslingerWeapon = Object.freeze({
 
 export const cowGulchContent: ScenarioContent = {
   ...cowGulchMap,
+  formalSettlementSupported: true,
   units: cowGulchMap.units.map((unit) => unit.id === 'gunslinger-1'
     ? { ...unit, weapon: firstMapGunslingerWeapon }
     : unit),

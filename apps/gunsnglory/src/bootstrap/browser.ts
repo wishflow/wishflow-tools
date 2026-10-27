@@ -2,7 +2,14 @@ import { createGame } from '../game';
 import { cowGulchContent } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
 import { createProgress } from '../progress';
-import { createIndexedDbSettingsRepository } from '../progress/indexeddb-settings-repository';
+import { createIndexedDbProfileRepository } from '../progress/indexeddb-profile-repository';
+
+function createSessionId(): string {
+  if (typeof globalThis.crypto.randomUUID === 'function') return globalThis.crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  globalThis.crypto.getRandomValues(bytes);
+  return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 export function createBrowserGame() {
   return createGame({
@@ -15,9 +22,10 @@ export function createBrowserGame() {
       globalThis.crypto.getRandomValues(seed);
       return seed[0]!;
     },
+    sessionIdSource: createSessionId,
   });
 }
 
 export function createBrowserProgress() {
-  return createProgress(createIndexedDbSettingsRepository());
+  return createProgress(createIndexedDbProfileRepository());
 }

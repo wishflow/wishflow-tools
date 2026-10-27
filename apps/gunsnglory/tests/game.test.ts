@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cowGulchContent } from '../src/content/cow-gulch';
+import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { createGame, type GameSession, type ScenarioContent } from '../src/game';
 
@@ -611,4 +612,49 @@ test('reopens a clean session from the same seed and leaves the previous session
 
   restarted.submitIntent({ type: 'start-wave' });
   assert.deepEqual(restarted.advance({ deltaMs: 0 }), firstStartedView);
+});
+
+test('produces one stable formal terminal record only after a supported wave settles', async () => {
+  const game = createGame({
+    scenarios: { [cowGulchContent.id]: cowGulchContent },
+    sessionIdSource: () => 'formal-session-1',
+  });
+  const session = await game.open({ scenarioId: cowGulchContent.id, mode: 'formal', randomSeed: 42 });
+  assert.equal(session.startRecord.mode, 'formal');
+  assert.equal(session.terminalRecord(), undefined);
+
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  for (let step = 0; step < 100 && view.wave?.phase === 'active'; step += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+
+  const terminal = session.terminalRecord();
+  assert.equal(terminal?.mode, 'formal');
+  assert.equal(terminal?.sessionId, 'formal-session-1');
+  assert.equal(terminal?.scenarioId, 'cow-gulch');
+  assert.equal(terminal?.outcome, 'victory');
+  assert.equal(terminal?.highScoreCandidate, 50);
+  assert.equal(terminal?.settlementId, 'formal-session-1:cow-gulch:1');
+  assert.deepEqual(session.terminalRecord(), terminal);
+});
+
+test('keeps the one-life defeat fixture in debug mode and rejects unsupported formal content', async () => {
+  const game = createGame({
+    scenarios: {
+      [cowGulchDefeatContent.id]: cowGulchDefeatContent,
+      [combatScenario.id]: combatScenario,
+    },
+    sessionIdSource: () => 'debug-session-1',
+  });
+  const debug = await game.open({ scenarioId: cowGulchDefeatContent.id, randomSeed: 42 });
+  assert.equal(debug.startRecord.mode, 'debug');
+  await assert.rejects(
+    game.open({ scenarioId: cowGulchDefeatContent.id, mode: 'formal', randomSeed: 42 }),
+    /formal mode is not supported/i,
+  );
+  await assert.rejects(
+    game.open({ scenarioId: combatScenario.id, mode: 'formal', randomSeed: 42 }),
+    /formal mode is not supported/i,
+  );
 });

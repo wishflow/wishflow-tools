@@ -13,6 +13,7 @@ export const messages = {
   'Start one pioneer sample': { en: 'Start one pioneer sample', zh: '开始单个拓荒者样本' },
   'Test defeat with one life': { en: 'Test defeat with one life', zh: '测试一条生命耗尽败北' },
   'Restart this sample': { en: 'Restart this sample', zh: '重新开始本样本' },
+  'Retry saving result': { en: 'Retry saving result', zh: '重试保存结算' },
   'Battle result': { en: 'Battle result', zh: '战斗结算' },
   'One-life test: no defender is deployed, so the pioneer reaches the exit.': {
     en: 'One-life test: no defender is deployed, so the pioneer reaches the exit.',

@@ -25,7 +25,9 @@ test('shows a victory settlement and restarts the same sample from clean state',
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
   await expect(page.getByTestId('settlement-summary')).toContainText('Cash $66');
   await expect(page.getByTestId('settlement-score')).toHaveText('Displayed score: $50');
-  await expect(page.getByTestId('settlement-high-score')).toHaveText('High-score file value (not saved yet): $50');
+  await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
+  await expect(page.getByTestId('settlement-high-score')).toHaveText('High-score saved: $50');
+  await expect(page.getByTestId('profile-status')).toContainText('Cow Gulch sample complete · Best $50');
   await expect(page.getByTestId('combat-status')).toContainText('Pioneer defeated · +$1');
   await expect(page.getByRole('button', { name: 'Restart this sample' })).toBeFocused();
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
@@ -56,7 +58,8 @@ test('shows a defeat settlement when the last life is lost and restarts without 
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Defeat');
   await expect(page.getByTestId('settlement-summary')).toContainText('Lives 0 · Escaped 1 · Defeated 0 · Cash $65');
   await expect(page.getByTestId('settlement-score')).toHaveText('Displayed score: $49');
-  await expect(page.getByTestId('settlement-high-score')).toHaveText('High-score file value (not saved yet): $48');
+  await expect(page.getByTestId('settlement-save-status')).toHaveText('Debug result · not added to the saved profile.');
+  await expect(page.getByTestId('settlement-high-score')).toHaveText('High-score candidate: $48');
 
   await page.getByRole('button', { name: 'Restart this sample' }).click();
   await expect(result).toBeHidden();
@@ -77,6 +80,7 @@ test('keeps the settlement and restart usable with mobile touch input', async ({
   await setFourTimesSpeed(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
+  await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
   await page.getByRole('button', { name: 'Restart this sample' }).tap();
   await expect(page.getByTestId('settlement')).toBeHidden();
   await expect(page.getByTestId('wave-status')).toHaveText('Wave 1 ready · Lives 50 · Cash $65');
