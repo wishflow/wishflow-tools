@@ -1,3 +1,33 @@
+import {
+  GAME_REPLAY_CHECKPOINT_INTERVAL,
+  GAME_REPLAY_FORMAT_VERSION,
+  GAME_REPLAY_MAX_FRAMES,
+  GAME_RULES_VERSION,
+  GameReplayError,
+  captureReplayState,
+  checkpointFrames,
+  parseReplay,
+  replayStateDigest,
+  serializeReplay,
+} from './replay';
+import type {
+  GameReplayFrame,
+  GameReplayPayload,
+  GameStartRecord,
+  ReplayState,
+} from './replay';
+
+export { GameReplayError } from './replay';
+export type {
+  GameReplayCheckpoint,
+  GameReplayDocument,
+  GameReplayErrorCode,
+  GameReplayFrame,
+  GameReplayPayload,
+  GameReplayTerminal,
+  GameStartRecord,
+} from './replay';
+
 export interface Rectangle {
   x: number;
   y: number;
@@ -225,14 +255,7 @@ export interface GameView {
 
 export interface GameSession {
   readonly id: string;
-  readonly startRecord: Readonly<{
-    sessionId: string;
-    scenarioId: string;
-    contentVersion: string;
-    randomAlgorithm: 'java.util.Random';
-    randomSeed: number;
-    mode: GameMode;
-  }>;
+  readonly startRecord: Readonly<GameStartRecord>;
   submitIntent(intent: GameIntent): boolean;
   pause(): GameView;
   resume(): GameView;
@@ -241,11 +264,19 @@ export interface GameSession {
   advance(input?: { deltaMs?: number }): GameView;
   observe(): GameView;
   terminalRecord(): GameSettlementRecord | undefined;
+  exportReplay(): Promise<string>;
   close(): void;
+}
+
+export interface GameReplayResult {
+  session: GameSession;
+  sourceStartRecord: Readonly<GameStartRecord>;
+  verifiedCheckpointFrames: readonly number[];
 }
 
 export interface Game {
   open(options: { scenarioId: string; randomSeed?: number; mode?: GameMode }): Promise<GameSession>;
+  replay(serialized: string): Promise<GameReplayResult>;
 }
 
 interface PendingIntent {
@@ -676,12 +707,7 @@ export function createGame(options: {
 
   let nextSessionNumber = 1;
 
-  return Object.freeze({
-    async open({ scenarioId, randomSeed, mode = 'debug' }: {
-      scenarioId: string;
-      randomSeed?: number;
-      mode?: GameMode;
-    }): Promise<GameSession> {
+  const openSession: Game['open'] = async ({ scenarioId, randomSeed, mode = 'debug' }) => {
       const scenario = scenarios.get(scenarioId);
       if (!scenario) throw new Error('Unknown scenario: ' + scenarioId);
       if (mode === 'formal' && scenario.formalSettlementSupported !== true) {
@@ -709,6 +735,8 @@ export function createGame(options: {
       const recruitableUnits = new Map((scenario.recruitableUnits ?? []).map((definition) => [definition.id, definition]));
       const recruitmentCommands = new Map<string, string>();
       const upgradeCommands = new Map<string, string>();
+      const recordedFrames: GameReplayFrame[] = [];
+      const replayStates = new Map<number, ReplayState>();
       const pending: PendingIntent[] = [];
       let nextIntentSequence = 1;
       let nextShotNumber = 1;
@@ -804,6 +832,7 @@ export function createGame(options: {
           sessionId,
           scenarioId: scenario.id,
           contentVersion: scenario.contentVersion ?? 'unversioned',
+          rulesVersion: GAME_RULES_VERSION,
           randomAlgorithm: 'java.util.Random',
           randomSeed: resolvedSeed,
           mode,
@@ -923,7 +952,8 @@ export function createGame(options: {
           if (wave) wave.events = [];
           let waveStarted = false;
           pending.sort((left, right) => left.sequence - right.sequence);
-          for (const command of pending.splice(0)) {
+          const frameCommands = pending.splice(0);
+          for (const command of frameCommands) {
             if (command.intent.type === 'clear-selection') {
               for (const unit of units) {
                 unit.selected = false;
@@ -1124,7 +1154,16 @@ export function createGame(options: {
               wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
             }
           }
-          return observe();
+          const nextView = observe();
+          recordedFrames.push({
+            frame,
+            deltaMs,
+            intents: frameCommands.map(({ intent }) => clone(intent)),
+          });
+          if (frame % GAME_REPLAY_CHECKPOINT_INTERVAL === 0 || nextView.wave?.settlement) {
+            replayStates.set(frame, captureReplayState(nextView));
+          }
+          return nextView;
         },
         observe,
         terminalRecord(): GameSettlementRecord | undefined {
@@ -1144,9 +1183,110 @@ export function createGame(options: {
           closed = true;
           pending.length = 0;
         },
+        async exportReplay(): Promise<string> {
+          assertOpen();
+          if (mode === 'replay') {
+            throw new GameReplayError('unsupported-mode', 'A replay session cannot be exported as a source recording');
+          }
+          if (scenario.contentVersion === undefined || !scenario.contentVersion.trim()
+            || scenario.contentVersion === 'unversioned' || !session.terminalRecord()) {
+            throw new GameReplayError('incomplete-recording', 'A versioned, settled session is required to export a replay');
+          }
+          const view = observe();
+          const settlement = view.wave?.settlement;
+          if (!settlement || recordedFrames.length === 0 || recordedFrames.at(-1)?.frame !== view.frame) {
+            throw new GameReplayError('incomplete-recording', 'Replay recording does not contain a terminal frame');
+          }
+          if (recordedFrames.length > GAME_REPLAY_MAX_FRAMES) {
+            throw new GameReplayError('recording-too-large', 'Replay frame count exceeds the supported limit');
+          }
+          const checkpoints = [];
+          for (const checkpointFrame of checkpointFrames(recordedFrames.length)) {
+            const state = replayStates.get(checkpointFrame);
+            if (!state) throw new GameReplayError('incomplete-recording', `Replay checkpoint ${checkpointFrame} is missing`);
+            checkpoints.push({ frame: checkpointFrame, stateDigest: await replayStateDigest(state) });
+          }
+          const terminalCheckpoint = checkpoints.at(-1);
+          if (!terminalCheckpoint) throw new GameReplayError('incomplete-recording', 'Replay terminal checkpoint is missing');
+          const payload: GameReplayPayload = {
+            formatVersion: GAME_REPLAY_FORMAT_VERSION,
+            rulesVersion: GAME_RULES_VERSION,
+            startRecord: session.startRecord,
+            frames: recordedFrames,
+            checkpoints,
+            terminal: {
+              frame: view.frame,
+              settlement,
+              stateDigest: terminalCheckpoint.stateDigest,
+            },
+          };
+          return serializeReplay(payload);
+        },
       };
 
+      replayStates.set(0, captureReplayState(observe()));
       return Object.freeze(session);
+  };
+
+  return Object.freeze({
+    open: openSession,
+    async replay(serialized: string): Promise<GameReplayResult> {
+      const record = await parseReplay(serialized);
+      const scenario = scenarios.get(record.startRecord.scenarioId);
+      if (!scenario || scenario.contentVersion !== record.startRecord.contentVersion) {
+        throw new GameReplayError('content-unavailable', 'The exact replay content version is not available');
+      }
+
+      const session = await openSession({
+        scenarioId: record.startRecord.scenarioId,
+        randomSeed: record.startRecord.randomSeed,
+        mode: 'replay',
+      });
+      const verifiedCheckpointFrames: number[] = [];
+      try {
+        const expectedCheckpoints = new Map(record.checkpoints.map((checkpoint) => [checkpoint.frame, checkpoint.stateDigest]));
+        const verifyCheckpoint = async (view: GameView): Promise<void> => {
+          const expectedDigest = expectedCheckpoints.get(view.frame);
+          if (expectedDigest === undefined) return;
+          const actualDigest = await replayStateDigest(captureReplayState(view));
+          if (actualDigest !== expectedDigest) {
+            throw new GameReplayError('result-mismatch', `Replay state differs at frame ${view.frame}`, view.frame);
+          }
+          verifiedCheckpointFrames.push(view.frame);
+        };
+
+        await verifyCheckpoint(session.observe());
+        for (const frame of record.frames) {
+          for (const intent of frame.intents) {
+            if (!session.submitIntent(intent)) {
+              throw new GameReplayError('corrupt-input', `Replay command is not accepted at frame ${frame.frame}`, frame.frame);
+            }
+          }
+          const view = session.advance({ deltaMs: frame.deltaMs });
+          if (view.frame !== frame.frame) {
+            throw new GameReplayError('result-mismatch', `Replay frame sequence differs at frame ${frame.frame}`, frame.frame);
+          }
+          await verifyCheckpoint(view);
+        }
+
+        const finalView = session.observe();
+        const settlement = finalView.wave?.settlement;
+        if (!settlement
+          || settlement.outcome !== record.terminal.settlement.outcome
+          || settlement.scoreBase !== record.terminal.settlement.scoreBase
+          || settlement.displayScore !== record.terminal.settlement.displayScore
+          || settlement.highScoreCandidate !== record.terminal.settlement.highScoreCandidate) {
+          throw new GameReplayError('result-mismatch', 'Replay terminal settlement does not match the recording', finalView.frame);
+        }
+        return {
+          session,
+          sourceStartRecord: freezeDeep(clone(record.startRecord)),
+          verifiedCheckpointFrames: freezeDeep(verifiedCheckpointFrames),
+        };
+      } catch (error) {
+        session.close();
+        throw error;
+      }
     },
   });
 }

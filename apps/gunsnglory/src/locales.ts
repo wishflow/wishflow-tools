@@ -30,6 +30,9 @@ export const messages = {
     zh: '一条生命测试：不部署防守单位，让拓荒者抵达出口。',
   },
   'Simulation speed': { en: 'Simulation speed', zh: '模拟速度' },
+  'Battle replay': { en: 'Battle replay', zh: '战局重放' },
+  'Export settled battle': { en: 'Export settled battle', zh: '导出已结算战局' },
+  'Import replay': { en: 'Import replay', zh: '导入重放文件' },
   'The normal sample resolves a victory; the one-life test verifies defeat. Later waves and the campaign are out of scope.': {
     en: 'The normal sample resolves a victory; the one-life test verifies defeat. Later waves and the campaign are out of scope.',
     zh: '普通样本验证胜利结算，一条生命测试验证败北；不包含后续波次或战役。',

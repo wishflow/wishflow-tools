@@ -5,7 +5,8 @@ import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
-import type { GameEvent, GameIntent, GameMode, GameSettlementRecord } from './game';
+import { GameReplayError } from './game';
+import type { GameEvent, GameIntent, GameMode, GameReplayErrorCode, GameReplayResult, GameSession, GameSettlementRecord } from './game';
 import type { ProfileView, SettlementSaveResult } from './progress';
 import { messages } from './locales';
 import './styles.css';
@@ -60,6 +61,14 @@ app.innerHTML = [
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
   '      <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
   '    </div>',
+  '    <section class="replay-panel" aria-labelledby="replay-title">',
+  '      <h2 id="replay-title" data-locale="Battle replay">Battle replay</h2>',
+  '      <div class="replay-actions">',
+  '        <button type="button" data-testid="export-replay" data-locale="Export settled battle">Export settled battle</button>',
+  '        <label class="replay-import-label" data-locale="Import replay">Import replay<input id="import-replay" data-testid="import-replay" type="file" accept="application/json,.json" aria-label="Import replay"></label>',
+  '      </div>',
+  '      <p data-testid="replay-status" role="status" aria-live="polite"></p>',
+  '    </section>',
   '    <details class="inspection-panel" data-testid="inspection-panel">',
   '      <summary>Inspect battle</summary>',
   '      <div class="inspection-actions">',
@@ -140,6 +149,9 @@ const settlementHighScoreElement = app.querySelector<HTMLElement>('[data-testid=
 const settlementSaveStatusElement = app.querySelector<HTMLElement>('[data-testid="settlement-save-status"]');
 const retrySettlementButton = app.querySelector<HTMLButtonElement>('[data-action="retry-settlement-save"]');
 const restartButton = app.querySelector<HTMLButtonElement>('[data-action="restart-sample"]');
+const exportReplayButton = app.querySelector<HTMLButtonElement>('[data-testid="export-replay"]');
+const importReplayInput = app.querySelector<HTMLInputElement>('[data-testid="import-replay"]');
+const replayStatusElement = app.querySelector<HTMLElement>('[data-testid="replay-status"]');
 if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement
   || !sceneTitleElement || !sceneContextElement || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
@@ -152,7 +164,8 @@ if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElem
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
-  || !settlementSaveStatusElement || !retrySettlementButton || !restartButton) {
+  || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
+  || !exportReplayButton || !importReplayInput || !replayStatusElement) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
@@ -202,6 +215,9 @@ const settlementScore: HTMLElement = settlementScoreElement;
 const settlementHighScore: HTMLElement = settlementHighScoreElement;
 const settlementSaveStatus: HTMLElement = settlementSaveStatusElement;
 const retrySettlementControl: HTMLButtonElement = retrySettlementButton;
+const exportReplayControl: HTMLButtonElement = exportReplayButton;
+const importReplayControl: HTMLInputElement = importReplayInput;
+const replayStatus: HTMLElement = replayStatusElement;
 
 const game = createBrowserGame();
 const progress = createBrowserProgress();
@@ -219,8 +235,17 @@ let showInspectionOverlay = false;
 let pageLeaving = false;
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | undefined;
 let profileLoadFailed = false;
-let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | undefined;
+let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | 'replay' | undefined;
 let activeSettlementRecord: GameSettlementRecord | undefined;
+let replaying = false;
+let replacingSession = false;
+let restartModeOverride: Exclude<GameMode, 'replay'> | undefined;
+type ReplayStatusState =
+  | { type: 'importing' }
+  | { type: 'exported' }
+  | { type: 'verified'; checkpointCount: number; outcome: 'victory' | 'defeat' }
+  | { type: 'error'; code: GameReplayErrorCode };
+let replayStatusState: ReplayStatusState | undefined;
 let lastDefeatReward: number | undefined;
 let lastRecruitmentEvent: Extract<GameEvent, { type: 'unit-recruited' | 'unit-recruitment-rejected' }> | undefined;
 let pendingRecruitmentType: string | undefined;
@@ -296,6 +321,21 @@ const languageMessages = {
     settlementFailed: 'Result is not saved. Retry to save it.',
     settlementConflict: 'A newer profile exists. Retry to merge this result.',
     settlementDebug: 'Debug result · not added to the saved profile.',
+    settlementReplay: 'Replay result · not added to the saved profile.',
+    replayExported: 'Replay file exported.',
+    replayImporting: 'Checking and replaying battle…',
+    replayVerified: (checkpointCount: number, outcome: string) => `Replay verified · ${checkpointCount} checkpoints · ${outcome}.`,
+    replayErrors: {
+      'missing-version': 'Replay is missing a required version.',
+      'unsupported-version': 'Replay uses an unsupported format or rules version.',
+      'content-unavailable': 'Replay content version is unavailable in this build.',
+      'corrupt-input': 'Replay file is invalid or incomplete.',
+      'digest-mismatch': 'Replay integrity check failed: its digest does not match.',
+      'result-mismatch': 'Replay verification failed: a checkpoint or result differs.',
+      'incomplete-recording': 'This battle has not reached a recordable result.',
+      'recording-too-large': 'This battle record exceeds the supported replay size.',
+      'unsupported-mode': 'Replays cannot be exported from another replay session.',
+    } satisfies Record<GameReplayErrorCode, string>,
     scoreCandidate: (score: number) => `High-score candidate: $${score}`,
     scoreSaved: (score: number) => `High-score saved: $${score}`,
     retrySave: 'Retry saving result',
@@ -369,6 +409,21 @@ const languageMessages = {
     settlementFailed: '结算尚未保存。请重试保存。',
     settlementConflict: '档案已有更新版本。重试可合并本次结果。',
     settlementDebug: '调试结果 · 不会写入已保存档案。',
+    settlementReplay: '重放结果 · 不会写入已保存档案。',
+    replayExported: '战局文件已导出。',
+    replayImporting: '正在检查并重放战局…',
+    replayVerified: (checkpointCount: number, outcome: string) => `重放验证通过 · ${checkpointCount} 个检查点 · ${outcome}。`,
+    replayErrors: {
+      'missing-version': '重放文件缺少必需的版本信息。',
+      'unsupported-version': '重放文件使用了不支持的格式或规则版本。',
+      'content-unavailable': '此版本游戏内容在当前构建中不可用。',
+      'corrupt-input': '重放文件无效或不完整。',
+      'digest-mismatch': '重放完整性检查失败：摘要与内容不匹配。',
+      'result-mismatch': '重放验证失败：检查点或结算结果不一致。',
+      'incomplete-recording': '本场战局尚未到达可记录的结算状态。',
+      'recording-too-large': '本场战局记录超过了重放文件支持的大小。',
+      'unsupported-mode': '不能从另一个重放会话导出战局。',
+    } satisfies Record<GameReplayErrorCode, string>,
     scoreCandidate: (score: number) => `高分候选值：$${score}`,
     scoreSaved: (score: number) => `已保存高分：$${score}`,
     retrySave: '重试保存结算',
@@ -396,8 +451,23 @@ function settlementSaveMessage(language: keyof typeof languageMessages): string 
     case 'failed': return messages.settlementFailed;
     case 'conflict': return messages.settlementConflict;
     case 'debug': return messages.settlementDebug;
+    case 'replay': return messages.settlementReplay;
     default: return '';
   }
+}
+
+function replayMessage(language: keyof typeof languageMessages): string {
+  const messages = languageMessages[language];
+  if (!replayStatusState) return '';
+  if (replayStatusState.type === 'importing') return messages.replayImporting;
+  if (replayStatusState.type === 'exported') return messages.replayExported;
+  if (replayStatusState.type === 'error') return messages.replayErrors[replayStatusState.code];
+  const outcome = replayStatusState.outcome === 'victory' ? messages.victory : messages.defeat;
+  return messages.replayVerified(replayStatusState.checkpointCount, outcome);
+}
+
+function replayErrorCode(error: unknown): GameReplayErrorCode {
+  return error instanceof GameReplayError ? error.code : 'corrupt-input';
 }
 
 async function applyFormalSettlement(record: GameSettlementRecord): Promise<void> {
@@ -438,8 +508,13 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
+  const actionLocked = replaying || replacingSession;
   const profileText = profileMessage(language);
   if (profileStatus.textContent !== profileText) profileStatus.textContent = profileText;
+  replayStatus.textContent = replayMessage(language);
+  exportReplayControl.disabled = replaying || replacingSession || !view.wave?.settlement
+    || session.startRecord.mode === 'replay';
+  importReplayControl.disabled = replaying || replacingSession;
   const defeatEvent = events.find((event) => event.type === 'enemy-defeated');
   if (defeatEvent?.type === 'enemy-defeated') lastDefeatReward = defeatEvent.cashReward;
   const recruitmentEvent = [...events].reverse().find((event) =>
@@ -463,11 +538,11 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   pauseStatus.textContent = pauseMessage;
   pauseStatus.hidden = !view.paused;
   pauseControl.textContent = view.paused ? messages.resumeBattle : messages.pauseBattle;
-  pauseControl.disabled = !view.paused
+  pauseControl.disabled = actionLocked || (!view.paused
     && view.wave?.phase !== 'active'
-    && !view.units.some((candidate) => candidate.moving);
+    && !view.units.some((candidate) => candidate.moving));
   singleStepControl.textContent = messages.singleStep;
-  singleStepControl.disabled = !view.paused || view.wave?.settlement !== undefined;
+  singleStepControl.disabled = actionLocked || !view.paused || view.wave?.settlement !== undefined;
   inspectionOverlayInput.checked = showInspectionOverlay;
   inspectionFrame.textContent = messages.inspectionFrame(view.frame, view.elapsedMs);
   inspectionUnits.textContent = messages.inspectionUnits(view.units.length === 0
@@ -587,7 +662,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (settlement && view.wave) {
     if (newSettlement) {
       activeSettlementRecord = session.terminalRecord();
-      settlementSaveState = activeSettlementRecord?.mode === 'formal' ? 'saving' : 'debug';
+      settlementSaveState = activeSettlementRecord?.mode === 'formal'
+        ? 'saving'
+        : activeSettlementRecord?.mode === 'replay' ? 'replay' : 'debug';
     }
     settlementTitle.textContent = messages.result;
     settlementOutcome.textContent = messages[settlement.outcome];
@@ -616,14 +693,14 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     retrySettlementControl.hidden = true;
   }
   const waveNotStarted = view.wave?.phase === 'not-started';
-  startWaveControl.disabled = !waveNotStarted || view.paused;
-  recruitControl.disabled = Boolean(settlement) || !recruitDefinition || view.paused;
+  startWaveControl.disabled = actionLocked || !waveNotStarted || view.paused;
+  recruitControl.disabled = actionLocked || Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
-  upgradeControl.disabled = Boolean(settlement) || !nextUpgrade || view.paused;
+  upgradeControl.disabled = actionLocked || Boolean(settlement) || !nextUpgrade || view.paused;
   startUpgradeSampleControl.hidden = upgradeScenario;
   returnCowGulchControl.hidden = !upgradeScenario;
-  startDefeatControl.disabled = !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
-  clearSelectionControl.disabled = Boolean(settlement) || view.paused;
+  startDefeatControl.disabled = actionLocked || !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
+  clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
   const canvasLabel = upgradeScenario
     ? language === 'zh' ? '牛溪谷升级规则测试地图' : 'Cow Gulch upgrade rules test map'
     : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
@@ -727,7 +804,6 @@ window.addEventListener('resize', () => redraw(true));
 let animationFrame = 0;
 let previousTimestamp: number | undefined;
 let loopGeneration = 0;
-let replacingSession = false;
 type PointerPoint = { x: number; y: number };
 type TrackedPointer = { pointerType: string; point: PointerPoint };
 type PinchGesture = {
@@ -755,31 +831,45 @@ function stopGameLoop(): void {
   simulationTime.reset();
 }
 
+function activateSession(
+  nextSession: GameSession,
+  nextReplayStatus?: ReplayStatusState,
+  nextRestartMode?: Exclude<GameMode, 'replay'>,
+): void {
+  stopGameLoop();
+  const previousSession = session;
+  session = nextSession;
+  view = session.observe();
+  pauseReason = undefined;
+  mapCamera = createMapCamera();
+  previousSession.close();
+  lastDefeatReward = undefined;
+  lastRecruitmentEvent = undefined;
+  pendingRecruitmentType = undefined;
+  recruitmentCommandNumber = 0;
+  lastUpgradeEvent = undefined;
+  pendingUpgradeUnitId = undefined;
+  upgradeCommandNumber = 0;
+  if (recruitConfirmation.open) recruitConfirmation.close();
+  if (upgradeConfirmation.open) upgradeConfirmation.close();
+  confirmUpgradeControl.hidden = false;
+  activeSettlementRecord = undefined;
+  settlementSaveState = undefined;
+  settlementPanel.hidden = true;
+  replayStatusState = nextReplayStatus;
+  restartModeOverride = nextRestartMode;
+  renderStatus();
+  redraw();
+}
+
 async function replaceSession(scenarioId: string, randomSeed: number, mode: GameMode): Promise<boolean> {
-  if (replacingSession) return false;
+  if (replaying || replacingSession) return false;
   replacingSession = true;
   stopGameLoop();
   const previousSession = session;
   try {
-    session = await game.open({ scenarioId, randomSeed, mode });
-    view = session.observe();
-    pauseReason = undefined;
-    mapCamera = createMapCamera();
-    previousSession.close();
-    lastDefeatReward = undefined;
-    lastRecruitmentEvent = undefined;
-    pendingRecruitmentType = undefined;
-    recruitmentCommandNumber = 0;
-    lastUpgradeEvent = undefined;
-    pendingUpgradeUnitId = undefined;
-    upgradeCommandNumber = 0;
-    if (recruitConfirmation.open) recruitConfirmation.close();
-    if (upgradeConfirmation.open) upgradeConfirmation.close();
-    confirmUpgradeControl.hidden = false;
-    activeSettlementRecord = undefined;
-    settlementSaveState = undefined;
-    renderStatus();
-    redraw();
+    const nextSession = await game.open({ scenarioId, randomSeed, mode });
+    activateSession(nextSession);
     return true;
   } catch {
     session = previousSession;
@@ -787,6 +877,69 @@ async function replaceSession(scenarioId: string, randomSeed: number, mode: Game
     return false;
   } finally {
     replacingSession = false;
+    renderStatus();
+  }
+}
+
+async function exportCurrentReplay(): Promise<void> {
+  if (replaying || replacingSession || exportReplayControl.disabled) return;
+  const sourceSession = session;
+  replaying = true;
+  renderStatus();
+  try {
+    const serialized = await sourceSession.exportReplay();
+    if (sourceSession !== session) return;
+    const url = URL.createObjectURL(new Blob([serialized], { type: 'application/json' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${sourceSession.startRecord.scenarioId}.replay.json`;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+    replayStatusState = { type: 'exported' };
+  } catch (error) {
+    replayStatusState = { type: 'error', code: replayErrorCode(error) };
+  } finally {
+    replaying = false;
+    renderStatus();
+  }
+}
+
+async function importReplayFile(file: File | undefined): Promise<void> {
+  if (!file || replaying || replacingSession) return;
+  replaying = true;
+  replayStatusState = { type: 'importing' };
+  renderStatus();
+  try {
+    if (file.size > 10_000_000) {
+      throw new GameReplayError('corrupt-input', 'Replay file is too large');
+    }
+    const result: GameReplayResult = await game.replay(await file.text());
+    if (result.sourceStartRecord.mode === 'replay') {
+      result.session.close();
+      throw new GameReplayError('unsupported-mode', 'A replay cannot be used as the source battle');
+    }
+    const settlement = result.session.observe().wave?.settlement;
+    if (!settlement) {
+      result.session.close();
+      throw new GameReplayError('incomplete-recording', 'Replay did not reach a terminal result');
+    }
+    replacingSession = true;
+    activateSession(
+      result.session,
+      {
+        type: 'verified',
+        checkpointCount: result.verifiedCheckpointFrames.length,
+        outcome: settlement.outcome,
+      },
+      result.sourceStartRecord.mode,
+    );
+  } catch (error) {
+    replayStatusState = { type: 'error', code: replayErrorCode(error) };
+  } finally {
+    importReplayControl.value = '';
+    replacingSession = false;
+    replaying = false;
+    renderStatus();
   }
 }
 
@@ -922,6 +1075,7 @@ function startGameLoop(): void {
 }
 
 function dispatch(intent: GameIntent): void {
+  if (replaying || replacingSession) return;
   if (!session.submitIntent(intent)) return;
   view = session.advance();
   renderStatus();
@@ -1046,8 +1200,11 @@ startDefeatControl.addEventListener('click', () => {
   });
 });
 retrySettlementControl.addEventListener('click', () => { void retryFormalSettlement(); });
+exportReplayControl.addEventListener('click', () => { void exportCurrentReplay(); });
+importReplayControl.addEventListener('change', () => { void importReplayFile(importReplayControl.files?.[0]); });
 restartControl.addEventListener('click', () => {
-  void replaceSession(session.startRecord.scenarioId, session.startRecord.randomSeed, session.startRecord.mode);
+  const mode = restartModeOverride ?? session.startRecord.mode;
+  void replaceSession(session.startRecord.scenarioId, session.startRecord.randomSeed, mode);
 });
 
 window.addEventListener('pagehide', () => {

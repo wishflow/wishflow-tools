@@ -304,3 +304,15 @@ T11 为 `GameSession` 增加暂停态 `singleStep`：它使用同一条 `advance
 | Codex 内置浏览器本地实测 | `http://127.0.0.1:5175/` 启动 Cow Gulch 波次并暂停；实测单步前为 Frame 464 / 964 ms，单步后为 Frame 465 / 980 ms，暂停提示仍显示。检查面板显示枪手、拓荒者、严格小于 5.0 格的攻击距离阈值及从出生点到出口的路线；开启覆盖层后画布显示青色路线、黄色射程边界和对象标签，并验证边缘标签未裁切及中英文切换。 |
 | 公网内置浏览器实测 | `https://wishflow-tools.pages.dev/gunsnglory/` 加载最新页面；启动 Cow Gulch 波次并暂停，单步前为 Frame 680 / 5851 ms，单步后为 Frame 681 / 5867 ms，仍保持暂停。检查面板和地图覆盖层均正常，页面显示路线、枪手射程圈、拓荒者生命标签及完整只读状态。 |
 | 集成与发布 | 提交 `de78951` 快进合入本地 `gunsnglory` 与 `master` 并推送 `origin master`。 [workflow 40625808761](https://github.com/wishflow/wishflow-tools/actions/runs/40625808761) 成功；Guns’n’Glory CI、共享站点检查、GitHub Pages 和 Cloudflare Pages 部署均通过，Worker 未触发。 |
+
+## 17. T12 记录与重放战局
+
+T12 由 Game 记录实际消费的逐帧 `deltaMs` 和按顺序接受的命令；战局达到终局后才允许导出。回放文件固定格式、规则和内容版本及 Java `Random` 初始 seed，包含帧 0、每 120 帧和终局的 SHA-256 状态检查点。导入时从帧 0 创建新的 `replay` 会话并验证检查点和终局；重放结果不写入正式档案。界面通过 JSON 文件显式导入、导出，保留用户已有记录。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `pnpm run test:ci` | 通过：TypeScript 检查、64 项单元测试、Vite 生产构建及 32 个 Playwright 场景。新增规则覆盖真实消费帧输入、版本和内容固定、周期/终局检查点、回放会话 ID/模式、结算一致、无正式存档权限及缺版本、损坏输入、摘要不符、结果不符、随机算法不支持、来源模式不支持和内容不可用错误。 |
+| 回放 UI 端到端 | Playwright 在 Cow Gulch 正式胜利后下载 JSON，再通过文件输入导回；状态报告核验通过的检查点数量和 Victory。Replay 结算显示不写入档案，正式档案仍为 $50；随后切换中英文确认动态状态正确，导入缺少版本的 JSON 时显示专属错误且保留当前重放结果；重启后重新进行正式胜利结算并成功保存，验证来源正式模式只用于“重新开始”，不会赋予重放正式资格。 |
+| Codex 内置浏览器本地实测 | 在本地 Vite 页面以 4× 完成单个正式战斗，下载战局 JSON 后通过可见的“Import replay”按钮选回文件；页面显示 `Replay verified · 4 checkpoints · Victory.`，结算为 Victory、最高分显示候选 $50，状态明确为 `Replay result · not added to the saved profile.`。检查窄屏布局后确认操作按钮单列、没有重复文件选择控件；本地档案仍保持 Cow Gulch $50。 |
+| 集成分支与公网发布 | 待 T12 功能分支通过审查并完成集成、GitHub Actions 与公网验证后补记。 |
+| 公网内置浏览器验收 | 待发布后执行；未完成前不报告 T12 已发布。 |

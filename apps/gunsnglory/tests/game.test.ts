@@ -4,6 +4,7 @@ import { cowGulchContent } from '../src/content/cow-gulch';
 import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { createGame, type GameSession, type ScenarioContent } from '../src/game';
+import { serializeReplay, type GameReplayPayload } from '../src/game/replay';
 
 const scenario: ScenarioContent = {
   id: 'fixture',
@@ -1069,4 +1070,109 @@ test('keeps the one-life defeat fixture in debug mode and rejects unsupported fo
     game.open({ scenarioId: combatScenario.id, mode: 'formal', randomSeed: 42 }),
     /formal mode is not supported/i,
   );
+});
+
+test('records consumed frame inputs and replays checkpoints to the same terminal result', async () => {
+  const game = createGame({
+    scenarios: { [cowGulchContent.id]: cowGulchContent },
+    sessionIdSource: (() => {
+      let id = 0;
+      return () => `replay-session-${++id}`;
+    })(),
+  });
+  const session = await game.open({ scenarioId: cowGulchContent.id, mode: 'formal', randomSeed: 42 });
+
+  for (let frame = 0; frame < 120; frame += 1) session.advance({ deltaMs: 0 });
+  await assert.rejects(session.exportReplay(), (error: unknown) =>
+    (error as { code?: string }).code === 'incomplete-recording');
+  assert.equal(session.submitIntent({ type: 'start-wave' }), true);
+  let view = session.advance({ deltaMs: 17 });
+  for (let step = 0; step < 100 && view.wave?.phase === 'active'; step += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  assert.equal(view.wave?.phase, 'complete');
+
+  const serialized = await session.exportReplay();
+  const record = JSON.parse(serialized) as {
+    formatVersion: number;
+    rulesVersion: string;
+    startRecord: { contentVersion: string; mode: string };
+    frames: Array<{ frame: number; deltaMs: number; intents: unknown[] }>;
+    checkpoints: Array<{ frame: number; stateDigest: string }>;
+    terminal: { frame: number; settlement: unknown; stateDigest: string };
+    digest: string;
+  };
+  assert.equal(record.formatVersion, 1);
+  assert.ok(record.rulesVersion.length > 0);
+  assert.equal(record.startRecord.contentVersion, cowGulchContent.contentVersion);
+  assert.equal(record.startRecord.mode, 'formal');
+  assert.deepEqual(record.frames[0], { frame: 1, deltaMs: 0, intents: [] });
+  assert.deepEqual(record.frames[120]?.intents, [{ type: 'start-wave' }]);
+  assert.ok(record.checkpoints.some((checkpoint) => checkpoint.frame === 120));
+  assert.equal(record.checkpoints.at(-1)?.frame, view.frame);
+
+  const replay = await game.replay(serialized);
+  assert.notEqual(replay.session.id, session.id);
+  assert.equal(replay.session.startRecord.mode, 'replay');
+  assert.deepEqual(replay.verifiedCheckpointFrames, record.checkpoints.map(({ frame }) => frame));
+  assert.deepEqual(replay.session.observe().wave?.settlement, view.wave?.settlement);
+  assert.equal(replay.session.terminalRecord()?.mode, 'replay');
+  await assert.rejects(replay.session.exportReplay(), (error: unknown) =>
+    (error as { code?: string }).code === 'unsupported-mode');
+
+  const missingVersion = structuredClone(record) as Record<string, unknown>;
+  delete missingVersion.rulesVersion;
+  await assert.rejects(game.replay(JSON.stringify(missingVersion)), (error: unknown) =>
+    (error as { code?: string }).code === 'missing-version');
+
+  const malformedVersion = structuredClone(record) as Record<string, unknown>;
+  malformedVersion.formatVersion = '1';
+  await assert.rejects(game.replay(JSON.stringify(malformedVersion)), (error: unknown) =>
+    (error as { code?: string }).code === 'corrupt-input');
+
+  const unsupportedFormatVersion = structuredClone(record);
+  unsupportedFormatVersion.formatVersion = 2;
+  await assert.rejects(game.replay(JSON.stringify(unsupportedFormatVersion)), (error: unknown) =>
+    (error as { code?: string }).code === 'unsupported-version');
+
+  const unsupportedRandomAlgorithm = structuredClone(record) as typeof record & {
+    startRecord: { randomAlgorithm?: string };
+  };
+  unsupportedRandomAlgorithm.startRecord.randomAlgorithm = 'unknown.random';
+  await assert.rejects(game.replay(JSON.stringify(unsupportedRandomAlgorithm)), (error: unknown) =>
+    (error as { code?: string }).code === 'unsupported-version');
+
+  const replayAsSource = structuredClone(record);
+  replayAsSource.startRecord.mode = 'replay';
+  await assert.rejects(game.replay(JSON.stringify(replayAsSource)), (error: unknown) =>
+    (error as { code?: string }).code === 'unsupported-mode');
+
+  const corruptFrame = structuredClone(record);
+  corruptFrame.frames[0]!.deltaMs = 101;
+  await assert.rejects(game.replay(JSON.stringify(corruptFrame)), (error: unknown) =>
+    (error as { code?: string }).code === 'corrupt-input');
+
+  const digestMismatch = structuredClone(record);
+  digestMismatch.frames[0]!.deltaMs = 1;
+  await assert.rejects(game.replay(JSON.stringify(digestMismatch)), (error: unknown) =>
+    (error as { code?: string }).code === 'digest-mismatch');
+
+  const resultMismatch = structuredClone(record) as Record<string, unknown> & {
+    checkpoints: Array<{ frame: number; stateDigest: string }>;
+    terminal: { frame: number; settlement: unknown; stateDigest: string };
+  };
+  const finalCheckpoint = resultMismatch.checkpoints.at(-1)!;
+  finalCheckpoint.stateDigest = 'sha256:' + '0'.repeat(64);
+  resultMismatch.terminal.stateDigest = finalCheckpoint.stateDigest;
+  const { digest: _originalDigest, ...resultMismatchPayload } = resultMismatch;
+  const rehashedResultMismatch = await serializeReplay(resultMismatchPayload as unknown as GameReplayPayload);
+  await assert.rejects(game.replay(rehashedResultMismatch), (error: unknown) =>
+    (error as { code?: string; frame?: number }).code === 'result-mismatch'
+      && (error as { frame?: number }).frame === view.frame);
+
+  const unavailableContentGame = createGame({
+    scenarios: { [cowGulchContent.id]: { ...cowGulchContent, contentVersion: 'different-content-version' } },
+  });
+  await assert.rejects(unavailableContentGame.replay(serialized), (error: unknown) =>
+    (error as { code?: string }).code === 'content-unavailable');
 });
