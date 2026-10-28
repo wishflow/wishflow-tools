@@ -36,6 +36,7 @@ export type {
 export type GameOpenErrorCode =
   | 'scenario-unavailable'
   | 'content-version-unavailable'
+  | 'difficulty-unavailable'
   | 'rules-version-unsupported'
   | 'prepared-setup-invalid'
   | 'prepared-setup-mismatch';
@@ -94,6 +95,18 @@ export interface RecruitableUnitDefinition {
 
 export type DamageType = 'light' | 'fire' | 'heavy' | 'poison';
 
+export type GameDifficulty = 'easy' | 'medium' | 'hard';
+
+export const GAME_DIFFICULTY_SCORE_PERCENT: Readonly<Record<GameDifficulty, number>> = Object.freeze({
+  easy: 75,
+  medium: 100,
+  hard: 150,
+});
+
+export function isGameDifficulty(value: unknown): value is GameDifficulty {
+  return value === 'easy' || value === 'medium' || value === 'hard';
+}
+
 export interface UnitWeaponDefinition {
   damage: number;
   damageType: DamageType;
@@ -128,6 +141,8 @@ export interface PreviewWaveDefinition {
   initialLives: number;
   initialCash?: number;
   difficultyScorePercent?: number;
+  /** Original level-specific enemy HP multipliers indexed by selected difficulty. */
+  enemyHitPointMultiplierPercentByDifficulty?: Readonly<Record<GameDifficulty, number>>;
   spawn: WaveSpawn;
   additionalSpawns?: readonly WaveSpawn[];
   enemy?: PreviewEnemyDefinition;
@@ -300,6 +315,7 @@ export interface Game {
     /** Exact requested scenario content version. An unavailable version never falls back. */
     contentVersion?: string;
     randomSeed?: number;
+    difficulty?: GameDifficulty;
     mode?: GameMode;
     preparedSetup?: PreparedSetup;
   }): Promise<GameSession>;
@@ -919,7 +935,14 @@ export function createGame(options: {
     return { scenario, setup };
   };
 
-  const openSession: Game['open'] = async ({ scenarioId, contentVersion, randomSeed, mode = 'debug', preparedSetup }) => {
+  const openSession: Game['open'] = async ({
+    scenarioId,
+    contentVersion,
+    randomSeed,
+    difficulty: requestedDifficulty,
+    mode = 'debug',
+    preparedSetup,
+  }) => {
       const sourceScenario = scenarios.get(scenarioId);
       if (!sourceScenario) throw new GameOpenError('scenario-unavailable', 'Unknown scenario: ' + scenarioId);
       if (contentVersion !== undefined && contentVersion !== (sourceScenario.contentVersion ?? 'unversioned')) {
@@ -928,6 +951,29 @@ export function createGame(options: {
       const setup = preparedSetup ?? await prepare({ scenarioId });
       const resolved = await resolvePreparedSetup(sourceScenario, setup);
       const scenario = resolved.scenario;
+      const difficulty = requestedDifficulty ?? 'easy';
+      if (!isGameDifficulty(difficulty)) {
+        throw new GameOpenError('difficulty-unavailable', 'Requested game difficulty is invalid');
+      }
+      const difficultyMultipliers = scenario.previewWave?.enemyHitPointMultiplierPercentByDifficulty;
+      if (difficultyMultipliers) {
+        const values = [difficultyMultipliers.easy, difficultyMultipliers.medium, difficultyMultipliers.hard];
+        if (values.some((value) => !Number.isSafeInteger(value) || value < 1)) {
+          throw new GameOpenError('difficulty-unavailable', 'Scenario difficulty multipliers are invalid');
+        }
+      }
+      if (scenario.previewWave?.enemy) {
+        if (difficulty !== 'easy' && !difficultyMultipliers) {
+          throw new GameOpenError('difficulty-unavailable', 'This scenario does not define the selected difficulty');
+        }
+        if (difficultyMultipliers) {
+          const easyMultiplier = difficultyMultipliers.easy;
+          const selectedMultiplier = difficultyMultipliers[difficulty];
+          scenario.previewWave.enemy.hitPoints = Math.max(1, Math.trunc(
+            (scenario.previewWave.enemy.hitPoints * selectedMultiplier) / easyMultiplier,
+          ));
+        }
+      }
       if (mode === 'formal' && preparedSetup) {
         const baseline = await prepare({ scenarioId });
         if (baseline.digest !== resolved.setup.digest) {
@@ -1060,6 +1106,7 @@ export function createGame(options: {
           randomAlgorithm: 'java.util.Random',
           randomSeed: resolvedSeed,
           mode,
+          difficulty,
           preparedSetup: resolved.setup,
         }),
         pause(): GameView {
@@ -1374,7 +1421,9 @@ export function createGame(options: {
             if (wave.lives <= 0 || waveCleared) {
               for (const unit of units) unit.movementTargetFine = undefined;
               wave.phase = 'complete';
-              const difficultyScorePercent = scenario.previewWave.difficultyScorePercent ?? 100;
+              const difficultyScorePercent = difficulty === 'easy'
+                ? scenario.previewWave.difficultyScorePercent ?? GAME_DIFFICULTY_SCORE_PERCENT.easy
+                : GAME_DIFFICULTY_SCORE_PERCENT[difficulty];
               wave.settlement = calculateSettlement(wave, difficultyScorePercent);
               wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
             }
@@ -1466,6 +1515,7 @@ export function createGame(options: {
       const session = await openSession({
         scenarioId: record.startRecord.scenarioId,
         randomSeed: record.startRecord.randomSeed,
+        difficulty: record.startRecord.difficulty ?? 'easy',
         mode: 'replay',
         ...(record.startRecord.preparedSetup ? { preparedSetup: record.startRecord.preparedSetup } : {}),
       });

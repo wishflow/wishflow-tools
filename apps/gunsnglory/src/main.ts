@@ -11,10 +11,11 @@ import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
-import { GameOpenError, GameReplayError } from './game';
+import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
 import { createExperiments, type ExperimentComparisonReport } from './experiments';
 import type {
   GameEvent,
+  GameDifficulty,
   GameIntent,
   GameMode,
   GameOpenErrorCode,
@@ -41,10 +42,11 @@ app.innerHTML = [
   '    <section class="campaign-panel" aria-labelledby="campaign-title">',
   '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
   '      <p class="campaign-note" data-locale="These two acceptance stages reuse Cow Gulch; they are not production campaign levels.">These two acceptance stages reuse Cow Gulch; they are not production campaign levels.</p>',
+  '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
   '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
   '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
   '    </section>',
-  '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span></div>',
+  '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
   '    <div class="game-frame">',
   '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
   '      <section class="settlement-panel" data-testid="settlement" aria-labelledby="settlement-title" aria-live="polite" hidden>',
@@ -194,10 +196,13 @@ const returnPreviousSceneButtonElement = app.querySelector<HTMLButtonElement>('[
 const campaignProgressSummaryElement = app.querySelector<HTMLElement>('[data-testid="campaign-progress-summary"]');
 const campaignStageListElement = app.querySelector<HTMLOListElement>('[data-testid="campaign-stage-list"]');
 const campaignStatusElement = app.querySelector<HTMLElement>('[data-testid="campaign-status"]');
+const campaignDifficultySelectElement = app.querySelector<HTMLSelectElement>('[data-testid="difficulty-select"]');
+const campaignDifficultyStatusElement = app.querySelector<HTMLElement>('[data-testid="difficulty-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
 const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
 const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
 const sceneContextElement = app.querySelector<HTMLElement>('[data-testid="scene-context"]');
+const sceneDifficultyElement = app.querySelector<HTMLElement>('[data-testid="scene-difficulty"]');
 const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-sample-status"]');
 const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-status"]');
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
@@ -259,7 +264,9 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
   || !retrySceneOpenButtonElement || !returnPreviousSceneButtonElement || !waveStatusElement || !combatStatusElement
   || !campaignProgressSummaryElement || !campaignStageListElement || !campaignStatusElement
-  || !sceneTitleElement || !sceneContextElement || !upgradeSampleStatusElement || !upgradeStatusElement
+  || !campaignDifficultySelectElement || !campaignDifficultyStatusElement
+  || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement
+  || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
@@ -294,8 +301,11 @@ const combatStatus: HTMLElement = combatStatusElement;
 const campaignProgressSummary: HTMLElement = campaignProgressSummaryElement;
 const campaignStageList: HTMLOListElement = campaignStageListElement;
 const campaignStatus: HTMLElement = campaignStatusElement;
+const campaignDifficultySelect: HTMLSelectElement = campaignDifficultySelectElement;
+const campaignDifficultyStatus: HTMLElement = campaignDifficultyStatusElement;
 const sceneTitle: HTMLElement = sceneTitleElement;
 const sceneContext: HTMLElement = sceneContextElement;
+const sceneDifficulty: HTMLElement = sceneDifficultyElement;
 const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
 const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
@@ -373,19 +383,21 @@ let session = await game.open({
 });
 let view = session.observe();
 let profile: ProfileView = {
-  settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED },
+  settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy' },
   completedScenarios: [],
   highScores: {},
 };
 let campaignProgressView: CampaignProgressView | undefined;
-let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
+let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'difficulty-locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
 let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
+let selectedDifficulty: GameDifficulty = 'easy';
 let pauseReason: 'manual' | 'background' | undefined;
 let showInspectionOverlay = false;
 let pageLeaving = false;
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | 'conflict' | 'profile-reset' | undefined;
+let settingsSaveBusy = false;
 let profileLoadFailed = false;
 let profileLoadErrorCode: string | undefined;
 let profileRecoveryStatusKey: 'backup-exported' | 'export-failed' | 'reset-failed' | 'profile-reset' | 'profile-refreshed' | undefined;
@@ -398,6 +410,7 @@ type SessionOpenRequest = {
   scenarioId: string;
   contentVersion?: string;
   randomSeed: number;
+  difficulty?: GameDifficulty;
   mode: GameMode;
 };
 type SceneOpenFailure = { request: SessionOpenRequest; code: GameOpenErrorCode | 'unknown' };
@@ -429,6 +442,10 @@ const languageMessages = {
     campaignStageLocked: 'Locked',
     campaignStageCompleted: 'Completed',
     campaignStageScore: (score: number) => `Best $${score}`,
+    difficultyNames: { easy: 'Easy', medium: 'Medium', hard: 'Hard' } satisfies Record<GameDifficulty, string>,
+    campaignDifficultyLocked: 'Hard unlocks after completing the 10th level in any region.',
+    campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
+    sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
     openCampaignStage: (name: string) => `Open ${name}`,
     campaignLocked: (name: string) => `${name} is locked. Complete its prerequisites first.`,
     campaignOpening: (name: string) => `Opening ${name}…`,
@@ -442,6 +459,7 @@ const languageMessages = {
     sceneOpenErrors: {
       'scenario-unavailable': 'This scenario is unavailable in this build.',
       'content-version-unavailable': 'The requested scenario content version is unavailable; no newer version was substituted.',
+      'difficulty-unavailable': 'This scenario does not support the requested difficulty.',
       'rules-version-unsupported': 'The requested game rules version is not supported by this build.',
       'prepared-setup-invalid': 'The requested game setup is incomplete or damaged.',
       'prepared-setup-mismatch': 'The requested game setup does not match this scenario.',
@@ -494,9 +512,9 @@ const languageMessages = {
     insufficientUpgradeCash: (price: number, cash: number) => `Not enough cash to upgrade: need $${price}, have $${cash}.`,
     upgradeLimitReached: 'This unit has reached the upgrade limit for this level.',
     noUpgradeAvailable: 'No upgrade is available for this unit in this level.',
-    'load-failed': 'Speed preference unavailable; using 1× for this session.',
-    saved: 'Speed preference saved.',
-    'save-failed': 'Speed is active for this session, but could not be saved.',
+    'load-failed': 'Settings could not be loaded; default settings are active for this session.',
+    saved: 'Settings saved.',
+    'save-failed': 'The selected settings are active for this session, but could not be saved.',
     conflict: 'A newer profile exists. Reload it before saving another setting.',
     'profile-reset': 'A new empty profile is ready.',
     retrySettings: 'Retry saving settings',
@@ -553,6 +571,10 @@ const languageMessages = {
     campaignStageLocked: '未解锁',
     campaignStageCompleted: '已完成',
     campaignStageScore: (score: number) => `最高分 $${score}`,
+    difficultyNames: { easy: '简单', medium: '中等', hard: '困难' } satisfies Record<GameDifficulty, string>,
+    campaignDifficultyLocked: '完成任意区域的第 10 关后解锁困难模式。',
+    campaignDifficultyUnlocked: '困难模式已解锁。',
+    sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
     openCampaignStage: (name: string) => `进入${name}`,
     campaignLocked: (name: string) => `${name}尚未解锁，请先完成前置关卡。`,
     campaignOpening: (name: string) => `正在进入${name}…`,
@@ -566,6 +588,7 @@ const languageMessages = {
     sceneOpenErrors: {
       'scenario-unavailable': '当前版本中没有此场景。',
       'content-version-unavailable': '请求的场景内容版本不可用；未替换为较新版本。',
+      'difficulty-unavailable': '该场景没有所选难度的规则数据。',
       'rules-version-unsupported': '当前版本不支持请求的游戏规则版本。',
       'prepared-setup-invalid': '请求的游戏配置不完整或已损坏。',
       'prepared-setup-mismatch': '请求的游戏配置与此场景不匹配。',
@@ -618,9 +641,9 @@ const languageMessages = {
     insufficientUpgradeCash: (price: number, cash: number) => `升级资金不足：需要 $${price}，当前 $${cash}。`,
     upgradeLimitReached: '该单位已达到本关升级上限。',
     noUpgradeAvailable: '该单位在本关没有可用升级。',
-    'load-failed': '无法读取倍速设置，本次暂用 1×。',
-    saved: '倍速设置已保存。',
-    'save-failed': '本次使用所选倍速，但保存失败。',
+    'load-failed': '无法读取设置，本次使用默认值。',
+    saved: '设置已保存。',
+    'save-failed': '本次使用所选设置，但保存失败。',
     conflict: '档案已有更新。请先重新加载，再保存其他设置。',
     'profile-reset': '新的空档案已就绪。',
     retrySettings: '重试保存设置',
@@ -683,10 +706,40 @@ function profileMessage(language: keyof typeof languageMessages): string {
   return messages.profileSaved(completed, score);
 }
 
+function applyProfileSettings(settings: ProfileView['settings']): void {
+  simulationSpeed = settings.simulationSpeed;
+  simulationSpeedInput.value = String(simulationSpeed);
+  selectedDifficulty = settings.difficulty === 'hard' && !campaignProgressView?.hardModeUnlocked
+    ? 'easy'
+    : settings.difficulty;
+  campaignDifficultySelect.value = selectedDifficulty;
+}
+
+function updateProfileSettings(settings: ProfileView['settings']): void {
+  profile = { ...profile, settings };
+  if (campaignProgressView) campaignProgressView = { ...campaignProgressView, profile };
+}
+
 function renderCampaign(): void {
   const language = getLanguage();
   const copy = languageMessages[language];
   const stages = campaignProgressView?.stages ?? [];
+  const hardUnlocked = campaignProgressView?.hardModeUnlocked === true;
+  const hardOption = campaignDifficultySelect.querySelector<HTMLOptionElement>('option[value="hard"]');
+  if (hardOption) hardOption.disabled = !hardUnlocked;
+  if (selectedDifficulty === 'hard' && !hardUnlocked) selectedDifficulty = 'easy';
+  if (campaignDifficultySelect.value !== selectedDifficulty) campaignDifficultySelect.value = selectedDifficulty;
+  const difficultyDisabled = profileLoadFailed || !campaignProgressView || campaignSelectionBusy
+    || settingsSaveBusy || replacingSession || replaying;
+  if (campaignDifficultySelect.disabled !== difficultyDisabled) {
+    campaignDifficultySelect.disabled = difficultyDisabled;
+  }
+  const difficultyStatusText = campaignProgressView
+    ? hardUnlocked ? copy.campaignDifficultyUnlocked : copy.campaignDifficultyLocked
+    : profileLoadFailed ? copy.campaignLoadFailed : copy.campaignLoading;
+  if (campaignDifficultyStatus.textContent !== difficultyStatusText) {
+    campaignDifficultyStatus.textContent = difficultyStatusText;
+  }
   const rows = Array.from(campaignStageList.children) as HTMLLIElement[];
   const rowsMatch = rows.length === stages.length
     && rows.every((row, index) => row.dataset.scenarioId === stages[index]?.scenarioId);
@@ -735,7 +788,7 @@ function renderCampaign(): void {
     if (state.textContent !== statusText) state.textContent = statusText;
     const buttonText = copy.openCampaignStage(title);
     if (button.textContent !== buttonText) button.textContent = buttonText;
-    const disabled = campaignSelectionBusy || profileLoadFailed || replacingSession || replaying
+    const disabled = campaignSelectionBusy || settingsSaveBusy || profileLoadFailed || replacingSession || replaying
       || stage.status === 'locked';
     if (button.disabled !== disabled) button.disabled = disabled;
   });
@@ -753,6 +806,7 @@ function renderCampaign(): void {
     case 'loading': feedbackText = copy.campaignLoading; break;
     case 'load-failed': feedbackText = copy.campaignLoadFailed; break;
     case 'locked': feedbackText = copy.campaignLocked(feedbackTitle); break;
+    case 'difficulty-locked': feedbackText = copy.campaignDifficultyLocked; break;
     case 'opening': feedbackText = copy.campaignOpening(feedbackTitle); break;
     case 'opened': feedbackText = copy.campaignOpened(feedbackTitle); break;
     case 'open-failed': feedbackText = copy.campaignOpenFailed; break;
@@ -1109,6 +1163,7 @@ async function applyFormalSettlement(record: GameSettlementRecord): Promise<void
   try {
     campaignProgressView = await progress.loadCampaign();
     profile = campaignProgressView.profile;
+    applyProfileSettings(profile.settings);
     profileLoadFailed = false;
     profileLoadErrorCode = undefined;
     campaignFeedback = undefined;
@@ -1138,6 +1193,7 @@ async function retryFormalSettlement(): Promise<void> {
   try {
     campaignProgressView = await progress.loadCampaign();
     profile = campaignProgressView.profile;
+    applyProfileSettings(profile.settings);
     profileLoadFailed = false;
     profileLoadErrorCode = undefined;
     campaignFeedback = undefined;
@@ -1172,6 +1228,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   resetCorruptProfileButton.hidden = profileLoadErrorCode !== 'corrupt-data' || !corruptProfileBackup;
   resetCorruptProfileButton.textContent = messages.replaceProfile;
   replayStatus.textContent = replayMessage(language);
+  sceneDifficulty.textContent = messages.sceneDifficulty(session.startRecord.difficulty ?? 'easy');
   exportReplayControl.disabled = replaying || replacingSession || !view.wave?.settlement
     || session.startRecord.mode === 'replay';
   importReplayControl.disabled = replaying || replacingSession;
@@ -1230,6 +1287,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.noRoute);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
+  simulationSpeedInput.disabled = !campaignProgressView && !profileLoadFailed;
   retrySettingsButton.hidden = settingsStatusKey !== 'save-failed' || profileLoadFailed;
   retrySettingsButton.textContent = messages.retrySettings;
   reloadProfileButton.hidden = settingsStatusKey !== 'conflict';
@@ -1439,11 +1497,10 @@ async function loadSettings(): Promise<void> {
   try {
     campaignProgressView = await progress.loadCampaign();
     profile = campaignProgressView.profile;
+    applyProfileSettings(profile.settings);
     campaignFeedback = undefined;
     profileLoadFailed = false;
     profileLoadErrorCode = undefined;
-    simulationSpeed = profile.settings.simulationSpeed;
-    simulationSpeedInput.value = String(simulationSpeed);
   } catch (error) {
     settingsStatusKey = 'load-failed';
     profileLoadFailed = true;
@@ -1564,7 +1621,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
 }
 
 async function openCampaignStage(scenarioId: string): Promise<void> {
-  if (campaignSelectionBusy) return;
+  if (campaignSelectionBusy || settingsSaveBusy) return;
+  const requestedDifficulty = selectedDifficulty;
   campaignSelectionBusy = true;
   campaignFeedback = { type: 'loading' };
   renderCampaign();
@@ -1582,12 +1640,19 @@ async function openCampaignStage(scenarioId: string): Promise<void> {
       campaignFeedback = { type: 'locked', scenarioId };
       return;
     }
+    if (requestedDifficulty === 'hard' && !campaignProgressView.hardModeUnlocked) {
+      selectedDifficulty = profile.settings.difficulty === 'hard' ? 'easy' : profile.settings.difficulty;
+      campaignDifficultySelect.value = selectedDifficulty;
+      campaignFeedback = { type: 'difficulty-locked' };
+      return;
+    }
     campaignFeedback = { type: 'opening', scenarioId };
     renderCampaign();
     const opened = await replaceSession({
       scenarioId: stage.scenarioId,
       contentVersion: stage.contentVersion,
       randomSeed: session.startRecord.randomSeed,
+      difficulty: requestedDifficulty,
       mode: 'formal',
     });
     campaignFeedback = { type: opened ? 'opened' : 'open-failed', scenarioId };
@@ -1600,11 +1665,16 @@ async function openCampaignStage(scenarioId: string): Promise<void> {
   }
 }
 
-function requestScenarioOpen(scenarioId: string, mode: GameMode): SessionOpenRequest {
+function requestScenarioOpen(
+  scenarioId: string,
+  mode: GameMode,
+  difficulty: GameDifficulty = mode === 'formal' ? selectedDifficulty : 'easy',
+): SessionOpenRequest {
   return {
     scenarioId,
     contentVersion: getBrowserScenarioContentVersion(scenarioId),
     randomSeed: session.startRecord.randomSeed,
+    difficulty,
     mode,
   };
 }
@@ -1671,6 +1741,26 @@ async function importReplayFile(file: File | undefined): Promise<void> {
   }
 }
 
+function saveSettings(settings: ProfileView['settings'], onFailure?: () => void): void {
+  const sequence = ++settingsSaveSequence;
+  settingsSaveBusy = true;
+  settingsStatusKey = undefined;
+  renderStatus();
+  void progress.saveSettings(settings).then((saved) => {
+    if (sequence !== settingsSaveSequence) return;
+    settingsSaveBusy = false;
+    updateProfileSettings(saved);
+    settingsStatusKey = 'saved';
+    renderStatus();
+  }).catch((error: unknown) => {
+    if (sequence !== settingsSaveSequence) return;
+    settingsSaveBusy = false;
+    onFailure?.();
+    settingsStatusKey = error instanceof ProgressError && error.code === 'conflict' ? 'conflict' : 'save-failed';
+    renderStatus();
+  });
+}
+
 simulationSpeedInput.addEventListener('input', () => {
   settingsSaveSequence += 1;
   simulationSpeed = normalizeSimulationSpeed(Number(simulationSpeedInput.value));
@@ -1680,31 +1770,50 @@ simulationSpeedInput.addEventListener('input', () => {
 });
 
 simulationSpeedInput.addEventListener('change', () => {
-  const sequence = ++settingsSaveSequence;
   const requestedSpeed = normalizeSimulationSpeed(Number(simulationSpeedInput.value));
   simulationSpeed = requestedSpeed;
-  void progress.saveSettings({ simulationSpeed: requestedSpeed }).then((saved) => {
-    if (sequence !== settingsSaveSequence) return;
-    simulationSpeed = saved.simulationSpeed;
-    settingsStatusKey = 'saved';
+  saveSettings({ simulationSpeed: requestedSpeed, difficulty: selectedDifficulty });
+});
+
+campaignDifficultySelect.addEventListener('change', () => {
+  const requestedDifficulty = campaignDifficultySelect.value;
+  if (!isGameDifficulty(requestedDifficulty)) {
+    campaignDifficultySelect.value = selectedDifficulty;
+    return;
+  }
+  if (requestedDifficulty === 'hard' && !campaignProgressView?.hardModeUnlocked) {
+    campaignDifficultySelect.value = selectedDifficulty;
+    campaignFeedback = { type: 'difficulty-locked' };
     renderStatus();
-  }).catch((error: unknown) => {
-    if (sequence !== settingsSaveSequence) return;
-    settingsStatusKey = error instanceof ProgressError && error.code === 'conflict' ? 'conflict' : 'save-failed';
-    renderStatus();
-  });
+    return;
+  }
+  selectedDifficulty = requestedDifficulty;
+  campaignFeedback = undefined;
+  saveSettings(
+    { simulationSpeed, difficulty: selectedDifficulty },
+  );
+  if (session.startRecord.mode === 'formal'
+    && view.frame === 0
+    && view.wave?.phase === 'not-started'
+    && session.startRecord.difficulty !== requestedDifficulty) {
+    void replaceSession(requestScenarioOpen(session.startRecord.scenarioId, 'formal', requestedDifficulty));
+  }
 });
 
 retrySettingsButton.addEventListener('click', () => {
   const sequence = ++settingsSaveSequence;
+  settingsSaveBusy = true;
+  renderStatus();
   void progress.retrySettings().then((saved) => {
     if (sequence !== settingsSaveSequence) return;
-    simulationSpeed = saved.simulationSpeed;
-    simulationSpeedInput.value = String(simulationSpeed);
+    settingsSaveBusy = false;
+    updateProfileSettings(saved);
+    applyProfileSettings(saved);
     settingsStatusKey = 'saved';
     renderStatus();
   }).catch((error: unknown) => {
     if (sequence !== settingsSaveSequence) return;
+    settingsSaveBusy = false;
     settingsStatusKey = error instanceof ProgressError && error.code === 'conflict' ? 'conflict' : 'save-failed';
     renderStatus();
   });
@@ -1712,6 +1821,8 @@ retrySettingsButton.addEventListener('click', () => {
 
 reloadProfileButton.addEventListener('click', () => {
   const sequence = ++settingsSaveSequence;
+  settingsSaveBusy = true;
+  renderStatus();
   void progress.loadProfile().then(async () => {
     const loaded = await progress.loadCampaign();
     if (sequence !== settingsSaveSequence) return;
@@ -1722,12 +1833,13 @@ reloadProfileButton.addEventListener('click', () => {
     profileLoadErrorCode = undefined;
     corruptProfileBackup = undefined;
     profileRecoveryStatusKey = undefined;
-    simulationSpeed = profile.settings.simulationSpeed;
-    simulationSpeedInput.value = String(simulationSpeed);
+    applyProfileSettings(profile.settings);
+    settingsSaveBusy = false;
     settingsStatusKey = 'saved';
     renderStatus();
   }).catch((error: unknown) => {
     if (sequence !== settingsSaveSequence) return;
+    settingsSaveBusy = false;
     profileLoadFailed = true;
     profileLoadErrorCode = error instanceof ProgressError ? error.code : undefined;
     settingsStatusKey = 'load-failed';
@@ -1777,8 +1889,7 @@ resetCorruptProfileButton.addEventListener('click', () => {
     profileLoadErrorCode = undefined;
     corruptProfileBackup = undefined;
     profileRecoveryStatusKey = 'profile-reset';
-    simulationSpeed = restored.settings.simulationSpeed;
-    simulationSpeedInput.value = String(simulationSpeed);
+    applyProfileSettings(restored.settings);
     settingsStatusKey = 'profile-reset';
     renderStatus();
   }).catch(async (error: unknown) => {
@@ -1790,8 +1901,7 @@ resetCorruptProfileButton.addEventListener('click', () => {
         profile = campaignProgressView.profile;
         profileLoadFailed = false;
         profileLoadErrorCode = undefined;
-        simulationSpeed = profile.settings.simulationSpeed;
-        simulationSpeedInput.value = String(simulationSpeed);
+        applyProfileSettings(profile.settings);
         settingsStatusKey = 'saved';
         profileRecoveryStatusKey = 'profile-refreshed';
       } catch (refreshError) {
@@ -2060,7 +2170,11 @@ exportReplayControl.addEventListener('click', () => { void exportCurrentReplay()
 importReplayControl.addEventListener('change', () => { void importReplayFile(importReplayControl.files?.[0]); });
 restartControl.addEventListener('click', () => {
   const mode = restartModeOverride ?? session.startRecord.mode;
-  void replaceSession(requestScenarioOpen(session.startRecord.scenarioId, mode));
+  void replaceSession(requestScenarioOpen(
+    session.startRecord.scenarioId,
+    mode,
+    mode === 'formal' ? selectedDifficulty : session.startRecord.difficulty ?? 'easy',
+  ));
 });
 
 window.addEventListener('pagehide', () => {
@@ -2288,3 +2402,7 @@ subscribeLanguage(() => {
   renderSavedComparisonStatus();
   redraw();
 });
+
+if (session.startRecord.mode === 'formal' && session.startRecord.difficulty !== selectedDifficulty) {
+  await replaceSession(requestScenarioOpen(session.startRecord.scenarioId, 'formal', selectedDifficulty));
+}

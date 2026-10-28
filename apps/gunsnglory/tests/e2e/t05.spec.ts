@@ -110,7 +110,7 @@ test('a stale tab sees a settings conflict and can reload the newer saved value'
   const firstSpeed = first.getByRole('slider', { name: 'Simulation speed' });
   await firstSpeed.focus();
   await firstSpeed.press('End');
-  await expect(first.getByTestId('settings-status')).toHaveText('Speed preference saved.');
+  await expect(first.getByTestId('settings-status')).toHaveText('Settings saved.');
 
   const staleSpeed = second.getByRole('slider', { name: 'Simulation speed' });
   await staleSpeed.focus();
@@ -122,7 +122,7 @@ test('a stale tab sees a settings conflict and can reload the newer saved value'
 
   await second.getByRole('button', { name: 'Reload saved profile' }).click();
   await expect(staleSpeed).toHaveValue('4');
-  await expect(second.getByTestId('settings-status')).toHaveText('Speed preference saved.');
+  await expect(second.getByTestId('settings-status')).toHaveText('Settings saved.');
 });
 
 test('retries a failed settings transaction with the original operation', async ({ page }) => {
@@ -149,10 +149,10 @@ test('retries a failed settings transaction with the original operation', async 
   await speed.focus();
   await speed.press('End');
   await expect(page.getByTestId('settings-status'))
-    .toHaveText('Speed is active for this session, but could not be saved.');
+    .toHaveText('The selected settings are active for this session, but could not be saved.');
   await expect(page.getByRole('button', { name: 'Retry saving settings' })).toBeVisible();
   await page.getByRole('button', { name: 'Retry saving settings' }).click();
-  await expect(page.getByTestId('settings-status')).toHaveText('Speed preference saved.');
+  await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
   await expect(speed).toHaveValue('4');
 });
 

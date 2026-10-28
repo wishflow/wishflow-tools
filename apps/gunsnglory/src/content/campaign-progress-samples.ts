@@ -27,12 +27,14 @@ export const campaignProgressSampleStages: readonly CampaignStageDefinition[] = 
     scenarioId: campaignProgressSampleOne.id,
     contentVersion: campaignProgressSampleOne.contentVersion!,
     title: campaignProgressSampleOne.title,
+    globalLevel: 1,
     requiresCompletedScenarioIds: [],
   },
   {
     scenarioId: campaignProgressSampleTwo.id,
     contentVersion: campaignProgressSampleTwo.contentVersion!,
     title: campaignProgressSampleTwo.title,
+    globalLevel: 2,
     requiresCompletedScenarioIds: [campaignProgressSampleOne.id],
   },
 ];

@@ -9,6 +9,7 @@ import {
   type VersionedProfile,
 } from './profile-repository';
 import { isSimulationSpeed } from '../game/time-scaling';
+import { isGameDifficulty } from '../game';
 
 function cloneVersionedProfile(profile: VersionedProfile): VersionedProfile {
   return { data: cloneProfileData(profile.data), revision: profile.revision };
@@ -35,6 +36,10 @@ export function createMemoryProfileRepository(initial?: Partial<ProfileData>): P
         const speed = stored.data.settings.simulationSpeed;
         if (speed !== undefined && !isSimulationSpeed(speed)) {
           throw new ProfileRepositoryError('corrupt-data', 'Invalid saved simulation speed');
+        }
+        const difficulty = stored.data.settings.difficulty;
+        if (difficulty !== undefined && !isGameDifficulty(difficulty)) {
+          throw new ProfileRepositoryError('corrupt-data', 'Invalid saved game difficulty');
         }
         if (!isProfileData(stored.data)) {
           throw new ProfileRepositoryError('corrupt-data', 'Saved profile data is corrupt');
@@ -99,7 +104,10 @@ export function createMemoryProfileRepository(initial?: Partial<ProfileData>): P
         throw new ProfileRepositoryError('conflict', 'Saved profile changed after the backup was exported');
       }
       const speed = stored.data.settings.simulationSpeed;
-      if (isProfileData(stored.data) && (speed === undefined || isSimulationSpeed(speed))) {
+      const difficulty = stored.data.settings.difficulty;
+      if (isProfileData(stored.data)
+        && (speed === undefined || isSimulationSpeed(speed))
+        && (difficulty === undefined || isGameDifficulty(difficulty))) {
         throw new ProfileRepositoryError('invalid-input', 'A valid profile cannot be reset as corrupt data');
       }
       stored = null;

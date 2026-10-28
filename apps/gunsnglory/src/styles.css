@@ -105,6 +105,49 @@ body {
   font-size: 0.8rem;
 }
 
+.campaign-difficulty-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
+  color: #f0d5a8;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.campaign-difficulty-control label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.campaign-difficulty-control select {
+  min-height: 2.4rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid rgba(237, 191, 117, 0.65);
+  border-radius: 0.55rem;
+  color: #ffe8c1;
+  background: #30271f;
+  font: inherit;
+}
+
+.campaign-difficulty-control select:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 3px;
+}
+
+.campaign-difficulty-control select:disabled {
+  color: #b4a48a;
+  cursor: wait;
+}
+
+.campaign-difficulty-control p {
+  margin: 0;
+  color: #c6b89f;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
 .campaign-stage-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -738,6 +781,19 @@ body {
   .campaign-panel {
     gap: 0.45rem;
     padding: 0.65rem;
+  }
+
+  .campaign-difficulty-control {
+    gap: 0.35rem;
+    font-size: 0.82rem;
+  }
+
+  .campaign-difficulty-control label {
+    flex-wrap: wrap;
+  }
+
+  .campaign-difficulty-control select {
+    min-height: 2.25rem;
   }
 
   .campaign-stage-list {

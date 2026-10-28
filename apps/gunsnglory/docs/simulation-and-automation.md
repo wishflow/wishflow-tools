@@ -2,7 +2,7 @@
 
 ## 1. 文档状态与目标
 
-本文定义公共操作、场景、实验和批量执行契约，并区分设计目标与已落地切片。T01–T13 已发布；T14–T17 已在 `gunsnglory` 集成分支完成本地实现与验证，尚未发布。T14 提供数值方案准备、不可变版本冻结和 Cow Gulch 配对比较界面；T15 为方案与比较报告增加 IndexedDB 持久化；T16 提供固定 Cow Gulch 单波场景的串行批次 API 和 Node CLI；T17 在 `Experiments` 内提供最多 4 个 Node worker 的可选并行调度，默认仍串行。MCP、远端执行和一般化无画面产品界面尚未实现。T12 回放实际范围与扩展缺口见[5.3 节](#53-game-拥有的回放最小载荷)，T13 运行器行为见[6.3 节](#63-t13-当前实现范围)，T14 比较范围见[7.1 节](#71-冻结实验输入)与[验证记录](validation.md#20-t14-比较两套数值方案)，T15 保存/恢复范围见[7.4 节](#74-t15-保存与重新打开实验)及[验证记录](validation.md#21-t15-保存并重新打开实验)，T16 批次与 CLI 范围见[8.2 节](#82-t16-串行批次与-cli-当前实现)及[验证记录](validation.md#22-t16-cli-串行批次)，T17 worker 范围见[8.3 节](#83-t17-worker-并行批次)及[验证记录](validation.md#23-t17-worker-并行批次)。实施顺序见[实施计划](implementation-plan.md)，依赖方向见[架构设计](architecture.md)，持久化语义见[存储契约](storage-contracts.md)。
+本文定义公共操作、场景、实验和批量执行契约，并区分设计目标与已落地切片。T01–T13 已发布；T14–T21 已在 `gunsnglory` 集成分支完成本地实现与验证，尚未发布。T14 提供数值方案准备、不可变版本冻结和 Cow Gulch 配对比较界面；T15 为方案与比较报告增加 IndexedDB 持久化；T16 提供固定 Cow Gulch 单波场景的串行批次 API 和 Node CLI；T17 在 `Experiments` 内提供最多 4 个 Node worker 的可选并行调度，默认仍串行；T21 记录战局难度并通过 Progress 管理困难模式解锁。当前仅有第 1、2 关进度样本，生产战役内容仍未实现。MCP、远端执行和一般化无画面产品界面尚未实现。T12 回放实际范围与扩展缺口见[5.3 节](#53-game-拥有的回放最小载荷)，T13 运行器行为见[6.3 节](#63-t13-当前实现范围)，T14 比较范围见[7.1 节](#71-冻结实验输入)与[验证记录](validation.md#20-t14-比较两套数值方案)，T15 保存/恢复范围见[7.4 节](#74-t15-保存与重新打开实验)及[验证记录](validation.md#21-t15-保存并重新打开实验)，T16 批次与 CLI 范围见[8.2 节](#82-t16-串行批次与-cli-当前实现)及[验证记录](validation.md#22-t16-cli-串行批次)，T17 worker 范围见[8.3 节](#83-t17-worker-并行批次)及[验证记录](validation.md#23-t17-worker-并行批次)。实施顺序见[实施计划](implementation-plan.md)，依赖方向见[架构设计](architecture.md)，持久化语义见[存储契约](storage-contracts.md)。
 
 公共能力按已确认的 `Game`、`Progress`、`Experiments` 三个深 Module 组织。本文以 `Game` 和 `Experiments` 的 Interface 为测试 Seam；`SessionController`、规则内核和 `ScenarioRunner` 均为内部实现，不能再形成一套要求消费者掌握的公共调用链。
 
@@ -149,7 +149,7 @@ T12 已实现的是 Cow Gulch 单场战局导出和从头确定性重放，不�
 
 | 项目 | 当前行为 |
 | --- | --- |
-| 版本与启动来源 | JSON 记录包含格式版本、规则版本、场景内容版本、来源 `StartRecord`、执行模式、Java `Random` 算法标识和 unsigned 32-bit 初始 seed。新 `StartRecord` 可包含 Game.prepare 生成的完整 PreparedSetup 与摘要；旧记录仍可不携带此字段。重放校验实际记录的数值配置，但当前不绑定一个可长期查询的命名方案版本。 |
+| 版本与启动来源 | JSON 记录包含格式版本、规则版本、场景内容版本、来源 `StartRecord`、执行模式、Java `Random` 算法标识和 unsigned 32-bit 初始 seed。新 `StartRecord` 记录实际采用的 `easy`、`medium` 或 `hard` 难度，并可包含 Game.prepare 生成的完整 PreparedSetup 与摘要；缺少难度字段的旧记录按 `easy` 重放，缺少 PreparedSetup 的旧记录仍兼容。重放校验实际记录的数值配置，但当前不绑定一个可长期查询的命名方案版本。 |
 | 时间与输入 | 记录 Game 实际消费的每帧整数 `deltaMs`（0–100 ms）和按接受顺序排列的全部 `GameIntent`；回放从帧 0 提交同一输入，不采用墙钟时间或原浏览器倍速。 |
 | 检查点与终局 | 帧 0、每 120 帧及终局保存状态摘要；SHA-256 对规范 JSON 计算。摘要覆盖帧、游戏时间、单位、敌人、投射物、招募池、事件和波次，不包含新会话身份、镜头和暂停 UI 状态。终局结算与最终检查点必须匹配。 |
 | 新会话与存档权限 | `Game.replay` 创建新的会话 ID，当前运行模式固定为 `replay`，保留不可变来源 `StartRecord`。Replay 结算可展示，但不会写入正式 Progress；页面只提供 JSON 文件导入/导出，不覆盖旧文件，也不把回放内容写进 IndexedDB。 |

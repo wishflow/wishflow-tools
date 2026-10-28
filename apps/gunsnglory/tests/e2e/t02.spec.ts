@@ -99,13 +99,13 @@ test('loads legacy profile settings, saves the selected speed to IndexedDB, and 
   expect(savedProfile).toMatchObject({
     id: 'default',
     schemaVersion: 2,
-    settings: { soundEnabled: false, simulationSpeed: 2.25 },
+    settings: { soundEnabled: false, simulationSpeed: 2.25, difficulty: 'easy' },
     completedScenarios: [],
     highScores: {},
     appliedSettlementIds: [],
   });
   expect(savedProfile.revision as number).toBeGreaterThan(0);
-  expect(savedProfile.lastOperationId as string).toMatch(/^settings:\d+:2\.25$/);
+  expect(savedProfile.lastOperationId as string).toMatch(/^settings:\d+:2\.25:easy$/);
   expect(typeof savedProfile.lastRequestDigest).toBe('string');
   expect((savedProfile.lastRequestDigest as string).length).toBeGreaterThan(0);
 
@@ -190,7 +190,7 @@ test('preserves malformed IndexedDB settings when a user tries to save a new spe
     }, settings);
     await page.reload();
     await expect(speed).toBeEnabled();
-    await expect(settingsStatus).toContainText('unavailable');
+    await expect(settingsStatus).toContainText('could not be loaded');
     await speed.focus();
     await speed.press('ArrowRight');
     await expect(settingsStatus).toContainText('could not be saved');

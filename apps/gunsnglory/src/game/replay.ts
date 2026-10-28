@@ -1,4 +1,4 @@
-import type { GameIntent, GameMode, GameView, WaveSettlement } from './index';
+import type { GameDifficulty, GameIntent, GameMode, GameView, WaveSettlement } from './index';
 import { canonicalSha256Digest } from '../value-digest';
 
 export const GAME_RULES_VERSION = 'gng-rules-1';
@@ -28,6 +28,8 @@ export interface GameStartRecord {
   randomAlgorithm: 'java.util.Random';
   randomSeed: number;
   mode: GameMode;
+  /** Selected player difficulty; absent in legacy recordings and interpreted as Easy. */
+  difficulty?: GameDifficulty;
   /** Present in new records; absent in legacy v1 recordings which used the scenario baseline. */
   preparedSetup?: PreparedSetup;
 }
@@ -257,6 +259,7 @@ function validStartRecord(value: unknown): value is GameStartRecord {
     && typeof value.rulesVersion === 'string' && value.rulesVersion.length > 0
     && value.randomAlgorithm === 'java.util.Random'
     && Number.isSafeInteger(value.randomSeed) && (value.randomSeed as number) >= 0 && (value.randomSeed as number) <= 0xffff_ffff
+    && (value.difficulty === undefined || value.difficulty === 'easy' || value.difficulty === 'medium' || value.difficulty === 'hard')
     && (value.mode === 'formal' || value.mode === 'debug' || value.mode === 'experiment');
 }
 

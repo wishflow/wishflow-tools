@@ -474,3 +474,21 @@ T20 将战役阶段定义与解锁投影归属 `Progress`。网页显示每关�
 | 存档格式与回归边界 | 未修改数据库版本或 `schemaVersion: 2`。`loadCampaign()` 的读取不清除待重试的设置写入，新增 Progress 回归测试验证原请求仍可重试。完整六区域和生产解锁关系仍由后续关卡内容任务补齐。 |
 
 验证入口：[Progress 投影与重试回归](../tests/progress.test.ts)、[浏览器版本注册](../tests/browser-bootstrap.test.ts)、[T20 桌面/触屏流程](../tests/e2e/t20-campaign-progress.spec.ts)、[存储契约](storage-contracts.md#46-当前已实现倍速设置与样本结算档案)。
+
+## 27. T21 难度选择与困难模式解锁
+
+T21 将下一场战斗的难度保存在既有 Progress 设置中，并将本次实际难度写入 Game 启动记录及回放来源记录。Cow Gulch 第 1 关采用逆向结果中的敌人生命倍率：简单 100%、中等 125%、困难 155%；分数倍率为 75%、100%、150%。Progress 按已完成阶段的全局关卡号计算困难模式解锁：完成 10 的倍数关卡后开放。未解锁时界面禁用困难选项，Progress 保存接口也拒绝绕过 UI 直接写入困难设置。
+
+当前战役目录只含 T20 的第 1、2 关验收样本，故网页真实进度仍保持困难锁定。本次通过 Progress 合成第 10 关阶段验证胜利结算解锁；没有把合成关卡加入产品目录，也未宣称完整战役已实现。数据库版本、`schemaVersion: 2` 和现有 IndexedDB 记录均未迁移；旧设置缺少难度字段时映射为简单模式。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm run test:ci` | 通过：TypeScript 检查、120 项单元测试、Vite 生产构建及 48 个 Playwright 场景。 |
+| Game 难度行为 | 通过：中等模式将 Cow Gulch 敌人生命设为 157（基准 125%）；困难模式从基准分数 67 得到画面分数 101、存档候选值 100，分别验证原版浮点取整和整数截断。 |
+| Progress 解锁与回退 | 通过：未完成第 10 关时直接保存 Hard 返回 `difficulty-locked`；第 10 关胜利后允许保存 Hard，再切回 Easy，已解锁状态仍保留。旧设置和缺少难度字段的档案默认 Easy；非法值报告 `corrupt-data`。 |
+| 回放兼容 | 通过：新记录保留实际难度并按相同规则回放；缺少难度字段的旧启动记录按 Easy 处理。 |
+| IndexedDB 与桌面/触屏浏览器 | 通过：Playwright 验证 Medium 写入 `gunsnglory-profile`、刷新恢复、关卡启动标签、结算显示分数及独立保存高分；第 1 关完成后 Hard 仍锁定。手机视口控件可操作且无横向溢出。 |
+| Codex 内置浏览器 | 本地 `http://127.0.0.1:5175/` 清洁刷新后，从 IndexedDB 恢复 Medium、1× 和 1/2 进度，初始正式场景显示 `DIFFICULTY · MEDIUM`，Hard 仍禁用。切换 Easy 时等待中的正式初始场景同步显示 Easy；切回 Medium 并再次刷新后，设置与场景标签仍为 Medium，进度保持 1/2。此次刷新未产生新 console error；日志仅包含 2026-10-28 热更新期间的历史错误。 |
+| 发布边界 | 仅在 `gunsnglory` 本地集成分支验证；尚未合并、push 或发布。Hard UI 完整解锁仍需后续加入真实第 10 关及生产战役目录。 |
+
+验证入口：[难度规则与解锁测试](../tests/difficulty.test.ts)、[Progress 设置兼容测试](../tests/progress.test.ts)、[T21 桌面/触屏流程](../tests/e2e/t21-difficulty.spec.ts)、[难度与存档契约](storage-contracts.md#46-当前已实现倍速设置与样本结算档案)。

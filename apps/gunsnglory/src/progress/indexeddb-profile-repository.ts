@@ -1,3 +1,4 @@
+import { isGameDifficulty } from '../game';
 import { isSimulationSpeed } from '../game/time-scaling';
 import {
   cloneProfileData,
@@ -68,7 +69,9 @@ function toRepositoryError(error: unknown): ProfileRepositoryError {
 function validSettings(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
   const speed = (value as Record<string, unknown>).simulationSpeed;
-  return speed === undefined || isSimulationSpeed(speed);
+  const difficulty = (value as Record<string, unknown>).difficulty;
+  return (speed === undefined || isSimulationSpeed(speed))
+    && (difficulty === undefined || isGameDifficulty(difficulty));
 }
 
 function decodeProfile(value: unknown): DecodedProfile {

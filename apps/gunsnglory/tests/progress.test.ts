@@ -6,13 +6,13 @@ import { verifyProfileRepositoryContract } from './profile-repository-contract';
 import type { GameSettlementRecord } from '../src/game';
 import type { CampaignStageDefinition } from '../src/progress';
 
-test('loads a default speed for a new or older profile without the setting', async () => {
+test('loads Easy and a default speed for a new or older profile without the setting', async () => {
   for (const settings of [undefined, {}, { soundEnabled: true }]) {
     const repository = createMemoryProfileRepository(settings === undefined ? undefined : {
       settings,
     });
     const progress = createProgress(repository);
-    assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1 });
+    assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1, difficulty: 'easy' });
   }
 });
 
@@ -21,9 +21,12 @@ test('loads and saves supported speeds through the shared profile repository', a
     settings: { simulationSpeed: 1.5, soundEnabled: false },
   }));
 
-  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1.5 });
-  assert.deepEqual(await progress.saveSettings({ simulationSpeed: 4.25 }), { simulationSpeed: 4 });
-  assert.deepEqual((await progress.loadProfile()).settings, { simulationSpeed: 4 });
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1.5, difficulty: 'easy' });
+  assert.deepEqual(await progress.saveSettings({ simulationSpeed: 4.25, difficulty: 'medium' }), {
+    simulationSpeed: 4,
+    difficulty: 'medium',
+  });
+  assert.deepEqual((await progress.loadProfile()).settings, { simulationSpeed: 4, difficulty: 'medium' });
 });
 
 test('reports a stale settings write instead of silently replacing another profile update', async () => {
@@ -32,13 +35,13 @@ test('reports a stale settings write instead of silently replacing another profi
   const second = createProgress(repository);
   await Promise.all([first.loadProfile(), second.loadProfile()]);
 
-  await first.saveSettings({ simulationSpeed: 2 });
-  await assert.rejects(second.saveSettings({ simulationSpeed: 3 }), (error: unknown) =>
+  await first.saveSettings({ simulationSpeed: 2, difficulty: 'easy' });
+  await assert.rejects(second.saveSettings({ simulationSpeed: 3, difficulty: 'medium' }), (error: unknown) =>
     (error as { code?: string }).code === 'conflict');
   const persistedSpeed = (await first.loadProfile()).settings.simulationSpeed;
   assert.equal(persistedSpeed, 2);
   await second.loadProfile();
-  await second.saveSettings({ simulationSpeed: persistedSpeed === 2 ? 3 : 2 });
+  await second.saveSettings({ simulationSpeed: persistedSpeed === 2 ? 3 : 2, difficulty: 'easy' });
   assert.notEqual((await second.loadProfile()).settings.simulationSpeed, persistedSpeed);
 });
 
@@ -59,9 +62,9 @@ test('retains a failed settings write for an idempotent retry', async () => {
   };
   const progress = createProgress(repository);
   await progress.loadProfile();
-  await assert.rejects(progress.saveSettings({ simulationSpeed: 2 }), /IndexedDB unavailable/);
-  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2 });
-  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2 });
+  await assert.rejects(progress.saveSettings({ simulationSpeed: 2, difficulty: 'easy' }), /IndexedDB unavailable/);
+  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2, difficulty: 'easy' });
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2, difficulty: 'easy' });
 });
 
 function settlement(overrides: Partial<GameSettlementRecord> = {}): GameSettlementRecord {
@@ -85,12 +88,14 @@ test('projects only campaign-specific completions into available and locked stag
       scenarioId: 'campaign-cow-gulch-1',
       contentVersion: 'campaign-sample-1',
       title: { en: 'Cow Gulch sample 1', zh: '牛溪谷样本 1' },
+      globalLevel: 1,
       requiresCompletedScenarioIds: [],
     },
     {
       scenarioId: 'campaign-cow-gulch-2',
       contentVersion: 'campaign-sample-2',
       title: { en: 'Cow Gulch sample 2', zh: '牛溪谷样本 2' },
+      globalLevel: 2,
       requiresCompletedScenarioIds: ['campaign-cow-gulch-1'],
     },
   ];
@@ -100,6 +105,7 @@ test('projects only campaign-specific completions into available and locked stag
   const initial = await progress.loadCampaign();
   assert.deepEqual(initial.stages.map(({ status }) => status), ['available', 'locked']);
   assert.equal(initial.completedCount, 0);
+  assert.equal(initial.hardModeUnlocked, false);
   assert.equal(initial.profile.completedScenarios.includes('cow-gulch'), true);
   assert.equal(Object.isFrozen(initial.stages), true);
 
@@ -111,6 +117,7 @@ test('projects only campaign-specific completions into available and locked stag
   const advanced = await progress.loadCampaign();
   assert.deepEqual(advanced.stages.map(({ status }) => status), ['completed', 'available']);
   assert.equal(advanced.completedCount, 1);
+  assert.equal(advanced.hardModeUnlocked, false);
   assert.equal(advanced.stages[0]?.highScore, 50);
   assert.equal(advanced.stages[1]?.contentVersion, 'campaign-sample-2');
 });
@@ -132,10 +139,10 @@ test('refreshing campaign progress preserves a pending settings retry', async ()
   };
   const progress = createProgress(repository);
   await progress.loadProfile();
-  await assert.rejects(progress.saveSettings({ simulationSpeed: 2 }), /IndexedDB unavailable/);
+  await assert.rejects(progress.saveSettings({ simulationSpeed: 2, difficulty: 'easy' }), /IndexedDB unavailable/);
 
   await progress.loadCampaign();
-  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2 });
+  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2, difficulty: 'easy' });
 });
 
 test('records a formal sample settlement once and keeps the best score', async () => {
@@ -170,7 +177,7 @@ test('does not apply debug, experiment, or replay settlements to a formal profil
     await assert.rejects(progress.applySettlement(settlement({ mode })), /formal/i);
   }
   assert.deepEqual(await progress.loadProfile(), {
-    settings: { simulationSpeed: 1 },
+    settings: { simulationSpeed: 1, difficulty: 'easy' },
     completedScenarios: [],
     highScores: {},
   });
@@ -259,7 +266,16 @@ test('rejects corrupt persisted settings and does not hide repository write fail
     resetCorruptProfile: (snapshot: string) => memory.resetCorruptProfile(snapshot),
   };
   const progress = createProgress(failingRepository);
-  await assert.rejects(progress.saveSettings({ simulationSpeed: 2 }), /IndexedDB unavailable/);
+  await assert.rejects(progress.saveSettings({ simulationSpeed: 2, difficulty: 'easy' }), /IndexedDB unavailable/);
+});
+
+test('defaults legacy settings to Easy and rejects an invalid saved difficulty', async () => {
+  const legacy = createProgress(createMemoryProfileRepository({ settings: { simulationSpeed: 2 } }));
+  assert.deepEqual(await legacy.loadSettings(), { simulationSpeed: 2, difficulty: 'easy' });
+
+  const corrupt = createProgress(createMemoryProfileRepository({ settings: { simulationSpeed: 2, difficulty: 'expert' } }));
+  await assert.rejects(corrupt.loadSettings(), (error: unknown) =>
+    error instanceof ProgressError && error.code === 'corrupt-data' && /Invalid saved game difficulty/.test(error.message));
 });
 
 test('exports the damaged record and resets it only against the exported snapshot', async () => {
@@ -274,7 +290,7 @@ test('exports the damaged record and resets it only against the exported snapsho
 
   const restored = await progress.resetCorruptProfile(backup);
   assert.deepEqual(restored, {
-    settings: { simulationSpeed: 1 },
+    settings: { simulationSpeed: 1, difficulty: 'easy' },
     completedScenarios: [],
     highScores: {},
   });
@@ -287,5 +303,5 @@ test('does not allow the corrupt-data recovery operation to delete a valid profi
   assert.ok(snapshot);
   await assert.rejects(progress.resetCorruptProfile(snapshot), (error: unknown) =>
     error instanceof ProgressError && error.code === 'invalid-input');
-  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2 });
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2, difficulty: 'easy' });
 });

@@ -1,4 +1,4 @@
-import type { GameSettlementRecord } from '../game';
+import { isGameDifficulty, type GameDifficulty, type GameSettlementRecord } from '../game';
 import { DEFAULT_SIMULATION_SPEED, isSimulationSpeed, normalizeSimulationSpeed } from '../game/time-scaling';
 import {
   cloneProfileData,
@@ -11,6 +11,7 @@ import {
 
 export interface GameSettings {
   simulationSpeed: number;
+  difficulty: GameDifficulty;
 }
 
 export interface ProfileView {
@@ -23,6 +24,7 @@ export interface CampaignStageDefinition {
   scenarioId: string;
   contentVersion: string;
   title: { en: string; zh: string };
+  globalLevel: number;
   requiresCompletedScenarioIds: readonly string[];
 }
 
@@ -35,6 +37,7 @@ export interface CampaignProgressView {
   profile: ProfileView;
   stages: readonly CampaignStageProgress[];
   completedCount: number;
+  hardModeUnlocked: boolean;
 }
 
 export interface SettlementSaveResult {
@@ -55,7 +58,7 @@ export interface Progress {
 }
 
 export class ProgressError extends Error {
-  constructor(readonly code: ProfileRepositoryError['code'], message: string) {
+  constructor(readonly code: ProfileRepositoryError['code'] | 'difficulty-locked', message: string) {
     super(message);
     this.name = 'ProgressError';
   }
@@ -69,7 +72,7 @@ function progressError(error: unknown): Error {
 
 function createDefaultProfileData(): ProfileData {
   return {
-    settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED },
+    settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy' },
     completedScenarios: [],
     highScores: {},
     appliedSettlementIds: [],
@@ -81,9 +84,14 @@ function publicProfile(data: ProfileData): ProfileView {
   if (simulationSpeed !== undefined && !isSimulationSpeed(simulationSpeed)) {
     throw new ProgressError('corrupt-data', 'Invalid saved simulation speed');
   }
+  const difficulty = data.settings.difficulty;
+  if (difficulty !== undefined && !isGameDifficulty(difficulty)) {
+    throw new ProgressError('corrupt-data', 'Invalid saved game difficulty');
+  }
   return Object.freeze({
     settings: Object.freeze({
       simulationSpeed: simulationSpeed === undefined ? DEFAULT_SIMULATION_SPEED : simulationSpeed,
+      difficulty: difficulty === undefined ? 'easy' : difficulty,
     }),
     completedScenarios: Object.freeze([...data.completedScenarios]),
     highScores: Object.freeze({ ...data.highScores }),
@@ -107,8 +115,14 @@ function settlementOperationId(settlement: GameSettlementRecord, expectedRevisio
   return `settlement:${settlement.settlementId}:${expectedRevision ?? 'new'}`;
 }
 
-function settingsOperationId(speed: number, expectedRevision: number | null): string {
-  return `settings:${expectedRevision ?? 'new'}:${speed}`;
+function settingsOperationId(speed: number, difficulty: GameDifficulty, expectedRevision: number | null): string {
+  return `settings:${expectedRevision ?? 'new'}:${speed}:${difficulty}`;
+}
+
+function hardModeUnlocked(data: ProfileData, campaignStages: readonly CampaignStageDefinition[]): boolean {
+  const completed = new Set(data.completedScenarios);
+  return campaignStages.some(({ scenarioId, globalLevel }) =>
+    globalLevel % 10 === 0 && completed.has(scenarioId));
 }
 
 export function createProgress(
@@ -122,8 +136,9 @@ export function createProgress(
   }));
   const campaignIds = new Set(campaignStages.map(({ scenarioId }) => scenarioId));
   if (campaignIds.size !== campaignStages.length
-    || campaignStages.some(({ scenarioId, contentVersion, requiresCompletedScenarioIds }) =>
-      !scenarioId || !contentVersion || requiresCompletedScenarioIds.includes(scenarioId)
+    || campaignStages.some(({ scenarioId, contentVersion, globalLevel, requiresCompletedScenarioIds }) =>
+      !scenarioId || !contentVersion || !Number.isSafeInteger(globalLevel) || globalLevel < 1 || globalLevel > 60
+        || requiresCompletedScenarioIds.includes(scenarioId)
         || requiresCompletedScenarioIds.some((requiredId) => !campaignIds.has(requiredId)))) {
     throw new TypeError('Campaign stages require unique IDs, versions and valid completion prerequisites');
   }
@@ -241,6 +256,7 @@ export function createProgress(
         profile,
         stages: Object.freeze(stages),
         completedCount: stages.filter(({ status }) => status === 'completed').length,
+        hardModeUnlocked: hardModeUnlocked(current?.data ?? createDefaultProfileData(), campaignStages),
       });
     } catch (error) {
       throw progressError(error);
@@ -252,7 +268,14 @@ export function createProgress(
   }
 
   async function saveSettings(settings: GameSettings): Promise<GameSettings> {
-    const saved = { simulationSpeed: normalizeSimulationSpeed(settings.simulationSpeed) };
+    const difficulty = settings.difficulty ?? lastKnownData.settings.difficulty ?? 'easy';
+    if (!isGameDifficulty(difficulty)) {
+      throw new ProgressError('invalid-input', 'Game difficulty is invalid');
+    }
+    const saved = {
+      simulationSpeed: normalizeSimulationSpeed(settings.simulationSpeed),
+      difficulty,
+    };
     return serialize(async () => {
       if (!hasLoadedProfile) {
         try {
@@ -262,12 +285,15 @@ export function createProgress(
         }
       }
       publicProfile(lastKnownData);
+      if (difficulty === 'hard' && !hardModeUnlocked(lastKnownData, campaignStages)) {
+        throw new ProgressError('difficulty-locked', 'Hard difficulty is locked until a level divisible by ten is completed');
+      }
       const nextData = cloneProfileData(lastKnownData);
       nextData.settings = { ...nextData.settings, ...saved };
       const request: WriteProfileRequest = {
         data: nextData,
         expectedRevision: lastKnownRevision,
-        operationId: settingsOperationId(saved.simulationSpeed, lastKnownRevision),
+        operationId: settingsOperationId(saved.simulationSpeed, saved.difficulty, lastKnownRevision),
       };
       pendingSettingsRequest = request;
       try {
@@ -287,8 +313,12 @@ export function createProgress(
       const request = pendingSettingsRequest;
       if (!request) throw new ProgressError('invalid-input', 'No pending settings save is available to retry');
       const speed = request.data.settings.simulationSpeed;
+      const difficulty = request.data.settings.difficulty;
       if (!isSimulationSpeed(speed)) {
         throw new ProgressError('corrupt-data', 'Pending simulation speed is corrupt');
+      }
+      if (!isGameDifficulty(difficulty)) {
+        throw new ProgressError('corrupt-data', 'Pending game difficulty is corrupt');
       }
       try {
         const result = await repository.writeProfile(request);
@@ -297,6 +327,7 @@ export function createProgress(
         pendingSettingsRequest = undefined;
         return {
           simulationSpeed: speed,
+          difficulty,
         };
       } catch (error) {
         throw progressError(error);
