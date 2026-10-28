@@ -329,3 +329,23 @@ T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一�
 | `pnpm run install:apps` 与 `pnpm run build:site` | 冻结安装全部登记应用依赖成功，共享站点及全部静态应用构建成功。3D Objects 输出既有的单 chunk 体积提示，其 bundle 检查仍通过。 |
 | Codex 内置浏览器本地预览 | 打开 Guns’n’Glory 生产构建预览 `http://127.0.0.1:4174/`；页面正常显示 Cow Gulch、HUD 与现有控制。浏览器 console 的 error/warn 为空。T13 没有新增可见控件，其真实运行已由上一行 Chromium 行为测试核验。 |
 | 集成与发布 | `c3c80d6` 已快进合入本地 `gunsnglory` 与 `master`，并推送 `master`。GitHub Actions [40638987841](https://github.com/wishflow/wishflow-tools/actions/runs/40638987841) 以 `success` 完成。重新加载公网标准地址 `https://wishflow-tools.pages.dev/gunsnglory/` 后，内置浏览器显示 Cow Gulch 地图、状态、倍速控件和现有操作；控制台 error/warn 为空。T13 无可见游戏控件，其单场景真实行为由前述 Chromium Playwright 测试覆盖。 |
+
+## 19. T14 Cow Gulch 贴图变体与桥位路线核对
+
+这次视觉差异来自地图数据只选用了每种贴图的首候选，漏掉了原版随机变化图集。原版基础图集和路径几何没有错位；原版逻辑地图仍使用 32×32 方形地格，桥梁是跨格绘制的长方形精灵。
+
+| 检查项 | 结果 |
+| --- | --- |
+| APK 地图变体逻辑 | JADX 对 BackgroundMap.createVariationMap() 的反编译显示，原版用 Util.random(4) 为符合条件的背景格和道路格选择候选；Util.random(int) 调用 java.util.Random.nextInt(int)。Cow Gulch 的候选范围包括沙地、峡壁、阴影、河岸和道路变体。 |
+| 静态图集 | 从 Guns’n’Glory FREE 1.8.6 的 drawable-mdpi-v4 中补入 tiles_desert_var、tiles_canyon_wall_var、tiles_waterside_var、tiles_shadow_var 和 tiles_path_var。逐项与 APK 内 mdpi 资源做字节比较，5 张全部一致。 |
+| 稳定网页画面 | 网页地图使用 Java Random 算法与固定种子 0x47524e31 生成一个稳定候选。原版每次加载使用未固定的随机种子，所以网页复现的是原版候选集合中的固定画面，不声称复现某一次 Android 随机结果。 |
+| 地图几何 | 17×17、289 个背景绘制命令；31 个道路格、2 个竖桥精灵、1 个横桥精灵和 2 个桥墩。新数据只改图集与裁片选择，不改 TDM、格数、路线、碰撞或坐标变换。 |
+| 路线与桥位 | 原版路线从 (-1.5, 10.5) 走到 (4.5, 10.5)，经过竖桥中心 (2.5, 10.5)；随后从 (12.5, 13.5) 到 (12.5, 6.5)，经过横桥中心 (12.5, 9.5)。所以敌人走上桥是原版 TDM 路线的必经行为，不是寻路从峡谷任意穿墙。桥梁绘制在敌人之后，敌人穿越时会被桥面图层覆盖。 |
+| 内置浏览器本地检查 | 重新加载 http://127.0.0.1:5186/ 后，Cow Gulch 显示了沙地、峡壁、河岸和道路变体；检查面板展示了原版路线节点。单波样本结束后已重置到 Frame 0，倍速恢复 1×，档案仍显示 Best $50。 |
+
+验证入口：
+
+- [terrain-rendering.test.ts](../tests/terrain-rendering.test.ts) 从 TDM 原始格和 Android 背景整形、随机变体及图集映射重建地图，并逐格对照静态 draw commands；同时锁定道路、桥梁与桥墩数量。
+- [content.test.ts](../tests/content.test.ts) 检查路线格落在阴影通道内，并检查两座桥覆盖原版路线中心。
+- [game.test.ts](../tests/game.test.ts) 与 [canvas-renderer.test.ts](../tests/canvas-renderer.test.ts) 检查敌人沿 TDM 路线经过出生、转向和出口格，桥位图层绘制在敌人上方，敌人脚底锚点与路线格一致。
+- test:ci 通过：TypeScript 检查、87 项单元测试、Vite 生产构建及 33 个 Playwright 桌面/触屏场景。

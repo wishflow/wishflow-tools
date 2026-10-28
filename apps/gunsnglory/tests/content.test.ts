@@ -51,7 +51,7 @@ test('contains the researched Cow Gulch scenario and exactly its first-map unit'
   assert.equal(cowGulchContent.previewWave?.enemy?.cashReward, 1);
   assert.equal(content.map.background.length, 289);
   assert.ok(content.map.streets.length > 30);
-  assert.match(content.source.variationPolicy, /first candidate/i);
+  assert.match(content.source.variationPolicy, /fixed.*seed/i);
 });
 
 test('keeps the converted Cow Gulch grid and route controls aligned with the raw TDM bytes', () => {
@@ -118,7 +118,11 @@ test('follows the original shadow route beneath both bridge overlays', () => {
   }
 
   for (const cell of traversedCells) {
-    assert.equal(backgroundByCell.get(cell), 'tiles_shadow', `${cell} must be an original shadow-route cell`);
+    const backgroundAsset = backgroundByCell.get(cell);
+    assert.ok(
+      backgroundAsset === 'tiles_shadow' || backgroundAsset === 'tiles_shadow_var',
+      'route cell must use an original shadow tile: ' + cell,
+    );
   }
   assert.ok(
     content.map.streets.some((tile: { asset: string; x: number; y: number; width: number; height: number }) =>
