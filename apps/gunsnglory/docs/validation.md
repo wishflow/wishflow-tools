@@ -314,5 +314,5 @@ T12 由 Game 记录实际消费的逐帧 `deltaMs` 和按顺序接受的命令�
 | `pnpm run test:ci` | 通过：TypeScript 检查、64 项单元测试、Vite 生产构建及 32 个 Playwright 场景。新增规则覆盖真实消费帧输入、版本和内容固定、周期/终局检查点、回放会话 ID/模式、结算一致、无正式存档权限及缺版本、损坏输入、摘要不符、结果不符、随机算法不支持、来源模式不支持和内容不可用错误。 |
 | 回放 UI 端到端 | Playwright 在 Cow Gulch 正式胜利后下载 JSON，再通过文件输入导回；状态报告核验通过的检查点数量和 Victory。Replay 结算显示不写入档案，正式档案仍为 $50；随后切换中英文确认动态状态正确，导入缺少版本的 JSON 时显示专属错误且保留当前重放结果；重启后重新进行正式胜利结算并成功保存，验证来源正式模式只用于“重新开始”，不会赋予重放正式资格。 |
 | Codex 内置浏览器本地实测 | 在本地 Vite 页面以 4× 完成单个正式战斗，下载战局 JSON 后通过可见的“Import replay”按钮选回文件；页面显示 `Replay verified · 4 checkpoints · Victory.`，结算为 Victory、最高分显示候选 $50，状态明确为 `Replay result · not added to the saved profile.`。检查窄屏布局后确认操作按钮单列、没有重复文件选择控件；本地档案仍保持 Cow Gulch $50。 |
-| 集成分支与公网发布 | 待 T12 功能分支通过审查并完成集成、GitHub Actions 与公网验证后补记。 |
-| 公网内置浏览器验收 | 待发布后执行；未完成前不报告 T12 已发布。 |
+| 集成与部署 | `8b4938b` 已快进合入本地 `gunsnglory` 和 `master` 并推送 `origin master`。[GitHub Actions workflow 40631844247](https://github.com/wishflow/wishflow-tools/actions/runs/40631844247) 成功；Guns’n’Glory 测试、共享检查、Cloudflare Pages 和 GitHub Pages 部署均通过，Worker 未触发。Cloudflare Pages 本次部署为 [`7c6dce31.wishflow-tools.pages.dev`](https://7c6dce31.wishflow-tools.pages.dev/gunsnglory/)。 |
+| 公网内置浏览器验收 | 在标准地址 `https://wishflow-tools.pages.dev/gunsnglory/` 刷新后验证：以 4× 完成 Cow Gulch 单波胜利，结算为生命 50、逃脱 0、击败 1、现金 $66、分数 $50；导出 JSON 并导入后显示“重放验证通过 · 4 个检查点 · 胜利”，重放结算明确“不写入已保存档案”，档案最高分保持 $50。测试将倍速恢复为 1×；页面无 console error。部署后已打开的旧标签页最初仍显示旧脚本，刷新标准地址后加载新重放面板。 |
