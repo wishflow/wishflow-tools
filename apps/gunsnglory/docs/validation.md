@@ -316,3 +316,16 @@ T12 由 Game 记录实际消费的逐帧 `deltaMs` 和按顺序接受的命令�
 | Codex 内置浏览器本地实测 | 在本地 Vite 页面以 4× 完成单个正式战斗，下载战局 JSON 后通过可见的“Import replay”按钮选回文件；页面显示 `Replay verified · 4 checkpoints · Victory.`，结算为 Victory、最高分显示候选 $50，状态明确为 `Replay result · not added to the saved profile.`。检查窄屏布局后确认操作按钮单列、没有重复文件选择控件；本地档案仍保持 Cow Gulch $50。 |
 | 集成与部署 | `8b4938b` 已快进合入本地 `gunsnglory` 和 `master` 并推送 `origin master`。[GitHub Actions workflow 40631844247](https://github.com/wishflow/wishflow-tools/actions/runs/40631844247) 成功；Guns’n’Glory 测试、共享检查、Cloudflare Pages 和 GitHub Pages 部署均通过，Worker 未触发。Cloudflare Pages 本次部署为 [`7c6dce31.wishflow-tools.pages.dev`](https://7c6dce31.wishflow-tools.pages.dev/gunsnglory/)。 |
 | 公网内置浏览器验收 | 在标准地址 `https://wishflow-tools.pages.dev/gunsnglory/` 刷新后验证：以 4× 完成 Cow Gulch 单波胜利，结算为生命 50、逃脱 0、击败 1、现金 $66、分数 $50；导出 JSON 并导入后显示“重放验证通过 · 4 个检查点 · 胜利”，重放结算明确“不写入已保存档案”，档案最高分保持 $50。测试将倍速恢复为 1×；页面无 console error。部署后已打开的旧标签页最初仍显示旧脚本，刷新标准地址后加载新重放面板。 |
+
+## 18. T13 无画面运行单个场景
+
+T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一个固定版本场景。测试策略只观察冻结的玩家可见白名单；Game 开局记录在首帧前校验。运行记录精确区分胜负、预算耗尽、取消、无效输入和执行错误，不读取或修改正式进度。当前没有实验 UI、方案编辑、持久化、批量或 CLI；完整实现边界见[模拟与自动化契约](simulation-and-automation.md#63-t13-当前实现范围)。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、84 项单元测试、Vite 生产构建及 33 个 Playwright 场景。Experiments 覆盖固定 seed 胜利/败北、内容/规则/策略版本不符、未知场景、拒绝 `latest`、帧/模拟时长/实体/墙钟预算、取消与会话关闭、非法意图/策略异常及无效/故障/倒退时钟。 |
+| T13 Playwright 浏览器集成 | Chromium 页面动态加载正式 Cow Gulch 内容、Game 和 Experiments Module；经 `Experiments.run()` 得到 Victory、`mode: experiment`、seed 42 和终局现金 $66。单场景行为不依赖 UI、Progress 或 IndexedDB。 |
+| `pnpm run test:catalog` | 通过：14 项导航目录、发布分类及静态站输出检查。 |
+| `pnpm run install:apps` 与 `pnpm run build:site` | 冻结安装全部登记应用依赖成功，共享站点及全部静态应用构建成功。3D Objects 输出既有的单 chunk 体积提示，其 bundle 检查仍通过。 |
+| Codex 内置浏览器本地预览 | 打开 Guns’n’Glory 生产构建预览 `http://127.0.0.1:4174/`；页面正常显示 Cow Gulch、HUD 与现有控制。浏览器 console 的 error/warn 为空。T13 没有新增可见控件，其真实运行已由上一行 Chromium 行为测试核验。 |
+| 集成与发布 | 当前记录仅覆盖功能分支本地验证；集成提交、GitHub Actions、公开部署及公网浏览器检查在后续发布完成后补记。 |

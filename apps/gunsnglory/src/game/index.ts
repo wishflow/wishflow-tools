@@ -17,7 +17,7 @@ import type {
   ReplayState,
 } from './replay';
 
-export { GameReplayError } from './replay';
+export { GameReplayError, GAME_RULES_VERSION } from './replay';
 export type {
   GameReplayCheckpoint,
   GameReplayDocument,
@@ -27,6 +27,15 @@ export type {
   GameReplayTerminal,
   GameStartRecord,
 } from './replay';
+
+export type GameOpenErrorCode = 'scenario-unavailable';
+
+export class GameOpenError extends Error {
+  constructor(readonly code: GameOpenErrorCode, message: string) {
+    super(message);
+    this.name = 'GameOpenError';
+  }
+}
 
 export interface Rectangle {
   x: number;
@@ -709,7 +718,7 @@ export function createGame(options: {
 
   const openSession: Game['open'] = async ({ scenarioId, randomSeed, mode = 'debug' }) => {
       const scenario = scenarios.get(scenarioId);
-      if (!scenario) throw new Error('Unknown scenario: ' + scenarioId);
+      if (!scenario) throw new GameOpenError('scenario-unavailable', 'Unknown scenario: ' + scenarioId);
       if (mode === 'formal' && scenario.formalSettlementSupported !== true) {
         throw new Error('Formal mode is not supported for scenario: ' + scenarioId);
       }

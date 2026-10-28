@@ -4,7 +4,7 @@
 
 用户已确认 `Game`、`Progress`、`Experiments` 三个深 Module，以及首五个纵向小切片的粒度。本计划采用这些决定，不再将它们列为待确认候选。
 
-**当前进度：T01–T12 已合入 `gunsnglory` 和 `master` 并发布。** T10 最终提交 `faf018c` 通过本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器检查；T11 提交 `de78951` 增加暂停单步和只读检查，经本地应用 CI、共享站点构建、GitHub Actions 与公网内置浏览器验证。T12 提交 `8b4938b` 增加战局记录与确定性重放，经本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器往返验证；详见[T12 验收记录](validation.md#17-t12-记录与重放战局)。真实 Android AVD 窗口未能由内置控制接管，目标设备触控仍未验证，详见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。前十二个切片不代表完整首关或 M1；T13–T26 与后续任务族尚未实现。
+**当前进度：T01–T12 已合入 `gunsnglory` 和 `master` 并发布。** T10 最终提交 `faf018c` 通过本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器检查；T11 提交 `de78951` 增加暂停单步和只读检查，经本地应用 CI、共享站点构建、GitHub Actions 与公网内置浏览器验证。T12 提交 `8b4938b` 增加战局记录与确定性重放，经本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器往返验证；详见[T12 验收记录](validation.md#17-t12-记录与重放战局)。T13 已在功能分支实现并通过本地应用 CI、共享站点构建及内置浏览器本地预览，集成与线上发布仍待验收；详见[T13 验收记录](validation.md#18-t13-无画面运行单个场景)。真实 Android AVD 窗口未能由内置控制接管，目标设备触控仍未验证，详见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。T01–T13 均不代表完整首关或 M1；T14–T26 与后续任务族尚未实现。
 
 需求编号对应[产品规格](spec.md)的 27 条用户故事，本文以 `US01` 至 `US27` 引用。接口与依赖以[架构设计](architecture.md)为准，领域名称以[词汇表](GLOSSARY.md)为准；存储及模拟细节分别由[存储契约](storage-contracts.md)和[模拟契约](simulation-and-automation.md)维护。
 
@@ -144,11 +144,10 @@
 
 ## 4. 后续窄切片
 
-T06–T12 已实现并发布；T10 的 Android AVD 触控仍待验证。实现依据和验证记录见[验证记录](validation.md#11-t06-拖动单位与地形碰撞验收)、[T07 招募验收](validation.md#12-t07-招募-gunslinger-验收)、[T08 升级验收](validation.md#13-t08-升级-cow-gulch-gunslinger)、[T09 暂停恢复验收](validation.md#14-t09-暂停恢复及后台返回验收)、[T10 触屏缩放与命中验收](validation.md#15-t10-触屏缩放与命中验收)、[T11 单步与只读检查验收](validation.md#16-t11-单步与只读检查验收)及[T12 记录与重放战局](validation.md#17-t12-记录与重放战局)。下表仅保留尚未实现任务，通过公共 Module 和相应浏览器消费者验收。每次只引入当前行为需要的内部复杂性，不以另一模块的实现作为方便性前置。
+T06–T12 已实现并发布；T13 的单场景运行器已实现并完成本地验收，集成/发布待验收。T10 的 Android AVD 触控仍待验证。实现依据和验证记录见[验证记录](validation.md#11-t06-拖动单位与地形碰撞验收)、[T07 招募验收](validation.md#12-t07-招募-gunslinger-验收)、[T08 升级验收](validation.md#13-t08-升级-cow-gulch-gunslinger)、[T09 暂停恢复验收](validation.md#14-t09-暂停恢复及后台返回验收)、[T10 触屏缩放与命中验收](validation.md#15-t10-触屏缩放与命中验收)、[T11 单步与只读检查验收](validation.md#16-t11-单步与只读检查验收)、[T12 记录与重放战局](validation.md#17-t12-记录与重放战局)及[T13 无画面运行单个场景](validation.md#18-t13-无画面运行单个场景)。下表仅保留尚未实现任务，通过公共 Module 和相应浏览器消费者验收。每次只引入当前行为需要的内部复杂性，不以另一模块的实现作为方便性前置。
 
 | ID / 交付行为 | 故事 | Blocked by | 验收与回滚边界 |
 | --- | --- | --- | --- |
-| T13：无画面运行单个场景 | US23、US24、US26 | T04 | Experiments 以显式请求调用 Game.open，在首帧前固定实际 StartRecord；策略只见允许观察并提交合法意图；结果与错误分类明确。不依赖学习/回放 UI 或 T14 的公开 prepare。回退单场景入口。 |
 | T14：比较两套数值方案 | US19、US20、US21、US22 | T13 | 首次因方案编辑需要引入 Game.prepare，取得完整基线参数与精确版本；prepare 不创建战局，不读取时间或消耗随机。Experiments 据此冻结两套方案，同场景/策略/样本比较并显示样本量；草稿不影响已运行输入，不接触 Progress。回退比较入口。 |
 | T15：保存并重新打开实验 | US19、US20、US22 | T14 | Experiments 内部存储的内存/IndexedDB 实现共用契约；冻结和产物提交可验证。无 Progress 前置；回退时保留不可变实验。 |
 | T16：CLI 运行串行批次 | US23、US24、US25、US26 | T13、T14 | 小批次导出结果与失败输入；预算/取消/错误分别报告；pi 真实调用。无需实验仓库或浏览器。回退 CLI，保留结果。 |
