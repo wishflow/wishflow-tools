@@ -2,7 +2,7 @@
 
 ## 1. 决策与阅读范围
 
-用户已确认采用 **Game、Progress、Experiments 三个公共深 Module**，以它们的 Interface 作为主要行为测试 Seam。本文是该决策的统一架构定义，取代按全局 `core / application / ports / simulation` 划分公共能力的方案。T01–T10 已实现并发布，覆盖地图视口、测试倍速、受控战斗与结算、Cow Gulch 样本档案、单位移动与地形碰撞、招募、升级、暂停恢复，以及基于共享地图变换的触屏缩放与命中。T10 的真实 Android AVD 触控尚未验证；自动化和公网浏览器验证见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。T05 的本地档案只覆盖受支持的 Cow Gulch 样本，前十个切片也不等于完整首关或 M1。完整关卡解锁、冲突恢复、Experiments 与其他架构能力仍待后续切片，见[实施计划](implementation-plan.md)。
+用户已确认采用 **Game、Progress、Experiments 三个公共深 Module**，以它们的 Interface 作为主要行为测试 Seam。本文是该决策的统一架构定义，取代按全局 `core / application / ports / simulation` 划分公共能力的方案。T01–T10 已实现并发布，覆盖地图视口、测试倍速、受控战斗与结算、Cow Gulch 样本档案、单位移动与地形碰撞、招募、升级、暂停恢复，以及基于共享地图变换的触屏缩放与命中。T11 已实现并通过本地验证，当前待合入和发布；它增加暂停单步和只读检查覆盖层。T10 的真实 Android AVD 触控尚未验证；自动化和公网浏览器验证见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。T05 的本地档案只覆盖受支持的 Cow Gulch 样本，前 11 个切片并不等于完整首关或 M1。完整关卡解锁、冲突恢复、Experiments 与其他架构能力仍待后续切片，见[实施计划](implementation-plan.md)。
 
 产品目标与范围见[产品规格](spec.md)，领域用语见[领域词汇](GLOSSARY.md)。本文负责能力封装、依赖和状态归属；时间与回放细节见[模拟契约](simulation-and-automation.md)，持久化细节见[存储契约](storage-contracts.md)。
 

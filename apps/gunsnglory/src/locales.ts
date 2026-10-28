@@ -7,6 +7,9 @@ export const messages = {
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
   'Pause battle': { en: 'Pause battle', zh: '暂停战斗' },
   'Resume battle': { en: 'Resume battle', zh: '继续战斗' },
+  'Inspect battle': { en: 'Inspect battle', zh: '检查战局' },
+  'Show map overlay': { en: 'Show map overlay', zh: '显示地图覆盖层' },
+  'Single step · 16 ms': { en: 'Single step · 16 ms', zh: '单步推进 · 16 毫秒' },
   'Click the gunslinger to select it. Click empty ground to clear selection.': {
     en: 'Click the gunslinger to select it. Click empty ground to clear selection.',
     zh: '点击枪手进行选择；点击空地取消选择。',

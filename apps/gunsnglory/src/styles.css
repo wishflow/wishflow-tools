@@ -252,6 +252,71 @@ body {
   outline-offset: 3px;
 }
 
+.inspection-panel {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid rgba(69, 224, 210, 0.35);
+  border-radius: 0.7rem;
+  background: rgba(19, 24, 22, 0.72);
+}
+
+.inspection-panel summary {
+  color: #9ee9e2;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inspection-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.inspection-actions label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #d2c6b1;
+}
+
+.inspection-actions input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #45e0d2;
+}
+
+.inspection-actions button {
+  min-height: 2.4rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid rgba(69, 224, 210, 0.5);
+  border-radius: 0.55rem;
+  color: #d9fff9;
+  background: #24413c;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.inspection-actions button:disabled {
+  color: #9eaaa5;
+  background: #28312e;
+  cursor: default;
+}
+
+.inspection-panel p {
+  margin: 0;
+  color: #d2c6b1;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.inspection-panel [data-testid="inspection-route"] {
+  color: #8ee3d9;
+}
+
 .recruit-confirmation {
   width: min(28rem, calc(100% - 2rem));
   margin: auto;

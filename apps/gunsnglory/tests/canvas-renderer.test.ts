@@ -11,6 +11,8 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
   const unitImage = {} as HTMLImageElement;
   const drawCalls: unknown[][] = [];
   const clipRects: number[][] = [];
+  const overlayText: string[] = [];
+  const routeCommands: string[] = [];
   let pendingRect: number[] | undefined;
   const context = {
     save() {},
@@ -21,12 +23,21 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
     rect(...args: number[]) { pendingRect = args; },
     clip() { if (pendingRect) clipRects.push(pendingRect); },
     drawImage(...args: unknown[]) { drawCalls.push(args); },
+    moveTo() { routeCommands.push('moveTo'); },
+    lineTo() { routeCommands.push('lineTo'); },
+    arc() {},
+    stroke() {},
+    fill() {},
+    setLineDash() {},
+    measureText(text: string) { return { width: text.length * 6 } as TextMetrics; },
+    fillText(text: string) { overlayText.push(text); },
   } as unknown as CanvasRenderingContext2D;
   const view: GameView = {
     frame: 0,
     elapsedMs: 0,
     paused: false,
     scenarioId: 'cow-gulch',
+    route: [{ x: -1.5, y: 10.5 }, { x: 4.5, y: 10.5 }, { x: 16.5, y: 3.5 }],
     map: {
       width: 17,
       height: 17,
@@ -48,9 +59,22 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
       moving: false,
       upgradeLevel: 0,
       positionFine: { x: (8 * 7680) + 3840, y: (8 * 7680) + 5760 },
+      attackRange: {
+        centerTenthTiles: { x: 85, y: 82 },
+        maximumTenthTiles: 50,
+        boundary: 'exclusive',
+      },
       frame: { x: 0, y: 0, width: 32, height: 44 },
       render: { x: 8, y: 7.625, width: 1, height: 1.375 },
       hitArea: { x: 8, y: 7.625, width: 1, height: 1.375 },
+      weapon: {
+        damage: 10,
+        damageType: 'light',
+        rangeFine: 38400,
+        reloadTimeMs: 500,
+        projectileSpeed: 100,
+        damageStyle: 0,
+      },
     }],
     enemies: [{
       id: 'pioneer-1',
@@ -159,5 +183,15 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
     Math.abs(bottomAtFractionalScale.origin.y * 1.3 - Math.round(bottomAtFractionalScale.origin.y * 1.3)) < 1e-9,
     'the centered map stays aligned to the display-pixel grid',
   );
+
+  drawGame(context, view, {
+    ground: mapImage,
+    bridge: bridgeImage,
+    pioneer_male: enemyImage,
+    unit: unitImage,
+  }, 1, undefined, true);
+  assert.equal(routeCommands.filter((command) => command === 'lineTo').length, view.route!.length - 1);
+  assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
+  assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
 });

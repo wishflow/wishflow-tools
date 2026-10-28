@@ -60,6 +60,17 @@ app.innerHTML = [
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
   '      <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
   '    </div>',
+  '    <details class="inspection-panel" data-testid="inspection-panel">',
+  '      <summary>Inspect battle</summary>',
+  '      <div class="inspection-actions">',
+  '        <label><input type="checkbox" data-testid="inspection-overlay"> Show map overlay</label>',
+  '        <button type="button" data-testid="single-step" data-action="single-step" disabled>Single step · 16 ms</button>',
+  '      </div>',
+  '      <p data-testid="inspection-frame"></p>',
+  '      <p data-testid="inspection-units"></p>',
+  '      <p data-testid="inspection-enemies"></p>',
+  '      <p data-testid="inspection-route"></p>',
+  '    </details>',
   '    <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-labelledby="recruit-confirmation-title">',
   '      <h2 id="recruit-confirmation-title"></h2>',
   '      <div class="recruit-confirmation-actions">',
@@ -96,6 +107,12 @@ const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recru
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
 const pauseStatusElement = app.querySelector<HTMLElement>('[data-testid="pause-status"]');
 const pauseButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-toggle"]');
+const singleStepButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="single-step"]');
+const inspectionOverlayInputElement = app.querySelector<HTMLInputElement>('[data-testid="inspection-overlay"]');
+const inspectionFrameElement = app.querySelector<HTMLElement>('[data-testid="inspection-frame"]');
+const inspectionUnitsElement = app.querySelector<HTMLElement>('[data-testid="inspection-units"]');
+const inspectionEnemiesElement = app.querySelector<HTMLElement>('[data-testid="inspection-enemies"]');
+const inspectionRouteElement = app.querySelector<HTMLElement>('[data-testid="inspection-route"]');
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
@@ -130,6 +147,8 @@ if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElem
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
   || !pauseStatusElement || !pauseButtonElement
+  || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
+  || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
@@ -150,6 +169,12 @@ const recruitStatus: HTMLElement = recruitStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
 const pauseStatus: HTMLElement = pauseStatusElement;
 const pauseControl: HTMLButtonElement = pauseButtonElement;
+const singleStepControl: HTMLButtonElement = singleStepButtonElement;
+const inspectionOverlayInput: HTMLInputElement = inspectionOverlayInputElement;
+const inspectionFrame: HTMLElement = inspectionFrameElement;
+const inspectionUnits: HTMLElement = inspectionUnitsElement;
+const inspectionEnemies: HTMLElement = inspectionEnemiesElement;
+const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
@@ -190,6 +215,7 @@ let profile: ProfileView = {
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let pauseReason: 'manual' | 'background' | undefined;
+let showInspectionOverlay = false;
 let pageLeaving = false;
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | undefined;
 let profileLoadFailed = false;
@@ -215,6 +241,19 @@ const languageMessages = {
     resumeBattle: 'Resume battle',
     battlePaused: 'Battle paused.',
     battlePausedInBackground: 'Battle paused automatically while this tab was in the background.',
+    inspectTitle: 'Inspect battle',
+    showOverlay: 'Show map overlay',
+    singleStep: 'Single step · 16 ms',
+    inspectionFrame: (frame: number, elapsedMs: number) => `Frame ${frame} · ${elapsedMs} ms`,
+    inspectionUnits: (units: string) => `Units: ${units}`,
+    inspectionEnemies: (enemies: string) => `Enemies: ${enemies}`,
+    inspectionRoute: (route: string) => `Route: ${route}`,
+    noUnits: 'none',
+    noEnemies: 'none',
+    noRoute: 'not available',
+    position: (x: string, y: string) => `at (${x}, ${y})`,
+    unitRange: (range: string, boundary: string) => ` · range ${boundary} ${range} cells`,
+    enemyHealth: (hp: number, maxHp: number) => ` · HP ${hp}/${maxHp}`,
     waiting: (lives: number, number: number, cash: number) => `Wave ${number} ready · Lives ${lives} · Cash $${cash}`,
     active: (lives: number, number: number, enemies: number, cash: number) => `Wave ${number} · Lives ${lives} · Enemies ${enemies} · Cash $${cash}`,
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `Wave ${number} complete · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
@@ -275,6 +314,19 @@ const languageMessages = {
     resumeBattle: '继续战斗',
     battlePaused: '战斗已暂停。',
     battlePausedInBackground: '切换到后台时已自动暂停战斗。',
+    inspectTitle: '战局检查',
+    showOverlay: '显示地图覆盖层',
+    singleStep: '单步推进 · 16 毫秒',
+    inspectionFrame: (frame: number, elapsedMs: number) => `帧 ${frame} · ${elapsedMs} 毫秒`,
+    inspectionUnits: (units: string) => `单位：${units}`,
+    inspectionEnemies: (enemies: string) => `敌人：${enemies}`,
+    inspectionRoute: (route: string) => `路线：${route}`,
+    noUnits: '无',
+    noEnemies: '无',
+    noRoute: '不可用',
+    position: (x: string, y: string) => `位置 (${x}, ${y})`,
+    unitRange: (range: string, boundary: string) => ` · 射程 ${boundary} ${range} 格`,
+    enemyHealth: (hp: number, maxHp: number) => ` · 生命 ${hp}/${maxHp}`,
     waiting: (lives: number, number: number, cash: number) => `第 ${number} 波待开始 · 生命 ${lives} · 现金 $${cash}`,
     active: (lives: number, number: number, enemies: number, cash: number) => `第 ${number} 波 · 生命 ${lives} · 敌人 ${enemies} · 现金 $${cash}`,
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `第 ${number} 波完成 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
@@ -414,6 +466,33 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   pauseControl.disabled = !view.paused
     && view.wave?.phase !== 'active'
     && !view.units.some((candidate) => candidate.moving);
+  singleStepControl.textContent = messages.singleStep;
+  singleStepControl.disabled = !view.paused || view.wave?.settlement !== undefined;
+  inspectionOverlayInput.checked = showInspectionOverlay;
+  inspectionFrame.textContent = messages.inspectionFrame(view.frame, view.elapsedMs);
+  inspectionUnits.textContent = messages.inspectionUnits(view.units.length === 0
+    ? messages.noUnits
+    : view.units.map((unit) => {
+      const x = (unit.positionFine.x / 7680).toFixed(2);
+      const y = (unit.positionFine.y / 7680).toFixed(2);
+      const range = unit.attackRange
+        ? messages.unitRange(
+          (unit.attackRange.maximumTenthTiles / 10).toFixed(1),
+          unit.attackRange.boundary === 'exclusive' ? '<' : '≤',
+        )
+        : '';
+      return `${unit.id} ${messages.position(x, y)}${range}`;
+    }).join(' · '));
+  inspectionEnemies.textContent = messages.inspectionEnemies(view.enemies.length === 0
+    ? messages.noEnemies
+    : view.enemies.map((enemy) => {
+      const x = (enemy.positionFine.x / 7680).toFixed(2);
+      const y = (enemy.positionFine.y / 7680).toFixed(2);
+      return `${enemy.id} ${messages.position(x, y)}${messages.enemyHealth(enemy.hitPoints, enemy.maxHitPoints)}`;
+    }).join(' · '));
+  inspectionRoute.textContent = messages.inspectionRoute(view.route?.length
+    ? view.route.map((point) => `(${point.x.toFixed(1)}, ${point.y.toFixed(1)})`).join(' → ')
+    : messages.noRoute);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
   if (view.wave) {
@@ -591,7 +670,7 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
 function redraw(resize = false): void {
   const displayPixelScale = getDisplayPixelScale();
   if (resize || !context) context = resizeCanvas(canvas, displayPixelScale);
-  drawGame(context, view, images, displayPixelScale, mapCamera);
+  drawGame(context, view, images, displayPixelScale, mapCamera, showInspectionOverlay, getLanguage());
 }
 
 function getDisplayPixelScale(): number {
@@ -868,6 +947,18 @@ pauseControl.addEventListener('click', () => {
   stopGameLoop();
   view = session.pause();
   renderStatus();
+  redraw();
+});
+
+singleStepControl.addEventListener('click', () => {
+  if (!view.paused || singleStepControl.disabled) return;
+  view = session.singleStep({ deltaMs: 16 });
+  renderStatus();
+  redraw();
+});
+
+inspectionOverlayInput.addEventListener('change', () => {
+  showInspectionOverlay = inspectionOverlayInput.checked;
   redraw();
 });
 
@@ -1177,4 +1268,7 @@ canvas.addEventListener('pointercancel', (event: PointerEvent) => finishPointerC
 canvas.addEventListener('lostpointercapture', (event: PointerEvent) => finishPointerContact(event.pointerId));
 window.addEventListener('blur', cancelPointerGesture);
 
-subscribeLanguage(() => renderStatus());
+subscribeLanguage(() => {
+  renderStatus();
+  redraw();
+});

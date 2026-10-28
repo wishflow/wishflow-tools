@@ -291,3 +291,15 @@ T10 在表现层加入临时地图相机：初始视图保持原地图适配；�
 | 触控与设备边界 | Playwright 移动浏览器通过实际多点触摸事件验证缩放焦点、缩放后命中和多指状态转换。ADB 确认 `emulator-5554` 已启动，Android Studio Device Manager 显示 AVD 在线；但 Codex CUA 未暴露独立 Emulator 窗口，无法在该 AVD 内实际操作游戏，因此真实 Android 触控仍未验证。 |
 | 集成提交 | `adb016a` 实现触屏相机；`faf018c` 修复并恢复 3× 上限。两者均已快进合入本地 `gunsnglory` 与 `master`，最终 `master` 提交为 `faf018c`。 |
 | GitHub Actions 与发布 | [workflow 40620555023](https://github.com/wishflow/wishflow-tools/actions/runs/40620555023) 成功；Guns’n’Glory CI、共享站点检查、Cloudflare Pages 和 GitHub Pages 部署均通过，Worker 未触发。 |
+
+## 16. T11 单步与只读检查验收
+
+T11 为 `GameSession` 增加暂停态 `singleStep`：它使用同一条 `advance` 规则路径，只执行一次给定时间输入，随后保持暂停；未暂停或已结算会话拒绝单步。浏览器学习控件以 16 ms 为一帧，并只在暂停时可用。检查面板从只读 `GameView` 展示帧号、时间、单位/敌人位置与生命、单位射程和路线点；Canvas 覆盖层按 Cow Gulch 出生偏移、转向格中心与出口绘制路线，同时显示单位射程和对象标签。切换覆盖层只重绘，不调用 Game。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、63 项单元测试、Vite 生产构建及 31 个 Playwright 场景。新增规则测试将暂停单步与普通推进结果对照，Game 观察验证攻击中心/严格射程边界，Canvas 测试校验路线段、单位射程及对象标签，移动端场景验证触屏操作。 |
+| 单步行为 | Game 测试验证帧号恰增 1、经过时间只增加指定的 37 ms、单步后继续暂停；同随机种子下与普通 `advance(37)` 结果完全一致；未暂停会话拒绝单步。 |
+| 检查无副作用 | Playwright 在暂停战局中检查帧、单位、敌人和路线，开启/关闭覆盖层只改变 Canvas 像素；帧号、游戏时间和波次状态保持不变，等待期间画面继续冻结。 |
+| Codex 内置浏览器本地实测 | `http://127.0.0.1:5175/` 启动 Cow Gulch 波次并暂停；实测单步前为 Frame 464 / 964 ms，单步后为 Frame 465 / 980 ms，暂停提示仍显示。检查面板显示枪手、拓荒者、严格小于 5.0 格的攻击距离阈值及从出生点到出口的路线；开启覆盖层后画布显示青色路线、黄色射程边界和对象标签，并验证边缘标签未裁切及中英文切换。 |
+| 发布状态 | 本节的本地 CI 与内置浏览器结果已验证；合入及公网发布待完成后补录。 |

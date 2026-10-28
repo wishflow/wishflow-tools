@@ -124,6 +124,12 @@ export interface UnitView extends ScenarioUnit {
   selected: boolean;
   moving: boolean;
   positionFine: { x: number; y: number };
+  /** Effective target radius and origin used by Game's strict outer-range check. */
+  attackRange?: {
+    centerTenthTiles: { x: number; y: number };
+    maximumTenthTiles: number;
+    boundary: 'exclusive' | 'inclusive';
+  };
   upgradeLevel: number;
   nextUpgrade?: UnitUpgradeDefinition;
 }
@@ -175,6 +181,11 @@ export interface WaveSettlement {
   highScoreCandidate: number;
 }
 
+export interface RoutePoint {
+  x: number;
+  y: number;
+}
+
 export type GameMode = 'formal' | 'debug' | 'experiment' | 'replay';
 
 export interface GameSettlementRecord extends WaveSettlement {
@@ -202,6 +213,8 @@ export interface GameView {
   paused: boolean;
   scenarioId: string;
   map: ScenarioContent['map'];
+  /** Read-only route centerline for learning and rendering overlays. */
+  route?: readonly RoutePoint[];
   units: readonly UnitView[];
   enemies: readonly EnemyView[];
   shots: readonly ShotView[];
@@ -223,6 +236,8 @@ export interface GameSession {
   submitIntent(intent: GameIntent): boolean;
   pause(): GameView;
   resume(): GameView;
+  /** Advances exactly one ordinary frame while paused, then remains paused. */
+  singleStep(input?: { deltaMs?: number }): GameView;
   advance(input?: { deltaMs?: number }): GameView;
   observe(): GameView;
   terminalRecord(): GameSettlementRecord | undefined;
@@ -365,6 +380,13 @@ function unitView(unit: MutableUnit, maxUpgrades: number): UnitView {
     selected: unit.selected,
     moving: unit.movementTargetFine !== undefined,
     positionFine: { ...positionFine },
+    ...(unit.weapon ? {
+      attackRange: {
+        centerTenthTiles: unitAttackCenterTenthTiles(unit),
+        maximumTenthTiles: weaponRangeTenthTiles(unit.weapon),
+        boundary: 'exclusive' as const,
+      },
+    } : {}),
     upgradeLevel: unit.upgradeLevel,
     ...(upgrade ? { nextUpgrade: clone(upgrade) } : {}),
   };
@@ -549,17 +571,27 @@ function createPreviewEnemy(
 }
 
 function unitEnemyDistanceSquare(unit: MutableUnit, enemy: MutableEnemy): number {
-  const unitX = tenthTileCoordinate(unit.positionFine.x);
-  const unitY = tenthTileCoordinate(unit.positionFine.y - FIELD_CENTER_HALF);
+  const unitCenter = unitAttackCenterTenthTiles(unit);
   const enemyX = tenthTileCoordinate(enemy.positionFine.x);
   const enemyY = tenthTileCoordinate(enemy.positionFine.y);
-  const dx = unitX - enemyX;
-  const dy = unitY - enemyY;
+  const dx = unitCenter.x - enemyX;
+  const dy = unitCenter.y - enemyY;
   return (dx * dx) + (dy * dy);
 }
 
+function unitAttackCenterTenthTiles(unit: MutableUnit): { x: number; y: number } {
+  return {
+    x: tenthTileCoordinate(unit.positionFine.x),
+    y: tenthTileCoordinate(unit.positionFine.y - FIELD_CENTER_HALF),
+  };
+}
+
+function weaponRangeTenthTiles(weapon: UnitWeaponDefinition): number {
+  return Math.trunc((weapon.rangeFine * 10) / FINE_UNITS_PER_CELL);
+}
+
 function maxWeaponSquareRange(weapon: UnitWeaponDefinition): number {
-  const rangeInTenthTiles = Math.trunc((weapon.rangeFine * 10) / FINE_UNITS_PER_CELL);
+  const rangeInTenthTiles = weaponRangeTenthTiles(weapon);
   return rangeInTenthTiles * rangeInTenthTiles;
 }
 
@@ -703,6 +735,15 @@ export function createGame(options: {
         if (closed) throw new Error('Game session is closed');
       };
 
+      const route: RoutePoint[] | undefined = scenario.previewWave ? [
+        {
+          x: scenario.previewWave.spawn.cell.x - 1.5,
+          y: scenario.previewWave.spawn.cell.y + 0.5,
+        },
+        ...scenario.previewWave.redirects.map(({ cell }) => ({ x: cell.x + 0.5, y: cell.y + 0.5 })),
+        { x: scenario.previewWave.exit.x + 0.5, y: scenario.previewWave.exit.y + 0.5 },
+      ] : undefined;
+
       const observe = (): GameView => {
         assertOpen();
         return freezeDeep({
@@ -711,6 +752,7 @@ export function createGame(options: {
           paused,
           scenarioId: scenario.id,
           map: scenario.map,
+          ...(route ? { route } : {}),
           units: units.map((unit) => unitView(unit, scenario.maxUpgrades ?? 0)),
           enemies: (wave?.enemies ?? []).map((enemy) => ({
             id: enemy.id,
@@ -774,6 +816,18 @@ export function createGame(options: {
         resume(): GameView {
           assertOpen();
           paused = false;
+          return observe();
+        },
+        singleStep(input: { deltaMs?: number } = {}): GameView {
+          assertOpen();
+          if (!paused) throw new Error('Game session must be paused before single-stepping');
+          if (wave?.settlement) throw new Error('A settled game session cannot be single-stepped');
+          paused = false;
+          try {
+            session.advance(input);
+          } finally {
+            paused = true;
+          }
           return observe();
         },
         submitIntent(intent: GameIntent): boolean {

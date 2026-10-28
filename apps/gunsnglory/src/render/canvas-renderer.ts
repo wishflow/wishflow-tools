@@ -1,4 +1,4 @@
-import type { Direction, EnemyView, GameView, RenderTile, ShotView } from '../game';
+import type { Direction, EnemyView, GameView, RenderTile, ShotView, UnitView } from '../game';
 import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
@@ -123,12 +123,130 @@ function drawShot(context: CanvasRenderingContext2D, shot: ShotView, viewport: M
   context.stroke();
 }
 
+function drawInspectionLabel(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  text: string,
+  viewport: MapViewport,
+  color: string,
+): void {
+  const fontSize = Math.max(8, 9 * viewport.scaleFactor);
+  const padding = Math.max(2, 3 * viewport.scaleFactor);
+  context.font = `${fontSize}px ui-monospace, monospace`;
+  const width = context.measureText(text).width + padding * 2;
+  const height = fontSize + padding * 2;
+  const labelX = Math.max(
+    viewport.origin.x + (width / 2),
+    Math.min(x, viewport.origin.x + viewport.mapWidth - (width / 2)),
+  );
+  const labelTop = Math.max(
+    viewport.origin.y,
+    Math.min(y - height, viewport.origin.y + viewport.mapHeight - height),
+  );
+  context.fillStyle = 'rgba(20, 15, 10, 0.92)';
+  context.fillRect(labelX - width / 2, labelTop, width, height);
+  context.fillStyle = color;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, labelX, labelTop + height / 2);
+}
+
+function drawInspectionOverlay(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  viewport: MapViewport,
+  language: 'en' | 'zh',
+): void {
+  const toScreen = (x: number, y: number) => ({
+    x: viewport.origin.x + x * viewport.tileSize,
+    y: viewport.origin.y + y * viewport.tileSize,
+  });
+
+  if (view.route && view.route.length > 1) {
+    context.beginPath();
+    view.route.forEach((point, index) => {
+      const screen = toScreen(point.x, point.y);
+      if (index === 0) context.moveTo(screen.x, screen.y);
+      else context.lineTo(screen.x, screen.y);
+    });
+    context.strokeStyle = '#45e0d2';
+    context.lineWidth = Math.max(1.5, 2 * viewport.scaleFactor);
+    context.lineCap = 'round';
+    context.setLineDash([5 * viewport.scaleFactor, 3 * viewport.scaleFactor]);
+    context.stroke();
+    context.setLineDash([]);
+    for (const [index, point] of view.route.entries()) {
+      const screen = toScreen(point.x, point.y);
+      context.beginPath();
+      context.arc(screen.x, screen.y, Math.max(2, 2.5 * viewport.scaleFactor), 0, Math.PI * 2);
+      context.fillStyle = index === view.route.length - 1 ? '#f17b56' : '#45e0d2';
+      context.fill();
+    }
+  }
+
+  for (const unit of view.units) drawUnitInspection(context, unit, viewport, toScreen, language);
+  for (const enemy of view.enemies) {
+    const logical = { x: enemy.positionFine.x / 7680, y: enemy.positionFine.y / 7680 };
+    const screen = toScreen(logical.x, logical.y);
+    drawInspectionLabel(
+      context,
+      screen.x,
+      screen.y - 24 * viewport.scaleFactor,
+      language === 'zh'
+        ? `拓荒者生命 ${enemy.hitPoints}/${enemy.maxHitPoints}`
+        : `Pioneer HP ${enemy.hitPoints}/${enemy.maxHitPoints}`,
+      viewport,
+      enemy.alive ? '#ffe28a' : '#ef9b84',
+    );
+  }
+}
+
+function drawUnitInspection(
+  context: CanvasRenderingContext2D,
+  unit: UnitView,
+  viewport: MapViewport,
+  toScreen: (x: number, y: number) => { x: number; y: number },
+  language: 'en' | 'zh',
+): void {
+  const attackRange = unit.attackRange;
+  if (attackRange && attackRange.maximumTenthTiles > 0) {
+    const center = toScreen(
+      attackRange.centerTenthTiles.x / 10,
+      attackRange.centerTenthTiles.y / 10,
+    );
+    context.beginPath();
+    context.arc(center.x, center.y, (attackRange.maximumTenthTiles / 10) * viewport.tileSize, 0, Math.PI * 2);
+    context.strokeStyle = 'rgba(255, 216, 91, 0.9)';
+    context.lineWidth = Math.max(1, 1.5 * viewport.scaleFactor);
+    context.setLineDash([4 * viewport.scaleFactor, 3 * viewport.scaleFactor]);
+    context.stroke();
+    context.setLineDash([]);
+  }
+
+  const spriteX = viewport.origin.x + (unit.render.x + unit.render.width / 2) * viewport.tileSize;
+  const spriteY = viewport.origin.y + unit.render.y * viewport.tileSize;
+  const rangeLabel = !attackRange ? '' : language === 'zh'
+    ? ` · 射程 ${attackRange.boundary === 'exclusive' ? '<' : '≤'} ${(attackRange.maximumTenthTiles / 10).toFixed(1)}`
+    : ` · R ${attackRange.boundary === 'exclusive' ? '<' : '≤'} ${(attackRange.maximumTenthTiles / 10).toFixed(1)}`;
+  drawInspectionLabel(
+    context,
+    spriteX,
+    spriteY,
+    `${language === 'zh' ? '单位' : 'Unit'} ${unit.type}${rangeLabel}`,
+    viewport,
+    '#a9e8ff',
+  );
+}
+
 export function drawGame(
   context: CanvasRenderingContext2D,
   view: GameView,
   images: GameImages,
   displayPixelScale = 1,
   camera: Readonly<MapCamera> = DEFAULT_MAP_CAMERA,
+  showInspectionOverlay = false,
+  language: 'en' | 'zh' = 'en',
 ): void {
   context.save();
   context.clearRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
@@ -187,6 +305,8 @@ export function drawGame(
       context.setLineDash([]);
     }
   }
+
+  if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 
   context.restore();
 }

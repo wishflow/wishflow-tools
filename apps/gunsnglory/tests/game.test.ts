@@ -327,6 +327,19 @@ test('the upgraded Gunslinger fires on the researched faster reload while the ba
   assert.equal(baseCooling.shots.length, 0, 'the base cooldown still has 50 ms remaining at 200 ms');
 });
 
+test('publishes the exact read-only attack origin and exclusive radius used by targeting', async () => {
+  const session = await createGame({ scenarios: { fixture: combatScenario } }).open({ scenarioId: 'fixture' });
+  const attackRange = session.observe().units[0]?.attackRange;
+
+  assert.deepEqual(attackRange, {
+    centerTenthTiles: { x: 85, y: 82 },
+    maximumTenthTiles: 50,
+    boundary: 'exclusive',
+  });
+  assert.equal(Object.isFrozen(attackRange), true);
+  assert.equal(Object.isFrozen(attackRange?.centerTenthTiles), true);
+});
+
 test('selects a unit only inside its hit area and clears selection on empty ground', async () => {
   const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
 
@@ -733,6 +746,33 @@ test('pausing freezes frames and rejects new intents until resume without catchi
   assert.equal(resumedView.frame, beforePause.frame);
   assert.equal(resumedView.elapsedMs, beforePause.elapsedMs);
   assert.deepEqual(paused.advance({ deltaMs: 37 }), control.advance({ deltaMs: 37 }));
+});
+
+test('single-stepping advances exactly one ordinary frame and remains paused', async () => {
+  const createSession = () => createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } })
+    .open({ scenarioId: 'cow-gulch', randomSeed: 9876 });
+  const stepped = await createSession();
+  const control = await createSession();
+
+  for (const session of [stepped, control]) {
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+    session.advance({ deltaMs: 37 });
+    session.pause();
+  }
+  for (let index = 0; index < 20; index += 1) stepped.observe();
+  const before = stepped.observe();
+
+  const after = stepped.singleStep({ deltaMs: 37 });
+  assert.equal(after.frame, before.frame + 1);
+  assert.equal(after.elapsedMs, before.elapsedMs + 37);
+  assert.equal(after.paused, true);
+
+  control.resume();
+  assert.throws(() => control.singleStep(), /paused/);
+  control.advance({ deltaMs: 37 });
+  control.pause();
+  assert.deepEqual(after, control.observe(), 'single-step follows the same rule and random path as normal advance');
 });
 
 test('keeps preview waves and random streams isolated between sessions', async () => {
