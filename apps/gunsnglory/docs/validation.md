@@ -276,3 +276,18 @@ T09 将暂停状态纳入 `Game` 的公开会话行为，并由浏览器控制�
 | Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5179/` 的升级规则调试样本中以 4× 开始单个敌人，点击暂停后显示“战斗已暂停。”和“继续战斗”；等待后画面保持不变，点击继续后恢复“暂停战斗”控件，画面重新推进。 |
 | 集成与部署 | `e6b1105` 已快进合入本地 `gunsnglory` 和 `master` 并推送。 [GitHub Actions workflow 40569651906](https://github.com/wishflow/wishflow-tools/actions/runs/40569651906) 成功；Guns’n’Glory 测试、共享站点检查、Cloudflare Pages 和 GitHub Pages 部署通过，Worker 未触发。 |
 | Codex 内置浏览器公网实测 | 刷新 `https://wishflow-tools.pages.dev/gunsnglory/`，打开不写入正式档案的升级规则调试样本并开始一个拓荒者。暂停后状态提示和“继续战斗”可见，等待 500 ms 后画面不变；恢复后提示消失、按钮回到“暂停战斗”，等待后战斗画面继续变化。档案最高分仍显示 $50；未完成正式关卡或写入结算。 |
+
+## 15. T10 触屏缩放与命中验收
+
+T10 在表现层加入临时地图相机：初始视图保持原地图适配；双指以两指中点为焦点缩放和平移，缩放限制为 1×–3×，相机保持在地图边界内。绘制与指针命中共用同一 `MapViewport` 变换。单指点按选择枪手、拖动移动；单指拖动转为多指时立即停止单位移动，直到全部触点释放前不再把剩余手指转换成游戏命令。相机不写入 Game 规则、Progress 或 IndexedDB，重开场景时恢复初始视图。
+
+| 检查 | 实际结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 修复缩放上限后通过：TypeScript 检查、61 项单元测试、Vite 生产构建和 29 个 Playwright 场景。新增测试验证焦点保持、相机边界/设备像素、双指缩放后的命中，以及拖动转多指时停止并锁定剩余触点。 |
+| 视口变异检查 | 临时把最大缩放从 3× 改为 4×，边界测试按预期以 `4 !== 3` 失败，证明上限回归可检出。变异清理失误曾使临时值进入 `adb016a`，工作流 `40620136843` 因此失败且没有部署；修复提交 `faf018c` 恢复 3× 后，完整 CI 与部署工作流通过。 |
+| 仓库集成构建 | `pnpm run test:catalog` 的 14 项测试通过；运行 `pnpm run install:apps` 后，`pnpm run build:site` 完整构建所有登记应用通过。 |
+| Codex 内置浏览器本地实测 | 本地页面 Canvas 为 1022×574 CSS 像素（外框 1024×576）；地图完整显示在画布内。点击画布选中枪手，页面持续显示 `Gunslinger selected · Cell (9, 9)`。 |
+| Codex 内置浏览器公网实测 | 修复版发布后打开 `https://wishflow-tools.pages.dev/gunsnglory/`；桌面 Canvas 为 1022×574，点击枪手后显示“已选择枪手 · Cell (9, 9)”。390×844 窄屏检查中 Canvas 为 326.2×182.6，页面内容宽 375px、视口宽 390px，无横向溢出；随后恢复默认视口。检查只选择单位，没有启动战斗或写入新的结算；已有档案仍显示 Cow Gulch 最高分 $50。 |
+| 触控与设备边界 | Playwright 移动浏览器通过实际多点触摸事件验证缩放焦点、缩放后命中和多指状态转换。ADB 确认 `emulator-5554` 已启动，Android Studio Device Manager 显示 AVD 在线；但 Codex CUA 未暴露独立 Emulator 窗口，无法在该 AVD 内实际操作游戏，因此真实 Android 触控仍未验证。 |
+| 集成提交 | `adb016a` 实现触屏相机；`faf018c` 修复并恢复 3× 上限。两者均已快进合入本地 `gunsnglory` 与 `master`，最终 `master` 提交为 `faf018c`。 |
+| GitHub Actions 与发布 | [workflow 40620555023](https://github.com/wishflow/wishflow-tools/actions/runs/40620555023) 成功；Guns’n’Glory CI、共享站点检查、Cloudflare Pages 和 GitHub Pages 部署均通过，Worker 未触发。 |
