@@ -32,7 +32,7 @@ body {
 
 .eyebrow {
   margin: 0 0 0.45rem;
-  color: #e0a752;
+  color: #805318;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.18em;
@@ -40,7 +40,7 @@ body {
 
 .game-heading h1 {
   margin: 0;
-  color: #ffe1a8;
+  color: #704919;
   font-family: Georgia, "Noto Serif CJK SC", serif;
   font-size: clamp(1.8rem, 4vw, 3rem);
   font-weight: 700;
@@ -49,7 +49,7 @@ body {
 
 .intro {
   margin: 0.45rem 0 0;
-  color: #c6b89f;
+  color: #5b5144;
   font-size: clamp(0.85rem, 1.6vw, 1rem);
 }
 
