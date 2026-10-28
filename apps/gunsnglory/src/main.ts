@@ -1,6 +1,6 @@
 import '@wishflow/site-shell';
 import { getLanguage, registerMessages, subscribeLanguage } from '@wishflow/site-shell';
-import { createBrowserGame, createBrowserProgress } from './bootstrap/browser';
+import { createBrowserExperimentRepository, createBrowserGame, createBrowserProgress } from './bootstrap/browser';
 import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
@@ -75,7 +75,16 @@ app.innerHTML = [
   '          </select>',
   '        </label>',
   '        <button type="button" data-testid="compare-schemes" data-action="compare-schemes" data-locale="Compare schemes">Compare schemes</button>',
+  '        <button type="button" data-testid="save-comparison" data-action="save-comparison" data-locale="Save comparison" disabled>Save comparison</button>',
   '      </div>',
+  '      <div class="saved-experiment-controls">',
+  '        <label for="saved-comparison-select" data-locale="Saved comparisons">Saved comparisons',
+  '          <select id="saved-comparison-select" data-testid="saved-comparison-select"><option value="" data-locale="No saved comparisons">No saved comparisons</option></select>',
+  '        </label>',
+  '        <button type="button" data-testid="open-comparison" data-action="open-comparison" data-locale="Open saved comparison" disabled>Open saved comparison</button>',
+  '        <button type="button" data-testid="load-more-comparisons" data-action="load-more-comparisons" data-locale="Load more" hidden disabled>Load more</button>',
+  '      </div>',
+  '      <p data-testid="saved-comparison-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="experiment-status" role="status" aria-live="polite"></p>',
   '      <div class="experiment-report" data-testid="experiment-report" hidden>',
   '        <p class="experiment-report-summary" data-testid="experiment-report-summary" aria-live="polite"></p>',
@@ -98,7 +107,7 @@ app.innerHTML = [
   '          </table>',
   '        </div>',
   '      </div>',
-  '      <p class="experiment-note" data-locale="These runs use fixed paired seeds, do not change the saved profile, and stay in memory until this page closes.">These runs use fixed paired seeds, do not change the saved profile, and stay in memory until this page closes.</p>',
+  '      <p class="experiment-note" data-locale="These runs use fixed paired seeds and do not change the saved profile. Save a comparison to keep it across sessions.">These runs use fixed paired seeds and do not change the saved profile. Save a comparison to keep it across sessions.</p>',
   '    </section>',
   '    <section class="replay-panel" aria-labelledby="replay-title">',
   '      <h2 id="replay-title" data-locale="Battle replay">Battle replay</h2>',
@@ -195,6 +204,11 @@ const compareSchemesButtonElement = app.querySelector<HTMLButtonElement>('[data-
 const experimentCashRewardInputElement = app.querySelector<HTMLInputElement>('[data-testid="experiment-cash-reward"]');
 const experimentSampleCountSelectElement = app.querySelector<HTMLSelectElement>('[data-testid="experiment-sample-count"]');
 const experimentStatusElement = app.querySelector<HTMLElement>('[data-testid="experiment-status"]');
+const saveComparisonButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="save-comparison"]');
+const savedComparisonSelectElement = app.querySelector<HTMLSelectElement>('[data-testid="saved-comparison-select"]');
+const openComparisonButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="open-comparison"]');
+const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="load-more-comparisons"]');
+const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
 if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement
@@ -212,7 +226,9 @@ if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElem
   || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
   || !exportReplayButton || !importReplayInput || !replayStatusElement
   || !compareSchemesButtonElement || !experimentCashRewardInputElement || !experimentSampleCountSelectElement
-  || !experimentStatusElement || !experimentReportElement || !experimentReportSummaryElement) {
+  || !experimentStatusElement || !experimentReportElement || !experimentReportSummaryElement
+  || !saveComparisonButtonElement || !savedComparisonSelectElement || !openComparisonButtonElement
+  || !loadMoreComparisonsButtonElement || !savedComparisonStatusElement) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
@@ -269,6 +285,11 @@ const compareSchemesControl: HTMLButtonElement = compareSchemesButtonElement;
 const experimentCashRewardInput: HTMLInputElement = experimentCashRewardInputElement;
 const experimentSampleCountSelect: HTMLSelectElement = experimentSampleCountSelectElement;
 const experimentStatus: HTMLElement = experimentStatusElement;
+const saveComparisonControl: HTMLButtonElement = saveComparisonButtonElement;
+const savedComparisonSelect: HTMLSelectElement = savedComparisonSelectElement;
+const openComparisonControl: HTMLButtonElement = openComparisonButtonElement;
+const loadMoreComparisonsControl: HTMLButtonElement = loadMoreComparisonsButtonElement;
+const savedComparisonStatus: HTMLElement = savedComparisonStatusElement;
 const experimentReport: HTMLElement = experimentReportElement;
 const experimentReportSummary: HTMLElement = experimentReportSummaryElement;
 
@@ -276,6 +297,7 @@ const game = createBrowserGame();
 const progress = createBrowserProgress();
 const experiments = createExperiments({
   game,
+  repository: createBrowserExperimentRepository(),
   policies: [{
     id: 'start-wave',
     version: '1',
@@ -534,8 +556,10 @@ function replayErrorCode(error: unknown): GameReplayErrorCode {
 }
 
 let latestExperimentReport: ExperimentComparisonReport | undefined;
-let comparisonNumber = 0;
-let candidateSchemeVersion = 0;
+let latestExperimentPersisted = false;
+let savedComparisonCursor: string | undefined;
+let savedComparisonSummaries: import('./experiments/experiment-repository').SavedComparisonSummary[] = [];
+let savedComparisonListBusy = false;
 
 const experimentCopy = {
   en: {
@@ -546,6 +570,16 @@ const experimentCopy = {
       `${report.pairedCompletedSampleCount}/${report.plannedSampleCount} paired samples · ${report.completedRunCount}/${report.plannedRunCount} runs completed · ${incompleteRate} incomplete across all planned runs.`,
     schemeValues: (original: number, draft: number) => `Original reward $${original} · Draft reward $${draft}`,
     unavailable: '—',
+    saved: 'Comparison saved in this browser.',
+    opened: 'Saved comparison opened.',
+    missing: 'That saved comparison is no longer available.',
+    saveFailed: 'Could not save the comparison to browser storage.',
+    openFailed: 'Could not open the saved comparison.',
+    listFailed: 'Could not load saved comparisons from browser storage.',
+    savedListFailed: 'Saved, but the comparison list could not be refreshed.',
+    noSaved: 'No saved comparisons',
+    savedOption: (id: string, date: string) => `${id} · ${date}`,
+    loadMore: 'Load more',
   },
   zh: {
     invalidReward: '请输入 $0 到 $1,000,000,000 之间的整数奖励。',
@@ -555,8 +589,77 @@ const experimentCopy = {
       `${report.pairedCompletedSampleCount}/${report.plannedSampleCount} 组配对样本 · ${report.completedRunCount}/${report.plannedRunCount} 场运行完成 · 全部计划运行未完成率 ${incompleteRate}。`,
     schemeValues: (original: number, draft: number) => `原版奖励 $${original} · 草稿奖励 $${draft}`,
     unavailable: '—',
+    saved: '比较已保存到此浏览器。',
+    opened: '已打开已保存的比较。',
+    missing: '此比较已不存在。',
+    saveFailed: '无法将比较保存到浏览器存储。',
+    openFailed: '无法打开已保存的比较。',
+    listFailed: '无法从浏览器存储读取已保存的比较。',
+    savedListFailed: '比较已保存，但无法刷新列表。',
+    noSaved: '没有已保存的比较',
+    savedOption: (id: string, date: string) => `${id} · ${date}`,
+    loadMore: '加载更多',
   },
 };
+
+type SavedComparisonStatusKey = 'saved' | 'opened' | 'missing' | 'saveFailed' | 'openFailed' | 'listFailed' | 'savedListFailed';
+let savedComparisonStatusKey: SavedComparisonStatusKey | undefined;
+
+function renderSavedComparisonStatus(): void {
+  savedComparisonStatus.textContent = savedComparisonStatusKey
+    ? experimentCopy[getLanguage()][savedComparisonStatusKey]
+    : '';
+}
+
+function setSavedComparisonStatus(key?: SavedComparisonStatusKey): void {
+  savedComparisonStatusKey = key;
+  renderSavedComparisonStatus();
+}
+
+function renderSavedComparisonOptions(selectedId = savedComparisonSelect.value): void {
+  const language = getLanguage();
+  const copy = experimentCopy[language];
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = copy.noSaved;
+  savedComparisonSelect.replaceChildren(placeholder);
+  const dateFormat = new Intl.DateTimeFormat(language, { dateStyle: 'short', timeStyle: 'short' });
+  for (const summary of savedComparisonSummaries) {
+    const option = document.createElement('option');
+    option.value = summary.id;
+    option.textContent = copy.savedOption(summary.id, dateFormat.format(new Date(summary.savedAt)));
+    savedComparisonSelect.append(option);
+  }
+  savedComparisonSelect.value = savedComparisonSummaries.some(({ id }) => id === selectedId) ? selectedId : '';
+  openComparisonControl.disabled = savedComparisonSelect.value === '' || savedComparisonListBusy;
+  loadMoreComparisonsControl.hidden = savedComparisonCursor === undefined;
+  loadMoreComparisonsControl.disabled = savedComparisonCursor === undefined || savedComparisonListBusy;
+}
+
+async function loadSavedComparisons(options: { reset?: boolean; selectId?: string; reportFailure?: boolean } = {}): Promise<boolean> {
+  if (savedComparisonListBusy) return false;
+  let loaded = false;
+  savedComparisonListBusy = true;
+  renderSavedComparisonOptions();
+  try {
+    const page = await experiments.listComparisons({
+      limit: 20,
+      ...(!options.reset && savedComparisonCursor ? { cursor: savedComparisonCursor } : {}),
+    });
+    if (options.reset) savedComparisonSummaries = [];
+    const existingIds = new Set(savedComparisonSummaries.map(({ id }) => id));
+    savedComparisonSummaries.push(...page.items.filter(({ id }) => !existingIds.has(id)));
+    savedComparisonCursor = page.nextCursor;
+    loaded = true;
+    if (options.reportFailure) setSavedComparisonStatus();
+  } catch {
+    if (options.reportFailure) setSavedComparisonStatus('listFailed');
+  } finally {
+    savedComparisonListBusy = false;
+    renderSavedComparisonOptions(options.selectId);
+  }
+  return loaded;
+}
 
 function renderExperimentComparison(): void {
   if (!latestExperimentReport) return;
@@ -605,6 +708,7 @@ function renderExperimentComparison(): void {
     set(side, 'escaped', metric(values.averageEscapedEnemies));
   }
   experimentReport.hidden = false;
+  saveComparisonControl.disabled = latestExperimentPersisted;
 }
 
 compareSchemesControl.addEventListener('click', async () => {
@@ -624,6 +728,7 @@ compareSchemesControl.addEventListener('click', async () => {
   }
 
   compareSchemesControl.disabled = true;
+  saveComparisonControl.disabled = true;
   experimentCashRewardInput.disabled = true;
   experimentSampleCountSelect.disabled = true;
   experimentStatus.textContent = copy.comparing(sampleCount);
@@ -633,14 +738,15 @@ compareSchemesControl.addEventListener('click', async () => {
       version: '1',
       scenarioId: 'cow-gulch',
     });
-    const draftVersion = `draft-${++candidateSchemeVersion}`;
+    const comparisonToken = globalThis.crypto.randomUUID();
+    const draftVersion = `draft-${comparisonToken}`;
     const draft = await experiments.saveScheme({
       id: 'cow-gulch-reward-draft',
       version: draftVersion,
       scenarioId: 'cow-gulch',
       overrides: [{ path: 'previewWave/enemy/cashReward', value: reward }],
     });
-    const comparisonId = `cow-gulch-reward-comparison-${++comparisonNumber}`;
+    const comparisonId = `cow-gulch-reward-comparison-${comparisonToken}`;
     latestExperimentReport = await experiments.compare({
       comparisonId,
       scenario: {
@@ -666,16 +772,76 @@ compareSchemesControl.addEventListener('click', async () => {
       })),
       policy: { id: 'start-wave', version: '1' },
     });
+    latestExperimentPersisted = false;
     renderExperimentComparison();
     experimentStatus.textContent = '';
   } catch {
     experimentStatus.textContent = copy.failed;
   } finally {
     compareSchemesControl.disabled = false;
+    saveComparisonControl.disabled = !latestExperimentReport || latestExperimentPersisted;
     experimentCashRewardInput.disabled = false;
     experimentSampleCountSelect.disabled = false;
   }
 });
+
+savedComparisonSelect.addEventListener('change', () => {
+  openComparisonControl.disabled = savedComparisonSelect.value === '' || savedComparisonListBusy;
+});
+
+saveComparisonControl.addEventListener('click', async () => {
+  const report = latestExperimentReport;
+  if (!report) return;
+  saveComparisonControl.disabled = true;
+  setSavedComparisonStatus();
+  try {
+    const saved = await experiments.saveComparison(report);
+    const summary = {
+      id: saved.id,
+      savedAt: saved.savedAt,
+      ...saved.summary,
+      candidateScheme: { ...saved.summary.candidateScheme },
+    };
+    savedComparisonSummaries = [summary, ...savedComparisonSummaries.filter(({ id }) => id !== saved.id)];
+    renderSavedComparisonOptions(saved.id);
+    const refreshed = await loadSavedComparisons({ reset: true, selectId: saved.id });
+    latestExperimentPersisted = true;
+    renderExperimentComparison();
+    setSavedComparisonStatus(refreshed ? 'saved' : 'savedListFailed');
+  } catch {
+    setSavedComparisonStatus('saveFailed');
+  } finally {
+    saveComparisonControl.disabled = !latestExperimentReport || latestExperimentPersisted;
+  }
+});
+
+openComparisonControl.addEventListener('click', async () => {
+  const id = savedComparisonSelect.value;
+  if (!id) return;
+  openComparisonControl.disabled = true;
+  setSavedComparisonStatus();
+  try {
+    const saved = await experiments.openComparison(id);
+    if (!saved) {
+      setSavedComparisonStatus('missing');
+      return;
+    }
+    latestExperimentReport = saved.report;
+    latestExperimentPersisted = true;
+    renderExperimentComparison();
+    setSavedComparisonStatus('opened');
+  } catch {
+    setSavedComparisonStatus('openFailed');
+  } finally {
+    openComparisonControl.disabled = savedComparisonSelect.value === '' || savedComparisonListBusy;
+  }
+});
+
+loadMoreComparisonsControl.addEventListener('click', () => {
+  void loadSavedComparisons({ reportFailure: true });
+});
+
+void loadSavedComparisons({ reset: true, reportFailure: true });
 
 async function applyFormalSettlement(record: GameSettlementRecord): Promise<void> {
   try {
@@ -1635,5 +1801,7 @@ window.addEventListener('blur', cancelPointerGesture);
 subscribeLanguage(() => {
   renderStatus();
   renderExperimentComparison();
+  renderSavedComparisonOptions();
+  renderSavedComparisonStatus();
   redraw();
 });

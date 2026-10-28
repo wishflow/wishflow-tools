@@ -365,3 +365,19 @@ T14 在 Game Interface 增加 `prepare()`：返回当前场景完整可调数值
 | 发布状态 | 本轮只提交到本地 `gunsnglory` 集成分支；没有合入 `master` 或推送。按任务图，整体发布在 T25 验收和 T26 登记发布阶段进行，T14 不代表 M1 完成。 |
 
 验证入口：[Game 数值准备测试](../tests/game.test.ts)、[Experiments 方案比较测试](../tests/experiments.test.ts)、[浏览器方案比较测试](../tests/e2e/t14-scheme-comparison.spec.ts)。
+
+## 21. T15 保存并重新打开实验
+
+T15 为不可变数值方案与配对比较报告增加内存和 IndexedDB 仓储。浏览器数据库 `gunsnglory-experiments` 与正式档案数据库分离，按 `schemes`、`comparisons`、`artifacts` 保存方案、摘要和完整报告。摘要与完整报告在同一个 IndexedDB 读写事务中提交；重开时验证摘要、方案引用和报告内容，不重跑样本。该切片不保存 `Experiments.run()` 的单次运行、不续算刷新前尚未结束的比较，也不改变 Progress。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、93 项单元测试、Vite 生产构建和 39 个 Playwright 场景。 |
+| 仓储契约与 IndexedDB 集成 | Node 单测让内存仓储通过共享 `ExperimentRepository` 契约；Chromium 再让真实 IndexedDB 仓储通过同一契约。浏览器测试还验证同时间戳记录的稳定倒序分页、跨页游标，以及删除完整报告附件后 `openComparison()` 返回 `corrupt-data`。 |
+| 桌面刷新与重开 | 使用 seed 42、43、44 执行 3 组配对样本（6/6 场完成），显示基线结算现金 $66、候选方案 $70。保存后切换中文并刷新；列表重新出现记录，显式选择后打开，报告摘要、方案值及候选现金与刷新前相同，已打开的报告不能重复保存。 |
+| 正式档案隔离 | Playwright 在比较前后读取 `gunsnglory-profile` 的默认档案记录并逐字段比较，结果完全一致；T15 只写独立的实验数据库。 |
+| 窄屏触控 | 390×844 视口中可触控运行比较、保存并重开；页面无横向溢出。Playwright 流程捕获的 console error、warning 与 pageerror 均为空。 |
+| Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5192/` 手动运行比较、保存、刷新、从列表选择并重开；报告仍显示相同的 3 组样本及 $66/$70 结果。切换站点语言后，保存状态与实验界面文案随之切换为中文。实测截图保存在 `/tmp/var/wishflow-tools/t15-experiment-reopen.png`，不纳入应用资源。 |
+| 分支与发布边界 | T15 已完成本地验证；本提交只进入 `gunsnglory` 本地分支，不合并 `master`、不 push。按实施计划，整体发布仍由 T25/T26 门槛控制，T15 不代表 M1 完成。 |
+
+验证入口：[实验仓储共享契约](../tests/experiment-repository-contract.ts)、[内存仓储契约测试](../tests/experiment-repository.test.ts)、[IndexedDB 契约与分页测试](../tests/e2e/t15-indexeddb-contract.spec.ts)、[保存与重开测试](../tests/e2e/t15-experiment-persistence.spec.ts)。

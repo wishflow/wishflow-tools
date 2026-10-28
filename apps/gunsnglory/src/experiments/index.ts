@@ -8,6 +8,9 @@ import {
   type NumericParameterValue,
   type PreparedSetup,
 } from '../game';
+import { ExperimentRepositoryError, type ExperimentRepository, type ListSavedComparisonsRequest, type SavedComparison, type SavedComparisonPage } from './experiment-repository';
+import { createMemoryExperimentRepository } from './memory-experiment-repository';
+export type { ListSavedComparisonsRequest, SavedComparison, SavedComparisonPage, SavedComparisonSummary } from './experiment-repository';
 
 export type RunStatus = 'completed' | 'cancelled' | 'budget-exceeded' | 'failed' | 'invalid-input';
 export type RunOutcome = 'victory' | 'defeat';
@@ -193,6 +196,7 @@ export interface ComparisonVariant {
 
 export interface ExperimentComparisonReport {
   comparisonId: string;
+  request: ExperimentComparisonRequest;
   status: 'completed' | 'cancelled';
   scenarioId: string;
   scenarioVersion: string;
@@ -216,17 +220,22 @@ export interface Experiments {
   run(request: RunRequest, options?: { signal?: AbortSignal }): Promise<RunResult>;
   saveScheme(input: NumericSchemeInput): Promise<NumericSchemeVersion>;
   compare(input: ExperimentComparisonRequest, options?: { signal?: AbortSignal }): Promise<ExperimentComparisonReport>;
+  saveComparison(report: ExperimentComparisonReport): Promise<SavedComparison>;
+  openComparison(id: string): Promise<SavedComparison | null>;
+  listComparisons(request?: ListSavedComparisonsRequest): Promise<SavedComparisonPage>;
 }
 
 interface ExperimentsRuntime {
   now(): number;
+  timestamp(): number;
   yieldToHost(): Promise<void>;
 }
 
 interface CreateExperimentsOptions {
   game: Game;
   policies: readonly ControlPolicy[];
-  /** Override monotonic time and event-loop yielding in deterministic tests. */
+  repository?: ExperimentRepository;
+  /** Override monotonic time, saved timestamps, and event-loop yielding in deterministic tests. */
   runtime?: Partial<ExperimentsRuntime>;
 }
 
@@ -541,9 +550,11 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
 
   const runtime: ExperimentsRuntime = {
     now: options.runtime?.now ?? (() => performance.now()),
+    timestamp: options.runtime?.timestamp ?? (() => Date.now()),
     yieldToHost: options.runtime?.yieldToHost ?? (() => new Promise<void>((resolve) => setTimeout(resolve, 0))),
   };
   const schemes = new Map<string, NumericSchemeVersion>();
+  const repository = options.repository ?? createMemoryExperimentRepository();
 
   const runSingle: Experiments['run'] = async (input, runOptions = {}) => {
       const request = snapshotRequest(input);
@@ -790,15 +801,32 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
       if (existing.preparedSetup.digest === scheme.preparedSetup.digest) return existing;
       throw new TypeError('A numeric scheme version is immutable and already exists');
     }
-    schemes.set(key, scheme);
-    return scheme;
+    let persisted: NumericSchemeVersion;
+    try {
+      persisted = await repository.saveScheme(scheme);
+    } catch (error) {
+      if (error instanceof ExperimentRepositoryError && error.code === 'conflict') {
+        throw new TypeError('A numeric scheme version is immutable and already exists');
+      }
+      throw error;
+    }
+    schemes.set(key, persisted);
+    return persisted;
   };
 
   const compare: Experiments['compare'] = async (input, compareOptions = {}) => {
     const request = snapshotComparison(input);
     if (!request) throw new TypeError('Experiment comparison request is invalid');
-    const baseline = schemes.get(schemeKey(request.baseline.id, request.baseline.version));
-    const candidate = schemes.get(schemeKey(request.candidate.id, request.candidate.version));
+    const loadScheme = async (reference: NumericSchemeReference) => {
+      const key = schemeKey(reference.id, reference.version);
+      const cached = schemes.get(key);
+      if (cached) return cached;
+      const stored = await repository.readScheme(reference);
+      if (stored) schemes.set(key, freezeDeep(stored));
+      return stored ?? undefined;
+    };
+    const baseline = await loadScheme(request.baseline);
+    const candidate = await loadScheme(request.candidate);
     if (!baseline || !candidate) throw new RangeError('A referenced numeric scheme version is unavailable');
     for (const scheme of [baseline, candidate]) {
       if (scheme.scenarioId !== request.scenario.gameScenarioId
@@ -848,6 +876,7 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
     const incompleteRunCount = plannedRunCount - completedRunCount;
     return freezeDeep({
       comparisonId: request.comparisonId,
+      request,
       status: compareOptions.signal?.aborted ? 'cancelled' : 'completed',
       scenarioId: request.scenario.id,
       scenarioVersion: request.scenario.version,
@@ -877,5 +906,31 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
     });
   };
 
-  return Object.freeze({ run: runSingle, saveScheme, compare });
+  const saveComparison: Experiments['saveComparison'] = async (report) => {
+    const savedAt = runtime.timestamp();
+    if (!Number.isSafeInteger(savedAt) || savedAt < 0) throw new TypeError('Saved timestamp is invalid');
+    const input = {
+      id: report.comparisonId,
+      savedAt,
+      request: report.request,
+      summary: {
+        status: report.status,
+        scenarioId: report.scenarioId,
+        scenarioVersion: report.scenarioVersion,
+        candidateScheme: { id: report.request.candidate.id, version: report.request.candidate.version },
+        plannedSampleCount: report.plannedSampleCount,
+        completedRunCount: report.completedRunCount,
+      },
+      report,
+    };
+    return freezeDeep(await repository.saveComparison(input));
+  };
+  const openComparison: Experiments['openComparison'] = async (id) => {
+    const saved = await repository.openComparison(id);
+    return saved ? freezeDeep(saved) : null;
+  };
+  const listComparisons: Experiments['listComparisons'] = async (request) =>
+    freezeDeep(await repository.listComparisons(request));
+
+  return Object.freeze({ run: runSingle, saveScheme, compare, saveComparison, openComparison, listComparisons });
 }

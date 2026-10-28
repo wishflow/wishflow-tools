@@ -46,6 +46,11 @@ export const messages = {
   'Pioneer cash reward': { en: 'Pioneer cash reward', zh: '拓荒者现金奖励' },
   'Matched samples': { en: 'Matched samples', zh: '配对样本数' },
   'Compare schemes': { en: 'Compare schemes', zh: '开始比较' },
+  'Save comparison': { en: 'Save comparison', zh: '保存比较' },
+  'Saved comparisons': { en: 'Saved comparisons', zh: '已保存的比较' },
+  'No saved comparisons': { en: 'No saved comparisons', zh: '没有已保存的比较' },
+  'Open saved comparison': { en: 'Open saved comparison', zh: '打开已保存比较' },
+  'Load more': { en: 'Load more', zh: '加载更多' },
   'Measure': { en: 'Measure', zh: '指标' },
   'Original': { en: 'Original', zh: '原版' },
   'Draft': { en: 'Draft', zh: '草稿' },
@@ -59,8 +64,8 @@ export const messages = {
   'Average cash change': { en: 'Average cash change', zh: '平均现金变化' },
   'Average peak enemies': { en: 'Average peak enemies', zh: '平均敌人峰值' },
   'Average escaped enemies': { en: 'Average escaped enemies', zh: '平均逃脱敌人数' },
-  'These runs use fixed paired seeds, do not change the saved profile, and stay in memory until this page closes.': {
-    en: 'These runs use fixed paired seeds, do not change the saved profile, and stay in memory until this page closes.',
-    zh: '运行使用固定配对种子，不会修改已存档案；页面关闭后清除实验结果。',
+  'These runs use fixed paired seeds and do not change the saved profile. Save a comparison to keep it across sessions.': {
+    en: 'These runs use fixed paired seeds and do not change the saved profile. Save a comparison to keep it across sessions.',
+    zh: '运行使用固定配对种子，不会修改正式档案。保存比较后可跨会话查看结果。',
   },
 };

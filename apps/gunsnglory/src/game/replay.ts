@@ -1,4 +1,5 @@
 import type { GameIntent, GameMode, GameView, WaveSettlement } from './index';
+import { canonicalSha256Digest } from '../value-digest';
 
 export const GAME_RULES_VERSION = 'gng-rules-1';
 export const GAME_REPLAY_FORMAT_VERSION = 1;
@@ -226,21 +227,7 @@ export function checkpointFrames(frameCount: number): number[] {
 }
 
 export async function gameValueDigest(value: unknown): Promise<string> {
-  const bytes = new TextEncoder().encode(canonicalJson(value));
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
-  return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
-}
-
-function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== 'object') {
-    const serialized = JSON.stringify(value);
-    if (serialized === undefined) throw new TypeError('Replay contains a non-JSON value');
-    return serialized;
-  }
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  const entries = Object.entries(value as Record<string, unknown>)
-    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
-  return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child)}`).join(',')}}`;
+  return canonicalSha256Digest(value);
 }
 
 function validPreparedSetup(value: unknown): value is PreparedSetup {

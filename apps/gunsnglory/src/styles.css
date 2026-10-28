@@ -278,14 +278,16 @@ body {
   line-height: 1.45;
 }
 
-.experiment-controls {
+.experiment-controls,
+.saved-experiment-controls {
   display: flex;
   align-items: end;
   flex-wrap: wrap;
   gap: 0.65rem;
 }
 
-.experiment-controls label {
+.experiment-controls label,
+.saved-experiment-controls label {
   display: grid;
   gap: 0.35rem;
   color: #d8e9dc;
@@ -294,7 +296,8 @@ body {
 }
 
 .experiment-controls input,
-.experiment-controls select {
+.experiment-controls select,
+.saved-experiment-controls select {
   min-height: 2.5rem;
   min-width: 7rem;
   padding: 0.45rem 0.6rem;
@@ -305,7 +308,8 @@ body {
   font: inherit;
 }
 
-.experiment-controls button {
+.experiment-controls button,
+.saved-experiment-controls button {
   min-height: 2.5rem;
   padding: 0.5rem 0.8rem;
   border: 1px solid rgba(130, 211, 195, 0.52);
@@ -317,25 +321,33 @@ body {
   cursor: pointer;
 }
 
-.experiment-controls button:hover {
+.experiment-controls button:hover,
+.saved-experiment-controls button:hover {
   background: #31584f;
 }
 
-.experiment-controls button:disabled {
+.experiment-controls button:disabled,
+.saved-experiment-controls button:disabled {
   color: #9eaaa5;
   background: #28312e;
   cursor: wait;
 }
 
-.experiment-controls :focus-visible {
+.experiment-controls :focus-visible,
+.saved-experiment-controls :focus-visible {
   outline: 2px solid #9ee9e2;
   outline-offset: 2px;
 }
 
-.experiment-panel [data-testid="experiment-status"] {
+.experiment-panel [data-testid="experiment-status"],
+.experiment-panel [data-testid="saved-comparison-status"] {
   min-height: 1.3em;
   color: #e3c986;
   font-size: 0.82rem;
+}
+
+.saved-experiment-controls {
+  margin-top: 0.65rem;
 }
 
 .experiment-report {
@@ -654,7 +666,8 @@ body {
     padding: 0.7rem;
   }
 
-  .experiment-controls {
+  .experiment-controls,
+  .saved-experiment-controls {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
   }
@@ -662,11 +675,14 @@ body {
   .experiment-controls label,
   .experiment-controls input,
   .experiment-controls select,
-  .experiment-controls button {
+  .experiment-controls button,
+  .saved-experiment-controls select,
+  .saved-experiment-controls button {
     width: 100%;
   }
 
-  .experiment-controls button {
+  .experiment-controls button,
+  .saved-experiment-controls button {
     grid-column: 1 / -1;
   }
 

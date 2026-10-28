@@ -3,6 +3,7 @@ import { cowGulchContent, cowGulchUpgradeSampleContent } from '../content/cow-gu
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
 import { createProgress } from '../progress';
 import { createIndexedDbProfileRepository } from '../progress/indexeddb-profile-repository';
+import { createIndexedDbExperimentRepository } from '../experiments/indexeddb-experiment-repository';
 
 function createSessionId(): string {
   if (typeof globalThis.crypto.randomUUID === 'function') return globalThis.crypto.randomUUID();
@@ -29,4 +30,8 @@ export function createBrowserGame() {
 
 export function createBrowserProgress() {
   return createProgress(createIndexedDbProfileRepository());
+}
+
+export function createBrowserExperimentRepository() {
+  return createIndexedDbExperimentRepository();
 }
