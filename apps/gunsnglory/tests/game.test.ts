@@ -1242,6 +1242,41 @@ test('prepares a complete immutable numeric setup without allocating a session o
   assert.equal(sessionIds, 0);
 });
 
+test('rejects unavailable content and rules versions before allocating a session or reading randomness', async () => {
+  let randomReads = 0;
+  let sessionIds = 0;
+  const game = createGame({
+    scenarios: { [cowGulchContent.id]: cowGulchContent },
+    randomSeedSource: () => { randomReads += 1; return 42; },
+    sessionIdSource: () => { sessionIds += 1; return `session-${sessionIds}`; },
+  });
+  const setup = await game.prepare({ scenarioId: cowGulchContent.id });
+
+  await assert.rejects(game.open({
+    scenarioId: cowGulchContent.id,
+    contentVersion: 'older-content-version',
+  }), (error: unknown) => (error as { code?: string }).code === 'content-version-unavailable');
+  await assert.rejects(game.open({
+    scenarioId: cowGulchContent.id,
+    preparedSetup: { ...setup, contentVersion: 'older-content-version' },
+  }), (error: unknown) => (error as { code?: string }).code === 'content-version-unavailable');
+  await assert.rejects(game.open({
+    scenarioId: cowGulchContent.id,
+    preparedSetup: { ...setup, rulesVersion: 'future-rules-version' },
+  }), (error: unknown) => (error as { code?: string }).code === 'rules-version-unsupported');
+
+  assert.equal(randomReads, 0);
+  assert.equal(sessionIds, 0);
+  const session = await game.open({
+    scenarioId: cowGulchContent.id,
+    contentVersion: cowGulchContent.contentVersion,
+    randomSeed: 42,
+  });
+  assert.equal(session.startRecord.contentVersion, cowGulchContent.contentVersion);
+  session.close();
+  assert.equal(sessionIds, 1);
+});
+
 test('opens and replays the exact prepared numeric configuration', async () => {
   const game = createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } });
   const prepared = await game.prepare({

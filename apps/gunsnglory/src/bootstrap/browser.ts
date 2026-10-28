@@ -1,6 +1,7 @@
 import { createGame } from '../game';
 import { cowGulchContent, cowGulchUpgradeSampleContent } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
+import type { ScenarioContent } from '../game';
 import { createProgress } from '../progress';
 import { createIndexedDbProfileRepository } from '../progress/indexeddb-profile-repository';
 import { createIndexedDbExperimentRepository } from '../experiments/indexeddb-experiment-repository';
@@ -12,13 +13,20 @@ function createSessionId(): string {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
+  [cowGulchContent.id]: cowGulchContent,
+  [cowGulchDefeatContent.id]: cowGulchDefeatContent,
+  [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
+};
+
+export function getBrowserScenarioContentVersion(scenarioId: string): string | undefined {
+  const scenario = browserScenarios[scenarioId];
+  return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
+}
+
 export function createBrowserGame() {
   return createGame({
-    scenarios: {
-      [cowGulchContent.id]: cowGulchContent,
-      [cowGulchDefeatContent.id]: cowGulchDefeatContent,
-      [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
-    },
+    scenarios: browserScenarios,
     randomSeedSource: () => {
       const seed = new Uint32Array(1);
       globalThis.crypto.getRandomValues(seed);

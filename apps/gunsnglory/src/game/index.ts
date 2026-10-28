@@ -33,7 +33,12 @@ export type {
   PreparedSetup,
 } from './replay';
 
-export type GameOpenErrorCode = 'scenario-unavailable' | 'prepared-setup-invalid' | 'prepared-setup-mismatch';
+export type GameOpenErrorCode =
+  | 'scenario-unavailable'
+  | 'content-version-unavailable'
+  | 'rules-version-unsupported'
+  | 'prepared-setup-invalid'
+  | 'prepared-setup-mismatch';
 
 export class GameOpenError extends Error {
   constructor(readonly code: GameOpenErrorCode, message: string) {
@@ -292,6 +297,8 @@ export interface Game {
   prepare(options: { scenarioId: string; overrides?: readonly NumericParameterValue[] }): Promise<PreparedSetup>;
   open(options: {
     scenarioId: string;
+    /** Exact requested scenario content version. An unavailable version never falls back. */
+    contentVersion?: string;
     randomSeed?: number;
     mode?: GameMode;
     preparedSetup?: PreparedSetup;
@@ -870,10 +877,14 @@ export function createGame(options: {
     source: ScenarioContent,
     input: PreparedSetup,
   ): Promise<{ scenario: ScenarioContent; setup: PreparedSetup }> => {
-    if (!input || input.scenarioId !== source.id
-      || input.contentVersion !== (source.contentVersion ?? 'unversioned')
-      || input.rulesVersion !== GAME_RULES_VERSION) {
-      throw new GameOpenError('prepared-setup-mismatch', 'Prepared setup does not match the exact game content and rules version');
+    if (!input || input.scenarioId !== source.id) {
+      throw new GameOpenError('prepared-setup-mismatch', 'Prepared setup does not match the requested scenario');
+    }
+    if (input.contentVersion !== (source.contentVersion ?? 'unversioned')) {
+      throw new GameOpenError('content-version-unavailable', 'Prepared setup content version is unavailable');
+    }
+    if (input.rulesVersion !== GAME_RULES_VERSION) {
+      throw new GameOpenError('rules-version-unsupported', 'Prepared setup rules version is not supported');
     }
     const scenario = clone(source);
     const bindings = numericParameterBindings(scenario);
@@ -908,9 +919,12 @@ export function createGame(options: {
     return { scenario, setup };
   };
 
-  const openSession: Game['open'] = async ({ scenarioId, randomSeed, mode = 'debug', preparedSetup }) => {
+  const openSession: Game['open'] = async ({ scenarioId, contentVersion, randomSeed, mode = 'debug', preparedSetup }) => {
       const sourceScenario = scenarios.get(scenarioId);
       if (!sourceScenario) throw new GameOpenError('scenario-unavailable', 'Unknown scenario: ' + scenarioId);
+      if (contentVersion !== undefined && contentVersion !== (sourceScenario.contentVersion ?? 'unversioned')) {
+        throw new GameOpenError('content-version-unavailable', 'Requested scenario content version is unavailable');
+      }
       const setup = preparedSetup ?? await prepare({ scenarioId });
       const resolved = await resolvePreparedSetup(sourceScenario, setup);
       const scenario = resolved.scenario;

@@ -1,13 +1,28 @@
 import '@wishflow/site-shell';
 import { getLanguage, registerMessages, subscribeLanguage } from '@wishflow/site-shell';
-import { createBrowserExperimentRepository, createBrowserGame, createBrowserProgress } from './bootstrap/browser';
+import {
+  createBrowserExperimentRepository,
+  createBrowserGame,
+  createBrowserProgress,
+  getBrowserScenarioContentVersion,
+} from './bootstrap/browser';
+import { cowGulchContent } from './content/cow-gulch';
 import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
-import { GameReplayError } from './game';
+import { GameOpenError, GameReplayError } from './game';
 import { createExperiments, type ExperimentComparisonReport } from './experiments';
-import type { GameEvent, GameIntent, GameMode, GameReplayErrorCode, GameReplayResult, GameSession, GameSettlementRecord } from './game';
+import type {
+  GameEvent,
+  GameIntent,
+  GameMode,
+  GameOpenErrorCode,
+  GameReplayErrorCode,
+  GameReplayResult,
+  GameSession,
+  GameSettlementRecord,
+} from './game';
 import { ProgressError, type ProfileView, type SettlementSaveResult } from './progress';
 import { messages } from './locales';
 import './styles.css';
@@ -43,6 +58,11 @@ app.innerHTML = [
   '      <button type="button" data-action="export-corrupt-profile" hidden>Download profile backup</button>',
   '      <button type="button" data-action="reset-corrupt-profile" hidden>Replace damaged profile</button>',
   '      <p data-testid="selection-status" role="status" aria-live="polite"></p>',
+  '      <section data-testid="scene-open-error" role="alert" hidden>',
+  '        <p data-testid="scene-open-error-message"></p>',
+  '        <button type="button" data-action="retry-scene-open">Retry loading requested scene</button>',
+  '        <button type="button" data-action="return-to-previous-scene">Return to previous scene</button>',
+  '      </section>',
   '      <p data-testid="wave-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="combat-status" role="status" aria-live="polite"></p>',
   '      <label class="simulation-speed-control" for="simulation-speed">',
@@ -161,6 +181,10 @@ const profileRecoveryStatusElement = app.querySelector<HTMLElement>('[data-testi
 const exportCorruptProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="export-corrupt-profile"]');
 const resetCorruptProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="reset-corrupt-profile"]');
 const statusElement = app.querySelector<HTMLElement>('[data-testid="selection-status"]');
+const sceneOpenErrorElement = app.querySelector<HTMLElement>('[data-testid="scene-open-error"]');
+const sceneOpenErrorMessageElement = app.querySelector<HTMLElement>('[data-testid="scene-open-error-message"]');
+const retrySceneOpenButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-scene-open"]');
+const returnPreviousSceneButtonElement = app.querySelector<HTMLButtonElement>('[data-action="return-to-previous-scene"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
 const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
 const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
@@ -223,7 +247,8 @@ const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="ex
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
 if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
-  || !statusElement || !waveStatusElement || !combatStatusElement
+  || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
+  || !retrySceneOpenButtonElement || !returnPreviousSceneButtonElement || !waveStatusElement || !combatStatusElement
   || !sceneTitleElement || !sceneContextElement || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
@@ -250,6 +275,10 @@ const profileRecoveryStatus: HTMLElement = profileRecoveryStatusElement;
 const exportCorruptProfileButton: HTMLButtonElement = exportCorruptProfileButtonElement;
 const resetCorruptProfileButton: HTMLButtonElement = resetCorruptProfileButtonElement;
 const status: HTMLElement = statusElement;
+const sceneOpenErrorPanel: HTMLElement = sceneOpenErrorElement;
+const sceneOpenErrorMessage: HTMLElement = sceneOpenErrorMessageElement;
+const retrySceneOpenControl: HTMLButtonElement = retrySceneOpenButtonElement;
+const returnPreviousSceneControl: HTMLButtonElement = returnPreviousSceneButtonElement;
 const waveStatus: HTMLElement = waveStatusElement;
 const combatStatus: HTMLElement = combatStatusElement;
 const sceneTitle: HTMLElement = sceneTitleElement;
@@ -324,7 +353,11 @@ const experiments = createExperiments({
     }),
   }],
 });
-let session = await game.open({ scenarioId: 'cow-gulch', mode: 'formal' });
+let session = await game.open({
+  scenarioId: cowGulchContent.id,
+  contentVersion: cowGulchContent.contentVersion ?? 'unversioned',
+  mode: 'formal',
+});
 let view = session.observe();
 let profile: ProfileView = {
   settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED },
@@ -345,6 +378,14 @@ let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | '
 let activeSettlementRecord: GameSettlementRecord | undefined;
 let replaying = false;
 let replacingSession = false;
+type SessionOpenRequest = {
+  scenarioId: string;
+  contentVersion?: string;
+  randomSeed: number;
+  mode: GameMode;
+};
+type SceneOpenFailure = { request: SessionOpenRequest; code: GameOpenErrorCode | 'unknown' };
+let sceneOpenFailure: SceneOpenFailure | undefined;
 let restartModeOverride: Exclude<GameMode, 'replay'> | undefined;
 type ReplayStatusState =
   | { type: 'importing' }
@@ -368,6 +409,16 @@ const languageMessages = {
     none: 'No unit selected',
     selected: 'Gunslinger selected',
     failed: 'Game scene failed to load',
+    retrySceneOpen: 'Retry loading requested scene',
+    returnPreviousScene: 'Return to previous scene',
+    sceneOpenErrors: {
+      'scenario-unavailable': 'This scenario is unavailable in this build.',
+      'content-version-unavailable': 'The requested scenario content version is unavailable; no newer version was substituted.',
+      'rules-version-unsupported': 'The requested game rules version is not supported by this build.',
+      'prepared-setup-invalid': 'The requested game setup is incomplete or damaged.',
+      'prepared-setup-mismatch': 'The requested game setup does not match this scenario.',
+      unknown: 'The scene could not be opened. Your previous scene is still available.',
+    } satisfies Record<GameOpenErrorCode | 'unknown', string>,
     pauseBattle: 'Pause battle',
     resumeBattle: 'Resume battle',
     battlePaused: 'Battle paused.',
@@ -470,6 +521,16 @@ const languageMessages = {
     none: '尚未选择单位',
     selected: '已选择枪手',
     failed: '游戏场景加载失败',
+    retrySceneOpen: '重试加载请求的场景',
+    returnPreviousScene: '返回之前的场景',
+    sceneOpenErrors: {
+      'scenario-unavailable': '当前版本中没有此场景。',
+      'content-version-unavailable': '请求的场景内容版本不可用；未替换为较新版本。',
+      'rules-version-unsupported': '当前版本不支持请求的游戏规则版本。',
+      'prepared-setup-invalid': '请求的游戏配置不完整或已损坏。',
+      'prepared-setup-mismatch': '请求的游戏配置与此场景不匹配。',
+      unknown: '场景无法打开；之前的场景仍可使用。',
+    } satisfies Record<GameOpenErrorCode | 'unknown', string>,
     pauseBattle: '暂停战斗',
     resumeBattle: '继续战斗',
     battlePaused: '战斗已暂停。',
@@ -955,6 +1016,14 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
   const actionLocked = replaying || replacingSession;
+  sceneOpenErrorPanel.hidden = sceneOpenFailure === undefined;
+  retrySceneOpenControl.textContent = messages.retrySceneOpen;
+  retrySceneOpenControl.disabled = actionLocked;
+  returnPreviousSceneControl.textContent = messages.returnPreviousScene;
+  returnPreviousSceneControl.disabled = actionLocked;
+  if (sceneOpenFailure) {
+    sceneOpenErrorMessage.textContent = messages.sceneOpenErrors[sceneOpenFailure.code];
+  }
   const profileText = profileMessage(language);
   if (profileStatus.textContent !== profileText) profileStatus.textContent = profileText;
   const profileRecoveryText = profileRecoveryMessage(language);
@@ -1321,23 +1390,37 @@ function activateSession(
   redraw();
 }
 
-async function replaceSession(scenarioId: string, randomSeed: number, mode: GameMode): Promise<boolean> {
+async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
   if (replaying || replacingSession) return false;
   replacingSession = true;
+  const resumePreviousSession = !view.paused && !document.hidden
+    && (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving));
   stopGameLoop();
-  const previousSession = session;
   try {
-    const nextSession = await game.open({ scenarioId, randomSeed, mode });
+    const nextSession = await game.open(request);
+    sceneOpenFailure = undefined;
     activateSession(nextSession);
     return true;
-  } catch {
-    session = previousSession;
-    status.textContent = languageMessages[getLanguage()].failed;
+  } catch (error) {
+    sceneOpenFailure = {
+      request,
+      code: error instanceof GameOpenError ? error.code : 'unknown',
+    };
     return false;
   } finally {
     replacingSession = false;
     renderStatus();
+    if (sceneOpenFailure && resumePreviousSession) startGameLoop();
   }
+}
+
+function requestScenarioOpen(scenarioId: string, mode: GameMode): SessionOpenRequest {
+  return {
+    scenarioId,
+    contentVersion: getBrowserScenarioContentVersion(scenarioId),
+    randomSeed: session.startRecord.randomSeed,
+    mode,
+  };
 }
 
 async function exportCurrentReplay(): Promise<void> {
@@ -1716,12 +1799,10 @@ recruitConfirmation.addEventListener('cancel', () => {
   pendingRecruitmentType = undefined;
 });
 startUpgradeSampleControl.addEventListener('click', () => {
-  const randomSeed = session.startRecord.randomSeed;
-  void replaceSession('cow-gulch-upgrade-sample', randomSeed, 'debug');
+  void replaceSession(requestScenarioOpen('cow-gulch-upgrade-sample', 'debug'));
 });
 returnCowGulchControl.addEventListener('click', () => {
-  const randomSeed = session.startRecord.randomSeed;
-  void replaceSession('cow-gulch', randomSeed, 'formal');
+  void replaceSession(requestScenarioOpen('cow-gulch', 'formal'));
 });
 upgradeControl.addEventListener('click', () => {
   const unit = view.units.find((candidate) => candidate.selected && candidate.nextUpgrade);
@@ -1755,17 +1836,23 @@ upgradeConfirmation.addEventListener('cancel', () => {
 });
 clearSelectionControl.addEventListener('click', () => dispatch({ type: 'clear-selection' }));
 startDefeatControl.addEventListener('click', () => {
-  const randomSeed = session.startRecord.randomSeed;
-  void replaceSession('cow-gulch-defeat', randomSeed, 'debug').then((replaced) => {
+  void replaceSession(requestScenarioOpen('cow-gulch-defeat', 'debug')).then((replaced) => {
     if (replaced) dispatch({ type: 'start-wave' });
   });
+});
+retrySceneOpenControl.addEventListener('click', () => {
+  if (sceneOpenFailure) void replaceSession(sceneOpenFailure.request);
+});
+returnPreviousSceneControl.addEventListener('click', () => {
+  sceneOpenFailure = undefined;
+  renderStatus();
 });
 retrySettlementControl.addEventListener('click', () => { void retryFormalSettlement(); });
 exportReplayControl.addEventListener('click', () => { void exportCurrentReplay(); });
 importReplayControl.addEventListener('change', () => { void importReplayFile(importReplayControl.files?.[0]); });
 restartControl.addEventListener('click', () => {
   const mode = restartModeOverride ?? session.startRecord.mode;
-  void replaceSession(session.startRecord.scenarioId, session.startRecord.randomSeed, mode);
+  void replaceSession(requestScenarioOpen(session.startRecord.scenarioId, mode));
 });
 
 window.addEventListener('pagehide', () => {
