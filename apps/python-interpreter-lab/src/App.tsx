@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getLanguage, subscribeLanguage, type Language } from '@wishflow/site-shell';
+import { createSourcePositionIndex, type SourceLink } from './analysis/source-position';
 import { MAX_SOURCE_LENGTH, validateSource } from './analysis/source-limit';
 import { usePyodideAnalysis } from './analysis/usePyodideAnalysis';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -11,7 +12,9 @@ const EXAMPLE = 'x = 1 + 2\nprint(x)\n\ndef add(a, b):\n    return a + b\n';
 export default function App() {
   const [language, setLanguage] = useState<Language>(getLanguage);
   const [source, setSource] = useState(EXAMPLE);
+  const [sourceLink, setSourceLink] = useState<SourceLink | null>(null);
   const analysis = usePyodideAnalysis();
+  const positionIndex = useMemo(() => createSourcePositionIndex(source), [source]);
   const t = (key: MessageKey) => message(key, language);
   const sourceValidation = validateSource(source);
   const sourceError = sourceValidation.ok
@@ -24,12 +27,14 @@ export default function App() {
 
   function updateSource(nextSource: string) {
     setSource(nextSource);
+    setSourceLink(null);
     analysis.clearOutput();
     if (analysis.status === 'analyzing') analysis.restart();
   }
 
   function startAnalysis() {
     if (!sourceValidation.ok) return;
+    setSourceLink(null);
     analysis.analyze(source);
   }
 
@@ -73,7 +78,11 @@ export default function App() {
           source={source}
           status={analysis.status}
           error={sourceError}
+          tokens={analysis.result?.tokens ?? []}
+          positionIndex={positionIndex}
+          sourceLink={sourceLink}
           t={t}
+          onLink={setSourceLink}
           onChange={updateSource}
           onAnalyze={startAnalysis}
           onCancel={analysis.cancel}
@@ -81,7 +90,15 @@ export default function App() {
           onClear={() => updateSource('')}
           onRestore={() => updateSource(EXAMPLE)}
         />
-        <ResultsPanel result={analysis.result} diagnostic={analysis.diagnostic} isBusy={analysis.status === 'analyzing'} t={t} />
+        <ResultsPanel
+          result={analysis.result}
+          diagnostic={analysis.diagnostic}
+          isBusy={analysis.status === 'analyzing'}
+          positionIndex={positionIndex}
+          sourceLink={sourceLink}
+          t={t}
+          onLink={setSourceLink}
+        />
       </div>
       <footer className="lab-footer">
         <span>{t('footerLeft')}</span>

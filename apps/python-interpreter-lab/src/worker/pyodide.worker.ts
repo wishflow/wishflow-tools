@@ -25,8 +25,11 @@ interface PyodideModule {
 const ANALYZE_PYTHON = String.raw`
 import ast
 import dis
+import io
 import json
 import sys
+import token
+import tokenize
 import types
 
 MAX_AST_NODES = 5000
@@ -34,6 +37,8 @@ MAX_AST_DEPTH = 100
 MAX_CODE_OBJECTS = 200
 MAX_INSTRUCTIONS_PER_CODE = 20000
 MAX_TOTAL_INSTRUCTIONS = 50000
+MAX_TOKENS = 5000
+MAX_TOKEN_TEXT = 256
 AST_NODE_COUNT = 0
 AST_TRUNCATED = False
 
@@ -191,6 +196,31 @@ def analyze(source):
             'instructionsTruncated': code_truncated,
         })
 
+    tokens = []
+    tokens_truncated = False
+    tokenization_error = None
+    try:
+        for item in tokenize.generate_tokens(io.StringIO(source).readline):
+            if len(tokens) >= MAX_TOKENS:
+                tokens_truncated = True
+                break
+            text = item.string
+            text_truncated = len(text) > MAX_TOKEN_TEXT
+            tokens.append({
+                'index': len(tokens),
+                'type': token.tok_name.get(item.type, str(item.type)),
+                'exactType': token.tok_name.get(item.exact_type, str(item.exact_type)),
+                'text': text[:MAX_TOKEN_TEXT] + ('…' if text_truncated else ''),
+                'textTruncated': text_truncated,
+                'start': {'line': item.start[0], 'column': item.start[1]},
+                'end': {'line': item.end[0], 'column': item.end[1]},
+            })
+    except Exception as error:
+        tokenization_error = {
+            'type': type(error).__name__,
+            'message': short_text(getattr(error, 'msg', str(error)), 1000),
+        }
+
     return {
         'ok': True,
         'result': {
@@ -201,6 +231,9 @@ def analyze(source):
             'codeObjectsTruncated': code_objects_truncated,
             'instructionCount': instruction_count,
             'instructionsTruncated': instructions_truncated,
+            'tokens': tokens,
+            'tokensTruncated': tokens_truncated,
+            'tokenizationError': tokenization_error,
         },
     }
 

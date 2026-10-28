@@ -1,3 +1,6 @@
+import { useEffect, useRef } from 'react';
+import { findTokenAtOffset, rangesEqual, tokenSourceRange, type SourceLink, type SourcePositionIndex, type SourceRange } from '../analysis/source-position';
+import type { PythonToken } from '../analysis/types';
 import type { AnalysisStatus } from '../analysis/usePyodideAnalysis';
 import { MAX_SOURCE_LENGTH } from '../analysis/source-limit';
 import type { MessageKey } from '../locales';
@@ -6,7 +9,11 @@ interface SourcePanelProps {
   source: string;
   status: AnalysisStatus;
   error: string;
+  tokens: PythonToken[];
+  positionIndex: SourcePositionIndex;
+  sourceLink: SourceLink | null;
   t: (key: MessageKey) => string;
+  onLink(link: SourceLink): void;
   onChange(source: string): void;
   onAnalyze(): void;
   onCancel(): void;
@@ -15,8 +22,35 @@ interface SourcePanelProps {
   onRestore(): void;
 }
 
-export function SourcePanel({ source, status, error, t, onChange, onAnalyze, onCancel, onRetry, onClear, onRestore }: SourcePanelProps) {
+export function SourcePanel({ source, status, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onCancel, onRetry, onClear, onRestore }: SourcePanelProps) {
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const busy = status === 'loading' || status === 'analyzing';
+
+  useEffect(() => {
+    if (!sourceLink || sourceLink.origin.kind === 'editor') return;
+    const editor = editorRef.current;
+    if (!editor) return;
+    if (!sourceLink.range) {
+      if (editor.selectionStart !== editor.selectionEnd) {
+        editor.setSelectionRange(editor.selectionStart, editor.selectionStart);
+      }
+      return;
+    }
+    editor.focus();
+    editor.setSelectionRange(sourceLink.range.start, sourceLink.range.end);
+  }, [sourceLink]);
+
+  function linkCurrentSelection(editor: HTMLTextAreaElement) {
+    const selection = { start: editor.selectionStart, end: editor.selectionEnd };
+    let range: SourceRange | null = selection;
+    if (selection.start === selection.end) {
+      const token = findTokenAtOffset(tokens, positionIndex, selection.start);
+      range = token ? tokenSourceRange(token, positionIndex) : null;
+    }
+    if (rangesEqual(range, sourceLink?.range ?? null)) return;
+    onLink({ origin: { kind: 'editor' }, range });
+  }
+
   return (
     <section className="panel source-panel" aria-labelledby="source-heading">
       <div className="panel-heading">
@@ -31,12 +65,14 @@ export function SourcePanel({ source, status, error, t, onChange, onAnalyze, onC
       <textarea
         id="python-source"
         className="source-editor"
+        ref={editorRef}
         aria-label={t('source')}
         autoCapitalize="off"
         autoCorrect="off"
         spellCheck={false}
         value={source}
         onChange={(event) => onChange(event.target.value)}
+        onSelect={(event) => linkCurrentSelection(event.currentTarget)}
       />
       {error && <p className="input-error" role="alert">{error}</p>}
       <div className="source-toolbar">

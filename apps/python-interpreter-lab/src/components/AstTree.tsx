@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { astNodeSourceRange, rangesOverlap, type SourceLink, type SourcePositionIndex } from '../analysis/source-position';
 import type { AstField, AstNode } from '../analysis/types';
 import type { MessageKey } from '../locales';
 
@@ -7,6 +8,9 @@ interface AstTreeProps {
   lineLabel: string;
   columnLabel: string;
   constantLabel: string;
+  positionIndex: SourcePositionIndex;
+  sourceLink: SourceLink | null;
+  onLink(link: SourceLink): void;
   t: (key: MessageKey) => string;
 }
 
@@ -41,10 +45,13 @@ function FieldValue({ value, depth, props }: { value: AstField; depth: number; p
 function AstNodeView({ node, depth, props }: { node: AstNode; depth: number; props: AstTreeProps }) {
   const line = node.location?.lineno;
   const column = node.location?.col_offset;
+  const range = astNodeSourceRange(node, props.positionIndex);
+  const isOrigin = props.sourceLink?.origin.kind === 'ast' && props.sourceLink.origin.id === node.id;
+  const isMatch = Boolean(range && props.sourceLink?.range && rangesOverlap(range, props.sourceLink.range));
   const [expanded, setExpanded] = useState(depth === 0);
   return (
-    <details className="ast-node" open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
-      <summary>
+    <details className={`ast-node${isOrigin ? ' is-source-origin' : ''}${isMatch ? ' is-source-match' : ''}`} open={expanded} onToggle={(event) => setExpanded(event.currentTarget.open)}>
+      <summary onClick={() => props.onLink({ origin: { kind: 'ast', id: node.id }, range })}>
         <span className="ast-type">{node.type}</span>
         {line !== null && line !== undefined && <span className="ast-location">{props.lineLabel} {line}{column !== null && column !== undefined ? ` · ${props.columnLabel} ${column}` : ''}</span>}
       </summary>

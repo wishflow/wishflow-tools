@@ -33,6 +33,26 @@ export interface BytecodeInstruction {
   positions: InstructionPosition | null;
 }
 
+export interface TokenPosition {
+  line: number;
+  column: number;
+}
+
+export interface PythonToken {
+  index: number;
+  type: string;
+  exactType: string;
+  text: string;
+  textTruncated: boolean;
+  start: TokenPosition;
+  end: TokenPosition;
+}
+
+export interface TokenizationError {
+  type: string;
+  message: string;
+}
+
 export interface CodeObject {
   id: string;
   name: string;
@@ -53,6 +73,9 @@ export interface AnalysisResult {
   codeObjectsTruncated: boolean;
   instructionCount: number;
   instructionsTruncated: boolean;
+  tokens: PythonToken[];
+  tokensTruncated: boolean;
+  tokenizationError: TokenizationError | null;
 }
 
 export interface PythonDiagnostic {

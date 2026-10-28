@@ -1,4 +1,5 @@
 import type { CodeObject } from '../analysis/types';
+import { instructionSourceRange, rangesOverlap, type SourceLink, type SourcePositionIndex } from '../analysis/source-position';
 import { formatInstructionArgument } from '../analysis/instruction-argument';
 import type { MessageKey } from '../locales';
 
@@ -6,11 +7,14 @@ interface BytecodePanelProps {
   codeObjects: CodeObject[];
   selectedCodeId: string;
   instructionsTruncated: boolean;
+  positionIndex: SourcePositionIndex;
+  sourceLink: SourceLink | null;
   t: (key: MessageKey) => string;
   onSelect(codeId: string): void;
+  onLink(link: SourceLink): void;
 }
 
-export function BytecodePanel({ codeObjects, selectedCodeId, instructionsTruncated, t, onSelect }: BytecodePanelProps) {
+export function BytecodePanel({ codeObjects, selectedCodeId, instructionsTruncated, positionIndex, sourceLink, t, onSelect, onLink }: BytecodePanelProps) {
   const selected = codeObjects.find((code) => code.id === selectedCodeId) ?? codeObjects[0];
   if (!selected) return <p className="empty-state">{t('noInstructions')}</p>;
 
@@ -39,17 +43,41 @@ export function BytecodePanel({ codeObjects, selectedCodeId, instructionsTruncat
         <div className="instruction-scroll" role="region" aria-label={`${selected.qualname} ${t('bytecode')}`} tabIndex={0}>
           <table className="instruction-table">
             <thead>
-              <tr><th>{t('offset')}</th><th>{t('opcode')}</th><th>{t('argument')}</th><th>{t('line')}</th></tr>
+              <tr><th>{t('offset')}</th><th>{t('opcode')}</th><th>{t('argument')}</th><th>{t('line')}</th><th>{t('sourcePosition')}</th></tr>
             </thead>
             <tbody>
-              {selected.instructions.map((instruction, index) => (
-                <tr key={`${instruction.offset}-${index}`}>
-                  <td className="number-cell">{instruction.offset}</td>
-                  <td><code>{instruction.opname}</code></td>
-                  <td className="argument-cell">{formatInstructionArgument(instruction.argrepr, instruction.arg)}</td>
-                  <td className="number-cell">{instruction.startsLine ?? instruction.positions?.lineno ?? '—'}</td>
-                </tr>
-              ))}
+              {selected.instructions.map((instruction, index) => {
+                const range = instructionSourceRange(instruction, positionIndex);
+                const isOrigin = sourceLink?.origin.kind === 'instruction'
+                  && sourceLink.origin.codeObjectId === selected.id
+                  && sourceLink.origin.offset === instruction.offset;
+                const isMatch = Boolean(range && sourceLink?.range && rangesOverlap(range, sourceLink.range));
+                const position = instruction.positions;
+                const positionLabel = range && position?.lineno !== null && position?.lineno !== undefined
+                  && position.end_lineno !== null && position.end_lineno !== undefined
+                  && position.col_offset !== null && position.col_offset !== undefined
+                  && position.end_col_offset !== null && position.end_col_offset !== undefined
+                  ? `${position.lineno}:${position.col_offset}–${position.end_lineno}:${position.end_col_offset}`
+                  : '—';
+                return (
+                  <tr key={`${instruction.offset}-${index}`} className={`${isOrigin ? 'is-source-origin ' : ''}${isMatch ? 'is-source-match' : ''}`}>
+                    <td className="number-cell">{instruction.offset}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="bytecode-locator"
+                        aria-label={t('locateInstruction').replace('{offset}', String(instruction.offset))}
+                        onClick={() => onLink({ origin: { kind: 'instruction', codeObjectId: selected.id, offset: instruction.offset }, range })}
+                      >
+                        <code>{instruction.opname}</code>
+                      </button>
+                    </td>
+                    <td className="argument-cell">{formatInstructionArgument(instruction.argrepr, instruction.arg)}</td>
+                    <td className="number-cell">{instruction.startsLine ?? instruction.positions?.lineno ?? '—'}</td>
+                    <td className="bytecode-position">{positionLabel}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
