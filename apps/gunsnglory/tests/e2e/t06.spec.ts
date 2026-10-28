@@ -5,7 +5,9 @@ async function mapPoint(
   cellX: number,
   cellY: number,
 ): Promise<{ x: number; y: number }> {
-  return page.getByTestId('game-canvas').evaluate((element, cell) => {
+  const canvasLocator = page.getByTestId('game-canvas');
+  await canvasLocator.scrollIntoViewIfNeeded();
+  return canvasLocator.evaluate((element, cell) => {
     const canvas = element as HTMLCanvasElement;
     const bounds = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;

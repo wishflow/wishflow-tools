@@ -1,8 +1,13 @@
 import { createGame } from '../game';
 import { cowGulchContent, cowGulchUpgradeSampleContent } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
-import type { ScenarioContent } from '../game';
+import {
+  campaignProgressSampleOne,
+  campaignProgressSampleStages,
+  campaignProgressSampleTwo,
+} from '../content/campaign-progress-samples';
 import { createProgress } from '../progress';
+import type { ScenarioContent } from '../game';
 import { createIndexedDbProfileRepository } from '../progress/indexeddb-profile-repository';
 import { createIndexedDbExperimentRepository } from '../experiments/indexeddb-experiment-repository';
 
@@ -17,6 +22,8 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchContent.id]: cowGulchContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
+  [campaignProgressSampleOne.id]: campaignProgressSampleOne,
+  [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,
 };
 
 export function getBrowserScenarioContentVersion(scenarioId: string): string | undefined {
@@ -37,7 +44,7 @@ export function createBrowserGame() {
 }
 
 export function createBrowserProgress() {
-  return createProgress(createIndexedDbProfileRepository());
+  return createProgress(createIndexedDbProfileRepository(), campaignProgressSampleStages);
 }
 
 export function createBrowserExperimentRepository() {

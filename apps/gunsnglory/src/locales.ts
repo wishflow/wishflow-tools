@@ -5,6 +5,11 @@ export const messages = {
     zh: '结束牛溪谷战斗样本，查看结算，并从干净状态重新开始。',
   },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
+  'Campaign progress': { en: 'Campaign progress', zh: '战役进度' },
+  'These two acceptance stages reuse Cow Gulch; they are not production campaign levels.': {
+    en: 'These two acceptance stages reuse Cow Gulch; they are not production campaign levels.',
+    zh: '这两个验收关卡复用牛溪谷地图，不代表正式战役关卡。',
+  },
   'Pause battle': { en: 'Pause battle', zh: '暂停战斗' },
   'Resume battle': { en: 'Resume battle', zh: '继续战斗' },
   'Inspect battle': { en: 'Inspect battle', zh: '检查战局' },

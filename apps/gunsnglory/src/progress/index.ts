@@ -19,6 +19,24 @@ export interface ProfileView {
   highScores: Readonly<Record<string, number>>;
 }
 
+export interface CampaignStageDefinition {
+  scenarioId: string;
+  contentVersion: string;
+  title: { en: string; zh: string };
+  requiresCompletedScenarioIds: readonly string[];
+}
+
+export interface CampaignStageProgress extends CampaignStageDefinition {
+  status: 'available' | 'locked' | 'completed';
+  highScore?: number;
+}
+
+export interface CampaignProgressView {
+  profile: ProfileView;
+  stages: readonly CampaignStageProgress[];
+  completedCount: number;
+}
+
 export interface SettlementSaveResult {
   status: 'saved' | 'conflict' | 'failed';
   profile: ProfileView;
@@ -26,6 +44,7 @@ export interface SettlementSaveResult {
 
 export interface Progress {
   loadProfile(): Promise<ProfileView>;
+  loadCampaign(): Promise<CampaignProgressView>;
   loadSettings(): Promise<GameSettings>;
   saveSettings(settings: GameSettings): Promise<GameSettings>;
   retrySettings(): Promise<GameSettings>;
@@ -92,7 +111,23 @@ function settingsOperationId(speed: number, expectedRevision: number | null): st
   return `settings:${expectedRevision ?? 'new'}:${speed}`;
 }
 
-export function createProgress(repository: ProfileRepository): Progress {
+export function createProgress(
+  repository: ProfileRepository,
+  campaign: readonly CampaignStageDefinition[] = [],
+): Progress {
+  const campaignStages = campaign.map((stage) => Object.freeze({
+    ...stage,
+    title: Object.freeze({ ...stage.title }),
+    requiresCompletedScenarioIds: Object.freeze([...stage.requiresCompletedScenarioIds]),
+  }));
+  const campaignIds = new Set(campaignStages.map(({ scenarioId }) => scenarioId));
+  if (campaignIds.size !== campaignStages.length
+    || campaignStages.some(({ scenarioId, contentVersion, requiresCompletedScenarioIds }) =>
+      !scenarioId || !contentVersion || requiresCompletedScenarioIds.includes(scenarioId)
+        || requiresCompletedScenarioIds.some((requiredId) => !campaignIds.has(requiredId)))) {
+    throw new TypeError('Campaign stages require unique IDs, versions and valid completion prerequisites');
+  }
+
   let writeTail: Promise<void> = Promise.resolve();
   let lastKnownData = createDefaultProfileData();
   let lastKnownRevision: number | null = null;
@@ -182,6 +217,31 @@ export function createProgress(repository: ProfileRepository): Progress {
       const current = await loadStored();
       pendingSettingsRequest = undefined;
       return publicProfile(current?.data ?? createDefaultProfileData());
+    } catch (error) {
+      throw progressError(error);
+    }
+  }
+
+  async function loadCampaign(): Promise<CampaignProgressView> {
+    try {
+      const current = await loadStored();
+      const profile = publicProfile(current?.data ?? createDefaultProfileData());
+      const completed = new Set(profile.completedScenarios);
+      const stages = campaignStages.map((stage): CampaignStageProgress => {
+        const isCompleted = completed.has(stage.scenarioId);
+        const isAvailable = stage.requiresCompletedScenarioIds.every((scenarioId) => completed.has(scenarioId));
+        const highScore = profile.highScores[stage.scenarioId];
+        return Object.freeze({
+          ...stage,
+          status: isCompleted ? 'completed' : isAvailable ? 'available' : 'locked',
+          ...(highScore === undefined ? {} : { highScore }),
+        });
+      });
+      return Object.freeze({
+        profile,
+        stages: Object.freeze(stages),
+        completedCount: stages.filter(({ status }) => status === 'completed').length,
+      });
     } catch (error) {
       throw progressError(error);
     }
@@ -289,6 +349,7 @@ export function createProgress(repository: ProfileRepository): Progress {
 
   return Object.freeze({
     loadProfile,
+    loadCampaign,
     loadSettings,
     saveSettings,
     retrySettings,

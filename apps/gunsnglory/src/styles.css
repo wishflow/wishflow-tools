@@ -64,6 +64,110 @@ body {
   box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.3);
 }
 
+.campaign-panel {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(217, 170, 99, 0.25);
+  border-radius: 0.75rem;
+  background: rgba(31, 25, 20, 0.72);
+}
+
+.campaign-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.campaign-heading h2,
+.campaign-heading p,
+.campaign-note,
+.campaign-status {
+  margin: 0;
+}
+
+.campaign-heading h2 {
+  color: #f6d29c;
+  font-size: 1rem;
+}
+
+.campaign-heading p,
+.campaign-stage-state {
+  color: #e2c28e;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.campaign-note,
+.campaign-status {
+  color: #c6b89f;
+  font-size: 0.8rem;
+}
+
+.campaign-stage-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.campaign-stage {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgba(217, 170, 99, 0.2);
+  border-radius: 0.6rem;
+  background: rgba(48, 39, 31, 0.62);
+}
+
+.campaign-stage-details {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.campaign-stage-name {
+  overflow-wrap: anywhere;
+  color: #f0dec1;
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.campaign-stage button {
+  flex: 0 0 auto;
+  min-height: 2.35rem;
+  max-width: 48%;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(237, 191, 117, 0.65);
+  border-radius: 0.55rem;
+  color: #ffe8c1;
+  background: #513821;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.campaign-stage button:hover:not(:disabled) {
+  background: #67482b;
+}
+
+.campaign-stage button:disabled {
+  color: #b4a48a;
+  background: #30271f;
+  cursor: default;
+}
+
+.campaign-stage button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 3px;
+}
+
 .scene-heading,
 .game-controls {
   display: flex;
@@ -629,6 +733,22 @@ body {
     gap: 0.65rem;
     padding: 0.65rem;
     border-radius: 0.75rem;
+  }
+
+  .campaign-panel {
+    gap: 0.45rem;
+    padding: 0.65rem;
+  }
+
+  .campaign-stage-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .campaign-stage button {
+    max-width: 55%;
+    min-height: 2.35rem;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.82rem;
   }
 
   .scene-heading span {

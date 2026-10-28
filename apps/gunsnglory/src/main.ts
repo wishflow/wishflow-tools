@@ -23,7 +23,7 @@ import type {
   GameSession,
   GameSettlementRecord,
 } from './game';
-import { ProgressError, type ProfileView, type SettlementSaveResult } from './progress';
+import { ProgressError, type CampaignProgressView, type ProfileView, type SettlementSaveResult } from './progress';
 import { messages } from './locales';
 import './styles.css';
 
@@ -38,6 +38,12 @@ app.innerHTML = [
   '    <p class="intro">Use the Cow Gulch map to defeat a pioneer and collect the reward.</p>',
   '  </header>',
   '  <section class="game-panel" aria-labelledby="scene-title">',
+  '    <section class="campaign-panel" aria-labelledby="campaign-title">',
+  '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
+  '      <p class="campaign-note" data-locale="These two acceptance stages reuse Cow Gulch; they are not production campaign levels.">These two acceptance stages reuse Cow Gulch; they are not production campaign levels.</p>',
+  '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
+  '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
+  '    </section>',
   '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span></div>',
   '    <div class="game-frame">',
   '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
@@ -185,6 +191,9 @@ const sceneOpenErrorElement = app.querySelector<HTMLElement>('[data-testid="scen
 const sceneOpenErrorMessageElement = app.querySelector<HTMLElement>('[data-testid="scene-open-error-message"]');
 const retrySceneOpenButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-scene-open"]');
 const returnPreviousSceneButtonElement = app.querySelector<HTMLButtonElement>('[data-action="return-to-previous-scene"]');
+const campaignProgressSummaryElement = app.querySelector<HTMLElement>('[data-testid="campaign-progress-summary"]');
+const campaignStageListElement = app.querySelector<HTMLOListElement>('[data-testid="campaign-stage-list"]');
+const campaignStatusElement = app.querySelector<HTMLElement>('[data-testid="campaign-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
 const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
 const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
@@ -249,6 +258,7 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
   || !retrySceneOpenButtonElement || !returnPreviousSceneButtonElement || !waveStatusElement || !combatStatusElement
+  || !campaignProgressSummaryElement || !campaignStageListElement || !campaignStatusElement
   || !sceneTitleElement || !sceneContextElement || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
@@ -281,6 +291,9 @@ const retrySceneOpenControl: HTMLButtonElement = retrySceneOpenButtonElement;
 const returnPreviousSceneControl: HTMLButtonElement = returnPreviousSceneButtonElement;
 const waveStatus: HTMLElement = waveStatusElement;
 const combatStatus: HTMLElement = combatStatusElement;
+const campaignProgressSummary: HTMLElement = campaignProgressSummaryElement;
+const campaignStageList: HTMLOListElement = campaignStageListElement;
+const campaignStatus: HTMLElement = campaignStatusElement;
 const sceneTitle: HTMLElement = sceneTitleElement;
 const sceneContext: HTMLElement = sceneContextElement;
 const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
@@ -364,6 +377,9 @@ let profile: ProfileView = {
   completedScenarios: [],
   highScores: {},
 };
+let campaignProgressView: CampaignProgressView | undefined;
+let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
+let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let pauseReason: 'manual' | 'background' | undefined;
@@ -406,6 +422,18 @@ let mapCamera: MapCamera = createMapCamera();
 const languageMessages = {
   en: {
     result: 'Battle result',
+    campaignSummary: (completed: number, total: number) => `${completed}/${total} stages complete`,
+    campaignLoading: 'Loading campaign progress…',
+    campaignLoadFailed: 'Campaign progress could not be loaded; stages are unavailable.',
+    campaignStageAvailable: 'Available',
+    campaignStageLocked: 'Locked',
+    campaignStageCompleted: 'Completed',
+    campaignStageScore: (score: number) => `Best $${score}`,
+    openCampaignStage: (name: string) => `Open ${name}`,
+    campaignLocked: (name: string) => `${name} is locked. Complete its prerequisites first.`,
+    campaignOpening: (name: string) => `Opening ${name}…`,
+    campaignOpened: (name: string) => `${name} opened.`,
+    campaignOpenFailed: 'The stage could not be opened. The previous scene remains available.',
     none: 'No unit selected',
     selected: 'Gunslinger selected',
     failed: 'Game scene failed to load',
@@ -518,6 +546,18 @@ const languageMessages = {
   },
   zh: {
     result: '战斗结算',
+    campaignSummary: (completed: number, total: number) => `已完成 ${completed}/${total} 个关卡`,
+    campaignLoading: '正在读取战役进度…',
+    campaignLoadFailed: '无法读取战役进度，当前关卡不可用。',
+    campaignStageAvailable: '可进入',
+    campaignStageLocked: '未解锁',
+    campaignStageCompleted: '已完成',
+    campaignStageScore: (score: number) => `最高分 $${score}`,
+    openCampaignStage: (name: string) => `进入${name}`,
+    campaignLocked: (name: string) => `${name}尚未解锁，请先完成前置关卡。`,
+    campaignOpening: (name: string) => `正在进入${name}…`,
+    campaignOpened: (name: string) => `已进入${name}。`,
+    campaignOpenFailed: '无法打开该关卡，之前的场景仍可使用。',
     none: '尚未选择单位',
     selected: '已选择枪手',
     failed: '游戏场景加载失败',
@@ -641,6 +681,83 @@ function profileMessage(language: keyof typeof languageMessages): string {
   const score = profile.highScores['cow-gulch'];
   if (!completed && score === undefined) return messages.noSavedProfile;
   return messages.profileSaved(completed, score);
+}
+
+function renderCampaign(): void {
+  const language = getLanguage();
+  const copy = languageMessages[language];
+  const stages = campaignProgressView?.stages ?? [];
+  const rows = Array.from(campaignStageList.children) as HTMLLIElement[];
+  const rowsMatch = rows.length === stages.length
+    && rows.every((row, index) => row.dataset.scenarioId === stages[index]?.scenarioId);
+
+  if (!rowsMatch) {
+    const fragment = document.createDocumentFragment();
+    stages.forEach((stage, index) => {
+      const row = document.createElement('li');
+      row.className = 'campaign-stage';
+      row.dataset.scenarioId = stage.scenarioId;
+      const details = document.createElement('div');
+      details.className = 'campaign-stage-details';
+      const name = document.createElement('span');
+      name.className = 'campaign-stage-name';
+      name.dataset.role = 'stage-name';
+      const state = document.createElement('span');
+      state.className = 'campaign-stage-state';
+      state.dataset.role = 'stage-state';
+      details.append(name, state);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.action = 'open-campaign-stage';
+      button.dataset.scenarioId = stage.scenarioId;
+      button.setAttribute('data-testid', `campaign-stage-button-${index + 1}`);
+      row.append(details, button);
+      fragment.append(row);
+    });
+    campaignStageList.replaceChildren(fragment);
+  }
+
+  stages.forEach((stage, index) => {
+    const row = campaignStageList.children[index] as HTMLLIElement | undefined;
+    if (!row) return;
+    const name = row.querySelector<HTMLElement>('[data-role="stage-name"]');
+    const state = row.querySelector<HTMLElement>('[data-role="stage-state"]');
+    const button = row.querySelector<HTMLButtonElement>('[data-action="open-campaign-stage"]');
+    if (!name || !state || !button) return;
+    const title = stage.title[language];
+    if (name.textContent !== title) name.textContent = title;
+    const stageStatus = stage.status === 'completed'
+      ? copy.campaignStageCompleted
+      : stage.status === 'available' ? copy.campaignStageAvailable : copy.campaignStageLocked;
+    const statusText = stage.highScore === undefined
+      ? stageStatus
+      : `${stageStatus} · ${copy.campaignStageScore(stage.highScore)}`;
+    if (state.textContent !== statusText) state.textContent = statusText;
+    const buttonText = copy.openCampaignStage(title);
+    if (button.textContent !== buttonText) button.textContent = buttonText;
+    const disabled = campaignSelectionBusy || profileLoadFailed || replacingSession || replaying
+      || stage.status === 'locked';
+    if (button.disabled !== disabled) button.disabled = disabled;
+  });
+
+  const summaryText = campaignProgressView
+    ? copy.campaignSummary(campaignProgressView.completedCount, campaignProgressView.stages.length)
+    : profileLoadFailed ? copy.campaignLoadFailed : copy.campaignLoading;
+  if (campaignProgressSummary.textContent !== summaryText) campaignProgressSummary.textContent = summaryText;
+  const feedbackStage = campaignFeedback?.scenarioId
+    ? campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === campaignFeedback?.scenarioId)
+    : undefined;
+  const feedbackTitle = feedbackStage?.title[language] ?? campaignFeedback?.scenarioId ?? '';
+  let feedbackText = '';
+  switch (campaignFeedback?.type) {
+    case 'loading': feedbackText = copy.campaignLoading; break;
+    case 'load-failed': feedbackText = copy.campaignLoadFailed; break;
+    case 'locked': feedbackText = copy.campaignLocked(feedbackTitle); break;
+    case 'opening': feedbackText = copy.campaignOpening(feedbackTitle); break;
+    case 'opened': feedbackText = copy.campaignOpened(feedbackTitle); break;
+    case 'open-failed': feedbackText = copy.campaignOpenFailed; break;
+  }
+  if (campaignStatus.textContent !== feedbackText) campaignStatus.textContent = feedbackText;
 }
 
 function profileRecoveryMessage(language: keyof typeof languageMessages): string {
@@ -989,6 +1106,16 @@ async function applyFormalSettlement(record: GameSettlementRecord): Promise<void
       profileLoadFailed = true;
     }
   }
+  try {
+    campaignProgressView = await progress.loadCampaign();
+    profile = campaignProgressView.profile;
+    profileLoadFailed = false;
+    profileLoadErrorCode = undefined;
+    campaignFeedback = undefined;
+  } catch {
+    campaignProgressView = undefined;
+    campaignFeedback = { type: 'load-failed' };
+  }
   renderStatus();
 }
 
@@ -1008,6 +1135,16 @@ async function retryFormalSettlement(): Promise<void> {
   } catch {
     settlementSaveState = 'failed';
   }
+  try {
+    campaignProgressView = await progress.loadCampaign();
+    profile = campaignProgressView.profile;
+    profileLoadFailed = false;
+    profileLoadErrorCode = undefined;
+    campaignFeedback = undefined;
+  } catch {
+    campaignProgressView = undefined;
+    campaignFeedback = { type: 'load-failed' };
+  }
   renderStatus();
 }
 
@@ -1015,6 +1152,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
+  renderCampaign();
   const actionLocked = replaying || replacingSession;
   sceneOpenErrorPanel.hidden = sceneOpenFailure === undefined;
   retrySceneOpenControl.textContent = messages.retrySceneOpen;
@@ -1132,8 +1270,13 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
   }
   const upgradeScenario = view.scenarioId === 'cow-gulch-upgrade-sample';
-  sceneTitle.textContent = upgradeScenario ? messages.upgradeSceneTitle : 'Cow Gulch';
-  sceneContext.textContent = upgradeScenario ? messages.upgradeSceneContext : 'NEW MEXICO · 01';
+  const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
+  sceneTitle.textContent = upgradeScenario
+    ? messages.upgradeSceneTitle
+    : activeCampaignStage?.title[language] ?? 'Cow Gulch';
+  sceneContext.textContent = upgradeScenario
+    ? messages.upgradeSceneContext
+    : activeCampaignStage ? language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE' : 'NEW MEXICO · 01';
   upgradeSampleStatus.textContent = upgradeScenario ? messages.debugUpgradeFixture : messages.originalUpgradeLimit;
   const selectedUnit = unit;
   const nextUpgrade = selectedUnit?.nextUpgrade;
@@ -1229,7 +1372,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
   const canvasLabel = upgradeScenario
     ? language === 'zh' ? '牛溪谷升级规则测试地图' : 'Cow Gulch upgrade rules test map'
-    : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
+    : activeCampaignStage
+      ? language === 'zh' ? `${activeCampaignStage.title[language]}游戏地图` : `${activeCampaignStage.title[language]} game map`
+      : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
   if (canvas.getAttribute('aria-label') !== canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
 }
 
@@ -1292,7 +1437,9 @@ const images: Record<string, HTMLImageElement> = {};
 
 async function loadSettings(): Promise<void> {
   try {
-    profile = await progress.loadProfile();
+    campaignProgressView = await progress.loadCampaign();
+    profile = campaignProgressView.profile;
+    campaignFeedback = undefined;
     profileLoadFailed = false;
     profileLoadErrorCode = undefined;
     simulationSpeed = profile.settings.simulationSpeed;
@@ -1301,6 +1448,8 @@ async function loadSettings(): Promise<void> {
     settingsStatusKey = 'load-failed';
     profileLoadFailed = true;
     profileLoadErrorCode = error instanceof ProgressError ? error.code : undefined;
+    campaignProgressView = undefined;
+    campaignFeedback = { type: 'load-failed' };
   } finally {
     simulationSpeedInput.disabled = false;
     renderStatus();
@@ -1411,6 +1560,43 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
     replacingSession = false;
     renderStatus();
     if (sceneOpenFailure && resumePreviousSession) startGameLoop();
+  }
+}
+
+async function openCampaignStage(scenarioId: string): Promise<void> {
+  if (campaignSelectionBusy) return;
+  campaignSelectionBusy = true;
+  campaignFeedback = { type: 'loading' };
+  renderCampaign();
+  try {
+    campaignProgressView = await progress.loadCampaign();
+    profile = campaignProgressView.profile;
+    profileLoadFailed = false;
+    profileLoadErrorCode = undefined;
+    const stage = campaignProgressView.stages.find((candidate) => candidate.scenarioId === scenarioId);
+    if (!stage) {
+      campaignFeedback = { type: 'load-failed' };
+      return;
+    }
+    if (stage.status === 'locked') {
+      campaignFeedback = { type: 'locked', scenarioId };
+      return;
+    }
+    campaignFeedback = { type: 'opening', scenarioId };
+    renderCampaign();
+    const opened = await replaceSession({
+      scenarioId: stage.scenarioId,
+      contentVersion: stage.contentVersion,
+      randomSeed: session.startRecord.randomSeed,
+      mode: 'formal',
+    });
+    campaignFeedback = { type: opened ? 'opened' : 'open-failed', scenarioId };
+  } catch {
+    campaignProgressView = undefined;
+    campaignFeedback = { type: 'load-failed' };
+  } finally {
+    campaignSelectionBusy = false;
+    renderStatus();
   }
 }
 
@@ -1526,9 +1712,12 @@ retrySettingsButton.addEventListener('click', () => {
 
 reloadProfileButton.addEventListener('click', () => {
   const sequence = ++settingsSaveSequence;
-  void progress.loadProfile().then((loaded) => {
+  void progress.loadProfile().then(async () => {
+    const loaded = await progress.loadCampaign();
     if (sequence !== settingsSaveSequence) return;
-    profile = loaded;
+    campaignProgressView = loaded;
+    campaignFeedback = undefined;
+    profile = loaded.profile;
     profileLoadFailed = false;
     profileLoadErrorCode = undefined;
     corruptProfileBackup = undefined;
@@ -1574,8 +1763,16 @@ exportCorruptProfileButton.addEventListener('click', () => {
 resetCorruptProfileButton.addEventListener('click', () => {
   const backup = corruptProfileBackup;
   if (!backup || !window.confirm(languageMessages[getLanguage()].confirmResetProfile)) return;
-  void progress.resetCorruptProfile(backup).then((restored) => {
+  void progress.resetCorruptProfile(backup).then(async (restored) => {
     profile = restored;
+    try {
+      campaignProgressView = await progress.loadCampaign();
+      profile = campaignProgressView.profile;
+      campaignFeedback = undefined;
+    } catch {
+      campaignProgressView = undefined;
+      campaignFeedback = { type: 'load-failed' };
+    }
     profileLoadFailed = false;
     profileLoadErrorCode = undefined;
     corruptProfileBackup = undefined;
@@ -1588,7 +1785,9 @@ resetCorruptProfileButton.addEventListener('click', () => {
     if (error instanceof ProgressError && error.code === 'conflict') {
       corruptProfileBackup = undefined;
       try {
-        profile = await progress.loadProfile();
+        campaignProgressView = await progress.loadCampaign();
+        campaignFeedback = undefined;
+        profile = campaignProgressView.profile;
         profileLoadFailed = false;
         profileLoadErrorCode = undefined;
         simulationSpeed = profile.settings.simulationSpeed;
@@ -1758,6 +1957,15 @@ singleStepControl.addEventListener('click', () => {
 inspectionOverlayInput.addEventListener('change', () => {
   showInspectionOverlay = inspectionOverlayInput.checked;
   redraw();
+});
+
+campaignStageList.addEventListener('click', (event: MouseEvent) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest<HTMLButtonElement>('[data-action="open-campaign-stage"]');
+  const scenarioId = button?.dataset.scenarioId;
+  if (!scenarioId) return;
+  void openCampaignStage(scenarioId);
 });
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));

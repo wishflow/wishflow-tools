@@ -4,6 +4,7 @@ import { createProgress, ProgressError } from '../src/progress';
 import { createMemoryProfileRepository } from '../src/progress/memory-profile-repository';
 import { verifyProfileRepositoryContract } from './profile-repository-contract';
 import type { GameSettlementRecord } from '../src/game';
+import type { CampaignStageDefinition } from '../src/progress';
 
 test('loads a default speed for a new or older profile without the setting', async () => {
   for (const settings of [undefined, {}, { soundEnabled: true }]) {
@@ -77,6 +78,65 @@ function settlement(overrides: Partial<GameSettlementRecord> = {}): GameSettleme
     ...overrides,
   };
 }
+
+test('projects only campaign-specific completions into available and locked stages', async () => {
+  const stages: readonly CampaignStageDefinition[] = [
+    {
+      scenarioId: 'campaign-cow-gulch-1',
+      contentVersion: 'campaign-sample-1',
+      title: { en: 'Cow Gulch sample 1', zh: '牛溪谷样本 1' },
+      requiresCompletedScenarioIds: [],
+    },
+    {
+      scenarioId: 'campaign-cow-gulch-2',
+      contentVersion: 'campaign-sample-2',
+      title: { en: 'Cow Gulch sample 2', zh: '牛溪谷样本 2' },
+      requiresCompletedScenarioIds: ['campaign-cow-gulch-1'],
+    },
+  ];
+  const repository = createMemoryProfileRepository({ completedScenarios: ['cow-gulch'] });
+  const progress = createProgress(repository, stages);
+
+  const initial = await progress.loadCampaign();
+  assert.deepEqual(initial.stages.map(({ status }) => status), ['available', 'locked']);
+  assert.equal(initial.completedCount, 0);
+  assert.equal(initial.profile.completedScenarios.includes('cow-gulch'), true);
+  assert.equal(Object.isFrozen(initial.stages), true);
+
+  await progress.applySettlement(settlement({
+    settlementId: 'campaign-session:campaign-cow-gulch-1:1',
+    sessionId: 'campaign-session',
+    scenarioId: 'campaign-cow-gulch-1',
+  }));
+  const advanced = await progress.loadCampaign();
+  assert.deepEqual(advanced.stages.map(({ status }) => status), ['completed', 'available']);
+  assert.equal(advanced.completedCount, 1);
+  assert.equal(advanced.stages[0]?.highScore, 50);
+  assert.equal(advanced.stages[1]?.contentVersion, 'campaign-sample-2');
+});
+
+test('refreshing campaign progress preserves a pending settings retry', async () => {
+  const memory = createMemoryProfileRepository();
+  let failNextWrite = true;
+  const repository = {
+    readProfile: () => memory.readProfile(),
+    async writeProfile(request: Parameters<typeof memory.writeProfile>[0]) {
+      if (failNextWrite) {
+        failNextWrite = false;
+        throw new Error('IndexedDB unavailable');
+      }
+      return memory.writeProfile(request);
+    },
+    exportRawProfileRecord: () => memory.exportRawProfileRecord(),
+    resetCorruptProfile: (snapshot: string) => memory.resetCorruptProfile(snapshot),
+  };
+  const progress = createProgress(repository);
+  await progress.loadProfile();
+  await assert.rejects(progress.saveSettings({ simulationSpeed: 2 }), /IndexedDB unavailable/);
+
+  await progress.loadCampaign();
+  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2 });
+});
 
 test('records a formal sample settlement once and keeps the best score', async () => {
   const repository = createMemoryProfileRepository();

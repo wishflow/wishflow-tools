@@ -4,7 +4,7 @@
 
 本文件定义 `Progress`、`Experiments` 及共享内部 `content` Module 隐藏的存储与内容读取语义。三个面向消费者的深 Module 为 `Game`、`Progress`、`Experiments`；本文的 Repository 和 Source 是所属 Module 的内部 Seam，不是 UI、AI 或脚本需要调用的另一套公共 Interface。模块关系见[架构设计](architecture.md)，交付顺序见[实施计划](implementation-plan.md)。
 
-本文同时记录长期契约和已实现范围。T05 已实现 Progress 的小型档案聚合、Cow Gulch 受支持样本的正式结算、内存与 IndexedDB 存储、条件写入、去重及页面内重试；T15 已实现实验数值方案与比较报告的内存/IndexedDB 存储及跨刷新恢复；T18 已实现设置写入冲突提示、失败重试、损坏档案备份及条件重置。完整六区域战役进度、关卡解锁、可续算的运行状态和内容来源仍是后续目标。当前存档与实验仓库均是窄实现，不能视作完整战役或通用实验平台。
+本文同时记录长期契约和已实现范围。T05 已实现 Progress 的小型档案聚合、Cow Gulch 受支持样本的正式结算、内存与 IndexedDB 存储、条件写入、去重及页面内重试；T15 已实现实验数值方案与比较报告的内存/IndexedDB 存储及跨刷新恢复；T18 已实现设置写入冲突提示、失败重试、损坏档案备份及条件重置。T20 已用两个验收样本验证有限的战役进度投影与关卡解锁；完整六区域战役、生产关卡定义及其解锁关系、可续算运行状态和通用内容来源仍是后续目标。当前存档与实验仓库均是窄实现，不能视作完整战役或通用实验平台。
 
 目标是让 IndexedDB、localStorage、远程数据库或对象存储的替换只影响适配器及启动装配。接口替换成立的条件是新实现通过同一套契约测试；类型签名相同但原子性、冲突或失败语义不同，不算兼容实现。
 
@@ -120,7 +120,7 @@ localStorage 适配器的锁协议必须覆盖本应用所有写入者。环境�
 
 ### 4.6 当前已实现：倍速设置与样本结算档案
 
-`Progress` 公共 Interface 提供 `loadProfile()`、`loadSettings()`、`saveSettings()`、`retrySettings()`、`exportSavedProfile()`、`resetCorruptProfile()`、`applySettlement()` 和 `retrySettlement()`。公开档案视图仅返回设置、已完成样本 ID 和各样本高分；不暴露修订号、结算收据或存储介质。浏览器使用 `gunsnglory-profile` 数据库、`profiles` 对象仓库和 `default` 记录，实时战局本身不写入档案。
+`Progress` 公共 Interface 提供 `loadProfile()`、`loadCampaign()`、`loadSettings()`、`saveSettings()`、`retrySettings()`、`exportSavedProfile()`、`resetCorruptProfile()`、`applySettlement()` 和 `retrySettlement()`。公开档案视图仅返回设置、已完成样本 ID 和各样本高分；不暴露修订号、结算收据或存储介质。浏览器使用 `gunsnglory-profile` 数据库、`profiles` 对象仓库和 `default` 记录，实时战局本身不写入档案。
 
 当前记录格式 `schemaVersion: 2` 包含 `settings`、`completedScenarios`、`highScores`、`appliedSettlementIds`、`revision`，以及最近一次存储操作的 ID 和请求摘要。对象仓库结构仍为数据库版本 1，以保持与既有记录兼容。旧 `schemaVersion: 1` 记录在读取时映射为默认的空样本进度和修订 0；首次成功写入时升级为格式 2，原有声音设置及其他设置字段原样保留。缺少倍速时使用 `1×`，有效范围为 `0.25×–4×`、步进 `0.25×`。
 
@@ -128,7 +128,7 @@ localStorage 适配器的锁协议必须覆盖本应用所有写入者。环境�
 
 T18 没有更改数据库版本或 `schemaVersion: 2`。原有 `schemaVersion: 1` 迁移仍只在首次成功写入时转换到格式 2。设置重试保留原请求内容、修订和操作 ID；恢复备份序列化原始 `default` 记录，条件重置只接受当前仍损坏且与该快照完全相同的记录。较新格式保留在原处，用户可导出后用兼容版本处理。
 
-Cow Gulch 样本明确标记为当前唯一支持正式结算的内容。调试败北样本、实验和回放不能写正式档案。结算写入失败或修订冲突会在结算界面显示未保存状态，用户可重试；未保存结算只保存在内存，关闭或刷新页面会丢失待重试请求。设置写入冲突会提示重载；临时设置失败可使用同请求重试。损坏档案可先下载原始 JSON，再确认替换；未知较新格式只能导出。当前仍没有完整战役解锁、跨标签页自动合并、进度合并选择或导入档案功能。
+Cow Gulch 样本明确标记为当前唯一支持正式结算的内容。调试败北样本、实验和回放不能写正式档案。结算写入失败或修订冲突会在结算界面显示未保存状态，用户可重试；未保存结算只保存在内存，关闭或刷新页面会丢失待重试请求。设置写入冲突会提示重载；临时设置失败可使用同请求重试。损坏档案可先下载原始 JSON，再确认替换；未知较新格式只能导出。T20 的战役阶段 ID 为 `campaign-cow-gulch-sample-1` 和 `campaign-cow-gulch-sample-2`，与 T05 的 `cow-gulch` 样本 ID 分离，避免旧样本结算误解锁。阶段目录注入 Progress；`loadCampaign()` 从既有完成 ID 与最高分投影阶段状态。胜利结算使用原有 `completedScenarios`、`highScores` 与结算收据写入路径；IndexedDB 数据库版本和 `schemaVersion: 2` 均不变。每次开关卡前浏览器重新读取状态并拒绝锁定项；未完成关卡不保存运行态，重新选择时从初始状态开始。两个验收阶段共用现有 Cow Gulch 地图和规则，只用于验证选择、解锁、最高分及刷新恢复，不是完整生产关卡。跨标签页自动合并、进度合并选择或导入档案仍未实现。
 
 ## 5. 内容读取契约
 

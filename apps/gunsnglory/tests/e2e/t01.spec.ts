@@ -23,6 +23,7 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   expect(colorCount).toBeGreaterThan(30);
 
   const clickWorld = async (worldX: number, worldY: number) => {
+    await canvas.scrollIntoViewIfNeeded();
     const bounds = await canvas.boundingBox();
     if (!bounds) throw new Error('Game canvas has no layout box');
     await page.mouse.click(
