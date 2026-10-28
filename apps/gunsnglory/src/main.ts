@@ -2,7 +2,7 @@ import '@wishflow/site-shell';
 import { getLanguage, registerMessages, subscribeLanguage } from '@wishflow/site-shell';
 import { createBrowserGame, createBrowserProgress } from './bootstrap/browser';
 import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
-import { screenToMapCell } from './render/map-viewport';
+import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import type { GameEvent, GameIntent, GameMode, GameSettlementRecord } from './game';
@@ -204,6 +204,7 @@ let pendingUpgradeUnitId: string | undefined;
 let upgradeCommandNumber = 0;
 let settingsSaveSequence = 0;
 const simulationTime = new SimulationTimeAccumulator();
+let mapCamera: MapCamera = createMapCamera();
 const languageMessages = {
   en: {
     result: 'Battle result',
@@ -590,7 +591,7 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
 function redraw(resize = false): void {
   const displayPixelScale = getDisplayPixelScale();
   if (resize || !context) context = resizeCanvas(canvas, displayPixelScale);
-  drawGame(context, view, images, displayPixelScale);
+  drawGame(context, view, images, displayPixelScale, mapCamera);
 }
 
 function getDisplayPixelScale(): number {
@@ -648,10 +649,23 @@ let animationFrame = 0;
 let previousTimestamp: number | undefined;
 let loopGeneration = 0;
 let replacingSession = false;
+type PointerPoint = { x: number; y: number };
+type TrackedPointer = { pointerType: string; point: PointerPoint };
+type PinchGesture = {
+  pointerIds: [number, number];
+  startDistance: number;
+  startZoom: number;
+  mapAnchor: PointerPoint;
+};
+
 let activePointerId: number | undefined;
-let activePointerOrigin: { x: number; y: number } | undefined;
+let activePointerOrigin: PointerPoint | undefined;
 let activeDragUnitId: string | undefined;
 let dragStarted = false;
+let pointerMovedBeyondTolerance = false;
+let multiTouchGestureLocked = false;
+let pinchGesture: PinchGesture | undefined;
+const trackedPointers = new Map<number, TrackedPointer>();
 const DRAG_START_TOLERANCE = 20;
 
 function stopGameLoop(): void {
@@ -671,6 +685,7 @@ async function replaceSession(scenarioId: string, randomSeed: number, mode: Game
     session = await game.open({ scenarioId, randomSeed, mode });
     view = session.observe();
     pauseReason = undefined;
+    mapCamera = createMapCamera();
     previousSession.close();
     lastDefeatReward = undefined;
     lastRecruitmentEvent = undefined;
@@ -722,11 +737,27 @@ simulationSpeedInput.addEventListener('change', () => {
 
 function finishPointerMovement(pointerId?: number): void {
   if (pointerId !== undefined && pointerId !== activePointerId) return;
+  const endedPointerId = activePointerId;
   const wasDragging = dragStarted;
   activePointerId = undefined;
   activePointerOrigin = undefined;
   activeDragUnitId = undefined;
   dragStarted = false;
+  pointerMovedBeyondTolerance = false;
+  if (endedPointerId !== undefined) trackedPointers.delete(endedPointerId);
+  if (wasDragging) dispatch({ type: 'stop-moving' });
+}
+
+function cancelPointerGesture(): void {
+  const wasDragging = dragStarted;
+  activePointerId = undefined;
+  activePointerOrigin = undefined;
+  activeDragUnitId = undefined;
+  dragStarted = false;
+  pointerMovedBeyondTolerance = false;
+  multiTouchGestureLocked = false;
+  pinchGesture = undefined;
+  trackedPointers.clear();
   if (wasDragging) dispatch({ type: 'stop-moving' });
 }
 
@@ -737,7 +768,7 @@ function pauseForBackground(): void {
     stopGameLoop();
     return;
   }
-  finishPointerMovement();
+  cancelPointerGesture();
   pauseReason = 'background';
   stopGameLoop();
   view = session.pause();
@@ -832,7 +863,7 @@ pauseControl.addEventListener('click', () => {
     return;
   }
 
-  finishPointerMovement();
+  cancelPointerGesture();
   pauseReason = 'manual';
   stopGameLoop();
   view = session.pause();
@@ -934,56 +965,189 @@ window.addEventListener('pagehide', () => {
   session.close();
 }, { once: true });
 
-function pointerMapPosition(event: PointerEvent): { x: number; y: number; mapX: number; mapY: number } | undefined {
+function pointerLogicalPosition(clientX: number, clientY: number): PointerPoint | undefined {
   const bounds = canvas.getBoundingClientRect();
   const logicalViewport = fitAspectViewport(bounds.width, bounds.height, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
-  const point = toLogicalPoint(
-    event.clientX - bounds.left,
-    event.clientY - bounds.top,
+  return toLogicalPoint(
+    clientX - bounds.left,
+    clientY - bounds.top,
     logicalViewport,
     GAME_VIEWPORT.width,
     GAME_VIEWPORT.height,
-  );
-  if (!point) return undefined;
+  ) ?? undefined;
+}
 
-  const mapViewport = getMapViewport(view, getDisplayPixelScale());
+function pointerMapPosition(event: PointerEvent): { x: number; y: number; mapX: number; mapY: number } | undefined {
+  const point = pointerLogicalPosition(event.clientX, event.clientY);
+  if (!point) return undefined;
+  const mapViewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
   const mapCell = screenToMapCell(mapViewport, point.x, point.y);
   return { x: point.x, y: point.y, mapX: mapCell.x, mapY: mapCell.y };
 }
 
-canvas.addEventListener('pointerdown', (event: PointerEvent) => {
-  if (activePointerId !== undefined) {
-    if (event.pointerId !== activePointerId) finishPointerMovement();
+function midpoint(first: PointerPoint, second: PointerPoint): PointerPoint {
+  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+}
+
+function pointerDistance(first: PointerPoint, second: PointerPoint): number {
+  return Math.hypot(first.x - second.x, first.y - second.y);
+}
+
+function startPinchGesture(): void {
+  const touchPointers = [...trackedPointers.entries()].filter(([, pointer]) => pointer.pointerType === 'touch').slice(0, 2);
+  if (touchPointers.length < 2) return;
+
+  const wasDragging = dragStarted;
+  activePointerId = undefined;
+  activePointerOrigin = undefined;
+  activeDragUnitId = undefined;
+  dragStarted = false;
+  pointerMovedBeyondTolerance = false;
+  multiTouchGestureLocked = true;
+  if (wasDragging) dispatch({ type: 'stop-moving' });
+
+  const [firstEntry, secondEntry] = touchPointers;
+  if (!firstEntry || !secondEntry) return;
+  const [firstId, firstPointer] = firstEntry;
+  const [secondId, secondPointer] = secondEntry;
+  const focalPoint = midpoint(firstPointer.point, secondPointer.point);
+  const viewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
+  pinchGesture = {
+    pointerIds: [firstId, secondId],
+    startDistance: Math.max(1, pointerDistance(firstPointer.point, secondPointer.point)),
+    startZoom: mapCamera.zoom,
+    mapAnchor: screenToMapCell(viewport, focalPoint.x, focalPoint.y),
+  };
+}
+
+function updatePinchGesture(): void {
+  if (!pinchGesture) return;
+  const [firstId, secondId] = pinchGesture.pointerIds;
+  const firstPointer = trackedPointers.get(firstId);
+  const secondPointer = trackedPointers.get(secondId);
+  if (!firstPointer || !secondPointer) return;
+
+  const focalPoint = midpoint(firstPointer.point, secondPointer.point);
+  const distanceRatio = pointerDistance(firstPointer.point, secondPointer.point) / pinchGesture.startDistance;
+  const displayPixelScale = getDisplayPixelScale();
+  const baseViewport = getMapViewport(view, displayPixelScale);
+  mapCamera = cameraForAnchor(
+    baseViewport,
+    view.map.width,
+    view.map.height,
+    GAME_VIEWPORT.width,
+    GAME_VIEWPORT.height,
+    pinchGesture.startZoom * distanceRatio,
+    pinchGesture.mapAnchor,
+    focalPoint,
+    displayPixelScale,
+  );
+  redraw();
+}
+
+function finishPointerContact(pointerId: number): void {
+  if (!trackedPointers.has(pointerId)) return;
+  if (multiTouchGestureLocked) {
+    trackedPointers.delete(pointerId);
+    if (pinchGesture?.pointerIds.includes(pointerId)) pinchGesture = undefined;
+    if (trackedPointers.size === 0) {
+      multiTouchGestureLocked = false;
+      pinchGesture = undefined;
+    }
     return;
   }
-  if (!event.isPrimary || (event.pointerType === 'mouse' && event.button !== 0)) return;
-  const point = pointerMapPosition(event);
-  if (!point) return;
+  if (pointerId === activePointerId) finishPointerMovement(pointerId);
+  else trackedPointers.delete(pointerId);
+}
 
+function selectedUnitAt(mapX: number, mapY: number): string | undefined {
+  return view.units.find((unit) => unit.selected
+    && mapX >= unit.hitArea.x && mapX < unit.hitArea.x + unit.hitArea.width
+    && mapY >= unit.hitArea.y && mapY < unit.hitArea.y + unit.hitArea.height)?.id;
+}
+
+canvas.addEventListener('pointerdown', (event: PointerEvent) => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  if (event.pointerType !== 'touch' && !event.isPrimary) return;
+  if (multiTouchGestureLocked && event.pointerType !== 'touch') return;
+  if (activePointerId !== undefined) {
+    const activePointer = trackedPointers.get(activePointerId);
+    if (activePointer?.pointerType !== 'touch' || event.pointerType !== 'touch') return;
+  }
+
+  const point = pointerLogicalPosition(event.clientX, event.clientY);
+  if (!point) return;
   event.preventDefault();
-  activePointerId = event.pointerId;
-  activePointerOrigin = { x: point.x, y: point.y };
-  dragStarted = false;
   try {
     canvas.setPointerCapture(event.pointerId);
   } catch {
-    finishPointerMovement();
     return;
   }
-  dispatch({ type: 'select-at', x: point.mapX, y: point.mapY });
+  trackedPointers.set(event.pointerId, { pointerType: event.pointerType, point });
+  if (multiTouchGestureLocked) return;
+
+  if (event.pointerType === 'touch') {
+    if ([...trackedPointers.values()].filter((pointer) => pointer.pointerType === 'touch').length >= 2) {
+      startPinchGesture();
+      return;
+    }
+  }
+  if (activePointerId !== undefined) return;
+
+  activePointerId = event.pointerId;
+  activePointerOrigin = point;
+  activeDragUnitId = undefined;
+  dragStarted = false;
+  pointerMovedBeyondTolerance = false;
+  if (event.pointerType === 'touch') {
+    const mapViewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
+    const mapCell = screenToMapCell(mapViewport, point.x, point.y);
+    activeDragUnitId = selectedUnitAt(mapCell.x, mapCell.y);
+    return;
+  }
+
+  const mapPoint = pointerMapPosition(event);
+  if (!mapPoint) {
+    finishPointerMovement(event.pointerId);
+    return;
+  }
+  dispatch({ type: 'select-at', x: mapPoint.mapX, y: mapPoint.mapY });
   activeDragUnitId = view.units.find((unit) => unit.selected)?.id;
 });
 
 canvas.addEventListener('pointermove', (event: PointerEvent) => {
+  const pointer = trackedPointers.get(event.pointerId);
+  if (!pointer) return;
+  const logicalPoint = pointerLogicalPosition(event.clientX, event.clientY);
+  if (!logicalPoint) {
+    finishPointerContact(event.pointerId);
+    return;
+  }
+  pointer.point = logicalPoint;
+
+  if (multiTouchGestureLocked) {
+    event.preventDefault();
+    if (pinchGesture?.pointerIds.includes(event.pointerId)) updatePinchGesture();
+    return;
+  }
   if (event.pointerId !== activePointerId || !activePointerOrigin) return;
   const point = pointerMapPosition(event);
   if (!point) {
-    finishPointerMovement(event.pointerId);
+    finishPointerContact(event.pointerId);
     return;
   }
-  if (!dragStarted
+  if (!pointerMovedBeyondTolerance
     && Math.abs(point.x - activePointerOrigin.x) <= DRAG_START_TOLERANCE
     && Math.abs(point.y - activePointerOrigin.y) <= DRAG_START_TOLERANCE) return;
+
+  pointerMovedBeyondTolerance = true;
+  event.preventDefault();
+  if (pointer.pointerType === 'touch' && !activeDragUnitId) {
+    const viewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
+    const origin = screenToMapCell(viewport, activePointerOrigin.x, activePointerOrigin.y);
+    dispatch({ type: 'select-at', x: origin.x, y: origin.y });
+    activeDragUnitId = view.units.find((unit) => unit.selected)?.id;
+  }
   if (!activeDragUnitId || !view.units.some((unit) => unit.id === activeDragUnitId && unit.selected)) return;
 
   dragStarted = true;
@@ -991,13 +1155,26 @@ canvas.addEventListener('pointermove', (event: PointerEvent) => {
 });
 
 canvas.addEventListener('pointerup', (event: PointerEvent) => {
-  if (event.pointerId !== activePointerId) return;
+  const pointer = trackedPointers.get(event.pointerId);
+  if (!pointer) return;
   event.preventDefault();
+  if (multiTouchGestureLocked) {
+    finishPointerContact(event.pointerId);
+    return;
+  }
+  if (event.pointerId !== activePointerId) {
+    finishPointerContact(event.pointerId);
+    return;
+  }
+  if (pointer.pointerType === 'touch' && !pointerMovedBeyondTolerance) {
+    const point = pointerMapPosition(event);
+    if (point) dispatch({ type: 'select-at', x: point.mapX, y: point.mapY });
+  }
   finishPointerMovement(event.pointerId);
 });
 
-canvas.addEventListener('pointercancel', (event: PointerEvent) => finishPointerMovement(event.pointerId));
-canvas.addEventListener('lostpointercapture', (event: PointerEvent) => finishPointerMovement(event.pointerId));
-window.addEventListener('blur', () => finishPointerMovement());
+canvas.addEventListener('pointercancel', (event: PointerEvent) => finishPointerContact(event.pointerId));
+canvas.addEventListener('lostpointercapture', (event: PointerEvent) => finishPointerContact(event.pointerId));
+window.addEventListener('blur', cancelPointerGesture);
 
 subscribeLanguage(() => renderStatus());

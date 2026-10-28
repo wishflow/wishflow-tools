@@ -1,13 +1,9 @@
 import type { Direction, EnemyView, GameView, RenderTile, ShotView } from '../game';
-import { calculateMapViewport, type MapViewport } from './map-viewport';
+import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
 export type GameImages = Readonly<Record<string, HTMLImageElement>>;
-
-function snapToDevicePixel(value: number, displayPixelScale: number): number {
-  return Math.round(value * displayPixelScale) / displayPixelScale;
-}
 
 export function resizeCanvas(
   canvas: HTMLCanvasElement,
@@ -22,8 +18,12 @@ export function resizeCanvas(
   return context;
 }
 
-export function getMapViewport(view: GameView, displayPixelScale = 1): MapViewport {
-  const viewport = calculateMapViewport(
+export function getMapViewport(
+  view: GameView,
+  displayPixelScale = 1,
+  camera: Readonly<MapCamera> = DEFAULT_MAP_CAMERA,
+): MapViewport {
+  const baseViewport = calculateMapViewport(
     view.map.width,
     view.map.height,
     GAME_VIEWPORT.width,
@@ -31,13 +31,15 @@ export function getMapViewport(view: GameView, displayPixelScale = 1): MapViewpo
     view.map.tileSize,
     displayPixelScale,
   );
-  return {
-    ...viewport,
-    origin: {
-      x: snapToDevicePixel(viewport.origin.x, displayPixelScale),
-      y: snapToDevicePixel(viewport.origin.y, displayPixelScale),
-    },
-  };
+  return mapViewportWithCamera(
+    baseViewport,
+    view.map.width,
+    view.map.height,
+    GAME_VIEWPORT.width,
+    GAME_VIEWPORT.height,
+    camera,
+    displayPixelScale,
+  );
 }
 
 function drawTiles(
@@ -126,13 +128,14 @@ export function drawGame(
   view: GameView,
   images: GameImages,
   displayPixelScale = 1,
+  camera: Readonly<MapCamera> = DEFAULT_MAP_CAMERA,
 ): void {
   context.save();
   context.clearRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   context.fillStyle = '#1a1712';
   context.fillRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
 
-  const viewport = getMapViewport(view, displayPixelScale);
+  const viewport = getMapViewport(view, displayPixelScale, camera);
   context.beginPath();
   context.rect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   context.clip();
