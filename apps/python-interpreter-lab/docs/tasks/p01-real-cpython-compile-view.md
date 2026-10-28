@@ -2,7 +2,7 @@
 
 对应规格：[P1 真实 CPython 编译视图](../specs/p01-real-cpython-compile-view.md)。按依赖顺序纵向交付；每项任务完成后运行其验证，P1 整体验收通过后再集成。
 
-当前状态：T01–T05 的实现、catalog 登记、整站构建及本地验证已完成。首版已合并并推送；第一次 GitHub Actions 在依赖安装时因 pnpm 12 未批准 `esbuild` 安装脚本而失败并跳过部署。已增加应用本地 `allowBuilds.esbuild`，且用 pnpm 12.15.0 验证冻结安装与完整 `test:ci` 通过。修复提交、第二次 Actions 和线上实测尚未完成，发布门仍待通过。
+当前状态：T01–T05 的实现、catalog 登记、整站构建、CI、Pages 部署和线上实测均已完成。第一次 GitHub Actions 因 pnpm 12 未批准 `esbuild` 安装脚本而失败并跳过部署；增加应用本地 `allowBuilds.esbuild` 后，pnpm 12.15.0 冻结安装与完整 `test:ci` 通过。第二次 workflow `40750421138` 的共享检查、Python 应用测试、GitHub Pages 与 Cloudflare Pages 全部成功；正式 URL 的真实 AST、代码对象、字节码和共享语言切换实测通过。发布门已通过。
 
 ## T01：搭建独立前端应用
 
@@ -49,4 +49,5 @@
 | T04 工作区与交互 | 通过 | AST 可展开；键盘焦点可达；共享语言切换有效；320/768/1024/1440px 无横向溢出 |
 | T05 catalog、CI 与整站产物 | 通过 | 应用 6 条单测 + 5 条 E2E；根 catalog 14 条检查；`build:site` 生成完整应用目录 |
 | pnpm 12 安装策略复验 | 通过 | `npx --yes pnpm@12.15.0 install --frozen-lockfile`；`allowBuilds.esbuild` 通过供应链检查与冻结安装 |
-| 部署与线上实测 | 待完成 | 首次远端运行在依赖安装策略处失败、部署被跳过；修复已通过本地同版本 pnpm 验证，待提交推送并复查 Actions 与公开站点 |
+| 正式 CI 与部署 | 通过 | workflow [`40750421138`](https://github.com/wishflow/wishflow-tools/actions/runs/40750421138)：共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 全部成功；首轮 `40748933722` 的安装失败已由本地 pnpm 配置修复 |
+| 线上实测 | 通过 | `https://wishflow-tools.pages.dev/python-interpreter-lab/`：Pyodide 314.0.7 / CPython 3.14.2；默认示例 AST 含 2 个代码对象，模块显示 `LOAD_SMALL_INT 3`，`add` 函数显示 `BINARY_OP`；共享语言切换到英文并恢复中文成功 |
