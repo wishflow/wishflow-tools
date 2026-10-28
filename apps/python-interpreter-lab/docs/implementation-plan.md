@@ -4,9 +4,9 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-当前为 P0 文档阶段，日期 2026-10-29；功能分支为 `codex/python-interpreter-lab-docs`，从 `master` 创建。用户本轮要求先写文档，因此本轮交付保留在功能分支；应用实现、导航登记、合并发布及线上验证均尚未进行。后续实施依照根交付规则推进，或遵循用户届时明确指定的分支安排。
+P0 文档基线已完成。当前在 `codex/python-interpreter-lab-docs` 上完成了 P1 本地实现与验收：应用遵循 React + TypeScript + Vite、共享站点壳、本地 pnpm 和 module Worker 约束，固定 Pyodide 314.0.7 提供真实 CPython AST、代码对象与反汇编；catalog 已登记，应用 CI 与整站构建通过。提交、合并 `master`、推送、GitHub Actions 状态确认及线上实测仍待完成，因此 P1 发布门尚未通过。验收基线见 [spec](specs/p01-real-cpython-compile-view.md) 和 [tasks](tasks/p01-real-cpython-compile-view.md)。
 
-本次只创建以下文档：
+P0 建立了以下文档：
 
 | 文件 | 单一职责 |
 | --- | --- |
@@ -15,7 +15,7 @@
 | [ADR-0001](adr/0001-browser-python-visualizer.md) | 总体路线、备选方案、执行边界及取舍 |
 | 本文 | 阶段、依赖、启动条件、验收与回滚 |
 
-详细 spec 和 tasks 在对应阶段实施前创建，不预建空文件，不把下面的整体路线视作已经批准所有依赖和接口细节。
+后续详细 spec 和 tasks 在对应阶段实施前创建，不预建空文件，不把整体路线视作已经批准所有依赖和接口细节。P1 已启动，因此它的详细文件已建立。
 
 ## 2. 阶段启动方式
 
@@ -73,19 +73,20 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 ## 4. 阶段范围、验收与回滚
 
-### P0：文档基线（本次）
+### P0：文档基线（已完成）
 
 - **范围**：功能分支、应用目录、AGENTS/CLAUDE、整体 ADR 和 plan，确认两类引擎的推进顺序。
 - **完成标准**：文档间无矛盾或失效文件链接；`pi` 能启动加载本应用契约，并按指针真实读取 ADR/plan；Markdown 差异检查通过，成品复制完成。
-- **边界与回滚**：不登记导航、不创建依赖清单和应用代码。回退本次文档提交即可，不影响站点运行。
+- **边界与回滚**：P0 本身不登记导航、不创建依赖清单和应用代码。回退 P0 文档提交即可，不影响站点运行。
 
-### P1：真实 AST、代码对象与字节码
+### P1：真实 AST、代码对象与字节码（本地验收通过，发布待完成）
 
-- **前置**：P0；本阶段 spec 确认 UI 最小方案、Pyodide 及 Python 版本、资源托管方式和目标浏览器。
+- **前置**：P0；已在 [P1 spec](specs/p01-real-cpython-compile-view.md) 中确定 UI 最小方案、Pyodide 314.0.7 与对应 CPython 版本展示方式、固定版本 CDN 资源及浏览器验收范围。
 - **交付**：用户可输入或选择示例、点击分析，在 Worker 内得到 AST、代码对象和真实反汇编；可选择嵌套函数代码对象；展示版本、加载状态、语法/编译错误及取消恢复。分析不执行用户代码。
-- **集成**：建立独立 React + TypeScript + Vite 应用、pnpm lockfile、可执行安装脚本、独立 `build`/`test:ci` 和 `dist/`；`build` 先做类型检查再构建。Vite 使用 `base: './'`，先验证共享站点 `/python-interpreter-lab/` 子路径可加载入口、样式、WASM/数据文件和 module Worker，才登记 catalog。catalog 项含中英文标题和简介。HTML 用 `@wishflow/site-shell` 包裹 content 插槽并提供 slug、双语标题和 `../` 站点链接；React 入口导入共享壳。默认单页不打开空侧栏。
+- **集成**：已建立独立 React + TypeScript + Vite 应用、pnpm lockfile、可执行安装脚本、独立 `build`/`test:ci` 和 `dist/`；`build` 先做类型检查再构建。Vite 使用 `base: './'`，在 `/python-interpreter-lab/` 子路径下验证了入口、样式和 module Worker，并经 Pyodide CDN 初始化后登记 catalog。catalog 含中英文标题和简介。HTML 通过 `@wishflow/site-shell` content 插槽接入共享壳，设置 slug、双语标题和 `../` 站点链接；React 入口导入共享壳。单页未启用空侧栏。
 - **验收**：`x = 1 + 2` 展示实际常量折叠结果；含 `def` 的源码能区分模块与函数代码对象；缩进错误、AST 成功但编译失败、资源加载失败和分析取消都有正确反馈；后续再次分析可成功。
 - **路径验收**：检查以 `/python-interpreter-lab/` 为 base 的生产产物资源路径，而非只通过 Vite 根路径 dev server。
+- **当前结果**：`pnpm run test:ci` 的类型检查、6 条单测与 5 条浏览器用例通过；根 `pnpm run test:catalog` 的 14 条检查通过；`pnpm run build:site` 完成并生成 `_site/python-interpreter-lab/`。部署与线上验证仍待推送后完成。
 - **回滚**：回退应用登记及首版提交，恢复此前静态站点。只回退应用自身文件及本阶段必需的共享登记，不改变其他应用。
 
 ### P2：词法观察与源码联动
@@ -180,9 +181,9 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 | 风险或待决项 | 必须处理的时点 | 具体动作 |
 | --- | --- | --- |
-| UI 技术栈、编辑器依赖 | P1 spec | 沿用 React/TypeScript/Vite 默认模式；比较编辑器依赖的体验、包体、许可、可访问性和子路径打包情况，后续图形库在 P8 再定 |
-| Pyodide/CPython 版本与资源托管 | P1 spec | 固定版本，验证资产一致性、下载体积、部署路径、缓存和加载失败恢复 |
-| 浏览器、窄屏、键盘与动画预算 | P1 spec，并随能力扩展 | 确定测试矩阵；不得只按开发机表现承诺所有设备 |
+| UI 技术栈、编辑器依赖 | P1 spec（已确定） | 采用 React/TypeScript/Vite 与原生 textarea，不额外引入编辑器依赖；后续图形库在 P8 再定 |
+| Pyodide/CPython 版本与资源托管 | P1 spec（已验证主要链路） | 固定 Pyodide 314.0.7 CDN，显示运行时 CPython 3.14.2；已验证加载、失败重试及子路径访问，尚未形成加载耗时或离线表现承诺 |
+| 浏览器、窄屏、键盘与动画预算 | P1 spec（本地通过） | 浏览器用例覆盖 320/768/1024/1440px、键盘焦点和共享语言切换；样式尊重减少动态效果偏好，其他浏览器兼容性随阶段扩展 |
 | 运行占满 Worker、无法取消 | P1/P3/P5 | 分别验证分析终止、执行终止、教学步进让出；测量停止延迟 |
 | 源码与引擎/版本不匹配 | P1 起 | 每个结果带明确来源，重置和编辑后拒绝旧结果 |
 | trace 事件时机或异常状态误导 | P3 spec | 先用小案例确定事件含义，再设计高亮与变量标签 |
@@ -203,11 +204,11 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 6. **发布**：后续可运行阶段按根规则完成相关检查、提交、合并 `master`、`git push origin master`，等待已有 CI/CD 成功，并在线上路径实测后才记录发布完成。静态应用改动不触发无关 Cloudflare Worker 发布。
 7. **回滚**：以每个阶段的独立提交或明确提交集合回退，按第 3 节处理已经落地的后续依赖，验证剩余能力仍可用；有持久化格式、新共享协议或跨应用变更时必须重新补充兼容与回滚说明。
 
-阶段中的构建和测试入口是后续必须建立的交付契约，目前不是可运行命令或已通过的证据。本次文档不会创建 CI 配置或修改发布链路。
+阶段中的构建和测试入口由 P1 建立并已在本地运行。本应用沿用现有 CI 变更分类与静态站发布链路，不为其新增 CI 配置。
 
-## 8. 本次文档验证记录
+## 8. 验证记录
 
-### 8.1 文档检查
+### 8.1 P0 文档检查（历史记录）
 
 检查范围为本批 4 份 Markdown：相对文件链接、代码围栏、尾空白、CLAUDE 单行导入及跨文档范围一致性。相对链接检查共 9 处，均可解析；交叉审阅后明确了依赖阶段的回退条件，以及语法预检与运行期不支持操作的区别。
 
@@ -225,7 +226,7 @@ pi --no-extensions --no-mcp --no-skills --no-prompt-templates --no-themes \
   2> /tmp/python-interpreter-lab-pi-frontend-context.stderr
 ```
 
-运行退出码为 0，stderr 为空。启动上下文加载了根与本应用的 `AGENTS.md`，没有用 `read` 补读 AGENTS 冒充启动加载；两次真实 `read` 分别读取 ADR 和计划，均返回 `isError: false`。输出要点如下：
+运行退出码为 0，stderr 为空。启动上下文加载了根与本应用的 `AGENTS.md`，没有用 `read` 补读 AGENTS 冒充启动加载；两次真实 `read` 分别读取 ADR 和计划，均返回 `isError: false`。以下是 P0 当时的输出结论；当前应用状态请以本节 P1 记录为准。
 
 ```text
 启动加载：AGENTS.md
@@ -242,4 +243,18 @@ catalog 登记：首版可构建、可验证，且通过子路径资源检查后
 应用实现与登记：均未进行；当前为 P0 文档阶段
 ```
 
-本次交付只有文档，因此没有应用构建、解释器测试、浏览器功能或线上发布结果。
+P0 交付只有文档，因此当时没有应用构建、解释器测试、浏览器功能或线上发布结果。
+
+### 8.3 P1 本地实现与验证
+
+本阶段详细基线见 [P1 spec](specs/p01-real-cpython-compile-view.md) 与 [P1 tasks](tasks/p01-real-cpython-compile-view.md)。应用通过真实 module Worker 动态加载固定 Pyodide 314.0.7；在本机 Chrome 中收到版本握手 `Pyodide 314.0.7；CPython 3.14.2`。`x = 1 + 2` 的真实指令表显示 `LOAD_SMALL_INT 3`；嵌套 `add` 函数由实际 `dis.get_instructions` 返回 `BINARY_OP`。分析 `raise RuntimeError(...)` 只显示编译结果，没有执行或抛出用户代码异常。
+
+| 验证 | 命令或操作 | 结果 |
+| --- | --- | --- |
+| 应用 CI | `CHROME_EXEC='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' pnpm run test:ci`（应用目录） | 通过：类型检查、6 条单测、5 条生产构建浏览器用例；包含解析/编译错误、常量折叠、嵌套代码对象、无执行、取消/重试、CDN 失败恢复、AST/code object 截断及 320/768/1024/1440px 无横向溢出 |
+| catalog 与变更分类 | `pnpm run test:catalog` | 通过：14 条检查；确认应用变更进入测试矩阵及静态站构建 |
+| 整站构建 | `pnpm run build:site` | 通过，生成 `_site/python-interpreter-lab/`；既有 3D 应用报告 chunk 大小提示，其 bundle 检查通过 |
+| 站点语言同步 | Codex 内置浏览器切换共享语言控件 | 通过：中文与英文的标题、源码操作、AST/字节码标签和运行时状态同步更新 |
+| 生产子路径浏览器实测 | Playwright 本地静态服务挂载 `/python-interpreter-lab/` 并加载 Pyodide CDN | 通过：页面、module Worker、Pyodide/WASM 实际运行；错误恢复后可继续分析 |
+
+以上是本地验收；GitHub Actions、线上部署和公开 URL 实测仍待提交、合并与推送后完成，未将其记录为已发布。
