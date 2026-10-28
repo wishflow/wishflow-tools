@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "node --import tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
-    "test:ci": "pnpm run typecheck && pnpm run test:unit && pnpm run build && pnpm run test:e2e"
+    "test:ci": "pnpm run typecheck && pnpm run test:unit && pnpm run build && pnpm run test:e2e",
+    "simulate:batch": "tsx src/cli/run-batch.ts"
   },
   "dependencies": {
     "@wishflow/site-shell": "file:../../packages/site-shell"

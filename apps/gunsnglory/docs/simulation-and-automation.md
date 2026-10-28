@@ -2,7 +2,7 @@
 
 ## 1. 文档状态与目标
 
-本文定义公共操作、场景、实验和批量执行契约，并区分设计目标与已落地切片。T01–T13 已发布；T14–T15 已在 `gunsnglory` 集成分支完成本地实现与验证，尚未发布。T14 提供数值方案准备、不可变版本冻结和 Cow Gulch 配对比较界面；T15 为方案与比较报告增加 IndexedDB 持久化。批量、CLI、MCP 和无画面产品界面尚未实现。T12 回放实际范围与扩展缺口见[5.3 节](#53-game-拥有的回放最小载荷)，T13 运行器行为见[6.3 节](#63-t13-当前实现范围)，T14 比较范围见[7.1 节](#71-冻结实验输入)与[验证记录](validation.md#20-t14-比较两套数值方案)，T15 保存/恢复范围见[7.4 节](#74-t15-保存与重新打开实验)及[验证记录](validation.md#21-t15-保存并重新打开实验)。实施顺序见[实施计划](implementation-plan.md)，依赖方向见[架构设计](architecture.md)，持久化语义见[存储契约](storage-contracts.md)。
+本文定义公共操作、场景、实验和批量执行契约，并区分设计目标与已落地切片。T01–T13 已发布；T14–T16 已在 `gunsnglory` 集成分支完成本地实现与验证，尚未发布。T14 提供数值方案准备、不可变版本冻结和 Cow Gulch 配对比较界面；T15 为方案与比较报告增加 IndexedDB 持久化；T16 提供固定 Cow Gulch 单波场景的串行批次 API 和 Node CLI。MCP、worker、远端执行及一般化无画面产品界面尚未实现。T12 回放实际范围与扩展缺口见[5.3 节](#53-game-拥有的回放最小载荷)，T13 运行器行为见[6.3 节](#63-t13-当前实现范围)，T14 比较范围见[7.1 节](#71-冻结实验输入)与[验证记录](validation.md#20-t14-比较两套数值方案)，T15 保存/恢复范围见[7.4 节](#74-t15-保存与重新打开实验)及[验证记录](validation.md#21-t15-保存并重新打开实验)，T16 批次与 CLI 范围见[8.2 节](#82-t16-串行批次与-cli-当前实现)及[验证记录](validation.md#22-t16-cli-串行批次)。实施顺序见[实施计划](implementation-plan.md)，依赖方向见[架构设计](architecture.md)，持久化语义见[存储契约](storage-contracts.md)。
 
 公共能力按已确认的 `Game`、`Progress`、`Experiments` 三个深 Module 组织。本文以 `Game` 和 `Experiments` 的 Interface 为测试 Seam；`SessionController`、规则内核和 `ScenarioRunner` 均为内部实现，不能再形成一套要求消费者掌握的公共调用链。
 
@@ -204,7 +204,7 @@ Experiments 的策略在约定决策边界获取 Game 的隔离观察并返回�
 | 预算边界 | `deltaMs` 为 0–100 的整数；`maxFrames` ≤ 250,000、`maxSimulatedMs` ≤ 2,147,483,647、`maxEntities` ≤ 100,000、`maxWallClockMs` ≤ 120,000、`yieldEveryFrames` ≤ 10,000；每决策最多 16 个意图，总动作轨迹最多 10,000 条。 |
 | 结果与保存 | `Experiments.run()` 返回实际 StartRecord、终局记录、动作轨迹、帧数、模拟/墙钟时间、实体峰值及可用的波次指标；该单次运行结果只在内存返回，不写 Progress 或 IndexedDB。比较报告的持久化由 T15 的 `saveComparison()` 单独负责。 |
 
-当前验收场景为 Cow Gulch 固定内容版本与单波样本。Experiments 已实现 `saveScheme()` 与 `compare()`；浏览器面板只允许编辑拓荒者现金奖励，并用 1、3 或 5 组固定配对 seed 比较原版与新建的不可变草稿版本。报告包含完成/计划数、未完成率、胜负、胜率、剩余生命、胜利用时、结算现金与现金变化、敌人数峰值及逃脱数。T14 初版只在内存中保存方案与报告；T15 已提供内存和 IndexedDB 仓储，可保存方案与比较报告并在刷新后重开，不写 Progress。仍没有一般化场景目录、单次运行记录持久化、批量/CLI、MCP、worker 或远端执行。T13 行为门槛见[验证记录](validation.md#18-t13-无画面运行单个场景)，T14 面板验收见[验证记录](validation.md#20-t14-比较两套数值方案)。
+当前验收场景为 Cow Gulch 固定内容版本与单波样本。Experiments 已实现 `saveScheme()` 与 `compare()`；浏览器面板只允许编辑拓荒者现金奖励，并用 1、3 或 5 组固定配对 seed 比较原版与新建的不可变草稿版本。报告包含完成/计划数、未完成率、胜负、胜率、剩余生命、胜利用时、结算现金与现金变化、敌人数峰值及逃脱数。T14 初版只在内存中保存方案与报告；T15 已提供内存和 IndexedDB 仓储，可保存方案与比较报告并在刷新后重开，不写 Progress。T16 在固定 Cow Gulch 单波与 `start-wave@1` 范围内提供串行批次；仍没有一般化场景目录、单次运行记录持久化、可配置策略、并行 worker、MCP 或远端执行。T13 行为门槛见[验证记录](validation.md#18-t13-无画面运行单个场景)，T14 面板验收见[验证记录](validation.md#20-t14-比较两套数值方案)，T16 CLI 验收见[验证记录](validation.md#22-t16-cli-串行批次)。
 
 ## 7. 数值实验与指标
 
@@ -278,7 +278,15 @@ T15 不提供运行中断点、后台继续执行、单次 `run()` 持久化、�
 
 任务重试使用同一逻辑 `runId`，附加不同 `attemptId`；最终结果只提交一次，失败尝试作为诊断保留。Experiments 内部先条件切换 `activeAttemptId` 再启动重试；产物 ID 包含尝试标识，迟到的旧尝试不能提交新终态。尝试失败与逻辑运行失败分开，重试耗尽才提交逻辑失败。具体提交条件和大型产物完整性按存储契约处理。
 
-### 8.2 后端任务边界
+### 8.2 T16 串行批次与 CLI 当前实现
+
+`Experiments.runBatch(request, { signal })` 先校验整个批次，再按输入顺序逐个 `await Experiments.run()`；最多 25 项。样本 ID 必须唯一，随机 seed 可重复以支持重跑。运行 ID 固定为 `batchId:sampleId`。批次报告同时保留完整输入、每个 `RunResult`、按 `completed`、`cancelled`、`budget-exceeded`、`failed`、`invalid-input` 分类的计数、未完成输入及取消前未启动的输入。批次调度状态 `completed` 表示所有计划项均已处理，不代表每场都正常结束或获胜。运行不写 `Progress`、IndexedDB 或实验仓库。
+
+Node CLI 命令为 `pnpm run simulate:batch -- --input <file.json> [--output <file.json>|-]`，包脚本使用已有 `tsx`，无新增依赖。输入是 1 MiB 内的 schemaVersion 1 JSON，字段为 `batchId`、1–25 个 `{id, randomSeed}` 样本和可选 `budgets`。CLI 固定运行 `cow-gulch-single-wave@1` 内容与 `start-wave@1` 策略；不接受脚本源码、路径或 `latest` 作为游戏配置。默认每场预算为 2,000 帧、200,000 ms 模拟时间、100 个实体、30,000 ms 墙钟时间及每 40 帧让出一次；覆盖值仍受 `Experiments.run()` 的上限约束。
+
+输出为 JSON：正常情况写到 stdout 或 `--output` 文件；每个非 `completed` 结果带原始 `RunRequest` 进入 `failureInputs`，取消时尚未启动的完整请求进入 `notStarted`。`SIGINT` 与 `SIGTERM` 通过 `AbortSignal` 协作取消，并在退出前输出部分结果；退出码 0 表示所有已调度运行均有 `completed` 状态（胜利或败北属于规则结果），1 表示存在未完成运行或执行错误，2 表示参数/输入错误，130/143 表示用户中断/终止。预算耗尽仍会导出分类结果并返回非零码。
+
+### 8.3 后端任务边界
 
 后端入口通过 Experiments Interface 以完整运行或批次为单位接收任务，不提供远程逐帧战斗控制，也不直接导出私有 runner。待实现的最小操作是提交实验、查询状态、请求取消、读取结果和获取产物。
 
@@ -301,11 +309,11 @@ stateDiagram-v2
 
 ## 9. CLI、MCP 与 agent 验证
 
-先提供 Game 与 Experiments 的公共 Interface，确有使用需求时再添加 CLI。交互调试调用 Game，场景与批次调用 Experiments；MCP 复用相同接口，不导入私有 `SessionController`、规则内核或 `ScenarioRunner` 绕过行为契约。本阶段不预选协议 SDK 或服务框架。
+T16 已基于实际批次消费者增加首个 Node CLI：它只解析输入文件、装配固定场景与策略、调用 `Experiments.runBatch()` 并导出 JSON。交互调试调用 Game，场景与批次调用 Experiments；MCP 若以后接入也复用相同接口，不导入私有 `SessionController`、规则内核或 `ScenarioRunner` 绕过行为契约。本阶段不预选协议 SDK 或服务框架。
 
 CLI/MCP 参数应映射到已验证的场景、配置及逻辑产物标识，使用有界查询和明确错误码。CLI 的本地路径处理属于适配器，不能让路径进入游戏内核；远程入口不得暴露任意文件读取或执行能力。
 
-每个实际开发的 agent 入口都要用 `pi` 实际加载并完成至少一次真实操作。证据包括执行命令、加载的工具/技能或上下文标识、输入场景、返回的运行标识和关键结果。CLI 必须经 agent 实际执行；MCP 必须经桥接工具真实调用；只读源码、单测或手工直调不能替代该验证。
+每个实际开发的 agent 入口都要用 `pi` 实际加载并完成至少一次真实操作。T16 已由 pi 的 bash 工具调用 `simulate:batch` 并验证三个固定 seed 的胜利结果；详细命令与返回见[验证记录](validation.md#22-t16-cli-串行批次)。后续 CLI 同样须经 agent 实际执行；MCP 须经桥接工具真实调用；只读源码、单测或手工直调不能替代该验证。
 
 如果环境不支持，交付明确列出未验证入口和阻塞原因。接口设计、示例输出或模拟桩均不能作为已经调用成功的证明。
 

@@ -319,7 +319,7 @@ T12 由 Game 记录实际消费的逐帧 `deltaMs` 和按顺序接受的命令�
 
 ## 18. T13 无画面运行单个场景
 
-T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一个固定版本场景。测试策略只观察冻结的玩家可见白名单；Game 开局记录在首帧前校验。运行记录精确区分胜负、预算耗尽、取消、无效输入和执行错误，不读取或修改正式进度。T13 切片本身不含实验 UI 或方案编辑；T14 后续增加了内存方案版本及比较面板，但实验持久化、批量或 CLI 仍未实现。完整边界见[模拟与自动化契约](simulation-and-automation.md#63-t13-当前实现范围)。
+T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一个固定版本场景。测试策略只观察冻结的玩家可见白名单；Game 开局记录在首帧前校验。运行记录精确区分胜负、预算耗尽、取消、无效输入和执行错误，不读取或修改正式进度。T13 切片本身不含实验 UI 或方案编辑；T14 后续增加了数值方案及比较面板，T15 增加比较保存，T16 增加固定场景的串行批次 CLI。完整边界见[模拟与自动化契约](simulation-and-automation.md#63-t13-当前实现范围)。
 
 | 检查 | 结果 |
 | --- | --- |
@@ -381,3 +381,25 @@ T15 为不可变数值方案与配对比较报告增加内存和 IndexedDB 仓�
 | 分支与发布边界 | T15 已完成本地验证；本提交只进入 `gunsnglory` 本地分支，不合并 `master`、不 push。按实施计划，整体发布仍由 T25/T26 门槛控制，T15 不代表 M1 完成。 |
 
 验证入口：[实验仓储共享契约](../tests/experiment-repository-contract.ts)、[内存仓储契约测试](../tests/experiment-repository.test.ts)、[IndexedDB 契约与分页测试](../tests/e2e/t15-indexeddb-contract.spec.ts)、[保存与重开测试](../tests/e2e/t15-experiment-persistence.spec.ts)。
+
+## 22. T16 CLI 串行批次
+
+T16 在 `Experiments` 公共接口增加有界串行批次，并提供固定 Cow Gulch 单波场景的 Node CLI。批次先整体校验，再按输入顺序执行；预算耗尽和单次执行错误作为运行结果分类，取消会保留当前结果和未启动输入。此能力不读取正式档案、IndexedDB 或实验仓库。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、101 项单元测试、Vite 生产构建及 39 个 Playwright 场景。 |
+| T16 单元测试 | 8 项通过：批次串行顺序与重复 seed、预算分类、取消后不启动剩余项、执行错误与无效策略区分、整批输入预校验，以及 CLI JSON 版本、预算边界、重复 ID、seed 与 25 项上限。 |
+| CLI 成功样例 | `pnpm run simulate:batch -- --input examples/serial-batch.json --output /tmp/var/wishflow-tools/t16-pi-batch-final.json` 退出码 0；3 项计划、3 项启动，seed 42/43/44 均为 victory、终局现金 `$66`，`failureInputs` 与 `notStarted` 均为空。 |
+| pi agent 入口实调 | pi 加载根与应用 `AGENTS.md`，通过 bash 实际调用 CLI；pi 退出码 0、stderr 为空，返回同一批次的 3/3 胜利结果，现金均为 `$66`。实际命令如下。 |
+| 预算超限 | 使用 `maxFrames=1`、`yieldEveryFrames=1` 的真实 CLI 进程退出码为 1；报告中调度状态为 `completed`（计划项均已处理），`budget-exceeded=1`、停止原因 `max-frames`，失败输入仍保留 seed 42。 |
+| SIGINT 取消 | 对 25 项批次设置 `yieldEveryFrames=1`，在运行 350 ms 后发送 SIGINT；进程以 130 退出，报告为 `cancelled`，25 项计划、2 项启动、23 项未启动，已启动项中有 1 项分类为取消。默认让出间隔下 25 项在首次信号前已完成；将让出间隔降为 1 后才形成稳定的进程级取消观察。 |
+| 持久化与发布边界 | CLI 只写 JSON 报告文件，不访问正式档案、IndexedDB 或实验仓库。T16 只在本地 `gunsnglory` 集成分支验证；未合并、未 push、未发布。 |
+
+验证入口：[批次调度测试](../tests/serial-batch.test.ts)、[CLI 输入解析测试](../tests/serial-batch-cli-input.test.ts)、[批次示例](../examples/serial-batch.json)、[CLI 实现](../src/cli/run-batch.ts)。
+
+pi 实际加载调用命令（工作目录 `apps/gunsnglory/`）：
+
+```sh
+pi --no-extensions --no-skills --no-prompt-templates --no-themes --no-mcp --no-session --approve --offline --tools bash --mode json -p '请用 bash 工具从当前目录真实运行 `pnpm run simulate:batch -- --input examples/serial-batch.json --output /tmp/var/wishflow-tools/t16-pi-batch-final.json`。然后读取该 JSON，仅报告 report.status、plannedRunCount、startedRunCount、每个结果的 runId、终局 outcome 与 finalCash、failureInputs 数及 notStarted 数。不要修改项目文件。'
+```

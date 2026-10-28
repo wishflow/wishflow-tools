@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "batchId": "cow-gulch-smoke",
+  "samples": [
+    { "id": "seed-42", "randomSeed": 42 },
+    { "id": "seed-43", "randomSeed": 43 },
+    { "id": "seed-44", "randomSeed": 44 }
+  ]
+}

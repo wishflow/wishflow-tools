@@ -216,8 +216,46 @@ export interface ExperimentComparisonReport {
   pairs: readonly ComparisonPair[];
 }
 
+export interface ExperimentBatchRequest {
+  batchId: string;
+  scenario: ExperimentScenario;
+  samples: readonly { id: string; randomSeed: number }[];
+  policy: { id: string; version: string };
+}
+
+export interface ExperimentBatchRun {
+  input: RunRequest;
+  result: RunResult;
+}
+
+export interface ExperimentBatchFailureInput {
+  input: RunRequest;
+  status: Exclude<RunStatus, 'completed'>;
+  stopReason: RunStopReason;
+}
+
+export interface ExperimentBatchNotStartedInput {
+  input: RunRequest;
+  reason: 'cancelled-before-start';
+}
+
+export interface ExperimentBatchReport {
+  batchId: string;
+  request: ExperimentBatchRequest;
+  status: 'completed' | 'cancelled';
+  plannedRunCount: number;
+  startedRunCount: number;
+  statusCounts: Readonly<Record<RunStatus, number>>;
+  results: readonly ExperimentBatchRun[];
+  failureInputs: readonly ExperimentBatchFailureInput[];
+  notStarted: readonly ExperimentBatchNotStartedInput[];
+}
+
+export const MAX_EXPERIMENT_BATCH_RUNS = 25;
+
 export interface Experiments {
   run(request: RunRequest, options?: { signal?: AbortSignal }): Promise<RunResult>;
+  runBatch(request: ExperimentBatchRequest, options?: { signal?: AbortSignal }): Promise<ExperimentBatchReport>;
   saveScheme(input: NumericSchemeInput): Promise<NumericSchemeVersion>;
   compare(input: ExperimentComparisonRequest, options?: { signal?: AbortSignal }): Promise<ExperimentComparisonReport>;
   saveComparison(report: ExperimentComparisonReport): Promise<SavedComparison>;
@@ -447,6 +485,37 @@ function snapshotRequest(value: unknown): FrozenRunRequest | undefined {
     sample: { id: sample.id, randomSeed: sample.randomSeed },
     policy: { id: policy.id, version: policy.version },
     ...(preparedSetup ? { preparedSetup } : {}),
+  });
+}
+
+function snapshotBatchRequest(value: unknown): ExperimentBatchRequest | undefined {
+  if (!isRecord(value) || !validId(value.batchId) || value.batchId.length > 64
+    || !Array.isArray(value.samples) || value.samples.length < 1
+    || value.samples.length > MAX_EXPERIMENT_BATCH_RUNS) return undefined;
+
+  const sampleIds = new Set<string>();
+  const samples: { id: string; randomSeed: number }[] = [];
+  let template: FrozenRunRequest | undefined;
+  for (const sample of value.samples) {
+    if (!isRecord(sample) || !validId(sample.id) || sampleIds.has(sample.id)
+      || !validInteger(sample.randomSeed, 0, 0xffff_ffff)) return undefined;
+    sampleIds.add(sample.id);
+    const request = snapshotRequest({
+      runId: `${value.batchId}:${sample.id}`,
+      scenario: value.scenario,
+      sample,
+      policy: value.policy,
+    });
+    if (!request) return undefined;
+    template ??= request;
+    samples.push(request.sample);
+  }
+  if (!template) return undefined;
+  return freezeDeep({
+    batchId: value.batchId,
+    scenario: template.scenario,
+    samples,
+    policy: template.policy,
   });
 }
 
@@ -772,6 +841,74 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
       }
     };
 
+  const runBatch: Experiments['runBatch'] = async (input, runOptions = {}) => {
+    const request = snapshotBatchRequest(input);
+    if (!request) throw new TypeError('Experiment batch request is invalid');
+
+    const runRequests = request.samples.map((sample) => snapshotRequest({
+      runId: `${request.batchId}:${sample.id}`,
+      scenario: request.scenario,
+      sample,
+      policy: request.policy,
+    })!);
+    const results: ExperimentBatchRun[] = [];
+    const failureInputs: ExperimentBatchFailureInput[] = [];
+    const statusCounts: Record<RunStatus, number> = {
+      completed: 0,
+      cancelled: 0,
+      'budget-exceeded': 0,
+      failed: 0,
+      'invalid-input': 0,
+    };
+
+    let nextIndex = 0;
+    for (; nextIndex < runRequests.length; nextIndex += 1) {
+      if (runOptions.signal?.aborted) break;
+      const runInput = runRequests[nextIndex]!;
+      let result: RunResult;
+      try {
+        result = await runSingle(runInput, runOptions);
+      } catch (error) {
+        const cancelled = runOptions.signal?.aborted ?? false;
+        result = freezeDeep({
+          ...safeIdentity(runInput),
+          status: cancelled ? 'cancelled' : 'failed',
+          stopReason: cancelled ? 'cancelled' : 'execution-error',
+          actions: [],
+          error: {
+            code: cancelled ? 'cancelled' : 'batch-run-exception',
+            message: errorMessage(error),
+          },
+        });
+      }
+      results.push({ input: runInput, result });
+      statusCounts[result.status] += 1;
+      if (result.status !== 'completed') {
+        failureInputs.push({ input: runInput, status: result.status, stopReason: result.stopReason });
+      }
+      if (runOptions.signal?.aborted) {
+        nextIndex += 1;
+        break;
+      }
+    }
+
+    const notStarted = runRequests.slice(nextIndex).map((runInput) => ({
+      input: runInput,
+      reason: 'cancelled-before-start' as const,
+    }));
+    return freezeDeep({
+      batchId: request.batchId,
+      request,
+      status: runOptions.signal?.aborted ? 'cancelled' : 'completed',
+      plannedRunCount: runRequests.length,
+      startedRunCount: results.length,
+      statusCounts,
+      results,
+      failureInputs,
+      notStarted,
+    });
+  };
+
   const saveScheme: Experiments['saveScheme'] = async (input) => {
     if (!input || !validId(input.id) || !validId(input.version) || !validId(input.scenarioId)) {
       throw new TypeError('Numeric scheme identity is invalid');
@@ -932,5 +1069,5 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
   const listComparisons: Experiments['listComparisons'] = async (request) =>
     freezeDeep(await repository.listComparisons(request));
 
-  return Object.freeze({ run: runSingle, saveScheme, compare, saveComparison, openComparison, listComparisons });
+  return Object.freeze({ run: runSingle, runBatch, saveScheme, compare, saveComparison, openComparison, listComparisons });
 }

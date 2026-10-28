@@ -14,6 +14,16 @@ pnpm run dev
 pnpm run test:ci
 ```
 
+## 本地串行批次 CLI（T16）
+
+从仓库根目录运行示例批次并导出 JSON：
+
+```bash
+pnpm --dir apps/gunsnglory run simulate:batch -- --input examples/serial-batch.json --output /tmp/gunsnglory-batch.json
+```
+
+输入限制为 1–25 个固定 seed，首版运行 Cow Gulch 单波与 `start-wave@1` 策略；可在 JSON 的 `budgets` 中覆盖每场上限。报告保留完整运行输入、结果、预算/取消/错误分类与失败样本；`Ctrl-C` 会协作停止并导出已完成部分。该开发工具不读取或修改正式档案，也不依赖 IndexedDB。输入格式与退出码见[模拟与自动化契约](docs/simulation-and-automation.md#82-t16-串行批次与-cli-当前实现)。
+
 地图与单位图像来自反解析得到的原版资源。当前地形采用固定变体以便复测；关卡数据和规则仍按[实施计划](docs/implementation-plan.md)逐步实现。
 
 ## 文档导航
