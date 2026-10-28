@@ -38,11 +38,13 @@ T01 ──┐
 T02 ──┘
 ```
 
-## 本地验证记录
+## 验证与发布记录
 
 | 项目 | 结果 | 证据 |
 | --- | --- | --- |
-| T01 Worker Token DTO | 待验证 | 实现后记录 Pyodide 真实调用与上限案例 |
-| T02 源码位置索引 | 待验证 | 实现后记录单测与 Unicode/多行映射结果 |
-| T03 面板和联动 | 待验证 | 实现后记录 Playwright 操作及无匹配边界 |
-| T04 CI、部署与线上实测 | 待验证 | P2 开发期间更新；未完成前发布门保持关闭 |
+| T01 Worker Token DTO | 已完成 | Pyodide 314.0.7 / CPython 3.14.2 实际返回 19 个 Token，含 `NAME`、`STRING`、`NEWLINE`、`ENDMARKER` 和 `OP · PLUS`；Playwright 验证 5,000 项数量上限及 256 码点文本截断。 |
+| T02 源码位置索引 | 已完成 | `test:ci` 中 11/11 单测通过，覆盖中文、emoji、UTF-8 字节列、码点到 UTF-16 转换、Tab、原始 CRLF、无效边界、零宽范围和半开区间。将交集判断临时改为包含端点后，针对性用例按预期失败，恢复后通过。 |
+| T03 面板和联动 | 已完成 | `test:ci` 中 8/8 Playwright 用例通过，覆盖源码/Token/AST/字节码双向定位、中文与 emoji、嵌套代码对象切换、注释无映射、无范围项焦点、语法错误，以及 320/768/1024/1440px 布局。 |
+| T04 CI、部署与线上实测 | 已完成 | 根 `test:catalog` 14/14、`build:site` 通过；workflow [40765644524](https://github.com/wishflow/wishflow-tools/actions/runs/40765644524) 的共享检查、Python 应用测试及 GitHub Pages / Cloudflare Pages 部署成功。线上实测 CPython 3.14.2、19 个 Token；选择字符串定位到 `"🐍"`，选择 `BINARY_OP` 定位到 `left + right`，并联动高亮 3 个 Token 和 AST 节点。 |
+
+发布地址：<https://wishflow-tools.pages.dev/python-interpreter-lab/>。线上 Chromium 的 textarea 会将 CRLF 输入规范化为 LF；原始 CRLF 的行列转换仍由位置工具单测直接覆盖，详见 [P2 spec](../specs/p02-token-source-linkage.md) §2。

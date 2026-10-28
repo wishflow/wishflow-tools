@@ -31,6 +31,8 @@
 
 来源：Python 3.14 的 [AST 位置说明](https://docs.python.org/3.14/library/ast.html)、[`dis.Instruction.positions`](https://docs.python.org/3.14/library/dis.html#dis.Instruction.positions)、[`tokenize.generate_tokens` 与 `TokenInfo`](https://docs.python.org/3.14/library/tokenize.html#tokenize.TokenInfo) 以及 [PEP 657 位置语义](https://peps.python.org/pep-0657/)。
 
+浏览器 textarea 的实际 value 是位置映射基准。线上 Chromium 用例观察到 CRLF 输入会被 textarea 规范化为 LF；位置工具单测仍直接用原始 CRLF 源码验证行列转换，避免依赖特定行尾形式。
+
 ## 3. Token 结果结构与资源上限
 
 成功的 `AnalysisResult` 增加 `tokens`、`tokensTruncated` 和可选的 `tokenizationError`：
