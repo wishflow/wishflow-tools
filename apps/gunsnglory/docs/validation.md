@@ -302,4 +302,5 @@ T11 为 `GameSession` 增加暂停态 `singleStep`：它使用同一条 `advance
 | 单步行为 | Game 测试验证帧号恰增 1、经过时间只增加指定的 37 ms、单步后继续暂停；同随机种子下与普通 `advance(37)` 结果完全一致；未暂停会话拒绝单步。 |
 | 检查无副作用 | Playwright 在暂停战局中检查帧、单位、敌人和路线，开启/关闭覆盖层只改变 Canvas 像素；帧号、游戏时间和波次状态保持不变，等待期间画面继续冻结。 |
 | Codex 内置浏览器本地实测 | `http://127.0.0.1:5175/` 启动 Cow Gulch 波次并暂停；实测单步前为 Frame 464 / 964 ms，单步后为 Frame 465 / 980 ms，暂停提示仍显示。检查面板显示枪手、拓荒者、严格小于 5.0 格的攻击距离阈值及从出生点到出口的路线；开启覆盖层后画布显示青色路线、黄色射程边界和对象标签，并验证边缘标签未裁切及中英文切换。 |
-| 发布状态 | 本节的本地 CI 与内置浏览器结果已验证；合入及公网发布待完成后补录。 |
+| 公网内置浏览器实测 | `https://wishflow-tools.pages.dev/gunsnglory/` 加载最新页面；启动 Cow Gulch 波次并暂停，单步前为 Frame 680 / 5851 ms，单步后为 Frame 681 / 5867 ms，仍保持暂停。检查面板和地图覆盖层均正常，页面显示路线、枪手射程圈、拓荒者生命标签及完整只读状态。 |
+| 集成与发布 | 提交 `de78951` 快进合入本地 `gunsnglory` 与 `master` 并推送 `origin master`。 [workflow 40625808761](https://github.com/wishflow/wishflow-tools/actions/runs/40625808761) 成功；Guns’n’Glory CI、共享站点检查、GitHub Pages 和 Cloudflare Pages 部署均通过，Worker 未触发。 |
