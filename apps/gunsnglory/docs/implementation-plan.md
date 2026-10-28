@@ -143,7 +143,7 @@ P1-A–F 是验收责任，不是至少执行六轮的要求。一次工作可�
 | 任务 | 交付与范围 | 真正前置 | 验收与回滚 |
 | --- | --- | --- | --- |
 | P1-A 原始开局 | 迁入首关地图、完整对象实例及必需资源；按原始解锁呈现待雇用、锁定、活动对象；选择反馈可用 | P0 中对象构造、原图、资源及首关限制规格通过 | 对象集合与独立原始预期匹配；初始现金、生命、升级上限正确。只验收原始开局，不要求 B 的完整雇用成功。可回退受控样本入口 |
-| P1-B 前两波与完整雇用战斗 | 原始请求池、间隔、拓荒者小组、占格/重试；枪手特殊装填；赚取现金后激活、选择和移动新增单位；炸弹手及重型 AOE、弹道/爆炸、动画和声音 | A；波次消费、雇用和两类武器规格通过 | 在真实前两波赚钱后成功雇用并控制同一对象；跨越特殊装填周期；群体命中/未命中边界、一次奖励通过。固定输入与浏览器操作均验证；回退对应规则和版本，不改原版价格适配样本 |
+| P1-B 前两波、枪手雇用与 Mexican 战斗 | 原始请求池、间隔、拓荒者小组、占格/重试；真实开局赚钱后雇用一名枪手；枪手特殊装填；Mexican 雇用、重型 AOE、弹道/爆炸、动画和声音 | A；波次消费、雇用和两类武器规格通过 | 真实前两波路径验证枪手槽的雇用与控制；Mexican 雇用和武器使用由独立、明确标识的行为 fixture 验证。群体命中/未命中边界及一次奖励通过。不得在同一个真实两波开局中要求购买枪手和 Mexican；现金不能注入正式场景。回退对应规则与版本 |
 | P1-C 第三波运输队 | 配对请求的牵引与车厢、同组移动、受击/死亡、残车与乘员；动画、效果及声音一起交付 | B 的多人战斗与路线；运输及死亡派生规格通过 | 真实第三波全部配对请求、生成失败重试、车毁后乘员继续走/战斗；阈值、方向、组号、倍率、一次生成/奖励与清理通过；待派生期间不提前结算。回退同一行为链，不只关闭动画 |
 | P1-D 第四至八波与正式结算 | 混合池、波间提示/加速、倍率/动态难度、剩余敌人、HUD 与整关胜败 | B、C；完整波次和结算规格通过 | 原版初态完整运行至第 8 波后结束；清一波不等于整关胜利；失败/重开清理。保存完整输入、终态与浏览器过程；回退成对的规则与内容版本 |
 | P1-E 正式入口与存档接通 | 默认进入真实首关；Progress 写真实结果；旧样本记录隔离；必需资源加载失败保留恢复入口 | D；样本/正式关卡身份和兼容方案通过 | 刷新恢复真实进度，未完成战局从初态重开；保存失败可重试；旧样本胜利不变成首关通关；下一真实关未完成时明确不可进入。回滚保留原档与修订，不删用户数据 |
@@ -152,7 +152,7 @@ P1-A–F 是验收责任，不是至少执行六轮的要求。一次工作可�
 ```mermaid
 flowchart LR
     P0["P0 规格门槛"] --> A["A 原始开局"]
-    A --> B["B 前两波与雇用战斗"]
+    A --> B["B 前两波与枪手/Mexican 战斗"]
     B --> C["C 第三波运输队"]
     B --> D["D 第四至八波与结算"]
     C --> D
@@ -166,8 +166,8 @@ flowchart LR
 
 | 任务 | 固定输入与步骤 | 独立通过预期 | 边界、失败和证据 |
 | --- | --- | --- | --- |
-| P1-A 原始开局 | 新正式档案、无已完成关卡、无全单位解锁；`levelId=1`、`difficulty=easy`，只准备战局并在帧0查看/选择/取消选择对象。 | [产品规格 §4.4](spec.md#44-地图构造首关初态与雇用)：Cow Gulch/map01，现金65、生命50、升级上限0、8波；原始对象为 tile96 枪手槽8个和 tile97 炸弹手槽7个（activity4），tile104 活动枪手1个（activity5）；fresh profile 下 tile101/130 的锁定对象不实例化，tile98–100/131 不在该图。坐标/朝向逐项等于 `td_map_01.tdm` 原始格；地图没有 spawn location 或 spawn-pool action。 | 原始 TDM 独立解码，与 GameObjectManager 构造分支逐对象对照；点击只改变选择，不激活或扣款。必需地图/图像缺失时拒绝进入半初始化战局并保留恢复入口。证据：`R/data/map-inventory.json`、`R/data/level-config.json`、GameObjectManager 源与固定开局浏览器截图。 |
-| P1-B 前两波与雇用战斗 | 从 A 的 StartRecord 开始，固定随机/时间输入，按真实输入推进 Wave01–02；记录移动、开火、雇用同一枪手槽及 Mexican 群体攻击。 | L01 Wave01/02 的 newWave 参数和**原始**请求向量分别为 `HP70/speed100: [6,2,2,0,0,0,0,0,0,0]`、`HP75/speed100: [0,2,2,3,0,0,0,0,0,0]`，向量顺序按 `Wave` pool type 2–11。进入后续波前先应用动态难度缩放；池按剩余请求数加权选择，只有 addEnemy 成功才扣请求。枪手基础档初始冷却250ms；每6次实际射击后冷却加到2000ms；同一 Desperado 由 activity4 转 activity5，恰好扣75且可继续选择/移动/射击。 | 固定回放跨过6发并核对每次 `shoot()`、目标/弹道/伤害；无目标不消耗射击计数，移动时活动冷却仍递减。74/75现金、重复雇用、AOE范围内/边界/外侧使用标明为 fixture 的独立案例，不修改首关初始65现金。证据：`R/recovered-source/java/.../GameDesignWaves.java`、WaveManager、UnitDirector、GameObjectUnit、`R/data/waves.json` 与手工复核请求向量。 |
+| P1-A 原始开局 | 新正式档案、无已完成关卡、无全单位解锁；`levelId=1`、`difficulty=easy`，只准备战局并在帧0查看/选择/取消选择对象。 | [产品规格 §4.4](spec.md#44-地图构造首关初态与雇用)：Cow Gulch/map01，现金65、生命50、升级上限0、8波；原始对象为 tile96 枪手槽8个和 tile97 Mexican（重型爆炸攻击单位）待雇用槽7个（activity4），tile104 活动枪手1个（activity5）；fresh profile 下 tile101/130 的锁定对象不实例化，tile98–100/131 不在该图。坐标/朝向逐项等于 `td_map_01.tdm` 原始格；地图没有 spawn location 或 spawn-pool action。 | 原始 TDM 独立解码，与 GameObjectManager 构造分支逐对象对照；点击只改变选择，不激活或扣款。必需地图/图像缺失时拒绝进入半初始化战局并保留恢复入口。证据：`R/data/map-inventory.json`、`R/data/level-config.json`、GameObjectManager 源与固定开局浏览器截图。 |
+| P1-B 前两波、枪手雇用与 Mexican 战斗 | 真实路线从 A 的原始 `StartRecord` 开始，固定随机/时间输入，按原始现金推进 Wave01–02；赚到75后雇用一个枪手槽并继续控制同一对象。Mexican 的技能行为另用带独立身份的 Game 行为 fixture，不写入正式档案。 | L01 Wave01/02 的 `newWave` 参数和**原始**请求向量分别为 `HP70/speed100: [6,2,2,0,0,0,0,0,0,0]`、`HP75/speed100: [0,2,2,3,0,0,0,0,0,0]`，顺序为 `Wave` pool type 2–11。后续波前先应用动态难度缩放；按剩余请求数加权选择，只有 `addEnemy` 成功才扣请求。枪手基础档初始冷却250ms；每6次实际射击后冷却加到2000ms；同一 Desperado 由 activity4 转 activity5，扣75且仍可选择/移动/射击。 | 真实回放跨过6发，核对每次 `shoot()`、目标/弹道/伤害；无目标不消耗计数，移动时冷却仍递减。枪手74/75与重复雇用使用价格边界 fixture。Mexican 使用独立 fixture：activity4、现金99拒绝且状态不变；现金100 成功唤醒同一对象，之后能选择/移动/攻击；AOE 覆盖范围内、边界和外侧敌人，并核对一次奖励、弹道/爆炸表现与声音事件。正式开局保留65现金，真实两波路线不注入现金，也不要求同时雇用两种单位。证据：`R/recovered-source/java/.../GameDesignWaves.java`、Wave/WaveManager、UnitDirector、GameObjectUnit、`R/data/waves.json` 和独立手工复算。 |
 | P1-C 第三波运输队 | 从固定的 A 开始记录前两波输入，到达 Wave03；按固定随机状态推进 Wave03 全部实际 covered-wagon 请求与运输死亡链；源配置为3个，运行数按上一波动态难度缩放。 | L01 Wave03 原始配置为 HP60/speed100、spawn0、base delay3000ms、covered-wagon请求3；实际请求数为 `max(1, round-half-up(3 × difficulty / 1000))`。每次成功构造 type8牵引+type4车厢，同组行动，成功后基础间隔乘2为6000ms；生成碰撞失败保留池请求，首轮重试间隔为3000ms。type4死亡奖励一次；计数降到500以下时只派生一次残车与0–4乘员，乘员使用原方向、四个原始偏移、当前波次 HP 倍率和独立组号。 | 随机完整状态与调用顺序固定；独立复算乘员0–4槽、type1/2、速度 `90+random(20)`、坐标及组号。死亡计数500不生成、499触发；重复更新不重复派生或奖励；牵引type8不套用车厢派生；待派生对象清理前不得结算。证据：WaveManager、EnemyDirector、Util、`R/route-and-wave-model.md`、`R/game-loop-and-enemy-update.md` 与运输波固定状态记录。 |
 | P1-D 第四至八波与结算 | 使用从 A 开始的固定完整回放和开波确认与战斗 GameIntent 推进 Wave04–08，另以终局边界 fixture 检查败北与重开。 | 每波 metadata、原始 `newWave/addToWave/rawCalls` 顺序与 `R/data/waves.json` 和 GameDesignWaves 逐项一致；实际池数量按前波动态难度逐项独立复算；清空单波不能终局。每次逻辑更新先判 `lives<=0` 败北；否则仅在 `waveEmpty && enemyList.length===0` 时调用 nextWave。第8波后没有请求、敌人及待清理对象才产生正式胜利。 | 覆盖活动池、波间、生成重试、死亡清理、离场扣命和重开；重开恢复同一初态且不先行写进度。回放保存规则/内容版本、随机完整状态、逐帧时间、命令与终态摘要。证据：GunsAndGloryThread、WaveManager、EnemyDirector、`R/data/waves.json`、`R/progress-and-save-data.md`。 |
 | P1-E 正式入口与档案 | 用 schemaVersion 2 的现有档案，包含 `cow-gulch`、`campaign-cow-gulch-sample-1/2` 中任意样本完成记录、设置和高分；从正式 L01 入口开局、胜利、刷新并尝试进入 L02。 | 正式关卡使用独立稳定的 scenarioId，不与 `cow-gulch` 或两个 T20 样本 ID 相同；历史样本记录和高分原样保留且不解锁正式 L01/L02。复用 `completedScenarios`、`highScores` 和 settlement receipt 时保持 schemaVersion 2/数据库版本1；L01 胜利后幂等完成并开放 L02，刷新保留进度/设置但不续玩未完成局。 | 验证正式/样本/replay/experiment 结算权限、重复 settlement、保存失败重试、冲突及已有档案完整保留。若实现确需新增持久字段，则先补版本化迁移和旧档往返测试再开工；禁止删除、重命名或静默提升样本数据。证据：Progress 公共 Interface、`storage-contracts.md` §4、`R/progress-and-save-data.md`、profile fixture 与真实 IndexedDB 浏览器记录。 |
