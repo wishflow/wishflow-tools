@@ -4,7 +4,7 @@
 
 用户已确认 `Game`、`Progress`、`Experiments` 三个深 Module，以及首五个纵向小切片的粒度。本计划采用这些决定，不再将它们列为待确认候选。
 
-**当前进度：T01–T12 已合入 `gunsnglory` 和 `master` 并发布。** T10 最终提交 `faf018c` 通过本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器检查；T11 提交 `de78951` 增加暂停单步和只读检查，经本地应用 CI、共享站点构建、GitHub Actions 与公网内置浏览器验证。T12 提交 `8b4938b` 增加战局记录与确定性重放，经本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器往返验证；详见[T12 验收记录](validation.md#17-t12-记录与重放战局)。T13 已在功能分支实现并通过本地应用 CI、共享站点构建及内置浏览器本地预览，集成与线上发布仍待验收；详见[T13 验收记录](validation.md#18-t13-无画面运行单个场景)。真实 Android AVD 窗口未能由内置控制接管，目标设备触控仍未验证，详见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。T01–T13 均不代表完整首关或 M1；T14–T26 与后续任务族尚未实现。
+**当前进度：T01–T13 已合入 `gunsnglory` 和 `master` 并发布。** T10 最终提交 `faf018c` 通过本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器检查；T11 提交 `de78951` 增加暂停单步和只读检查，经本地应用 CI、共享站点构建、GitHub Actions 与公网内置浏览器验证。T12 提交 `8b4938b` 增加战局记录与确定性重放，经本地应用 CI、共享站点构建、GitHub Actions 和公网内置浏览器往返验证；详见[T12 验收记录](validation.md#17-t12-记录与重放战局)。T13 提交 `c3c80d6` 增加单场景无画面运行器，通过本地应用 CI、共享站点构建、GitHub Actions `40638987841` 和公网内置浏览器检查；详见[T13 验收记录](validation.md#18-t13-无画面运行单个场景)。真实 Android AVD 窗口未能由内置控制接管，目标设备触控仍未验证，详见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。T01–T13 均不代表完整首关或 M1；T14–T26 与后续任务族尚未实现。
 
 需求编号对应[产品规格](spec.md)的 27 条用户故事，本文以 `US01` 至 `US27` 引用。接口与依赖以[架构设计](architecture.md)为准，领域名称以[词汇表](GLOSSARY.md)为准；存储及模拟细节分别由[存储契约](storage-contracts.md)和[模拟契约](simulation-and-automation.md)维护。
 
@@ -144,7 +144,7 @@
 
 ## 4. 后续窄切片
 
-T06–T12 已实现并发布；T13 的单场景运行器已实现并完成本地验收，集成/发布待验收。T10 的 Android AVD 触控仍待验证。实现依据和验证记录见[验证记录](validation.md#11-t06-拖动单位与地形碰撞验收)、[T07 招募验收](validation.md#12-t07-招募-gunslinger-验收)、[T08 升级验收](validation.md#13-t08-升级-cow-gulch-gunslinger)、[T09 暂停恢复验收](validation.md#14-t09-暂停恢复及后台返回验收)、[T10 触屏缩放与命中验收](validation.md#15-t10-触屏缩放与命中验收)、[T11 单步与只读检查验收](validation.md#16-t11-单步与只读检查验收)、[T12 记录与重放战局](validation.md#17-t12-记录与重放战局)及[T13 无画面运行单个场景](validation.md#18-t13-无画面运行单个场景)。下表仅保留尚未实现任务，通过公共 Module 和相应浏览器消费者验收。每次只引入当前行为需要的内部复杂性，不以另一模块的实现作为方便性前置。
+T06–T13 已实现并发布。T10 的 Android AVD 触控仍待验证。实现依据和验证记录见[验证记录](validation.md#11-t06-拖动单位与地形碰撞验收)、[T07 招募验收](validation.md#12-t07-招募-gunslinger-验收)、[T08 升级验收](validation.md#13-t08-升级-cow-gulch-gunslinger)、[T09 暂停恢复验收](validation.md#14-t09-暂停恢复及后台返回验收)、[T10 触屏缩放与命中验收](validation.md#15-t10-触屏缩放与命中验收)、[T11 单步与只读检查验收](validation.md#16-t11-单步与只读检查验收)、[T12 记录与重放战局](validation.md#17-t12-记录与重放战局)及[T13 无画面运行单个场景](validation.md#18-t13-无画面运行单个场景)。下表仅保留尚未实现任务，通过公共 Module 和相应浏览器消费者验收。每次只引入当前行为需要的内部复杂性，不以另一模块的实现作为方便性前置。
 
 | ID / 交付行为 | 故事 | Blocked by | 验收与回滚边界 |
 | --- | --- | --- | --- |

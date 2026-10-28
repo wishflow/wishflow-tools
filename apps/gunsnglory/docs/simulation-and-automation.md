@@ -2,7 +2,7 @@
 
 ## 1. 文档状态与目标
 
-本文定义公共操作、场景、实验和批量执行契约，并区分设计目标与已落地切片。目前 T01–T12 的浏览器窄切片已发布；T13 已增加仅供代码调用的 Experiments 单场景运行器，待集成与发布验收。数值方案编辑/比较、实验持久化、批量、CLI、MCP 和无画面产品界面尚未实现。T12 回放实际范围与扩展缺口见[5.3 节](#53-game-拥有的回放最小载荷)，T13 已落地范围见[6.3 节](#63-t13-当前实现范围)。实施顺序见[实施计划](implementation-plan.md)，依赖方向见[架构设计](architecture.md)，持久化语义见[存储契约](storage-contracts.md)。
+本文定义公共操作、场景、实验和批量执行契约，并区分设计目标与已落地切片。目前 T01–T13 的浏览器窄切片已发布；T13 提供仅供代码调用的 Experiments 单场景运行器，已通过集成工作流和公网页面检查。数值方案编辑/比较、实验持久化、批量、CLI、MCP 和无画面产品界面尚未实现。T12 回放实际范围与扩展缺口见[5.3 节](#53-game-拥有的回放最小载荷)，T13 已落地范围见[6.3 节](#63-t13-当前实现范围)。实施顺序见[实施计划](implementation-plan.md)，依赖方向见[架构设计](architecture.md)，持久化语义见[存储契约](storage-contracts.md)。
 
 公共能力按已确认的 `Game`、`Progress`、`Experiments` 三个深 Module 组织。本文以 `Game` 和 `Experiments` 的 Interface 为测试 Seam；`SessionController`、规则内核和 `ScenarioRunner` 均为内部实现，不能再形成一套要求消费者掌握的公共调用链。
 

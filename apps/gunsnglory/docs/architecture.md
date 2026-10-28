@@ -2,7 +2,7 @@
 
 ## 1. 决策与阅读范围
 
-用户已确认采用 **Game、Progress、Experiments 三个公共深 Module**，以它们的 Interface 作为主要行为测试 Seam。本文是该决策的统一架构定义，取代按全局 `core / application / ports / simulation` 划分公共能力的方案。T01–T12 已实现并发布；T13 已在当前分支实现单场景无画面运行器，待集成与发布验收。现有切片覆盖地图视口、测试倍速、受控战斗与结算、Cow Gulch 样本档案、单位移动与地形碰撞、招募、升级、暂停恢复、触屏缩放与命中、暂停单步和只读检查、单场战局记录与确定性重放，以及经 Game Interface 运行单个实验场景。T12 验收见[验证记录](validation.md#17-t12-记录与重放战局)，T13 验收见[验证记录](validation.md#18-t13-无画面运行单个场景)；T10 的真实 Android AVD 触控仍未验证，见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。T05 的本地档案只覆盖受支持的 Cow Gulch 样本；这些切片并不等于完整首关或 M1。完整关卡解锁、冲突恢复、实验方案比较/保存、批量执行与其他架构能力仍待后续切片，见[实施计划](implementation-plan.md)。
+用户已确认采用 **Game、Progress、Experiments 三个公共深 Module**，以它们的 Interface 作为主要行为测试 Seam。本文是该决策的统一架构定义，取代按全局 `core / application / ports / simulation` 划分公共能力的方案。T01–T13 已实现并发布；T13 的单场景无画面运行器已合入 `gunsnglory` 与 `master`，并通过公开工作流和公网浏览器检查。现有切片覆盖地图视口、测试倍速、受控战斗与结算、Cow Gulch 样本档案、单位移动与地形碰撞、招募、升级、暂停恢复、触屏缩放与命中、暂停单步和只读检查、单场战局记录与确定性重放，以及经 Game Interface 运行单个实验场景。T12 验收见[验证记录](validation.md#17-t12-记录与重放战局)，T13 验收见[验证记录](validation.md#18-t13-无画面运行单个场景)；T10 的真实 Android AVD 触控仍未验证，见[验证记录](validation.md#15-t10-触屏缩放与命中验收)。T05 的本地档案只覆盖受支持的 Cow Gulch 样本；这些切片并不等于完整首关或 M1。完整关卡解锁、冲突恢复、实验方案比较/保存、批量执行与其他架构能力仍待后续切片，见[实施计划](implementation-plan.md)。
 
 产品目标与范围见[产品规格](spec.md)，领域用语见[领域词汇](GLOSSARY.md)。本文负责能力封装、依赖和状态归属；时间与回放细节见[模拟契约](simulation-and-automation.md)，持久化细节见[存储契约](storage-contracts.md)。
 

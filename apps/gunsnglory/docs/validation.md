@@ -328,4 +328,4 @@ T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一�
 | `pnpm run test:catalog` | 通过：14 项导航目录、发布分类及静态站输出检查。 |
 | `pnpm run install:apps` 与 `pnpm run build:site` | 冻结安装全部登记应用依赖成功，共享站点及全部静态应用构建成功。3D Objects 输出既有的单 chunk 体积提示，其 bundle 检查仍通过。 |
 | Codex 内置浏览器本地预览 | 打开 Guns’n’Glory 生产构建预览 `http://127.0.0.1:4174/`；页面正常显示 Cow Gulch、HUD 与现有控制。浏览器 console 的 error/warn 为空。T13 没有新增可见控件，其真实运行已由上一行 Chromium 行为测试核验。 |
-| 集成与发布 | 当前记录仅覆盖功能分支本地验证；集成提交、GitHub Actions、公开部署及公网浏览器检查在后续发布完成后补记。 |
+| 集成与发布 | `c3c80d6` 已快进合入本地 `gunsnglory` 与 `master`，并推送 `master`。GitHub Actions [40638987841](https://github.com/wishflow/wishflow-tools/actions/runs/40638987841) 以 `success` 完成。重新加载公网标准地址 `https://wishflow-tools.pages.dev/gunsnglory/` 后，内置浏览器显示 Cow Gulch 地图、状态、倍速控件和现有操作；控制台 error/warn 为空。T13 无可见游戏控件，其单场景真实行为由前述 Chromium Playwright 测试覆盖。 |
