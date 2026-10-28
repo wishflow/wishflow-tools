@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线已完成。P1 的真实编译工作区已实现、验证并发布到 `master`。首次 Actions 运行暴露 pnpm 12 默认拦截 `esbuild` 安装脚本的问题；应用已加入本地构建批准配置，并用 pnpm 12.15.0 验证冻结安装与完整测试。修复后的 workflow `40750421138` 中共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功；线上 `/python-interpreter-lab/` 已确认 Pyodide 314.0.7 / CPython 3.14.2、真实 AST、模块与嵌套函数字节码，以及共享中英文切换。P1 发布门已通过。验收基线见 [spec](specs/p01-real-cpython-compile-view.md) 和 [tasks](tasks/p01-real-cpython-compile-view.md)。
+P0 文档基线和 P1 真实编译工作区已完成并发布到 `master`。P1 的 GitHub Pages、Cloudflare Pages 和线上验收通过，证据见 [P1 spec](specs/p01-real-cpython-compile-view.md) 与 [P1 tasks](tasks/p01-real-cpython-compile-view.md)。当前已启动 P2：增加真实 CPython Token 与源码、AST、字节码范围联动；阶段细节见 [P2 spec](specs/p02-token-source-linkage.md) 和 [P2 tasks](tasks/p02-token-source-linkage.md)。
 
 P0 建立了以下文档：
 
@@ -89,11 +89,11 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **当前结果**：应用类型检查、6 条单测与 5 条浏览器用例通过；根 `pnpm run test:catalog` 的 14 条检查通过；`pnpm run build:site` 生成 `_site/python-interpreter-lab/`。首次推送后的 workflow `40748933722` 因 pnpm 12 未批准 `esbuild` 安装脚本而失败并跳过部署；新增应用本地 `allowBuilds.esbuild` 后，pnpm 12.15.0 冻结安装与完整应用 `test:ci` 通过。修复后的 workflow `40750421138` 中共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。Codex 内置浏览器在 `https://wishflow-tools.pages.dev/python-interpreter-lab/` 实测得到 Pyodide 314.0.7 / CPython 3.14.2、模块 `LOAD_SMALL_INT 3`、嵌套 `add` 函数 `BINARY_OP`，并确认共享语言切换到英文后恢复中文正常。发布门通过。
 - **回滚**：回退应用登记及首版提交，恢复此前静态站点。只回退应用自身文件及本阶段必需的共享登记，不改变其他应用。
 
-### P2：词法观察与源码联动
+### P2：词法观察与源码联动（进行中）
 
-- **前置**：P1；确认源码范围与编辑器位置转换规则。
-- **交付**：Token 面板、AST 节点与字节码到源码的定位；点击源码可观察相关节点/指令，选择指令可定位其来源。允许无对应项及多个相关项。
-- **验收**：赋值、多行表达式、分支、中文标识符与字符串位置正确；常量折叠不会产生虚构指令；空行、注释、内部指令没有伪造的唯一映射；更改源码后旧映射失效。
+- **前置**：P1 已发布；P2 spec 已确认 Python tokenizer/AST/bytecode/textarea 的位置单位和转换边界。
+- **交付**：真实 Token 面板、AST 节点与字节码到源码的定位；源码选择可观察相关 Token/节点/指令，选择 Token、节点或指令可定位其源码范围。允许无对应项及多个相关项。
+- **验收**：赋值、多行表达式、中文标识符、emoji 字符串和 Tab 位置准确；常量折叠不会产生虚构指令；结构 Token、空白和注释不伪造映射；源码更改后旧映射失效；具体场景见 [P2 spec](specs/p02-token-source-linkage.md)。
 - **回滚**：移除新增观察与联动能力，P1 独立分析仍可用。
 
 ### P3：真实运行、轨迹与回放
