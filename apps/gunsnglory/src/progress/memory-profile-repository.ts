@@ -8,6 +8,7 @@ import {
   type ProfileRepository,
   type VersionedProfile,
 } from './profile-repository';
+import { isSimulationSpeed } from '../game/time-scaling';
 
 function cloneVersionedProfile(profile: VersionedProfile): VersionedProfile {
   return { data: cloneProfileData(profile.data), revision: profile.revision };
@@ -30,6 +31,15 @@ export function createMemoryProfileRepository(initial?: Partial<ProfileData>): P
 
   return {
     async readProfile(): Promise<VersionedProfile | null> {
+      if (stored) {
+        const speed = stored.data.settings.simulationSpeed;
+        if (speed !== undefined && !isSimulationSpeed(speed)) {
+          throw new ProfileRepositoryError('corrupt-data', 'Invalid saved simulation speed');
+        }
+        if (!isProfileData(stored.data)) {
+          throw new ProfileRepositoryError('corrupt-data', 'Saved profile data is corrupt');
+        }
+      }
       return stored ? cloneVersionedProfile(stored) : null;
     },
 
@@ -55,6 +65,44 @@ export function createMemoryProfileRepository(initial?: Partial<ProfileData>): P
         requestDigest: digest,
       };
       return { revision };
+    },
+
+    async exportRawProfileRecord(): Promise<string | null> {
+      if (!stored) return null;
+      return JSON.stringify({
+        id: 'default',
+        schemaVersion: 2,
+        settings: stored.data.settings,
+        completedScenarios: stored.data.completedScenarios,
+        highScores: stored.data.highScores,
+        appliedSettlementIds: stored.data.appliedSettlementIds,
+        revision: Math.max(1, stored.revision),
+        lastOperationId: stored.operationId || 'memory-initial',
+        lastRequestDigest: stored.requestDigest || 'memory-initial',
+      });
+    },
+
+    async resetCorruptProfile(snapshot: string): Promise<void> {
+      if (!stored) throw new ProfileRepositoryError('invalid-input', 'No saved profile is available to reset');
+      const currentSnapshot = JSON.stringify({
+        id: 'default',
+        schemaVersion: 2,
+        settings: stored.data.settings,
+        completedScenarios: stored.data.completedScenarios,
+        highScores: stored.data.highScores,
+        appliedSettlementIds: stored.data.appliedSettlementIds,
+        revision: Math.max(1, stored.revision),
+        lastOperationId: stored.operationId || 'memory-initial',
+        lastRequestDigest: stored.requestDigest || 'memory-initial',
+      });
+      if (snapshot !== currentSnapshot) {
+        throw new ProfileRepositoryError('conflict', 'Saved profile changed after the backup was exported');
+      }
+      const speed = stored.data.settings.simulationSpeed;
+      if (isProfileData(stored.data) && (speed === undefined || isSimulationSpeed(speed))) {
+        throw new ProfileRepositoryError('invalid-input', 'A valid profile cannot be reset as corrupt data');
+      }
+      stored = null;
     },
   };
 }

@@ -425,3 +425,20 @@ pi 实际加载调用命令（工作目录 `apps/gunsnglory/`）：
 ```sh
 pi --no-extensions --no-skills --no-prompt-templates --no-themes --no-mcp --no-session --approve --offline --tools bash --mode json -p '请使用 bash 工具从当前应用目录真实运行 `pnpm run simulate:batch -- --input examples/serial-batch.json --workers 2 --output /tmp/var/wishflow-tools/t17-pi-batch.json`。然后用 bash 工具读取该 JSON，只输出 report.status、report.maxConcurrency、plannedRunCount、startedRunCount、每个结果的 runId/outcome/finalCash、failureInputs 数和 notStarted 数。不要修改项目文件。'
 ```
+
+## 24. T18 档案冲突与恢复
+
+T18 沿用 IndexedDB 数据库版本 1 与档案格式 `schemaVersion: 2`，没有格式迁移或覆盖既有记录。设置保存以本标签页最后一次读取的修订为条件；遇到其他标签页的更新时返回冲突并要求显式重载。临时失败可用原操作重试。损坏档案可以导出原始 JSON；重置会先核对导出快照和当前记录，并且只删除仍被判定为损坏的记录。未知较新格式只允许备份导出。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm run test:ci` | 通过：TypeScript 类型检查、112 项单元测试、Vite 生产构建及 44 个 Playwright 场景。 |
+| Progress 公共行为 | 通过：两个实例读取相同版本后，陈旧设置写入返回 `conflict`；读取最新档案后可保存新选择。设置事务失败后通过 `retrySettings()` 重用原请求。 |
+| IndexedDB 多标签页 | 通过：两个真实页面从空档案启动；第一标签页保存 `4×` 后，第二页保存 `0.25×` 得到冲突，点击“重新加载已保存档案”后显示 `4×`。 |
+| IndexedDB 临时失败 | 通过：测试中止设置写事务，页面显示失败并提供重试；同一操作重试后设置保存成功。 |
+| 损坏档案恢复 | 通过：页面下载文件名为 `gunsnglory-profile-backup.json` 的原记录，测试核对文件内容；确认后只在快照匹配时删除损坏记录并回到空档案。旧快照冲突和有效档案禁止重置均由 Progress 单测覆盖。 |
+| IndexedDB 恢复竞争 | 通过：真实 IndexedDB 在备份后被改动时，旧快照重置返回 `conflict`，更新后的损坏记录仍保留。 |
+| 未知新版保护 | 通过：`schemaVersion: 99` 可以导出备份，重置按钮不出现，IndexedDB 原记录仍保持不变。 |
+| Codex 内置浏览器与发布 | 内置浏览器成功打开本地应用并显示地图、档案状态和倍速控件；状态交互由 Playwright 覆盖。没有发布或对公网执行验收，需按 M1 发布门槛继续推进。 |
+
+验证入口：[Progress 行为测试](../tests/progress.test.ts)、[T05/T18 IndexedDB 浏览器测试](../tests/e2e/t05.spec.ts)、[档案存储契约](storage-contracts.md#4-正式档案契约)。

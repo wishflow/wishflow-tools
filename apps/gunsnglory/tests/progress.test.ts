@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createProgress } from '../src/progress';
+import { createProgress, ProgressError } from '../src/progress';
 import { createMemoryProfileRepository } from '../src/progress/memory-profile-repository';
 import { verifyProfileRepositoryContract } from './profile-repository-contract';
 import type { GameSettlementRecord } from '../src/game';
@@ -23,6 +23,44 @@ test('loads and saves supported speeds through the shared profile repository', a
   assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1.5 });
   assert.deepEqual(await progress.saveSettings({ simulationSpeed: 4.25 }), { simulationSpeed: 4 });
   assert.deepEqual((await progress.loadProfile()).settings, { simulationSpeed: 4 });
+});
+
+test('reports a stale settings write instead of silently replacing another profile update', async () => {
+  const repository = createMemoryProfileRepository();
+  const first = createProgress(repository);
+  const second = createProgress(repository);
+  await Promise.all([first.loadProfile(), second.loadProfile()]);
+
+  await first.saveSettings({ simulationSpeed: 2 });
+  await assert.rejects(second.saveSettings({ simulationSpeed: 3 }), (error: unknown) =>
+    (error as { code?: string }).code === 'conflict');
+  const persistedSpeed = (await first.loadProfile()).settings.simulationSpeed;
+  assert.equal(persistedSpeed, 2);
+  await second.loadProfile();
+  await second.saveSettings({ simulationSpeed: persistedSpeed === 2 ? 3 : 2 });
+  assert.notEqual((await second.loadProfile()).settings.simulationSpeed, persistedSpeed);
+});
+
+test('retains a failed settings write for an idempotent retry', async () => {
+  const memory = createMemoryProfileRepository();
+  let failNextWrite = true;
+  const repository = {
+    readProfile: () => memory.readProfile(),
+    async writeProfile(request: Parameters<typeof memory.writeProfile>[0]) {
+      if (failNextWrite) {
+        failNextWrite = false;
+        throw new Error('IndexedDB unavailable');
+      }
+      return memory.writeProfile(request);
+    },
+    exportRawProfileRecord: () => memory.exportRawProfileRecord(),
+    resetCorruptProfile: (snapshot: string) => memory.resetCorruptProfile(snapshot),
+  };
+  const progress = createProgress(repository);
+  await progress.loadProfile();
+  await assert.rejects(progress.saveSettings({ simulationSpeed: 2 }), /IndexedDB unavailable/);
+  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2 });
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2 });
 });
 
 function settlement(overrides: Partial<GameSettlementRecord> = {}): GameSettlementRecord {
@@ -94,6 +132,8 @@ test('keeps an unsaved settlement pending and can retry after the repository rec
       }
       return memory.writeProfile(request);
     },
+    exportRawProfileRecord: () => memory.exportRawProfileRecord(),
+    resetCorruptProfile: (snapshot: string) => memory.resetCorruptProfile(snapshot),
   };
   const progress = createProgress(repository);
   const pending = await progress.applySettlement(settlement());
@@ -121,6 +161,8 @@ test('returns a conflict when two Progress instances race from the same revision
       return snapshot;
     },
     writeProfile: memory.writeProfile,
+    exportRawProfileRecord: memory.exportRawProfileRecord,
+    resetCorruptProfile: memory.resetCorruptProfile,
   };
   const firstProgress = createProgress(repository);
   const secondProgress = createProgress(repository);
@@ -146,13 +188,44 @@ test('runs the shared ProfileRepository contract against the in-memory adapter',
 
 test('rejects corrupt persisted settings and does not hide repository write failures', async () => {
   const corrupt = createProgress(createMemoryProfileRepository({ settings: { simulationSpeed: 1.1 } }));
-  await assert.rejects(corrupt.loadSettings(), /Invalid saved simulation speed/);
+  await assert.rejects(corrupt.loadSettings(), (error: unknown) =>
+    error instanceof ProgressError && error.code === 'corrupt-data' && /Invalid saved simulation speed/.test(error.message));
 
   const memory = createMemoryProfileRepository();
   const failingRepository = {
     async readProfile() { return memory.readProfile(); },
     async writeProfile() { throw new Error('IndexedDB unavailable'); },
+    exportRawProfileRecord: () => memory.exportRawProfileRecord(),
+    resetCorruptProfile: (snapshot: string) => memory.resetCorruptProfile(snapshot),
   };
   const progress = createProgress(failingRepository);
   await assert.rejects(progress.saveSettings({ simulationSpeed: 2 }), /IndexedDB unavailable/);
+});
+
+test('exports the damaged record and resets it only against the exported snapshot', async () => {
+  const repository = createMemoryProfileRepository({ settings: { simulationSpeed: 1.1 } });
+  const progress = createProgress(repository);
+  const backup = await progress.exportSavedProfile();
+  assert.ok(backup);
+  assert.equal(JSON.parse(backup).settings.simulationSpeed, 1.1);
+  await assert.rejects(progress.resetCorruptProfile(`${backup} `), (error: unknown) =>
+    error instanceof ProgressError && error.code === 'conflict');
+  assert.equal(await progress.exportSavedProfile(), backup);
+
+  const restored = await progress.resetCorruptProfile(backup);
+  assert.deepEqual(restored, {
+    settings: { simulationSpeed: 1 },
+    completedScenarios: [],
+    highScores: {},
+  });
+});
+
+test('does not allow the corrupt-data recovery operation to delete a valid profile', async () => {
+  const repository = createMemoryProfileRepository({ settings: { simulationSpeed: 2 } });
+  const progress = createProgress(repository);
+  const snapshot = await progress.exportSavedProfile();
+  assert.ok(snapshot);
+  await assert.rejects(progress.resetCorruptProfile(snapshot), (error: unknown) =>
+    error instanceof ProgressError && error.code === 'invalid-input');
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2 });
 });

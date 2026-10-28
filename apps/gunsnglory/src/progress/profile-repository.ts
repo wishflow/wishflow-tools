@@ -20,6 +20,8 @@ export interface WriteProfileRequest {
 export interface ProfileRepository {
   readProfile(): Promise<VersionedProfile | null>;
   writeProfile(request: WriteProfileRequest): Promise<{ revision: number }>;
+  exportRawProfileRecord(): Promise<string | null>;
+  resetCorruptProfile(snapshot: string): Promise<void>;
 }
 
 export type ProfileRepositoryErrorCode =

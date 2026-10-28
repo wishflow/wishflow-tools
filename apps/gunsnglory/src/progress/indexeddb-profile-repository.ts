@@ -120,6 +120,16 @@ function decodeProfile(value: unknown): DecodedProfile {
   };
 }
 
+function profileSnapshot(value: unknown): string {
+  try {
+    const snapshot = JSON.stringify(value);
+    if (snapshot === undefined) throw new Error('Profile record cannot be represented as JSON');
+    return snapshot;
+  } catch {
+    throw new ProfileRepositoryError('corrupt-data', 'Saved profile cannot be exported as JSON');
+  }
+}
+
 function withProfileTransaction<T>(
   mode: IDBTransactionMode,
   run: (transaction: IDBTransaction, complete: (value: T) => void, fail: (error: Error) => void) => void,
@@ -233,6 +243,61 @@ export function createIndexedDbProfileRepository(): ProfileRepository {
           }
         };
         read.onerror = () => fail(toRepositoryError(read.error ?? new Error('Unable to read the saved profile')));
+      });
+    },
+
+    exportRawProfileRecord(): Promise<string | null> {
+      return withProfileTransaction('readonly', (transaction, complete, fail) => {
+        const request = transaction.objectStore(PROFILE_STORE).get(DEFAULT_PROFILE_ID);
+        request.onsuccess = () => {
+          try {
+            complete(request.result === undefined ? null : profileSnapshot(request.result));
+          } catch (error) {
+            fail(error instanceof Error ? error : new Error(String(error)));
+          }
+        };
+        request.onerror = () => fail(toRepositoryError(request.error ?? new Error('Unable to export the saved profile')));
+      });
+    },
+
+    resetCorruptProfile(snapshot: string): Promise<void> {
+      return withProfileTransaction('readwrite', (transaction, complete, fail) => {
+        const store = transaction.objectStore(PROFILE_STORE);
+        const request = store.get(DEFAULT_PROFILE_ID);
+        request.onsuccess = () => {
+          if (request.result === undefined) {
+            fail(new ProfileRepositoryError('invalid-input', 'No saved profile is available to reset'));
+            return;
+          }
+          let currentSnapshot: string;
+          try {
+            currentSnapshot = profileSnapshot(request.result);
+          } catch (error) {
+            fail(error instanceof Error ? error : new Error(String(error)));
+            return;
+          }
+          if (currentSnapshot !== snapshot) {
+            fail(new ProfileRepositoryError('conflict', 'Saved profile changed after the backup was exported'));
+            return;
+          }
+          try {
+            decodeProfile(request.result);
+          } catch (error) {
+            if (!(error instanceof ProfileRepositoryError) || error.code !== 'corrupt-data') {
+              fail(error instanceof Error ? error : new Error(String(error)));
+              return;
+            }
+            try {
+              store.delete(DEFAULT_PROFILE_ID);
+              complete(undefined);
+            } catch (deleteError) {
+              fail(deleteError instanceof Error ? deleteError : new Error(String(deleteError)));
+            }
+            return;
+          }
+          fail(new ProfileRepositoryError('invalid-input', 'A valid profile cannot be reset as corrupt data'));
+        };
+        request.onerror = () => fail(toRepositoryError(request.error ?? new Error('Unable to read the saved profile')));
       });
     },
   };

@@ -8,7 +8,7 @@ import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccum
 import { GameReplayError } from './game';
 import { createExperiments, type ExperimentComparisonReport } from './experiments';
 import type { GameEvent, GameIntent, GameMode, GameReplayErrorCode, GameReplayResult, GameSession, GameSettlementRecord } from './game';
-import type { ProfileView, SettlementSaveResult } from './progress';
+import { ProgressError, type ProfileView, type SettlementSaveResult } from './progress';
 import { messages } from './locales';
 import './styles.css';
 
@@ -39,6 +39,9 @@ app.innerHTML = [
   '    </div>',
   '    <div class="game-controls">',
   '      <p data-testid="profile-status" role="status" aria-live="polite"></p>',
+  '      <p data-testid="profile-recovery-status" role="status" aria-live="polite"></p>',
+  '      <button type="button" data-action="export-corrupt-profile" hidden>Download profile backup</button>',
+  '      <button type="button" data-action="reset-corrupt-profile" hidden>Replace damaged profile</button>',
   '      <p data-testid="selection-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="wave-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="combat-status" role="status" aria-live="polite"></p>',
@@ -48,6 +51,8 @@ app.innerHTML = [
   '        <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
   '      </label>',
   '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
+  '      <button type="button" data-action="retry-settings-save" hidden>Retry saving settings</button>',
+  '      <button type="button" data-action="reload-saved-profile" hidden>Reload saved profile</button>',
   '      <p data-testid="upgrade-sample-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="upgrade-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="recruit-pool-status" role="status" aria-live="polite"></p>',
@@ -152,6 +157,9 @@ registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
+const profileRecoveryStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-recovery-status"]');
+const exportCorruptProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="export-corrupt-profile"]');
+const resetCorruptProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="reset-corrupt-profile"]');
 const statusElement = app.querySelector<HTMLElement>('[data-testid="selection-status"]');
 const waveStatusElement = app.querySelector<HTMLElement>('[data-testid="wave-status"]');
 const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat-status"]');
@@ -162,6 +170,8 @@ const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgra
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
 const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
+const retrySettingsButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-settings-save"]');
+const reloadProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="reload-saved-profile"]');
 const pauseStatusElement = app.querySelector<HTMLElement>('[data-testid="pause-status"]');
 const pauseButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-toggle"]');
 const singleStepButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="single-step"]');
@@ -211,12 +221,15 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement
+if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
+  || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
+  || !statusElement || !waveStatusElement || !combatStatusElement
   || !sceneTitleElement || !sceneContextElement || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
+  || !retrySettingsButtonElement || !reloadProfileButtonElement
   || !pauseStatusElement || !pauseButtonElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
@@ -233,6 +246,9 @@ if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElem
 }
 const canvas: HTMLCanvasElement = canvasElement;
 const profileStatus: HTMLElement = profileStatusElement;
+const profileRecoveryStatus: HTMLElement = profileRecoveryStatusElement;
+const exportCorruptProfileButton: HTMLButtonElement = exportCorruptProfileButtonElement;
+const resetCorruptProfileButton: HTMLButtonElement = resetCorruptProfileButtonElement;
 const status: HTMLElement = statusElement;
 const waveStatus: HTMLElement = waveStatusElement;
 const combatStatus: HTMLElement = combatStatusElement;
@@ -243,6 +259,8 @@ const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
 const recruitStatus: HTMLElement = recruitStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
+const retrySettingsButton: HTMLButtonElement = retrySettingsButtonElement;
+const reloadProfileButton: HTMLButtonElement = reloadProfileButtonElement;
 const pauseStatus: HTMLElement = pauseStatusElement;
 const pauseControl: HTMLButtonElement = pauseButtonElement;
 const singleStepControl: HTMLButtonElement = singleStepButtonElement;
@@ -318,8 +336,11 @@ let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let pauseReason: 'manual' | 'background' | undefined;
 let showInspectionOverlay = false;
 let pageLeaving = false;
-let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | undefined;
+let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | 'conflict' | 'profile-reset' | undefined;
 let profileLoadFailed = false;
+let profileLoadErrorCode: string | undefined;
+let profileRecoveryStatusKey: 'backup-exported' | 'export-failed' | 'reset-failed' | 'profile-reset' | 'profile-refreshed' | undefined;
+let corruptProfileBackup: string | undefined;
 let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | 'replay' | undefined;
 let activeSettlementRecord: GameSettlementRecord | undefined;
 let replaying = false;
@@ -397,8 +418,22 @@ const languageMessages = {
     'load-failed': 'Speed preference unavailable; using 1× for this session.',
     saved: 'Speed preference saved.',
     'save-failed': 'Speed is active for this session, but could not be saved.',
+    conflict: 'A newer profile exists. Reload it before saving another setting.',
+    'profile-reset': 'A new empty profile is ready.',
+    retrySettings: 'Retry saving settings',
+    reloadProfile: 'Reload saved profile',
     noSavedProfile: 'Saved profile: no Cow Gulch result yet.',
     profileLoadFailed: 'Saved profile could not be read.',
+    profileCorrupt: 'Saved profile is damaged. Download a backup before replacing it.',
+    profileUnsupported: 'Saved profile uses a newer format. Download a backup and open it with a compatible version.',
+    exportProfile: 'Download profile backup',
+    replaceProfile: 'Replace damaged profile',
+    backupExported: 'Backup downloaded. You can now replace the damaged profile.',
+    exportFailed: 'Profile backup could not be exported.',
+    resetProfile: 'Damaged profile replaced. The downloaded backup keeps the original record.',
+    resetFailed: 'Profile changed or could not be reset. Download a fresh backup and retry.',
+    profileRefreshed: 'A newer valid profile was found and loaded.',
+    confirmResetProfile: 'Replace this damaged profile with a new empty one? Make sure the backup was downloaded.',
     profileSaved: (completed: boolean, score: number | undefined) =>
       `Saved profile: Cow Gulch${completed ? ' sample complete' : ''}${score === undefined ? '' : ` · Best $${score}`}.`,
     settlementSaving: 'Saving result to this browser…',
@@ -485,8 +520,22 @@ const languageMessages = {
     'load-failed': '无法读取倍速设置，本次暂用 1×。',
     saved: '倍速设置已保存。',
     'save-failed': '本次使用所选倍速，但保存失败。',
+    conflict: '档案已有更新。请先重新加载，再保存其他设置。',
+    'profile-reset': '新的空档案已就绪。',
+    retrySettings: '重试保存设置',
+    reloadProfile: '重新加载已保存档案',
     noSavedProfile: '已保存档案：尚无牛溪谷结算。',
     profileLoadFailed: '无法读取已保存档案。',
+    profileCorrupt: '已保存档案损坏。替换前请先下载备份。',
+    profileUnsupported: '档案使用了较新格式。请下载备份，并在兼容版本中打开。',
+    exportProfile: '下载档案备份',
+    replaceProfile: '替换损坏档案',
+    backupExported: '备份已下载，现在可以替换损坏档案。',
+    exportFailed: '无法导出档案备份。',
+    resetProfile: '损坏档案已替换。原记录保留在已下载的备份中。',
+    resetFailed: '档案已变化或无法重置。请重新下载备份后重试。',
+    profileRefreshed: '发现并加载了较新的有效档案。',
+    confirmResetProfile: '要将损坏档案替换为空档案吗？请确认备份已下载。',
     profileSaved: (completed: boolean, score: number | undefined) =>
       `已保存档案：牛溪谷${completed ? '样本已完成' : ''}${score === undefined ? '' : ` · 最高分 $${score}`}。`,
     settlementSaving: '正在将结算保存到此浏览器…',
@@ -521,11 +570,28 @@ const languageMessages = {
 };
 
 function profileMessage(language: keyof typeof languageMessages): string {
-  if (profileLoadFailed) return languageMessages[language].profileLoadFailed;
+  const messages = languageMessages[language];
+  if (profileLoadFailed) {
+    if (profileLoadErrorCode === 'corrupt-data') return messages.profileCorrupt;
+    if (profileLoadErrorCode === 'unsupported-version') return messages.profileUnsupported;
+    return messages.profileLoadFailed;
+  }
   const completed = profile.completedScenarios.includes('cow-gulch');
   const score = profile.highScores['cow-gulch'];
-  if (!completed && score === undefined) return languageMessages[language].noSavedProfile;
-  return languageMessages[language].profileSaved(completed, score);
+  if (!completed && score === undefined) return messages.noSavedProfile;
+  return messages.profileSaved(completed, score);
+}
+
+function profileRecoveryMessage(language: keyof typeof languageMessages): string {
+  const messages = languageMessages[language];
+  switch (profileRecoveryStatusKey) {
+    case 'backup-exported': return messages.backupExported;
+    case 'export-failed': return messages.exportFailed;
+    case 'reset-failed': return messages.resetFailed;
+    case 'profile-reset': return messages.resetProfile;
+    case 'profile-refreshed': return messages.profileRefreshed;
+    default: return '';
+  }
 }
 
 function settlementSaveMessage(language: keyof typeof languageMessages): string {
@@ -847,13 +913,17 @@ async function applyFormalSettlement(record: GameSettlementRecord): Promise<void
   try {
     const result = await progress.applySettlement(record);
     profile = result.profile;
-    profileLoadFailed = false;
+    if (result.status !== 'failed') {
+      profileLoadFailed = false;
+      profileLoadErrorCode = undefined;
+    }
     settlementSaveState = result.status;
   } catch {
     settlementSaveState = 'failed';
     try {
       profile = await progress.loadProfile();
       profileLoadFailed = false;
+      profileLoadErrorCode = undefined;
     } catch {
       profileLoadFailed = true;
     }
@@ -869,7 +939,10 @@ async function retryFormalSettlement(): Promise<void> {
   try {
     const result = await progress.retrySettlement(settlementId);
     profile = result.profile;
-    profileLoadFailed = false;
+    if (result.status !== 'failed') {
+      profileLoadFailed = false;
+      profileLoadErrorCode = undefined;
+    }
     settlementSaveState = result.status;
   } catch {
     settlementSaveState = 'failed';
@@ -884,6 +957,13 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const actionLocked = replaying || replacingSession;
   const profileText = profileMessage(language);
   if (profileStatus.textContent !== profileText) profileStatus.textContent = profileText;
+  const profileRecoveryText = profileRecoveryMessage(language);
+  if (profileRecoveryStatus.textContent !== profileRecoveryText) profileRecoveryStatus.textContent = profileRecoveryText;
+  exportCorruptProfileButton.hidden = !profileLoadFailed
+    || (profileLoadErrorCode !== 'corrupt-data' && profileLoadErrorCode !== 'unsupported-version');
+  exportCorruptProfileButton.textContent = messages.exportProfile;
+  resetCorruptProfileButton.hidden = profileLoadErrorCode !== 'corrupt-data' || !corruptProfileBackup;
+  resetCorruptProfileButton.textContent = messages.replaceProfile;
   replayStatus.textContent = replayMessage(language);
   exportReplayControl.disabled = replaying || replacingSession || !view.wave?.settlement
     || session.startRecord.mode === 'replay';
@@ -943,6 +1023,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.noRoute);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
+  retrySettingsButton.hidden = settingsStatusKey !== 'save-failed' || profileLoadFailed;
+  retrySettingsButton.textContent = messages.retrySettings;
+  reloadProfileButton.hidden = settingsStatusKey !== 'conflict';
+  reloadProfileButton.textContent = messages.reloadProfile;
   if (view.wave) {
     const wave = view.wave;
     const waveText = wave.phase === 'not-started'
@@ -1141,11 +1225,13 @@ async function loadSettings(): Promise<void> {
   try {
     profile = await progress.loadProfile();
     profileLoadFailed = false;
+    profileLoadErrorCode = undefined;
     simulationSpeed = profile.settings.simulationSpeed;
     simulationSpeedInput.value = String(simulationSpeed);
-  } catch {
+  } catch (error) {
     settingsStatusKey = 'load-failed';
     profileLoadFailed = true;
+    profileLoadErrorCode = error instanceof ProgressError ? error.code : undefined;
   } finally {
     simulationSpeedInput.disabled = false;
     renderStatus();
@@ -1333,9 +1419,111 @@ simulationSpeedInput.addEventListener('change', () => {
     simulationSpeed = saved.simulationSpeed;
     settingsStatusKey = 'saved';
     renderStatus();
-  }).catch(() => {
+  }).catch((error: unknown) => {
     if (sequence !== settingsSaveSequence) return;
-    settingsStatusKey = 'save-failed';
+    settingsStatusKey = error instanceof ProgressError && error.code === 'conflict' ? 'conflict' : 'save-failed';
+    renderStatus();
+  });
+});
+
+retrySettingsButton.addEventListener('click', () => {
+  const sequence = ++settingsSaveSequence;
+  void progress.retrySettings().then((saved) => {
+    if (sequence !== settingsSaveSequence) return;
+    simulationSpeed = saved.simulationSpeed;
+    simulationSpeedInput.value = String(simulationSpeed);
+    settingsStatusKey = 'saved';
+    renderStatus();
+  }).catch((error: unknown) => {
+    if (sequence !== settingsSaveSequence) return;
+    settingsStatusKey = error instanceof ProgressError && error.code === 'conflict' ? 'conflict' : 'save-failed';
+    renderStatus();
+  });
+});
+
+reloadProfileButton.addEventListener('click', () => {
+  const sequence = ++settingsSaveSequence;
+  void progress.loadProfile().then((loaded) => {
+    if (sequence !== settingsSaveSequence) return;
+    profile = loaded;
+    profileLoadFailed = false;
+    profileLoadErrorCode = undefined;
+    corruptProfileBackup = undefined;
+    profileRecoveryStatusKey = undefined;
+    simulationSpeed = profile.settings.simulationSpeed;
+    simulationSpeedInput.value = String(simulationSpeed);
+    settingsStatusKey = 'saved';
+    renderStatus();
+  }).catch((error: unknown) => {
+    if (sequence !== settingsSaveSequence) return;
+    profileLoadFailed = true;
+    profileLoadErrorCode = error instanceof ProgressError ? error.code : undefined;
+    settingsStatusKey = 'load-failed';
+    renderStatus();
+  });
+});
+
+exportCorruptProfileButton.addEventListener('click', () => {
+  void progress.exportSavedProfile().then((backup) => {
+    if (!backup) {
+      corruptProfileBackup = undefined;
+      profileRecoveryStatusKey = 'export-failed';
+      renderStatus();
+      return;
+    }
+    corruptProfileBackup = backup;
+    const blob = new Blob([backup], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'gunsnglory-profile-backup.json';
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    profileRecoveryStatusKey = 'backup-exported';
+    renderStatus();
+  }).catch(() => {
+    corruptProfileBackup = undefined;
+    profileRecoveryStatusKey = 'export-failed';
+    renderStatus();
+  });
+});
+
+resetCorruptProfileButton.addEventListener('click', () => {
+  const backup = corruptProfileBackup;
+  if (!backup || !window.confirm(languageMessages[getLanguage()].confirmResetProfile)) return;
+  void progress.resetCorruptProfile(backup).then((restored) => {
+    profile = restored;
+    profileLoadFailed = false;
+    profileLoadErrorCode = undefined;
+    corruptProfileBackup = undefined;
+    profileRecoveryStatusKey = 'profile-reset';
+    simulationSpeed = restored.settings.simulationSpeed;
+    simulationSpeedInput.value = String(simulationSpeed);
+    settingsStatusKey = 'profile-reset';
+    renderStatus();
+  }).catch(async (error: unknown) => {
+    if (error instanceof ProgressError && error.code === 'conflict') {
+      corruptProfileBackup = undefined;
+      try {
+        profile = await progress.loadProfile();
+        profileLoadFailed = false;
+        profileLoadErrorCode = undefined;
+        simulationSpeed = profile.settings.simulationSpeed;
+        simulationSpeedInput.value = String(simulationSpeed);
+        settingsStatusKey = 'saved';
+        profileRecoveryStatusKey = 'profile-refreshed';
+      } catch (refreshError) {
+        profileLoadFailed = true;
+        profileLoadErrorCode = refreshError instanceof ProgressError ? refreshError.code : undefined;
+        profileRecoveryStatusKey = 'reset-failed';
+      }
+    } else {
+      if (error instanceof ProgressError && error.code !== 'corrupt-data') {
+        profileLoadErrorCode = error.code;
+        corruptProfileBackup = undefined;
+      }
+      profileRecoveryStatusKey = 'reset-failed';
+    }
     renderStatus();
   });
 });
