@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线已完成。当前在 `codex/python-interpreter-lab-docs` 上完成了 P1 本地实现与验收：应用遵循 React + TypeScript + Vite、共享站点壳、本地 pnpm 和 module Worker 约束，固定 Pyodide 314.0.7 提供真实 CPython AST、代码对象与反汇编；catalog 已登记，应用 CI 与整站构建通过。提交、合并 `master`、推送、GitHub Actions 状态确认及线上实测仍待完成，因此 P1 发布门尚未通过。验收基线见 [spec](specs/p01-real-cpython-compile-view.md) 和 [tasks](tasks/p01-real-cpython-compile-view.md)。
+P0 文档基线已完成。P1 的真实编译工作区已实现并通过本地验证，首版已合并并推送到 `master`。首次 Actions 运行暴露 pnpm 12 默认拦截 `esbuild` 安装脚本的问题；应用现已加入本地构建批准配置，并用 pnpm 12.15.0 验证冻结安装、6 条单测和 5 条浏览器用例通过。修复提交、第二次 Actions、部署及线上实测仍待完成，因此 P1 发布门尚未通过。验收基线见 [spec](specs/p01-real-cpython-compile-view.md) 和 [tasks](tasks/p01-real-cpython-compile-view.md)。
 
 P0 建立了以下文档：
 
@@ -86,7 +86,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **集成**：已建立独立 React + TypeScript + Vite 应用、pnpm lockfile、可执行安装脚本、独立 `build`/`test:ci` 和 `dist/`；`build` 先做类型检查再构建。Vite 使用 `base: './'`，在 `/python-interpreter-lab/` 子路径下验证了入口、样式和 module Worker，并经 Pyodide CDN 初始化后登记 catalog。catalog 含中英文标题和简介。HTML 通过 `@wishflow/site-shell` content 插槽接入共享壳，设置 slug、双语标题和 `../` 站点链接；React 入口导入共享壳。单页未启用空侧栏。
 - **验收**：`x = 1 + 2` 展示实际常量折叠结果；含 `def` 的源码能区分模块与函数代码对象；缩进错误、AST 成功但编译失败、资源加载失败和分析取消都有正确反馈；后续再次分析可成功。
 - **路径验收**：检查以 `/python-interpreter-lab/` 为 base 的生产产物资源路径，而非只通过 Vite 根路径 dev server。
-- **当前结果**：`pnpm run test:ci` 的类型检查、6 条单测与 5 条浏览器用例通过；根 `pnpm run test:catalog` 的 14 条检查通过；`pnpm run build:site` 完成并生成 `_site/python-interpreter-lab/`。部署与线上验证仍待推送后完成。
+- **当前结果**：应用类型检查、6 条单测与 5 条浏览器用例通过；根 `pnpm run test:catalog` 的 14 条检查通过；`pnpm run build:site` 完成并生成 `_site/python-interpreter-lab/`。首次推送后的 GitHub Actions 在 `esbuild` 安装脚本策略处失败且跳过部署；新增应用本地 `allowBuilds.esbuild` 后，使用 pnpm 12.15.0 的冻结安装、类型检查、6 条单测、构建和 5 条浏览器用例均通过。修复提交、后续 Actions 与线上验证待完成。
 - **回滚**：回退应用登记及首版提交，恢复此前静态站点。只回退应用自身文件及本阶段必需的共享登记，不改变其他应用。
 
 ### P2：词法观察与源码联动
@@ -257,4 +257,4 @@ P0 交付只有文档，因此当时没有应用构建、解释器测试、浏�
 | 站点语言同步 | Codex 内置浏览器切换共享语言控件 | 通过：中文与英文的标题、源码操作、AST/字节码标签和运行时状态同步更新 |
 | 生产子路径浏览器实测 | Playwright 本地静态服务挂载 `/python-interpreter-lab/` 并加载 Pyodide CDN | 通过：页面、module Worker、Pyodide/WASM 实际运行；错误恢复后可继续分析 |
 
-以上是本地验收；GitHub Actions、线上部署和公开 URL 实测仍待提交、合并与推送后完成，未将其记录为已发布。
+本地验收和 pnpm 12.15.0 安装复验通过。首个远端 workflow 的失败已定位并在本地修复；修复后的远端 Actions、线上部署和公开 URL 实测仍待完成，未将其记录为已发布。

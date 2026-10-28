@@ -13,7 +13,7 @@
 ## 稳定约束
 
 - 应用用于解释 Python 的编译和执行过程。真实视图的数据来自固定版本的 Pyodide/CPython；教学视图使用显式声明语义范围的 Mini VM。两个视图分别标明引擎、版本和观察粒度。
-- 可公开访问的版本是 `apps/python-interpreter-lab/` 下的独立 pnpm 前端应用；`python-interpreter-lab` 同时决定 catalog slug、`/python-interpreter-lab/` URL 和 `_site/python-interpreter-lab/` 输出路径。应用提供自己的 lockfile、可执行 `scripts/install.sh`、`build`、`test:ci`，构建输出写入 `dist/`；catalog 维护中英文标题与简介，只在已有可构建、可验证的首版时登记 `apps/catalog.json`。
+- 可公开访问的版本是 `apps/python-interpreter-lab/` 下的独立 pnpm 前端应用；`python-interpreter-lab` 同时决定 catalog slug、`/python-interpreter-lab/` URL 和 `_site/python-interpreter-lab/` 输出路径。应用提供自己的 lockfile、可执行 `scripts/install.sh`、`build`、`test:ci`，构建输出写入 `dist/`；本地 `pnpm-workspace.yaml` 仅允许 Vite 所需的 `esbuild` 安装脚本，新增需要执行安装脚本的依赖时须按根规则审查并只允许必要项；catalog 维护中英文标题与简介，只在已有可构建、可验证的首版时登记 `apps/catalog.json`。
 - UI 默认沿用仓库已有的 React + TypeScript + Vite 应用模式。Vite 使用相对 `base: './'` 并输出到 `dist/`，避免站点子路径下的根绝对资源引用。Python 分析与执行使用由 Vite 正确打包的浏览器 module Web Worker；它属于应用静态资源，不是 Cloudflare Worker 或远程执行服务。
 - 公开页面按 [站点外壳契约](../../packages/site-shell/README.md)接入 `@wishflow/site-shell`：HTML 壳提供 `data-app="python-interpreter-lab"`、正确的 `data-base`/`data-home-href`、双语标题，并把应用根节点放入 `content` 插槽；应用入口导入共享组件。应用的 `package.json` 使用仓库本地 `file:../../packages/site-shell` 依赖。
 - 单页面板应用默认不启用应用内侧栏。只有引入真实的多页面路由时才提供双语 `data-local-nav` 并启用侧栏；使用 `history.pushState` 的路由在完成跳转后通知共享壳刷新路由状态。
