@@ -627,6 +627,8 @@ CI 首次运行暴露设置冲突和保存重试用例无法点击：长升级�
 | 行为 | 可选中睡眠槽但不激活、不扣款、不增加招募池；对其移动命令被拒绝。桌面及触屏浏览器测试确认选中枪手和 Mexican 睡眠槽时现金仍为$65、招募池为空；桌面浏览器再通过站点语言开关核对 Mexican 的中英文待招募提示。 |
 | `typecheck`、`test:unit`、`build` | `pnpm --dir apps/gunsnglory run typecheck` 通过；`pnpm --dir apps/gunsnglory run test:unit` 124项通过；`pnpm --dir apps/gunsnglory run build` 通过，构建目录包含三张新增 PNG。 |
 | 浏览器测试 | `pnpm --dir apps/gunsnglory run test:e2e` 全套48项通过；增加 Mexican 点选断言后，`pnpm --dir apps/gunsnglory exec playwright test tests/e2e/t01.spec.ts` 两项桌面/触屏测试再次通过。Codex 内置浏览器打开本地 Vite 画面，截图确认地图中睡眠贴图和 Zzz 图层已加载。 |
-| 审查与发布 | 条件反转变异使移动规则及睡眠对象测试按预期失败，恢复后 `game.test.ts` 的46项全部通过。此记录更新时尚未合并/发布；待该提交通过主分支 CI 后补记公开站点核验。 |
+| 审查 | 条件反转变异使移动规则及睡眠对象测试按预期失败，恢复后 `game.test.ts` 的46项全部通过。 |
+| 合并与发布 | 实现提交 `1e567d2` 通过合并提交 `c7a8f8b` 进入 `master` 并推送。GitHub Actions run `40755487772` 成功；`test-shared`、`test (gunsnglory)`、`deploy-cloudflare-pages` 和 `deploy-github-pages` 均通过，Worker 检查/部署因未涉及而跳过。 |
+| 公开页面与内置浏览器 | 在 Codex 内置浏览器打开 `https://wishflow-tools.pages.dev/gunsnglory/?release=1e567d2`。截图确认地图睡眠人物和 Zzz 图层已加载；实点 tile96 枪手槽显示“枪手待招募，尚未雇用 · Cell (7, 2)”，实点 tile97 Mexican 槽显示“墨西哥人待招募，尚未雇用 · Cell (4, 4)”。两次选择后战局仍为50生命、$65，预备单位为空；没有推进波次或尝试完成整关。 |
 
 本轮只完成 P1-A 原始开局；没有声称原版雇用闭环、完整前两波或完整 Cow Gulch 已通过。后续 B 从原始初态继续实现真实雇用与前两波，不能把本节中的静态对象/初态验收当作 B–F 的通过证据。
