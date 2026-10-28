@@ -195,3 +195,70 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
 });
+
+test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {
+  const mapImage = {} as HTMLImageElement;
+  const sleepingImage = {} as HTMLImageElement;
+  const effectImage = {} as HTMLImageElement;
+  const drawCalls: unknown[][] = [];
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+  } as unknown as CanvasRenderingContext2D;
+  const view: GameView = {
+    frame: 4,
+    elapsedMs: 400,
+    paused: false,
+    scenarioId: 'cow-gulch',
+    map: {
+      width: 1,
+      height: 1,
+      tileSize: 32,
+      background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 1, height: 1 }],
+      streets: [],
+    },
+    units: [{
+      id: 'gunslinger-hire-01',
+      type: 'gunslinger',
+      activity: 4,
+      cell: { x: 0, y: 0 },
+      movementSpeedFinePer100Ms: 1500,
+      asset: 'player_gunslinger_sleep',
+      frame: { x: 0, y: 0, width: 32, height: 32 },
+      render: { x: 0, y: -0.25, width: 1, height: 1 },
+      hitArea: { x: 0, y: -0.25, width: 1, height: 1 },
+      selected: false,
+      moving: false,
+      positionFine: { x: 3840, y: 5760 },
+      sleepingAnimationFrame: 2,
+      upgradeLevel: 0,
+    }],
+    enemies: [],
+    shots: [],
+    recruitPool: [],
+    events: [],
+  };
+
+  drawGame(context, view, {
+    ground: mapImage,
+    player_gunslinger_sleep: sleepingImage,
+    sfx_sleeping: effectImage,
+  });
+
+  assert.deepEqual(drawCalls.map(([image]) => image), [mapImage, sleepingImage, effectImage]);
+  assert.deepEqual(drawCalls[1]?.slice(1, 5), [0, 0, 32, 32]);
+  const viewport = getMapViewport(view);
+  const effectCall = drawCalls[2]!;
+  assert.deepEqual(effectCall.slice(1, 5), [48, 0, 24, 16], 'uses the third 24×16 sleeping animation frame');
+  const [, , , , , effectX, effectY, effectWidth, effectHeight] = effectCall;
+  const feetX = viewport.origin.x + (view.units[0]!.positionFine.x / 240) * viewport.scaleFactor;
+  const feetY = viewport.origin.y + (view.units[0]!.positionFine.y / 240) * viewport.scaleFactor;
+  assert.equal((effectX as number) + (effectWidth as number) / 2, feetX);
+  assert.equal((effectY as number) + (effectHeight as number), feetY - 32 * viewport.scaleFactor);
+});

@@ -614,3 +614,19 @@ CI 首次运行暴露设置冲突和保存重试用例无法点击：长升级�
 | P1 表格结构 | 6项任务，每项均含输入/初态、独立预期、边界与证据。 |
 | 文档链接与结构 | `python3 /tmp/check-gunsnglory-docs.py` 通过：10份受跟踪 Markdown、171个本地链接/锚点、代码围栏闭合、27个用户故事保留；P1 表格为6项×4列；`git diff --check` 通过。 |
 | 游戏验证范围 | 本轮仅修改 Markdown，不运行游戏构建、游戏测试、ADB 或内置浏览器；没有代码/资源变更，不触发应用部署。 |
+
+## 34. P1-A Cow Gulch 原始开局
+
+本轮实现 P1-A 的固定初态与可见对象，覆盖 Cow Gulch/map01；没有推进波次或验证整关。独立预期来自手工复核的 `td_map_01.tdm` 字节及 `GameObjectManager` 构造/解锁分支，具体基线见[产品规格 §4.4](spec.md#44-地图构造首关初态与雇用)。完整首关仍为0/60，P1-B–F 未完成。
+
+| 验收面 | 实际结果 |
+| --- | --- |
+| 对象与解锁 | fresh profile 创建8个 tile96 枪手睡眠槽、7个 tile97 Mexican 睡眠槽及 tile104 活动枪手；坐标按原 TDM 行优先解码。tile101/130 锁定对象不实例化，tile98–100/131 不属于本图。 |
+| 初态与版本 | Game 视图包含16个单位；Wave1 初态为50生命、$65、未开始，升级上限仍为0。场景内容版本升至 `gng-free-1.8.6-map1-objects-v2`，隔离新增对象集合与旧回放。 |
+| 资源与反馈 | 从 APK 提取并纳入游戏的枪手/Mexican 睡眠贴图和3帧 `sfx_sleeping`；Canvas 按脚底锚点绘制，帧每200ms轮换并在暂停时冻结。英文/中文选择提示分别区分枪手与 Mexican 的“待招募”状态。 |
+| 行为 | 可选中睡眠槽但不激活、不扣款、不增加招募池；对其移动命令被拒绝。桌面及触屏浏览器测试确认选中枪手和 Mexican 睡眠槽时现金仍为$65、招募池为空；桌面浏览器再通过站点语言开关核对 Mexican 的中英文待招募提示。 |
+| `typecheck`、`test:unit`、`build` | `pnpm --dir apps/gunsnglory run typecheck` 通过；`pnpm --dir apps/gunsnglory run test:unit` 124项通过；`pnpm --dir apps/gunsnglory run build` 通过，构建目录包含三张新增 PNG。 |
+| 浏览器测试 | `pnpm --dir apps/gunsnglory run test:e2e` 全套48项通过；增加 Mexican 点选断言后，`pnpm --dir apps/gunsnglory exec playwright test tests/e2e/t01.spec.ts` 两项桌面/触屏测试再次通过。Codex 内置浏览器打开本地 Vite 画面，截图确认地图中睡眠贴图和 Zzz 图层已加载。 |
+| 审查与发布 | 条件反转变异使移动规则及睡眠对象测试按预期失败，恢复后 `game.test.ts` 的46项全部通过。此记录更新时尚未合并/发布；待该提交通过主分支 CI 后补记公开站点核验。 |
+
+本轮只完成 P1-A 原始开局；没有声称原版雇用闭环、完整前两波或完整 Cow Gulch 已通过。后续 B 从原始初态继续实现真实雇用与前两波，不能把本节中的静态对象/初态验收当作 B–F 的通过证据。

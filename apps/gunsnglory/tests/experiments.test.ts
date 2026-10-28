@@ -226,7 +226,7 @@ test('stops when the scene exceeds its entity budget', async () => {
   assert.equal(result.status, 'budget-exceeded');
   assert.equal(result.stopReason, 'max-entities');
   assert.equal(result.outcome, undefined);
-  assert.equal(result.metrics?.peakEntities, 2);
+  assert.equal(result.metrics?.peakEntities, 16, 'the fixed first-map object set counts toward the entity budget');
 });
 
 test('observes AbortSignal cancellation between bounded frame batches and closes the session', async () => {

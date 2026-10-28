@@ -3,7 +3,7 @@ import test from 'node:test';
 import { cowGulchContent } from '../src/content/cow-gulch';
 import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
-import { createGame, type GameSession, type ScenarioContent } from '../src/game';
+import { createGame, type GameSession, type ScenarioContent, type UnitView } from '../src/game';
 import { serializeReplay, type GameReplayPayload } from '../src/game/replay';
 
 const scenario: ScenarioContent = {
@@ -1213,7 +1213,6 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
     (error as { code?: string }).code === 'content-unavailable');
 });
 
-
 test('prepares a complete immutable numeric setup without allocating a session or reading randomness', async () => {
   let randomReads = 0;
   let sessionIds = 0;
@@ -1324,4 +1323,54 @@ test('rejects a tampered setup and prevents custom setups from entering formal p
     mode: 'formal',
     preparedSetup: prepared,
   }), (error: unknown) => (error as { code?: string }).code === 'prepared-setup-mismatch');
+});
+
+test('selects a sleeping first-map unit without activating it, charging cash, or allowing movement', async () => {
+  const session = await createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } }).open({
+    scenarioId: cowGulchContent.id,
+    difficulty: 'easy',
+  });
+  const initial = session.observe();
+  const sleeping = initial.units.find((unit) => unit.id === 'gunslinger-hire-01');
+  assert.ok(sleeping);
+  assert.equal(initial.units.length, 16);
+  assert.equal(initial.wave?.phase, 'not-started');
+  assert.equal(initial.wave?.lives, 50);
+  assert.equal(initial.wave?.cash, 65);
+  assert.equal(sleeping.activity, 4);
+  assert.equal(sleeping.selected, false);
+
+  assert.equal(session.submitIntent({ type: 'select-at', x: 6.5, y: 1.5 }), true);
+  const selected = session.advance({ deltaMs: 0 });
+  const selectedSleeping = selected.units.find((unit) => unit.id === sleeping.id);
+  assert.equal(selectedSleeping?.selected, true);
+  assert.equal(selectedSleeping?.activity, 4);
+  assert.equal(selected.wave?.cash, 65);
+  assert.equal(selected.recruitPool.find((entry) => entry.unitType === 'gunslinger')?.count, 0);
+
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 7.5, targetY: 2.5 }), false);
+  const afterRejectedMove = session.advance({ deltaMs: 100 });
+  assert.deepEqual(afterRejectedMove.units.find((unit) => unit.id === sleeping.id)?.positionFine, sleeping.positionFine);
+  assert.equal(afterRejectedMove.wave?.cash, 65);
+
+  session.submitIntent({ type: 'clear-selection' });
+  assert.equal(session.advance({ deltaMs: 0 }).units.find((unit) => unit.id === sleeping.id)?.selected, false);
+});
+
+test('cycles the sleeping Zzz frames every 200 ms and freezes them while paused', async () => {
+  const session = await createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } }).open({
+    scenarioId: cowGulchContent.id,
+    difficulty: 'easy',
+  });
+  const sleepingFrame = (units: readonly UnitView[]) =>
+    units.find((unit) => unit.id === 'gunslinger-hire-01')?.sleepingAnimationFrame;
+  const frames = [sleepingFrame(session.observe().units)];
+  for (let index = 0; index < 6; index += 1) {
+    frames.push(sleepingFrame(session.advance({ deltaMs: 100 }).units));
+  }
+  assert.deepEqual(frames, [0, 0, 1, 1, 2, 2, 0]);
+
+  session.pause();
+  const pausedFrame = sleepingFrame(session.observe().units);
+  assert.equal(sleepingFrame(session.advance({ deltaMs: 100 }).units), pausedFrame);
 });

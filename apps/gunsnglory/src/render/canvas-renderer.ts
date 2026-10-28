@@ -3,6 +3,8 @@ import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type M
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
+const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
+
 export type GameImages = Readonly<Record<string, HTMLImageElement>>;
 
 export function resizeCanvas(
@@ -291,6 +293,28 @@ export function drawGame(
       width,
       height,
     );
+
+    if (unit.activity === 4) {
+      const effectImage = images.sfx_sleeping;
+      if (!effectImage) throw new Error('Missing game image: sfx_sleeping');
+      const animationFrame = Math.max(0, Math.trunc(unit.sleepingAnimationFrame ?? 0)) % SLEEPING_EFFECT_FRAME.count;
+      const feetX = viewport.origin.x + (unit.positionFine.x / 240) * viewport.scaleFactor;
+      const feetY = viewport.origin.y + (unit.positionFine.y / 240) * viewport.scaleFactor;
+      const effectScale = viewport.scaleFactor;
+      const effectWidth = SLEEPING_EFFECT_FRAME.width * effectScale;
+      const effectHeight = SLEEPING_EFFECT_FRAME.height * effectScale;
+      context.drawImage(
+        effectImage,
+        animationFrame * SLEEPING_EFFECT_FRAME.width,
+        0,
+        SLEEPING_EFFECT_FRAME.width,
+        SLEEPING_EFFECT_FRAME.height,
+        feetX - effectWidth / 2,
+        feetY - (32 * effectScale) - effectHeight,
+        effectWidth,
+        effectHeight,
+      );
+    }
 
     if (unit.selected) {
       context.strokeStyle = '#ffe28a';

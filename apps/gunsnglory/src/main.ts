@@ -452,7 +452,9 @@ const languageMessages = {
     campaignOpened: (name: string) => `${name} opened.`,
     campaignOpenFailed: 'The stage could not be opened. The previous scene remains available.',
     none: 'No unit selected',
-    selected: 'Gunslinger selected',
+    unitName: (type: string) => type === 'mexican' ? 'Mexican' : 'Gunslinger',
+    selected: (name: string) => `${name} selected`,
+    selectedSleeping: (name: string) => `${name} is waiting to be hired`,
     failed: 'Game scene failed to load',
     retrySceneOpen: 'Retry loading requested scene',
     returnPreviousScene: 'Return to previous scene',
@@ -581,7 +583,9 @@ const languageMessages = {
     campaignOpened: (name: string) => `已进入${name}。`,
     campaignOpenFailed: '无法打开该关卡，之前的场景仍可使用。',
     none: '尚未选择单位',
-    selected: '已选择枪手',
+    unitName: (type: string) => type === 'mexican' ? '墨西哥人' : '枪手',
+    selected: (name: string) => `已选择${name}`,
+    selectedSleeping: (name: string) => `${name}待招募，尚未雇用`,
     failed: '游戏场景加载失败',
     retrySceneOpen: '重试加载请求的场景',
     returnPreviousScene: '返回之前的场景',
@@ -1245,7 +1249,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     lastUpgradeEvent = upgradeEvent;
   }
   const selectionText = unit
-    ? messages.selected + ' · Cell (' + (unit.cell.x + 1) + ', ' + (unit.cell.y + 1) + ')'
+    ? (unit.activity === 4
+      ? messages.selectedSleeping(messages.unitName(unit.type))
+      : messages.selected(messages.unitName(unit.type)))
+      + ' · Cell (' + (unit.cell.x + 1) + ', ' + (unit.cell.y + 1) + ')'
     : messages.none;
   if (status.textContent !== selectionText) status.textContent = selectionText;
   simulationSpeedValue.textContent = simulationSpeed + '×';
@@ -1489,6 +1496,7 @@ const assetNames = new Set([
   ...view.map.background.map((tile) => tile.asset),
   ...view.map.streets.map((tile) => tile.asset),
   ...view.units.map((unit) => unit.asset),
+  ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
   'pioneer_male',
 ]);
 const images: Record<string, HTMLImageElement> = {};
