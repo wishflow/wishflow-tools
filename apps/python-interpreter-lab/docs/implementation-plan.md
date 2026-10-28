@@ -83,8 +83,9 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 - **前置**：P0；本阶段 spec 确认 UI 最小方案、Pyodide 及 Python 版本、资源托管方式和目标浏览器。
 - **交付**：用户可输入或选择示例、点击分析，在 Worker 内得到 AST、代码对象和真实反汇编；可选择嵌套函数代码对象；展示版本、加载状态、语法/编译错误及取消恢复。分析不执行用户代码。
-- **集成**：建立独立 pnpm 应用、安装脚本、`build`/`test:ci` 和 `dist/`；复用 site-shell 及中英文机制；有可运行页面和检查后在 catalog 登记。
+- **集成**：建立独立 React + TypeScript + Vite 应用、pnpm lockfile、可执行安装脚本、独立 `build`/`test:ci` 和 `dist/`；`build` 先做类型检查再构建。Vite 使用 `base: './'`，先验证共享站点 `/python-interpreter-lab/` 子路径可加载入口、样式、WASM/数据文件和 module Worker，才登记 catalog。catalog 项含中英文标题和简介。HTML 用 `@wishflow/site-shell` 包裹 content 插槽并提供 slug、双语标题和 `../` 站点链接；React 入口导入共享壳。默认单页不打开空侧栏。
 - **验收**：`x = 1 + 2` 展示实际常量折叠结果；含 `def` 的源码能区分模块与函数代码对象；缩进错误、AST 成功但编译失败、资源加载失败和分析取消都有正确反馈；后续再次分析可成功。
+- **路径验收**：检查以 `/python-interpreter-lab/` 为 base 的生产产物资源路径，而非只通过 Vite 根路径 dev server。
 - **回滚**：回退应用登记及首版提交，恢复此前静态站点。只回退应用自身文件及本阶段必需的共享登记，不改变其他应用。
 
 ### P2：词法观察与源码联动
@@ -179,7 +180,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 | 风险或待决项 | 必须处理的时点 | 具体动作 |
 | --- | --- | --- |
-| UI 技术栈、编辑器依赖 | P1 spec | 比较仓库已有方案与最小需求，确认新增依赖；后续图形库在 P8 再定 |
+| UI 技术栈、编辑器依赖 | P1 spec | 沿用 React/TypeScript/Vite 默认模式；比较编辑器依赖的体验、包体、许可、可访问性和子路径打包情况，后续图形库在 P8 再定 |
 | Pyodide/CPython 版本与资源托管 | P1 spec | 固定版本，验证资产一致性、下载体积、部署路径、缓存和加载失败恢复 |
 | 浏览器、窄屏、键盘与动画预算 | P1 spec，并随能力扩展 | 确定测试矩阵；不得只按开发机表现承诺所有设备 |
 | 运行占满 Worker、无法取消 | P1/P3/P5 | 分别验证分析终止、执行终止、教学步进让出；测量停止延迟 |
@@ -198,7 +199,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 2. **编译**：在固定的 Pyodide/CPython 中生成并核对结果。单独验证嵌套 code object、位置缺失、非 ASCII 位置、语法与编译错误；外部系统 Python 只能作参考，不能冒充目标运行时。
 3. **执行与历史**：验证事件时机、变量冻结、输出顺序、取消重建、预算截断、旧消息丢弃及回放无副作用。基础样例需覆盖表达式、循环、调用和异常。
 4. **教学 VM**：每个语法切片验证独立预期的指令与状态，再与固定 CPython 比较支持范围的最终结果；差分相同不替代逐步状态正确。
-5. **浏览器**：使用应用实际交互完成输入、分析、选择、运行、停止和回放；新增调试能力再补相关流程。预览使用 Codex 内置浏览器，CI 可运行已有模式的无头浏览器检查。
+5. **浏览器**：使用应用实际交互完成输入、分析、选择、运行、停止和回放；新增调试能力再补相关流程。检查共享壳和语言切换、catalog 登记、从 `base: './'` 构建的生产产物、`/python-interpreter-lab/` 路径下的静态资源/WASM/module Worker 地址、窄屏面板布局、键盘可达和减少动态效果。预览使用 Codex 内置浏览器，CI 可运行已有模式的无头浏览器检查。
 6. **发布**：后续可运行阶段按根规则完成相关检查、提交、合并 `master`、`git push origin master`，等待已有 CI/CD 成功，并在线上路径实测后才记录发布完成。静态应用改动不触发无关 Cloudflare Worker 发布。
 7. **回滚**：以每个阶段的独立提交或明确提交集合回退，按第 3 节处理已经落地的后续依赖，验证剩余能力仍可用；有持久化格式、新共享协议或跨应用变更时必须重新补充兼容与回滚说明。
 
@@ -214,31 +215,31 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 ### 8.2 pi 实际加载与读取
 
-在 `apps/python-interpreter-lab/` 下运行以下命令，使用已有模型配置，关闭额外扩展、MCP 和 skill，仅开放 `read`；保留 AGENTS 启动发现。`--offline` 只关闭启动更新等网络行为，不表示使用离线推理模型。
+本轮前端约束修订后，在 `apps/python-interpreter-lab/` 下重新验证。使用已有模型配置，关闭额外扩展、MCP 和 skill，仅开放 `read`，保留 AGENTS 启动发现。`--offline` 只关闭启动更新等网络行为，不表示使用离线推理模型。
 
 ```sh
 pi --no-extensions --no-mcp --no-skills --no-prompt-templates --no-themes \
   --no-session --no-approve --offline --tools read --mode json \
-  -p '这是只读的应用文档加载验证，不是实现任务。先列出启动上下文中已加载的 AGENTS.md 路径，确认包含仓库和当前 python-interpreter-lab 应用的契约；不要调用 read 补读 AGENTS.md 来代替启动加载。然后根据应用文档指针实际调用 read 读取 docs/adr/0001-browser-python-visualizer.md 和 docs/implementation-plan.md。报告两个标题，并回答：已确认的引擎顺序是什么；CPython 回放暂停是否等于实时暂停解释器；首版能否展示真实 CPython 值栈；未来 Mini VM 历史是否允许分叉恢复；下一阶段开始前需补充什么文档；现在是否已有应用实现和导航登记。不要修改文件、执行命令、安装内容或调用任何其他服务。' \
-  > /tmp/python-interpreter-lab-pi-context.jsonl \
-  2> /tmp/python-interpreter-lab-pi-context.stderr
+  -p '这是只读的应用文档加载验证，不是实现任务。先列出启动上下文中已加载的 AGENTS.md 路径，确认包含仓库和当前 python-interpreter-lab 应用契约；不要调用 read 补读 AGENTS.md 来代替启动加载。然后根据应用文档指针实际调用 read 读取 docs/adr/0001-browser-python-visualizer.md 和 docs/implementation-plan.md。报告两个标题，并回答：默认前端模式是什么；Vite 如何配置子路径构建；HTML 如何接入站点壳；单页要不要启用本地侧栏；动态语言状态由谁管理；Pyodide 使用哪种 Worker；catalog 在什么时候登记；现在是否已存在应用实现与登记。不要修改文件、执行命令、安装内容或调用任何其他服务。' \
+  > /tmp/python-interpreter-lab-pi-frontend-context.jsonl \
+  2> /tmp/python-interpreter-lab-pi-frontend-context.stderr
 ```
 
-运行退出码为 0，stderr 为空。启动上下文确认包含仓库及应用 AGENTS；没有用 `read` 补读 AGENTS 冒充启动加载。两次真实 `read` 调用分别读取 ADR 和计划，均返回 `isError: false`。关键输出归一为仓库相对路径如下：
+运行退出码为 0，stderr 为空。启动上下文加载了根与本应用的 `AGENTS.md`，没有用 `read` 补读 AGENTS 冒充启动加载；两次真实 `read` 分别读取 ADR 和计划，均返回 `isError: false`。输出要点如下：
 
 ```text
 启动加载：AGENTS.md
 启动加载：apps/python-interpreter-lab/AGENTS.md
 read: docs/adr/0001-browser-python-visualizer.md -> isError: false
 read: docs/implementation-plan.md -> isError: false
-标题：ADR-0001：浏览器内 Python 编译与执行可视化
-标题：Python 解释器实验室整体实施计划
-引擎顺序：Pyodide 真实编译 -> 真实执行轨迹与回放 -> 教学 Mini VM
-CPython 回放暂停：不等于实时暂停解释器
-首版真实 CPython 值栈：不展示
-Mini VM 历史分叉：未纳入，需另行确认
-阶段开始前：补充该阶段 spec 和 tasks
-应用实现、导航登记：均未进行
+默认前端：React + TypeScript + Vite
+子路径构建：base: './'，输出 dist/
+站点壳：@wishflow/site-shell；React 根节点使用 content 插槽
+单页侧栏：不启用
+语言状态：由共享站点壳管理
+Pyodide 执行：module-type Web Worker
+catalog 登记：首版可构建、可验证，且通过子路径资源检查后
+应用实现与登记：均未进行；当前为 P0 文档阶段
 ```
 
-该调用验证了文档启动加载及阅读指针；之后的审阅修订只收紧任务验收和依赖回退描述，并补充本节证据，未改动 AGENTS 或架构方向。当前没有应用代码与依赖配置，因此未运行应用构建、解释器测试、浏览器功能检查或线上发布验证。
+本次交付只有文档，因此没有应用构建、解释器测试、浏览器功能或线上发布结果。

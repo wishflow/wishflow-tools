@@ -182,9 +182,12 @@ Worker 提供线程隔离，不提供任意不可信 Python 的完整权限沙�
 
 ## 9. 前端与部署取舍
 
-- 优先沿用仓库已有 TypeScript/Vite 和普通模块组织方式；React 可作为 UI 候选。CodeMirror、Monaco、D3 或其他图形库不在本次直接定为依赖；首阶段结合编辑需求、体积和现有模式确认。
-- 树和字节码表先满足可读、选择、定位、键盘操作和长内容展示；对象图在有真实对象模型后再实现。避免为尚不存在的对象图提前引入图形框架。
-- 首次可运行版本才建立应用独立依赖及安装、构建、测试入口；接入共享页眉、侧栏、页脚、语言切换及导航目录。仅静态站点部署，不修改其他应用执行服务。
+- **应用基线**：使用仓库现有独立 React + TypeScript + Vite 应用模式和普通模块边界；确需不同 UI 框架或更换构建模式时，先在阶段 spec 说明消费者需要和维护影响。Vite 的 `build` 需单独执行类型检查，再生成静态产物；本项目现有应用已采用 `tsc --noEmit` 加 Vite build 的模式。[Vite TypeScript 文档](https://vite.dev/guide/features.html#typescript)。
+- **子路径发布**：slug 固定为 `python-interpreter-lab`，公开路径为 `/python-interpreter-lab/`。首次可运行版本提供独立 `package.json`、`pnpm-lock.yaml`、`scripts/install.sh`、`build` 和 `test:ci`；Vite 使用 `base: './'`，产物落入应用 `dist/`。先验证构建资产及 Worker 在共享站点子路径下的引用，再登记 `apps/catalog.json`；catalog 是导航和共享构建的路径真源。
+- **共享外壳**：应用依赖仓库本地 `@wishflow/site-shell` 包，并按[页面接入与语言接口](../../../../packages/site-shell/README.md)使用 `<wishflow-site-shell data-app="python-interpreter-lab" data-base="../" data-home-href="../" ...>`。双语标题随站点菜单展示，React 根挂到 `slot="content"`；入口导入共享组件。应用语言由壳负责存储和切换，静态内容使用成对的 `data-locale`，React 动态消息使用 `registerMessages`/`subscribeLanguage`。现阶段是单页多面板工具，不显示空的本地导航；若将来形成多路由，才开启共享侧栏并维护双语 `data-local-nav`。
+- **Worker 打包**：Pyodide 的 JavaScript 模块要求 module-type Worker。默认沿用现有 Vite Worker 写法 `new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' })`；将来实际版本的加载要求和打包约束按 P1 spec 验证。[Vite Worker 导入](https://vite.dev/guide/features.html#web-workers)、[Pyodide Web Worker](https://pyodide.org/en/stable/usage/webworker.html)。此处的 Web Worker 是浏览器静态应用代码，不新增 Cloudflare Worker。
+- **交互与可访问性**：源码输入及面板操作可用键盘完成，状态有可访问名称和可见焦点；窄屏使用响应式面板布局，源代码可在面板内滚动；状态变化动画尊重 `prefers-reduced-motion`。具体断点、编辑器和布局指标由阶段 spec 定义。
+- **尚待阶段决定的依赖**：CodeMirror/Monaco、树组件和图形库均不在 ADR 中预选。先用原生 HTML/React 实现源码表单与可展开结构；P1 按编辑能力、包体、许可、可访问性和子路径构建评估是否引入编辑器，P8 再根据已实现对象数据决定是否需要图形库。
 - Pyodide 资源采用同站点托管还是固定版本 CDN，在首阶段明确下载体积、缓存、CORS/CSP、路径、失败重试和发布限制后选择。运行时与标准库资产版本必须一致；不用漂移的 `latest` 作为生产依赖。
 - 固定 Pyodide 及其内置 CPython 版本，并在界面和验证结果显示。版本升级是独立变更，重新核对编译结果、源码位置和轨迹行为。
 
