@@ -576,3 +576,18 @@ CI 首次运行暴露设置冲突和保存重试用例无法点击：长升级�
 | 逐关任务 | L01 归入 P1-A–F；L02–10 各有 P2 任务 ID；L11–60 各有对应区域 P3 任务 ID。它们仅固定关卡数据/装配责任，任务详细契约仍须在实现前补齐。 |
 | 实现与验收状态 | 只有 L01 的地图、单位和样本规则/表现已有局部实现，均为“部分”；完整原版关卡验收记录 0/60。其他 59 关尚未迁入。两个进度样本复用 Cow Gulch，未计作真实关卡。 |
 | 文档检查 | Markdown 相对链接、表格行数和静态映射交叉核对通过；未修改游戏代码。 |
+
+## 32. P0 对象、规则和表现首次消费矩阵
+
+本轮将对象/敌人、共享规则与表现资源族纳入[实施计划第 10 节](implementation-plan.md#10-p0-逐项覆盖表的待完成工作)。资料仍由 `R/` 研究目录和产品规格作真源；矩阵中的“首次”区分 TDM marker、解锁后可用关卡和波次配置，不能解释为每次随机运行必然创建该对象。
+
+| 核对项 | 结果 |
+| --- | --- |
+| 玩家对象映射 | 覆盖 `unitTypeMap` 全部 21 个 type、14 个升级数据组及 6 组独立解锁门槛；类型映射与 tile marker 从 `level-config.json`、`map-inventory.json` 对照，首用状态按 `isUnlocked` 门槛筛选。 |
+| 敌人目录与波次首次配置 | 9 类 enemy 数据均归入矩阵。pool 首次配置为 Settler 与 Covered Wagon：L01，Rider：L02，Stage Coach：L03，Gold Transport：L04，Boss：L22，Doc：L52；type8 Horse Neutral 按 Covered Wagon 的派生组记录，不与玩家 unit type8 炸药箱混淆。 |
+| 解锁后地图 | Grandpa：L21、Sniper：L31、Pyromaniac：L41、Salesman：L51；Dynamite 首个解锁后含 marker 的关为 L25，Gambler/Casino 为 L43。规则为当前全局关卡门槛与 `isLevelFinished(progressCode)` 二选一，不能用 marker 首次出现代替解锁状态。 |
+| 共享规则范围 | 将 60 张战役图的背景/道路/路线字段、527 条 `newWave`、1,377 个 `addToWave` 配置、86 个 spawn-pool action、敌人碰撞/组队/重试、战斗数据、运输死亡派生及进度/结算责任接回 P1–P3。静态图摘要不是实际寻路或生成结果。 |
+| 表现资源范围 | 记录地形、装饰、人物/敌人、投射物/状态效果、HUD/Help/文本和音频的首用任务。APK 943 个 PNG 路径不作为功能分母；20 个无直接命中的 PNG 候选与3个无直接游戏引用 OGG 保留为边界，不推断它们必须显示/播放或可删除。 |
+| 交付状态 | 本轮只改 Markdown；旧样本中的 Cow Gulch 内容仍为“部分”，完整关卡为 0/60。未运行游戏构建、自动化游戏测试、ADB 或浏览器，因为没有代码或资源变更。 |
+
+执行了只读交叉核对：从 `map-inventory.json` 计算原始 marker 首次出现与解锁后首次出现；从 `waves.json` 按 `Wave` pool 常量找首次非零配置；核对 `level-config.json` 的类型、单位数据组、解锁门槛与地图/波次行。此前 60 关表的逐行检查继续通过。`python3 /tmp/check-gunsnglory-docs.py` 检查本仓库 Markdown 链接及锚点，`git diff --check` 检查差异空白；P0 仍因 P1-A–F 的逐任务独立预期审查未完成而保持开放。

@@ -316,13 +316,13 @@ P1 的原始对象数量、状态、基础值、波次明细和来源由[产品�
 
 ## 10. P0 逐项覆盖表的待完成工作
 
-**战役静态资料现已逐项列出 60/60 关，但 P0 仍未完成。** 本节是完整内容和交付状态的唯一维护位置；战役表关闭地图/参数/原始波次条目的逐关编目，不证明完整运行行为。对象与规则、表现覆盖和 P1-A–F 完整契约仍须逐项分配并验收。产品规格第 4 节继续维护行为定义，本节引用而不重复规则公式。
+**战役静态资料已逐项列出 60/60 关；下方再列出对象、敌人、共享规则和表现资源的首次消费。P0 仍未完成：这些表记录静态分母与任务归属，不代表内容已迁入或通过真实战局验收；P1-A–F 的独立预期和验收条件仍须逐项复核。** 本节是完整内容和交付状态的唯一维护位置，产品规格第 4 节维护行为定义，本节引用而不复制规则公式。
 
 | 待展开集合 | 本节应形成的逐项行 | 当前状态 / 闭合条件 |
 | --- | --- | --- |
 | 战役 | 全部 60 个真实关卡，逐行列出地图、基础参数、波次条目、静态地图标记、阶段与逐关任务 ID | 下方 60 行静态编目已完成；首次机制、完整任务契约、实现状态和完整关卡验收仍未闭合 |
-| 对象及规则 | 所有实际使用的单位等级组、敌人构造差异、车辆/武器组件、特殊对象、生成与战斗行为 | 第 3.3 节只分派集合责任；逐项首次消费者、共享定义和任务未闭合 |
-| 表现 | 各已确定行为需要的素材组、状态/方向/动画、效果、音频和交互反馈 | 素材/消费者对应及具体验收任务未全部闭合；不按平台资源文件数充当功能数量 |
+| 对象及规则 | 所有实际使用的单位等级组、敌人构造差异、车辆/武器组件、特殊对象、生成与战斗行为 | 下方逐项表已列出 21 个对象类型、9 类敌人、首次消费者和共享规则责任；真实数据迁入与规则验收未完成 |
+| 表现 | 各已确定行为需要的素材组、状态/方向/动画、效果、音频和交互反馈 | 下方已按地形、对象状态、UI 和音频列出资源族与首用场景；各内容的最终帧、锚点和像素对照仍待实现后验收 |
 | P1 任务契约 | A–F 对应的全部范围项和第 2.1 节所需字段 | 第 4 节给出范围、依赖与退出条件；完整输入/状态/独立预期需在 P0 逐项核对 |
 
 ### 战役关卡逐项清单
@@ -426,6 +426,62 @@ P1 的原始对象数量、状态、基础值、波次明细和来源由[产品�
 | 59 | Chilkoot Pass | `td_map_62.tdm` | C250/L25/U3;HP100/135/160% | 8/20/4 | 列车组件tile×5、生成建筑tile×3、单位tile×26 | `P3-AK-L59` | ✓* / 未开始 / 未开始 / 未开始 | — |
 | 60 | Glacier Bay | `td_map_63.tdm` | C200/L25/U3;HP90/135/160% | 12/30/2 | 列车组件tile×7、Steamer组件tile×10、炸药箱/触发器tile 2/2、赌徒/赌场tile 1/1、生成建筑tile×3、单位tile×16 | `P3-AK-L60` | ✓* / 未开始 / 未开始 / 未开始 | — |
 
+### 对象、单位与敌人首次消费
+
+“首次地图标记”表示 TDM 原始 tile 第一次出现；“解锁后首用”表示按 `GameObjectUnit.isUnlocked` 的关卡门槛筛选后，地图里第一次仍有对应标记的战役关；敌人列记录 `addToWave` 首次配置该池，不表示随机战局必然生成该敌人。Enemy ID 与玩家/地图对象的 unit type 是两套编号。单位门槛按“当前全局关卡达到门槛 **或** 对应 `isLevelFinished` 编码完成”解释。tile102/110 的对象语义以[产品规格 §4.4](spec.md#44-地图构造首关初态与雇用)勘误为准，研究摘要中的旧映射不作实现依据。
+
+| 对象或类型 | 首次静态标记 / 配置 | 解锁后首用与责任 | 数据组 / 任务 | 状态 资料/迁入/规则/表现 |
+| --- | --- | --- | --- | --- |
+| 玩家 unit type 1 · Desperado | tile96/104；Cow Gulch / L01 | L01 原始开局 | `unitDataDesperado`；`P1-A/B` | ✓* / 部分 / 部分 / 部分 |
+| 玩家 unit type 2 · Mexican | tile97/105；Cow Gulch / L01 | L01 原始开局 | `unitDataMexican`；`P1-A/B` | ✓* / 部分 / 部分 / 部分 |
+| 玩家 unit type 3 · Cannon | tile98/106；Fort Kaboom / L03 | L03 | `unitDataCannon`；`P2-NM-L03` | ✓* / 未开始 / 未开始 / 未开始 |
+| 玩家 unit type 4 · Indian | tile99/107；Death Valley / L02 | L02 | `unitDataIndian`；`P2-NM-L02` | ✓* / 未开始 / 未开始 / 未开始 |
+| 玩家 unit type 6 · Grandpa | tile101/109；Cow Gulch / L01 | 当前关卡≥21 或 `isLevelFinished(30)`；首个符合地图为 L21 | `unitDataGrandpa`；`P3-OR-L21` | ✓* / 未开始 / 未开始 / 未开始 |
+| 玩家 unit type 5 · Sniper | tile100/108；Death Valley / L02 | 当前关卡≥31 或 `isLevelFinished(40)`；首个符合地图为 L31 | `unitDataSniper`；`P3-DK-L31` | ✓* / 未开始 / 未开始 / 未开始 |
+| 玩家 unit type 35 · Pyromaniac | tile130/138；Cow Gulch / L01 | 当前关卡≥41 或 `isLevelFinished(50)`；首个符合地图为 L41 | `unitDataPyromaniac`；`P3-NV-L41` | ✓* / 未开始 / 未开始 / 未开始 |
+| 玩家 unit type 36 · Salesman | tile131/139；Death Valley / L02 | 当前关卡≥51 或 `isLevelFinished(60)`；首个符合地图为 L51 | `unitDataSalesman`；`P3-AK-L51` | ✓* / 未开始 / 未开始 / 未开始 |
+| 列车 unit type 10/11/12、20/21/22 | tile83–85、91–93；Tech Town / L04 | L04；横、纵编组及 Gatling 各类型按地图 marker 展开 | `unitDataTrain`、`unitDataGatling`；`P2-NM-L04` | ✓* / 未开始 / 未开始 / 未开始 |
+| Steamer unit type 30–33 | tile120–123；Traveller’s Town / L11 | L11；type32 消费 `unitDataDoubleCannon`，其余组件消费 `unitDataSteamer` | `unitDataSteamer`、`unitDataDoubleCannon`；`P3-MS-L11` | ✓* / 未开始 / 未开始 / 未开始 |
+| 炸药 unit type 7/8 | tile102/110；Cactusville / L08 | type7 Trigger、type8 Box；当前关卡≥21 或 `isLevelFinished(30)`，首个解锁后含 marker 的地图为 Dynamite Plains / L25 | `unitDataDynamite`；`P3-OR-L25` | ✓* / 未开始 / 未开始 / 未开始 |
+| Gambler unit type 9 / Casino spawn type 4 | tile132/150；Tech Town / L04 | 当前关卡≥41 或 `isLevelFinished(50)`；首个解锁后含配对 marker 的地图为 Reno / L43 | `unitDataGambler`；`P3-NV-L43` | ✓* / 未开始 / 未开始 / 未开始 |
+| 地图 spawn location type 1–3 | tile112–114；Fort Kaboom / L03 | 由地图配置与对应 spawn-pool action 一起消费；不能只按静态数量断言实际出兵 | `P2-NM-L03`；后续首次消费者归对应 Lxx | ✓* / 未开始 / 未开始 / 未开始 |
+| Enemy type 1/2 · Settler | `Settler ×1/×2/×3/×4` 请求池；Cow Gulch / L01 | 运行时男/女外观与敌人数值分别映射，按随机分支验收 | 9 行 `enemyDesignData`；`P1-B` | ✓* / 部分 / 部分 / 部分 |
+| Enemy type 3 · Rider | Rider 请求池；Death Valley / L02 | L02 | `P2-NM-L02` | ✓* / 未开始 / 未开始 / 未开始 |
+| Enemy type 4 · Covered Wagon；type 8 · Horse Neutral | Covered Wagon 请求池在 Cow Gulch / L01 首次配置；type8 与牵引车同组派生 | L01 第三波；必须与 P1-C 的车辆组/死亡派生验收一起完成 | `P1-C` | ✓* / 未开始 / 未开始 / 未开始 |
+| Enemy type 5 · Stage Coach | Stage Coach 请求池；Fort Kaboom / L03 | L03 | `P2-NM-L03` | ✓* / 未开始 / 未开始 / 未开始 |
+| Enemy type 6 · Gold Transport | Gold Transport 请求池；Tech Town / L04 | L04 | `P2-NM-L04` | ✓* / 未开始 / 未开始 / 未开始 |
+| Enemy type 7 · Boss | Boss 请求池；Cashcow Canyon / L22 首次配置 | L22 | `P3-OR-L22` | ✓* / 未开始 / 未开始 / 未开始 |
+| Enemy type 9 · Doc | Doc 请求池；Cold Lake / L52 首次出现 | L52 | `P3-AK-L52` | ✓* / 未开始 / 未开始 / 未开始 |
+
+上表覆盖 `unitTypeMap` 的 21 个 type、14 个单位数据组、6 组解锁门槛以及 9 行 enemy 数据；type8 Horse Neutral 是敌方运输组成员，不是 unit type 8 炸药箱。首次 wave 请求来自 `Wave` 的 pool 常量与 60 关 `waves.json`，首次地图 marker 来自逐图 `map-inventory.json`；导入前须与 `GameObjectManager` 和 `GameObjectUnit.isUnlocked` 消费分支核对。原始 tile 频数不表示当前关卡已解锁或实际创建对象。
+
+### 共享规则覆盖
+
+| 规则集合 | 静态分母与首个验收场景 | 实施责任 / 来源入口 | 状态 资料/迁入/规则/表现 |
+| --- | --- | --- | --- |
+| 地图层、道路、路线与 PriorityMap | 60 张 campaign map；原始 tile、background/street/variation 三层、action 1/2/3、分支方向和出口；Cow Gulch / L01 起 | `P1-A/F`，每张新图由对应 `P2/P3-Lxx` 验证；`R/content-inventory.md`、`R/route-and-wave-model.md`、`R/data/static-route-graph.json` | ✓* / 部分 / 部分 / 部分 |
+| 波次、spawn slot 与生成池 | 60 关、527 条 `newWave`、1,377 个 `addToWave`、86 个 spawn-pool action；L01 的 8 波起 | `P1-B/D`，后续全关分别归 P2/P3；`R/data/waves.json`、`R/recovered-source/java/.../Wave.java`、`R/route-and-wave-model.md` | ✓* / 部分 / 部分 / 部分 |
+| 敌人移动、组队、占格、阻挡与生成重试 | 9 类敌人、254 个 spawn、2,350 个 redirector、183 个出口；先验收 L01 直线/分支与第三波配对，再覆盖真实地图组合 | `P1-B/C`，地图组合随 P2/P3；`R/game-loop-and-enemy-update.md`、`R/route-and-wave-model.md`、`R/data/static-route-graph.json` | ✓* / 部分 / 部分 / 部分 |
+| 雇用、升级、目标选择、武器与伤害状态 | 21 个 type 映射、14 组共44行升级数据、9 行敌人抗性/奖励；L01 的枪手/炸弹手，再按首用表扩展 | `P1-A/B`；后续对象归对应首用任务；[产品规格 §4.3–4.7](spec.md#43-参数确定单位与规则消费) | ✓* / 部分 / 部分 / 部分 |
+| 运输组死亡、派生乘员、奖励与清理 | enemy type4–6 请求、type8 牵引、最多四个派生槽；L01 第三波 | `P1-C`；`R/game-loop-and-enemy-update.md`、`R/data/campaign-wave-paired-spawns.json` | ✓* / 未开始 / 未开始 / 未开始 |
+| 特殊对象交互 | 炸药 102/110、赌场配对132/150、计时/下注/延迟生成；首个解锁后实图分别 L25/L43 | `P3-OR-L25`、`P3-NV-L43`；[产品规格 §4.4](spec.md#44-地图构造首关初态与雇用)、`R/special-map-interactions.md` | ✓* / 未开始 / 未开始 / 未开始 |
+| 战役进度、难度、结算与正式档案 | 60 关/6 区、三档难度、开放门槛、波间和整关结算、正式进度/高分；Cow Gulch / L01 | `P1-D/E/F` 后按 P2/P3；[产品规格 §4.8](spec.md#48-关卡身份切换与结算)、`R/progress-and-save-data.md` | ✓* / 部分 / 部分 / 部分 |
+
+### 表现资源与交互族
+
+下表以静态消费者索引为素材清单入口；APK 943 个 PNG 路径不是实现分母，20 个 PNG 候选没有静态直接命中、3 个 OGG 没有直接游戏引用，均不能由文件存在或扫描未命中推断为可见/必需功能。原始素材仍保留在 `R/`，迁入后由游戏自身内容持有。
+
+| 表现族 | 静态资源及消费者入口 | 首用场景 / 责任 | 状态 资料/迁入/规则/表现 |
+| --- | --- | --- | --- |
+| 地形、背景、道路、桥、铁路和水域 | `terrain-render-index.json` 按逐图 tile 映射到地区 atlas 和 density crop；`drawable-use-index.json` | map01 / `P1-A`；地区地图在对应 P2/P3 首关扩展 | ✓* / 部分 / 部分 / 部分 |
+| 装饰与地图物件 | tile68–79、86–87、94–95、115–119、126 的 Decoration 映射；列车/Steamer组件、建筑、箱/触发器和赌场单独按对象表验收 | map01 / `P1-A`；特有对象按首次消费者任务 | ✓* / 部分 / 部分 / 部分 |
+| 玩家单位与敌人 | 各 type 的图集、portrait、方向/镜像、待雇用/活动/移动/射击/受击/死亡状态；以 `GameDesignOptics`、drawable sink 和资源清单交叉核对 | L01 枪手/炸弹手/Settler；其它对象按首次消费表 | ✓* / 部分 / 部分 / 部分 |
+| 投射物、状态特效与派生对象 | 普通弹、AOE、火/毒/减速/治疗、火箭沿途/爆炸、睡眠 Z、车辆残片/乘员、SteamCloud | L01 武器与第三波；后续首次状态随对应玩法任务 | ✓* / 部分 / 部分 / 部分 |
+| HUD、菜单、帮助、对话和语言 | HUD/数字图集、方向与选择反馈、minimap、教程、关卡/难度/结果页面、1,208 个字符串；原版无中文 locale，中文为网页新增翻译 | L01 全流程；统一接入 site-shell 语言状态 | ✓* / 部分 / 部分 / 部分 |
+| 音效、语音与音乐 | 67 个已导出 OGG，64 个有直接 DEX/XML 引用；`audio-use-index.json` 映射事件、变体、节流和循环 | L01 开波/枪手/爆炸/胜败；单位语音与地区音乐随首次消费任务 | ✓* / 未开始 / 未开始 / 未开始 |
+
+动画帧、锚点、遮挡顺序和固定状态截图作为实现验收项，不用资源清单代替像素对照。原版研究中未由静态代码/资源关联解决的项目及其边界仍归研究问题清单；本表未命中的素材不阻塞首个真实关卡，但不得未经正向使用证据删除。
+
 逐项表固定字段为：`语义 ID / 内容名称 / 真实消费者或关卡 / 规格及来源入口 / 所属阶段 / 具体任务 / 资料确认 / 数据迁入 / 规则通过 / 表现检查 / 验证记录 / 阻塞或未验证项`。四类状态使用“未开始、部分、通过、阻塞”并说明适用范围；不适用的列写明理由。只有对应内容实际完成后才更新状态，现有样本能力不批量转成真实内容通过。
 
-P0 审核需继续将对象/规则、首次消费者、素材与音画需求逐项接入本表任务，并为每项建立独立验收预期。战役静态清单已列全，但所有完整关卡验收仍为空；全部对象/规则/表现行及 P1-A–F 契约补齐后，再按第 2.2 节决定 P0 是否完成。
+本轮已补齐对象/规则/表现的静态分母、首次消费者和任务责任；这只关闭编目，不关闭实现状态。P0 仍未完成：下一步需逐项审查 P1-A–F 是否满足第 2.1 节，尤其是独立的初态、输入序列、跨波预期、随机/时间边界及回滚证据；完整原版关卡验收仍为 0/60。
