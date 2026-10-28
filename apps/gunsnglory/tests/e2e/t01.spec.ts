@@ -35,6 +35,20 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await clickWorld(512, 288);
   await expect(status).toContainText('Gunslinger selected');
 
+  await clickWorld(446, 49);
+  await expect(status).toContainText('Gunslinger is waiting to be hired');
+  await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
+  await expect(page.getByTestId('recruit-pool-status')).toContainText('empty');
+
+  await clickWorld(347, 123);
+  await expect(status).toContainText('Mexican is waiting to be hired');
+  await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
+
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(status).toContainText('墨西哥人待招募，尚未雇用');
+  await page.getByRole('button', { name: '切换界面语言为英文' }).click();
+  await expect(status).toContainText('Mexican is waiting to be hired');
+
   await clickWorld(272, 48);
   await expect(status).toContainText('No unit selected');
 
@@ -84,5 +98,10 @@ test('selects and clears the unit with mobile touch input', async ({ browser }) 
   await expect(status).toContainText('Gunslinger selected');
   await tapWorld(272, 48);
   await expect(status).toContainText('No unit selected');
+
+  await tapWorld(446, 49);
+  await expect(status).toContainText('Gunslinger is waiting to be hired');
+  await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
+  await expect(page.getByTestId('recruit-pool-status')).toContainText('empty');
   await context.close();
 });

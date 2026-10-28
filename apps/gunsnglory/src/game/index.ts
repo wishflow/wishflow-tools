@@ -66,6 +66,8 @@ export interface RenderTile {
 
 export interface ScenarioUnit {
   id: string;
+  /** Original map-object activity: 4 is sleeping, 5 is active. */
+  activity?: 4 | 5;
   type: string;
   cell: { x: number; y: number };
   /** Recovered GameDesignData speed value, applied as fine units per 100 ms. */
@@ -185,6 +187,7 @@ export type GameIntent =
   | { type: 'upgrade-unit'; unitId: string; commandId: string };
 
 export interface UnitView extends ScenarioUnit {
+  sleepingAnimationFrame?: number;
   selected: boolean;
   moving: boolean;
   positionFine: { x: number; y: number };
@@ -531,7 +534,7 @@ function nextUpgrade(unit: MutableUnit, maxUpgrades: number): UnitUpgradeDefinit
   return unit.definition.upgradeLevels?.[unit.upgradeLevel];
 }
 
-function unitView(unit: MutableUnit, maxUpgrades: number): UnitView {
+function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): UnitView {
   const { definition, positionFine } = unit;
   const upgrade = nextUpgrade(unit, maxUpgrades);
   const { x: offsetX, y: offsetY } = unitRenderOffsetAt(definition, positionFine);
@@ -540,8 +543,9 @@ function unitView(unit: MutableUnit, maxUpgrades: number): UnitView {
 
   return {
     ...clone(definition),
+    ...(definition.activity === 4 ? { sleepingAnimationFrame: Math.floor(elapsedMs / 200) % 3 } : {}),
     movementSpeedFinePer100Ms: unit.movementSpeedFinePer100Ms,
-    ...(unit.weapon ? { weapon: clone(unit.weapon) } : { weapon: undefined }),
+    ...(unit.weapon ? { weapon: clone(unit.weapon) } : {}),
     cell: {
       x: Math.floor(positionFine.x / FINE_UNITS_PER_CELL),
       y: Math.floor((positionFine.y - FIELD_CENTER_HALF) / FINE_UNITS_PER_CELL),
@@ -1051,7 +1055,7 @@ export function createGame(options: {
           scenarioId: scenario.id,
           map: scenario.map,
           ...(route ? { route } : {}),
-          units: units.map((unit) => unitView(unit, scenario.maxUpgrades ?? 0)),
+          units: units.map((unit) => unitView(unit, scenario.maxUpgrades ?? 0, elapsedMs)),
           enemies: (wave?.enemies ?? []).map((enemy) => ({
             id: enemy.id,
             type: enemy.type,
@@ -1191,7 +1195,8 @@ export function createGame(options: {
 
           if (intent.type === 'move-unit') {
             if (!Number.isFinite(intent.targetX) || !Number.isFinite(intent.targetY)
-              || !units.some((unit) => unit.selected && unit.movementSpeedFinePer100Ms > 0)) return false;
+              || !units.some((unit) => unit.selected && (unit.definition.activity ?? 5) === 5
+                && unit.movementSpeedFinePer100Ms > 0)) return false;
             pending.push({
               sequence: nextIntentSequence,
               intent: { type: 'move-unit', targetX: intent.targetX, targetY: intent.targetY },
@@ -1317,7 +1322,7 @@ export function createGame(options: {
             }
 
             if (command.intent.type === 'move-unit') {
-              const selectedUnit = units.find((unit) => unit.selected);
+              const selectedUnit = units.find((unit) => unit.selected && (unit.definition.activity ?? 5) === 5);
               if (selectedUnit) {
                 selectedUnit.movementTargetFine = {
                   x: Math.round(Math.max(-0.5, Math.min(scenario.map.width + 0.5, command.intent.targetX)) * FINE_UNITS_PER_CELL),
@@ -1330,7 +1335,7 @@ export function createGame(options: {
             const selection = command.intent;
             if (selection.type !== 'select-at') continue;
             const target = [...units].reverse().find((unit) => {
-              const current = unitView(unit, scenario.maxUpgrades ?? 0);
+              const current = unitView(unit, scenario.maxUpgrades ?? 0, elapsedMs);
               return contains(current.hitArea, selection.x, selection.y);
             });
             for (const unit of units) {

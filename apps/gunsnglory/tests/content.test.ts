@@ -144,9 +144,55 @@ test('every map draw command resolves to a bundled APK atlas', () => {
   const assets = new Set([
     ...content.map.background.map((tile: { asset: string }) => tile.asset),
     ...content.map.streets.map((tile: { asset: string }) => tile.asset),
-    ...content.units.map((unit: { asset: string }) => unit.asset),
+    ...cowGulchContent.units.map((unit) => unit.asset),
+    'sfx_sleeping',
   ]);
   for (const asset of assets) {
     assert.ok(existsSync(path.join(appRoot, 'public/assets', asset + '.png')), asset + '.png must be bundled');
   }
+});
+
+test('materializes every fresh Cow Gulch unit marker with original activity and stable tile coordinates', () => {
+  const tdm = readFileSync(path.join(appRoot, 'public/content/maps/td_map_01.tdm'));
+  const freshObjects = cowGulchContent.units.map((unit) => ({
+    id: unit.id,
+    type: unit.type,
+    activity: unit.activity ?? 5,
+    cell: unit.cell,
+    asset: unit.asset,
+  }));
+
+  assert.deepEqual(freshObjects.filter((unit) => unit.activity === 4 && unit.type === 'gunslinger'), [
+    { id: 'gunslinger-hire-01', type: 'gunslinger', activity: 4, cell: { x: 6, y: 1 }, asset: 'player_gunslinger_sleep' },
+    { id: 'gunslinger-hire-02', type: 'gunslinger', activity: 4, cell: { x: 5, y: 4 }, asset: 'player_gunslinger_sleep' },
+    { id: 'gunslinger-hire-03', type: 'gunslinger', activity: 4, cell: { x: 3, y: 6 }, asset: 'player_gunslinger_sleep' },
+    { id: 'gunslinger-hire-04', type: 'gunslinger', activity: 4, cell: { x: 15, y: 8 }, asset: 'player_gunslinger_sleep' },
+    { id: 'gunslinger-hire-05', type: 'gunslinger', activity: 4, cell: { x: 16, y: 12 }, asset: 'player_gunslinger_sleep' },
+    { id: 'gunslinger-hire-06', type: 'gunslinger', activity: 4, cell: { x: 2, y: 14 }, asset: 'player_gunslinger_sleep' },
+    { id: 'gunslinger-hire-07', type: 'gunslinger', activity: 4, cell: { x: 14, y: 14 }, asset: 'player_gunslinger_sleep' },
+    { id: 'gunslinger-hire-08', type: 'gunslinger', activity: 4, cell: { x: 6, y: 16 }, asset: 'player_gunslinger_sleep' },
+  ]);
+  assert.deepEqual(freshObjects.filter((unit) => unit.activity === 4 && unit.type === 'mexican'), [
+    { id: 'mexican-hire-01', type: 'mexican', activity: 4, cell: { x: 3, y: 3 }, asset: 'player_mexican_sleep' },
+    { id: 'mexican-hire-02', type: 'mexican', activity: 4, cell: { x: 1, y: 5 }, asset: 'player_mexican_sleep' },
+    { id: 'mexican-hire-03', type: 'mexican', activity: 4, cell: { x: 6, y: 5 }, asset: 'player_mexican_sleep' },
+    { id: 'mexican-hire-04', type: 'mexican', activity: 4, cell: { x: 14, y: 8 }, asset: 'player_mexican_sleep' },
+    { id: 'mexican-hire-05', type: 'mexican', activity: 4, cell: { x: 2, y: 13 }, asset: 'player_mexican_sleep' },
+    { id: 'mexican-hire-06', type: 'mexican', activity: 4, cell: { x: 4, y: 15 }, asset: 'player_mexican_sleep' },
+    { id: 'mexican-hire-07', type: 'mexican', activity: 4, cell: { x: 13, y: 16 }, asset: 'player_mexican_sleep' },
+  ]);
+
+  const active = freshObjects.filter((unit) => unit.activity === 5);
+  assert.deepEqual(active.map(({ id, type, cell }) => ({ id, type, cell })), [
+    { id: 'gunslinger-1', type: 'gunslinger', cell: { x: 8, y: 8 } },
+  ]);
+  assert.equal(freshObjects.length, 16);
+  for (const unit of freshObjects) {
+    const tile = tdm[2 + (unit.cell.y * 17) + unit.cell.x];
+    assert.ok(tile === 96 || tile === 97 || tile === 104, `${unit.id} must be backed by an eligible source marker`);
+  }
+  assert.equal(tdm.filter((tile) => tile === 101).length, 1, 'the locked Scout marker remains in the raw map');
+  assert.equal(tdm.filter((tile) => tile === 130).length, 1, 'the locked Pyromaniac marker remains in the raw map');
+  assert.ok(!freshObjects.some((unit) => unit.cell.x === 9 && unit.cell.y === 10));
+  assert.ok(!freshObjects.some((unit) => unit.cell.x === 11 && unit.cell.y === 16));
 });
