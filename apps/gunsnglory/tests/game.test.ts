@@ -414,6 +414,42 @@ test('blocks the original collision terrain and slides along it one axis at a ti
   assert.ok(view.units[0]!.positionFine.y > (1.75 * 7680), 'vertical motion slides while horizontal motion is blocked');
 });
 
+test('keeps the full Gunslinger sprite inside the map texture at its outer edges', async () => {
+  const edgeTargets = [
+    { name: 'left', x: 0, y: 8.75 },
+    { name: 'right', x: 17, y: 8.75 },
+    { name: 'top', x: 8.5, y: 0 },
+    { name: 'bottom', x: 8.5, y: 17 },
+  ];
+
+  for (const target of edgeTargets) {
+    const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
+    session.submitIntent({ type: 'select-at', x: 8.5, y: 8.75 });
+    session.advance({ deltaMs: 0 });
+    session.submitIntent({ type: 'move-unit', targetX: target.x, targetY: target.y });
+
+    let view = session.advance({ deltaMs: 0 });
+    let stableFrames = 0;
+    let previousPosition = view.units[0]!.positionFine;
+    for (let index = 0; index < 600 && stableFrames < 5; index += 1) {
+      view = session.advance({ deltaMs: 100 });
+      const position = view.units[0]!.positionFine;
+      stableFrames = position.x === previousPosition.x && position.y === previousPosition.y
+        ? stableFrames + 1
+        : 0;
+      previousPosition = position;
+    }
+
+    const unit = view.units[0]!;
+    assert.ok(unit.render.x >= 0, `${target.name}: sprite must not cross the left map edge`);
+    assert.ok(unit.render.y >= 0, `${target.name}: sprite must not cross the top map edge`);
+    assert.ok(unit.render.x + unit.render.width <= view.map.width,
+      `${target.name}: sprite must not cross the right map edge`);
+    assert.ok(unit.render.y + unit.render.height <= view.map.height,
+      `${target.name}: sprite must not cross the bottom map edge`);
+  }
+});
+
 test('treats a researched street overlay as walkable over blocking canyon terrain', async () => {
   const originalTileGrid = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 0));
   originalTileGrid[1]![2] = 80;

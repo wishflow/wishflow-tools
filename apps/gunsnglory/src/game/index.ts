@@ -394,6 +394,14 @@ function initialUnitPosition(definition: ScenarioUnit): { x: number; y: number }
   };
 }
 
+function unitRenderOffsetAt(definition: ScenarioUnit, positionFine: { x: number; y: number }): { x: number; y: number } {
+  const initialPosition = initialUnitPosition(definition);
+  return {
+    x: (positionFine.x - initialPosition.x) / FINE_UNITS_PER_CELL,
+    y: (positionFine.y - initialPosition.y) / FINE_UNITS_PER_CELL,
+  };
+}
+
 function nextUpgrade(unit: MutableUnit, maxUpgrades: number): UnitUpgradeDefinition | undefined {
   if (unit.upgradeLevel >= maxUpgrades) return undefined;
   return unit.definition.upgradeLevels?.[unit.upgradeLevel];
@@ -402,8 +410,7 @@ function nextUpgrade(unit: MutableUnit, maxUpgrades: number): UnitUpgradeDefinit
 function unitView(unit: MutableUnit, maxUpgrades: number): UnitView {
   const { definition, positionFine } = unit;
   const upgrade = nextUpgrade(unit, maxUpgrades);
-  const offsetX = (positionFine.x - initialUnitPosition(definition).x) / FINE_UNITS_PER_CELL;
-  const offsetY = (positionFine.y - initialUnitPosition(definition).y) / FINE_UNITS_PER_CELL;
+  const { x: offsetX, y: offsetY } = unitRenderOffsetAt(definition, positionFine);
   const render = { ...definition.render, x: definition.render.x + offsetX, y: definition.render.y + offsetY };
   const hitArea = { ...definition.hitArea, x: definition.hitArea.x + offsetX, y: definition.hitArea.y + offsetY };
 
@@ -475,6 +482,18 @@ function terrainBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: numb
   return false;
 }
 
+function unitSpriteWithinMap(unit: MutableUnit, scenario: ScenarioContent, fineX: number, fineY: number): boolean {
+  const { x: renderOffsetX, y: renderOffsetY } = unitRenderOffsetAt(unit.definition, { x: fineX, y: fineY });
+  const render = unit.definition.render;
+  const left = render.x + renderOffsetX;
+  const top = render.y + renderOffsetY;
+
+  return left >= 0
+    && top >= 0
+    && left + render.width <= scenario.map.width
+    && top + render.height <= scenario.map.height;
+}
+
 function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number): void {
   const target = unit.movementTargetFine;
   if (!target || deltaMs === 0) return;
@@ -495,10 +514,14 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number)
   const nextX = unit.positionFine.x + moveX;
   const nextY = unit.positionFine.y + moveY;
 
-  if (moveX !== 0 && !terrainBlocksUnit(scenario, nextX, unit.positionFine.y)) {
+  if (moveX !== 0
+    && unitSpriteWithinMap(unit, scenario, nextX, unit.positionFine.y)
+    && !terrainBlocksUnit(scenario, nextX, unit.positionFine.y)) {
     unit.positionFine.x = nextX;
   }
-  if (moveY !== 0 && !terrainBlocksUnit(scenario, unit.positionFine.x, nextY)) {
+  if (moveY !== 0
+    && unitSpriteWithinMap(unit, scenario, unit.positionFine.x, nextY)
+    && !terrainBlocksUnit(scenario, unit.positionFine.x, nextY)) {
     unit.positionFine.y = nextY;
   }
 }
