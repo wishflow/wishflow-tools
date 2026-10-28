@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cowGulchContent } from '../src/content/cow-gulch';
-import { createExperiments, type ExperimentBatchRequest } from '../src/experiments';
+import { createExperiments, type ExperimentBatchRequest, type Experiments, type RunRequest, type RunResult } from '../src/experiments';
 import { createGame, GAME_RULES_VERSION, type Game, type GameSession } from '../src/game';
+
+interface TestBatchExecutor {
+  run(request: RunRequest, options?: { signal?: AbortSignal }): Promise<RunResult>;
+}
 
 const scenario: ExperimentBatchRequest['scenario'] = {
   id: 'cow-gulch-single-wave',
@@ -34,6 +38,7 @@ function createBatchFixture(options: {
   onClose?: () => void;
   now?: () => number;
   yieldToHost?: () => Promise<void>;
+  batchExecutor?: TestBatchExecutor;
 } = {}) {
   const source = createGame({
     scenarios: { [cowGulchContent.id]: cowGulchContent },
@@ -69,6 +74,7 @@ function createBatchFixture(options: {
   return createExperiments({
     game,
     runtime,
+    ...(options.batchExecutor ? { batchExecutor: options.batchExecutor } : {}),
     policies: [{
       id: 'start-wave',
       version: '1',
@@ -116,6 +122,130 @@ test('runs a batch serially in input order and preserves duplicate seeds as sepa
   assert.equal(report.results[0]?.result.metrics?.finalCash, report.results[1]?.result.metrics?.finalCash);
   assert.equal(report.failureInputs.length, 0);
   assert.equal(report.notStarted.length, 0);
+});
+
+test('runs a parallel batch through its executor within the requested bound and preserves serial results and order', async () => {
+  const samples = [
+    { id: 'seed-42', randomSeed: 42 },
+    { id: 'seed-43', randomSeed: 43 },
+    { id: 'seed-44', randomSeed: 44 },
+    { id: 'seed-45', randomSeed: 45 },
+  ];
+  const serial = createBatchFixture();
+  const expected = await serial.runBatch(request(samples));
+  let activeRuns = 0;
+  let maximumActiveRuns = 0;
+  const parallel = createBatchFixture({
+    batchExecutor: {
+      run: async (runRequest, options) => {
+        activeRuns += 1;
+        maximumActiveRuns = Math.max(maximumActiveRuns, activeRuns);
+        try {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return await serial.run(runRequest, options);
+        } finally {
+          activeRuns -= 1;
+        }
+      },
+    },
+  });
+
+  const actual = await parallel.runBatch(request(samples), { maxConcurrency: 2 });
+
+  assert.equal(actual.maxConcurrency, 2);
+  assert.equal(maximumActiveRuns, 2);
+  assert.deepEqual(actual.results.map(({ input }) => input.sample.id), samples.map(({ id }) => id));
+  assert.deepEqual(actual.results.map(({ result }) => ({
+    status: result.status,
+    stopReason: result.stopReason,
+    outcome: result.outcome,
+    actions: result.actions,
+    metrics: result.metrics && { ...result.metrics, wallClockMs: undefined },
+  })), expected.results.map(({ result }) => ({
+    status: result.status,
+    stopReason: result.stopReason,
+    outcome: result.outcome,
+    actions: result.actions,
+    metrics: result.metrics && { ...result.metrics, wallClockMs: undefined },
+  })));
+});
+
+test('locates a thrown batch executor error to its original input and continues the queue', async () => {
+  const samples = [
+    { id: 'seed-42', randomSeed: 42 },
+    { id: 'seed-43', randomSeed: 43 },
+    { id: 'seed-44', randomSeed: 44 },
+  ];
+  const serial = createBatchFixture();
+  const parallel = createBatchFixture({
+    batchExecutor: {
+      run: async (runRequest, options) => {
+        if (runRequest.sample.id === 'seed-43') throw new Error('worker exited unexpectedly');
+        return serial.run(runRequest, options);
+      },
+    },
+  });
+
+  const report = await parallel.runBatch(request(samples), { maxConcurrency: 2 });
+
+  assert.equal(report.status, 'completed');
+  assert.deepEqual(report.results.map(({ result }) => result.status), ['completed', 'failed', 'completed']);
+  assert.equal(report.failureInputs.length, 1);
+  assert.equal(report.failureInputs[0]?.input.runId, 'serial-batch:seed-43');
+  assert.equal(report.failureInputs[0]?.stopReason, 'execution-error');
+  assert.equal(report.results[1]?.result.error?.message, 'worker exited unexpectedly');
+  assert.equal(report.notStarted.length, 0);
+});
+
+test('parallel cancellation drains active workers and reports queued inputs without starting them', async () => {
+  const controller = new AbortController();
+  const samples = [
+    { id: 'seed-42', randomSeed: 42 },
+    { id: 'seed-43', randomSeed: 43 },
+    { id: 'seed-44', randomSeed: 44 },
+    { id: 'seed-45', randomSeed: 45 },
+  ];
+  const serial = createBatchFixture();
+  const started: string[] = [];
+  const parallel = createBatchFixture({
+    batchExecutor: {
+      run: async (runRequest, options) => {
+        started.push(runRequest.sample.id);
+        if (started.length === 2) controller.abort('parallel-cancel');
+        return serial.run(runRequest, options);
+      },
+    },
+  });
+
+  const report = await parallel.runBatch(request(samples), {
+    signal: controller.signal,
+    maxConcurrency: 2,
+  });
+
+  assert.equal(report.status, 'cancelled');
+  assert.deepEqual(started, ['seed-42', 'seed-43']);
+  assert.deepEqual(report.results.map(({ result }) => result.status), ['cancelled', 'cancelled']);
+  assert.equal(report.statusCounts.cancelled, 2);
+  assert.deepEqual(report.notStarted.map(({ input }) => input.sample.id), ['seed-44', 'seed-45']);
+});
+
+test('requires an executor only when multiple samples can actually run concurrently', async () => {
+  const experiments = createBatchFixture();
+  const oneSample = request([{ id: 'seed-42', randomSeed: 42 }]);
+  const oneReport = await experiments.runBatch(oneSample, { maxConcurrency: 4 });
+  assert.equal(oneReport.maxConcurrency, 1);
+
+  await assert.rejects(
+    experiments.runBatch(request([
+      { id: 'seed-42', randomSeed: 42 },
+      { id: 'seed-43', randomSeed: 43 },
+    ]), { maxConcurrency: 2 }),
+    /parallel batch execution is unavailable/i,
+  );
+  await assert.rejects(
+    experiments.runBatch(oneSample, { maxConcurrency: 0 }),
+    /maxConcurrency must be an integer/i,
+  );
 });
 
 test('reports simulation budget exhaustion separately and keeps each failed input', async () => {

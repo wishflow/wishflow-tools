@@ -403,3 +403,25 @@ pi 实际加载调用命令（工作目录 `apps/gunsnglory/`）：
 ```sh
 pi --no-extensions --no-skills --no-prompt-templates --no-themes --no-mcp --no-session --approve --offline --tools bash --mode json -p '请用 bash 工具从当前目录真实运行 `pnpm run simulate:batch -- --input examples/serial-batch.json --output /tmp/var/wishflow-tools/t16-pi-batch-final.json`。然后读取该 JSON，仅报告 report.status、plannedRunCount、startedRunCount、每个结果的 runId、终局 outcome 与 finalCash、failureInputs 数及 notStarted 数。不要修改项目文件。'
 ```
+
+## 23. T17 worker 并行批次
+
+T17 扩展 `Experiments.runBatch()`，以有界 Node worker 并行运行同一批次。并发缺省为 1、上限为 4；worker 线程只在 Node CLI 装配，浏览器构建仍只使用 Game 与 Experiments 的原有实现，不新增依赖。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm --dir apps/gunsnglory run test:ci` | 通过：TypeScript 检查、108 项单元测试、Vite 生产构建及 39 个 Playwright 场景。 |
+| T17 新增行为测试 | 7 项通过：有界调度与输入顺序、串并行结果对照、worker executor 异常归因、并行取消与未启动样本、执行器缺失/并发范围、worker 数上限及 worker 内预算失败输入保留。 |
+| 串并行结果一致 | 集成测试分别通过默认串行和 `--workers 2` 运行同一示例，按 `runId` 顺序比较完整结果；规则状态、动作、结算和指标一致。只排除真实墙钟 `wallClockMs` 与运行实例 `sessionId`/`settlementId`。并行报告的 session ID 各自唯一。 |
+| Worker 预算与输入上限 | 两个 worker 各触发 `maxFrames=1`；CLI 退出码 1，报告仍为 `completed`（所有计划项均已处理），分类计数 `budget-exceeded=2`，两个原始 seed 和 `max-frames` 原因都保留。`--workers 5` 在读取输入前以退出码 2 拒绝。 |
+| Worker 进程取消 | 对 25 项批次以 `--workers 2` 运行并在 800 ms 后向 CLI 发送 SIGINT；进程退出码 130，报告 `cancelled`，25 项计划、8 项启动、2 项活动运行分类为取消、17 项未启动。取消后未再分发新输入。 |
+| pi agent 入口实调 | pi 加载根与应用 `AGENTS.md` 后，通过 bash 实际调用 worker 模式；pi 退出码 0、stderr 为空。报告为 `completed`、`maxConcurrency=2`、3/3 项启动，seed 42/43/44 均 victory、终局现金 `$66`，失败和未启动均为 0。实际命令如下。 |
+| 存储、依赖与发布边界 | 批次仍不读写正式档案、IndexedDB 或实验仓库。使用 Node 内建 `worker_threads` 和已有 `tsx`，未改 lockfile。T17 只在本地 `gunsnglory` 集成分支验证；未合并、未 push、未发布。 |
+
+验证入口：[批次调度行为测试](../tests/serial-batch.test.ts)、[真实 worker CLI 测试](../tests/serial-batch-parallel.test.ts)、[Node worker 执行器](../src/experiments/node-batch-executor.ts)、[worker 入口](../src/experiments/node-batch-worker.ts)、[批次 CLI](../src/cli/run-batch.ts)。
+
+pi 实际加载调用命令（工作目录 `apps/gunsnglory/`）：
+
+```sh
+pi --no-extensions --no-skills --no-prompt-templates --no-themes --no-mcp --no-session --approve --offline --tools bash --mode json -p '请使用 bash 工具从当前应用目录真实运行 `pnpm run simulate:batch -- --input examples/serial-batch.json --workers 2 --output /tmp/var/wishflow-tools/t17-pi-batch.json`。然后用 bash 工具读取该 JSON，只输出 report.status、report.maxConcurrency、plannedRunCount、startedRunCount、每个结果的 runId/outcome/finalCash、failureInputs 数和 notStarted 数。不要修改项目文件。'
+```

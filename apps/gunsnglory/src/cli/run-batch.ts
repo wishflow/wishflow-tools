@@ -2,15 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { readFile, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { cowGulchContent } from '../content/cow-gulch';
-import { createExperiments } from '../experiments';
-import { createGame, GAME_RULES_VERSION } from '../game';
+import { MAX_EXPERIMENT_BATCH_CONCURRENCY } from '../experiments';
+import { createCowGulchExperiments } from '../experiments/cow-gulch-experiment';
+import { createNodeBatchExecutor } from '../experiments/node-batch-executor';
 import { parseSerialBatchInput, SerialBatchInputError } from './batch-input';
 
 const MAX_INPUT_BYTES = 1_048_576;
-const USAGE = `Usage: pnpm run simulate:batch -- --input <file.json> [--output <file.json>|-]
+const USAGE = `Usage: pnpm run simulate:batch -- --input <file.json> [--output <file.json>|-] [--workers <1-${MAX_EXPERIMENT_BATCH_CONCURRENCY}>]
 
-Runs a bounded, serial Cow Gulch single-wave batch using the versioned start-wave policy.
+Runs a bounded Cow Gulch single-wave batch using the versioned start-wave policy.
+Runs serially by default; --workers opts into bounded Node worker threads.
 Output is JSON; non-completed run inputs are included under report.failureInputs,
 and cancelled before-start inputs are included under report.notStarted.
 `;
@@ -18,6 +19,7 @@ and cancelled before-start inputs are included under report.notStarted.
 interface CliArguments {
   inputPath: string;
   outputPath?: string;
+  maxWorkers: number;
 }
 
 interface BatchCliErrorOutput {
@@ -36,29 +38,42 @@ function messageOf(error: unknown): string {
 function parseArguments(argv: readonly string[]): CliArguments | 'help' {
   let inputPath: string | undefined;
   let outputPath: string | undefined;
+  let maxWorkers = 1;
+  let workersProvided = false;
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
     if (argument === '--' && index === 0) continue;
     if (argument === '--help' || argument === '-h') return 'help';
-    if (argument !== '--input' && argument !== '--output') {
+    if (argument !== '--input' && argument !== '--output' && argument !== '--workers') {
       throw new TypeError(`Unsupported argument: ${argument}`);
     }
     const value = argv[index + 1];
-    if (!value || value.startsWith('--')) throw new TypeError(`${argument} requires a path`);
+    if (!value || value.startsWith('--')) throw new TypeError(`${argument} requires a value`);
     index += 1;
     if (argument === '--input') {
       if (inputPath) throw new TypeError('--input may be specified only once');
       inputPath = value;
     } else {
-      if (outputPath !== undefined) throw new TypeError('--output may be specified only once');
-      outputPath = value;
+      if (argument === '--output') {
+        if (outputPath !== undefined) throw new TypeError('--output may be specified only once');
+        outputPath = value;
+      } else {
+        if (workersProvided) throw new TypeError('--workers may be specified only once');
+        const requestedWorkers = Number(value);
+        if (!/^\d+$/.test(value) || !Number.isSafeInteger(requestedWorkers)
+          || requestedWorkers < 1 || requestedWorkers > MAX_EXPERIMENT_BATCH_CONCURRENCY) {
+          throw new TypeError(`--workers must be an integer from 1 to ${MAX_EXPERIMENT_BATCH_CONCURRENCY}`);
+        }
+        maxWorkers = requestedWorkers;
+        workersProvided = true;
+      }
     }
   }
   if (!inputPath) throw new TypeError('--input is required');
   if (outputPath && outputPath !== '-' && resolve(outputPath) === resolve(inputPath)) {
     throw new TypeError('Input and output must be different files');
   }
-  return { inputPath, ...(outputPath === undefined ? {} : { outputPath }) };
+  return { inputPath, maxWorkers, ...(outputPath === undefined ? {} : { outputPath }) };
 }
 
 async function writePayload(outputPath: string | undefined, payload: unknown): Promise<void> {
@@ -93,26 +108,6 @@ async function writeError(
     process.stderr.write(`gunsnglory batch: could not write JSON output: ${messageOf(error)}\n`);
     return 1;
   }
-}
-
-function makeExperiments() {
-  let nextSessionId = 0;
-  const game = createGame({
-    scenarios: { [cowGulchContent.id]: cowGulchContent },
-    sessionIdSource: () => `cli-batch-session-${++nextSessionId}`,
-  });
-  return createExperiments({
-    game,
-    policies: [{
-      id: 'start-wave',
-      version: '1',
-      create: () => ({
-        decide: (observation) => observation.wave?.phase === 'not-started'
-          ? [{ type: 'start-wave' as const }]
-          : [],
-      }),
-    }],
-  });
 }
 
 export async function runBatchCli(argv = process.argv.slice(2)): Promise<number> {
@@ -191,7 +186,11 @@ export async function runBatchCli(argv = process.argv.slice(2)): Promise<number>
   process.on('SIGTERM', onTerminate);
 
   try {
-    const report = await makeExperiments().runBatch(request, { signal: abortController.signal });
+    const executor = args.maxWorkers > 1 ? createNodeBatchExecutor() : undefined;
+    const report = await createCowGulchExperiments(executor).runBatch(request, {
+      signal: abortController.signal,
+      maxConcurrency: args.maxWorkers,
+    });
     await writePayload(args.outputPath, { schemaVersion: 1, report });
     if (report.status === 'cancelled') return receivedSignal === 'SIGTERM' ? 143 : 130;
     if (report.failureInputs.length > 0 || report.notStarted.length > 0) return 1;

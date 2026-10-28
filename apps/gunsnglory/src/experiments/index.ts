@@ -243,6 +243,7 @@ export interface ExperimentBatchReport {
   batchId: string;
   request: ExperimentBatchRequest;
   status: 'completed' | 'cancelled';
+  maxConcurrency: number;
   plannedRunCount: number;
   startedRunCount: number;
   statusCounts: Readonly<Record<RunStatus, number>>;
@@ -252,10 +253,16 @@ export interface ExperimentBatchReport {
 }
 
 export const MAX_EXPERIMENT_BATCH_RUNS = 25;
+export const MAX_EXPERIMENT_BATCH_CONCURRENCY = 4;
+
+export interface ExperimentBatchOptions {
+  signal?: AbortSignal;
+  maxConcurrency?: number;
+}
 
 export interface Experiments {
   run(request: RunRequest, options?: { signal?: AbortSignal }): Promise<RunResult>;
-  runBatch(request: ExperimentBatchRequest, options?: { signal?: AbortSignal }): Promise<ExperimentBatchReport>;
+  runBatch(request: ExperimentBatchRequest, options?: ExperimentBatchOptions): Promise<ExperimentBatchReport>;
   saveScheme(input: NumericSchemeInput): Promise<NumericSchemeVersion>;
   compare(input: ExperimentComparisonRequest, options?: { signal?: AbortSignal }): Promise<ExperimentComparisonReport>;
   saveComparison(report: ExperimentComparisonReport): Promise<SavedComparison>;
@@ -269,10 +276,16 @@ interface ExperimentsRuntime {
   yieldToHost(): Promise<void>;
 }
 
+interface BatchRunExecutor {
+  run(request: RunRequest, options?: { signal?: AbortSignal }): Promise<RunResult>;
+}
+
 interface CreateExperimentsOptions {
   game: Game;
   policies: readonly ControlPolicy[];
   repository?: ExperimentRepository;
+  /** Internal execution seam; only parallel batches use the configured executor. */
+  batchExecutor?: BatchRunExecutor;
   /** Override monotonic time, saved timestamps, and event-loop yielding in deterministic tests. */
   runtime?: Partial<ExperimentsRuntime>;
 }
@@ -844,7 +857,10 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
   const runBatch: Experiments['runBatch'] = async (input, runOptions = {}) => {
     const request = snapshotBatchRequest(input);
     if (!request) throw new TypeError('Experiment batch request is invalid');
-
+    const requestedConcurrency = runOptions.maxConcurrency ?? 1;
+    if (!validInteger(requestedConcurrency, 1, MAX_EXPERIMENT_BATCH_CONCURRENCY)) {
+      throw new TypeError(`Batch maxConcurrency must be an integer from 1 to ${MAX_EXPERIMENT_BATCH_CONCURRENCY}`);
+    }
     const runRequests = request.samples.map((sample) => snapshotRequest({
       runId: `${request.batchId}:${sample.id}`,
       scenario: request.scenario,
@@ -861,16 +877,26 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
       'invalid-input': 0,
     };
 
+    const maxConcurrency = Math.min(requestedConcurrency, runRequests.length);
+    if (maxConcurrency > 1 && !options.batchExecutor) {
+      throw new TypeError('Parallel batch execution is unavailable in this Experiments instance');
+    }
     let nextIndex = 0;
-    for (; nextIndex < runRequests.length; nextIndex += 1) {
-      if (runOptions.signal?.aborted) break;
-      const runInput = runRequests[nextIndex]!;
-      let result: RunResult;
+    const recordResult = (runInput: RunRequest, result: RunResult) => {
+      results.push({ input: runInput, result });
+      statusCounts[result.status] += 1;
+      if (result.status !== 'completed') {
+        failureInputs.push({ input: runInput, status: result.status, stopReason: result.stopReason });
+      }
+    };
+    const executeRun = async (runInput: RunRequest, parallel: boolean): Promise<RunResult> => {
       try {
-        result = await runSingle(runInput, runOptions);
+        return parallel
+          ? await options.batchExecutor!.run(runInput, { signal: runOptions.signal })
+          : await runSingle(runInput, { signal: runOptions.signal });
       } catch (error) {
         const cancelled = runOptions.signal?.aborted ?? false;
-        result = freezeDeep({
+        return freezeDeep({
           ...safeIdentity(runInput),
           status: cancelled ? 'cancelled' : 'failed',
           stopReason: cancelled ? 'cancelled' : 'execution-error',
@@ -881,14 +907,32 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
           },
         });
       }
-      results.push({ input: runInput, result });
-      statusCounts[result.status] += 1;
-      if (result.status !== 'completed') {
-        failureInputs.push({ input: runInput, status: result.status, stopReason: result.stopReason });
+    };
+
+    if (maxConcurrency === 1) {
+      for (; nextIndex < runRequests.length; nextIndex += 1) {
+        if (runOptions.signal?.aborted) break;
+        const runInput = runRequests[nextIndex]!;
+        recordResult(runInput, await executeRun(runInput, false));
+        if (runOptions.signal?.aborted) {
+          nextIndex += 1;
+          break;
+        }
       }
-      if (runOptions.signal?.aborted) {
-        nextIndex += 1;
-        break;
+    } else {
+      const resultsByIndex: (ExperimentBatchRun | undefined)[] = new Array(runRequests.length);
+      const runWorker = async () => {
+        while (!runOptions.signal?.aborted) {
+          const index = nextIndex;
+          if (index >= runRequests.length) return;
+          nextIndex += 1;
+          const runInput = runRequests[index]!;
+          resultsByIndex[index] = { input: runInput, result: await executeRun(runInput, true) };
+        }
+      };
+      await Promise.all(Array.from({ length: maxConcurrency }, () => runWorker()));
+      for (const entry of resultsByIndex) {
+        if (entry) recordResult(entry.input, entry.result);
       }
     }
 
@@ -900,6 +944,7 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
       batchId: request.batchId,
       request,
       status: runOptions.signal?.aborted ? 'cancelled' : 'completed',
+      maxConcurrency,
       plannedRunCount: runRequests.length,
       startedRunCount: results.length,
       statusCounts,
