@@ -100,6 +100,7 @@ test('rejects content-version drift before advancing the opened session', async 
   let closed = false;
   const instrumentedGame: Game = {
     replay: (serialized) => baseGame.replay(serialized),
+    prepare: (options) => baseGame.prepare(options),
     async open(options) {
       const session = await baseGame.open(options);
       return {
@@ -235,6 +236,7 @@ test('observes AbortSignal cancellation between bounded frame batches and closes
   const baseGame = createTestGame();
   const game: Game = {
     replay: (serialized) => baseGame.replay(serialized),
+    prepare: (options) => baseGame.prepare(options),
     async open(options) {
       const session = await baseGame.open(options);
       return {
@@ -415,4 +417,109 @@ test('enforces the wall-clock budget consumed while creating a policy', async ()
   assert.equal(result.status, 'budget-exceeded');
   assert.equal(result.stopReason, 'max-wall-clock-time');
   assert.equal(result.startRecord, undefined);
+});
+
+
+test('compares immutable numeric schemes on the same seeds and reports samples and metrics', async () => {
+  const experiments = createExperiments({ game: createTestGame(), policies: [policy] });
+  const overrides = [{ path: 'previewWave/enemy/cashReward', value: 5 }];
+  const candidateInput = {
+    id: 'pioneer-reward',
+    version: '1',
+    scenarioId: cowGulchContent.id,
+    overrides,
+  };
+  const baseline = await experiments.saveScheme({
+    id: 'original',
+    version: '1',
+    scenarioId: cowGulchContent.id,
+  });
+  const candidate = await experiments.saveScheme(candidateInput);
+  overrides[0]!.value = 99;
+
+  const report = await experiments.compare({
+    comparisonId: 'reward-comparison-1',
+    scenario: request().scenario,
+    baseline: { id: baseline.id, version: baseline.version },
+    candidate: { id: candidate.id, version: candidate.version },
+    samples: [
+      { id: 'sample-42', randomSeed: 42 },
+      { id: 'sample-43', randomSeed: 43 },
+      { id: 'sample-44', randomSeed: 44 },
+    ],
+    policy: { id: policy.id, version: policy.version },
+  });
+
+  assert.equal(report.status, 'completed');
+  assert.equal(report.plannedSampleCount, 3);
+  assert.equal(report.plannedRunCount, 6);
+  assert.equal(report.completedRunCount, 6);
+  assert.equal(report.incompleteRunCount, 0);
+  assert.equal(report.incompleteRate, 0);
+  assert.equal(report.pairedCompletedSampleCount, 3);
+  assert.equal(report.baseline.summary.completedSamples, 3);
+  assert.equal(report.baseline.summary.winRate, 1);
+  assert.equal(report.baseline.summary.averageFinalCash, 66);
+  assert.equal(report.baseline.summary.averageCashDelta, 1);
+  assert.equal(report.candidate.summary.averageFinalCash, 70);
+  assert.equal(report.candidate.summary.averageCashDelta, 5);
+  assert.equal(report.candidate.scheme.preparedSetup.parameters.find(({ path }) =>
+    path === 'previewWave/enemy/cashReward')?.value, 5);
+  assert.ok(report.pairs.every((pair) =>
+    pair.baseline?.sampleId === pair.candidate?.sampleId
+      && pair.baseline?.startRecord?.randomSeed === pair.candidate?.startRecord?.randomSeed));
+  assert.ok(report.candidate.runs.every((run) =>
+    run.startRecord?.preparedSetup?.digest === candidate.preparedSetup.digest));
+  assert.ok(Object.isFrozen(report));
+  assert.ok(Object.isFrozen(candidate));
+  assert.equal(overrides[0]?.value, 99);
+  await assert.rejects(
+    experiments.saveScheme({
+      ...candidateInput,
+      overrides: [{ path: 'previewWave/enemy/cashReward', value: 7 }],
+    }),
+    /immutable/i,
+  );
+});
+
+test('classifies comparison cancellation and counts all planned runs in the incomplete denominator', async () => {
+  const controller = new AbortController();
+  const experiments = createExperiments({
+    game: createTestGame(),
+    policies: [policy],
+    runtime: {
+      now: () => 0,
+      yieldToHost: async () => { controller.abort(); },
+    },
+  });
+  const baseline = await experiments.saveScheme({
+    id: 'original-cancel',
+    version: '1',
+    scenarioId: cowGulchContent.id,
+  });
+  const candidate = await experiments.saveScheme({
+    id: 'candidate-cancel',
+    version: '1',
+    scenarioId: cowGulchContent.id,
+    overrides: [{ path: 'previewWave/enemy/cashReward', value: 5 }],
+  });
+
+  const report = await experiments.compare({
+    comparisonId: 'cancel-comparison',
+    scenario: { ...request().scenario, yieldEveryFrames: 1 },
+    baseline: { id: baseline.id, version: baseline.version },
+    candidate: { id: candidate.id, version: candidate.version },
+    samples: [
+      { id: 'sample-42', randomSeed: 42 },
+      { id: 'sample-43', randomSeed: 43 },
+    ],
+    policy: { id: policy.id, version: policy.version },
+  }, { signal: controller.signal });
+
+  assert.equal(report.status, 'cancelled');
+  assert.equal(report.plannedRunCount, 4);
+  assert.equal(report.completedRunCount, 0);
+  assert.equal(report.incompleteRunCount, 4);
+  assert.equal(report.incompleteRate, 1);
+  assert.equal(report.pairedCompletedSampleCount, 0);
 });

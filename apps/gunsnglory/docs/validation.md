@@ -319,7 +319,7 @@ T12 由 Game 记录实际消费的逐帧 `deltaMs` 和按顺序接受的命令�
 
 ## 18. T13 无画面运行单个场景
 
-T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一个固定版本场景。测试策略只观察冻结的玩家可见白名单；Game 开局记录在首帧前校验。运行记录精确区分胜负、预算耗尽、取消、无效输入和执行错误，不读取或修改正式进度。当前没有实验 UI、方案编辑、持久化、批量或 CLI；完整实现边界见[模拟与自动化契约](simulation-and-automation.md#63-t13-当前实现范围)。
+T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一个固定版本场景。测试策略只观察冻结的玩家可见白名单；Game 开局记录在首帧前校验。运行记录精确区分胜负、预算耗尽、取消、无效输入和执行错误，不读取或修改正式进度。T13 切片本身不含实验 UI 或方案编辑；T14 后续增加了内存方案版本及比较面板，但实验持久化、批量或 CLI 仍未实现。完整边界见[模拟与自动化契约](simulation-and-automation.md#63-t13-当前实现范围)。
 
 | 检查 | 结果 |
 | --- | --- |
@@ -330,7 +330,7 @@ T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一�
 | Codex 内置浏览器本地预览 | 打开 Guns’n’Glory 生产构建预览 `http://127.0.0.1:4174/`；页面正常显示 Cow Gulch、HUD 与现有控制。浏览器 console 的 error/warn 为空。T13 没有新增可见控件，其真实运行已由上一行 Chromium 行为测试核验。 |
 | 集成与发布 | `c3c80d6` 已快进合入本地 `gunsnglory` 与 `master`，并推送 `master`。GitHub Actions [40638987841](https://github.com/wishflow/wishflow-tools/actions/runs/40638987841) 以 `success` 完成。重新加载公网标准地址 `https://wishflow-tools.pages.dev/gunsnglory/` 后，内置浏览器显示 Cow Gulch 地图、状态、倍速控件和现有操作；控制台 error/warn 为空。T13 无可见游戏控件，其单场景真实行为由前述 Chromium Playwright 测试覆盖。 |
 
-## 19. T14 Cow Gulch 贴图变体与桥位路线核对
+## 19. Cow Gulch 贴图变体与桥位路线核对
 
 这次视觉差异来自地图数据只选用了每种贴图的首候选，漏掉了原版随机变化图集。原版基础图集和路径几何没有错位；原版逻辑地图仍使用 32×32 方形地格，桥梁是跨格绘制的长方形精灵。
 
@@ -349,3 +349,19 @@ T13 增加 `Experiments.run()`，通过真实 `Game` 公共 Interface 执行一�
 - [content.test.ts](../tests/content.test.ts) 检查路线格落在阴影通道内，并检查两座桥覆盖原版路线中心。
 - [game.test.ts](../tests/game.test.ts) 与 [canvas-renderer.test.ts](../tests/canvas-renderer.test.ts) 检查敌人沿 TDM 路线经过出生、转向和出口格，桥位图层绘制在敌人上方，敌人脚底锚点与路线格一致。
 - test:ci 通过：TypeScript 检查、87 项单元测试、Vite 生产构建及 33 个 Playwright 桌面/触屏场景。
+
+## 20. T14 比较两套数值方案
+
+T14 在 Game Interface 增加 `prepare()`：返回当前场景完整可调数值、精确内容/规则版本及摘要，不建立战局、不读取时钟、不消耗随机数。Experiments 增加不可变内存方案版本和配对比较；正式开局仍拒绝修改过的数值方案。页面提供 Cow Gulch 拓荒者现金奖励草稿，以及 1、3、5 个配对样本选项。
+
+| 检查 | 结果 |
+| --- | --- |
+| `pnpm run test:ci` | 通过：TypeScript 检查、92 项单元测试、Vite 生产构建及 35 个 Playwright 场景。 |
+| Game 与 Experiments 单测 | 验证准备结果包含升级上限、可选配置的有效默认值、其他数值、版本和摘要且深度冻结；准备不创建 session、不读取随机或时间；篡改摘要无效，正式模式拒绝自定义方案；冻结方案不可原地改写；两边运行使用相同场景、策略和 seed；取消时按所有计划运行计算未完成率。 |
+| Playwright 桌面流程 | 使用 seed 42、43、44 完成 3 组配对样本，共 6/6 场运行完成。原版与现金奖励 $5 草稿均为 3 胜、0 败、50 条剩余生命；平均结算现金分别为 $66 与 $70，平均胜利用时均为 10.1 秒，未完成率为 0%。修改输入框不会改写已显示报告；切换中文后方案值、表头和档案状态仍正确。 |
+| Playwright 窄屏触控 | 390×844 视口下可触控启动比较并读到报告；页面没有横向溢出，宽指标表在自身容器内滚动。 |
+| Codex 内置浏览器实测 | 本地 Vite `http://127.0.0.1:5191/` 中手动启动 3 组比较，看到 6/6 完成、原版 $66/草稿 $70、现金变化 +$1/+$5。桌面和 390px 窄视口截图核对了排版；窄屏页面宽度未超过视口，表格由内部滚动区承载。控制台 error/warn 为空。 |
+| Progress 与持久化 | 比较结果未改变正式档案状态，也不写 IndexedDB；方案版本和报告只驻留当前页面内存。持久化由 T15 负责。 |
+| 发布状态 | 本轮只提交到本地 `gunsnglory` 集成分支；没有合入 `master` 或推送。按任务图，整体发布在 T25 验收和 T26 登记发布阶段进行，T14 不代表 M1 完成。 |
+
+验证入口：[Game 数值准备测试](../tests/game.test.ts)、[Experiments 方案比较测试](../tests/experiments.test.ts)、[浏览器方案比较测试](../tests/e2e/t14-scheme-comparison.spec.ts)。

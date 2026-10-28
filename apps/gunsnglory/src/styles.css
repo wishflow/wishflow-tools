@@ -252,6 +252,151 @@ body {
   outline-offset: 3px;
 }
 
+.experiment-panel {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(69, 224, 210, 0.3);
+  border-radius: 0.7rem;
+  background: rgba(19, 24, 22, 0.62);
+}
+
+.experiment-panel h2,
+.experiment-panel p {
+  margin: 0;
+}
+
+.experiment-panel h2 {
+  color: #9ee9e2;
+  font-size: 0.98rem;
+}
+
+.experiment-intro,
+.experiment-note {
+  color: #c1c9be;
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
+.experiment-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.experiment-controls label {
+  display: grid;
+  gap: 0.35rem;
+  color: #d8e9dc;
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+.experiment-controls input,
+.experiment-controls select {
+  min-height: 2.5rem;
+  min-width: 7rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid rgba(130, 211, 195, 0.42);
+  border-radius: 0.5rem;
+  color: #effff5;
+  background: #202d29;
+  font: inherit;
+}
+
+.experiment-controls button {
+  min-height: 2.5rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid rgba(130, 211, 195, 0.52);
+  border-radius: 0.55rem;
+  color: #e1fff6;
+  background: #24413c;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.experiment-controls button:hover {
+  background: #31584f;
+}
+
+.experiment-controls button:disabled {
+  color: #9eaaa5;
+  background: #28312e;
+  cursor: wait;
+}
+
+.experiment-controls :focus-visible {
+  outline: 2px solid #9ee9e2;
+  outline-offset: 2px;
+}
+
+.experiment-panel [data-testid="experiment-status"] {
+  min-height: 1.3em;
+  color: #e3c986;
+  font-size: 0.82rem;
+}
+
+.experiment-report {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.experiment-report[hidden] {
+  display: none;
+}
+
+.experiment-report-summary {
+  color: #9ee9e2;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.experiment-scheme-values {
+  color: #d8e9dc;
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
+.experiment-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.experiment-table-scroll table {
+  width: 100%;
+  min-width: 27rem;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.experiment-table-scroll th,
+.experiment-table-scroll td {
+  padding: 0.42rem 0.55rem;
+  border-bottom: 1px solid rgba(130, 211, 195, 0.16);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.experiment-table-scroll thead th {
+  color: #c4eae0;
+}
+
+.experiment-table-scroll th:first-child {
+  text-align: left;
+}
+
+.experiment-table-scroll tbody th {
+  color: #c1c9be;
+  font-weight: 600;
+}
+
+.experiment-table-scroll td {
+  color: #effff5;
+}
+
 .replay-panel {
   display: grid;
   gap: 0.65rem;
@@ -503,6 +648,26 @@ body {
 
   .replay-panel {
     padding: 0.7rem;
+  }
+
+  .experiment-panel {
+    padding: 0.7rem;
+  }
+
+  .experiment-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  }
+
+  .experiment-controls label,
+  .experiment-controls input,
+  .experiment-controls select,
+  .experiment-controls button {
+    width: 100%;
+  }
+
+  .experiment-controls button {
+    grid-column: 1 / -1;
   }
 
   .replay-actions {

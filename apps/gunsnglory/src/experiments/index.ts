@@ -5,6 +5,8 @@ import {
   type GameSettlementRecord,
   type GameStartRecord,
   type GameView,
+  type NumericParameterValue,
+  type PreparedSetup,
 } from '../game';
 
 export type RunStatus = 'completed' | 'cancelled' | 'budget-exceeded' | 'failed' | 'invalid-input';
@@ -24,6 +26,7 @@ export type RunStopReason =
   | 'max-entities'
   | 'max-wall-clock-time'
   | 'max-policy-actions'
+  | 'prepared-setup-mismatch'
   | 'cancelled'
   | 'execution-error';
 
@@ -49,6 +52,7 @@ export interface RunRequest {
   scenario: ExperimentScenario;
   sample: { id: string; randomSeed: number };
   policy: { id: string; version: string };
+  preparedSetup?: PreparedSetup;
 }
 
 export interface StrategyObservation {
@@ -104,6 +108,8 @@ export interface RunMetrics {
   simulatedMs: number;
   wallClockMs?: number;
   peakEntities: number;
+  peakActiveEnemies: number;
+  initialCash?: number;
   livesRemaining?: number;
   escapedEnemies?: number;
   defeatedEnemies?: number;
@@ -127,8 +133,89 @@ export interface RunResult {
   error?: { code: string; message: string };
 }
 
+export interface NumericSchemeInput {
+  id: string;
+  version: string;
+  scenarioId: string;
+  overrides?: readonly NumericParameterValue[];
+}
+
+export interface NumericSchemeVersion {
+  id: string;
+  version: string;
+  scenarioId: string;
+  contentVersion: string;
+  rulesVersion: string;
+  preparedSetup: PreparedSetup;
+}
+
+export interface NumericSchemeReference {
+  id: string;
+  version: string;
+}
+
+export interface ExperimentComparisonRequest {
+  comparisonId: string;
+  scenario: ExperimentScenario;
+  baseline: NumericSchemeReference;
+  candidate: NumericSchemeReference;
+  samples: readonly { id: string; randomSeed: number }[];
+  policy: { id: string; version: string };
+}
+
+export interface ComparisonSideSummary {
+  plannedSamples: number;
+  completedSamples: number;
+  incompleteSamples: number;
+  incompleteRate: number;
+  victories: number;
+  defeats: number;
+  winRate: number | null;
+  averageLivesRemaining: number | null;
+  averageVictoryTimeMs: number | null;
+  averageFinalCash: number | null;
+  averageCashDelta: number | null;
+  averagePeakEnemies: number | null;
+  averageEscapedEnemies: number | null;
+}
+
+export interface ComparisonPair {
+  sample: { id: string; randomSeed: number };
+  baseline?: RunResult;
+  candidate?: RunResult;
+}
+
+export interface ComparisonVariant {
+  scheme: NumericSchemeVersion;
+  runs: readonly RunResult[];
+  summary: ComparisonSideSummary;
+}
+
+export interface ExperimentComparisonReport {
+  comparisonId: string;
+  status: 'completed' | 'cancelled';
+  scenarioId: string;
+  scenarioVersion: string;
+  gameScenarioId: string;
+  contentVersion: string;
+  rulesVersion: string;
+  policyId: string;
+  policyVersion: string;
+  plannedSampleCount: number;
+  plannedRunCount: number;
+  completedRunCount: number;
+  incompleteRunCount: number;
+  incompleteRate: number;
+  pairedCompletedSampleCount: number;
+  baseline: ComparisonVariant;
+  candidate: ComparisonVariant;
+  pairs: readonly ComparisonPair[];
+}
+
 export interface Experiments {
   run(request: RunRequest, options?: { signal?: AbortSignal }): Promise<RunResult>;
+  saveScheme(input: NumericSchemeInput): Promise<NumericSchemeVersion>;
+  compare(input: ExperimentComparisonRequest, options?: { signal?: AbortSignal }): Promise<ExperimentComparisonReport>;
 }
 
 interface ExperimentsRuntime {
@@ -148,12 +235,22 @@ interface FrozenRunRequest {
   scenario: ExperimentScenario;
   sample: { id: string; randomSeed: number };
   policy: { id: string; version: string };
+  preparedSetup?: PreparedSetup;
+}
+
+interface FrozenComparisonRequest extends ExperimentComparisonRequest {
+  scenario: ExperimentScenario;
+  baseline: NumericSchemeReference;
+  candidate: NumericSchemeReference;
+  samples: readonly { id: string; randomSeed: number }[];
+  policy: { id: string; version: string };
 }
 
 const MAX_ID_LENGTH = 128;
 const MAX_SCENARIO_FRAMES = 250_000;
 const MAX_INTENTS_PER_DECISION = 16;
 const MAX_RECORDED_ACTIONS = 10_000;
+const MAX_COMPARISON_SAMPLES = 25;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -176,6 +273,124 @@ function freezeDeep<T>(value: T): T {
   return value;
 }
 
+function snapshotPreparedSetup(value: unknown): PreparedSetup | undefined {
+  if (!isRecord(value) || !validId(value.scenarioId) || !validId(value.contentVersion)
+    || !validId(value.rulesVersion) || typeof value.digest !== 'string'
+    || !/^sha256:[a-f0-9]{64}$/.test(value.digest) || !Array.isArray(value.parameters)) {
+    return undefined;
+  }
+  const paths = new Set<string>();
+  const parameters: NumericParameterValue[] = [];
+  for (const entry of value.parameters) {
+    if (!isRecord(entry) || typeof entry.path !== 'string' || !entry.path
+      || entry.path.length > MAX_ID_LENGTH || !validInteger(entry.value, 0, 1_000_000_000)
+      || paths.has(entry.path)) return undefined;
+    paths.add(entry.path);
+    parameters.push({ path: entry.path, value: entry.value });
+  }
+  return freezeDeep({
+    scenarioId: value.scenarioId,
+    contentVersion: value.contentVersion,
+    rulesVersion: value.rulesVersion,
+    parameters,
+    digest: value.digest,
+  });
+}
+
+function snapshotOverrides(value: unknown): NumericParameterValue[] | undefined {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return undefined;
+  const paths = new Set<string>();
+  const overrides: NumericParameterValue[] = [];
+  for (const entry of value) {
+    if (!isRecord(entry) || typeof entry.path !== 'string' || !entry.path
+      || entry.path.length > MAX_ID_LENGTH || !validInteger(entry.value, 0, 1_000_000_000)
+      || paths.has(entry.path)) return undefined;
+    paths.add(entry.path);
+    overrides.push({ path: entry.path, value: entry.value });
+  }
+  return overrides;
+}
+
+function snapshotComparison(value: unknown): FrozenComparisonRequest | undefined {
+  if (!isRecord(value) || !validId(value.comparisonId) || value.comparisonId.length > 100
+    || !isRecord(value.baseline) || !isRecord(value.candidate) || !Array.isArray(value.samples)
+    || value.samples.length < 1 || value.samples.length > MAX_COMPARISON_SAMPLES) {
+    return undefined;
+  }
+  const baseline = value.baseline;
+  const candidate = value.candidate;
+  if (!validId(baseline.id) || !validId(baseline.version)
+    || !validId(candidate.id) || !validId(candidate.version)
+    || (baseline.id === candidate.id && baseline.version === candidate.version)) return undefined;
+
+  const samples: { id: string; randomSeed: number }[] = [];
+  const sampleIds = new Set<string>();
+  const seeds = new Set<number>();
+  for (const sample of value.samples) {
+    if (!isRecord(sample) || !validId(sample.id) || !validInteger(sample.randomSeed, 0, 0xffff_ffff)
+      || sampleIds.has(sample.id) || seeds.has(sample.randomSeed)) return undefined;
+    sampleIds.add(sample.id);
+    seeds.add(sample.randomSeed);
+    samples.push({ id: sample.id, randomSeed: sample.randomSeed });
+  }
+
+  const template = snapshotRequest({
+    runId: value.comparisonId + ':0:baseline',
+    scenario: value.scenario,
+    sample: samples[0],
+    policy: value.policy,
+  });
+  if (!template) return undefined;
+  return freezeDeep({
+    comparisonId: value.comparisonId,
+    scenario: template.scenario,
+    baseline: { id: baseline.id, version: baseline.version },
+    candidate: { id: candidate.id, version: candidate.version },
+    samples,
+    policy: template.policy,
+  });
+}
+
+function schemeKey(id: string, version: string): string {
+  return JSON.stringify([id, version]);
+}
+
+function average(values: readonly number[]): number | null {
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+}
+
+function summarizeRuns(runs: readonly RunResult[], plannedSamples: number): ComparisonSideSummary {
+  const completed = runs.filter((run) => run.status === 'completed');
+  const victories = completed.filter((run) => run.outcome === 'victory');
+  const defeats = completed.filter((run) => run.outcome === 'defeat');
+  const metrics = completed.flatMap((run) => run.metrics ? [run.metrics] : []);
+  const cashPairs = metrics.flatMap((metric) =>
+    metric.initialCash !== undefined && metric.finalCash !== undefined
+      ? [metric.finalCash - metric.initialCash]
+      : []);
+
+  return {
+    plannedSamples,
+    completedSamples: completed.length,
+    incompleteSamples: Math.max(0, plannedSamples - completed.length),
+    incompleteRate: plannedSamples ? Math.max(0, plannedSamples - completed.length) / plannedSamples : 0,
+    victories: victories.length,
+    defeats: defeats.length,
+    winRate: completed.length ? victories.length / completed.length : null,
+    averageLivesRemaining: average(metrics.flatMap((metric) =>
+      metric.livesRemaining === undefined ? [] : [metric.livesRemaining])),
+    averageVictoryTimeMs: average(victories.flatMap((run) =>
+      run.metrics ? [run.metrics.simulatedMs] : [])),
+    averageFinalCash: average(metrics.flatMap((metric) =>
+      metric.finalCash === undefined ? [] : [metric.finalCash])),
+    averageCashDelta: average(cashPairs),
+    averagePeakEnemies: average(metrics.map((metric) => metric.peakActiveEnemies)),
+    averageEscapedEnemies: average(metrics.flatMap((metric) =>
+      metric.escapedEnemies === undefined ? [] : [metric.escapedEnemies])),
+  };
+}
+
 function snapshotRequest(value: unknown): FrozenRunRequest | undefined {
   if (!isRecord(value) || !isRecord(value.scenario) || !isRecord(value.sample) || !isRecord(value.policy)) {
     return undefined;
@@ -183,6 +398,11 @@ function snapshotRequest(value: unknown): FrozenRunRequest | undefined {
   const scenario = value.scenario;
   const sample = value.sample;
   const policy = value.policy;
+  const preparedSetup = value.preparedSetup === undefined ? undefined : snapshotPreparedSetup(value.preparedSetup);
+  if (value.preparedSetup !== undefined && !preparedSetup) return undefined;
+  if (preparedSetup && (preparedSetup.scenarioId !== scenario.gameScenarioId
+    || preparedSetup.contentVersion !== scenario.contentVersion
+    || preparedSetup.rulesVersion !== scenario.rulesVersion)) return undefined;
   if (!validId(value.runId) || !validId(scenario.id) || !validId(scenario.version)
     || !validId(scenario.gameScenarioId) || !validId(scenario.contentVersion)
     || !validId(scenario.rulesVersion) || scenario.observationLevel !== 'player-visible'
@@ -217,6 +437,7 @@ function snapshotRequest(value: unknown): FrozenRunRequest | undefined {
     },
     sample: { id: sample.id, randomSeed: sample.randomSeed },
     policy: { id: policy.id, version: policy.version },
+    ...(preparedSetup ? { preparedSetup } : {}),
   });
 }
 
@@ -322,9 +543,9 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
     now: options.runtime?.now ?? (() => performance.now()),
     yieldToHost: options.runtime?.yieldToHost ?? (() => new Promise<void>((resolve) => setTimeout(resolve, 0))),
   };
+  const schemes = new Map<string, NumericSchemeVersion>();
 
-  return Object.freeze({
-    async run(input: RunRequest, runOptions: { signal?: AbortSignal } = {}): Promise<RunResult> {
+  const runSingle: Experiments['run'] = async (input, runOptions = {}) => {
       const request = snapshotRequest(input);
       if (!request) {
         return freezeDeep({ ...safeIdentity(input), status: 'invalid-input', stopReason: 'invalid-request', actions: [] });
@@ -376,6 +597,8 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
       let startRecord: Readonly<GameStartRecord> | undefined;
       let view: GameView | undefined;
       let peakEntities = 0;
+      let peakActiveEnemies = 0;
+      let initialCash: number | undefined;
       const actions: RunActionRecord[] = [];
       const finish = (
         status: RunStatus,
@@ -397,6 +620,8 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
           simulatedMs: view.elapsedMs,
           ...(wallClockMs === undefined ? {} : { wallClockMs }),
           peakEntities,
+          peakActiveEnemies,
+          ...(initialCash === undefined ? {} : { initialCash }),
           ...(view.wave ? {
             livesRemaining: view.wave.lives,
             escapedEnemies: view.wave.escapedEnemies,
@@ -423,10 +648,15 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
             scenarioId: request.scenario.gameScenarioId,
             randomSeed: request.sample.randomSeed,
             mode: 'experiment',
+            ...(request.preparedSetup ? { preparedSetup: request.preparedSetup } : {}),
           });
         } catch (error) {
           if (error instanceof GameOpenError && error.code === 'scenario-unavailable') {
             return finish('invalid-input', 'scenario-unavailable', { error: { code: error.code, message: error.message } });
+          }
+          if (error instanceof GameOpenError
+            && (error.code === 'prepared-setup-invalid' || error.code === 'prepared-setup-mismatch')) {
+            return finish('invalid-input', 'prepared-setup-mismatch', { error: { code: error.code, message: error.message } });
           }
           throw error;
         }
@@ -434,6 +664,8 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
         startRecord = freezeDeep({ ...session.startRecord });
         view = session.observe();
         peakEntities = entityCount(view);
+        peakActiveEnemies = view.wave?.activeEnemies ?? 0;
+        initialCash = view.wave?.cash;
         if (view.frame !== 0 || view.elapsedMs !== 0) {
           return finish('failed', 'execution-error', { error: { code: 'initial-state-advanced', message: 'Game advanced before the first experiment frame' } });
         }
@@ -448,6 +680,9 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
         }
         if (startRecord.randomSeed !== request.sample.randomSeed || startRecord.mode !== 'experiment') {
           return finish('failed', 'execution-error', { error: { code: 'start-record-mismatch', message: 'Game did not honor the requested seed or experiment mode' } });
+        }
+        if (request.preparedSetup && startRecord.preparedSetup?.digest !== request.preparedSetup.digest) {
+          return finish('invalid-input', 'prepared-setup-mismatch');
         }
 
         let framesSinceYield = 0;
@@ -504,6 +739,7 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
           framesSinceYield += 1;
           const currentEntityCount = entityCount(view);
           peakEntities = Math.max(peakEntities, currentEntityCount);
+          peakActiveEnemies = Math.max(peakActiveEnemies, view.wave?.activeEnemies ?? 0);
           const settlement = session.terminalRecord();
           if (settlement) {
             if (settlement.mode !== 'experiment') {
@@ -523,6 +759,123 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
       } finally {
         session?.close();
       }
-    },
-  });
+    };
+
+  const saveScheme: Experiments['saveScheme'] = async (input) => {
+    if (!input || !validId(input.id) || !validId(input.version) || !validId(input.scenarioId)) {
+      throw new TypeError('Numeric scheme identity is invalid');
+    }
+    const overrides = snapshotOverrides(input.overrides);
+    if (!overrides) throw new TypeError('Numeric scheme overrides are invalid');
+    const preparedSetup = await options.game.prepare({
+      scenarioId: input.scenarioId,
+      overrides,
+    });
+    if (preparedSetup.contentVersion === 'unversioned') {
+      throw new TypeError('Numeric schemes require an exact content version');
+    }
+    const copiedSetup = snapshotPreparedSetup(preparedSetup);
+    if (!copiedSetup) throw new TypeError('Game returned an invalid prepared setup');
+    const scheme = freezeDeep({
+      id: input.id,
+      version: input.version,
+      scenarioId: copiedSetup.scenarioId,
+      contentVersion: copiedSetup.contentVersion,
+      rulesVersion: copiedSetup.rulesVersion,
+      preparedSetup: copiedSetup,
+    });
+    const key = schemeKey(scheme.id, scheme.version);
+    const existing = schemes.get(key);
+    if (existing) {
+      if (existing.preparedSetup.digest === scheme.preparedSetup.digest) return existing;
+      throw new TypeError('A numeric scheme version is immutable and already exists');
+    }
+    schemes.set(key, scheme);
+    return scheme;
+  };
+
+  const compare: Experiments['compare'] = async (input, compareOptions = {}) => {
+    const request = snapshotComparison(input);
+    if (!request) throw new TypeError('Experiment comparison request is invalid');
+    const baseline = schemes.get(schemeKey(request.baseline.id, request.baseline.version));
+    const candidate = schemes.get(schemeKey(request.candidate.id, request.candidate.version));
+    if (!baseline || !candidate) throw new RangeError('A referenced numeric scheme version is unavailable');
+    for (const scheme of [baseline, candidate]) {
+      if (scheme.scenarioId !== request.scenario.gameScenarioId
+        || scheme.contentVersion !== request.scenario.contentVersion
+        || scheme.rulesVersion !== request.scenario.rulesVersion) {
+        throw new TypeError('Numeric scheme and comparison scenario versions do not match');
+      }
+    }
+
+    const baselineRuns: RunResult[] = [];
+    const candidateRuns: RunResult[] = [];
+    const pairs: ComparisonPair[] = [];
+    for (const [index, sample] of request.samples.entries()) {
+      if (compareOptions.signal?.aborted) break;
+      const baselineRun = await runSingle({
+        runId: request.comparisonId + ':' + index + ':baseline',
+        scenario: request.scenario,
+        sample,
+        policy: request.policy,
+        preparedSetup: baseline.preparedSetup,
+      }, { signal: compareOptions.signal });
+      baselineRuns.push(baselineRun);
+
+      let candidateRun: RunResult | undefined;
+      if (!compareOptions.signal?.aborted && baselineRun.status !== 'cancelled') {
+        candidateRun = await runSingle({
+          runId: request.comparisonId + ':' + index + ':candidate',
+          scenario: request.scenario,
+          sample,
+          policy: request.policy,
+          preparedSetup: candidate.preparedSetup,
+        }, { signal: compareOptions.signal });
+        candidateRuns.push(candidateRun);
+      }
+      pairs.push({
+        sample: { ...sample },
+        baseline: baselineRun,
+        ...(candidateRun ? { candidate: candidateRun } : {}),
+      });
+      if (compareOptions.signal?.aborted) break;
+    }
+
+    const plannedSamples = request.samples.length;
+    const plannedRunCount = plannedSamples * 2;
+    const completedRunCount = [...baselineRuns, ...candidateRuns]
+      .filter((run) => run.status === 'completed').length;
+    const incompleteRunCount = plannedRunCount - completedRunCount;
+    return freezeDeep({
+      comparisonId: request.comparisonId,
+      status: compareOptions.signal?.aborted ? 'cancelled' : 'completed',
+      scenarioId: request.scenario.id,
+      scenarioVersion: request.scenario.version,
+      gameScenarioId: request.scenario.gameScenarioId,
+      contentVersion: request.scenario.contentVersion,
+      rulesVersion: request.scenario.rulesVersion,
+      policyId: request.policy.id,
+      policyVersion: request.policy.version,
+      plannedSampleCount: plannedSamples,
+      plannedRunCount,
+      completedRunCount,
+      incompleteRunCount,
+      incompleteRate: incompleteRunCount / plannedRunCount,
+      pairedCompletedSampleCount: pairs.filter((pair) =>
+        pair.baseline?.status === 'completed' && pair.candidate?.status === 'completed').length,
+      baseline: {
+        scheme: baseline,
+        runs: baselineRuns,
+        summary: summarizeRuns(baselineRuns, plannedSamples),
+      },
+      candidate: {
+        scheme: candidate,
+        runs: candidateRuns,
+        summary: summarizeRuns(candidateRuns, plannedSamples),
+      },
+      pairs,
+    });
+  };
+
+  return Object.freeze({ run: runSingle, saveScheme, compare });
 }

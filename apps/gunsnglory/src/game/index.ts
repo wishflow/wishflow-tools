@@ -4,6 +4,7 @@ import {
   GAME_REPLAY_MAX_FRAMES,
   GAME_RULES_VERSION,
   GameReplayError,
+  gameValueDigest,
   captureReplayState,
   checkpointFrames,
   parseReplay,
@@ -14,6 +15,8 @@ import type {
   GameReplayFrame,
   GameReplayPayload,
   GameStartRecord,
+  NumericParameterValue,
+  PreparedSetup,
   ReplayState,
 } from './replay';
 
@@ -26,9 +29,11 @@ export type {
   GameReplayPayload,
   GameReplayTerminal,
   GameStartRecord,
+  NumericParameterValue,
+  PreparedSetup,
 } from './replay';
 
-export type GameOpenErrorCode = 'scenario-unavailable';
+export type GameOpenErrorCode = 'scenario-unavailable' | 'prepared-setup-invalid' | 'prepared-setup-mismatch';
 
 export class GameOpenError extends Error {
   constructor(readonly code: GameOpenErrorCode, message: string) {
@@ -284,7 +289,13 @@ export interface GameReplayResult {
 }
 
 export interface Game {
-  open(options: { scenarioId: string; randomSeed?: number; mode?: GameMode }): Promise<GameSession>;
+  prepare(options: { scenarioId: string; overrides?: readonly NumericParameterValue[] }): Promise<PreparedSetup>;
+  open(options: {
+    scenarioId: string;
+    randomSeed?: number;
+    mode?: GameMode;
+    preparedSetup?: PreparedSetup;
+  }): Promise<GameSession>;
   replay(serialized: string): Promise<GameReplayResult>;
 }
 
@@ -378,6 +389,96 @@ function freezeDeep<T>(value: T, seen = new WeakSet<object>()): T {
   seen.add(object);
   for (const child of Object.values(object)) freezeDeep(child, seen);
   return Object.freeze(object) as T;
+}
+
+interface NumericParameterBinding {
+  read(): number;
+  write(value: number): void;
+}
+
+const WEAPON_NUMERIC_PARAMETERS = [
+  'damage',
+  'rangeFine',
+  'reloadTimeMs',
+  'projectileSpeed',
+  'specialReloadTimeMs',
+  'specialReloadFrequency',
+] as const;
+
+function numericParameterBindings(scenario: ScenarioContent): Map<string, NumericParameterBinding> {
+  const bindings = new Map<string, NumericParameterBinding>();
+  const add = (path: string, read: () => number, write: (value: number) => void): void => {
+    if (bindings.has(path)) throw new TypeError('Duplicate numeric parameter path: ' + path);
+    bindings.set(path, { read, write });
+  };
+  const addWeapon = (path: string, weapon: UnitWeaponDefinition): void => {
+    for (const key of WEAPON_NUMERIC_PARAMETERS) {
+      if (weapon[key] === undefined) continue;
+      add(path + '/' + key, () => weapon[key]!, (value) => { weapon[key] = value; });
+    }
+  };
+
+  add('maxUpgrades', () => scenario.maxUpgrades ?? 0, (value) => { scenario.maxUpgrades = value; });
+  for (const unit of scenario.units) {
+    const path = 'units/' + encodeURIComponent(unit.id);
+    add(path + '/movementSpeedFinePer100Ms',
+      () => unit.movementSpeedFinePer100Ms,
+      (value) => { unit.movementSpeedFinePer100Ms = value; });
+    if (unit.weapon) addWeapon(path + '/weapon', unit.weapon);
+    for (const [index, upgrade] of (unit.upgradeLevels ?? []).entries()) {
+      const upgradePath = path + '/upgradeLevels/' + index;
+      add(upgradePath + '/price', () => upgrade.price, (value) => { upgrade.price = value; });
+      add(upgradePath + '/movementSpeedFinePer100Ms',
+        () => upgrade.movementSpeedFinePer100Ms,
+        (value) => { upgrade.movementSpeedFinePer100Ms = value; });
+      addWeapon(upgradePath + '/weapon', upgrade.weapon);
+    }
+  }
+  for (const recruitable of scenario.recruitableUnits ?? []) {
+    const path = 'recruitableUnits/' + encodeURIComponent(recruitable.id);
+    add(path + '/price', () => recruitable.price, (value) => { recruitable.price = value; });
+  }
+  const wave = scenario.previewWave;
+  if (wave) {
+    add('previewWave/initialLives', () => wave.initialLives, (value) => { wave.initialLives = value; });
+    add('previewWave/initialCash', () => wave.initialCash ?? 0, (value) => { wave.initialCash = value; });
+    add('previewWave/difficultyScorePercent',
+      () => wave.difficultyScorePercent ?? 100,
+      (value) => { wave.difficultyScorePercent = value; });
+    if (wave.enemy) {
+      add('previewWave/enemy/hitPoints', () => wave.enemy!.hitPoints, (value) => { wave.enemy!.hitPoints = value; });
+      add('previewWave/enemy/cashReward', () => wave.enemy!.cashReward, (value) => { wave.enemy!.cashReward = value; });
+      for (const type of ['light', 'fire', 'heavy', 'poison'] as const) {
+        add('previewWave/enemy/penetration/' + type,
+          () => wave.enemy!.penetration[type],
+          (value) => { (wave.enemy!.penetration as Record<DamageType, number>)[type] = value; });
+      }
+    }
+    add('previewWave/baseEnemySpeed', () => wave.baseEnemySpeed, (value) => { wave.baseEnemySpeed = value; });
+    add('previewWave/speedMultiplierMin', () => wave.speedMultiplierMin, (value) => { wave.speedMultiplierMin = value; });
+    add('previewWave/speedMultiplierCount', () => wave.speedMultiplierCount, (value) => { wave.speedMultiplierCount = value; });
+    add('previewWave/escapePenalty', () => wave.escapePenalty, (value) => { wave.escapePenalty = value; });
+  }
+  return bindings;
+}
+
+const MAX_NUMERIC_PARAMETER_VALUE = 1_000_000_000;
+
+function validNumericParameter(path: string, value: unknown): value is number {
+  if (!Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > MAX_NUMERIC_PARAMETER_VALUE) {
+    return false;
+  }
+  return ![
+    'previewWave/initialLives',
+    'previewWave/enemy/hitPoints',
+    'previewWave/speedMultiplierCount',
+  ].includes(path) || (value as number) >= 1;
+}
+
+function sortedParameters(bindings: Map<string, NumericParameterBinding>): NumericParameterValue[] {
+  return [...bindings.entries()]
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([path, binding]) => ({ path, value: binding.read() }));
 }
 
 function contains(rectangle: Rectangle, x: number, y: number): boolean {
@@ -739,9 +840,86 @@ export function createGame(options: {
 
   let nextSessionNumber = 1;
 
-  const openSession: Game['open'] = async ({ scenarioId, randomSeed, mode = 'debug' }) => {
-      const scenario = scenarios.get(scenarioId);
-      if (!scenario) throw new GameOpenError('scenario-unavailable', 'Unknown scenario: ' + scenarioId);
+  const prepare: Game['prepare'] = async ({ scenarioId, overrides = [] }) => {
+    const source = scenarios.get(scenarioId);
+    if (!source) throw new GameOpenError('scenario-unavailable', 'Unknown scenario: ' + scenarioId);
+    const scenario = clone(source);
+    const bindings = numericParameterBindings(scenario);
+    const seenOverrides = new Set<string>();
+    for (const override of overrides) {
+      if (!override || typeof override.path !== 'string' || seenOverrides.has(override.path)
+        || !validNumericParameter(override.path, override.value)) {
+        throw new GameOpenError('prepared-setup-invalid', 'Numeric parameter override is invalid');
+      }
+      const binding = bindings.get(override.path);
+      if (!binding) throw new GameOpenError('prepared-setup-invalid', 'Unknown numeric parameter: ' + override.path);
+      seenOverrides.add(override.path);
+      binding.write(override.value);
+    }
+    const body = {
+      scenarioId: source.id,
+      contentVersion: source.contentVersion ?? 'unversioned',
+      rulesVersion: GAME_RULES_VERSION,
+      parameters: sortedParameters(bindings),
+    };
+    const digest = await gameValueDigest(body);
+    return freezeDeep({ ...body, digest });
+  };
+
+  const resolvePreparedSetup = async (
+    source: ScenarioContent,
+    input: PreparedSetup,
+  ): Promise<{ scenario: ScenarioContent; setup: PreparedSetup }> => {
+    if (!input || input.scenarioId !== source.id
+      || input.contentVersion !== (source.contentVersion ?? 'unversioned')
+      || input.rulesVersion !== GAME_RULES_VERSION) {
+      throw new GameOpenError('prepared-setup-mismatch', 'Prepared setup does not match the exact game content and rules version');
+    }
+    const scenario = clone(source);
+    const bindings = numericParameterBindings(scenario);
+    if (!Array.isArray(input.parameters) || input.parameters.length !== bindings.size) {
+      throw new GameOpenError('prepared-setup-invalid', 'Prepared setup does not contain the complete numeric parameter set');
+    }
+    const seenParameters = new Set<string>();
+    for (const parameter of input.parameters) {
+      if (!parameter || typeof parameter.path !== 'string' || seenParameters.has(parameter.path)
+        || !validNumericParameter(parameter.path, parameter.value)) {
+        throw new GameOpenError('prepared-setup-invalid', 'Prepared setup contains an invalid numeric parameter');
+      }
+      const binding = bindings.get(parameter.path);
+      if (!binding) throw new GameOpenError('prepared-setup-invalid', 'Prepared setup contains an unknown numeric parameter');
+      seenParameters.add(parameter.path);
+      binding.write(parameter.value);
+    }
+    if (seenParameters.size !== bindings.size) {
+      throw new GameOpenError('prepared-setup-invalid', 'Prepared setup is missing numeric parameters');
+    }
+    const body = {
+      scenarioId: source.id,
+      contentVersion: source.contentVersion ?? 'unversioned',
+      rulesVersion: GAME_RULES_VERSION,
+      parameters: sortedParameters(bindings),
+    };
+    const digest = await gameValueDigest(body);
+    if (input.digest !== digest) {
+      throw new GameOpenError('prepared-setup-invalid', 'Prepared setup digest does not match its numeric parameters');
+    }
+    const setup = freezeDeep({ ...body, digest });
+    return { scenario, setup };
+  };
+
+  const openSession: Game['open'] = async ({ scenarioId, randomSeed, mode = 'debug', preparedSetup }) => {
+      const sourceScenario = scenarios.get(scenarioId);
+      if (!sourceScenario) throw new GameOpenError('scenario-unavailable', 'Unknown scenario: ' + scenarioId);
+      const setup = preparedSetup ?? await prepare({ scenarioId });
+      const resolved = await resolvePreparedSetup(sourceScenario, setup);
+      const scenario = resolved.scenario;
+      if (mode === 'formal' && preparedSetup) {
+        const baseline = await prepare({ scenarioId });
+        if (baseline.digest !== resolved.setup.digest) {
+          throw new GameOpenError('prepared-setup-mismatch', 'Formal games cannot use modified numeric parameters');
+        }
+      }
       if (mode === 'formal' && scenario.formalSettlementSupported !== true) {
         throw new Error('Formal mode is not supported for scenario: ' + scenarioId);
       }
@@ -868,6 +1046,7 @@ export function createGame(options: {
           randomAlgorithm: 'java.util.Random',
           randomSeed: resolvedSeed,
           mode,
+          preparedSetup: resolved.setup,
         }),
         pause(): GameView {
           assertOpen();
@@ -1261,6 +1440,7 @@ export function createGame(options: {
   };
 
   return Object.freeze({
+    prepare,
     open: openSession,
     async replay(serialized: string): Promise<GameReplayResult> {
       const record = await parseReplay(serialized);
@@ -1273,6 +1453,7 @@ export function createGame(options: {
         scenarioId: record.startRecord.scenarioId,
         randomSeed: record.startRecord.randomSeed,
         mode: 'replay',
+        ...(record.startRecord.preparedSetup ? { preparedSetup: record.startRecord.preparedSetup } : {}),
       });
       const verifiedCheckpointFrames: number[] = [];
       try {

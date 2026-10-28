@@ -1212,3 +1212,81 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
   await assert.rejects(unavailableContentGame.replay(serialized), (error: unknown) =>
     (error as { code?: string }).code === 'content-unavailable');
 });
+
+
+test('prepares a complete immutable numeric setup without allocating a session or reading randomness', async () => {
+  let randomReads = 0;
+  let sessionIds = 0;
+  const game = createGame({
+    scenarios: { [cowGulchContent.id]: cowGulchContent },
+    randomSeedSource: () => { randomReads += 1; return 42; },
+    sessionIdSource: () => { sessionIds += 1; return `session-${sessionIds}`; },
+  });
+
+  const prepared = await game.prepare({ scenarioId: cowGulchContent.id });
+
+  assert.equal(prepared.scenarioId, cowGulchContent.id);
+  assert.equal(prepared.contentVersion, cowGulchContent.contentVersion);
+  assert.equal(prepared.rulesVersion, 'gng-rules-1');
+  assert.ok(prepared.parameters.some(({ path, value }) =>
+    path === 'units/gunslinger-1/weapon/damage' && value === 140));
+  assert.ok(prepared.parameters.some(({ path, value }) => path === 'maxUpgrades' && value === 0));
+  assert.ok(prepared.parameters.some(({ path, value }) => path === 'previewWave/initialCash' && value === 65));
+  assert.ok(prepared.parameters.some(({ path, value }) =>
+    path === 'previewWave/enemy/cashReward' && value === 1));
+  assert.match(prepared.digest, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(JSON.stringify(JSON.parse(JSON.stringify(prepared))), JSON.stringify(prepared));
+  assert.ok(Object.isFrozen(prepared));
+  assert.ok(Object.isFrozen(prepared.parameters));
+  assert.equal(randomReads, 0);
+  assert.equal(sessionIds, 0);
+});
+
+test('opens and replays the exact prepared numeric configuration', async () => {
+  const game = createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } });
+  const prepared = await game.prepare({
+    scenarioId: cowGulchContent.id,
+    overrides: [{ path: 'previewWave/enemy/cashReward', value: 5 }],
+  });
+  const session = await game.open({
+    scenarioId: cowGulchContent.id,
+    preparedSetup: prepared,
+    randomSeed: 42,
+    mode: 'experiment',
+  });
+
+  assert.equal(session.startRecord.preparedSetup?.digest, prepared.digest);
+  assert.equal(session.observe().wave?.cash, 65);
+  assert.equal(session.submitIntent({ type: 'start-wave' }), true);
+  let view = session.observe();
+  for (let frame = 0; frame < 2_000 && !session.terminalRecord(); frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  assert.equal(session.terminalRecord()?.outcome, 'victory');
+  assert.equal(view.wave?.cash, 70);
+
+  const replay = await game.replay(await session.exportReplay());
+  assert.equal(replay.session.startRecord.preparedSetup?.digest, prepared.digest);
+  assert.equal(replay.session.observe().wave?.cash, 70);
+});
+
+test('rejects a tampered setup and prevents custom setups from entering formal play', async () => {
+  const game = createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } });
+  const prepared = await game.prepare({
+    scenarioId: cowGulchContent.id,
+    overrides: [{ path: 'previewWave/enemy/cashReward', value: 5 }],
+  });
+  const changedParameters = prepared.parameters.map((parameter) => parameter.path === 'previewWave/enemy/cashReward'
+    ? { ...parameter, value: 7 }
+    : parameter);
+
+  await assert.rejects(game.open({
+    scenarioId: cowGulchContent.id,
+    preparedSetup: { ...prepared, parameters: changedParameters },
+  }), (error: unknown) => (error as { code?: string }).code === 'prepared-setup-invalid');
+  await assert.rejects(game.open({
+    scenarioId: cowGulchContent.id,
+    mode: 'formal',
+    preparedSetup: prepared,
+  }), (error: unknown) => (error as { code?: string }).code === 'prepared-setup-mismatch');
+});

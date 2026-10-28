@@ -6,6 +6,7 @@ import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } fro
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import { GameReplayError } from './game';
+import { createExperiments, type ExperimentComparisonReport } from './experiments';
 import type { GameEvent, GameIntent, GameMode, GameReplayErrorCode, GameReplayResult, GameSession, GameSettlementRecord } from './game';
 import type { ProfileView, SettlementSaveResult } from './progress';
 import { messages } from './locales';
@@ -61,6 +62,44 @@ app.innerHTML = [
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
   '      <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
   '    </div>',
+  '    <section class="experiment-panel" aria-labelledby="experiment-title">',
+  '      <h2 id="experiment-title" data-locale="Compare numeric schemes">Compare numeric schemes</h2>',
+  '      <p class="experiment-intro" data-locale="Compare the original Cow Gulch reward with an immutable draft using matched random samples.">Compare the original Cow Gulch reward with an immutable draft using matched random samples.</p>',
+  '      <div class="experiment-controls">',
+  '        <label for="experiment-cash-reward" data-locale="Pioneer cash reward">Pioneer cash reward',
+  '          <input id="experiment-cash-reward" data-testid="experiment-cash-reward" type="number" min="0" max="1000000000" step="1" value="5">',
+  '        </label>',
+  '        <label for="experiment-sample-count" data-locale="Matched samples">Matched samples',
+  '          <select id="experiment-sample-count" data-testid="experiment-sample-count">',
+  '            <option value="1">1</option><option value="3" selected>3</option><option value="5">5</option>',
+  '          </select>',
+  '        </label>',
+  '        <button type="button" data-testid="compare-schemes" data-action="compare-schemes" data-locale="Compare schemes">Compare schemes</button>',
+  '      </div>',
+  '      <p data-testid="experiment-status" role="status" aria-live="polite"></p>',
+  '      <div class="experiment-report" data-testid="experiment-report" hidden>',
+  '        <p class="experiment-report-summary" data-testid="experiment-report-summary" aria-live="polite"></p>',
+  '        <p class="experiment-scheme-values" data-testid="experiment-scheme-values"></p>',
+  '        <div class="experiment-table-scroll">',
+  '          <table>',
+  '            <thead><tr><th scope="col" data-locale="Measure">Measure</th><th scope="col" data-locale="Original">Original</th><th scope="col" data-locale="Draft">Draft</th></tr></thead>',
+  '            <tbody>',
+  '              <tr><th scope="row" data-locale="Completed / planned">Completed / planned</th><td data-testid="experiment-baseline-completed"></td><td data-testid="experiment-candidate-completed"></td></tr>',
+  '              <tr><th scope="row" data-locale="Incomplete samples">Incomplete samples</th><td data-testid="experiment-baseline-incomplete"></td><td data-testid="experiment-candidate-incomplete"></td></tr>',
+  '              <tr><th scope="row" data-locale="Victories / defeats">Victories / defeats</th><td data-testid="experiment-baseline-outcomes"></td><td data-testid="experiment-candidate-outcomes"></td></tr>',
+  '              <tr><th scope="row" data-locale="Win rate">Win rate</th><td data-testid="experiment-baseline-win-rate"></td><td data-testid="experiment-candidate-win-rate"></td></tr>',
+  '              <tr><th scope="row" data-locale="Average lives remaining">Average lives remaining</th><td data-testid="experiment-baseline-lives"></td><td data-testid="experiment-candidate-lives"></td></tr>',
+  '              <tr><th scope="row" data-locale="Average victory time">Average victory time</th><td data-testid="experiment-baseline-time"></td><td data-testid="experiment-candidate-time"></td></tr>',
+  '              <tr><th scope="row" data-locale="Average final cash">Average final cash</th><td data-testid="experiment-baseline-cash"></td><td data-testid="experiment-candidate-cash"></td></tr>',
+  '              <tr><th scope="row" data-locale="Average cash change">Average cash change</th><td data-testid="experiment-baseline-cash-delta"></td><td data-testid="experiment-candidate-cash-delta"></td></tr>',
+  '              <tr><th scope="row" data-locale="Average peak enemies">Average peak enemies</th><td data-testid="experiment-baseline-peak-enemies"></td><td data-testid="experiment-candidate-peak-enemies"></td></tr>',
+  '              <tr><th scope="row" data-locale="Average escaped enemies">Average escaped enemies</th><td data-testid="experiment-baseline-escaped"></td><td data-testid="experiment-candidate-escaped"></td></tr>',
+  '            </tbody>',
+  '          </table>',
+  '        </div>',
+  '      </div>',
+  '      <p class="experiment-note" data-locale="These runs use fixed paired seeds, do not change the saved profile, and stay in memory until this page closes.">These runs use fixed paired seeds, do not change the saved profile, and stay in memory until this page closes.</p>',
+  '    </section>',
   '    <section class="replay-panel" aria-labelledby="replay-title">',
   '      <h2 id="replay-title" data-locale="Battle replay">Battle replay</h2>',
   '      <div class="replay-actions">',
@@ -152,6 +191,12 @@ const restartButton = app.querySelector<HTMLButtonElement>('[data-action="restar
 const exportReplayButton = app.querySelector<HTMLButtonElement>('[data-testid="export-replay"]');
 const importReplayInput = app.querySelector<HTMLInputElement>('[data-testid="import-replay"]');
 const replayStatusElement = app.querySelector<HTMLElement>('[data-testid="replay-status"]');
+const compareSchemesButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="compare-schemes"]');
+const experimentCashRewardInputElement = app.querySelector<HTMLInputElement>('[data-testid="experiment-cash-reward"]');
+const experimentSampleCountSelectElement = app.querySelector<HTMLSelectElement>('[data-testid="experiment-sample-count"]');
+const experimentStatusElement = app.querySelector<HTMLElement>('[data-testid="experiment-status"]');
+const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
+const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
 if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElement || !combatStatusElement
   || !sceneTitleElement || !sceneContextElement || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
@@ -165,7 +210,9 @@ if (!canvasElement || !profileStatusElement || !statusElement || !waveStatusElem
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
   || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
-  || !exportReplayButton || !importReplayInput || !replayStatusElement) {
+  || !exportReplayButton || !importReplayInput || !replayStatusElement
+  || !compareSchemesButtonElement || !experimentCashRewardInputElement || !experimentSampleCountSelectElement
+  || !experimentStatusElement || !experimentReportElement || !experimentReportSummaryElement) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
@@ -218,9 +265,25 @@ const retrySettlementControl: HTMLButtonElement = retrySettlementButton;
 const exportReplayControl: HTMLButtonElement = exportReplayButton;
 const importReplayControl: HTMLInputElement = importReplayInput;
 const replayStatus: HTMLElement = replayStatusElement;
+const compareSchemesControl: HTMLButtonElement = compareSchemesButtonElement;
+const experimentCashRewardInput: HTMLInputElement = experimentCashRewardInputElement;
+const experimentSampleCountSelect: HTMLSelectElement = experimentSampleCountSelectElement;
+const experimentStatus: HTMLElement = experimentStatusElement;
+const experimentReport: HTMLElement = experimentReportElement;
+const experimentReportSummary: HTMLElement = experimentReportSummaryElement;
 
 const game = createBrowserGame();
 const progress = createBrowserProgress();
+const experiments = createExperiments({
+  game,
+  policies: [{
+    id: 'start-wave',
+    version: '1',
+    create: () => ({
+      decide: (observation) => observation.wave?.phase === 'not-started' ? [{ type: 'start-wave' }] : [],
+    }),
+  }],
+});
 let session = await game.open({ scenarioId: 'cow-gulch', mode: 'formal' });
 let view = session.observe();
 let profile: ProfileView = {
@@ -469,6 +532,150 @@ function replayMessage(language: keyof typeof languageMessages): string {
 function replayErrorCode(error: unknown): GameReplayErrorCode {
   return error instanceof GameReplayError ? error.code : 'corrupt-input';
 }
+
+let latestExperimentReport: ExperimentComparisonReport | undefined;
+let comparisonNumber = 0;
+let candidateSchemeVersion = 0;
+
+const experimentCopy = {
+  en: {
+    invalidReward: 'Enter a whole-number reward from $0 to $1,000,000,000.',
+    comparing: (samples: number) => `Comparing ${samples} matched sample${samples === 1 ? '' : 's'}…`,
+    failed: 'The comparison could not be completed. Check the selected values and try again.',
+    summary: (report: ExperimentComparisonReport, incompleteRate: string) =>
+      `${report.pairedCompletedSampleCount}/${report.plannedSampleCount} paired samples · ${report.completedRunCount}/${report.plannedRunCount} runs completed · ${incompleteRate} incomplete across all planned runs.`,
+    schemeValues: (original: number, draft: number) => `Original reward $${original} · Draft reward $${draft}`,
+    unavailable: '—',
+  },
+  zh: {
+    invalidReward: '请输入 $0 到 $1,000,000,000 之间的整数奖励。',
+    comparing: (samples: number) => `正在比较 ${samples} 组配对样本…`,
+    failed: '比较未能完成。请检查参数后重试。',
+    summary: (report: ExperimentComparisonReport, incompleteRate: string) =>
+      `${report.pairedCompletedSampleCount}/${report.plannedSampleCount} 组配对样本 · ${report.completedRunCount}/${report.plannedRunCount} 场运行完成 · 全部计划运行未完成率 ${incompleteRate}。`,
+    schemeValues: (original: number, draft: number) => `原版奖励 $${original} · 草稿奖励 $${draft}`,
+    unavailable: '—',
+  },
+};
+
+function renderExperimentComparison(): void {
+  if (!latestExperimentReport) return;
+  const language = getLanguage();
+  const copy = experimentCopy[language];
+  const number = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
+  const percent = (value: number | null) => value === null
+    ? copy.unavailable
+    : new Intl.NumberFormat(language, { style: 'percent', maximumFractionDigits: 1 }).format(value);
+  const metric = (value: number | null) => value === null ? copy.unavailable : number.format(value);
+  const money = (value: number | null, signed = false) => {
+    if (value === null) return copy.unavailable;
+    const formatted = number.format(Math.abs(value));
+    const sign = signed ? (value > 0 ? '+' : value < 0 ? '−' : '') : (value < 0 ? '−' : '');
+    return sign + '$' + formatted;
+  };
+  const time = (value: number | null) => value === null
+    ? copy.unavailable
+    : number.format(value / 1000) + (language === 'zh' ? ' 秒' : ' s');
+  const set = (side: 'baseline' | 'candidate', name: string, value: string) => {
+    const output = experimentReport.querySelector<HTMLElement>(`[data-testid="experiment-${side}-${name}"]`);
+    if (output) output.textContent = value;
+  };
+
+  const report = latestExperimentReport;
+  const summary = percent(report.incompleteRate);
+  experimentReportSummary.textContent = copy.summary(report, summary);
+  const originalReward = report.baseline.scheme.preparedSetup.parameters
+    .find(({ path }) => path === 'previewWave/enemy/cashReward')?.value ?? 0;
+  const draftReward = report.candidate.scheme.preparedSetup.parameters
+    .find(({ path }) => path === 'previewWave/enemy/cashReward')?.value ?? 0;
+  const schemeValues = experimentReport.querySelector<HTMLElement>('[data-testid="experiment-scheme-values"]');
+  if (schemeValues) schemeValues.textContent = copy.schemeValues(originalReward, draftReward);
+  for (const side of ['baseline', 'candidate'] as const) {
+    const variant = report[side];
+    const values = variant.summary;
+    set(side, 'completed', `${values.completedSamples}/${values.plannedSamples}`);
+    set(side, 'incomplete', `${values.incompleteSamples} (${percent(values.incompleteRate)})`);
+    set(side, 'outcomes', `${values.victories} / ${values.defeats}`);
+    set(side, 'win-rate', percent(values.winRate));
+    set(side, 'lives', metric(values.averageLivesRemaining));
+    set(side, 'time', time(values.averageVictoryTimeMs));
+    set(side, 'cash', money(values.averageFinalCash));
+    set(side, 'cash-delta', money(values.averageCashDelta, true));
+    set(side, 'peak-enemies', metric(values.averagePeakEnemies));
+    set(side, 'escaped', metric(values.averageEscapedEnemies));
+  }
+  experimentReport.hidden = false;
+}
+
+compareSchemesControl.addEventListener('click', async () => {
+  const language = getLanguage();
+  const copy = experimentCopy[language];
+  const rewardInput = experimentCashRewardInput.value.trim();
+  const reward = rewardInput === '' ? Number.NaN : Number(rewardInput);
+  const sampleCount = Number(experimentSampleCountSelect.value);
+  if (!Number.isSafeInteger(reward) || reward < 0 || reward > 1_000_000_000) {
+    experimentStatus.textContent = copy.invalidReward;
+    experimentCashRewardInput.focus();
+    return;
+  }
+  if (![1, 3, 5].includes(sampleCount)) {
+    experimentStatus.textContent = copy.failed;
+    return;
+  }
+
+  compareSchemesControl.disabled = true;
+  experimentCashRewardInput.disabled = true;
+  experimentSampleCountSelect.disabled = true;
+  experimentStatus.textContent = copy.comparing(sampleCount);
+  try {
+    const baseline = await experiments.saveScheme({
+      id: 'cow-gulch-original',
+      version: '1',
+      scenarioId: 'cow-gulch',
+    });
+    const draftVersion = `draft-${++candidateSchemeVersion}`;
+    const draft = await experiments.saveScheme({
+      id: 'cow-gulch-reward-draft',
+      version: draftVersion,
+      scenarioId: 'cow-gulch',
+      overrides: [{ path: 'previewWave/enemy/cashReward', value: reward }],
+    });
+    const comparisonId = `cow-gulch-reward-comparison-${++comparisonNumber}`;
+    latestExperimentReport = await experiments.compare({
+      comparisonId,
+      scenario: {
+        id: 'cow-gulch-single-wave',
+        version: '1',
+        gameScenarioId: 'cow-gulch',
+        contentVersion: baseline.contentVersion,
+        rulesVersion: baseline.rulesVersion,
+        observationLevel: 'player-visible',
+        decisionIntervalFrames: 1,
+        deltaMs: 100,
+        maxFrames: 2_000,
+        maxSimulatedMs: 200_000,
+        maxEntities: 100,
+        maxWallClockMs: 30_000,
+        yieldEveryFrames: 40,
+      },
+      baseline: { id: baseline.id, version: baseline.version },
+      candidate: { id: draft.id, version: draft.version },
+      samples: Array.from({ length: sampleCount }, (_, index) => ({
+        id: `seed-${42 + index}`,
+        randomSeed: 42 + index,
+      })),
+      policy: { id: 'start-wave', version: '1' },
+    });
+    renderExperimentComparison();
+    experimentStatus.textContent = '';
+  } catch {
+    experimentStatus.textContent = copy.failed;
+  } finally {
+    compareSchemesControl.disabled = false;
+    experimentCashRewardInput.disabled = false;
+    experimentSampleCountSelect.disabled = false;
+  }
+});
 
 async function applyFormalSettlement(record: GameSettlementRecord): Promise<void> {
   try {
@@ -1427,5 +1634,6 @@ window.addEventListener('blur', cancelPointerGesture);
 
 subscribeLanguage(() => {
   renderStatus();
+  renderExperimentComparison();
   redraw();
 });

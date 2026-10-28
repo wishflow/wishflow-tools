@@ -6,6 +6,19 @@ export const GAME_REPLAY_CHECKPOINT_INTERVAL = 120;
 export const GAME_REPLAY_MAX_CHARACTERS = 10_000_000;
 export const GAME_REPLAY_MAX_FRAMES = 250_000;
 
+export interface NumericParameterValue {
+  path: string;
+  value: number;
+}
+
+export interface PreparedSetup {
+  scenarioId: string;
+  contentVersion: string;
+  rulesVersion: string;
+  parameters: readonly NumericParameterValue[];
+  digest: string;
+}
+
 export interface GameStartRecord {
   sessionId: string;
   scenarioId: string;
@@ -14,6 +27,8 @@ export interface GameStartRecord {
   randomAlgorithm: 'java.util.Random';
   randomSeed: number;
   mode: GameMode;
+  /** Present in new records; absent in legacy v1 recordings which used the scenario baseline. */
+  preparedSetup?: PreparedSetup;
 }
 
 export interface GameReplayFrame {
@@ -82,14 +97,14 @@ export type ReplayState = Pick<GameView, 'frame' | 'elapsedMs' | 'units' | 'enem
 };
 
 export async function replayStateDigest(state: ReplayState): Promise<string> {
-  return digestValue(state);
+  return gameValueDigest(state);
 }
 
 export async function serializeReplay(payload: GameReplayPayload): Promise<string> {
   if (payload.frames.length > GAME_REPLAY_MAX_FRAMES) {
     throw new GameReplayError('recording-too-large', 'Replay frame count exceeds the supported limit');
   }
-  const digest = await digestValue(payload);
+  const digest = await gameValueDigest(payload);
   const serialized = JSON.stringify({ ...payload, digest });
   if (serialized.length > GAME_REPLAY_MAX_CHARACTERS) {
     throw new GameReplayError('recording-too-large', 'Replay exceeds the supported file size or frame count');
@@ -195,7 +210,7 @@ export async function parseReplay(serialized: string): Promise<GameReplayDocumen
     checkpoints: checkpoints as GameReplayCheckpoint[],
     terminal: parsed.terminal as unknown as GameReplayTerminal,
   };
-  if (await digestValue(payload) !== parsed.digest) {
+  if (await gameValueDigest(payload) !== parsed.digest) {
     throw new GameReplayError('digest-mismatch', 'Replay digest does not match its contents');
   }
   return { ...payload, digest: parsed.digest };
@@ -210,7 +225,7 @@ export function checkpointFrames(frameCount: number): number[] {
   return frames;
 }
 
-async function digestValue(value: unknown): Promise<string> {
+export async function gameValueDigest(value: unknown): Promise<string> {
   const bytes = new TextEncoder().encode(canonicalJson(value));
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
@@ -228,9 +243,28 @@ function canonicalJson(value: unknown): string {
   return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${canonicalJson(child)}`).join(',')}}`;
 }
 
+function validPreparedSetup(value: unknown): value is PreparedSetup {
+  if (!isRecord(value)
+    || typeof value.scenarioId !== 'string' || !value.scenarioId
+    || typeof value.contentVersion !== 'string' || !value.contentVersion
+    || typeof value.rulesVersion !== 'string' || !value.rulesVersion
+    || typeof value.digest !== 'string' || !/^sha256:[a-f0-9]{64}$/.test(value.digest)
+    || !Array.isArray(value.parameters)) return false;
+
+  const paths = new Set<string>();
+  for (const parameter of value.parameters) {
+    if (!isRecord(parameter) || typeof parameter.path !== 'string' || !parameter.path
+      || !Number.isSafeInteger(parameter.value) || (parameter.value as number) < 0
+      || paths.has(parameter.path)) return false;
+    paths.add(parameter.path);
+  }
+  return true;
+}
+
 function validStartRecord(value: unknown): value is GameStartRecord {
   if (!isRecord(value)) return false;
-  return typeof value.sessionId === 'string' && value.sessionId.length > 0
+  return (value.preparedSetup === undefined || validPreparedSetup(value.preparedSetup))
+    && typeof value.sessionId === 'string' && value.sessionId.length > 0
     && typeof value.scenarioId === 'string' && value.scenarioId.length > 0
     && typeof value.contentVersion === 'string' && value.contentVersion.length > 0
     && typeof value.rulesVersion === 'string' && value.rulesVersion.length > 0
