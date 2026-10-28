@@ -372,6 +372,11 @@ body {
   font-weight: 500;
 }
 
+.game-controls p[data-testid="upgrade-sample-status"] {
+  max-width: 24rem;
+  overflow-wrap: anywhere;
+}
+
 .game-controls button {
   min-height: 2.6rem;
   padding: 0.6rem 0.9rem;
