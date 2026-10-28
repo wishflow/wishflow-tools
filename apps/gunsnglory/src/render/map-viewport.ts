@@ -11,7 +11,7 @@ export const LOGICAL_TILE_SIZE = 32;
 export const BASE_VIEWPORT_WIDTH = 1024;
 export const MAX_SCALE_RATIO = 2;
 export const MIN_MAP_ZOOM = 1;
-export const MAX_MAP_ZOOM = 4;
+export const MAX_MAP_ZOOM = 3;
 
 export interface MapCamera {
   zoom: number;
