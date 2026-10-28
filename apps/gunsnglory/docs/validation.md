@@ -548,14 +548,18 @@ pi --no-extensions --no-skills --no-prompt-templates --no-themes --no-session --
 
 成品8份 Markdown 按相对路径以 `cp -R` 复制到 `/tmp/var/wishflow-tools/`，逐文件比较一致；交付目录中的旧修订稿同步删除。未运行游戏测试、构建、Android 或浏览器验收，因为本批没有改动游戏代码与资源。Mermaid 检查了文本结构及围栏，未进行图形渲染验收。
 
-## 30. 2026-10-29 逐轮交付流程校正
+## 30. 逐轮交付流程与发布验收
 
-用户明确要求每轮都完成实现、验证、提交、合并到 `master`、推送、等待 CI/CD 和 Codex 内置浏览器线上实测，线上反馈纳入下一轮。原计划将小变更留在本地、仅在里程碑发布，与该要求冲突；现已同步修订[应用协作契约](../AGENTS.md)和[实施计划](implementation-plan.md#53-每轮交付集成与线上验收)。P0 的逐关覆盖表及 P1 任务契约仍未闭合，因此本次没有开始 P1，也没有把 P0 标记完成。
+每轮要求完成实现、对应测试、提交、合并到 `master`、推送、等待 CI/CD，并在 Codex 内置浏览器完成线上实测。P0 覆盖表与 P1 任务契约仍未闭合；本轮完成的是既有 T14–T21 公布与发布流程修正，没有把 P0 标记完成。
+
+CI 首次运行暴露设置冲突和保存重试用例无法点击：长升级规则提示参与右侧自动宽度列计算，挤压相邻按钮列。将提示限制为 `24rem` 并允许断词换行后，既避免提示覆盖按钮，也保留原有按钮列尺寸。
 
 | 检查 | 结果 |
 | --- | --- |
-| AGENTS 实际加载与指针读取 | 在应用目录运行 `pi --no-extensions --no-skills --no-prompt-templates --no-themes --no-session --no-approve --offline --tools read --mode json` 并提示读取 `docs/implementation-plan.md`。pi 自动加载根与应用两份 AGENTS，实际 read 一次计划；返回当前阶段 P0、P0 未完成及六步逐轮闭环。退出码 0，stderr 0 字节；JSONL 保存在 `/tmp/gunsnglory-pi-round-check.jsonl`。 |
-| Guns’n’Glory 完整本地验证 | `pnpm --dir apps/gunsnglory run test:ci` 通过：类型检查、120 项单测、生产构建和 48 项 Playwright。 |
-| 共享目录与整站构建 | `pnpm run test:catalog` 通过 14 项；`pnpm run build:site` 成功构建所有已登记静态应用。 |
-| 文档边界 | 修改仅涉及 AGENTS、实施计划与本验证记录；`git diff --check` 通过。Markdown 相对链接复核见本轮提交记录。 |
-| 发布状态 | 本地验证已完成；本轮尚未提交、合并、推送、等待线上 CI/CD 或公开浏览器实测，不据此宣称交付完成。 |
+| 应用完整本地验证 | `pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、120 项单测、生产构建及 48 项 Playwright。 |
+| 失败复现与修复 | 提交 `a94ffaa` 的 CI 两次在 T05 设置冲突/重试用例失败；失败日志显示 `upgrade-sample-status` 截获按钮指针事件。新增样式后，Chrome 下 T01 和 T05 定点回归 10/10 通过；完整本地 CI 再次 120/120 单测、48/48 Playwright 通过。 |
+| 共享目录与整站构建 | `pnpm run test:catalog` 通过 14 项；`pnpm run build:site` 完成所有登记静态应用构建。 |
+| 提交与合并 | `558176c` 修复提示宽度；已快进合并至 `master`。 |
+| GitHub Actions 与发布 | [workflow 40734672557](https://github.com/wishflow/wishflow-tools/actions/runs/40734672557) 成功；Guns’n’Glory 测试、共享目录检查、Cloudflare Pages 与 GitHub Pages 部署均通过，Worker 未触发。 |
+| Codex 内置浏览器公网实测 | `https://wishflow-tools.pages.dev/gunsnglory/?release=558176c` 显示包含战役进度和实验面板的新版本；长升级提示换行，操作按钮可见。倍速由原有 4× 调至 3.75×，界面显示设置已保存，再恢复为 4×；档案进度与最高分未改动。 |
+| 当前开发门槛 | 完整原版关卡仍为 0/60；P0 尚未完成。后续按第 10 节逐项补齐关卡、对象/规则、表现覆盖和 P1-A–F 任务契约。 |
