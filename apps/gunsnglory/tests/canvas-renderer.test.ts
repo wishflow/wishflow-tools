@@ -4,11 +4,13 @@ import type { GameView } from '../src/game';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
-test('clips map layers and sorts scenery with units by original ground depth', () => {
+test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts', () => {
   const mapImage = {} as HTMLImageElement;
   const bridgeImage = {} as HTMLImageElement;
   const enemyImage = {} as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
+  const shotImage = {} as HTMLImageElement;
+  const wagonPartsImage = {} as HTMLImageElement;
   const cactusImage = { naturalWidth: 32, naturalHeight: 44 } as HTMLImageElement;
   const treeImage = { naturalWidth: 32, naturalHeight: 64 } as HTMLImageElement;
   const bushImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
@@ -131,12 +133,28 @@ test('clips map layers and sorts scenery with units by original ground depth', (
       hitFlashMs: 0,
       animationFrame: 2,
     }],
-    shots: [],
+    shots: [{
+      id: 'dynamite-1',
+      shooterId: 'gunslinger-1',
+      targetId: 'pioneer-1',
+      positionFine: { x: (9 * 7680) + 1920, y: (9 * 7680) + 1920 },
+      remainingMs: 100,
+      damageStyle: 3,
+      imageAsset: 'sfx_mexican_dynamite',
+      animationFrame: 0,
+    }],
+    wagonDebris: [{
+      id: 'wagon-part-1',
+      positionFine: { x: (9 * 7680) + 3840, y: (10 * 7680) + 3840 },
+      depthFineY: (9 * 7680) + 3840,
+      heightFine: 3840,
+      frame: 2,
+    }],
     recruitPool: [],
     events: [],
   };
 
-  drawGame(context, view, {
+  const images = {
     ground: mapImage,
     bridge: bridgeImage,
     pioneer_male: enemyImage,
@@ -144,7 +162,10 @@ test('clips map layers and sorts scenery with units by original ground depth', (
     cactus: cactusImage,
     tree: treeImage,
     bush: bushImage,
-  });
+    sfx_mexican_dynamite: { ...shotImage, naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    sfx_exploding_parts: { ...wagonPartsImage, naturalWidth: 72, naturalHeight: 12 } as HTMLImageElement,
+  };
+  drawGame(context, view, images);
 
   const viewport = getMapViewport(view);
   assert.deepEqual(clipRects, [
@@ -179,8 +200,9 @@ test('clips map layers and sorts scenery with units by original ground depth', (
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, enemyImage, bridgeImage, cactusImage, treeImage, unitImage, bushImage],
-    'enemies render under roads and scenery/units follow their source ground depth',
+    [mapImage, enemyImage, bridgeImage, cactusImage, treeImage, unitImage,
+      images.sfx_mexican_dynamite, images.sfx_exploding_parts, bushImage],
+    'enemies stay under roads while units, shots, wagon parts, and scenery share original scene depth',
   );
 
   const topRouteView = {
@@ -243,15 +265,7 @@ test('clips map layers and sorts scenery with units by original ground depth', (
     'the centered map stays aligned to the display-pixel grid',
   );
 
-  drawGame(context, view, {
-    ground: mapImage,
-    bridge: bridgeImage,
-    pioneer_male: enemyImage,
-    unit: unitImage,
-    cactus: cactusImage,
-    tree: treeImage,
-    bush: bushImage,
-  }, 1, undefined, true);
+  drawGame(context, view, images, 1, undefined, true);
   assert.equal(routeCommands.filter((command) => command === 'lineTo').length, view.route!.length - 1);
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
@@ -259,15 +273,7 @@ test('clips map layers and sorts scenery with units by original ground depth', (
   drawGame(context, {
     ...view,
     enemies: [{ ...view.enemies[0]!, alive: false, deathRemainingMs: 399 }],
-  }, {
-    ground: mapImage,
-    bridge: bridgeImage,
-    pioneer_male: enemyImage,
-    unit: unitImage,
-    cactus: cactusImage,
-    tree: treeImage,
-    bush: bushImage,
-  });
+  }, images);
   assert.equal(enemyDrawAlphas.at(-1), Math.max(0.15, 399 / 799), 'ordinary enemy death keeps the existing fade');
 });
 
