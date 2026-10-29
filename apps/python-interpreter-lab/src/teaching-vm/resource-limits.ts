@@ -6,5 +6,5 @@ export const MAX_INTEGER_BITS = 4_096;
 export const MAX_STRING_CODE_POINTS = 4_096;
 export const MAX_OUTPUT_CODE_POINTS = 32_768;
 export const MAX_HISTORY_SNAPSHOTS = 500;
-export const MAX_RUN_BATCH_SIZE = 32;
+export const MAX_RUN_BATCH_SIZE = 8;
 export const TEACHING_RUN_BATCH_DELAY_MS = 16;
