@@ -53,7 +53,7 @@ class Compiler {
       };
     });
     return {
-      version: 'mini-vm-v3',
+      version: 'mini-vm-v4',
       ast: this.ast,
       constants: this.constants,
       instructions: this.instructions,
@@ -153,6 +153,10 @@ class Compiler {
       case 'Call':
         for (const argument of expression.arguments) this.compileExpression(argument);
         this.emit('CALL_FUNCTION', expression.name, expression.span, expression.arguments.length);
+        return;
+      case 'ListLiteral':
+        for (const element of expression.elements) this.compileExpression(element);
+        this.emit('BUILD_LIST', expression.elements.length, expression.span);
         return;
       case 'Unary':
         this.compileExpression(expression.operand);

@@ -120,6 +120,10 @@ function ExpressionTree({
       detail = <code>{expression.name}(...)</code>;
       children = expression.arguments;
       break;
+    case 'ListLiteral':
+      detail = <code>{expression.elements.length === 0 ? '[]' : '[...]'}</code>;
+      children = expression.elements;
+      break;
     case 'Unary':
       detail = <code>{expression.operator}</code>;
       children = [expression.operand];

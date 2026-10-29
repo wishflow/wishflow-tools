@@ -56,6 +56,8 @@ export type TokenType =
   | 'STAR'
   | 'LEFT_PAREN'
   | 'RIGHT_PAREN'
+  | 'LEFT_BRACKET'
+  | 'RIGHT_BRACKET'
   | 'COMMA'
   | 'COLON'
   | 'INDENT'
@@ -153,7 +155,8 @@ export type TeachingExpression =
   | BinaryExpression
   | ComparisonExpression
   | LogicalExpression
-  | CallExpression;
+  | CallExpression
+  | ListLiteralExpression;
 
 export interface IntegerLiteralExpression {
   type: 'IntegerLiteral';
@@ -223,6 +226,12 @@ export interface CallExpression {
   span: SourceSpan;
 }
 
+export interface ListLiteralExpression {
+  type: 'ListLiteral';
+  elements: TeachingExpression[];
+  span: SourceSpan;
+}
+
 export interface TeachingConstant {
   type: 'int' | 'str' | 'bool' | 'none';
   value: string;
@@ -237,6 +246,7 @@ export type TeachingOpcode =
   | 'BINARY_ADD'
   | 'BINARY_SUBTRACT'
   | 'BINARY_MULTIPLY'
+  | 'BUILD_LIST'
   | 'COMPARE_OP'
   | 'JUMP'
   | 'POP_JUMP_IF_FALSE'
@@ -271,7 +281,7 @@ export interface TeachingFunction {
 }
 
 export interface TeachingCompileResult {
-  version: 'mini-vm-v3';
+  version: 'mini-vm-v4';
   ast: TeachingProgram;
   constants: TeachingConstant[];
   instructions: TeachingInstruction[];
@@ -281,9 +291,16 @@ export interface TeachingCompileResult {
 export type TeachingVmStatus = 'ready' | 'running' | 'paused' | 'finished' | 'error';
 
 export interface TeachingValueSnapshot {
-  type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator' | 'function';
+  type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator' | 'function' | 'list';
   value: string;
   display: string;
+  objectId?: number;
+}
+
+export interface TeachingHeapObjectSnapshot {
+  id: number;
+  type: 'list';
+  items: readonly TeachingValueSnapshot[];
 }
 
 export interface TeachingVariableSnapshot {
@@ -310,6 +327,7 @@ export interface TeachingVmSnapshot {
   frames: readonly TeachingFrameSnapshot[];
   stack: readonly TeachingValueSnapshot[];
   variables: readonly TeachingVariableSnapshot[];
+  heap: readonly TeachingHeapObjectSnapshot[];
   output: readonly string[];
   diagnostic: TeachingDiagnosticSnapshot | null;
 }

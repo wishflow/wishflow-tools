@@ -36,6 +36,53 @@ test('steps each bytecode instruction and records stack, variables, output, and 
   assert.equal(stepTeachingMachine(machine), snapshots.at(-1));
 });
 
+test('allocates lists with stable IDs and immutable per-step heap snapshots', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'empty = []',
+    'first = [1, "x"]',
+    'nested = [first, []]',
+    'other = [1, "x"]',
+  ].join('\n')));
+  const snapshots = [machine.current];
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') {
+    snapshots.push(stepTeachingMachine(machine));
+  }
+
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.variables.map(({ name, value }) => [name, value.type, value.objectId]), [
+    ['empty', 'list', 1],
+    ['first', 'list', 2],
+    ['nested', 'list', 4],
+    ['other', 'list', 5],
+  ]);
+  assert.deepEqual(machine.current.heap.map(({ id, type, items }) => [
+    id,
+    type,
+    items.map(({ type: itemType, value, objectId }) => [itemType, value, objectId]),
+  ]), [
+    [1, 'list', []],
+    [2, 'list', [['int', '1', undefined], ['str', 'x', undefined]]],
+    [3, 'list', []],
+    [4, 'list', [['list', 'list #2', 2], ['list', 'list #3', 3]]],
+    [5, 'list', [['int', '1', undefined], ['str', 'x', undefined]]],
+  ]);
+
+  const nestedSnapshot = snapshots.find(({ variables }) => variables.some(({ name }) => name === 'nested'));
+  const nestedObject = nestedSnapshot?.heap.find(({ id }) => id === 4);
+  assert.ok(nestedObject);
+  assert.ok(Object.isFrozen(nestedSnapshot?.heap));
+  assert.ok(Object.isFrozen(nestedObject));
+  assert.ok(Object.isFrozen(nestedObject.items));
+});
+
+test('caps list object allocation for a single run', () => {
+  const source = Array.from({ length: 257 }, () => 'items = []').join('\n');
+  const machine = createTeachingMachine(compileTeachingSource(source));
+  while (machine.current.status !== 'error' && machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'heap-object-limit-exceeded');
+});
+
 test('prints strings and zero arguments using Python-like output formatting', () => {
   const machine = createTeachingMachine(compileTeachingSource('print("hello", "🐍", 42)\nprint()'));
   while (machine.current.status !== 'finished') stepTeachingMachine(machine);

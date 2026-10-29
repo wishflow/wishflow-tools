@@ -104,7 +104,7 @@ test('runs short-circuit expressions, nested branches, and lazy range loops in t
     '  print(i)',
   ].join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
-  await expect(page.getByText('mini-vm-v3').first()).toBeVisible();
+  await expect(page.getByText('mini-vm-v4').first()).toBeVisible();
   const instructions = page.locator('.teaching-instruction-table');
   await expect(instructions).toContainText('JUMP_IF_FALSE_OR_POP');
   await expect(instructions).toContainText('POP_JUMP_IF_FALSE');
@@ -114,6 +114,39 @@ test('runs short-circuit expressions, nested branches, and lazy range loops in t
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
   await expect(page.locator('.teaching-output')).toHaveText('False True\nbranch\n2\n1\n0');
   await expect(page.locator('.teaching-control-flow')).toContainText('iterator is exhausted');
+});
+
+test('transfers list references through the teaching Worker snapshot DTO', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'empty = []',
+    'first = [1, [2,]]',
+    'alias = first',
+    'separate = [1, [2,]]',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expect(page.locator('.teaching-instruction-table')).toContainText('BUILD_LIST');
+  await expect(page.locator('.teaching-ast-scroll')).toContainText('ListLiteral');
+  await expect(page.locator('.teaching-ast-scroll')).toContainText('IntegerLiteral');
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+
+  const variables = page.locator('.teaching-state-grid section[aria-labelledby="teaching-variables-heading"] .teaching-variable-list');
+  await expect(variables).toContainText('empty');
+  await expect(variables).toContainText('first');
+  await expect(variables).toContainText('alias');
+  await expect(variables).toContainText('separate');
+  const displayedValues = await variables.locator(':scope > div').evaluateAll((items) => items.map((item) => [
+    item.querySelector('dt')?.textContent,
+    item.querySelector('dd code')?.textContent,
+  ]));
+  expect(displayedValues).toEqual([
+    ['empty', 'list #1'],
+    ['first', 'list #3'],
+    ['alias', 'list #3'],
+    ['separate', 'list #5'],
+  ]);
 });
 
 test('steps a zero-argument function through an observable frame stack in the Worker', async ({ page }) => {
@@ -131,7 +164,7 @@ test('steps a zero-argument function through an observable frame stack in the Wo
 
   const instructions = page.locator('.teaching-instruction-table');
   await expect(instructions.locator('tbody tr')).toHaveCount(9);
-  await expect(page.getByText('mini-vm-v3').first()).toBeVisible();
+  await expect(page.getByText('mini-vm-v4').first()).toBeVisible();
   await expect(page.locator('.teaching-ast-scroll')).toContainText('FunctionDef');
   await expect(page.locator('.teaching-ast-scroll')).toContainText('Call');
   await expect(instructions).toContainText('DEFINE_FUNCTION');

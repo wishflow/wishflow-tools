@@ -222,6 +222,43 @@ test('rejects return outside a function and nested function definitions', () => 
   );
 });
 
+test('tokenizes and parses empty, nested, and trailing-comma list literals', () => {
+  assert.deepEqual(tokenizeTeachingSource('x = [1, [2,],]').map(({ type }) => type), [
+    'NAME', 'EQUAL', 'LEFT_BRACKET', 'INTEGER', 'COMMA', 'LEFT_BRACKET', 'INTEGER',
+    'COMMA', 'RIGHT_BRACKET', 'COMMA', 'RIGHT_BRACKET', 'EOF',
+  ]);
+
+  const program = parseTeachingSource('empty = []\nvalues = [1, [2,],]');
+  const empty = program.statements[0];
+  assert.equal(empty?.type, 'Assign');
+  if (empty?.type !== 'Assign') assert.fail('expected assignment');
+  assert.deepEqual(empty.value, {
+    type: 'ListLiteral',
+    elements: [],
+    span: { start: 8, end: 10, line: 1, column: 9, endLine: 1, endColumn: 11 },
+  });
+
+  const values = program.statements[1];
+  assert.equal(values?.type, 'Assign');
+  if (values?.type !== 'Assign') assert.fail('expected assignment');
+  assert.equal(values.value.type, 'ListLiteral');
+  if (values.value.type !== 'ListLiteral') assert.fail('expected list literal');
+  assert.deepEqual(values.value.elements.map((element) => element.type), ['IntegerLiteral', 'ListLiteral']);
+  const nested = values.value.elements[1];
+  assert.equal(nested?.type, 'ListLiteral');
+  if (nested?.type !== 'ListLiteral') assert.fail('expected nested list literal');
+  assert.deepEqual(nested.span, { start: 24, end: 28, line: 2, column: 14, endLine: 2, endColumn: 18 });
+});
+
+test('rejects malformed list literals with parser diagnostics', () => {
+  for (const source of ['x = [1', 'x = [,]', 'x = [1,, 2]']) {
+    assert.throws(
+      () => parseTeachingSource(source),
+      (error: unknown) => error instanceof TeachingDiagnostic && error.stage === 'parse',
+    );
+  }
+});
+
 test('parses nested if/elif/else suites and closes a final block at end of source', () => {
   const program = parseTeachingSource([
     'if 0:',

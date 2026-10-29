@@ -339,6 +339,21 @@ class Parser {
   }
 
   private parsePrimary(): TeachingExpression {
+    if (this.match('LEFT_BRACKET')) {
+      const open = this.previous();
+      return this.withExpressionNesting(open, () => {
+        const elements: TeachingExpression[] = [];
+        if (!this.check('RIGHT_BRACKET')) {
+          elements.push(this.parseExpression());
+          while (this.match('COMMA')) {
+            if (this.check('RIGHT_BRACKET')) break;
+            elements.push(this.parseExpression());
+          }
+        }
+        const close = this.consume('RIGHT_BRACKET', 'expected-list-close', "Expected ']' after list items.");
+        return { type: 'ListLiteral', elements, span: mergeSpans(open.span, close.span) };
+      });
+    }
     if (this.match('INTEGER')) {
       const token = this.previous();
       return { type: 'IntegerLiteral', value: token.literal ?? token.lexeme, span: token.span };
@@ -386,7 +401,7 @@ class Parser {
         return expression;
       });
     }
-    this.fail('expected-expression', 'Expected an integer, string, None, name, call, or parenthesized expression.', this.peek());
+    this.fail('expected-expression', 'Expected a value, list, call, or parenthesized expression.', this.peek());
   }
 
   private withExpressionNesting<T>(token: TeachingToken, parseNested: () => T): T {
@@ -459,7 +474,7 @@ class Parser {
   }
 
   private unsupportedKeyword(token: TeachingToken): never {
-    this.fail('unsupported-keyword', `Keyword '${token.lexeme}' is outside mini-vm-v3.`, token);
+    this.fail('unsupported-keyword', `Keyword '${token.lexeme}' is outside mini-vm-v4.`, token);
   }
 
   private fail(code: string, message: string, token: TeachingToken): never {

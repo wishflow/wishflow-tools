@@ -6,7 +6,7 @@ import { TeachingDiagnostic } from '../src/teaching-vm/types';
 test('compiles arithmetic precedence and print into versioned teaching instructions', () => {
   const result = compileTeachingSource('x = 1 + 2 * 3\nprint(x)');
 
-  assert.equal(result.version, 'mini-vm-v3');
+  assert.equal(result.version, 'mini-vm-v4');
   assert.deepEqual(result.constants, [
     { type: 'int', value: '1' },
     { type: 'int', value: '2' },
@@ -24,6 +24,20 @@ test('compiles arithmetic precedence and print into versioned teaching instructi
     ['HALT', null],
   ]);
   assert.deepEqual(result.instructions.map(({ index }) => index), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
+test('compiles nested list literals in left-to-right order', () => {
+  const result = compileTeachingSource('values = [1, [2,],]');
+
+  assert.equal(result.version, 'mini-vm-v4');
+  assert.deepEqual(result.instructions.map(({ opcode, argument }) => [opcode, argument]), [
+    ['LOAD_CONST', 0],
+    ['LOAD_CONST', 1],
+    ['BUILD_LIST', 1],
+    ['BUILD_LIST', 2],
+    ['STORE_NAME', 'values'],
+    ['HALT', null],
+  ]);
 });
 
 test('compiles None to a dedicated constant without treating it as a name', () => {

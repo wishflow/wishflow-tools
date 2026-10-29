@@ -1,7 +1,10 @@
 import {
   MAX_HISTORY_SNAPSHOTS,
   MAX_ACTIVE_FRAME_COUNT,
+  MAX_CONTAINER_ENTRIES,
   MAX_DYNAMIC_INSTRUCTION_COUNT,
+  MAX_HEAP_ENTRIES,
+  MAX_HEAP_OBJECTS,
   MAX_INTEGER_BITS,
   MAX_NAME_COUNT,
   MAX_OUTPUT_CODE_POINTS,
@@ -15,6 +18,7 @@ import {
   type TeachingDiagnosticSnapshot,
   type TeachingFrameSnapshot,
   type TeachingFunction,
+  type TeachingHeapObjectSnapshot,
   type TeachingInstruction,
   type TeachingValueSnapshot,
   type TeachingVmHistory,
@@ -29,8 +33,20 @@ type RuntimeValue =
   | { type: 'str'; value: string }
   | { type: 'none' }
   | { type: 'function'; function: TeachingFunction }
+  | ListRuntimeValue
   | RangeRuntimeValue
   | IteratorRuntimeValue;
+
+interface ListRuntimeValue {
+  type: 'list';
+  objectId: number;
+}
+
+interface ListHeapObject {
+  id: number;
+  type: 'list';
+  items: RuntimeValue[];
+}
 
 interface RangeRuntimeValue {
   type: 'range';
@@ -67,6 +83,9 @@ export class TeachingMachine {
   #frames: RuntimeFrame[];
   #nextFrameId = 1;
   #variables = new Map<string, RuntimeValue>();
+  #heap = new Map<number, ListHeapObject>();
+  #nextHeapObjectId = 1;
+  #allocatedHeapEntryCount = 0;
   #output: string[] = [];
   #lastExecutedInstructionIndex: number | null = null;
   #faultInstructionIndex: number | null = null;
@@ -231,7 +250,7 @@ export class TeachingMachine {
       }
       case 'UNARY_NOT': {
         const value = this.peek(instruction);
-        this.#stack[this.#stack.length - 1] = { type: 'bool', value: !isTruthy(value) };
+        this.#stack[this.#stack.length - 1] = { type: 'bool', value: !this.isTruthy(value) };
         return null;
       }
       case 'BINARY_ADD':
@@ -242,6 +261,9 @@ export class TeachingMachine {
         return null;
       case 'BINARY_MULTIPLY':
         this.executeIntegerOperation(instruction, (left, right) => left * right);
+        return null;
+      case 'BUILD_LIST':
+        this.executeBuildList(instruction);
         return null;
       case 'COMPARE_OP':
         this.executeComparison(instruction);
@@ -390,7 +412,7 @@ export class TeachingMachine {
       this.runtimeError('vm-stack-underflow', 'PRINT does not have enough values on the stack.', instruction.span);
     }
     const values = this.#stack.slice(this.#stack.length - count);
-    const line = values.map(formatPrintValue).join(' ');
+    const line = values.map((value) => formatPrintValue(value, this.#heap)).join(' ');
     const addedCodePoints = codePointLength(line) + 1;
     const currentCodePoints = this.#output.reduce((total, item) => total + codePointLength(item) + 1, 0);
     if (currentCodePoints + addedCodePoints > MAX_OUTPUT_CODE_POINTS) {
@@ -427,7 +449,7 @@ export class TeachingMachine {
   private executeShortCircuit(instruction: TeachingInstruction): number | null {
     const target = this.validateJumpTarget(instruction);
     const value = this.peek(instruction);
-    const truth = isTruthy(value);
+    const truth = this.isTruthy(value);
     const shouldJump = instruction.opcode === 'JUMP_IF_FALSE_OR_POP' ? !truth : truth;
     if (!shouldJump) this.#stack.pop();
     this.#controlFlow = Object.freeze({
@@ -441,7 +463,7 @@ export class TeachingMachine {
   private executeConditionalJump(instruction: TeachingInstruction): number | null {
     const target = this.validateJumpTarget(instruction);
     const condition = this.peek(instruction);
-    const shouldJump = !isTruthy(condition);
+    const shouldJump = !this.isTruthy(condition);
     this.#stack.pop();
     this.#controlFlow = Object.freeze({
       kind: 'branch',
@@ -489,6 +511,42 @@ export class TeachingMachine {
       current: value.start,
       exhausted: false,
     };
+  }
+
+  private executeBuildList(instruction: TeachingInstruction): void {
+    const count = requireNumberArgument(instruction);
+    if (count < 0 || count > this.#stack.length) {
+      this.runtimeError('vm-stack-underflow', 'BUILD_LIST does not have enough values on the stack.', instruction.span);
+    }
+    if (count > MAX_CONTAINER_ENTRIES) {
+      this.runtimeError('container-size-limit-exceeded', `A list cannot contain more than ${MAX_CONTAINER_ENTRIES} items.`, instruction.span);
+    }
+    if (this.#heap.size >= MAX_HEAP_OBJECTS) {
+      this.runtimeError('heap-object-limit-exceeded', `Teaching VM reached its ${MAX_HEAP_OBJECTS}-object allocation limit.`, instruction.span);
+    }
+    if (this.#allocatedHeapEntryCount + count > MAX_HEAP_ENTRIES) {
+      this.runtimeError('heap-entry-limit-exceeded', `Teaching VM reached its ${MAX_HEAP_ENTRIES}-entry allocation limit.`, instruction.span);
+    }
+
+    const items = this.#stack.slice(this.#stack.length - count);
+    const objectId = this.#nextHeapObjectId;
+    this.#nextHeapObjectId += 1;
+    this.#allocatedHeapEntryCount += count;
+    this.#heap.set(objectId, { id: objectId, type: 'list', items });
+    this.#stack.splice(this.#stack.length - count, count, { type: 'list', objectId });
+  }
+
+  private isTruthy(value: RuntimeValue): boolean {
+    switch (value.type) {
+      case 'none': return false;
+      case 'function': return true;
+      case 'bool': return value.value;
+      case 'int': return value.value !== 0n;
+      case 'str': return value.value.length > 0;
+      case 'range': return rangeContains(value, value.start);
+      case 'iterator': return true;
+      case 'list': return (this.#heap.get(value.objectId)?.items.length ?? 0) > 0;
+    }
   }
 
   private executeForIteration(instruction: TeachingInstruction): number | null {
@@ -578,9 +636,34 @@ export class TeachingMachine {
       frames,
       stack: activeFrame.stack,
       variables: activeFrame.variables,
+      heap: this.createHeapSnapshot(),
       output: Object.freeze([...this.#output]),
       diagnostic: this.#diagnostic,
     });
+  }
+
+  private createHeapSnapshot(): readonly TeachingHeapObjectSnapshot[] {
+    const roots: RuntimeValue[] = [
+      ...this.#variables.values(),
+      ...this.#frames.flatMap((frame) => [...frame.locals.values(), ...frame.stack]),
+    ];
+    const reachableIds = new Set<number>();
+    const pending = [...roots];
+    for (let index = 0; index < pending.length; index += 1) {
+      const value = pending[index];
+      if (value?.type !== 'list' || reachableIds.has(value.objectId)) continue;
+      reachableIds.add(value.objectId);
+      const object = this.#heap.get(value.objectId);
+      if (object) pending.push(...object.items);
+    }
+
+    return Object.freeze([...this.#heap.values()]
+      .filter(({ id }) => reachableIds.has(id))
+      .map((object) => Object.freeze({
+        id: object.id,
+        type: object.type,
+        items: Object.freeze(object.items.map(snapshotValue)),
+      })));
   }
 
   private createFrameSnapshot(frame: RuntimeFrame): TeachingFrameSnapshot {
@@ -632,19 +715,21 @@ function runtimeValueFromConstant(constant: TeachingConstant): RuntimeValue {
 }
 
 function snapshotValue(value: RuntimeValue): TeachingValueSnapshot {
-  const text = value.type === 'none'
-    ? 'None'
-    : value.type === 'int'
-      ? value.value.toString(10)
-      : value.type === 'bool'
-        ? value.value ? 'True' : 'False'
-        : value.type === 'str'
-          ? value.value
-          : value.type === 'range'
-            ? formatRange(value)
-          : value.type === 'iterator'
-            ? formatIterator(value)
-            : `<function ${value.function.name}(${value.function.parameters.join(', ')})>`;
+  if (value.type === 'list') {
+    const text = `list #${value.objectId}`;
+    return Object.freeze({ type: value.type, value: text, display: text, objectId: value.objectId });
+  }
+  const text = (() => {
+    switch (value.type) {
+      case 'none': return 'None';
+      case 'int': return value.value.toString(10);
+      case 'bool': return value.value ? 'True' : 'False';
+      case 'str': return value.value;
+      case 'range': return formatRange(value);
+      case 'iterator': return formatIterator(value);
+      case 'function': return `<function ${value.function.name}(${value.function.parameters.join(', ')})>`;
+    }
+  })();
   return Object.freeze({
     type: value.type,
     value: text,
@@ -661,12 +746,13 @@ function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticS
   });
 }
 
-function formatPrintValue(value: RuntimeValue): string {
+function formatPrintValue(value: RuntimeValue, heap: Map<number, ListHeapObject>): string {
   if (value.type === 'function') return `<function ${value.function.name}>`;
   if (value.type === 'none') return 'None';
   if (value.type === 'bool') return value.value ? 'True' : 'False';
   if (value.type === 'range') return formatRange(value);
   if (value.type === 'iterator') return formatIterator(value);
+  if (value.type === 'list') return heap.has(value.objectId) ? `list #${value.objectId}` : '<missing list>';
   return value.value.toString();
 }
 
@@ -676,18 +762,6 @@ function isNumeric(value: RuntimeValue): value is Extract<RuntimeValue, { type: 
 
 function numericValue(value: Extract<RuntimeValue, { type: 'int' | 'bool' }>): bigint {
   return value.type === 'int' ? value.value : value.value ? 1n : 0n;
-}
-
-function isTruthy(value: RuntimeValue): boolean {
-  switch (value.type) {
-    case 'none': return false;
-    case 'function': return true;
-    case 'bool': return value.value;
-    case 'int': return value.value !== 0n;
-    case 'str': return value.value.length > 0;
-    case 'range': return rangeContains(value, value.start);
-    case 'iterator': return true;
-  }
 }
 
 function rangeContains(range: RangeRuntimeValue, value: bigint): boolean {
