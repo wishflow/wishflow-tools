@@ -69,6 +69,8 @@ export interface MapDecoration {
   cell: { x: number; y: number };
   /** Horizontal sprite-anchor offset from the cell center, in map cells. */
   anchorOffsetX?: number;
+  /** Original static-object collision bounds relative to the cell origin, in fine units. */
+  collisionBoxFine?: Rectangle;
 }
 
 export interface ScenarioUnit {
@@ -756,7 +758,7 @@ function backgroundCollisionCode(rawTile: number, grid: ScenarioContent['origina
   return rawTile === 160 ? 160 : 0;
 }
 
-function terrainBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: number): boolean {
+function mapBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: number): boolean {
   const grid = scenario.originalTileGrid;
   const width = scenario.map.width;
   const height = scenario.map.height;
@@ -779,7 +781,21 @@ function terrainBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: numb
     if (isBackgroundCollisionCode(backgroundCollisionCode(rawTile, grid, x, y)) && streetLayerCode === 0) return true;
   }
 
-  return false;
+  const unitLeft = fineX + UNIT_COLLIDER_START_X;
+  const unitTop = fineY + UNIT_COLLIDER_START_Y;
+  const unitRight = unitLeft + UNIT_COLLIDER_WIDTH;
+  const unitBottom = unitTop + UNIT_COLLIDER_HEIGHT;
+  return (scenario.map.decorations ?? []).some(({ cell, collisionBoxFine }) => {
+    if (!collisionBoxFine) return false;
+    const decorationLeft = (cell.x * FINE_UNITS_PER_CELL) + collisionBoxFine.x;
+    const decorationTop = (cell.y * FINE_UNITS_PER_CELL) + collisionBoxFine.y;
+    const decorationRight = decorationLeft + collisionBoxFine.width;
+    const decorationBottom = decorationTop + collisionBoxFine.height;
+    return unitLeft < decorationRight
+      && unitRight > decorationLeft
+      && unitTop < decorationBottom
+      && unitBottom > decorationTop;
+  });
 }
 
 function unitSpriteWithinMap(unit: MutableUnit, scenario: ScenarioContent, fineX: number, fineY: number): boolean {
@@ -816,12 +832,12 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number)
 
   if (moveX !== 0
     && unitSpriteWithinMap(unit, scenario, nextX, unit.positionFine.y)
-    && !terrainBlocksUnit(scenario, nextX, unit.positionFine.y)) {
+    && !mapBlocksUnit(scenario, nextX, unit.positionFine.y)) {
     unit.positionFine.x = nextX;
   }
   if (moveY !== 0
     && unitSpriteWithinMap(unit, scenario, unit.positionFine.x, nextY)
-    && !terrainBlocksUnit(scenario, unit.positionFine.x, nextY)) {
+    && !mapBlocksUnit(scenario, unit.positionFine.x, nextY)) {
     unit.positionFine.y = nextY;
   }
 }
