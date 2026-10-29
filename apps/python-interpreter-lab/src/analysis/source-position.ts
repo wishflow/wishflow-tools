@@ -10,7 +10,8 @@ export type SourceLinkOrigin =
   | { kind: 'token'; id: number }
   | { kind: 'ast'; id: string }
   | { kind: 'instruction'; codeObjectId: string; offset: number }
-  | { kind: 'trace'; index: number };
+  | { kind: 'trace'; index: number }
+  | { kind: 'teaching'; index: number | null };
 
 export interface SourceLink {
   origin: SourceLinkOrigin;

@@ -2,12 +2,17 @@ import { useEffect, useRef } from 'react';
 import { findTokenAtOffset, rangesEqual, tokenSourceRange, type SourceLink, type SourcePositionIndex, type SourceRange } from '../analysis/source-position';
 import type { PythonToken } from '../analysis/types';
 import type { AnalysisStatus } from '../analysis/usePyodideAnalysis';
+import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
 import { MAX_SOURCE_LENGTH } from '../analysis/source-limit';
 import type { MessageKey } from '../locales';
 
 interface SourcePanelProps {
+  mode: 'cpython' | 'teaching';
   source: string;
   status: AnalysisStatus;
+  teachingStatus: TeachingStatus;
+  teachingHasProgram: boolean;
+  teachingAtHead: boolean;
   error: string;
   tokens: PythonToken[];
   positionIndex: SourcePositionIndex;
@@ -20,11 +25,16 @@ interface SourcePanelProps {
   onStopExecution(): void;
   onCancel(): void;
   onRetry(): void;
+  onCompileTeaching(): void;
+  onStepTeaching(): void;
+  onRunTeaching(): void;
+  onPauseTeaching(): void;
+  onResetTeaching(): void;
   onClear(): void;
   onRestore(): void;
 }
 
-export function SourcePanel({ source, status, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onClear, onRestore }: SourcePanelProps) {
+export function SourcePanel({ mode, source, status, teachingStatus, teachingHasProgram, teachingAtHead, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onRunTeaching, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -61,7 +71,7 @@ export function SourcePanel({ source, status, error, tokens, positionIndex, sour
         </div>
         <span className="source-count">{source.length.toLocaleString()} / {MAX_SOURCE_LENGTH.toLocaleString()}</span>
       </div>
-      <p className="panel-hint">{t('sourceHint')}</p>
+      <p className="panel-hint">{t(mode === 'cpython' ? 'cpythonSourceHint' : 'teachingSourceHint')}</p>
       <label className="visually-hidden" htmlFor="python-source">{t('source')}</label>
       <textarea
         id="python-source"
@@ -82,18 +92,35 @@ export function SourcePanel({ source, status, error, tokens, positionIndex, sour
           <button type="button" className="text-button" onClick={onClear}>{t('clearSource')}</button>
         </div>
         <div className="primary-actions">
-          {status === 'loading' || status === 'analyzing' ? (
-            <button type="button" className="button button-secondary" onClick={onCancel}>{t('cancel')}</button>
+          {mode === 'cpython' ? (
+            <>
+              {status === 'loading' || status === 'analyzing' ? (
+                <button type="button" className="button button-secondary" onClick={onCancel}>{t('cancel')}</button>
+              ) : (
+                <button type="button" className="button button-primary" disabled={status !== 'ready' || Boolean(error)} onClick={onAnalyze}>{t('analyze')}</button>
+              )}
+              {status === 'running' ? (
+                <button type="button" className="button button-secondary" onClick={onStopExecution}>{t('stopExecution')}</button>
+              ) : (
+                <button type="button" className="button button-primary" disabled={status !== 'ready' || Boolean(error)} onClick={onRun}>{t('runPython')}</button>
+              )}
+              {(status === 'stopped' || status === 'failed') && (
+                <button type="button" className="button button-primary" onClick={onRetry}>{t('retry')}</button>
+              )}
+            </>
           ) : (
-            <button type="button" className="button button-primary" disabled={status !== 'ready' || Boolean(error)} onClick={onAnalyze}>{t('analyze')}</button>
-          )}
-          {status === 'running' ? (
-            <button type="button" className="button button-secondary" onClick={onStopExecution}>{t('stopExecution')}</button>
-          ) : (
-            <button type="button" className="button button-primary" disabled={status !== 'ready' || Boolean(error)} onClick={onRun}>{t('runPython')}</button>
-          )}
-          {(status === 'stopped' || status === 'failed') && (
-            <button type="button" className="button button-primary" onClick={onRetry}>{t('retry')}</button>
+            <>
+              {teachingStatus === 'running' ? (
+                <button type="button" className="button button-secondary" onClick={onPauseTeaching}>{t('pauseTeaching')}</button>
+              ) : (
+                <button type="button" className="button button-primary" disabled={Boolean(error) || teachingStatus === 'loading' || teachingStatus === 'compiling'} onClick={onCompileTeaching}>{t('compileTeaching')}</button>
+              )}
+              <button type="button" className="button button-secondary" disabled={!teachingHasProgram || !teachingAtHead || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onStepTeaching}>{t('stepTeaching')}</button>
+              {teachingStatus !== 'running' && (
+                <button type="button" className="button button-primary" disabled={!teachingHasProgram || !teachingAtHead || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onRunTeaching}>{t('runTeaching')}</button>
+              )}
+              <button type="button" className="button button-secondary" disabled={!teachingHasProgram || teachingStatus === 'compiling' || teachingStatus === 'loading'} onClick={onResetTeaching}>{t('resetTeaching')}</button>
+            </>
           )}
         </div>
       </div>

@@ -77,6 +77,7 @@ VM 内部状态由 Worker 独占，包括 `pc`、值栈、名字绑定、输出�
 - 教学 VM 放在单独的应用 module Worker 中，与现有 Pyodide Worker 的运行时和消息协议隔离；不添加后端、Cloudflare Worker 或新依赖。
 - Worker 接受带 `sessionId` 与 `sourceRevision` 的编译、单步、运行、暂停和复位请求；所有响应带相同身份。换模式、编辑源码、复位或新建会话后，旧响应不能覆盖新状态。
 - 连续运行按最多 32 条指令分批，让出 Worker 事件循环以处理暂停；只在暂停确认后显示“已暂停”。单步始终恰好执行一条指令。
+- 完整历史只在编译和复位时传输；单步和运行批次只传新增或被状态更新替换的快照，避免重复序列化已发送的有界历史。
 - 编译最多生成 2,000 条教学指令；每个程序最多 200 个不同名字；每个值及历史项均受下列预算约束。越界必须给出可见诊断，不能无提示丢弃状态。
 
 | 资源 | 上限提案 |
@@ -120,7 +121,7 @@ VM 内部状态由 Worker 独占，包括 `pc`、值栈、名字绑定、输出�
 
 ## 8. 文件边界与依赖
 
-实现沿用本应用现有 React + TypeScript + Vite 单页结构，没有新增依赖、路由或站点侧栏。Tokenizer、Parser、Compiler、VM、Worker 协议和 React 状态桥位于 `src/teaching-vm/`；执行调度位于独立的 `src/worker/teaching-vm.worker.ts`；界面集成复用现有 `App`、源码面板、共享 locale 和样式，并由 `TeachingVmPanel` 展示教学状态。单元测试覆盖纯逻辑，Playwright 使用真实页面与 Worker 验证交互。
+实现沿用本应用现有 React + TypeScript + Vite 单页结构，没有新增依赖、路由或站点侧栏。Tokenizer、Parser、Compiler、VM、Worker 协议和 React 状态桥位于 `src/teaching-vm/`；执行调度位于独立的 `src/worker/teaching-vm.worker.ts`；界面集成复用现有 `App`、源码面板、共享 locale 和样式，并由 `TeachingVmPanel` 展示教学状态。单元测试覆盖纯逻辑，Playwright 使用真实页面与 Worker 验证交互，包括完整历史滚动窗口和增量消息应用。
 
 ## 9. 回滚
 

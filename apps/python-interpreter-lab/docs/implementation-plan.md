@@ -121,7 +121,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **交付**：引入教学模式；表达式、名字赋值和最小 `print` 调用经 Lexer → Parser → AST → Compiler → VM 执行；提供单条指令、运行、暂停、重置，以及指令、值栈、变量、输出和有界历史快照。首个可见 VM 切片包含完整输入到结果链路。
 - **验收**：先赋值 `x = 1 + 2 * 3`、下一行 `print(x)` 的逐步栈变化及结果可核对；非法或未支持语法在执行前诊断，运行期才能确定的不支持操作明确报错、不降级语义；教学指令不标作 CPython offset；与真实模式切换从新会话开始，已有 CPython 能力不回归。
 - **详细文档**：[P5 规格](specs/p05-minimal-teaching-vm.md) 与 [P5 任务拆分](tasks/p05-minimal-teaching-vm.md)。范围变更按 spec §10 更新文档并确认影响；阶段进度以 tasks 执行记录为准。
-- **当前结果**：P5 v1 已完成本地实现与验证；应用 `PLAYWRIGHT_PORT=4187 pnpm run test:ci` 通过（39 项单测、23 项 Playwright），根 `pnpm run test:catalog` 通过（14 项检查），`pnpm run build:site` 成功。T06 仍待分支集成、推送后的 CI/CD 和线上验收；完成前，教学模式不列为公开版本能力。逐项证据见 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。
+- **当前结果**：P5 v1 已完成本地实现与验证；应用 `PLAYWRIGHT_PORT=4187 pnpm run test:ci` 通过（39 项单测、24 项 Playwright），根 `pnpm run test:catalog` 通过（14 项检查），`pnpm run build:site` 成功。T06 仍待分支集成、推送后的 CI/CD 和线上验收；完成前，教学模式不列为公开版本能力。逐项证据见 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。
 - **回滚**：回退教学模式入口和该引擎，真实模式仍可独立构建运行。不得用替换真实引擎来简化首个教学实现。
 
 ### P6：控制流、短路与循环

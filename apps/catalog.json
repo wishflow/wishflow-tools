@@ -19,8 +19,8 @@
     "slug": "python-interpreter-lab",
     "title": "Python Interpreter Lab",
     "titleZh": "Python 解释器实验室",
-    "description": "Inspect real CPython syntax trees, code objects, and bytecode in your browser.",
-    "descriptionZh": "在浏览器中查看真实 CPython 生成的语法树、代码对象和字节码。",
+    "description": "Inspect real CPython compilation and step through a bounded teaching VM in your browser.",
+    "descriptionZh": "在浏览器中观察真实 CPython 编译结果，并逐步运行有界教学 VM 子集。",
     "icon": "🐍"
   },
   {
