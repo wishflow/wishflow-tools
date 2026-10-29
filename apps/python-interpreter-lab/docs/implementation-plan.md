@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线、P1 真实编译工作区、P2 Token/源码联动、P3 真实执行轨迹和 P4 结构化变量与历史观察均已完成并发布到 `master`。P1–P4 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)。P4 实现、CI/CD 发布和线上验收均已通过，可按 P5 启动规则进入教学 Mini VM 阶段。
+P0 文档基线、P1 真实编译工作区、P2 Token/源码联动、P3 真实执行轨迹、P4 结构化变量与历史观察及 P5 最小教学 VM 均已完成并发布到 `master`。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。双引擎首版已发布，后续可按 P6 启动规则进入教学 VM 控制流阶段。
 
 P0 建立了以下文档：
 
@@ -115,13 +115,13 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **验证与发布**：应用 `pnpm run test:ci` 通过（19 条单测、20 条 Playwright）；根 `pnpm run test:catalog` 14/14 通过，`pnpm run build:site` 成功。提交 `85719da` 合入 `master` 后推送提交 `ec062c7`；workflow [40819932964](https://github.com/wishflow/wishflow-tools/actions/runs/40819932964) 中共享检查、Python 应用测试、Cloudflare Pages 和 GitHub Pages 均成功，Worker 部署按变更分类跳过。线上 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/) 实测 Pyodide 314.0.7 / CPython 3.14.2：嵌套 `outer`/`inner` 帧分别显示 `parent`、`child` 局部变量；相邻事件差异显示列表从 `[1]` 变为 `[1, 2]`；移动观察位置和切换视图未重新运行代码或增加事件。
 - **回滚**：恢复 P3 的基础摘要；本阶段不引入跨版本历史持久化，不需要存档迁移。
 
-### P5：最小教学 VM，打通真正逐指令执行（本地实现与验证完成，待发布验收）
+### P5：最小教学 VM，打通真正逐指令执行（已完成并发布）
 
 - **前置**：M1/M2 已发布；本阶段按 P5 v1 spec 的语言子集、教学指令版本与数字/字符串语义实施。
 - **交付**：引入教学模式；表达式、名字赋值和最小 `print` 调用经 Lexer → Parser → AST → Compiler → VM 执行；提供单条指令、运行、暂停、重置，以及指令、值栈、变量、输出和有界历史快照。首个可见 VM 切片包含完整输入到结果链路。
 - **验收**：先赋值 `x = 1 + 2 * 3`、下一行 `print(x)` 的逐步栈变化及结果可核对；非法或未支持语法在执行前诊断，运行期才能确定的不支持操作明确报错、不降级语义；教学指令不标作 CPython offset；与真实模式切换从新会话开始，已有 CPython 能力不回归。
 - **详细文档**：[P5 规格](specs/p05-minimal-teaching-vm.md) 与 [P5 任务拆分](tasks/p05-minimal-teaching-vm.md)。范围变更按 spec §10 更新文档并确认影响；阶段进度以 tasks 执行记录为准。
-- **当前结果**：P5 v1 已完成本地实现与验证；应用 `PLAYWRIGHT_PORT=4187 pnpm run test:ci` 通过（39 项单测、24 项 Playwright），根 `pnpm run test:catalog` 通过（14 项检查），`pnpm run build:site` 成功。T06 仍待分支集成、推送后的 CI/CD 和线上验收；完成前，教学模式不列为公开版本能力。逐项证据见 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。
+- **当前结果**：P5 v1 已实现并发布。应用 `PLAYWRIGHT_PORT=4187 pnpm run test:ci` 通过（39 项单测、24 项 Playwright），根 `pnpm run test:catalog` 通过（14 项检查），`pnpm run build:site` 成功。合并提交 `88a0fad` 推送后，workflow [40838287683](https://github.com/wishflow/wishflow-tools/actions/runs/40838287683) 的共享检查、Python 应用测试、GitHub Pages 与 Cloudflare Pages 均成功，Worker 部署按变更分类跳过。2026-10-29 在 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/) 实测教学 VM：`x = 1 + 2 * 3` / `print(x)` 生成 9 条 `mini-vm-v1` 指令并运行输出 `7`；切回真实 CPython 后，Pyodide 314.0.7 / CPython 3.14.2 正常生成 AST 与真实字节码。逐项证据见 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。
 - **回滚**：回退教学模式入口和该引擎，真实模式仍可独立构建运行。不得用替换真实引擎来简化首个教学实现。
 
 ### P6：控制流、短路与循环

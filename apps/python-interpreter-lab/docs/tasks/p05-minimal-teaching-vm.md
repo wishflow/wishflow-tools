@@ -85,4 +85,4 @@
 | T03 VM 指令步进、值栈和快照 | 完成 | 通过逐步状态、运行期错误、数值/字符串/输出预算与有界不可变历史测试。 |
 | T04 教学 Worker、消息协议与控制状态 | 完成 | 独立 module Worker 使用会话/源码版本过滤，按最多 8 条指令分批并在批次间让出约一帧；单步和批次只增量传输新历史；真实浏览器验证编译、单步、连续运行、暂停确认、复位、历史滚动窗口与旧状态失效。 |
 | T05 教学模式界面端到端切片 | 完成 | 单页引擎切换接入共享语言状态；展示 AST、教学指令、源码位置、栈、变量、输出和历史；Playwright 验证算术输出、语法/运行错误、历史锁定、模式/源码切换、双语及 320/768/1024/1440px 无横向溢出。 |
-| T06 边界回归、文档与发布验收 | 进行中 | 应用 CI 通过（39 项单测、24 项浏览器测试），catalog 14 项检查与共享站点构建通过；尚待分支集成、推送后 CI 和线上验收。 |
+| T06 边界回归、文档与发布验收 | 完成 | 应用 `PLAYWRIGHT_PORT=4187 pnpm run test:ci` 通过（39 项单测、24 项浏览器测试），根 `pnpm run test:catalog` 14/14 通过，`pnpm run build:site` 成功。合并提交 `88a0fad` 推送后，workflow [40838287683](https://github.com/wishflow/wishflow-tools/actions/runs/40838287683) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功，Worker 部署按变更分类跳过。2026-10-29 在 Cloudflare Pages 实测教学 VM 对 `x = 1 + 2 * 3` / `print(x)` 显示 9 条 `mini-vm-v1` 指令并输出 `7`；真实 CPython 模式显示 Pyodide 314.0.7 / CPython 3.14.2，并成功分析出 AST 与真实字节码。 |
