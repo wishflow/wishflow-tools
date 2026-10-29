@@ -5,7 +5,7 @@
 - 日期：2026-10-29。
 - 已确认方向：用户选择先用 Pyodide 展示真实 CPython AST、字节码和执行轨迹，再逐步加入教学 Mini VM。
 - 应用：Python 解释器实验室，目录 `apps/python-interpreter-lab/`，发布路径 `/python-interpreter-lab/`。
-- P0 文档基线及 P1–P5 双引擎首版已完成并发布；P5 v1 的范围与验收证据见对应 [spec](../specs/p05-minimal-teaching-vm.md) 和 [tasks](../tasks/p05-minimal-teaching-vm.md)。P6 控制流范围已按阶段规格确认，T01–T05 实现及本地验收通过，发布状态以[整体实施计划](../implementation-plan.md)为准。
+- P0 文档基线及 P1–P6 双引擎能力已完成并发布；P5 v1 与 P6 v2 的范围、验收及发布证据见对应 [P5 spec](../specs/p05-minimal-teaching-vm.md)、[P5 tasks](../tasks/p05-minimal-teaching-vm.md)、[P6 spec](../specs/p06-control-flow.md) 和 [P6 tasks](../tasks/p06-control-flow.md)。后续阶段状态以[整体实施计划](../implementation-plan.md)为准。
 - 本文中的模块划分和边界用于指导阶段规格；各阶段的具体公共接口和消息字段只在对应 spec 中约定，不预建通用框架。
 
 阶段、依赖与交付状态由[整体实施计划](../implementation-plan.md)维护。本文负责解释为什么采用这条路线、各引擎能展示什么，以及哪些边界必须保留。
@@ -46,7 +46,7 @@ flowchart LR
 | 两个引擎首版同时实现 | 可以同时覆盖两类目标，但会同时引入运行时、语言语义和 UI 的验证成本 | 不采用；用户已选择先真实视图后教学 VM |
 | 其他 Python 实现或修改 CPython/WASM 内核 | 可探索其他执行接口，但不能默认等价于真实 CPython；内核维护另有成本 | 不作为当前路线，出现无法满足的明确目标时另立 ADR |
 
-双引擎是分阶段演进目标，不要求预建通用引擎插件框架。当前已发布版本包含真实 CPython 视图与教学 `mini-vm-v1`；后续教学语义按 P6–P10 的阶段规格逐步扩展，保持教学状态与真实 CPython 产物相互独立。
+双引擎是分阶段演进目标，不要求预建通用引擎插件框架。当前已发布版本包含真实 CPython 视图与教学 `mini-vm-v2`；后续教学语义按 P7–P10 的阶段规格逐步扩展，保持教学状态与真实 CPython 产物相互独立。
 
 ## 4. 观察能力与真实性边界
 

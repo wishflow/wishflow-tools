@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线、P1 真实编译工作区、P2 Token/源码联动、P3 真实执行轨迹、P4 结构化变量与历史观察及 P5 最小教学 VM 均已完成并发布到 `master`。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。双引擎首版已发布，后续可按 P6 启动规则进入教学 VM 控制流阶段。
+P0 文档基线及 P1–P5 双引擎首版均已完成并发布到 `master`；P6 教学 VM 控制流也已完成并发布。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)，P6 验收、发布及线上证据见 [P6 spec](specs/p06-control-flow.md) 与 [P6 tasks](tasks/p06-control-flow.md)。后续阶段按各自启动规则推进。
 
 P0 建立了以下文档：
 
@@ -15,7 +15,7 @@ P0 建立了以下文档：
 | [ADR-0001](adr/0001-browser-python-visualizer.md) | 总体路线、备选方案、执行边界及取舍 |
 | 本文 | 阶段、依赖、启动条件、验收与回滚 |
 
-详细 spec 和 tasks 在对应阶段开始实施前创建，不预建空文件，也不把整体路线视为已批准所有依赖和接口细节。P1–P5 的规格记录各自已发布范围；P6 的比较、真值、短路、缩进和循环支持表已确认，实施按对应规格和任务推进。
+详细 spec 和 tasks 在对应阶段开始实施前创建，不预建空文件，也不把整体路线视为已批准所有依赖和接口细节。P1–P6 的规格记录各自已发布范围；P7 的参数、返回、作用域和递归边界须在该阶段开始时具体确认。
 
 ## 2. 阶段启动方式
 
@@ -128,7 +128,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 - **前置**：P5；比较、真值、短路、缩进和循环支持表已由用户确认。
 - **交付**：按已确认规格支持 `if/elif/else`、`while`、受限 `for/range`、布尔表达式与比较；展示条件、短路和循环如何改变下一条教学指令。任务按表达式、分支、循环等可独立验收的完整输入到输出切片展开。
-- **详细文档**：[P6 规格](specs/p06-control-flow.md) 与 [P6 任务](tasks/p06-control-flow.md)。P6 支持表已确认；T01–T05 实现及本地验收通过，T06 发布和线上验证进行中。
+- **详细文档**：[P6 规格](specs/p06-control-flow.md) 与 [P6 任务](tasks/p06-control-flow.md)。T01–T06 已完成并发布；本地、CI 和线上验收证据见 P6 tasks。
 - **验收**：未选中分支和短路右侧不执行；循环回跳、range 边界和嵌套正确；空循环、零次循环和动态步数超限可解释；对已确认的共同子集，与固定 CPython 的最终输出和错误类别对照。
 - **回滚**：撤回新增语法支持及示例，保留 P5；旧版语言边界继续显式显示。
 
