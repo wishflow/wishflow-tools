@@ -1,4 +1,7 @@
 import {
+  createTeachingBreakpoints,
+} from './source-mapping';
+import {
   MAX_HISTORY_SNAPSHOTS,
   MAX_ACTIVE_FRAME_COUNT,
   MAX_CONTAINER_ENTRIES,
@@ -15,6 +18,7 @@ import {
   TeachingDiagnostic,
   type SourceSpan,
   type TeachingCompileResult,
+  type TeachingBreakpoint,
   type TeachingConstant,
   type TeachingDiagnosticSnapshot,
   type TeachingFrameSnapshot,
@@ -23,6 +27,7 @@ import {
   type TeachingInstruction,
   type TeachingValueSnapshot,
   type TeachingVmHistory,
+  type TeachingPauseReason,
   type TeachingVmSnapshot,
   type TeachingVmStatus,
   type TeachingVariableSnapshot,
@@ -118,6 +123,10 @@ export class TeachingMachine {
   #faultInstructionIndex: number | null = null;
   #controlFlow: TeachingVmSnapshot['controlFlow'] = null;
   #diagnostic: TeachingDiagnosticSnapshot | null = null;
+  #pauseReason: TeachingPauseReason = null;
+  #hitBreakpointId: string | null = null;
+  #breakpoints = new Map<number, TeachingBreakpoint>();
+  #skipBreakpointInstructionIndex: number | null = null;
   #history: TeachingVmSnapshot[] = [];
   #historyContainerRecordCount = 0;
   #historyTruncated = false;
@@ -168,6 +177,17 @@ export class TeachingMachine {
     });
   }
 
+  get breakpoints(): readonly TeachingBreakpoint[] {
+    return Object.freeze([...this.#breakpoints.values()]);
+  }
+
+  setBreakpoints(sourceLines: readonly number[]): readonly TeachingBreakpoint[] {
+    const breakpoints = createTeachingBreakpoints(this.program, sourceLines);
+    this.#breakpoints = new Map(breakpoints.map((breakpoint) => [breakpoint.instructionIndex, breakpoint]));
+    this.#skipBreakpointInstructionIndex = null;
+    return this.breakpoints;
+  }
+
   step(statusAfter: NonTerminalStatus = 'paused'): TeachingVmSnapshot {
     if (this.#status === 'finished' || this.#status === 'error') return this.#current;
     const executingFrame = this.#frame;
@@ -181,7 +201,20 @@ export class TeachingMachine {
       return this.recordStep();
     }
 
+    const breakpoint = this.#breakpoints.get(executingFrame.pc);
+    const skipBreakpoint = this.#skipBreakpointInstructionIndex === executingFrame.pc;
+    this.#skipBreakpointInstructionIndex = null;
+    if (breakpoint && !skipBreakpoint) {
+      this.#skipBreakpointInstructionIndex = executingFrame.pc;
+      this.#status = 'paused';
+      this.#pauseReason = 'breakpoint';
+      this.#hitBreakpointId = breakpoint.id;
+      return this.recordStep();
+    }
+
     if (this.#executedInstructionCount >= MAX_DYNAMIC_INSTRUCTION_COUNT) {
+      this.#pauseReason = null;
+      this.#hitBreakpointId = null;
       this.failInstruction(
         instruction,
         'instruction-budget-exceeded',
@@ -192,6 +225,8 @@ export class TeachingMachine {
 
     this.#faultInstructionIndex = null;
     this.#diagnostic = null;
+    this.#pauseReason = null;
+    this.#hitBreakpointId = null;
     this.#executedInstructionCount += 1;
     try {
       const nextPc = this.execute(instruction, executingFrame);
@@ -203,11 +238,14 @@ export class TeachingMachine {
         executingFrame.pc = nextPc ?? executingFrame.pc + 1;
       }
       this.#status = instruction.opcode === 'HALT' ? 'finished' : statusAfter;
+      this.#pauseReason = this.#status === 'paused' ? 'step' : null;
     } catch (error) {
       const diagnostic = error instanceof TeachingDiagnostic
         ? error
         : new TeachingDiagnostic('runtime', 'runtime-error', 'Teaching VM encountered an unexpected runtime error.', instruction.span);
       this.#status = 'error';
+      this.#pauseReason = null;
+      this.#hitBreakpointId = null;
       this.#faultInstructionIndex = instruction.index;
       this.#diagnostic = snapshotDiagnostic(diagnostic);
     }
@@ -218,6 +256,8 @@ export class TeachingMachine {
   setStatus(status: NonTerminalStatus): TeachingVmSnapshot {
     if (this.#status === 'finished' || this.#status === 'error') return this.#current;
     this.#status = status;
+    this.#pauseReason = status === 'paused' ? 'user' : null;
+    this.#hitBreakpointId = null;
     this.#current = this.createSnapshot();
     if (this.#history.length > 0) this.#history[this.#history.length - 1] = this.#current;
     return this.#current;
@@ -910,6 +950,8 @@ export class TeachingMachine {
 
   private failInstruction(instruction: TeachingInstruction, code: string, message: string): void {
     this.#status = 'error';
+    this.#pauseReason = null;
+    this.#hitBreakpointId = null;
     this.#faultInstructionIndex = instruction.index;
     this.#diagnostic = snapshotDiagnostic(new TeachingDiagnostic('runtime', code, message, instruction.span));
   }
@@ -939,6 +981,8 @@ export class TeachingMachine {
       executedInstructionCount: this.#executedInstructionCount,
       pc: activeFrame.pc,
       status: this.#status,
+      pauseReason: this.#pauseReason,
+      hitBreakpointId: this.#hitBreakpointId,
       lastExecutedInstructionIndex: this.#lastExecutedInstructionIndex,
       nextInstructionIndex: this.#status === 'finished' ? null : activeFrame.pc,
       faultInstructionIndex: this.#faultInstructionIndex,

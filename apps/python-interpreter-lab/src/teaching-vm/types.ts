@@ -303,6 +303,17 @@ export interface TeachingInstruction {
   span: SourceSpan;
 }
 
+export interface TeachingSourceLineMapping {
+  line: number;
+  instructionIndex: number;
+}
+
+export interface TeachingBreakpoint {
+  id: string;
+  line: number;
+  instructionIndex: number;
+}
+
 export interface TeachingFunction {
   id: number;
   name: string;
@@ -322,6 +333,7 @@ export interface TeachingCompileResult {
 }
 
 export type TeachingVmStatus = 'ready' | 'running' | 'paused' | 'finished' | 'error';
+export type TeachingPauseReason = 'breakpoint' | 'step' | 'user' | null;
 
 export interface TeachingValueSnapshot {
   type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator' | 'function' | 'list' | 'dict';
@@ -366,6 +378,8 @@ export interface TeachingVmSnapshot {
   executedInstructionCount: number;
   pc: number;
   status: TeachingVmStatus;
+  pauseReason: TeachingPauseReason;
+  hitBreakpointId: string | null;
   lastExecutedInstructionIndex: number | null;
   nextInstructionIndex: number | null;
   faultInstructionIndex: number | null;
