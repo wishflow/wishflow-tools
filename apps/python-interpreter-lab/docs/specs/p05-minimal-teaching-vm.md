@@ -14,7 +14,7 @@
 | --- | --- |
 | 程序 | 多行顶层语句；空行和 `#` 行尾注释可忽略；无代码块和缩进语义 |
 | 语句 | 单名字赋值 `name = expression`；`print(expression, ...)`，允许零个或多个位置参数 |
-| 值 | 十进制任意精度整数、单引号或双引号字符串 |
+| 值 | 十进制任意精度整数（前导零规则见下文）、单引号或双引号字符串 |
 | 运算 | 整数与字符串同类型 `+`；整数 `-`、`*`；一元整数负号；括号；乘法优先于加减；同级左结合 |
 | 名字 | ASCII 标识符；赋值创建或覆盖模块教学环境中的名字；未赋值读取报 `NameError` |
 | 打印 | 字符串输出原文、整数输出十进制；参数以空格分隔，每次调用末尾添加换行 |
@@ -47,6 +47,8 @@ primary       ::= INTEGER | STRING | NAME | "(" expression ")"
 - 单个整数结果最多 4096 bits，字符串最多 4096 Unicode 码点；超限产生明确运行期资源错误，不截成另一个值继续执行。
 
 词法和语法错误在执行前返回 1-based 行/列诊断。源码范围使用 UTF-16 code unit 的 `[start, end)` 偏移，列号也按 UTF-16 code unit 计数，以便与浏览器编辑区选区直接对应；CRLF 作为一个换行处理。该坐标约定属于编辑器位置，不等于 CPython AST 的 UTF-8 byte column。运行期错误保留发生错误的教学指令位置；二元运算失败时不先弹出操作数，保证错误快照显示失败前的栈。
+
+十进制整数允许 `0`，其他整数必须以 `1`–`9` 开始；例如 `00` 在编译期报错。
 
 ## 4. 教学指令与执行状态
 
@@ -118,7 +120,7 @@ VM 内部状态由 Worker 独占，包括 `pc`、值栈、名字绑定、输出�
 
 ## 8. 文件边界与依赖
 
-拟新增 `src/teaching-vm/` 下的小型 tokenizer、parser、compiler、VM 和显式类型模块，新增独立 `src/worker/teaching-vm.worker.ts`，在现有 React 页面与组件层接入教学模式，并为纯逻辑和浏览器流程增加单测与 Playwright。最终文件以实现前代码检查为准；按现有单应用模块模式组织，不抽通用编译器框架，不添加第三方依赖。
+实现沿用本应用现有 React + TypeScript + Vite 单页结构，没有新增依赖、路由或站点侧栏。Tokenizer、Parser、Compiler、VM、Worker 协议和 React 状态桥位于 `src/teaching-vm/`；执行调度位于独立的 `src/worker/teaching-vm.worker.ts`；界面集成复用现有 `App`、源码面板、共享 locale 和样式，并由 `TeachingVmPanel` 展示教学状态。单元测试覆盖纯逻辑，Playwright 使用真实页面与 Worker 验证交互。
 
 ## 9. 回滚
 
