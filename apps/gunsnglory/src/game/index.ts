@@ -277,6 +277,8 @@ export interface EnemyView {
 export interface WagonDebrisView {
   id: string;
   positionFine: { x: number; y: number };
+  /** Original GameObjectWagonParts fineY; fragments move independently but keep their parent draw depth. */
+  depthFineY: number;
   heightFine: number;
   frame: number;
 }
@@ -473,6 +475,7 @@ interface MutableSpawnField {
 interface MutableWagonPart {
   id: string;
   positionFine: { x: number; y: number };
+  depthFineY: number;
   heightFine: number;
   xDirection: number;
   yDirection: number;
@@ -1168,6 +1171,7 @@ function createWagonDebris(
         x: enemy.positionFine.x - Math.trunc((step * FINE_UNITS_PER_CELL) / 20),
         y: enemy.positionFine.y,
       },
+      depthFineY: enemy.positionFine.y,
       heightFine: 3840,
       xDirection: random.nextInt(2000) - 1000,
       yDirection: random.nextInt(200) - 100,
@@ -1666,9 +1670,10 @@ export function createGame(options: {
             hitFlashMs: enemy.hitFlashMs,
             animationFrame: enemy.animationFrame,
           })),
-          wagonDebris: (wave?.wagonDebris ?? []).map(({ id, positionFine, heightFine, frame }) => ({
+          wagonDebris: (wave?.wagonDebris ?? []).map(({ id, positionFine, depthFineY, heightFine, frame }) => ({
             id,
             positionFine: { ...positionFine },
+            depthFineY,
             heightFine,
             frame,
           })),
