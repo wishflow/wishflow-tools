@@ -1,4 +1,4 @@
-import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView } from '../game';
+import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
 import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
@@ -161,27 +161,53 @@ function drawUnit(
 function drawSceneObjects(
   context: CanvasRenderingContext2D,
   units: readonly UnitView[],
+  shots: readonly ShotView[],
+  wagonDebris: readonly WagonDebrisView[],
   decorations: readonly MapDecoration[],
   images: GameImages,
   viewport: MapViewport,
 ): void {
   const drawItems: { depth: number; order: number; draw: () => void }[] = [];
   const drawOrder = [...decorations].sort((a, b) => a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+  let order = 0;
 
-  drawOrder.forEach((decoration, order) => {
+  drawOrder.forEach((decoration) => {
     drawItems.push({
       depth: (decoration.cell.y + 1) * FINE_UNITS_PER_CELL,
       order,
       draw: () => drawMapDecoration(context, decoration, images, viewport),
     });
+    order += 1;
   });
 
-  units.forEach((unit, index) => {
+  units.forEach((unit) => {
     drawItems.push({
       depth: unit.positionFine.y,
-      order: drawOrder.length + index,
+      order,
       draw: () => drawUnit(context, unit, images, viewport),
     });
+    order += 1;
+  });
+
+  // GameView does not expose the source shot's fineZ. This orders the current
+  // Cow Gulch scene by ground Y; special projectiles that switch fineZ in canyon
+  // cells remain part of the full P1-F comparison.
+  shots.forEach((shot) => {
+    drawItems.push({
+      depth: shot.positionFine.y,
+      order,
+      draw: () => drawShot(context, shot, images, viewport),
+    });
+    order += 1;
+  });
+
+  wagonDebris.forEach((part) => {
+    drawItems.push({
+      depth: part.depthFineY,
+      order,
+      draw: () => drawWagonDebrisPart(context, part, images, viewport),
+    });
+    order += 1;
   });
 
   drawItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
@@ -283,22 +309,20 @@ function drawEnemy(
   }
 }
 
-function drawWagonDebris(
+function drawWagonDebrisPart(
   context: CanvasRenderingContext2D,
-  view: GameView,
+  part: WagonDebrisView,
   images: GameImages,
   viewport: MapViewport,
 ): void {
   const image = images.sfx_exploding_parts;
-  for (const part of view.wagonDebris ?? []) {
-    if (!image) throw new Error('Missing game image: sfx_exploding_parts');
-    const tileScale = viewport.scaleFactor;
-    const width = 12 * tileScale;
-    const height = 12 * tileScale;
-    const centerX = viewport.origin.x + (part.positionFine.x / 240) * tileScale;
-    const feetY = viewport.origin.y + ((part.positionFine.y - part.heightFine) / 240) * tileScale;
-    context.drawImage(image, part.frame * 12, 0, 12, 12, centerX - width / 2, feetY - height, width, height);
-  }
+  if (!image) throw new Error('Missing game image: sfx_exploding_parts');
+  const tileScale = viewport.scaleFactor;
+  const width = 12 * tileScale;
+  const height = 12 * tileScale;
+  const centerX = viewport.origin.x + (part.positionFine.x / 240) * tileScale;
+  const feetY = viewport.origin.y + ((part.positionFine.y - part.heightFine) / 240) * tileScale;
+  context.drawImage(image, part.frame * 12, 0, 12, 12, centerX - width / 2, feetY - height, width, height);
 }
 
 function drawShot(
@@ -711,10 +735,8 @@ export function drawGame(
   drawTiles(context, view.map.background, images, viewport);
   for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
   drawTiles(context, view.map.streets, images, viewport);
-  for (const shot of view.shots) drawShot(context, shot, images, viewport);
-  drawWagonDebris(context, view, images, viewport);
   context.restore();
-  drawSceneObjects(context, view.units, view.map.decorations ?? [], images, viewport);
+  drawSceneObjects(context, view.units, view.shots, view.wagonDebris ?? [], view.map.decorations ?? [], images, viewport);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 

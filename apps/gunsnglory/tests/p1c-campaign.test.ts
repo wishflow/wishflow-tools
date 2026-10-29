@@ -126,6 +126,9 @@ test('covered wagon death rewards once, waits until 499 ms, and emits visual-onl
   const wreck = view.enemies.find(({ id }) => id === wagon.id)!;
   assert.equal(wreck.deathRemainingMs, 499);
   assert.equal(view.wagonDebris?.length, 20);
+  const debrisDepthY = wreck.positionFine.y;
+  assert.ok(view.wagonDebris?.every((part) => part.depthFineY === debrisDepthY),
+    'all parts keep the parent GameObjectWagonParts depth anchor');
   const passengers = view.enemies.filter(({ id }) => id.startsWith('wagon-passenger-'));
   assert.ok(passengers.length > 0 && passengers.length <= 4, 'seed 2 should exercise at least one source passenger');
   assert.ok(passengers.every((passenger) => passenger.type === 1 || passenger.type === 2));
@@ -134,6 +137,11 @@ test('covered wagon death rewards once, waits until 499 ms, and emits visual-onl
   assert.equal(new Set(passengers.map(({ groupId }) => groupId)).size, passengers.length);
   assert.ok(passengers.every((passenger) => passenger.drawingOffsetFine?.x !== 0
     || passenger.drawingOffsetFine?.y !== 0));
+  view = session.advance({ deltaMs: 100 });
+  assert.ok(view.wagonDebris?.every((part) => part.depthFineY === debrisDepthY),
+    'the parent depth anchor stays fixed while parts move');
+  assert.ok(view.wagonDebris?.some((part) => part.positionFine.y !== part.depthFineY),
+    'at least one airborne part moves away from its parent draw depth');
 });
 
 

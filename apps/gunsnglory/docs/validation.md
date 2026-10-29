@@ -823,3 +823,26 @@ REA/JADX 归档中的 `GunsAndGloryThread` 绘制路径按背景、敌人、网�
 | 发布与公网实测 | `master` 合并提交 `1ff50d3` 已推送。GitHub Actions [run 40911621390](https://github.com/wishflow/wishflow-tools/actions/runs/40911621390) 中 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 和 GitHub Pages 均成功；Worker/config 检查因静态应用变更而跳过。Codex 内置浏览器访问 [公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=1ff50d3)，确认 Cow Gulch 地图、道路/桥、静态装饰、单位和战斗 HUD 正常；暂停在 Wave01/8，50条生命，未结算。测试前后原有正式档案均为1/1、最高分 $356；没有修改速度或档案。随后 master 上的 P8 文档提交 `86aba9e` 触发 [run 40911778860](https://github.com/wishflow/wishflow-tools/actions/runs/40911778860)，文档检查通过，应用测试和部署按 docs-only 变更规则跳过。 |
 
 同深度插入顺序、动态对象、敌人与装饰的遮挡对照及其它关卡仍属于 P1-F 后续对照范围；本轮不据此调整路线、地形或战斗逻辑，也不将 Cow Gulch 计为已验收关卡。
+
+## 45. P1-F Cow Gulch 投射物与残骸深度排序
+
+本轮将投射物和车厢碎片并入玩家单位、静态装饰共用的地面深度队列。地图背景、敌人和道路仍按既有固定图层绘制；对象队列使用细坐标 Y 排序。车厢碎片单独运动，但排序沿用原版 `GameObjectWagonParts.fineY` 父锚点，不随碎片的空中轨迹改变。
+
+### APK 静态依据与边界
+
+REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.gameObjectsDraworder` 遍历并绘制 `getValueByObject() < 768000` 的对象，然后绘制道路；`drawObjects()` 再绘制剩余非敌人对象。排序值为 `fineY + drawingOffsetY + fineZ × 100`，同一 `fineZ` 下等价于按地面 Y 排序。Cow Gulch 静态装饰、玩家单位和 `GameObjectWagonParts` 使用 `fineZ=7680`；碎片由 `GameObjectWagonParts` 按父对象固定 `fineY` 绘制。依据位于研究分支 `codex/gunsnglory-spec` 的 `apps/gunsnglory/docs/research/recovered-source/java/com/hg/gunsandglory/game/GunsAndGloryThread.java`、`gamelogic/GameObjectManager.java` 与 `gamelogic/GameObjectWagonParts.java`；这些 REA/JADX 反编译文件是分析产物，不是原始 Java 源码。
+
+`GameObjectShot` 初始继承射手的 `fineZ`；伤害类型 3、4、5、6 的投射物在满足峡谷地形、非道路及飞行高度等条件后会把 `fineZ` 从 7680 改为0，并更新 draw order（研究分支同目录 `gamelogic/GameObjectShot.java`）。当前网页 `ShotView` 未暴露 `fineZ` 和原版弹道高度状态，因此本轮只能将投射物按细坐标 Y 排入道路之后的队列；特殊投射物应处于道路下方时的层级差异仍未修复。该限制不影响本轮对玩家单位、静态装饰和车厢残骸排序的结论，也不代表完整投射物视觉复刻。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 回归测试 | Canvas 夹具让树木、单位、投射物、车厢碎片和前排灌木按不同地面 Y 交错，断言绘制序列为背景→敌人→道路→后排装饰→单位→投射物→残骸→前排装饰；同时保留视口裁切及锚点断言。 |
+| 残骸锚点 | P1-C 运输死亡测试确认所有20个碎片使用车厢父对象的固定 `fineY` 排序；推进100ms后碎片位置已移动，但深度锚点不变。 |
+| 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4180 CI=1 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、152 项单元测试、生产构建及52项 Playwright 测试。 |
+| Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5177/` 以 1280×720 视口检查 Cow Gulch；截图可见 HUD、峡谷岩壁、两座桥、静态装饰、枪手、敌人及车厢碎片。检查时本地测试页显示 Wave04/8，生命46，敌人7，现金$139；随即暂停，正式档案仍为0/1，未产生结算。该画面核对地图与层级呈现，不作为战斗随机结果的验收证据。 |
+| 浏览器控制台 | 本地内置浏览器错误及警告日志为空。 |
+| 发布与公网实测 | 待本轮提交、集成、推送及 Pages workflow 成功后补记；此项完成前不得报告已发布。 |
+
+本轮只验证共享地面深度队列和车厢碎片锚点。特殊投射物的动态 `fineZ`、敌人/投射物/装饰的完整跨图层对照、同深度插入次序及其它地图仍待处理；Cow Gulch 首关仍为0/60。
