@@ -26,25 +26,25 @@ async function canvasPixels(page: import('@playwright/test').Page): Promise<stri
   return page.getByTestId('game-canvas').evaluate((element) => (element as HTMLCanvasElement).toDataURL());
 }
 
-test('drags the unit to a terrain boundary, then stops when the pointer is released', async ({ page }) => {
+test('blocks a drag at original map scenery, then stops when the pointer is released', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   await openSingleWaveSample(page);
   const status = page.getByTestId('selection-status');
   const start = await mapPoint(page, 8.5, 8.25);
-  const beyondCanyonWall = await mapPoint(page, 15, 8.75);
+  const beyondScenery = await mapPoint(page, 15, 8.75);
 
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();
   await expect(status).toContainText('Gunslinger selected');
-  await page.mouse.move(beyondCanyonWall.x, beyondCanyonWall.y, { steps: 8 });
-  await expect(status).toContainText('(12, 9)', { timeout: 5000 });
+  await page.mouse.move(beyondScenery.x, beyondScenery.y, { steps: 8 });
+  await expect(status).toContainText('(10, 9)', { timeout: 5000 });
   await page.mouse.up();
 
   const stoppedPixels = await canvasPixels(page);
   await page.waitForTimeout(250);
   expect(await canvasPixels(page)).toBe(stoppedPixels);
-  await expect(status).toContainText('(12, 9)');
+  await expect(status).toContainText('(10, 9)');
 });
 
 test('stops a drag on pointer cancellation or lost capture', async ({ page }) => {

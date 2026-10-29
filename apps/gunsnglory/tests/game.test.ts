@@ -672,6 +672,85 @@ test('blocks the original collision terrain and slides along it one axis at a ti
   assert.ok(view.units[0]!.positionFine.y > (1.75 * 7680), 'vertical motion slides while horizontal motion is blocked');
 });
 
+test('blocks movement against the original static decoration collision boxes', async () => {
+  const cases = [
+    {
+      id: 'decoration-collision-fixture',
+      code: 76,
+      unitCell: { x: 1, y: 1 },
+      decoration: {
+        asset: 'e_1x1_bush',
+        cell: { x: 2, y: 1 },
+        collisionBoxFine: { x: 1920, y: -1228, width: 3840, height: 2534 },
+      },
+    },
+    {
+      id: 'skeleton-collision-fixture',
+      code: 77,
+      unitCell: { x: 1, y: 1 },
+      decoration: {
+        asset: 'e_1x2_bones',
+        cell: { x: 2, y: 1 },
+        collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 },
+      },
+    },
+    {
+      id: 'shack-collision-fixture',
+      code: 116,
+      unitCell: { x: 0, y: 1 },
+      decoration: {
+        asset: 'b_2x1_shack',
+        cell: { x: 2, y: 1 },
+        collisionBoxFine: { x: -3840, y: -1228, width: 15360, height: 3840 },
+      },
+    },
+  ];
+
+  for (const collisionCase of cases) {
+    const originalTileGrid = Array.from({ length: 4 }, () => Array.from({ length: 4 }, () => 0));
+    originalTileGrid[collisionCase.decoration.cell.y]![collisionCase.decoration.cell.x] = collisionCase.code;
+    const cell = collisionCase.unitCell;
+    const objectScenario: ScenarioContent = {
+      id: collisionCase.id,
+      title: { en: collisionCase.id, zh: collisionCase.id },
+      map: {
+        width: 4,
+        height: 4,
+        tileSize: 32,
+        background: [],
+        streets: [],
+        decorations: [collisionCase.decoration],
+      },
+      originalTileGrid,
+      units: [{
+        ...scenario.units[0]!,
+        cell,
+        render: { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 },
+        hitArea: { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 },
+      }],
+    };
+    const session = await createGame({ scenarios: { [objectScenario.id]: objectScenario } })
+      .open({ scenarioId: objectScenario.id });
+    session.submitIntent({ type: 'select-at', x: cell.x + 0.5, y: cell.y + 0.5 });
+    session.advance({ deltaMs: 0 });
+    session.submitIntent({ type: 'move-unit', targetX: 3.5, targetY: 1.5 });
+
+    let view = session.advance({ deltaMs: 100 });
+    for (let frame = 0; frame < 19; frame += 1) view = session.advance({ deltaMs: 100 });
+
+    const unitRight = view.units[0]!.positionFine.x + 2534;
+    const decorationLeft = (collisionCase.decoration.cell.x * 7680) + collisionCase.decoration.collisionBoxFine.x;
+    assert.ok(
+      unitRight <= decorationLeft,
+      `${collisionCase.id}: the unit stops before overlapping the original static-object collider`,
+    );
+    if (collisionCase.id === 'shack-collision-fixture') {
+      assert.ok(view.units[0]!.positionFine.x > (cell.x * 7680) + 3840,
+        'the shack collider blocks the unit at its original edge while allowing approach');
+    }
+  }
+});
+
 test('keeps the full Gunslinger sprite inside the map texture at its outer edges', async () => {
   const edgeTargets = [
     { name: 'left', x: 0, y: 8.75 },
@@ -1546,7 +1625,7 @@ test('prepares a complete immutable numeric setup without allocating a session o
 
   assert.equal(prepared.scenarioId, cowGulchContent.id);
   assert.equal(prepared.contentVersion, cowGulchContent.contentVersion);
-  assert.equal(prepared.rulesVersion, 'gng-rules-2');
+  assert.equal(prepared.rulesVersion, 'gng-rules-3');
   assert.ok(prepared.parameters.some(({ path, value }) =>
     path === 'units/gunslinger-1/weapon/damage' && value === 140));
   assert.ok(prepared.parameters.some(({ path, value }) => path === 'maxUpgrades' && value === 0));
@@ -1582,6 +1661,10 @@ test('rejects unavailable content and rules versions before allocating a session
   await assert.rejects(game.open({
     scenarioId: cowGulchContent.id,
     preparedSetup: { ...setup, rulesVersion: 'future-rules-version' },
+  }), (error: unknown) => (error as { code?: string }).code === 'rules-version-unsupported');
+  await assert.rejects(game.open({
+    scenarioId: cowGulchContent.id,
+    preparedSetup: { ...setup, rulesVersion: 'gng-rules-2' },
   }), (error: unknown) => (error as { code?: string }).code === 'rules-version-unsupported');
 
   assert.equal(randomReads, 0);

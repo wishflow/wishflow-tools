@@ -5,7 +5,7 @@ import { cowGulchP1dCampaignContent } from './cow-gulch';
 export const cowGulchLevelOneContent = {
   ...cowGulchP1dCampaignContent,
   id: 'campaign-new-mexico-01',
-  contentVersion: 'gng-free-1.8.6-new-mexico-01-p1e-v1',
+  contentVersion: 'gng-free-1.8.6-new-mexico-01-p1e-v2',
   title: { en: 'Cow Gulch · Level 1', zh: '牛溪谷 · 第 1 关' },
   formalSettlementSupported: true,
 };
