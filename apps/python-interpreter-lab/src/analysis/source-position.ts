@@ -9,7 +9,8 @@ export type SourceLinkOrigin =
   | { kind: 'editor' }
   | { kind: 'token'; id: number }
   | { kind: 'ast'; id: string }
-  | { kind: 'instruction'; codeObjectId: string; offset: number };
+  | { kind: 'instruction'; codeObjectId: string; offset: number }
+  | { kind: 'trace'; index: number };
 
 export interface SourceLink {
   origin: SourceLinkOrigin;
@@ -93,6 +94,15 @@ export function sourcePositionOffset(
   const offsets = unit === 'code-point' ? line.codePointOffsets : line.utf8ByteOffsets;
   const localOffset = offsets.get(position.column);
   return localOffset === undefined ? null : line.start + localOffset;
+}
+
+export function sourceLineRange(index: SourcePositionIndex, lineNumber: number): SourceRange | null {
+  if (!Number.isInteger(lineNumber) || lineNumber < 1) return null;
+  const line = index.lines[lineNumber - 1];
+  if (!line) return null;
+  const endOffset = Math.max(...line.codePointOffsets.values());
+  if (endOffset === 0) return null;
+  return { start: line.start, end: line.start + endOffset };
 }
 
 export function sourcePositionRange(

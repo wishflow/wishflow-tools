@@ -1,4 +1,4 @@
-import type { AnalysisResult, PythonDiagnostic, WorkerRequest, WorkerResponse } from '../analysis/types';
+import type { AnalysisResult, PythonDiagnostic, WorkerExecutionResult, WorkerRequest, WorkerResponse } from '../analysis/types';
 
 const PYODIDE_VERSION = '314.0.7';
 const PYODIDE_BASE_URL = `https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/`;
@@ -8,7 +8,7 @@ interface PyodideRuntime {
   version: string;
   runPython(source: string): unknown;
   globals: {
-    set(name: string, value: string): void;
+    set(name: string, value: unknown): void;
     delete(name: string): void;
   };
 }
@@ -240,6 +240,252 @@ def analyze(source):
 json.dumps(analyze(__user_source), ensure_ascii=False, allow_nan=False)
 `;
 
+const EXECUTE_PYTHON = String.raw`
+import json
+import sys
+import time
+import types
+
+MAX_TRACE_EVENTS = 5000
+MAX_OUTPUT_CHARACTERS = 32768
+MAX_CALL_DEPTH = 40
+MAX_LOCALS = 20
+MAX_NAME_LENGTH = 100
+MAX_VALUE_LENGTH = 120
+MAX_STRING_PREVIEW = 10
+MAX_BYTES_PREVIEW = 16
+MAX_INTEGER_PREVIEW_BITS = 256
+BATCH_EVENTS = 32
+BATCH_OUTPUT_CHARACTERS = 1024
+SOURCE_FILENAME = '<input>'
+
+started_at = time.perf_counter()
+source = __lab_source
+
+def bounded_name(value):
+    if len(value) > MAX_NAME_LENGTH:
+        return value[:MAX_NAME_LENGTH - 1] + '…'
+    return value
+
+def type_name(value):
+    return bounded_name(type.__getattribute__(type(value), '__name__'))
+
+def safe_value(name, value):
+    value_type = type(value)
+    value_type_name = type_name(value)
+    if value_type is str:
+        preview = value[:MAX_STRING_PREVIEW]
+        summary = repr(preview)
+        if len(value) > MAX_STRING_PREVIEW:
+            summary = summary[:-1] + '…' + summary[-1]
+    elif value_type is bytes:
+        preview = value[:MAX_BYTES_PREVIEW]
+        summary = repr(preview)
+        if len(value) > MAX_BYTES_PREVIEW:
+            summary = summary[:-1] + '…' + summary[-1]
+    elif value_type is int and int.bit_length(value) > MAX_INTEGER_PREVIEW_BITS:
+        summary = '<int · ' + str(int.bit_length(value)) + ' bits>'
+    elif value_type in (type(None), bool, int, float):
+        summary = repr(value)
+    elif value_type in (list, tuple, set, dict):
+        summary = '<' + value_type_name + ' · ' + str(len(value)) + ' items>'
+    else:
+        summary = '<' + value_type_name + '>'
+    name = bounded_name(name)
+    if len(summary) > MAX_VALUE_LENGTH:
+        summary = summary[:MAX_VALUE_LENGTH] + '…'
+    return {'name': name, 'type': value_type_name, 'summary': summary}
+
+def exception_summary(error, traceback_object=None):
+    error_type = type_name(error)
+    if type(error) is SyntaxError:
+        message = error.msg or ''
+        line = error.lineno
+    else:
+        args = BaseException.__dict__['args'].__get__(error, type(error))
+        message = ', '.join(safe_value('', value)['summary'] for value in args[:2])
+        line = None
+        if traceback_object is None:
+            traceback_object = BaseException.__dict__['__traceback__'].__get__(error, type(error))
+        while traceback_object is not None:
+            frame = traceback_object.tb_frame
+            if frame.f_code.co_filename == SOURCE_FILENAME:
+                line = traceback_object.tb_lineno
+            traceback_object = traceback_object.tb_next
+    if len(message) > 240:
+        message = message[:240] + '…'
+    return {'type': error_type, 'message': message, 'line': line}
+
+class CappedOutput:
+    encoding = 'utf-8'
+
+    def __init__(self, state):
+        self.state = state
+        self.parts = []
+        self.pending = []
+        self.pending_length = 0
+        self.length = 0
+        self.truncated = False
+
+    def write(self, text):
+        if not isinstance(text, str):
+            raise TypeError('write() argument must be str')
+        remaining = MAX_OUTPUT_CHARACTERS - self.state['captured']
+        retained = text[:max(0, remaining)]
+        if retained:
+            self.parts.append(retained)
+            self.pending.append(retained)
+            self.pending_length += len(retained)
+            self.length += len(retained)
+            self.state['captured'] += len(retained)
+        if len(retained) < len(text):
+            self.truncated = True
+            self.state['truncated'] = True
+        if self.pending_length >= BATCH_OUTPUT_CHARACTERS:
+            flush_batch()
+        return len(text)
+
+    def flush(self):
+        return None
+
+    def getvalue(self):
+        return ''.join(self.parts)
+
+    def take_pending(self):
+        text = ''.join(self.pending)
+        self.pending = []
+        self.pending_length = 0
+        return text
+
+output_state = {'captured': 0, 'truncated': False}
+stdout = CappedOutput(output_state)
+stderr = CappedOutput(output_state)
+pending_events = []
+event_count = 0
+trace_truncated = False
+trace_enabled = True
+emitter_failed = False
+
+def flush_batch(force=False):
+    global emitter_failed
+    if emitter_failed:
+        pending_events.clear()
+        stdout.take_pending()
+        stderr.take_pending()
+        return
+    if not force and len(pending_events) < BATCH_EVENTS and stdout.pending_length < BATCH_OUTPUT_CHARACTERS and stderr.pending_length < BATCH_OUTPUT_CHARACTERS:
+        return
+    if not pending_events and stdout.pending_length == 0 and stderr.pending_length == 0:
+        return
+    payload = {
+        'events': pending_events[:],
+        'stdout': stdout.take_pending(),
+        'stderr': stderr.take_pending(),
+    }
+    pending_events.clear()
+    try:
+        __lab_emit(json.dumps(payload, ensure_ascii=False, allow_nan=False))
+    except BaseException:
+        emitter_failed = True
+
+def call_stack_for(frame):
+    names = []
+    current = frame
+    while current is not None:
+        if current.f_code.co_filename == SOURCE_FILENAME:
+            names.append(bounded_name(current.f_code.co_name))
+        current = current.f_back
+    names.reverse()
+    truncated = len(names) > MAX_CALL_DEPTH
+    return names[-MAX_CALL_DEPTH:], truncated
+
+def locals_for(frame):
+    values = frame.f_locals
+    names = sorted(
+        name for name in values
+        if type(name) is str and name not in ('__builtins__', '__name__', '__doc__', '__annotations__')
+    )
+    truncated = len(names) > MAX_LOCALS
+    summaries = [safe_value(name, values[name]) for name in names[:MAX_LOCALS]]
+    return summaries, truncated
+
+def record_event(frame, event, argument):
+    global event_count, trace_truncated, trace_enabled
+    if frame.f_code.co_filename != SOURCE_FILENAME:
+        return None
+    if event_count >= MAX_TRACE_EVENTS:
+        trace_truncated = True
+        trace_enabled = False
+        return None
+    call_stack, call_stack_truncated = call_stack_for(frame)
+    local_values, locals_truncated = locals_for(frame)
+    event_data = {
+        'index': event_count,
+        'event': event,
+        'phase': {
+            'call': 'frame-enter',
+            'line': 'line-before',
+            'exception': 'exception-raised',
+            'return': 'frame-exit',
+        }[event],
+        'line': frame.f_lineno,
+        'functionName': bounded_name(frame.f_code.co_name),
+        'callStack': call_stack,
+        'callStackTruncated': call_stack_truncated,
+        'locals': local_values,
+        'localsTruncated': locals_truncated,
+        'stdoutOffset': stdout.length,
+        'stderrOffset': stderr.length,
+    }
+    if event == 'return':
+        event_data['returnValue'] = safe_value('return', argument)
+    elif event == 'exception':
+        exception_type, error, traceback_object = argument
+        event_data['exception'] = exception_summary(error, traceback_object)
+    pending_events.append(event_data)
+    event_count += 1
+    if len(pending_events) >= BATCH_EVENTS:
+        flush_batch()
+    return record_event if trace_enabled else None
+
+user_globals = {'__name__': '__main__'}
+compiled = None
+outcome = 'completed'
+final_exception = None
+try:
+    compiled = compile(source, SOURCE_FILENAME, 'exec')
+except BaseException as error:
+    outcome = 'exception'
+    final_exception = exception_summary(error)
+
+if compiled is not None:
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    try:
+        sys.stdout = stdout
+        sys.stderr = stderr
+        sys.settrace(record_event)
+        exec(compiled, user_globals, user_globals)
+    except BaseException as error:
+        outcome = 'exception'
+        final_exception = exception_summary(error)
+    finally:
+        sys.settrace(None)
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+
+flush_batch(force=True)
+json.dumps({
+    'outcome': outcome,
+    'traceTruncated': trace_truncated or emitter_failed,
+    'stdout': stdout.getvalue(),
+    'stderr': stderr.getvalue(),
+    'outputTruncated': output_state['truncated'],
+    'durationMs': int((time.perf_counter() - started_at) * 1000),
+    'exception': final_exception,
+}, ensure_ascii=False, allow_nan=False)
+`;
+
 const workerScope = self as DedicatedWorkerGlobalScope;
 let sessionId: number | null = null;
 let runtime: PyodideRuntime | null = null;
@@ -321,11 +567,45 @@ function analyzeSource(request: Extract<WorkerRequest, { type: 'analyze' }>): vo
   }
 }
 
+function executeSource(request: Extract<WorkerRequest, { type: 'execute' }>): void {
+  if (!runtime || request.sessionId !== sessionId) return;
+  try {
+    runtime.globals.set('__lab_source', request.source);
+    runtime.globals.set('__lab_emit', (json: string) => {
+      const batch = JSON.parse(json) as Pick<WorkerResponse & { type: 'execution-batch' }, 'events' | 'stdout' | 'stderr'>;
+      respond({
+        type: 'execution-batch',
+        sessionId: request.sessionId,
+        requestId: request.requestId,
+        events: batch.events,
+        stdout: batch.stdout,
+        stderr: batch.stderr,
+      });
+    });
+    const raw = fromPythonString(runtime.runPython(EXECUTE_PYTHON));
+    const result = JSON.parse(raw) as WorkerExecutionResult;
+    respond({ type: 'execution-complete', sessionId: request.sessionId, requestId: request.requestId, result });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    respond({
+      type: 'error',
+      sessionId: request.sessionId,
+      requestId: request.requestId,
+      error: runtimeDiagnostic(message),
+    });
+  } finally {
+    runtime.globals.delete('__lab_source');
+    runtime.globals.delete('__lab_emit');
+  }
+}
+
 workerScope.addEventListener('message', (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
   if (request.type === 'init') {
     void initialize(request.sessionId);
-  } else {
+  } else if (request.type === 'analyze') {
     analyzeSource(request);
+  } else {
+    executeSource(request);
   }
 });

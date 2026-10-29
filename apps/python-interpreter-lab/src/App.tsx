@@ -26,10 +26,12 @@ export default function App() {
   useEffect(() => subscribeLanguage(setLanguage), []);
 
   function updateSource(nextSource: string) {
+    const shouldRestart = analysis.status === 'analyzing' || analysis.status === 'running';
     setSource(nextSource);
     setSourceLink(null);
     analysis.clearOutput();
-    if (analysis.status === 'analyzing') analysis.restart();
+    analysis.clearExecution();
+    if (shouldRestart) analysis.restart();
   }
 
   function startAnalysis() {
@@ -38,10 +40,17 @@ export default function App() {
     analysis.analyze(source);
   }
 
+  function startExecution() {
+    if (!sourceValidation.ok) return;
+    setSourceLink(null);
+    analysis.run(source);
+  }
+
   const statusText: Record<typeof analysis.status, string> = {
     loading: t('runtimeLoading'),
     ready: t('runtimeReady'),
     analyzing: t('runtimeAnalyzing'),
+    running: t('runtimeRunning'),
     stopped: t('runtimeStopped'),
     failed: t('runtimeFailed'),
   };
@@ -85,6 +94,8 @@ export default function App() {
           onLink={setSourceLink}
           onChange={updateSource}
           onAnalyze={startAnalysis}
+          onRun={startExecution}
+          onStopExecution={analysis.stopExecution}
           onCancel={analysis.cancel}
           onRetry={analysis.retry}
           onClear={() => updateSource('')}
@@ -92,8 +103,9 @@ export default function App() {
         />
         <ResultsPanel
           result={analysis.result}
+          execution={analysis.execution}
           diagnostic={analysis.diagnostic}
-          isBusy={analysis.status === 'analyzing'}
+          isBusy={analysis.status === 'analyzing' || analysis.status === 'running'}
           positionIndex={positionIndex}
           sourceLink={sourceLink}
           t={t}

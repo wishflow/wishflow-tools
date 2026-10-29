@@ -16,15 +16,16 @@ interface SourcePanelProps {
   onLink(link: SourceLink): void;
   onChange(source: string): void;
   onAnalyze(): void;
+  onRun(): void;
+  onStopExecution(): void;
   onCancel(): void;
   onRetry(): void;
   onClear(): void;
   onRestore(): void;
 }
 
-export function SourcePanel({ source, status, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onCancel, onRetry, onClear, onRestore }: SourcePanelProps) {
+export function SourcePanel({ source, status, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onClear, onRestore }: SourcePanelProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
-  const busy = status === 'loading' || status === 'analyzing';
 
   useEffect(() => {
     if (!sourceLink || sourceLink.origin.kind === 'editor') return;
@@ -81,12 +82,18 @@ export function SourcePanel({ source, status, error, tokens, positionIndex, sour
           <button type="button" className="text-button" onClick={onClear}>{t('clearSource')}</button>
         </div>
         <div className="primary-actions">
-          {busy ? (
+          {status === 'loading' || status === 'analyzing' ? (
             <button type="button" className="button button-secondary" onClick={onCancel}>{t('cancel')}</button>
-          ) : status === 'stopped' || status === 'failed' ? (
-            <button type="button" className="button button-primary" onClick={onRetry}>{t('retry')}</button>
           ) : (
             <button type="button" className="button button-primary" disabled={status !== 'ready' || Boolean(error)} onClick={onAnalyze}>{t('analyze')}</button>
+          )}
+          {status === 'running' ? (
+            <button type="button" className="button button-secondary" onClick={onStopExecution}>{t('stopExecution')}</button>
+          ) : (
+            <button type="button" className="button button-primary" disabled={status !== 'ready' || Boolean(error)} onClick={onRun}>{t('runPython')}</button>
+          )}
+          {(status === 'stopped' || status === 'failed') && (
+            <button type="button" className="button button-primary" onClick={onRetry}>{t('retry')}</button>
           )}
         </div>
       </div>

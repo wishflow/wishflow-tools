@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AnalysisResult, AstField, AstNode, PythonDiagnostic } from '../analysis/types';
+import type { AnalysisResult, AstField, AstNode, ExecutionResult, PythonDiagnostic } from '../analysis/types';
 import {
   astNodeSourceRange,
   instructionSourceRange,
@@ -11,10 +11,12 @@ import {
 import { AstTree } from './AstTree';
 import { BytecodePanel } from './BytecodePanel';
 import { TokensPanel } from './TokensPanel';
+import { ExecutionPanel } from './ExecutionPanel';
 import type { MessageKey } from '../locales';
 
 interface ResultsPanelProps {
   result: AnalysisResult | null;
+  execution: ExecutionResult | null;
   diagnostic: PythonDiagnostic | null;
   isBusy: boolean;
   positionIndex: SourcePositionIndex;
@@ -50,7 +52,7 @@ function ErrorPanel({ diagnostic, t }: { diagnostic: PythonDiagnostic; t: (key: 
   );
 }
 
-export function ResultsPanel({ result, diagnostic, isBusy, positionIndex, sourceLink, t, onLink }: ResultsPanelProps) {
+export function ResultsPanel({ result, execution, diagnostic, isBusy, positionIndex, sourceLink, t, onLink }: ResultsPanelProps) {
   const [selectedCodeId, setSelectedCodeId] = useState('code-0');
   useEffect(() => {
     if (result) setSelectedCodeId(result.codeObjects[0]?.id ?? 'code-0');
@@ -80,6 +82,7 @@ export function ResultsPanel({ result, diagnostic, isBusy, positionIndex, source
         {result && <span className="result-count">{t('codeObjectCount').replace('{count}', String(result.codeObjects.length))}</span>}
       </div>
       {diagnostic && <ErrorPanel diagnostic={diagnostic} t={t} />}
+      <ExecutionPanel execution={execution} sourcePositionIndex={positionIndex} t={t} onLink={onLink} />
       {result && sourceLink && (
         <p className="link-status" role="status">
           {!sourceLink.range ? t('sourcePositionUnavailable') : hasSourceMatch ? t('sourceLinkActive') : t('sourceNoMatches')}
