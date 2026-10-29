@@ -871,3 +871,7 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 | 发布与公网实测 | `master` 发布提交 `666c6c1b5b6a493adac7cef674a8cf7b8530499a` 已推送。GitHub Actions [run 40933632292](https://github.com/wishflow/wishflow-tools/actions/runs/40933632292) 中 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 和 GitHub Pages 均通过；Worker/config 检查按静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=666c6c1)，以1280×720视口确认导航、战役档案、Cow Gulch 地图与战斗 HUD 正常。战局暂停在 Wave01/8、50条生命、5名敌人、$76；正式档案测试前后均为1/1、最高分 $356，速度保持原存档4×，未产生结算。浏览器 error/warn 为空。 |
 
 本轮只补齐 Cow Gulch 当前实现所用特殊投射物的高度和道路层级，不代表所有弹道帧、拖尾动画、所有地图对象遮挡及整关原版对照完成。Cow Gulch 首关仍为0/60。
+
+### 开发预览排错记录
+
+本地 Vite 开发预览在重命名弹道切层函数后，热更新期间短暂报告旧符号 `updateShotFineZ` 未定义；整页重载后恢复。该日志来自热更新状态，不是最终源码构建或公开页面错误。今后若 HMR 在函数改名后报旧符号，先做整页重载并检查最终浏览器日志，再判断是否为可复现的代码缺陷。
