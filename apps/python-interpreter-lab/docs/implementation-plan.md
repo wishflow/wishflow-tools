@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线、P1 真实编译工作区和 P2 Token/源码联动已完成并发布到 `master`。P1、P2 的 GitHub Pages、Cloudflare Pages 和线上验收通过，阶段证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)。P3 的独立 spec 与 tasks 已建立，本地实现及完整回归通过；当前等待发布和线上实测完成阶段验收。
+P0 文档基线、P1 真实编译工作区、P2 Token/源码联动和 P3 真实执行轨迹均已完成并发布到 `master`。P1–P3 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)。下一阶段为 P4 结构化变量与历史观察；开始前按第 2 节补充独立 spec 和 tasks。
 
 P0 建立了以下文档：
 
@@ -97,13 +97,13 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **当前结果**：应用 `pnpm run test:ci` 通过（11 条单测、8 条 Playwright）；根 `pnpm run test:catalog` 14 条检查通过，`pnpm run build:site` 成功。推送 `a062421` 后 workflow [40765644524](https://github.com/wishflow/wishflow-tools/actions/runs/40765644524) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。线上 `https://wishflow-tools.pages.dev/python-interpreter-lab/` 实测 CPython 3.14.2 返回 19 个 Token，运算符显示 `OP · PLUS`；定位 emoji 字符串精确选择 `"🐍"`，点击 `BINARY_OP` 选择 `left + right`，并联动高亮 3 个 Token 与 AST 节点。P2 已独立发布，后续按 P3 的启动规则继续。
 - **回滚**：移除新增观察与联动能力，P1 独立分析仍可用。
 
-### P3：真实运行、轨迹与回放（本地实现完成，待发布验收）
+### P3：真实运行、轨迹与回放（已完成并发布）
 
 - **前置**：P1；确认执行会话、输出捕获、事件时机、停止恢复及录制预算。
 - **交付**：运行当前源码，记录用户帧的行、调用、返回和异常事件，捕获输出；显示调用关系和基础值摘要；录制完成后可播放、暂停、调速及按事件前后移动。停止运行与暂停播放使用不同控件或明确状态。
 - **验收**：循环显示多次行事件；函数能读取顶层全局变量；异常显示已产生输出及最终结果；事件前/后状态标识准确；回放不重复执行 `print`；死循环可终止并重新运行；旧会话响应不混入新会话。
 - **具体规格与任务**：[P3 spec](specs/p03-real-execution-trace.md)；[P3 tasks](tasks/p03-real-execution-trace.md)。固定 Pyodide 314.0.7 / CPython 3.14.2，通过 `sys.settrace()` 记录 `<input>` 用户帧；单次运行上限 5 秒、轨迹 5,000 项、输出 32,768 码点，并限制快照字段长度。停止或超时时终止 Worker，回放只浏览已录制事件，不重新执行代码。
-- **本地结果**：应用 `pnpm run test:ci` 通过（13 条单测、15 条 Playwright）；根 `pnpm run test:catalog` 14 项通过，`pnpm run build:site` 成功。Playwright 实测 CPython 调用/行/返回与异常、全局读取、循环重复行、事件回放不重复输出、停止/超时/Retry、源码编辑清理旧轨迹、事件与输出上限及 320/768/1024/1440px 布局。部署与线上结果见 P3 tasks；在线 gate 通过后再标记本阶段完成并启动 P4。
+- **当前结果**：应用 `pnpm run test:ci` 通过（13 条单测、15 条 Playwright）；根 `pnpm run test:catalog` 14 项通过，`pnpm run build:site` 成功。Playwright 实测 CPython 调用/行/返回与异常、全局读取、循环重复行、事件回放不重复输出、停止/超时/Retry、源码编辑清理旧轨迹、事件与输出上限及 320/768/1024/1440px 布局。提交 `bdba3e8` 推送后，workflow [40810018154](https://github.com/wishflow/wishflow-tools/actions/runs/40810018154) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。线上固定版本 CPython 3.14.2 实测全局变量函数输出 `42`、8 个事件、源码行定位及回放输出；死循环可停止，重载运行时后再次运行成功。P3 已独立发布，下一阶段按 P4 启动规则补充 spec/tasks。
 - **回滚**：回退运行与轨迹入口，保留静态编译观察。终止或超限留下的历史明确标为不完整。
 
 ### P4：结构化变量与历史观察

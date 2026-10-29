@@ -55,7 +55,7 @@ T01 Worker 执行协议
 
 | 任务 | 状态 | 验证与证据 |
 | --- | --- | --- |
-| T01 Worker 执行协议 | 本地完成 | 固定 Pyodide 314.0.7 / CPython 3.14.2 浏览器用例验证模块全局读取（输出 `12`）、真实 `call`/`line`/`exception`/`return` 事件、捕获/未捕获异常、stdout、事件批次及大整数/长标签限长。应用完整 Playwright 通过 15/15。 |
-| T02 会话与停止 | 本地完成 | Playwright 用死循环验证手动 Stop、5 秒超时、重建 Worker 后 Retry；编辑运行中源码后旧轨迹清除，下一次执行只显示新源码结果。超时、停止及 Worker 故障的状态与不完整记录分开处理。 |
-| T03 时间线与回放 | 本地完成 | Playwright 验证循环同一行出现 3 次、函数调用路径、源码行定位、捕获异常事件、播放前后输出不重复、键盘游标和四种视口；单测验证 emoji/中文输出偏移映射与源码行切片。 |
-| T04 回归与发布 | 本地验证通过，待线上验收 | 应用 `pnpm run test:ci`：13/13 单测、15/15 Playwright；根 `pnpm run test:catalog`：14/14；`pnpm run build:site` 成功。临时将事件数比较从 `>= 5,000` 改为 `> 5,000` 后，限额用例按预期失败并显示 5,001 项；恢复实现后完整应用 CI 通过。`git diff --check` 与 3 份文档相对链接检查通过；Markdown 已复制到 `/tmp/var/wishflow-tools/` 并逐文件 `cmp` 一致。提交合并后的 GitHub workflow 成功后，再在线上验证运行、停止和回放并记录完成。 |
+| T01 Worker 执行协议 | 已完成 | 固定 Pyodide 314.0.7 / CPython 3.14.2 浏览器用例验证模块全局读取（输出 `12`）、真实 `call`/`line`/`exception`/`return` 事件、捕获/未捕获异常、stdout、事件批次及大整数/长标签限长。应用完整 Playwright 通过 15/15。 |
+| T02 会话与停止 | 已完成 | Playwright 用死循环验证手动 Stop、5 秒超时、重建 Worker 后 Retry；编辑运行中源码后旧轨迹清除，下一次执行只显示新源码结果。超时、停止及 Worker 故障的状态与不完整记录分开处理。 |
+| T03 时间线与回放 | 已完成 | Playwright 验证循环同一行出现 3 次、函数调用路径、源码行定位、捕获异常事件、播放前后输出不重复、键盘游标和四种视口；单测验证 emoji/中文输出偏移映射与源码行切片。 |
+| T04 回归与发布 | 已完成并发布 | 应用 `pnpm run test:ci`：13/13 单测、15/15 Playwright；根 `pnpm run test:catalog`：14/14；`pnpm run build:site` 成功。临时将事件数比较从 `>= 5,000` 改为 `> 5,000` 后，限额用例按预期失败并显示 5,001 项；恢复实现后完整应用 CI 通过。`git diff --check` 与 3 份文档相对链接检查通过；Markdown 已复制到 `/tmp/var/wishflow-tools/` 并逐文件 `cmp` 一致。提交 `bdba3e8` 的 workflow [40810018154](https://github.com/wishflow/wishflow-tools/actions/runs/40810018154) 中共享检查、应用测试及两种 Pages 部署全部成功。线上 Pyodide 314.0.7 / CPython 3.14.2 实测运行全局变量函数输出 `42`、记录 8 个事件、定位源码行 `base = 40`、播放后输出保持 `42`；手动停止死循环后，Retry runtime 可成功运行 `print("retry ok")`。 |
