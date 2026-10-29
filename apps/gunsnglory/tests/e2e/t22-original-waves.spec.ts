@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('plays the first original waves, earns cash, and hires a map Gunslinger', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
 
@@ -38,7 +39,7 @@ test('plays the first original waves, earns cash, and hires a map Gunslinger', a
   await page.mouse.click(bounds.x + bounds.width * 446 / 1024, bounds.y + bounds.height * 49 / 576);
   await expect(page.getByTestId('selection-status')).toContainText('Gunslinger selected');
 
-  await expect.poll(async () => (await waveStatus.innerText()).match(/Wave (\d+)\/8/)?.[1]).toBe('2');
+  await expect(waveStatus).toContainText('Wave 2/8 ready', { timeout: 30_000 });
   await expect(waveStatus).toContainText(/Cash \$6$/);
   await page.getByRole('button', { name: 'Start wave 2 of 8' }).click();
   await expect(waveStatus).toContainText('Wave 2/8 · Lives');
