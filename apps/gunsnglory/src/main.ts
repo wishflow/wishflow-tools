@@ -80,6 +80,7 @@ app.innerHTML = [
   '        <input id="simulation-speed" data-testid="simulation-speed" aria-labelledby="simulation-speed-label" type="range" min="0.25" max="4" step="0.25" value="1" disabled>',
   '        <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
   '      </label>',
+  '      <button type="button" class="sound-toggle" data-testid="sound-toggle" data-action="toggle-sound" aria-pressed="true">Sound: On</button>',
   '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="retry-settings-save" hidden>Retry saving settings</button>',
   '      <button type="button" data-action="reload-saved-profile" hidden>Reload saved profile</button>',
@@ -229,6 +230,7 @@ const inspectionEnemiesElement = app.querySelector<HTMLElement>('[data-testid="i
 const inspectionRouteElement = app.querySelector<HTMLElement>('[data-testid="inspection-route"]');
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
+const soundToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="sound-toggle"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
 const recruitButton = app.querySelector<HTMLButtonElement>('[data-action="recruit-unit"]');
@@ -286,7 +288,8 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !pauseStatusElement || !pauseButtonElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
-  || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
+  || !simulationSpeedInputElement || !simulationSpeedValueElement || !soundToggleButtonElement
+  || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
   || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
@@ -339,6 +342,7 @@ const inspectionEnemies: HTMLElement = inspectionEnemiesElement;
 const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
+const soundToggleButton: HTMLButtonElement = soundToggleButtonElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
 const recruitControl: HTMLButtonElement = recruitButton;
 const upgradeControl: HTMLButtonElement = upgradeButton;
@@ -399,7 +403,7 @@ let session = await game.open({
 });
 let view = session.observe();
 let profile: ProfileView = {
-  settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy' },
+  settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy', soundEnabled: true },
   completedScenarios: [],
   highScores: {},
 };
@@ -408,6 +412,7 @@ let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'difficulty
 let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
+let soundEnabled = true;
 let selectedDifficulty: GameDifficulty = 'easy';
 let pauseReason: 'manual' | 'background' | undefined;
 let showInspectionOverlay = false;
@@ -555,6 +560,8 @@ const languageMessages = {
     conflict: 'A newer profile exists. Reload it before saving another setting.',
     'profile-reset': 'A new empty profile is ready.',
     retrySettings: 'Retry saving settings',
+    soundOn: 'Sound: On',
+    soundOff: 'Sound: Off',
     reloadProfile: 'Reload saved profile',
     noSavedProfile: 'Saved profile: no official Cow Gulch level 1 result yet.',
     profileLoadFailed: 'Saved profile could not be read.',
@@ -703,6 +710,8 @@ const languageMessages = {
     conflict: '档案已有更新。请先重新加载，再保存其他设置。',
     'profile-reset': '新的空档案已就绪。',
     retrySettings: '重试保存设置',
+    soundOn: '音效：开',
+    soundOff: '音效：关',
     reloadProfile: '重新加载已保存档案',
     noSavedProfile: '已保存档案：尚无牛溪谷正式第 1 关结算。',
     profileLoadFailed: '无法读取已保存档案。',
@@ -766,6 +775,7 @@ function profileMessage(language: keyof typeof languageMessages): string {
 
 function applyProfileSettings(settings: ProfileView['settings']): void {
   simulationSpeed = settings.simulationSpeed;
+  soundEnabled = settings.soundEnabled;
   simulationSpeedInput.value = String(simulationSpeed);
   selectedDifficulty = settings.difficulty === 'hard' && !campaignProgressView?.hardModeUnlocked
     ? 'easy'
@@ -1360,6 +1370,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.none;
   if (status.textContent !== selectionText) status.textContent = selectionText;
   simulationSpeedValue.textContent = simulationSpeed + '×';
+  soundToggleButton.textContent = soundEnabled ? messages.soundOn : messages.soundOff;
+  soundToggleButton.setAttribute('aria-pressed', String(soundEnabled));
   const pauseMessage = view.paused
     ? pauseReason === 'background' ? messages.battlePausedInBackground : messages.battlePaused
     : '';
@@ -1399,6 +1411,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
   simulationSpeedInput.disabled = !campaignProgressView && !profileLoadFailed;
+  soundToggleButton.disabled = !campaignProgressView && !profileLoadFailed;
   retrySettingsButton.hidden = settingsStatusKey !== 'save-failed' || profileLoadFailed;
   retrySettingsButton.textContent = messages.retrySettings;
   reloadProfileButton.hidden = settingsStatusKey !== 'conflict';
@@ -1753,7 +1766,7 @@ function stopGameLoop(): void {
 const audioElements = new Map<string, HTMLAudioElement>();
 
 function playRequestedSounds(events: readonly GameEvent[]): void {
-  if ('soundEnabled' in profile.settings && profile.settings.soundEnabled === false) return;
+  if (!soundEnabled) return;
   for (const event of events) {
     if (event.type !== 'sound-requested') continue;
     let audio = audioElements.get(event.sound);
@@ -1977,7 +1990,18 @@ simulationSpeedInput.addEventListener('input', () => {
 simulationSpeedInput.addEventListener('change', () => {
   const requestedSpeed = normalizeSimulationSpeed(Number(simulationSpeedInput.value));
   simulationSpeed = requestedSpeed;
-  saveSettings({ simulationSpeed: requestedSpeed, difficulty: selectedDifficulty });
+  saveSettings({ simulationSpeed: requestedSpeed, difficulty: selectedDifficulty, soundEnabled });
+});
+
+soundToggleButton.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  if (!soundEnabled) {
+    for (const audio of audioElements.values()) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  }
+  saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
 });
 
 campaignDifficultySelect.addEventListener('change', () => {
@@ -1995,7 +2019,7 @@ campaignDifficultySelect.addEventListener('change', () => {
   selectedDifficulty = requestedDifficulty;
   campaignFeedback = undefined;
   saveSettings(
-    { simulationSpeed, difficulty: selectedDifficulty },
+    { simulationSpeed, difficulty: selectedDifficulty, soundEnabled },
   );
   if (session.startRecord.mode === 'formal'
     && view.frame === 0

@@ -12,7 +12,7 @@ async function mapPoint(
     const canvas = element as HTMLCanvasElement;
     const bounds = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
-    const tileSize = Math.floor(Math.min((1024 * dpr) / 17, (576 * dpr) / 17, 64 * dpr)) / dpr;
+    const tileSize = Math.floor(Math.min((1024 * dpr) / 17, 64 * dpr)) / dpr;
     const originX = (1024 - 17 * tileSize) / 2;
     const originY = (576 - 17 * tileSize) / 2;
     return {

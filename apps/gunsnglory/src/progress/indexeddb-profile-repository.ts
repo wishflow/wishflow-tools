@@ -70,8 +70,10 @@ function validSettings(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
   const speed = (value as Record<string, unknown>).simulationSpeed;
   const difficulty = (value as Record<string, unknown>).difficulty;
+  const soundEnabled = (value as Record<string, unknown>).soundEnabled;
   return (speed === undefined || isSimulationSpeed(speed))
-    && (difficulty === undefined || isGameDifficulty(difficulty));
+    && (difficulty === undefined || isGameDifficulty(difficulty))
+    && (soundEnabled === undefined || typeof soundEnabled === 'boolean');
 }
 
 function decodeProfile(value: unknown): DecodedProfile {

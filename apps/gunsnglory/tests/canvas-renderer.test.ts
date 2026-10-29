@@ -145,7 +145,7 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
   assert.equal(
     topRouteViewport.origin.y + (topRouteView.enemies[0]!.positionFine.y / 240) * topRouteViewport.scaleFactor,
     viewport.origin.y + (2.5 * viewport.tileSize),
-    'the camera stays fixed so the complete map remains visible',
+    'the camera stays fixed while the map is cropped by the playfield',
   );
 
   const bottomRouteView = {
@@ -185,9 +185,9 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
   }
   const bottomAtFractionalScale = getMapViewport(bottomRouteView, 1.3);
   assert.ok(bottomAtFractionalScale.origin.x >= 0);
-  assert.ok(bottomAtFractionalScale.origin.y >= 0);
+  assert.ok(bottomAtFractionalScale.origin.y < 0);
   assert.ok(bottomAtFractionalScale.origin.x + bottomAtFractionalScale.mapWidth <= GAME_VIEWPORT.width);
-  assert.ok(bottomAtFractionalScale.origin.y + bottomAtFractionalScale.mapHeight <= GAME_VIEWPORT.height);
+  assert.ok(bottomAtFractionalScale.origin.y + bottomAtFractionalScale.mapHeight > GAME_VIEWPORT.height);
   assert.ok(
     Math.abs(bottomAtFractionalScale.origin.y * 1.3 - Math.round(bottomAtFractionalScale.origin.y * 1.3)) < 1e-9,
     'the centered map stays aligned to the display-pixel grid',

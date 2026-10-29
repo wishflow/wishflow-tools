@@ -9,31 +9,40 @@ import {
   screenToMapCell,
 } from '../src/render/map-viewport';
 
-test('fits the complete 17 by 17 Cow Gulch map inside the landscape viewport', () => {
+test('scales Cow Gulch from the viewport width and lets the camera crop its height', () => {
   const viewport = calculateMapViewport(17, 17, 1024, 576);
 
-  assert.equal(viewport.scale, 33 / 32);
-  assert.equal(viewport.tileSize, 33);
-  assert.equal(viewport.mapWidth, 561);
-  assert.equal(viewport.mapHeight, 561);
-  assert.equal(viewport.origin.x, 231.5);
-  assert.equal(viewport.origin.y, 7.5);
+  assert.equal(viewport.scale, 60 / 32);
+  assert.equal(viewport.tileSize, 60);
+  assert.equal(viewport.mapWidth, 1020);
+  assert.equal(viewport.mapHeight, 1020);
+  assert.equal(viewport.origin.x, 2);
+  assert.equal(viewport.origin.y, -222);
   assert.ok(viewport.origin.x >= 0);
-  assert.ok(viewport.origin.y >= 0);
   assert.ok(viewport.origin.x + viewport.mapWidth <= 1024);
-  assert.ok(viewport.origin.y + viewport.mapHeight <= 576);
+  assert.ok(viewport.origin.y < 0);
+  assert.ok(viewport.origin.y + viewport.mapHeight > 576);
 });
 
-test('respects the zoom ceiling while fitting maps of different sizes', () => {
+test('respects the original minimum and maximum scale bounds while sizing maps by width', () => {
   const narrowMap = calculateMapViewport(8, 4, 1024, 576);
   const wideMap = calculateMapViewport(40, 17, 1024, 576);
 
   assert.equal(narrowMap.scale, 2);
   assert.equal(narrowMap.tileSize, 64);
-  assert.equal(wideMap.scale, 25 / 32);
-  assert.equal(wideMap.tileSize, 25);
-  assert.ok(wideMap.origin.x + wideMap.mapWidth <= 1024);
+  assert.equal(wideMap.scale, 27 / 32);
+  assert.equal(wideMap.tileSize, 27);
+  assert.ok(wideMap.origin.x < 0);
+  assert.ok(wideMap.origin.x + wideMap.mapWidth > 1024);
   assert.ok(wideMap.origin.y + wideMap.mapHeight <= 576);
+});
+
+test('rounds the original scale to hundredths before truncating the displayed tile size', () => {
+  const viewport = calculateMapViewport(29, 4, 320, 480);
+
+  assert.equal(viewport.tileSize, 10);
+  assert.equal(viewport.scale, 10 / 32);
+  assert.equal(viewport.mapWidth, 290);
 });
 
 test('uses integer device pixels for each map cell at fractional display scales', () => {
@@ -42,9 +51,9 @@ test('uses integer device pixels for each map cell at fractional display scales'
     const tilePixels = viewport.tileSize * displayPixelScale;
     assert.ok(Math.abs(tilePixels - Math.round(tilePixels)) < 1e-9);
     assert.ok(viewport.origin.x >= 0);
-    assert.ok(viewport.origin.y >= 0);
     assert.ok(viewport.origin.x + viewport.mapWidth <= 1024);
-    assert.ok(viewport.origin.y + viewport.mapHeight <= 576);
+    assert.ok(viewport.origin.y < 0);
+    assert.ok(viewport.origin.y + viewport.mapHeight > 576);
   }
 });
 

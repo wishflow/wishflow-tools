@@ -9,6 +9,7 @@ export interface MapViewport {
 
 export const LOGICAL_TILE_SIZE = 32;
 export const BASE_VIEWPORT_WIDTH = 1024;
+export const MIN_SCALE_RATIO = 0.85;
 export const MAX_SCALE_RATIO = 2;
 export const MIN_MAP_ZOOM = 1;
 export const MAX_MAP_ZOOM = 3;
@@ -31,7 +32,7 @@ function assertPositiveFinite(name: string, value: number): void {
   }
 }
 
-/** Mirrors the original screen-width target, scale bounds, rounding, and integer displayed tile size. */
+/** Applies the original width target and scale bounds; the camera clips maps beyond the playfield. */
 export function calculateMapViewport(
   mapWidthTiles: number,
   mapHeightTiles: number,
@@ -48,12 +49,12 @@ export function calculateMapViewport(
   assertPositiveFinite('Display pixel scale', displayPixelScale);
 
   const splashScale = viewportWidth / BASE_VIEWPORT_WIDTH;
+  const minScale = splashScale * MIN_SCALE_RATIO;
   const maxScale = Math.max(splashScale * MAX_SCALE_RATIO, 1);
-  const tilePixels = Math.floor(Math.min(
-    (viewportWidth * displayPixelScale) / mapWidthTiles,
-    (viewportHeight * displayPixelScale) / mapHeightTiles,
-    maxScale * logicalTileSize * displayPixelScale,
-  ));
+  const requestedScale = viewportWidth / (mapWidthTiles * logicalTileSize);
+  const boundedScale = Math.max(minScale, Math.min(maxScale, requestedScale));
+  const appliedScale = Math.round(boundedScale * 100) / 100;
+  const tilePixels = Math.floor(appliedScale * logicalTileSize * displayPixelScale);
   if (tilePixels < 1) throw new RangeError('Map tiles are too small for the display pixel scale');
   const tileSize = tilePixels / displayPixelScale;
   const scale = tileSize / logicalTileSize;

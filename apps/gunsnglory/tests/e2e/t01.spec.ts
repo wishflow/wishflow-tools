@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { clickCanvasPoint, cowGulchMarkerPoint, tapCanvasPoint } from './helpers';
 
 test('opens Cow Gulch, selects the gunslinger, clears selection, and survives resize', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -22,25 +23,15 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   });
   expect(colorCount).toBeGreaterThan(30);
 
-  const clickWorld = async (worldX: number, worldY: number) => {
-    await canvas.scrollIntoViewIfNeeded();
-    const bounds = await canvas.boundingBox();
-    if (!bounds) throw new Error('Game canvas has no layout box');
-    await page.mouse.click(
-      bounds.x + bounds.width * worldX / 1024,
-      bounds.y + bounds.height * worldY / 576,
-    );
-  };
-
-  await clickWorld(512, 288);
+  await clickCanvasPoint(page, { x: 512, y: 288 });
   await expect(status).toContainText('Gunslinger selected');
 
-  await clickWorld(446, 49);
+  await clickCanvasPoint(page, cowGulchMarkerPoint(5, 4));
   await expect(status).toContainText('Gunslinger is waiting to be hired');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   await expect(page.getByTestId('recruit-pool-status')).toContainText('empty');
 
-  await clickWorld(347, 123);
+  await clickCanvasPoint(page, cowGulchMarkerPoint(6, 5));
   await expect(status).toContainText('Mexican is waiting to be hired');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
 
@@ -49,7 +40,7 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await page.getByRole('button', { name: '切换界面语言为英文' }).click();
   await expect(status).toContainText('Mexican is waiting to be hired');
 
-  await clickWorld(272, 48);
+  await clickCanvasPoint(page, { x: 272, y: 48 });
   await expect(status).toContainText('No unit selected');
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -61,7 +52,7 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   const startButtonBox = await page.getByTestId('open-single-wave-sample').boundingBox();
   expect(startButtonBox?.width).toBeGreaterThan(170);
 
-  await clickWorld(512, 288);
+  await clickCanvasPoint(page, { x: 512, y: 288 });
   await expect(status).toContainText('Gunslinger selected');
 
   await page.getByRole('button', { name: /clear selection/i }).click();
@@ -85,21 +76,12 @@ test('selects and clears the unit with mobile touch input', async ({ browser }) 
   const status = page.getByTestId('selection-status');
   await expect(status).toContainText('No unit selected');
 
-  const tapWorld = async (worldX: number, worldY: number) => {
-    const bounds = await canvas.boundingBox();
-    if (!bounds) throw new Error('Game canvas has no layout box');
-    await page.touchscreen.tap(
-      bounds.x + bounds.width * worldX / 1024,
-      bounds.y + bounds.height * worldY / 576,
-    );
-  };
-
-  await tapWorld(512, 288);
+  await tapCanvasPoint(page, { x: 512, y: 288 });
   await expect(status).toContainText('Gunslinger selected');
-  await tapWorld(272, 48);
+  await tapCanvasPoint(page, { x: 272, y: 48 });
   await expect(status).toContainText('No unit selected');
 
-  await tapWorld(446, 49);
+  await tapCanvasPoint(page, cowGulchMarkerPoint(5, 4));
   await expect(status).toContainText('Gunslinger is waiting to be hired');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   await expect(page.getByTestId('recruit-pool-status')).toContainText('empty');
