@@ -59,6 +59,10 @@ function DiagnosticPanel({ diagnostic, t }: { diagnostic: TeachingDiagnosticSnap
     'function-value-unsupported': 'teachingCodeFunctionValue',
     'type-error': 'teachingCodeTypeError',
     'not-callable': 'teachingCodeTypeError',
+    'index-out-of-range': 'teachingCodeIndexError',
+    'heap-object-limit-exceeded': 'teachingCodeResourceLimit',
+    'heap-entry-limit-exceeded': 'teachingCodeResourceLimit',
+    'container-size-limit-exceeded': 'teachingCodeResourceLimit',
     'zero-range-step': 'teachingCodeZeroRangeStep',
     'instruction-budget-exceeded': 'teachingCodeInstructionBudget',
     'too-many-names': 'teachingCodeResourceLimit',
@@ -123,6 +127,10 @@ function ExpressionTree({
     case 'ListLiteral':
       detail = <code>{expression.elements.length === 0 ? '[]' : '[...]'}</code>;
       children = expression.elements;
+      break;
+    case 'Subscript':
+      detail = <code>[...]</code>;
+      children = [expression.value, expression.index];
       break;
     case 'Unary':
       detail = <code>{expression.operator}</code>;

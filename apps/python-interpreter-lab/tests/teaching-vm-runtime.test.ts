@@ -83,6 +83,84 @@ test('caps list object allocation for a single run', () => {
   assert.equal(machine.current.diagnostic?.code, 'heap-object-limit-exceeded');
 });
 
+test('reads and writes list indices through shared aliases without changing prior snapshots', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'a = [1, 2]',
+    'b = a',
+    'before = a[0]',
+    'b[0] = 9',
+    'print(a[0], b[-1], before)',
+  ].join('\n')));
+  const snapshots = [machine.current];
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') {
+    snapshots.push(stepTeachingMachine(machine));
+  }
+
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['9 2 1']);
+  const a = machine.current.variables.find(({ name }) => name === 'a')?.value;
+  const b = machine.current.variables.find(({ name }) => name === 'b')?.value;
+  assert.equal(a?.objectId, b?.objectId);
+  assert.deepEqual(machine.current.heap.find(({ id }) => id === a?.objectId)?.items.map(({ value }) => value), ['9', '2']);
+
+  const beforeWrite = snapshots.find(({ variables }) => variables.some(({ name }) => name === 'before'));
+  assert.deepEqual(beforeWrite?.heap.find(({ id }) => id === a?.objectId)?.items.map(({ value }) => value), ['1', '2']);
+});
+
+test('writes through nested subscript targets', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'matrix = [[1, 2], [3, 4]]',
+    'matrix[0][1] = 9',
+    'print(matrix[0][0], matrix[0][1], matrix[-1][-1])',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['1 9 4']);
+  assert.deepEqual(machine.current.heap.map(({ id, items }) => [id, items.map(({ value, objectId }) => [value, objectId])]), [
+    [1, [['1', undefined], ['9', undefined]]],
+    [2, [['3', undefined], ['4', undefined]]],
+    [3, [['list #1', 1], ['list #2', 2]]],
+  ]);
+});
+
+test('uses bool indices as integers and reports invalid or out-of-range indices', () => {
+  const machine = createTeachingMachine(compileTeachingSource('items = [10, 20]\nprint(items[True], items[False], items[-1])'));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['20 10 20']);
+
+  for (const source of ['items = [1]\nprint(items[1])', 'items = [1]\nitems[-2] = 9']) {
+    const failed = createTeachingMachine(compileTeachingSource(source));
+    while (failed.current.status !== 'error' && failed.current.status !== 'finished') stepTeachingMachine(failed);
+    assert.equal(failed.current.status, 'error');
+    assert.equal(failed.current.diagnostic?.code, 'index-out-of-range');
+  }
+
+  const wrongType = createTeachingMachine(compileTeachingSource('items = [1]\nprint(items["0"])'));
+  while (wrongType.current.status !== 'error' && wrongType.current.status !== 'finished') stepTeachingMachine(wrongType);
+  assert.equal(wrongType.current.diagnostic?.code, 'type-error');
+});
+
+test('evaluates subscript assignment value before container and index expressions', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'items = [0]',
+    'def value():',
+    '  print("value")',
+    '  return 9',
+    'def container():',
+    '  print("container")',
+    '  return items',
+    'def index():',
+    '  print("index")',
+    '  return 0',
+    'container()[index()] = value()',
+    'print(items[0])',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['value', 'container', 'index', '9']);
+});
+
 test('prints strings and zero arguments using Python-like output formatting', () => {
   const machine = createTeachingMachine(compileTeachingSource('print("hello", "🐍", 42)\nprint()'));
   while (machine.current.status !== 'finished') stepTeachingMachine(machine);

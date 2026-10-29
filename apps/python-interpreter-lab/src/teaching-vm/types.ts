@@ -81,6 +81,7 @@ export interface TeachingProgram {
 
 export type TeachingStatement =
   | AssignmentStatement
+  | SubscriptAssignmentStatement
   | PrintStatement
   | IfStatement
   | WhileStatement
@@ -106,6 +107,13 @@ export interface ReturnStatement {
 export interface AssignmentStatement {
   type: 'Assign';
   name: string;
+  value: TeachingExpression;
+  span: SourceSpan;
+}
+
+export interface SubscriptAssignmentStatement {
+  type: 'SubscriptAssign';
+  target: SubscriptExpression;
   value: TeachingExpression;
   span: SourceSpan;
 }
@@ -156,6 +164,7 @@ export type TeachingExpression =
   | ComparisonExpression
   | LogicalExpression
   | CallExpression
+  | SubscriptExpression
   | ListLiteralExpression;
 
 export interface IntegerLiteralExpression {
@@ -232,6 +241,13 @@ export interface ListLiteralExpression {
   span: SourceSpan;
 }
 
+export interface SubscriptExpression {
+  type: 'Subscript';
+  value: TeachingExpression;
+  index: TeachingExpression;
+  span: SourceSpan;
+}
+
 export interface TeachingConstant {
   type: 'int' | 'str' | 'bool' | 'none';
   value: string;
@@ -247,6 +263,8 @@ export type TeachingOpcode =
   | 'BINARY_SUBTRACT'
   | 'BINARY_MULTIPLY'
   | 'BUILD_LIST'
+  | 'BINARY_SUBSCR'
+  | 'STORE_SUBSCR'
   | 'COMPARE_OP'
   | 'JUMP'
   | 'POP_JUMP_IF_FALSE'

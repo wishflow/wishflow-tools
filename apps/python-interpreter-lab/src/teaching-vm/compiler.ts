@@ -67,6 +67,12 @@ class Compiler {
         this.compileExpression(statement.value);
         this.emit('STORE_NAME', statement.name, statement.span);
         return;
+      case 'SubscriptAssign':
+        this.compileExpression(statement.value);
+        this.compileExpression(statement.target.value);
+        this.compileExpression(statement.target.index);
+        this.emit('STORE_SUBSCR', null, statement.span);
+        return;
       case 'Print':
         for (const argument of statement.arguments) this.compileExpression(argument);
         this.emit('PRINT', statement.arguments.length, statement.span);
@@ -157,6 +163,11 @@ class Compiler {
       case 'ListLiteral':
         for (const element of expression.elements) this.compileExpression(element);
         this.emit('BUILD_LIST', expression.elements.length, expression.span);
+        return;
+      case 'Subscript':
+        this.compileExpression(expression.value);
+        this.compileExpression(expression.index);
+        this.emit('BINARY_SUBSCR', null, expression.span);
         return;
       case 'Unary':
         this.compileExpression(expression.operand);
@@ -249,6 +260,8 @@ function collectLocalNames(statements: TeachingStatement[]): string[] {
     switch (statement.type) {
       case 'Assign':
         names.add(statement.name);
+        return;
+      case 'SubscriptAssign':
         return;
       case 'For':
         names.add(statement.name);

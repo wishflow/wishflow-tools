@@ -149,6 +149,38 @@ test('transfers list references through the teaching Worker snapshot DTO', async
   ]);
 });
 
+test('reads and mutates a list through aliases in the teaching Worker', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'a = [1, 2]',
+    'b = a',
+    'b[0] = 9',
+    'print(a[0], b[-1])',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expect(page.locator('.teaching-instruction-table')).toContainText('STORE_SUBSCR');
+  await expect(page.locator('.teaching-ast-scroll')).toContainText('Subscript');
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText('9 2');
+
+  const variables = page.locator('.teaching-state-grid section[aria-labelledby="teaching-variables-heading"] .teaching-variable-list');
+  const displayedValues = await variables.locator(':scope > div').evaluateAll((items) => items.map((item) => [
+    item.querySelector('dt')?.textContent,
+    item.querySelector('dd code')?.textContent,
+  ]));
+  expect(displayedValues).toEqual([
+    ['a', 'list #1'],
+    ['b', 'list #1'],
+  ]);
+
+  await source.fill('values = [1]\nprint(values[1])');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByRole('alert')).toContainText('Index out of range');
+});
+
 test('steps a zero-argument function through an observable frame stack in the Worker', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));

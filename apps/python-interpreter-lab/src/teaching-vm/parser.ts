@@ -62,12 +62,7 @@ class Parser {
       };
     }
     if (this.match('FOR')) return this.parseForStatement(this.previous());
-    if (this.match('NAME')) {
-      const name = this.previous();
-      this.consume('EQUAL', 'expected-assignment', "Expected '=' after a variable name.");
-      const value = this.parseExpression();
-      return { type: 'Assign', name: name.lexeme, value, span: mergeSpans(name.span, value.span) };
-    }
+    if (isExpressionStart(this.peek().type)) return this.parseAssignmentStatement();
     if (this.match('PRINT')) return this.parsePrintStatement(this.previous());
     this.fail('expected-statement', 'Expected a name assignment or print(...) statement.', this.peek());
   }
@@ -225,6 +220,19 @@ class Parser {
     return { type: 'Print', arguments: args, span: mergeSpans(start.span, end.span) };
   }
 
+  private parseAssignmentStatement(): TeachingStatement {
+    const start = this.peek();
+    const target = this.parseExpression();
+    this.consume('EQUAL', 'expected-assignment', "Expected '=' after an assignment target.");
+    if (target.type !== 'Name' && target.type !== 'Subscript') {
+      this.fail('invalid-assignment-target', 'Only names and subscripts can be assigned to.', start);
+    }
+    const value = this.parseExpression();
+    return target.type === 'Name'
+      ? { type: 'Assign', name: target.name, value, span: mergeSpans(target.span, value.span) }
+      : { type: 'SubscriptAssign', target, value, span: mergeSpans(target.span, value.span) };
+  }
+
   private parseExpression(): TeachingExpression {
     return this.parseOr();
   }
@@ -339,6 +347,10 @@ class Parser {
   }
 
   private parsePrimary(): TeachingExpression {
+    return this.parseSubscripts(this.parseAtom());
+  }
+
+  private parseAtom(): TeachingExpression {
     if (this.match('LEFT_BRACKET')) {
       const open = this.previous();
       return this.withExpressionNesting(open, () => {
@@ -402,6 +414,22 @@ class Parser {
       });
     }
     this.fail('expected-expression', 'Expected a value, list, call, or parenthesized expression.', this.peek());
+  }
+
+  private parseSubscripts(value: TeachingExpression): TeachingExpression {
+    let expression = value;
+    while (this.match('LEFT_BRACKET')) {
+      const open = this.previous();
+      const index = this.withExpressionNesting(open, () => this.parseExpression());
+      const close = this.consume('RIGHT_BRACKET', 'expected-subscript-close', "Expected ']' after the subscript.");
+      expression = {
+        type: 'Subscript',
+        value: expression,
+        index,
+        span: mergeSpans(expression.span, close.span),
+      };
+    }
+    return expression;
   }
 
   private withExpressionNesting<T>(token: TeachingToken, parseNested: () => T): T {
@@ -491,6 +519,19 @@ function isCompoundStatement(statement: TeachingStatement): boolean {
     || statement.type === 'While'
     || statement.type === 'For'
     || statement.type === 'FunctionDef';
+}
+
+function isExpressionStart(type: TeachingToken['type']): boolean {
+  return type === 'NAME'
+    || type === 'INTEGER'
+    || type === 'STRING'
+    || type === 'TRUE'
+    || type === 'FALSE'
+    || type === 'NONE'
+    || type === 'LEFT_BRACKET'
+    || type === 'LEFT_PAREN'
+    || type === 'MINUS'
+    || type === 'NOT';
 }
 
 function mergeSpans(start: SourceSpan, end: SourceSpan): SourceSpan {

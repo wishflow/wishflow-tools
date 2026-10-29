@@ -265,6 +265,12 @@ export class TeachingMachine {
       case 'BUILD_LIST':
         this.executeBuildList(instruction);
         return null;
+      case 'BINARY_SUBSCR':
+        this.executeSubscript(instruction);
+        return null;
+      case 'STORE_SUBSCR':
+        this.executeStoreSubscript(instruction);
+        return null;
       case 'COMPARE_OP':
         this.executeComparison(instruction);
         return null;
@@ -549,6 +555,37 @@ export class TeachingMachine {
     }
   }
 
+  private executeSubscript(instruction: TeachingInstruction): void {
+    const [container, index] = this.peekPair(instruction);
+    if (container.type !== 'list') this.typeError('subscript', [container], instruction.span);
+    if (!isNumeric(index)) this.typeError('list index', [index], instruction.span);
+    const object = this.#heap.get(container.objectId);
+    if (!object) this.runtimeError('invalid-object-reference', `List object #${container.objectId} does not exist.`, instruction.span);
+    const normalizedIndex = normalizeListIndex(index, object.items.length, instruction.span);
+    const value = object.items[normalizedIndex];
+    if (!value) this.runtimeError('index-out-of-range', 'List index is out of range.', instruction.span);
+    this.replacePair(value);
+  }
+
+  private executeStoreSubscript(instruction: TeachingInstruction): void {
+    if (this.#stack.length < 3) {
+      this.runtimeError('vm-stack-underflow', 'STORE_SUBSCR requires a value, container, and index.', instruction.span);
+    }
+    const value = this.#stack[this.#stack.length - 3];
+    const container = this.#stack[this.#stack.length - 2];
+    const index = this.#stack[this.#stack.length - 1];
+    if (!value || !container || !index) {
+      this.runtimeError('vm-stack-underflow', 'STORE_SUBSCR requires a value, container, and index.', instruction.span);
+    }
+    if (container.type !== 'list') this.typeError('subscript assignment', [container], instruction.span);
+    if (!isNumeric(index)) this.typeError('list index', [index], instruction.span);
+    const object = this.#heap.get(container.objectId);
+    if (!object) this.runtimeError('invalid-object-reference', `List object #${container.objectId} does not exist.`, instruction.span);
+    const normalizedIndex = normalizeListIndex(index, object.items.length, instruction.span);
+    object.items[normalizedIndex] = value;
+    this.#stack.splice(this.#stack.length - 3, 3);
+  }
+
   private executeForIteration(instruction: TeachingInstruction): number | null {
     const target = this.validateJumpTarget(instruction);
     const iterator = this.peek(instruction);
@@ -762,6 +799,20 @@ function isNumeric(value: RuntimeValue): value is Extract<RuntimeValue, { type: 
 
 function numericValue(value: Extract<RuntimeValue, { type: 'int' | 'bool' }>): bigint {
   return value.type === 'int' ? value.value : value.value ? 1n : 0n;
+}
+
+function normalizeListIndex(
+  value: Extract<RuntimeValue, { type: 'int' | 'bool' }>,
+  length: number,
+  span: SourceSpan,
+): number {
+  const size = BigInt(length);
+  const index = numericValue(value);
+  const normalized = index < 0n ? index + size : index;
+  if (normalized < 0n || normalized >= size) {
+    throw new TeachingDiagnostic('runtime', 'index-out-of-range', 'List index is out of range.', span);
+  }
+  return Number(normalized);
 }
 
 function rangeContains(range: RangeRuntimeValue, value: bigint): boolean {

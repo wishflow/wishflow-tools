@@ -40,6 +40,25 @@ test('compiles nested list literals in left-to-right order', () => {
   ]);
 });
 
+test('compiles subscript reads and evaluates the assignment value before its target', () => {
+  const result = compileTeachingSource('items = [1]\nitems[0] = 2\nvalue = items[0]');
+
+  assert.deepEqual(result.instructions.map(({ opcode, argument }) => [opcode, argument]), [
+    ['LOAD_CONST', 0],
+    ['BUILD_LIST', 1],
+    ['STORE_NAME', 'items'],
+    ['LOAD_CONST', 1],
+    ['LOAD_NAME', 'items'],
+    ['LOAD_CONST', 2],
+    ['STORE_SUBSCR', null],
+    ['LOAD_NAME', 'items'],
+    ['LOAD_CONST', 2],
+    ['BINARY_SUBSCR', null],
+    ['STORE_NAME', 'value'],
+    ['HALT', null],
+  ]);
+});
+
 test('compiles None to a dedicated constant without treating it as a name', () => {
   const result = compileTeachingSource('x = None\nprint(x)');
   assert.deepEqual(result.constants, [{ type: 'none', value: 'None' }]);

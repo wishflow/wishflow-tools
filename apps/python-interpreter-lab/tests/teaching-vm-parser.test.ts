@@ -259,6 +259,38 @@ test('rejects malformed list literals with parser diagnostics', () => {
   }
 });
 
+test('parses nested subscript reads and subscript assignment targets', () => {
+  const source = 'value = items[-1]\nitems[0][1] = value';
+  const program = parseTeachingSource(source);
+  const read = program.statements[0];
+  assert.equal(read?.type, 'Assign');
+  if (read?.type !== 'Assign') assert.fail('expected assignment');
+  assert.equal(read.value.type, 'Subscript');
+  if (read.value.type !== 'Subscript') assert.fail('expected subscript read');
+  assert.equal(source.slice(read.value.span.start, read.value.span.end), 'items[-1]');
+  assert.equal(read.value.value.type, 'Name');
+  assert.equal(read.value.index.type, 'Unary');
+
+  const write = program.statements[1];
+  assert.equal(write?.type, 'SubscriptAssign');
+  if (write?.type !== 'SubscriptAssign') assert.fail('expected subscript assignment');
+  assert.equal(source.slice(write.target.span.start, write.target.span.end), 'items[0][1]');
+  assert.equal(write.target.type, 'Subscript');
+  assert.equal(write.target.value.type, 'Subscript');
+  assert.equal(write.value.type, 'Name');
+});
+
+test('rejects non-assignable expression targets', () => {
+  for (const source of ['1 = 2', 'build() = 2']) {
+    assert.throws(
+      () => parseTeachingSource(source),
+      (error: unknown) => error instanceof TeachingDiagnostic
+        && error.stage === 'parse'
+        && error.code === 'invalid-assignment-target',
+    );
+  }
+});
+
 test('parses nested if/elif/else suites and closes a final block at end of source', () => {
   const program = parseTeachingSource([
     'if 0:',
