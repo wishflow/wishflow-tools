@@ -73,8 +73,11 @@ button:disabled { cursor: not-allowed; }
 .input-error { margin: 8px 0 0; color: #9c362d; font-size: 12px; line-height: 1.45; }
 .source-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; }
 .quiet-actions, .primary-actions { display: flex; align-items: center; gap: 11px; }
-.primary-actions { flex-wrap: wrap; }
+.primary-actions { min-width: 0; flex-wrap: wrap; }
 .teaching-step-controls { display: flex; width: 100%; min-width: 0; flex-wrap: wrap; gap: 8px; }
+.teaching-speed-control { display: grid; width: min(100%, 300px); min-width: 0; gap: 4px; color: #58647c; font-size: 10px; font-weight: 750; }
+.teaching-speed-control select { width: 100%; min-width: 0; max-width: 100%; min-height: 38px; padding: 6px 9px; border: 1px solid #d5d9d2; border-radius: 8px; background: var(--card); color: var(--ink); font-size: 12px; }
+.teaching-run-speed-hint { width: 100%; margin: -6px 0 0; white-space: normal; }
 .text-button { min-height: 36px; padding: 4px 2px; border: 0; background: transparent; color: #52617c; font-size: 12px; font-weight: 650; cursor: pointer; text-decoration: underline; text-decoration-color: #b6becc; text-underline-offset: 3px; }
 .text-button:hover { color: var(--ink); }
 .button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid transparent; border-radius: 9px 9px 9px 3px; font-size: 13px; font-weight: 750; cursor: pointer; transition: background 120ms ease, transform 120ms ease; }

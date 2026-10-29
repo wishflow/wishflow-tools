@@ -61,6 +61,13 @@ test('compiles teaching instructions, steps the value stack, prints, and browses
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
   await expect(page.getByRole('combobox', { name: '执行视图' })).toHaveValue('teaching');
   await expect(page.getByRole('heading', { name: '教学 VM' })).toBeVisible();
+  const localizedSpeed = page.getByRole('combobox', { name: '自动运行速度' });
+  await expect(localizedSpeed).toHaveValue('standard');
+  await expect(localizedSpeed.locator('option')).toHaveText([
+    '慢速 · 每 250 毫秒最多 1 条指令',
+    '标准 · 每 16 毫秒最多 8 条指令',
+    '快速 · 每 16 毫秒最多 32 条指令',
+  ]);
   await expect(page.locator('.teaching-output')).toHaveText('7');
   await page.getByRole('button', { name: '切换界面语言为英文' }).click();
   await expect(page.getByRole('combobox', { name: 'Execution view' })).toHaveValue('teaching');
@@ -71,6 +78,8 @@ test('sets source-line and instruction breakpoints with keyboard controls and lo
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('# ignored comment\n\nx = 1\nprint(x)');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  const speed = page.getByRole('combobox', { name: 'Automatic run speed' });
+  await speed.selectOption('slow');
 
   const instructions = page.locator('.teaching-instruction-table');
   const sourceBreakpoint = instructions.getByRole('button', { name: 'Set source breakpoint at line 4' });
@@ -100,6 +109,7 @@ test('sets source-line and instruction breakpoints with keyboard controls and lo
   await expect(page.locator('.teaching-instruction-count')).toContainText('2 of 5,000');
 
   await instructions.getByRole('button', { name: 'Set source breakpoint at line 3' }).click();
+  await speed.selectOption('fast');
   await page.getByRole('button', { name: 'Continue teaching program' }).click();
   await expect(page.locator('.teaching-breakpoint-status')).toContainText('Paused before instruction 3');
   await expect(page.locator('.teaching-instruction-count')).toContainText('3 of 5,000');
@@ -129,6 +139,71 @@ test('sets source-line and instruction breakpoints with keyboard controls and lo
   await instructions.getByRole('button', { name: '在第 4 行设置源码断点' }).click();
   await expect(localizedBreakpointList).toContainText('源码第 4 行');
   await expect(instructions.getByRole('button', { name: '移除第 4 行源码断点' })).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('changes automatic run speed while running and keeps step boundaries deterministic', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  const speed = page.getByRole('combobox', { name: 'Automatic run speed' });
+  await expect(speed).toHaveValue('standard');
+
+  await source.fill('index = 0\nwhile index < 120:\n  index = index + 1\nprint(index)');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await speed.focus();
+  await expect(speed).toBeFocused();
+  await speed.press('Tab');
+  await expect(page.getByRole('button', { name: 'Run teaching program' })).toBeFocused();
+  await speed.focus();
+  await speed.selectOption('slow');
+  await expect(speed).toHaveValue('slow');
+  await speed.selectOption('standard');
+  await expect(speed).toHaveValue('standard');
+  await speed.selectOption('fast');
+  await expect(speed).toHaveValue('fast');
+  await speed.selectOption('slow');
+  await expect(speed).toHaveValue('slow');
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  const pauseButton = page.getByRole('button', { name: 'Pause teaching program' });
+  await expect(pauseButton).toBeVisible();
+  await expect(page.locator('.status-dot')).toHaveClass(/status-running/);
+  const reducedAnimationDuration = await page.locator('.status-dot').evaluate((element) => Number.parseFloat(getComputedStyle(element).animationDuration));
+  expect(reducedAnimationDuration).toBeLessThan(0.001);
+
+  await pauseButton.click();
+  await expect(page.getByText('Teaching VM paused').first()).toBeVisible();
+  const slowPauseCount = await page.locator('.teaching-instruction-count').textContent();
+  await page.waitForTimeout(100);
+  await expect(page.locator('.teaching-instruction-count')).toHaveText(slowPauseCount ?? '');
+
+  await speed.selectOption('fast');
+  await page.getByRole('button', { name: 'Continue teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText('120');
+
+  await source.fill('while True:\n  index = 1');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await speed.selectOption('fast');
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  const fastPauseButton = page.getByRole('button', { name: 'Pause teaching program' });
+  await expect(fastPauseButton).toBeVisible();
+  await fastPauseButton.click();
+  await expect(page.getByText('Teaching VM paused').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Reset teaching VM' }).click();
+
+  await source.fill('value = 1 + 2\nprint(value)');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await speed.selectOption('slow');
+  await page.getByRole('button', { name: 'Step Over' }).click();
+  await expect(page.locator('.teaching-step-status')).toContainText('Paused before line 2');
+  const slowStepCount = await page.locator('.teaching-instruction-count').textContent();
+
+  await page.getByRole('button', { name: 'Reset teaching VM' }).click();
+  await speed.selectOption('fast');
+  await page.getByRole('button', { name: 'Step Over' }).click();
+  await expect(page.locator('.teaching-step-status')).toContainText('Paused before line 2');
+  await expect(page.locator('.teaching-instruction-count')).toHaveText(slowStepCount ?? '');
 });
 
 test('steps over source lines and into or out of function frames', async ({ page }) => {
@@ -563,6 +638,7 @@ test('shows the dynamic instruction budget in the browser for an infinite while 
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('while True:\n  x = 1');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('combobox', { name: 'Automatic run speed' }).selectOption('fast');
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('5,000-instruction execution limit', { timeout: 30_000 });
   await expect(page.locator('.small-meta').filter({ hasText: '5,000 teaching instructions executed' })).toBeVisible();

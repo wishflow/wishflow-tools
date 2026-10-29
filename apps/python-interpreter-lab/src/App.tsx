@@ -135,6 +135,7 @@ export default function App() {
           source={source}
           status={analysis.status}
           teachingStatus={teaching.status}
+          teachingRunSpeed={teaching.runSpeed}
           teachingHasProgram={Boolean(teaching.program)}
           teachingAtHead={teaching.atHead}
           teachingCanStepOut={teaching.headSnapshot?.frames.at(-1)?.kind === 'function'}
@@ -154,6 +155,7 @@ export default function App() {
           onStepTeaching={teaching.step}
           onStepSourceTeaching={teaching.stepSource}
           onRunTeaching={teaching.run}
+          onSetTeachingRunSpeed={teaching.setRunSpeed}
           onPauseTeaching={teaching.pause}
           onResetTeaching={teaching.reset}
           onClear={() => updateSource('')}

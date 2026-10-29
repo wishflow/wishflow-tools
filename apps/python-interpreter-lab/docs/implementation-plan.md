@@ -154,7 +154,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **前置**：P7/P8；产品语义已于 2026-10-30 确认。Step Line 与 Step Over 合并；源码断点绑定首条可执行指令；Continue 仅跳过当前命中一次；Reset 保留断点，编辑/重新编译清除；速度档为慢 1 条/250ms、标准 8 条/16ms、快 32 条/16ms。
 - **交付**：源码行和教学指令断点、单指令 Step、Step Into/Over/Out、Continue、Pause、Reset 及执行速度控制。时间轴浏览旧快照时，继续执行先返回执行头；不实现历史分叉。
 - **验收**：同一行多条指令、同一行循环、递归、调用后返回、断点后继续都停在规定位置；Continue 不在同一暂停点立即重复命中；根帧 Step Out 和结束后的操作有明确反馈。
-- **进度**：T01 的源码行映射和断点状态、T02 的断点控件/Worker 接入、T03 的 Into/Over/Out 源码步进和帧控制，以及 T04 的断点 Continue/Pause 与历史时间轴集成，均已完成本地实现与验证。类型检查、124 项单测、生产构建和 20 项 Teaching VM Playwright E2E 通过。P9 尚未发布；T05–T06 仍待实现与验收。
+- **进度**：T01 的源码行映射和断点状态、T02 的断点控件/Worker 接入、T03 的 Into/Over/Out 源码步进和帧控制、T04 的断点 Continue/Pause 与历史时间轴集成，以及 T05 的速度档和操作体验均已完成本地实现与验证。类型检查、125 项单测、生产构建和 21 项 Teaching VM Playwright E2E 通过。P9 尚未发布；T06 的完整回归、文档与发布待完成。
 - **详细文档**：[P9 规格](specs/p09-teaching-debugger.md) 与 [P9 tasks](tasks/p09-teaching-debugger.md)。
 - **回滚**：撤回高级调试入口，P5 的逐指令单步及各阶段语言能力仍工作。
 

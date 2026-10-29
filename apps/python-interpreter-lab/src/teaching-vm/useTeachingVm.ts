@@ -5,7 +5,7 @@ import type {
   TeachingVmHistory,
   TeachingVmSnapshot,
 } from './types';
-import { MAX_BREAKPOINT_COUNT, MAX_HISTORY_CONTAINER_RECORDS, MAX_HISTORY_SNAPSHOTS } from './resource-limits';
+import { DEFAULT_TEACHING_RUN_SPEED, MAX_BREAKPOINT_COUNT, MAX_HISTORY_CONTAINER_RECORDS, MAX_HISTORY_SNAPSHOTS, type TeachingRunSpeed } from './resource-limits';
 import type { TeachingHistoryUpdate, TeachingWorkerIdentity, TeachingWorkerRequest, TeachingWorkerResponse } from './worker-protocol';
 import type { TeachingSourceStepMode } from './source-step';
 
@@ -22,6 +22,7 @@ export function useTeachingVm() {
   const historyRef = useRef(EMPTY_HISTORY);
   const breakpointsRef = useRef({ sourceLines: [] as number[], instructionIndexes: [] as number[] });
   const [status, setStatus] = useState<TeachingStatus>('loading');
+  const [runSpeed, setRunSpeedState] = useState<TeachingRunSpeed>(DEFAULT_TEACHING_RUN_SPEED);
   const [program, setProgram] = useState<TeachingCompileResult | null>(null);
   const [history, setHistory] = useState<TeachingVmHistory>(EMPTY_HISTORY);
   const [historyCursor, setHistoryCursor] = useState<number | null>(null);
@@ -216,8 +217,13 @@ export function useTeachingVm() {
     if (!worker || !program || (status !== 'ready' && status !== 'paused')) return;
     setHistoryCursor(null);
     setStatus('running');
-    worker.postMessage({ type: 'run', ...sessionIdentity() } satisfies TeachingWorkerRequest);
-  }, [program, sessionIdentity, status]);
+    worker.postMessage({ type: 'run', speed: runSpeed, ...sessionIdentity() } satisfies TeachingWorkerRequest);
+  }, [program, runSpeed, sessionIdentity, status]);
+
+  const setRunSpeed = useCallback((speed: TeachingRunSpeed) => {
+    setRunSpeedState(speed);
+    workerRef.current?.postMessage({ type: 'set-run-speed', speed, ...sessionIdentity() } satisfies TeachingWorkerRequest);
+  }, [sessionIdentity]);
 
   const pause = useCallback(() => {
     const worker = workerRef.current;
@@ -246,6 +252,7 @@ export function useTeachingVm() {
 
   return {
     status,
+    runSpeed,
     program,
     history,
     snapshot,
@@ -259,6 +266,7 @@ export function useTeachingVm() {
     step,
     stepSource,
     run,
+    setRunSpeed,
     pause,
     reset,
     invalidate,

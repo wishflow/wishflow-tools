@@ -13,5 +13,28 @@ export const MAX_ACTIVE_FRAME_COUNT = 64;
 export const MAX_HEAP_OBJECTS = 256;
 export const MAX_CONTAINER_ENTRIES = 256;
 export const MAX_HEAP_ENTRIES = 2_048;
-export const MAX_RUN_BATCH_SIZE = 8;
-export const TEACHING_RUN_BATCH_DELAY_MS = 16;
+
+export type TeachingRunSpeed = 'slow' | 'standard' | 'fast';
+
+export interface TeachingRunPace {
+  readonly batchSize: number;
+  readonly delayMs: number;
+}
+
+export const DEFAULT_TEACHING_RUN_SPEED: TeachingRunSpeed = 'standard';
+
+export const TEACHING_RUN_PACES: Readonly<Record<TeachingRunSpeed, TeachingRunPace>> = Object.freeze({
+  slow: Object.freeze({ batchSize: 1, delayMs: 250 }),
+  standard: Object.freeze({ batchSize: 8, delayMs: 16 }),
+  fast: Object.freeze({ batchSize: 32, delayMs: 16 }),
+});
+
+export function normalizeTeachingRunSpeed(speed: unknown): TeachingRunSpeed {
+  return speed === 'slow' || speed === 'fast' || speed === 'standard'
+    ? speed
+    : DEFAULT_TEACHING_RUN_SPEED;
+}
+
+export function getTeachingRunPace(speed: unknown): TeachingRunPace {
+  return TEACHING_RUN_PACES[normalizeTeachingRunSpeed(speed)];
+}

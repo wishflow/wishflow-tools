@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { compileTeachingSource } from '../src/teaching-vm/compiler';
+import { getTeachingRunPace, normalizeTeachingRunSpeed } from '../src/teaching-vm/resource-limits';
 import { mapTeachingSourceLines } from '../src/teaching-vm/source-mapping';
 import {
   createTeachingSourceStepGoal,
@@ -12,6 +13,20 @@ import {
   setTeachingMachineStatus,
   stepTeachingMachine,
 } from '../src/teaching-vm/vm';
+
+test('maps bounded automatic run speeds and falls back to the standard profile', () => {
+  assert.deepEqual(getTeachingRunPace('slow'), { batchSize: 1, delayMs: 250 });
+  assert.deepEqual(getTeachingRunPace('standard'), { batchSize: 8, delayMs: 16 });
+  assert.deepEqual(getTeachingRunPace('fast'), { batchSize: 32, delayMs: 16 });
+  assert.equal(normalizeTeachingRunSpeed('unknown'), 'standard');
+  assert.equal(normalizeTeachingRunSpeed('fast'), 'fast');
+
+  for (const speed of ['slow', 'standard', 'fast', 'unknown']) {
+    const pace = getTeachingRunPace(speed);
+    assert.ok(pace.batchSize >= 1 && pace.batchSize <= 32);
+    assert.ok(pace.delayMs >= 16 && pace.delayMs <= 250);
+  }
+});
 
 test('maps executable source lines to their first instruction across module and function code', () => {
   const program = compileTeachingSource([

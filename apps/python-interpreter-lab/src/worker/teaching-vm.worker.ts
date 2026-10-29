@@ -1,5 +1,11 @@
 import { compileTeachingSource } from '../teaching-vm/compiler';
-import { MAX_RUN_BATCH_SIZE, TEACHING_RUN_BATCH_DELAY_MS } from '../teaching-vm/resource-limits';
+import {
+  DEFAULT_TEACHING_RUN_SPEED,
+  getTeachingRunPace,
+  normalizeTeachingRunSpeed,
+  TEACHING_RUN_PACES,
+  type TeachingRunSpeed,
+} from '../teaching-vm/resource-limits';
 import {
   createTeachingSourceStepGoal,
   isTeachingSourceStepGoalReached,
@@ -31,7 +37,10 @@ let program: TeachingCompileResult | null = null;
 let machine: TeachingMachine | null = null;
 let runGeneration = 0;
 let isRunning = false;
+let activeRunCommand: 'run' | 'step-source' | null = null;
 let pauseRequested = false;
+let teachingRunSpeed: TeachingRunSpeed = DEFAULT_TEACHING_RUN_SPEED;
+let cancelPendingRunDelay: (() => void) | null = null;
 let lastPublishedStepIndex = -1;
 let breakpointSourceLines: number[] = [];
 let breakpointInstructionIndexes: number[] = [];
@@ -88,8 +97,10 @@ function advanceIdentity(identity: TeachingWorkerIdentity): boolean {
 }
 
 function cancelRun(): void {
+  wakePendingRunDelay();
   runGeneration += 1;
   isRunning = false;
+  activeRunCommand = null;
   pauseRequested = false;
 }
 
@@ -119,6 +130,25 @@ function sendSnapshot(type: 'snapshot' | 'paused' | 'run-complete', identity: Te
   respond({ type, ...identityOf(identity), snapshot: machine.current, historyUpdate: updateHistory() });
 }
 
+function wakePendingRunDelay(): void {
+  const wake = cancelPendingRunDelay;
+  cancelPendingRunDelay = null;
+  wake?.();
+}
+
+function waitForRunDelay(delayMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    let timer: ReturnType<typeof setTimeout>;
+    const finish = () => {
+      if (cancelPendingRunDelay === finish) cancelPendingRunDelay = null;
+      clearTimeout(timer);
+      resolve();
+    };
+    timer = setTimeout(finish, delayMs);
+    cancelPendingRunDelay = finish;
+  });
+}
+
 async function runLoop(
   identity: TeachingWorkerIdentity,
   generation: number,
@@ -128,12 +158,14 @@ async function runLoop(
     if (pauseRequested) {
       pauseRequested = false;
       isRunning = false;
+      activeRunCommand = null;
       setTeachingMachineStatus(machine, 'paused');
       sendSnapshot('paused', identity);
       return;
     }
 
-    for (let count = 0; count < MAX_RUN_BATCH_SIZE; count += 1) {
+    const pace = sourceStepGoal ? TEACHING_RUN_PACES.standard : getTeachingRunPace(teachingRunSpeed);
+    for (let count = 0; count < pace.batchSize; count += 1) {
       if (generation !== runGeneration || !identityMatches(identity) || !machine) return;
       if (pauseRequested) break;
       const snapshot = stepTeachingMachine(machine, 'running');
@@ -147,6 +179,7 @@ async function runLoop(
     if (generation !== runGeneration || !identityMatches(identity) || !machine) return;
     if (machine.current.status === 'paused') {
       isRunning = false;
+      activeRunCommand = null;
       pauseRequested = false;
       sendSnapshot('paused', identity);
       return;
@@ -154,6 +187,7 @@ async function runLoop(
     if (pauseRequested) continue;
     if (machine.current.status === 'finished' || machine.current.status === 'error') {
       isRunning = false;
+      activeRunCommand = null;
       sendSnapshot('run-complete', identity);
       return;
     }
@@ -164,7 +198,7 @@ async function runLoop(
       snapshot: machine.current,
       historyUpdate: updateHistory(),
     });
-    await new Promise<void>((resolve) => setTimeout(resolve, TEACHING_RUN_BATCH_DELAY_MS));
+    await waitForRunDelay(pace.delayMs);
   }
 }
 
@@ -204,6 +238,14 @@ function handleRequest(request: TeachingWorkerRequest): void {
   }
 
   if (!identityMatches(request)) return;
+  if (request.type === 'set-run-speed') {
+    const nextSpeed = normalizeTeachingRunSpeed(request.speed);
+    if (nextSpeed !== teachingRunSpeed) {
+      teachingRunSpeed = nextSpeed;
+      if (activeRunCommand === 'run') wakePendingRunDelay();
+    }
+    return;
+  }
   if (request.type === 'set-breakpoints') {
     if (!machine || !program || isRunning) return;
     try {
@@ -226,7 +268,10 @@ function handleRequest(request: TeachingWorkerRequest): void {
     return;
   }
   if (request.type === 'pause') {
-    if (isRunning) pauseRequested = true;
+    if (isRunning) {
+      pauseRequested = true;
+      wakePendingRunDelay();
+    }
     return;
   }
 
@@ -261,6 +306,7 @@ function handleRequest(request: TeachingWorkerRequest): void {
 
   if (request.type === 'run' || request.type === 'step-source') {
     if (isRunning || machine.current.status === 'finished' || machine.current.status === 'error') return;
+    if (request.type === 'run') teachingRunSpeed = normalizeTeachingRunSpeed(request.speed);
     const sourceStepGoal = request.type === 'step-source'
       ? createTeachingSourceStepGoal(request.mode, program, machine.current)
       : null;
@@ -269,6 +315,7 @@ function handleRequest(request: TeachingWorkerRequest): void {
       return;
     }
     isRunning = true;
+    activeRunCommand = request.type;
     pauseRequested = false;
     const generation = ++runGeneration;
     setTeachingMachineStatus(machine, 'running');
@@ -282,6 +329,7 @@ function handleRequest(request: TeachingWorkerRequest): void {
     void runLoop(identity, generation, sourceStepGoal).catch((error: unknown) => {
       if (!identityMatches(identity)) return;
       isRunning = false;
+      activeRunCommand = null;
       respond({
         type: 'worker-error',
         ...identity,

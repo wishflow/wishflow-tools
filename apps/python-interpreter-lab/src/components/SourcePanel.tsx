@@ -4,6 +4,7 @@ import type { PythonToken } from '../analysis/types';
 import type { AnalysisStatus } from '../analysis/usePyodideAnalysis';
 import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
 import type { TeachingSourceStepMode } from '../teaching-vm/source-step';
+import { normalizeTeachingRunSpeed, type TeachingRunSpeed } from '../teaching-vm/resource-limits';
 import { MAX_SOURCE_LENGTH } from '../analysis/source-limit';
 import type { MessageKey } from '../locales';
 
@@ -12,6 +13,7 @@ interface SourcePanelProps {
   source: string;
   status: AnalysisStatus;
   teachingStatus: TeachingStatus;
+  teachingRunSpeed: TeachingRunSpeed;
   teachingHasProgram: boolean;
   teachingAtHead: boolean;
   teachingCanStepOut: boolean;
@@ -31,13 +33,14 @@ interface SourcePanelProps {
   onStepTeaching(): void;
   onStepSourceTeaching(mode: TeachingSourceStepMode): void;
   onRunTeaching(): void;
+  onSetTeachingRunSpeed(speed: TeachingRunSpeed): void;
   onPauseTeaching(): void;
   onResetTeaching(): void;
   onClear(): void;
   onRestore(): void;
 }
 
-export function SourcePanel({ mode, source, status, teachingStatus, teachingHasProgram, teachingAtHead, teachingCanStepOut, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onStepSourceTeaching, onRunTeaching, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
+export function SourcePanel({ mode, source, status, teachingStatus, teachingRunSpeed, teachingHasProgram, teachingAtHead, teachingCanStepOut, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onStepSourceTeaching, onRunTeaching, onSetTeachingRunSpeed, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const canControlTeaching = teachingHasProgram
     && teachingAtHead
@@ -136,6 +139,19 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingHasP
                   <span id="teaching-step-out-reason" className="small-meta teaching-step-out-reason">{t('teachingStepOutUnavailable')}</span>
                 )}
               </div>
+              <label className="teaching-speed-control">
+                <span>{t('teachingRunSpeed')}</span>
+                <select
+                  aria-describedby="teaching-run-speed-hint"
+                  value={teachingRunSpeed}
+                  onChange={(event) => onSetTeachingRunSpeed(normalizeTeachingRunSpeed(event.currentTarget.value))}
+                >
+                  <option value="slow">{t('teachingRunSpeedSlow')}</option>
+                  <option value="standard">{t('teachingRunSpeedStandard')}</option>
+                  <option value="fast">{t('teachingRunSpeedFast')}</option>
+                </select>
+              </label>
+              <p id="teaching-run-speed-hint" className="small-meta teaching-run-speed-hint">{t('teachingRunSpeedHint')}</p>
               {teachingStatus !== 'running' && (
                 <button type="button" className="button button-primary" disabled={!teachingHasProgram || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onRunTeaching}>{t(teachingStatus === 'paused' ? 'continueTeaching' : 'runTeaching')}</button>
               )}
