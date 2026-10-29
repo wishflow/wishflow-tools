@@ -41,6 +41,151 @@ test('prints strings and zero arguments using Python-like output formatting', ()
   assert.deepEqual(machine.current.output, ['hello 🐍 42', '']);
 });
 
+test('uses Python truthiness, operand-returning short circuit, and boolean integer arithmetic', () => {
+  const source = [
+    'print(False and missing, True or missing)',
+    'print(False or "fallback", True and 3)',
+    'print(not 0, not "", not "x", not False)',
+    'print(True + True, False * 4, -True)',
+  ].join('\n');
+  const machine = createTeachingMachine(compileTeachingSource(source));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, [
+    'False True',
+    'fallback 3',
+    'True True False True',
+    '2 0 -1',
+  ]);
+});
+
+test('compares bools and ints numerically and strings by Unicode code point', () => {
+  const machine = createTeachingMachine(compileTeachingSource('print(False == 0, True == 1, "a" < "b", "🐍" < "\uE000")'));
+  while (machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.deepEqual(machine.current.output, ['True True True False']);
+
+  const mismatch = createTeachingMachine(compileTeachingSource('print("a" < 1)'));
+  while (mismatch.current.status !== 'error') stepTeachingMachine(mismatch);
+  assert.equal(mismatch.current.diagnostic?.code, 'type-error');
+});
+
+test('records the actual next instruction and result of a short-circuit decision', () => {
+  const machine = createTeachingMachine(compileTeachingSource('print(False and missing)'));
+  stepTeachingMachine(machine);
+  const shortCircuit = stepTeachingMachine(machine);
+  assert.equal(shortCircuit.pc, 3);
+  assert.deepEqual(shortCircuit.controlFlow, {
+    kind: 'shortCircuit',
+    outcome: 'short-circuited',
+    nextInstructionIndex: 3,
+  });
+  while (machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.deepEqual(machine.current.output, ['False']);
+});
+
+test('executes only the selected nested if/elif/else branch and reports branch decisions', () => {
+  const source = [
+    'if 0:',
+    '  print(missing)',
+    'elif "x":',
+    '  if True:',
+    '    print("chosen")',
+    'else:',
+    '  print("fallback")',
+    'print("done")',
+  ].join('\n');
+  const machine = createTeachingMachine(compileTeachingSource(source));
+  stepTeachingMachine(machine);
+  const skipped = stepTeachingMachine(machine);
+  assert.equal(skipped.controlFlow?.kind, 'branch');
+  assert.equal(skipped.controlFlow?.outcome, 'branch-skipped');
+  assert.equal(skipped.nextInstructionIndex, skipped.controlFlow?.nextInstructionIndex);
+
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['chosen', 'done']);
+});
+
+test('repeats while bodies until the condition becomes false', () => {
+  const source = [
+    'i = 0',
+    'while i < 3:',
+    '  print(i)',
+    '  i = i + 1',
+    'print(i)',
+  ].join('\n');
+  const machine = createTeachingMachine(compileTeachingSource(source));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['0', '1', '2', '3']);
+  assert.equal(machine.current.variables.find(({ name }) => name === 'i')?.value.value, '3');
+});
+
+test('stops an infinite while loop at the 5,000-instruction budget and points to the next instruction', () => {
+  const machine = createTeachingMachine(compileTeachingSource('while True:\n  x = 1'));
+  while (machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.executedInstructionCount, 5_000);
+  assert.equal(machine.current.diagnostic?.code, 'instruction-budget-exceeded');
+  assert.equal(machine.current.faultInstructionIndex, machine.current.pc);
+  assert.equal(machine.current.nextInstructionIndex, machine.current.pc);
+  assert.match(machine.current.diagnostic?.message ?? '', /5000/);
+});
+
+test('iterates positive, negative, and boolean ranges and preserves a previous loop binding on zero trips', () => {
+  const source = [
+    'for i in range(3):',
+    '  print(i)',
+    'for i in range(2, 5):',
+    '  print(i)',
+    'for i in range(2, -1, -1):',
+    '  print(i)',
+    'for i in range(True, False, -True):',
+    '  print(i)',
+    'i = 99',
+    'for i in range(0):',
+    '  print(missing)',
+    'print(i)',
+  ].join('\n');
+  const machine = createTeachingMachine(compileTeachingSource(source));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['0', '1', '2', '2', '3', '4', '2', '1', '0', '1', '99']);
+  assert.equal(machine.current.variables.find(({ name }) => name === 'i')?.value.value, '99');
+
+  const missingBinding = createTeachingMachine(compileTeachingSource('for item in range(0):\n  print("never")\nprint(item)'));
+  while (missingBinding.current.diagnostic === null && missingBinding.current.status !== 'finished') {
+    stepTeachingMachine(missingBinding);
+  }
+  assert.equal(missingBinding.current.diagnostic?.code, 'name-error');
+  assert.deepEqual(missingBinding.current.output, []);
+});
+
+test('reports zero range step and non-integer arguments without consuming stack values', () => {
+  const zeroStep = createTeachingMachine(compileTeachingSource('for i in range(1, 2, 0):\n  print(i)'));
+  while (zeroStep.current.diagnostic === null) stepTeachingMachine(zeroStep);
+  assert.equal(zeroStep.current.diagnostic?.code, 'zero-range-step');
+  assert.deepEqual(zeroStep.current.stack.map(({ value }) => value), ['1', '2', '0']);
+
+  const wrongType = createTeachingMachine(compileTeachingSource('for i in range("x"):\n  print(i)'));
+  while (wrongType.current.diagnostic === null) stepTeachingMachine(wrongType);
+  assert.equal(wrongType.current.diagnostic?.code, 'type-error');
+  assert.equal(wrongType.current.stack[0]?.value, 'x');
+});
+
+test('keeps range iteration lazy and shows a bounded iterator summary', () => {
+  const stop = (1n << 4_000n).toString();
+  const machine = createTeachingMachine(compileTeachingSource(`for i in range(${stop}):\n  print(i)`));
+  stepTeachingMachine(machine);
+  const rangeSnapshot = stepTeachingMachine(machine);
+  assert.equal(rangeSnapshot.stack[0]?.type, 'range');
+  assert.match(rangeSnapshot.stack[0]?.display ?? '', /^range\(\d+\)$/);
+  stepTeachingMachine(machine);
+  stepTeachingMachine(machine);
+  assert.equal(machine.current.stack[0]?.type, 'iterator');
+  assert.match(machine.current.stack[0]?.display ?? '', /next=1/);
+  assert.equal(machine.current.stack.length, 2);
+});
+
 test('preserves the pre-error stack for NameError and TypeError', () => {
   const missing = createTeachingMachine(compileTeachingSource('print(missing)'));
   const nameError = stepTeachingMachine(missing);

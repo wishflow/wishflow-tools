@@ -1,6 +1,7 @@
 export const MAX_TOKEN_COUNT = 5_000;
 export const MAX_PARSE_NESTING_DEPTH = 100;
 export const MAX_INSTRUCTION_COUNT = 2_000;
+export const MAX_DYNAMIC_INSTRUCTION_COUNT = 5_000;
 export const MAX_NAME_COUNT = 200;
 export const MAX_INTEGER_BITS = 4_096;
 export const MAX_STRING_CODE_POINTS = 4_096;

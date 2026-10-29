@@ -3,9 +3,9 @@ import { MAX_STRING_CODE_POINTS, MAX_TOKEN_COUNT } from './resource-limits';
 import { TeachingDiagnostic, type SourceSpan, type TeachingToken, type TokenType } from './types';
 
 const unsupportedKeywords = new Set([
-  'False', 'None', 'True', 'and', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
-  'def', 'del', 'elif', 'else', 'except', 'finally', 'for', 'from', 'global', 'if', 'import',
-  'in', 'is', 'lambda', 'nonlocal', 'not', 'or', 'pass', 'raise', 'return', 'try', 'while',
+  'None', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
+  'def', 'del', 'except', 'finally', 'from', 'global', 'import',
+  'is', 'lambda', 'nonlocal', 'pass', 'raise', 'return', 'try',
   'with', 'yield',
 ]);
 
@@ -20,6 +20,8 @@ class Tokenizer {
   private line = 1;
   private column = 1;
   private readonly tokens: TeachingToken[] = [];
+  private readonly indentation = [0];
+  private atLineStart = true;
 
   constructor(private readonly source: string) {}
 
@@ -29,6 +31,7 @@ class Tokenizer {
     }
 
     while (!this.isAtEnd()) {
+      if (this.atLineStart && this.scanLineIndentation()) continue;
       const character = this.peek();
       if (character === ' ' || character === '\t') {
         this.advance();
@@ -47,9 +50,55 @@ class Tokenizer {
       }
     }
 
+    if (this.indentation.length > 1 && this.tokens.at(-1)?.type !== 'NEWLINE') {
+      this.addToken('NEWLINE', this.cursor(), null, '');
+    }
+    while (this.indentation.length > 1) {
+      this.indentation.pop();
+      this.addToken('DEDENT', this.cursor(), null, '');
+    }
+
     const cursor = this.cursor();
     this.tokens.push({ type: 'EOF', lexeme: '', literal: null, span: spanFrom(cursor, cursor) });
     return this.tokens;
+  }
+
+  private scanLineIndentation(): boolean {
+    const start = this.cursor();
+    let width = 0;
+    let firstTab: Cursor | null = null;
+    while (this.peek() === ' ' || this.peek() === '\t') {
+      if (this.peek() === '\t' && firstTab === null) firstTab = this.cursor();
+      width += 1;
+      this.advance();
+    }
+
+    if (firstTab) {
+      const end = { ...firstTab, offset: firstTab.offset + 1, column: firstTab.column + 1 };
+      throw this.error('tab-indentation', 'Tabs are not allowed in leading indentation.', spanFrom(firstTab, end));
+    }
+
+    if (this.peek() === '#' || this.peek() === '\r' || this.peek() === '\n' || this.isAtEnd()) {
+      if (this.peek() === '#') this.skipComment();
+      if (this.peek() === '\r' || this.peek() === '\n') this.scanNewline();
+      return true;
+    }
+
+    const current = this.indentation.at(-1) ?? 0;
+    if (width > current) {
+      this.indentation.push(width);
+      this.addToken('INDENT', start, null);
+    } else if (width < current) {
+      while (width < (this.indentation.at(-1) ?? 0)) {
+        this.indentation.pop();
+        this.addToken('DEDENT', start, null);
+      }
+      if (width !== this.indentation.at(-1)) {
+        throw this.error('inconsistent-indentation', 'Dedent does not match an earlier indentation level.', spanFrom(start, this.cursor()));
+      }
+    }
+    this.atLineStart = false;
+    return false;
   }
 
   private scanNewline(): void {
@@ -61,6 +110,7 @@ class Tokenizer {
     }
     this.line += 1;
     this.column = 1;
+    this.atLineStart = true;
     this.addToken('NEWLINE', start, null);
   }
 
@@ -83,11 +133,22 @@ class Tokenizer {
     this.advance();
     while (isAsciiIdentifierPart(this.peek())) this.advance();
     const lexeme = this.source.slice(start.offset, this.offset);
-    const type: TokenType = lexeme === 'print'
-      ? 'PRINT'
-      : unsupportedKeywords.has(lexeme)
-        ? 'UNSUPPORTED_KEYWORD'
-        : 'NAME';
+    const keywordTypes: Record<string, TokenType> = {
+      False: 'FALSE',
+      True: 'TRUE',
+      and: 'AND',
+      elif: 'ELIF',
+      else: 'ELSE',
+      for: 'FOR',
+      if: 'IF',
+      in: 'IN',
+      not: 'NOT',
+      or: 'OR',
+      print: 'PRINT',
+      while: 'WHILE',
+    };
+    const type: TokenType = keywordTypes[lexeme]
+      ?? (unsupportedKeywords.has(lexeme) ? 'UNSUPPORTED_KEYWORD' : 'NAME');
     this.addToken(type, start, null);
   }
 
@@ -137,14 +198,35 @@ class Tokenizer {
 
   private scanPunctuation(character: string): void {
     const start = this.cursor();
+    const comparisonTypes: Record<string, [TokenType, TokenType]> = {
+      '=': ['EQUAL', 'EQUAL_EQUAL'],
+      '!': ['UNSUPPORTED_KEYWORD', 'BANG_EQUAL'],
+      '<': ['LESS', 'LESS_EQUAL'],
+      '>': ['GREATER', 'GREATER_EQUAL'],
+    };
+    const comparison = comparisonTypes[character];
+    if (comparison) {
+      this.advance();
+      if (this.peek() === '=') {
+        this.advance();
+        this.addToken(comparison[1], start, null);
+        return;
+      }
+      if (character === '!') {
+        throw this.error('unexpected-character', 'Use != for inequality.', this.spanFrom(start));
+      }
+      this.addToken(comparison[0], start, null);
+      return;
+    }
+
     const typeByCharacter: Record<string, TokenType> = {
-      '=': 'EQUAL',
       '+': 'PLUS',
       '-': 'MINUS',
       '*': 'STAR',
       '(': 'LEFT_PAREN',
       ')': 'RIGHT_PAREN',
       ',': 'COMMA',
+      ':': 'COLON',
     };
     const type = typeByCharacter[character];
     if (!type) {

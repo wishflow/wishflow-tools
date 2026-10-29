@@ -11,7 +11,8 @@ import {
 
 class Parser {
   private current = 0;
-  private nestingDepth = 0;
+  private expressionNestingDepth = 0;
+  private blockNestingDepth = 0;
 
   constructor(private readonly tokens: TeachingToken[], private readonly sourceLength: number) {}
 
@@ -19,8 +20,10 @@ class Parser {
     const statements: TeachingStatement[] = [];
     while (!this.isAtEnd()) {
       if (this.match('NEWLINE')) continue;
-      statements.push(this.parseStatement());
+      const statement = this.parseStatement();
+      statements.push(statement);
       if (this.match('NEWLINE')) continue;
+      if (statement.type === 'If' || statement.type === 'While' || statement.type === 'For') continue;
       if (!this.isAtEnd()) this.fail('expected-newline', 'Expected a newline between statements.', this.peek());
     }
 
@@ -41,6 +44,21 @@ class Parser {
 
   private parseStatement(): TeachingStatement {
     if (this.check('UNSUPPORTED_KEYWORD')) this.unsupportedKeyword(this.peek());
+    if (this.match('IF')) return this.parseIfStatement(this.previous());
+    if (this.match('WHILE')) {
+      const start = this.previous();
+      const condition = this.parseExpression();
+      this.consume('COLON', 'expected-colon', "Expected ':' after the while condition.");
+      this.consume('NEWLINE', 'expected-newline', 'Expected a newline after the while header.');
+      const body = this.parseSuite(start);
+      return {
+        type: 'While',
+        condition,
+        body,
+        span: mergeSpans(start.span, body.at(-1)?.span ?? condition.span),
+      };
+    }
+    if (this.match('FOR')) return this.parseForStatement(this.previous());
     if (this.match('NAME')) {
       const name = this.previous();
       this.consume('EQUAL', 'expected-assignment', "Expected '=' after a variable name.");
@@ -49,6 +67,97 @@ class Parser {
     }
     if (this.match('PRINT')) return this.parsePrintStatement(this.previous());
     this.fail('expected-statement', 'Expected a name assignment or print(...) statement.', this.peek());
+  }
+
+  private parseIfStatement(start: TeachingToken): TeachingStatement {
+    const branches: Array<{ condition: TeachingExpression; body: TeachingStatement[]; span: SourceSpan }> = [];
+    branches.push(this.parseIfBranch(start));
+    while (true) {
+      while (this.match('NEWLINE')) { /* blank and comment-only lines do not break an if chain */ }
+      if (!this.match('ELIF')) break;
+      branches.push(this.parseIfBranch(this.previous()));
+    }
+
+    let elseBody: TeachingStatement[] | null = null;
+    let endSpan = branches.at(-1)?.span ?? start.span;
+    while (this.match('NEWLINE')) { /* blank and comment-only lines may precede else */ }
+    if (this.match('ELSE')) {
+      const otherwise = this.previous();
+      this.consume('COLON', 'expected-colon', "Expected ':' after else.");
+      this.consume('NEWLINE', 'expected-newline', 'Expected a newline after else.');
+      elseBody = this.parseSuite(otherwise);
+      endSpan = elseBody.at(-1)?.span ?? otherwise.span;
+    }
+
+    return { type: 'If', branches, elseBody, span: mergeSpans(start.span, endSpan) };
+  }
+
+  private parseForStatement(start: TeachingToken): TeachingStatement {
+    const name = this.consume('NAME', 'expected-loop-name', 'Expected a loop variable after for.');
+    this.consume('IN', 'expected-in', "Expected 'in' after the loop variable.");
+    const rangeName = this.consume('NAME', 'expected-range', "Expected range(...) after 'in'.");
+    if (rangeName.lexeme !== 'range') {
+      this.fail('unsupported-iterator', "Only range(...) is supported in a for loop.", rangeName);
+    }
+    this.consume('LEFT_PAREN', 'expected-range-parenthesis', "Expected '(' after range.");
+    const rangeArguments: TeachingExpression[] = [];
+    if (this.check('RIGHT_PAREN')) {
+      this.fail('expected-range-argument', 'range requires one to three arguments.', this.peek());
+    }
+    rangeArguments.push(this.parseExpression());
+    while (this.match('COMMA')) {
+      if (rangeArguments.length >= 3) {
+        this.fail('too-many-range-arguments', 'range accepts at most three arguments.', this.previous());
+      }
+      rangeArguments.push(this.parseExpression());
+    }
+    const endRange = this.consume('RIGHT_PAREN', 'expected-range-close', "Expected ')' after range arguments.");
+    this.consume('COLON', 'expected-colon', "Expected ':' after the for header.");
+    this.consume('NEWLINE', 'expected-newline', 'Expected a newline after the for header.');
+    const body = this.parseSuite(start);
+    return {
+      type: 'For',
+      name: name.lexeme,
+      rangeArguments,
+      rangeSpan: mergeSpans(rangeName.span, endRange.span),
+      body,
+      span: mergeSpans(start.span, body.at(-1)?.span ?? endRange.span),
+    };
+  }
+
+  private parseIfBranch(start: TeachingToken): { condition: TeachingExpression; body: TeachingStatement[]; span: SourceSpan } {
+    const condition = this.parseExpression();
+    this.consume('COLON', 'expected-colon', "Expected ':' after the if condition.");
+    this.consume('NEWLINE', 'expected-newline', 'Expected a newline after the if header.');
+    const body = this.parseSuite(start);
+    return {
+      condition,
+      body,
+      span: mergeSpans(start.span, body.at(-1)?.span ?? condition.span),
+    };
+  }
+
+  private parseSuite(start: TeachingToken): TeachingStatement[] {
+    while (this.match('NEWLINE')) { /* blank and comment-only lines do not start the suite */ }
+    this.consume('INDENT', 'expected-indented-block', 'Expected an indented block.');
+    return this.withBlockNesting(start, () => {
+      const statements: TeachingStatement[] = [];
+      while (!this.check('DEDENT') && !this.isAtEnd()) {
+        if (this.match('NEWLINE')) continue;
+        const statement = this.parseStatement();
+        statements.push(statement);
+        if (this.match('NEWLINE')) continue;
+        if (statement.type === 'If' || statement.type === 'While' || statement.type === 'For') continue;
+        if (!this.check('DEDENT') && !this.isAtEnd()) {
+          this.fail('expected-newline', 'Expected a newline between statements.', this.peek());
+        }
+      }
+      if (statements.length === 0) {
+        this.fail('empty-block', 'A control-flow block must contain at least one statement.', this.peek());
+      }
+      this.consume('DEDENT', 'expected-dedent', 'Expected the end of an indented block.');
+      return statements;
+    });
   }
 
   private parsePrintStatement(start: TeachingToken): TeachingStatement {
@@ -63,7 +172,73 @@ class Parser {
   }
 
   private parseExpression(): TeachingExpression {
-    return this.parseAdditive();
+    return this.parseOr();
+  }
+
+  private parseOr(): TeachingExpression {
+    let expression = this.parseAnd();
+    while (this.match('OR')) {
+      const right = this.parseAnd();
+      expression = {
+        type: 'Logical',
+        operator: 'or',
+        left: expression,
+        right,
+        span: mergeSpans(expression.span, right.span),
+      };
+    }
+    return expression;
+  }
+
+  private parseAnd(): TeachingExpression {
+    let expression = this.parseNot();
+    while (this.match('AND')) {
+      const right = this.parseNot();
+      expression = {
+        type: 'Logical',
+        operator: 'and',
+        left: expression,
+        right,
+        span: mergeSpans(expression.span, right.span),
+      };
+    }
+    return expression;
+  }
+
+  private parseNot(): TeachingExpression {
+    if (!this.match('NOT')) return this.parseComparison();
+    const operator = this.previous();
+    const operand = this.withExpressionNesting(operator, () => this.parseNot());
+    return {
+      type: 'Unary',
+      operator: 'not',
+      operand,
+      span: mergeSpans(operator.span, operand.span),
+    };
+  }
+
+  private parseComparison(): TeachingExpression {
+    const expression = this.parseAdditive();
+    if (!this.match('EQUAL_EQUAL', 'BANG_EQUAL', 'LESS', 'LESS_EQUAL', 'GREATER', 'GREATER_EQUAL')) {
+      return expression;
+    }
+    const operator = this.previous();
+    const right = this.parseAdditive();
+    const operatorByType = {
+      EQUAL_EQUAL: '==',
+      BANG_EQUAL: '!=',
+      LESS: '<',
+      LESS_EQUAL: '<=',
+      GREATER: '>',
+      GREATER_EQUAL: '>=',
+    } as const;
+    return {
+      type: 'Compare',
+      operator: operatorByType[operator.type as keyof typeof operatorByType],
+      left: expression,
+      right,
+      span: mergeSpans(expression.span, right.span),
+    };
   }
 
   private parseAdditive(): TeachingExpression {
@@ -100,7 +275,7 @@ class Parser {
   private parseUnary(): TeachingExpression {
     if (!this.match('MINUS')) return this.parsePrimary();
     const operator = this.previous();
-    const operand = this.withNested(operator, () => this.parseUnary());
+    const operand = this.withExpressionNesting(operator, () => this.parseUnary());
     return {
       type: 'Unary',
       operator: '-',
@@ -118,6 +293,10 @@ class Parser {
       const token = this.previous();
       return { type: 'StringLiteral', value: token.literal ?? '', span: token.span };
     }
+    if (this.match('TRUE', 'FALSE')) {
+      const token = this.previous();
+      return { type: 'BooleanLiteral', value: token.type === 'TRUE', span: token.span };
+    }
     if (this.match('NAME')) {
       const token = this.previous();
       return { type: 'Name', name: token.lexeme, span: token.span };
@@ -125,7 +304,7 @@ class Parser {
     if (this.match('UNSUPPORTED_KEYWORD')) this.unsupportedKeyword(this.previous());
     if (this.match('LEFT_PAREN')) {
       const open = this.previous();
-      return this.withNested(open, () => {
+      return this.withExpressionNesting(open, () => {
         const expression = this.parseExpression();
         this.consume('RIGHT_PAREN', 'expected-closing-parenthesis', "Expected ')' after expression.");
         return expression;
@@ -134,10 +313,10 @@ class Parser {
     this.fail('expected-expression', 'Expected an integer, string, name, or parenthesized expression.', this.peek());
   }
 
-  private withNested<T>(token: TeachingToken, parseNested: () => T): T {
-    this.nestingDepth += 1;
-    if (this.nestingDepth > MAX_PARSE_NESTING_DEPTH) {
-      this.nestingDepth -= 1;
+  private withExpressionNesting<T>(token: TeachingToken, parseNested: () => T): T {
+    this.expressionNestingDepth += 1;
+    if (this.expressionNestingDepth > MAX_PARSE_NESTING_DEPTH) {
+      this.expressionNestingDepth -= 1;
       this.fail(
         'expression-too-deep',
         `Expression nesting exceeds ${MAX_PARSE_NESTING_DEPTH}.`,
@@ -147,7 +326,24 @@ class Parser {
     try {
       return parseNested();
     } finally {
-      this.nestingDepth -= 1;
+      this.expressionNestingDepth -= 1;
+    }
+  }
+
+  private withBlockNesting<T>(token: TeachingToken, parseNested: () => T): T {
+    this.blockNestingDepth += 1;
+    if (this.blockNestingDepth > MAX_PARSE_NESTING_DEPTH) {
+      this.blockNestingDepth -= 1;
+      this.fail(
+        'block-too-deep',
+        `Block nesting exceeds ${MAX_PARSE_NESTING_DEPTH}.`,
+        token,
+      );
+    }
+    try {
+      return parseNested();
+    } finally {
+      this.blockNestingDepth -= 1;
     }
   }
 
@@ -187,7 +383,7 @@ class Parser {
   }
 
   private unsupportedKeyword(token: TeachingToken): never {
-    this.fail('unsupported-keyword', `Keyword '${token.lexeme}' is outside mini-vm-v1.`, token);
+    this.fail('unsupported-keyword', `Keyword '${token.lexeme}' is outside mini-vm-v2.`, token);
   }
 
   private fail(code: string, message: string, token: TeachingToken): never {

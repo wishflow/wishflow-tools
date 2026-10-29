@@ -28,15 +28,35 @@ export type TokenType =
   | 'NAME'
   | 'INTEGER'
   | 'STRING'
+  | 'TRUE'
+  | 'FALSE'
+  | 'AND'
+  | 'OR'
+  | 'NOT'
+  | 'IF'
+  | 'ELIF'
+  | 'ELSE'
+  | 'WHILE'
+  | 'FOR'
+  | 'IN'
   | 'PRINT'
   | 'UNSUPPORTED_KEYWORD'
   | 'EQUAL'
+  | 'EQUAL_EQUAL'
+  | 'BANG_EQUAL'
+  | 'LESS'
+  | 'LESS_EQUAL'
+  | 'GREATER'
+  | 'GREATER_EQUAL'
   | 'PLUS'
   | 'MINUS'
   | 'STAR'
   | 'LEFT_PAREN'
   | 'RIGHT_PAREN'
   | 'COMMA'
+  | 'COLON'
+  | 'INDENT'
+  | 'DEDENT'
   | 'NEWLINE'
   | 'EOF';
 
@@ -54,7 +74,7 @@ export interface TeachingProgram {
   span: SourceSpan;
 }
 
-export type TeachingStatement = AssignmentStatement | PrintStatement;
+export type TeachingStatement = AssignmentStatement | PrintStatement | IfStatement | WhileStatement | ForStatement;
 
 export interface AssignmentStatement {
   type: 'Assign';
@@ -69,12 +89,44 @@ export interface PrintStatement {
   span: SourceSpan;
 }
 
+export interface IfBranch {
+  condition: TeachingExpression;
+  body: TeachingStatement[];
+  span: SourceSpan;
+}
+
+export interface IfStatement {
+  type: 'If';
+  branches: IfBranch[];
+  elseBody: TeachingStatement[] | null;
+  span: SourceSpan;
+}
+
+export interface WhileStatement {
+  type: 'While';
+  condition: TeachingExpression;
+  body: TeachingStatement[];
+  span: SourceSpan;
+}
+
+export interface ForStatement {
+  type: 'For';
+  name: string;
+  rangeArguments: TeachingExpression[];
+  rangeSpan: SourceSpan;
+  body: TeachingStatement[];
+  span: SourceSpan;
+}
+
 export type TeachingExpression =
   | IntegerLiteralExpression
   | StringLiteralExpression
+  | BooleanLiteralExpression
   | NameExpression
   | UnaryExpression
-  | BinaryExpression;
+  | BinaryExpression
+  | ComparisonExpression
+  | LogicalExpression;
 
 export interface IntegerLiteralExpression {
   type: 'IntegerLiteral';
@@ -89,6 +141,12 @@ export interface StringLiteralExpression {
   span: SourceSpan;
 }
 
+export interface BooleanLiteralExpression {
+  type: 'BooleanLiteral';
+  value: boolean;
+  span: SourceSpan;
+}
+
 export interface NameExpression {
   type: 'Name';
   name: string;
@@ -97,7 +155,7 @@ export interface NameExpression {
 
 export interface UnaryExpression {
   type: 'Unary';
-  operator: '-';
+  operator: '-' | 'not';
   operand: TeachingExpression;
   span: SourceSpan;
 }
@@ -110,8 +168,24 @@ export interface BinaryExpression {
   span: SourceSpan;
 }
 
+export interface ComparisonExpression {
+  type: 'Compare';
+  operator: '==' | '!=' | '<' | '<=' | '>' | '>=';
+  left: TeachingExpression;
+  right: TeachingExpression;
+  span: SourceSpan;
+}
+
+export interface LogicalExpression {
+  type: 'Logical';
+  operator: 'and' | 'or';
+  left: TeachingExpression;
+  right: TeachingExpression;
+  span: SourceSpan;
+}
+
 export interface TeachingConstant {
-  type: 'int' | 'str';
+  type: 'int' | 'str' | 'bool';
   value: string;
 }
 
@@ -120,9 +194,18 @@ export type TeachingOpcode =
   | 'LOAD_NAME'
   | 'STORE_NAME'
   | 'UNARY_NEGATIVE'
+  | 'UNARY_NOT'
   | 'BINARY_ADD'
   | 'BINARY_SUBTRACT'
   | 'BINARY_MULTIPLY'
+  | 'COMPARE_OP'
+  | 'JUMP'
+  | 'POP_JUMP_IF_FALSE'
+  | 'BUILD_RANGE'
+  | 'GET_ITER'
+  | 'FOR_ITER'
+  | 'JUMP_IF_FALSE_OR_POP'
+  | 'JUMP_IF_TRUE_OR_POP'
   | 'PRINT'
   | 'HALT';
 
@@ -134,7 +217,7 @@ export interface TeachingInstruction {
 }
 
 export interface TeachingCompileResult {
-  version: 'mini-vm-v1';
+  version: 'mini-vm-v2';
   ast: TeachingProgram;
   constants: TeachingConstant[];
   instructions: TeachingInstruction[];
@@ -143,7 +226,7 @@ export interface TeachingCompileResult {
 export type TeachingVmStatus = 'ready' | 'running' | 'paused' | 'finished' | 'error';
 
 export interface TeachingValueSnapshot {
-  type: 'int' | 'str';
+  type: 'int' | 'str' | 'bool' | 'range' | 'iterator';
   value: string;
   display: string;
 }
@@ -162,15 +245,23 @@ export interface TeachingDiagnosticSnapshot {
 
 export interface TeachingVmSnapshot {
   stepIndex: number;
+  executedInstructionCount: number;
   pc: number;
   status: TeachingVmStatus;
   lastExecutedInstructionIndex: number | null;
   nextInstructionIndex: number | null;
   faultInstructionIndex: number | null;
+  controlFlow: TeachingControlFlowSnapshot | null;
   stack: readonly TeachingValueSnapshot[];
   variables: readonly TeachingVariableSnapshot[];
   output: readonly string[];
   diagnostic: TeachingDiagnosticSnapshot | null;
+}
+
+export interface TeachingControlFlowSnapshot {
+  kind: 'shortCircuit' | 'branch' | 'iteration';
+  outcome: string;
+  nextInstructionIndex: number | null;
 }
 
 export interface TeachingVmHistory {

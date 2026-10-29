@@ -70,7 +70,7 @@ test('shows localized teaching syntax and runtime errors with source locations',
   await source.fill('if');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('Unsupported syntax');
-  await expect(page.getByRole('alert')).toContainText('line 1, column 1');
+  await expect(page.getByRole('alert')).toContainText('line 1, column 3');
   await expect(page.getByRole('alert')).not.toContainText('Expected');
 
   await source.fill('print(missing)');
@@ -85,6 +85,89 @@ test('shows localized teaching syntax and runtime errors with source locations',
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('Type error');
   await expect(page.locator('.teaching-instruction-table tr.is-vm-fault')).toContainText('BINARY_SUBTRACT');
+});
+
+test('runs short-circuit expressions, nested branches, and lazy range loops in the Worker', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'print(False and missing, True or missing)',
+    'if "":',
+    '  print("not selected")',
+    'elif 1:',
+    '  if True:',
+    '    print("branch")',
+    'else:',
+    '  print(missing)',
+    'for i in range(2, -1, -1):',
+    '  print(i)',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expect(page.getByText('mini-vm-v2').first()).toBeVisible();
+  const instructions = page.locator('.teaching-instruction-table');
+  await expect(instructions).toContainText('JUMP_IF_FALSE_OR_POP');
+  await expect(instructions).toContainText('POP_JUMP_IF_FALSE');
+  await expect(instructions).toContainText('FOR_ITER');
+
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText('False True\nbranch\n2\n1\n0');
+  await expect(page.locator('.teaching-control-flow')).toContainText('iterator is exhausted');
+});
+
+test('renders operands for comparison and logical expressions in the teaching AST', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill('if 1 < 2 and not False:\n  print("selected")');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+
+  const ast = page.locator('.teaching-ast-scroll');
+  await expect(ast).toContainText('Compare');
+  await expect(ast).toContainText('<');
+  await expect(ast).toContainText('Logical');
+  await expect(ast).toContainText('and');
+  await expect(ast).toContainText('Unary');
+  await expect(ast).toContainText('not');
+  await expect(ast).toContainText('IntegerLiteral');
+  await expect(ast).toContainText('BooleanLiteral');
+});
+
+test('shows the dynamic instruction budget in the browser for an infinite while loop', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill('while True:\n  x = 1');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByRole('alert')).toContainText('5,000-instruction execution limit', { timeout: 30_000 });
+  await expect(page.locator('.small-meta').filter({ hasText: '5,000 teaching instructions executed' })).toBeVisible();
+  await expect(page.locator('.teaching-instruction-table tr.is-vm-fault')).toHaveCount(1);
+});
+
+test('matches the P6 common subset with real CPython output and range-step error category', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'i = 0',
+    'while i < 3:',
+    '  print(i)',
+    '  i = i + 1',
+    'for j in range(2, -1, -1):',
+    '  print(j)',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  await expect(page.locator('#execution-output')).toHaveText('0\n1\n2\n2\n1\n0\n');
+
+  await source.fill('for i in range(0, 1, 0):\n  print(i)');
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-exception')).toContainText('ValueError', { timeout: 20_000 });
+
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('teaching');
+  await expect(page.getByText('Ready to compile teaching program')).toBeVisible();
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByRole('alert')).toContainText('range() step cannot be zero');
 });
 
 test('pauses and resets a long teaching run and invalidates stale mode/source state', async ({ page }) => {

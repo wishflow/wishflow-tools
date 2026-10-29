@@ -5,7 +5,7 @@
 - 日期：2026-10-29。
 - 已确认方向：用户选择先用 Pyodide 展示真实 CPython AST、字节码和执行轨迹，再逐步加入教学 Mini VM。
 - 应用：Python 解释器实验室，目录 `apps/python-interpreter-lab/`，发布路径 `/python-interpreter-lab/`。
-- P0 文档基线及 P1–P5 双引擎首版已完成并发布；P5 v1 的范围与验收证据见对应 [spec](../specs/p05-minimal-teaching-vm.md) 和 [tasks](../tasks/p05-minimal-teaching-vm.md)，发布状态以[整体实施计划](../implementation-plan.md)为准。P6 控制流方案仍按阶段规格单独确认。
+- P0 文档基线及 P1–P5 双引擎首版已完成并发布；P5 v1 的范围与验收证据见对应 [spec](../specs/p05-minimal-teaching-vm.md) 和 [tasks](../tasks/p05-minimal-teaching-vm.md)。P6 控制流范围已按阶段规格确认，T01–T05 实现及本地验收通过，发布状态以[整体实施计划](../implementation-plan.md)为准。
 - 本文中的模块划分和边界用于指导阶段规格；各阶段的具体公共接口和消息字段只在对应 spec 中约定，不预建通用框架。
 
 阶段、依赖与交付状态由[整体实施计划](../implementation-plan.md)维护。本文负责解释为什么采用这条路线、各引擎能展示什么，以及哪些边界必须保留。

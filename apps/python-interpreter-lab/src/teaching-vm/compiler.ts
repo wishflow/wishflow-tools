@@ -26,7 +26,7 @@ class Compiler {
     for (const statement of this.ast.statements) this.compileStatement(statement);
     this.emit('HALT', null, this.ast.span);
     return {
-      version: 'mini-vm-v1',
+      version: 'mini-vm-v2',
       ast: this.ast,
       constants: this.constants,
       instructions: this.instructions,
@@ -40,8 +40,53 @@ class Compiler {
       return;
     }
 
-    for (const argument of statement.arguments) this.compileExpression(argument);
-    this.emit('PRINT', statement.arguments.length, statement.span);
+    if (statement.type === 'Print') {
+      for (const argument of statement.arguments) this.compileExpression(argument);
+      this.emit('PRINT', statement.arguments.length, statement.span);
+      return;
+    }
+
+    if (statement.type === 'If') this.compileIf(statement);
+    else if (statement.type === 'While') this.compileWhile(statement);
+    else this.compileFor(statement);
+  }
+
+  private compileIf(statement: Extract<TeachingStatement, { type: 'If' }>): void {
+    const endJumps: number[] = [];
+    for (const branch of statement.branches) {
+      this.compileExpression(branch.condition);
+      const skipBranch = this.emit('POP_JUMP_IF_FALSE', -1, branch.condition.span);
+      for (const child of branch.body) this.compileStatement(child);
+      if (branch !== statement.branches.at(-1) || statement.elseBody) {
+        endJumps.push(this.emit('JUMP', -1, branch.span));
+      }
+      this.patchArgument(skipBranch, this.instructions.length);
+    }
+    if (statement.elseBody) {
+      for (const child of statement.elseBody) this.compileStatement(child);
+    }
+    for (const jump of endJumps) this.patchArgument(jump, this.instructions.length);
+  }
+
+  private compileWhile(statement: Extract<TeachingStatement, { type: 'While' }>): void {
+    const conditionStart = this.instructions.length;
+    this.compileExpression(statement.condition);
+    const exit = this.emit('POP_JUMP_IF_FALSE', -1, statement.condition.span);
+    for (const child of statement.body) this.compileStatement(child);
+    this.emit('JUMP', conditionStart, statement.span);
+    this.patchArgument(exit, this.instructions.length);
+  }
+
+  private compileFor(statement: Extract<TeachingStatement, { type: 'For' }>): void {
+    for (const argument of statement.rangeArguments) this.compileExpression(argument);
+    this.emit('BUILD_RANGE', statement.rangeArguments.length, statement.rangeSpan);
+    this.emit('GET_ITER', null, statement.rangeSpan);
+    const loopStart = this.instructions.length;
+    const end = this.emit('FOR_ITER', -1, statement.span);
+    this.emit('STORE_NAME', statement.name, statement.span);
+    for (const child of statement.body) this.compileStatement(child);
+    this.emit('JUMP', loopStart, statement.span);
+    this.patchArgument(end, this.instructions.length);
   }
 
   private compileExpression(expression: TeachingExpression): void {
@@ -54,18 +99,37 @@ class Compiler {
       case 'StringLiteral':
         this.emit('LOAD_CONST', this.addConstant({ type: 'str', value: expression.value }), expression.span);
         return;
+      case 'BooleanLiteral':
+        this.emit('LOAD_CONST', this.addConstant({ type: 'bool', value: expression.value ? 'True' : 'False' }), expression.span);
+        return;
       case 'Name':
         this.emit('LOAD_NAME', expression.name, expression.span);
         return;
       case 'Unary':
         this.compileExpression(expression.operand);
-        this.emit('UNARY_NEGATIVE', null, expression.span);
+        this.emit(expression.operator === '-' ? 'UNARY_NEGATIVE' : 'UNARY_NOT', null, expression.span);
         return;
       case 'Binary':
         this.compileExpression(expression.left);
         this.compileExpression(expression.right);
         this.emit(binaryOpcode(expression.operator), null, expression.span);
         return;
+      case 'Compare':
+        this.compileExpression(expression.left);
+        this.compileExpression(expression.right);
+        this.emit('COMPARE_OP', expression.operator, expression.span);
+        return;
+      case 'Logical': {
+        this.compileExpression(expression.left);
+        const jump = this.emit(
+          expression.operator === 'and' ? 'JUMP_IF_FALSE_OR_POP' : 'JUMP_IF_TRUE_OR_POP',
+          -1,
+          expression.left.span,
+        );
+        this.compileExpression(expression.right);
+        this.patchArgument(jump, this.instructions.length);
+        return;
+      }
     }
   }
 
@@ -80,7 +144,7 @@ class Compiler {
     return index;
   }
 
-  private emit(opcode: TeachingOpcode, argument: number | string | null, span: SourceSpan): void {
+  private emit(opcode: TeachingOpcode, argument: number | string | null, span: SourceSpan): number {
     if (this.instructions.length >= MAX_INSTRUCTION_COUNT) {
       throw new TeachingDiagnostic(
         'compile',
@@ -95,6 +159,13 @@ class Compiler {
       argument,
       span,
     });
+    return this.instructions.length - 1;
+  }
+
+  private patchArgument(instructionIndex: number, target: number): void {
+    const instruction = this.instructions[instructionIndex];
+    if (!instruction) throw new Error('Cannot patch a missing teaching instruction.');
+    this.instructions[instructionIndex] = { ...instruction, argument: target };
   }
 }
 

@@ -35,6 +35,14 @@ test('ignores blank lines and comments while keeping logical newlines', () => {
   assert.deepEqual(tokens.map(({ type }) => type), ['NEWLINE', 'NEWLINE', 'NAME', 'EQUAL', 'INTEGER', 'EOF']);
 });
 
+test('emits indentation boundaries while ignoring blank and comment-only indentation', () => {
+  const tokens = tokenizeTeachingSource('if True:\r\n  # empty\r\n  print(1)\r\nprint(2)');
+  assert.deepEqual(tokens.map(({ type }) => type), [
+    'IF', 'TRUE', 'COLON', 'NEWLINE', 'NEWLINE', 'INDENT', 'PRINT', 'LEFT_PAREN', 'INTEGER',
+    'RIGHT_PAREN', 'NEWLINE', 'DEDENT', 'PRINT', 'LEFT_PAREN', 'INTEGER', 'RIGHT_PAREN', 'EOF',
+  ]);
+});
+
 test('reports lexical failures with exact UTF-16 ranges', () => {
   const cases = [
     { source: 'x = "bad\\q"', code: 'invalid-escape', start: 8, end: 10 },
@@ -117,6 +125,99 @@ test('parses unary negation and parenthesized expressions', () => {
   if (assignment.value.type !== 'Unary') assert.fail('expected unary expression');
   assert.equal(assignment.value.operator, '-');
   assert.equal(assignment.value.operand.type, 'Binary');
+});
+
+test('parses Python boolean, comparison, not, and logical precedence', () => {
+  const program = parseTeachingSource('x = not 1 + 1 == 2 or False and True');
+  const assignment = program.statements[0];
+  assert.equal(assignment.type, 'Assign');
+  if (assignment.type !== 'Assign') assert.fail('expected assignment');
+  assert.equal(assignment.value.type, 'Logical');
+  if (assignment.value.type !== 'Logical') assert.fail('expected logical expression');
+  assert.equal(assignment.value.operator, 'or');
+  assert.equal(assignment.value.left.type, 'Unary');
+  assert.equal(assignment.value.right.type, 'Logical');
+  if (assignment.value.left.type === 'Unary') assert.equal(assignment.value.left.operator, 'not');
+  if (assignment.value.right.type === 'Logical') assert.equal(assignment.value.right.operator, 'and');
+  assert.throws(
+    () => parseTeachingSource('print(1 < 2 < 3)'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.stage === 'parse',
+  );
+});
+
+test('parses nested if/elif/else suites and closes a final block at end of source', () => {
+  const program = parseTeachingSource([
+    'if 0:',
+    '  print(1)',
+    '# comment between branches',
+    'elif "x":',
+    '  if True:',
+    '    print(2)',
+    '# comment before else',
+    'else:',
+    '  print(3)',
+  ].join('\n'));
+  const statement = program.statements[0];
+  assert.equal(statement.type, 'If');
+  if (statement.type !== 'If') assert.fail('expected if statement');
+  assert.equal(statement.branches.length, 2);
+  assert.equal(statement.branches[1]?.body[0]?.type, 'If');
+  assert.equal(statement.elseBody?.[0]?.type, 'Print');
+  assert.throws(
+    () => parseTeachingSource('if True:\n  print(1)\n print(2)'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'inconsistent-indentation',
+  );
+  assert.throws(
+    () => parseTeachingSource('if True:\n\tprint(1)'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'tab-indentation',
+  );
+  assert.throws(
+    () => parseTeachingSource('if True:\n'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.stage === 'parse',
+  );
+});
+
+test('parses while suites with a boolean expression and nested control flow', () => {
+  const program = parseTeachingSource('while not done:\n  if ready:\n    print(True)');
+  const statement = program.statements[0];
+  assert.equal(statement.type, 'While');
+  if (statement.type !== 'While') assert.fail('expected while statement');
+  assert.equal(statement.condition.type, 'Unary');
+  assert.equal(statement.body[0]?.type, 'If');
+});
+
+test('parses one to three range expressions in a for suite', () => {
+  const program = parseTeachingSource('for item in range(1, end + 1, True):\n  print(item)');
+  const statement = program.statements[0];
+  assert.equal(statement.type, 'For');
+  if (statement.type !== 'For') assert.fail('expected for statement');
+  assert.equal(statement.name, 'item');
+  assert.equal(statement.rangeArguments.length, 3);
+  assert.equal(statement.rangeArguments[1]?.type, 'Binary');
+  assert.throws(
+    () => parseTeachingSource('for item in range():\n  print(item)'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'expected-range-argument',
+  );
+  assert.throws(
+    () => parseTeachingSource('for item in range(1, 2, 3, 4):\n  print(item)'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'too-many-range-arguments',
+  );
+  assert.throws(
+    () => parseTeachingSource('for item in values:\n  print(item)'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'unsupported-iterator',
+  );
+});
+
+test('limits block nesting independently at 100 levels', () => {
+  const nestedSource = (depth: number) => [
+    ...Array.from({ length: depth }, (_, index) => `${' '.repeat(index)}if True:`),
+    `${' '.repeat(depth)}print(${`${'('.repeat(100)}1${')'.repeat(100)}`})`,
+  ].join('\n');
+  assert.equal(parseTeachingSource(nestedSource(100)).statements.length, 1);
+  assert.throws(
+    () => parseTeachingSource(nestedSource(101)),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'block-too-deep',
+  );
 });
 
 test('rejects unsupported keywords, expression statements, and trailing commas', () => {

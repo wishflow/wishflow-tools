@@ -55,6 +55,10 @@ function DiagnosticPanel({ diagnostic, t }: { diagnostic: TeachingDiagnosticSnap
     ? 'teachingCodeNameError'
     : diagnostic.code === 'type-error'
       ? 'teachingCodeTypeError'
+      : diagnostic.code === 'zero-range-step'
+        ? 'teachingCodeZeroRangeStep'
+      : diagnostic.code === 'instruction-budget-exceeded'
+        ? 'teachingCodeInstructionBudget'
       : ['too-many-names', 'string-too-long', 'output-too-long', 'integer-too-large'].includes(diagnostic.code)
         ? 'teachingCodeResourceLimit'
         : diagnostic.stage === 'lex'
@@ -97,6 +101,9 @@ function ExpressionTree({
     case 'StringLiteral':
       detail = <code className="ast-literal">{JSON.stringify(expression.value)}</code>;
       break;
+    case 'BooleanLiteral':
+      detail = <code className="ast-literal">{expression.value ? 'True' : 'False'}</code>;
+      break;
     case 'Name':
       detail = <code>{expression.name}</code>;
       break;
@@ -105,6 +112,8 @@ function ExpressionTree({
       children = [expression.operand];
       break;
     case 'Binary':
+    case 'Compare':
+    case 'Logical':
       detail = <code>{expression.operator}</code>;
       children = [expression.left, expression.right];
       break;
@@ -154,7 +163,24 @@ function StatementTree({
     && sourceLink.origin.index === null
     && sourceLink.range?.start === range?.start
     && sourceLink.range?.end === range?.end;
-  const expressions = statement.type === 'Assign' ? [statement.value] : statement.arguments;
+  const expressions = statement.type === 'Assign'
+    ? [statement.value]
+    : statement.type === 'Print'
+      ? statement.arguments
+      : statement.type === 'While'
+        ? [statement.condition]
+        : statement.type === 'For'
+          ? statement.rangeArguments
+          : [];
+  const statementLabel = statement.type === 'Assign'
+    ? statement.name
+    : statement.type === 'Print'
+      ? 'print(...)'
+      : statement.type === 'If'
+        ? 'if / elif / else'
+        : statement.type === 'While'
+          ? 'while'
+          : `for ${statement.name} in range(...)`;
 
   return (
     <li className={`teaching-ast-node${isSourceMatch(statement.span, sourceLink) ? ' is-source-match' : ''}${isOrigin ? ' is-source-origin' : ''}`}>
@@ -165,7 +191,7 @@ function StatementTree({
         onClick={() => onLink({ origin: { kind: 'teaching', index: null }, range })}
       >
         <span className="ast-type">{statement.type}</span>
-        <code>{statement.type === 'Assign' ? statement.name : 'print(...)'}</code>
+        <code>{statementLabel}</code>
         <span className="ast-location">{positionLabel(statement.span, t)}</span>
       </button>
       {expressions.length > 0 && (
@@ -174,6 +200,49 @@ function StatementTree({
             <ExpressionTree key={`${expression.type}-${expression.span.start}-${expression.span.end}`} expression={expression} sourceLink={sourceLink} t={t} onLink={onLink} />
           ))}
         </ul>
+      )}
+      {statement.type === 'If' && (
+        <ul className="teaching-ast-list">
+          {statement.branches.map((branch, index) => (
+            <li key={`branch-${branch.span.start}`} className="teaching-ast-node">
+              <div className="teaching-ast-locate">
+                <span className="ast-type">{index === 0 ? 'if' : 'elif'}</span>
+                <ul className="teaching-ast-list">
+                  <ExpressionTree expression={branch.condition} sourceLink={sourceLink} t={t} onLink={onLink} />
+                </ul>
+              </div>
+              <ol className="teaching-ast-list">
+                {branch.body.map((child, childIndex) => (
+                  <StatementTree key={`${child.type}-${child.span.start}-${childIndex}`} statement={child} sourceLink={sourceLink} t={t} onLink={onLink} />
+                ))}
+              </ol>
+            </li>
+          ))}
+          {statement.elseBody && (
+            <li className="teaching-ast-node">
+              <span className="ast-type">else</span>
+              <ol className="teaching-ast-list">
+                {statement.elseBody.map((child, childIndex) => (
+                  <StatementTree key={`${child.type}-${child.span.start}-${childIndex}`} statement={child} sourceLink={sourceLink} t={t} onLink={onLink} />
+                ))}
+              </ol>
+            </li>
+          )}
+        </ul>
+      )}
+      {statement.type === 'While' && (
+        <ol className="teaching-ast-list">
+          {statement.body.map((child, childIndex) => (
+            <StatementTree key={`${child.type}-${child.span.start}-${childIndex}`} statement={child} sourceLink={sourceLink} t={t} onLink={onLink} />
+          ))}
+        </ol>
+      )}
+      {statement.type === 'For' && (
+        <ol className="teaching-ast-list">
+          {statement.body.map((child, childIndex) => (
+            <StatementTree key={`${child.type}-${child.span.start}-${childIndex}`} statement={child} sourceLink={sourceLink} t={t} onLink={onLink} />
+          ))}
+        </ol>
       )}
     </li>
   );
@@ -186,6 +255,9 @@ function formatInstructionArgument(instruction: TeachingCompileResult['instructi
       const value = constant.type === 'str' ? JSON.stringify(constant.value) : constant.value;
       return `#${instruction.argument} · ${value}`;
     }
+  }
+  if (['JUMP', 'POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'JUMP_IF_TRUE_OR_POP', 'FOR_ITER'].includes(instruction.opcode)) {
+    return `→ ${String(instruction.argument)}`;
   }
   return instruction.argument === null ? '—' : String(instruction.argument);
 }
@@ -387,6 +459,9 @@ export function TeachingVmPanel({ program, history, snapshot, headSnapshot, atHe
               />
               <span className="small-meta">{t('teachingHistoryPosition').replace('{current}', String(historyValue)).replace('{last}', String(historyEnd))}</span>
             </div>
+            <p className="small-meta">
+              {t('teachingInstructionCount').replace('{count}', String(snapshot?.executedInstructionCount ?? 0))}
+            </p>
             <div className="teaching-history-state" role="status">
               <span>{atHead ? t('teachingHistoryAtHead') : t('teachingHistoryInPast')}</span>
               {!atHead && <button type="button" className="text-button" onClick={onGoToHead}>{t('teachingReturnToHead')}</button>}
@@ -395,6 +470,16 @@ export function TeachingVmPanel({ program, history, snapshot, headSnapshot, atHe
             <div className="teaching-state-grid">
               <section aria-labelledby="teaching-stack-heading">
                 <h4 id="teaching-stack-heading">{t('teachingStack')}</h4>
+                {snapshot?.controlFlow && (
+                  <p className="teaching-control-flow" role="status">
+                    <strong>{t('teachingControlFlowDecision')}:</strong>{' '}
+                    {snapshot.controlFlow.kind === 'shortCircuit'
+                      ? t(snapshot.controlFlow.outcome === 'short-circuited' ? 'teachingShortCircuited' : 'teachingEvaluatedRight')
+                      : snapshot.controlFlow.kind === 'branch'
+                        ? t(snapshot.controlFlow.outcome === 'branch-taken' ? 'teachingBranchTaken' : 'teachingBranchSkipped')
+                        : t(snapshot.controlFlow.outcome === 'loop-finished' ? 'teachingLoopFinished' : 'teachingLoopContinues')}
+                  </p>
+                )}
                 {!snapshot || snapshot.stack.length === 0 ? <p className="empty-state">{t('teachingNoStack')}</p> : (
                   <ol className="teaching-value-list">
                     {snapshot.stack.map((value, index) => <li key={`${index}-${value.type}-${value.value}`}><span>{index}</span><code>{value.display}</code></li>)}
