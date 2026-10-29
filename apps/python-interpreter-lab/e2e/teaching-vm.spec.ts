@@ -90,9 +90,8 @@ test('shows localized teaching syntax and runtime errors with source locations',
 test('pauses and resets a long teaching run and invalidates stale mode/source state', async ({ page }) => {
   await chooseTeachingVm(page);
   const source = page.getByRole('textbox', { name: 'Python source' });
-  // Keep the VM busy long enough for the browser to deliver a pause request under CI load.
-  // The repeated output remains within the VM's source, token, instruction, and output budgets.
-  await source.fill('print("abcdefghij")\n'.repeat(999));
+  // Exercise pause near the instruction budget while keeping the rendered state small.
+  await source.fill(Array.from({ length: 999 }, (_, index) => `x = ${index}`).join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   const pauseButton = page.getByRole('button', { name: 'Pause teaching program' });
