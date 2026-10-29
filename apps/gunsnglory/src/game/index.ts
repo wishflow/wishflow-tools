@@ -290,6 +290,10 @@ export interface ShotView {
   positionFine: { x: number; y: number };
   remainingMs: number;
   damageStyle: UnitWeaponDefinition['damageStyle'];
+  /** Original fineZ draw-order bucket: 0 is behind roads, 7680 is in front. */
+  fineZ: 0 | 7680;
+  /** Original vertical arc offset, in fine coordinates above the ground anchor. */
+  heightFine: number;
   imageAsset?: 'sfx_mexican_dynamite';
   animationFrame: number;
   explosionRemainingMs?: number;
@@ -454,6 +458,10 @@ interface MutableShot {
   animationFrame: number;
   startFine: { x: number; y: number };
   positionFine: { x: number; y: number };
+  /** Cow Gulch player units inherit the original above-road fineZ at projectile creation. */
+  fineZ: 0 | 7680;
+  /** Applied at the next simulation frame, after the current frame was drawn. */
+  fineZTransitionPending: boolean;
   totalTravelTimeMs: number;
   remainingMs: number;
   impactResolved: boolean;
@@ -1293,6 +1301,31 @@ function projectileTravelTime(
   return Math.trunc(((baseTimePercent * baseSteps) + distanceSteps) / 100) * 10;
 }
 
+function shotArcHeightFine(
+  damageStyle: UnitWeaponDefinition['damageStyle'],
+  remainingMs: number,
+  totalTravelTimeMs: number,
+): number {
+  if (damageStyle !== 3 && damageStyle !== 4 && damageStyle !== 5 && damageStyle !== 6) return 0;
+  if (totalTravelTimeMs <= 0) return 0;
+  // The recovered Java stores the normalized travel ratio in a float before
+  // promoting it to double for Math.sin. Preserve that float32 rounding here.
+  const progress = Math.fround(Math.max(0, Math.min(1, remainingMs / totalTravelTimeMs)));
+  const placementOffset = Math.trunc(Math.fround(1920 * progress));
+  const baseOffset = damageStyle === 3 || damageStyle === 5
+    ? Math.trunc(placementOffset / 256)
+    : placementOffset;
+  const arcAmplitude = damageStyle === 4 ? 11520 : damageStyle === 6 ? 1536 : 15360;
+  return baseOffset + Math.trunc(Math.sin(Math.PI * progress) * arcAmplitude);
+}
+
+function shouldTransitionShotFineZ(shot: MutableShot): boolean {
+  if (shot.impactResolved || shot.fineZ !== 7680 || shot.totalTravelTimeMs <= 0) return false;
+  if (shot.damageStyle !== 3 && shot.damageStyle !== 4 && shot.damageStyle !== 5 && shot.damageStyle !== 6) return false;
+  const progress = Math.fround(shot.remainingMs / shot.totalTravelTimeMs);
+  return progress < 0.5 && shotArcHeightFine(shot.damageStyle, shot.remainingMs, shot.totalTravelTimeMs) < 7680;
+}
+
 function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[]): MutableEnemy | undefined {
   const weapon = unit.weapon;
   if (!weapon) return undefined;
@@ -1684,6 +1717,10 @@ export function createGame(options: {
             positionFine: { ...shot.positionFine },
             remainingMs: shot.remainingMs,
             damageStyle: shot.damageStyle,
+            fineZ: shot.fineZ,
+            heightFine: shot.impactResolved
+              ? 0
+              : shotArcHeightFine(shot.damageStyle, shot.remainingMs, shot.totalTravelTimeMs),
             ...(shot.imageAsset ? { imageAsset: shot.imageAsset } : {}),
             animationFrame: shot.animationFrame,
             ...(shot.explosionRemainingMs > 0 ? { explosionRemainingMs: shot.explosionRemainingMs } : {}),
@@ -1857,6 +1894,11 @@ export function createGame(options: {
           if (wave?.settlement) {
             wave.events = [];
             return observe();
+          }
+          for (const shot of wave?.shots ?? []) {
+            if (!shot.fineZTransitionPending) continue;
+            shot.fineZ = 0;
+            shot.fineZTransitionPending = false;
           }
           frame += 1;
           const deltaMs = normalizedDelta(input.deltaMs);
@@ -2181,6 +2223,8 @@ export function createGame(options: {
                 animationFrame: 0,
                 startFine,
                 positionFine: { ...startFine },
+                fineZ: 7680,
+                fineZTransitionPending: false,
                 totalTravelTimeMs: travelMs,
                 remainingMs: travelMs,
                 impactResolved: false,
@@ -2347,6 +2391,12 @@ export function createGame(options: {
           });
           if (frame % GAME_REPLAY_CHECKPOINT_INTERVAL === 0 || nextView.wave?.settlement) {
             replayStates.set(frame, captureReplayState(nextView));
+          }
+          // The original draw() changes fineZ after drawing the projectile for this frame.
+          // Defer the observable change until the next simulation frame so repeated observe()
+          // calls and pause redraws keep returning the same view for this frame.
+          for (const shot of wave?.shots ?? []) {
+            if (shouldTransitionShotFineZ(shot)) shot.fineZTransitionPending = true;
           }
           return nextView;
         },

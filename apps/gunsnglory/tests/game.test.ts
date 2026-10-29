@@ -4,7 +4,7 @@ import { cowGulchContent, cowGulchP1aSampleContent } from '../src/content/cow-gu
 import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { createGame, type GameSession, type ScenarioContent, type UnitView } from '../src/game';
-import { serializeReplay, type GameReplayPayload } from '../src/game/replay';
+import { captureReplayState, serializeReplay, type GameReplayPayload } from '../src/game/replay';
 
 const scenario: ScenarioContent = {
   id: 'fixture',
@@ -908,6 +908,133 @@ test('the first in-range Desperado shot follows its target, deals damage, kills 
   assert.equal(view.wave?.cash, 66, 'a dead enemy cannot pay twice');
   assert.equal(view.wave?.defeatedEnemies, 1);
   assert.equal(view.wave?.phase, 'complete');
+});
+
+test('Mexican dynamite follows the researched arc and drops below roads without requiring canyon terrain', async () => {
+  const depthScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'mexican-projectile-depth-fixture',
+    units: [{
+      ...combatScenario.units[0]!,
+      type: 'mexican',
+      weapon: {
+        ...combatScenario.units[0]!.weapon!,
+        damage: 1,
+        damageStyle: 3,
+        areaDamageFine: 0,
+        projectileSpeed: 6000,
+        reloadTimeMs: 500,
+      },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
+      baseEnemySpeed: 0,
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 100000 },
+    },
+  };
+  const session = await createGame({ scenarios: { [depthScenario.id]: depthScenario } }).open({
+    scenarioId: depthScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+
+  let earlyLowArcSeen = false;
+  let highArcSeen = false;
+  let descendingLowArcDrawnAboveRoad = false;
+  let sameFrameDepthStayedStable = false;
+  let lateLowArcSeen = false;
+  for (let frame = 0; frame < 80; frame += 1) {
+    const view = session.advance({ deltaMs: 50 });
+    const shot = view.shots.find((candidate) => candidate.explosionRemainingMs === undefined);
+    if (!shot) continue;
+    const replayShot = captureReplayState(view).shots.find((candidate) => candidate.id === shot.id);
+    assert.ok(replayShot);
+    assert.equal('fineZ' in replayShot, false, 'render depth is excluded from the persisted replay checkpoint shape');
+    assert.equal('heightFine' in replayShot, false, 'derived arc height is excluded from the persisted replay checkpoint shape');
+    if (shot.heightFine > 7680) {
+      highArcSeen = true;
+      assert.equal(shot.fineZ, 7680, 'the projectile stays on the ground layer while its arc exceeds the threshold');
+    } else if (!highArcSeen) {
+      earlyLowArcSeen = true;
+      assert.equal(shot.fineZ, 7680, 'the low starting arc does not switch depth before the second half of flight');
+    } else if (shot.fineZ === 7680) {
+      descendingLowArcDrawnAboveRoad = true;
+      if (shot.heightFine < 7680 && !sameFrameDepthStayedStable) {
+        assert.equal(session.observe().shots.find((candidate) => candidate.id === shot.id)?.fineZ, shot.fineZ,
+          'observe() keeps the just-rendered frame depth stable');
+        const pausedView = session.pause();
+        assert.equal(pausedView.shots.find((candidate) => candidate.id === shot.id)?.fineZ, shot.fineZ,
+          'pausing redraws the same frame before applying the depth transition');
+        assert.deepEqual(session.advance({ deltaMs: 1000 }), pausedView,
+          'a paused advance does not apply the pending depth transition');
+        assert.equal(session.observe().shots.find((candidate) => candidate.id === shot.id)?.fineZ, shot.fineZ);
+        session.resume();
+        sameFrameDepthStayedStable = true;
+      }
+    } else {
+      lateLowArcSeen = true;
+      assert.equal(descendingLowArcDrawnAboveRoad, true,
+        'the original draws the threshold-crossing frame first, then moves the shot behind roads');
+      break;
+    }
+  }
+  assert.equal(earlyLowArcSeen, true, 'the flight begins below the height threshold but stays above roads');
+  assert.equal(highArcSeen, true, 'the flight exposes the researched high arc');
+  assert.equal(descendingLowArcDrawnAboveRoad, true, 'the frame that crosses the arc threshold is drawn at the old depth');
+  assert.equal(sameFrameDepthStayedStable, true, 'observe and pause remain consistent on the threshold-crossing frame');
+  assert.equal(lateLowArcSeen, true, 'the following frame draws the descending projectile below roads before impact');
+});
+
+test('special projectile arcs use the original Java float32 ratio for all four damage styles', async () => {
+  const cases = [
+    { style: 3 as const, expectedHeightFine: 7681 },
+    { style: 4 as const, expectedHeightFine: 6080 },
+    { style: 5 as const, expectedHeightFine: 7681 },
+    { style: 6 as const, expectedHeightFine: 1088 },
+  ];
+  for (const { style, expectedHeightFine } of cases) {
+    const precisionScenario: ScenarioContent = {
+      ...combatScenario,
+      id: `special-projectile-float32-style-${style}`,
+      units: [{
+        ...combatScenario.units[0]!,
+        type: 'mexican',
+        weapon: {
+          ...combatScenario.units[0]!.weapon!,
+          damage: 1,
+          damageStyle: style,
+          areaDamageFine: 0,
+          projectileSpeed: 2160,
+          reloadTimeMs: 500,
+        },
+      }],
+      previewWave: {
+        ...combatScenario.previewWave!,
+        spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
+        baseEnemySpeed: 0,
+        enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 100000 },
+      },
+    };
+    const session = await createGame({ scenarios: { [precisionScenario.id]: precisionScenario } }).open({
+      scenarioId: precisionScenario.id,
+      randomSeed: 42,
+    });
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+
+    session.advance({ deltaMs: 100 });
+    session.advance({ deltaMs: 100 });
+    session.advance({ deltaMs: 51 });
+    session.advance({ deltaMs: 100 });
+    const view = session.advance({ deltaMs: 99 });
+    const shot = view.shots.find((candidate) => candidate.explosionRemainingMs === undefined);
+    assert.ok(shot, `damage style ${style} produces an active projectile at the fixture boundary`);
+    assert.equal(shot.remainingMs, 50);
+    assert.equal(shot.heightFine, expectedHeightFine,
+      `damage style ${style} must preserve Java float32 rounding before integer casts`);
+  }
 });
 
 test('the Mexican dynamite hits inside the strict one-tile radius and leaves boundary targets unharmed', async () => {
