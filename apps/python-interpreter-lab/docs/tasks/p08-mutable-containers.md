@@ -71,7 +71,7 @@ flowchart LR
 | P8 规格和任务基线 | 完成 | 基于整体计划的列表/字典/引用目标建立；无代码实现前置遗漏。 |
 | T01 列表字面量和引用堆 | 完成 | [Issue #1](https://github.com/wishflow/wishflow-tools/issues/1)；空/嵌套/尾逗号列表、AST 子节点、`BUILD_LIST`、稳定对象 ID、可达对象 heap DTO 和 256 对象上限已实现；89 单测及 32 项应用 CI 通过，最后一次 AST 调整后的构建与定向浏览器测试也通过。 |
 | T02 下标读写、赋值目标和别名 | 完成 | [Issue #2](https://github.com/wishflow/wishflow-tools/issues/2)；支持嵌套读写、负/布尔索引、别名共享修改和 RHS→容器→索引求值顺序；96 单测通过。完整 CI 的 30/33 E2E 通过，另 3 项因 Pyodide CDN 动态模块请求暂时失败，单独重跑后全部通过。 |
-| T03 字典字面量和键语义 | 未开始 |  |
+| T03 字典字面量和键语义 | 完成 | [Issue #3](https://github.com/wishflow/wishflow-tools/issues/3)；支持空/嵌套/尾逗号字典、`BUILD_MAP`、稳定引用、可哈希标量键、`True`/`1` 与 `False`/`0` 键等价、保序更新、别名读写、缺失键与资源诊断；103 项单测、构建和 34 项 E2E 全部通过。 |
 | T04 对象快照和对象图 | 未开始 |  |
 | T05 循环、打印、比较、预算和 P7 集成 | 未开始 |  |
 | T06 完整回归、文档与发布 | 未开始 |  |

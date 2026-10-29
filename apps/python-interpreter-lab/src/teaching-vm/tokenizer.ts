@@ -230,6 +230,8 @@ class Tokenizer {
       ')': 'RIGHT_PAREN',
       '[': 'LEFT_BRACKET',
       ']': 'RIGHT_BRACKET',
+      '{': 'LEFT_BRACE',
+      '}': 'RIGHT_BRACE',
       ',': 'COMMA',
       ':': 'COLON',
     };

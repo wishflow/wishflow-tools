@@ -80,6 +80,7 @@ export const messages = {
   teachingCodeFunctionValue: { en: 'Functions are only supported as direct call targets', zh: '函数只能作为直接调用目标' },
   teachingCodeTypeError: { en: 'Type error', zh: '类型错误' },
   teachingCodeIndexError: { en: 'Index out of range', zh: '索引超出范围' },
+  teachingCodeKeyError: { en: 'Dictionary key not found', zh: '字典键不存在' },
   teachingCodeResourceLimit: { en: 'Resource limit', zh: '资源上限' },
   teachingCodeInstructionBudget: { en: '5,000-instruction execution limit', zh: '5,000 条动态指令上限' },
   teachingCodeZeroRangeStep: { en: 'range() step cannot be zero', zh: 'range() 的步长不能为零' },

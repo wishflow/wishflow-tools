@@ -164,6 +164,13 @@ class Compiler {
         for (const element of expression.elements) this.compileExpression(element);
         this.emit('BUILD_LIST', expression.elements.length, expression.span);
         return;
+      case 'DictLiteral':
+        for (const { key, value } of expression.entries) {
+          this.compileExpression(key);
+          this.compileExpression(value);
+        }
+        this.emit('BUILD_MAP', expression.entries.length, expression.span);
+        return;
       case 'Subscript':
         this.compileExpression(expression.value);
         this.compileExpression(expression.index);

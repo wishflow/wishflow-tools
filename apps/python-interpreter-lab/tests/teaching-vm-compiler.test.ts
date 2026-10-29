@@ -59,6 +59,25 @@ test('compiles subscript reads and evaluates the assignment value before its tar
   ]);
 });
 
+test('compiles dictionary key/value pairs in source order', () => {
+  const result = compileTeachingSource('mapping = {True: "first", 1: "second",}');
+  assert.deepEqual(result.instructions.map(({ opcode, argument }) => [opcode, argument]), [
+    ['LOAD_CONST', 0],
+    ['LOAD_CONST', 1],
+    ['LOAD_CONST', 2],
+    ['LOAD_CONST', 3],
+    ['BUILD_MAP', 2],
+    ['STORE_NAME', 'mapping'],
+    ['HALT', null],
+  ]);
+  assert.deepEqual(result.constants, [
+    { type: 'bool', value: 'True' },
+    { type: 'str', value: 'first' },
+    { type: 'int', value: '1' },
+    { type: 'str', value: 'second' },
+  ]);
+});
+
 test('compiles None to a dedicated constant without treating it as a name', () => {
   const result = compileTeachingSource('x = None\nprint(x)');
   assert.deepEqual(result.constants, [{ type: 'none', value: 'None' }]);

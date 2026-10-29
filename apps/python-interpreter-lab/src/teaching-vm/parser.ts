@@ -351,6 +351,24 @@ class Parser {
   }
 
   private parseAtom(): TeachingExpression {
+    if (this.match('LEFT_BRACE')) {
+      const open = this.previous();
+      return this.withExpressionNesting(open, () => {
+        const entries: Array<{ key: TeachingExpression; value: TeachingExpression }> = [];
+        if (!this.check('RIGHT_BRACE')) {
+          while (true) {
+            const key = this.parseExpression();
+            this.consume('COLON', 'expected-dictionary-colon', "Expected ':' between a dictionary key and value.");
+            const value = this.parseExpression();
+            entries.push({ key, value });
+            if (!this.match('COMMA')) break;
+            if (this.check('RIGHT_BRACE')) break;
+          }
+        }
+        const close = this.consume('RIGHT_BRACE', 'expected-dictionary-close', "Expected '}' after dictionary entries.");
+        return { type: 'DictLiteral', entries, span: mergeSpans(open.span, close.span) };
+      });
+    }
     if (this.match('LEFT_BRACKET')) {
       const open = this.previous();
       return this.withExpressionNesting(open, () => {

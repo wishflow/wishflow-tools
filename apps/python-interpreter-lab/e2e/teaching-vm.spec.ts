@@ -181,6 +181,37 @@ test('reads and mutates a list through aliases in the teaching Worker', async ({
   await expect(page.getByRole('alert')).toContainText('Index out of range');
 });
 
+test('compiles and runs dictionary literals and subscript updates in the teaching Worker', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'mapping = {True: "first", 1: "updated", "nested": {"value": 3}}',
+    'alias = mapping',
+    'alias[None] = "none key"',
+    'print(mapping[True], mapping["nested"]["value"], mapping[None])',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expect(page.locator('.teaching-instruction-table')).toContainText('BUILD_MAP');
+  await expect(page.locator('.teaching-ast-scroll')).toContainText('DictLiteral');
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText('updated 3 none key');
+  const variables = page.locator('.teaching-state-grid section[aria-labelledby="teaching-variables-heading"] .teaching-variable-list');
+  const displayedValues = await variables.locator(':scope > div').evaluateAll((items) => items.map((item) => [
+    item.querySelector('dt')?.textContent,
+    item.querySelector('dd code')?.textContent,
+  ]));
+  expect(displayedValues).toEqual([
+    ['mapping', 'dict #2'],
+    ['alias', 'dict #2'],
+  ]);
+
+  await source.fill('mapping = {"x": 1}\nprint(mapping["missing"])');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByRole('alert')).toContainText('Dictionary key not found');
+});
+
 test('steps a zero-argument function through an observable frame stack in the Worker', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));

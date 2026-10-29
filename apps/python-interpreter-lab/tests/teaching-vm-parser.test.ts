@@ -291,6 +291,39 @@ test('rejects non-assignable expression targets', () => {
   }
 });
 
+test('parses empty, nested, and trailing-comma dictionary literals', () => {
+  assert.deepEqual(tokenizeTeachingSource('value = {"x": 1}').map(({ type }) => type), [
+    'NAME', 'EQUAL', 'LEFT_BRACE', 'STRING', 'COLON', 'INTEGER', 'RIGHT_BRACE', 'EOF',
+  ]);
+  const program = parseTeachingSource('empty = {}\nmapping = {True: "first", 1: "second", "nested": [2,],}');
+  const empty = program.statements[0];
+  assert.equal(empty?.type, 'Assign');
+  if (empty?.type !== 'Assign') assert.fail('expected assignment');
+  assert.equal(empty.value.type, 'DictLiteral');
+  if (empty.value.type !== 'DictLiteral') assert.fail('expected dictionary literal');
+  assert.deepEqual(empty.value.entries, []);
+
+  const assignment = program.statements[1];
+  assert.equal(assignment?.type, 'Assign');
+  if (assignment?.type !== 'Assign') assert.fail('expected assignment');
+  assert.equal(assignment.value.type, 'DictLiteral');
+  if (assignment.value.type !== 'DictLiteral') assert.fail('expected dictionary literal');
+  assert.deepEqual(assignment.value.entries.map(({ key, value }) => [key.type, value.type]), [
+    ['BooleanLiteral', 'StringLiteral'],
+    ['IntegerLiteral', 'StringLiteral'],
+    ['StringLiteral', 'ListLiteral'],
+  ]);
+});
+
+test('rejects malformed dictionary literals with parser diagnostics', () => {
+  for (const source of ['value = {"x": 1', 'value = {"x" 1}', 'value = {"x": 1,,}']) {
+    assert.throws(
+      () => parseTeachingSource(source),
+      (error: unknown) => error instanceof TeachingDiagnostic && error.stage === 'parse',
+    );
+  }
+});
+
 test('parses nested if/elif/else suites and closes a final block at end of source', () => {
   const program = parseTeachingSource([
     'if 0:',

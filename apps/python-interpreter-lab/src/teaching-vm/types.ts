@@ -58,6 +58,8 @@ export type TokenType =
   | 'RIGHT_PAREN'
   | 'LEFT_BRACKET'
   | 'RIGHT_BRACKET'
+  | 'LEFT_BRACE'
+  | 'RIGHT_BRACE'
   | 'COMMA'
   | 'COLON'
   | 'INDENT'
@@ -165,7 +167,8 @@ export type TeachingExpression =
   | LogicalExpression
   | CallExpression
   | SubscriptExpression
-  | ListLiteralExpression;
+  | ListLiteralExpression
+  | DictLiteralExpression;
 
 export interface IntegerLiteralExpression {
   type: 'IntegerLiteral';
@@ -241,6 +244,17 @@ export interface ListLiteralExpression {
   span: SourceSpan;
 }
 
+export interface DictEntryExpression {
+  key: TeachingExpression;
+  value: TeachingExpression;
+}
+
+export interface DictLiteralExpression {
+  type: 'DictLiteral';
+  entries: DictEntryExpression[];
+  span: SourceSpan;
+}
+
 export interface SubscriptExpression {
   type: 'Subscript';
   value: TeachingExpression;
@@ -263,6 +277,7 @@ export type TeachingOpcode =
   | 'BINARY_SUBTRACT'
   | 'BINARY_MULTIPLY'
   | 'BUILD_LIST'
+  | 'BUILD_MAP'
   | 'BINARY_SUBSCR'
   | 'STORE_SUBSCR'
   | 'COMPARE_OP'
@@ -309,17 +324,30 @@ export interface TeachingCompileResult {
 export type TeachingVmStatus = 'ready' | 'running' | 'paused' | 'finished' | 'error';
 
 export interface TeachingValueSnapshot {
-  type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator' | 'function' | 'list';
+  type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator' | 'function' | 'list' | 'dict';
   value: string;
   display: string;
   objectId?: number;
 }
 
-export interface TeachingHeapObjectSnapshot {
+export interface TeachingListHeapSnapshot {
   id: number;
   type: 'list';
   items: readonly TeachingValueSnapshot[];
 }
+
+export interface TeachingDictEntrySnapshot {
+  key: TeachingValueSnapshot;
+  value: TeachingValueSnapshot;
+}
+
+export interface TeachingDictHeapSnapshot {
+  id: number;
+  type: 'dict';
+  entries: readonly TeachingDictEntrySnapshot[];
+}
+
+export type TeachingHeapObjectSnapshot = TeachingListHeapSnapshot | TeachingDictHeapSnapshot;
 
 export interface TeachingVariableSnapshot {
   name: string;

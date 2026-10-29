@@ -60,6 +60,7 @@ function DiagnosticPanel({ diagnostic, t }: { diagnostic: TeachingDiagnosticSnap
     'type-error': 'teachingCodeTypeError',
     'not-callable': 'teachingCodeTypeError',
     'index-out-of-range': 'teachingCodeIndexError',
+    'key-not-found': 'teachingCodeKeyError',
     'heap-object-limit-exceeded': 'teachingCodeResourceLimit',
     'heap-entry-limit-exceeded': 'teachingCodeResourceLimit',
     'container-size-limit-exceeded': 'teachingCodeResourceLimit',
@@ -127,6 +128,10 @@ function ExpressionTree({
     case 'ListLiteral':
       detail = <code>{expression.elements.length === 0 ? '[]' : '[...]'}</code>;
       children = expression.elements;
+      break;
+    case 'DictLiteral':
+      detail = <code>{expression.entries.length === 0 ? '{}' : '{...}'}</code>;
+      children = expression.entries.flatMap(({ key, value }) => [key, value]);
       break;
     case 'Subscript':
       detail = <code>[...]</code>;

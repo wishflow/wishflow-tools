@@ -34,6 +34,7 @@ type RuntimeValue =
   | { type: 'none' }
   | { type: 'function'; function: TeachingFunction }
   | ListRuntimeValue
+  | DictRuntimeValue
   | RangeRuntimeValue
   | IteratorRuntimeValue;
 
@@ -47,6 +48,24 @@ interface ListHeapObject {
   type: 'list';
   items: RuntimeValue[];
 }
+
+interface DictRuntimeValue {
+  type: 'dict';
+  objectId: number;
+}
+
+interface DictHeapEntry {
+  key: RuntimeValue;
+  value: RuntimeValue;
+}
+
+interface DictHeapObject {
+  id: number;
+  type: 'dict';
+  entries: DictHeapEntry[];
+}
+
+type HeapObject = ListHeapObject | DictHeapObject;
 
 interface RangeRuntimeValue {
   type: 'range';
@@ -83,7 +102,7 @@ export class TeachingMachine {
   #frames: RuntimeFrame[];
   #nextFrameId = 1;
   #variables = new Map<string, RuntimeValue>();
-  #heap = new Map<number, ListHeapObject>();
+  #heap = new Map<number, HeapObject>();
   #nextHeapObjectId = 1;
   #allocatedHeapEntryCount = 0;
   #output: string[] = [];
@@ -264,6 +283,9 @@ export class TeachingMachine {
         return null;
       case 'BUILD_LIST':
         this.executeBuildList(instruction);
+        return null;
+      case 'BUILD_MAP':
+        this.executeBuildMap(instruction);
         return null;
       case 'BINARY_SUBSCR':
         this.executeSubscript(instruction);
@@ -542,6 +564,39 @@ export class TeachingMachine {
     this.#stack.splice(this.#stack.length - count, count, { type: 'list', objectId });
   }
 
+  private executeBuildMap(instruction: TeachingInstruction): void {
+    const count = requireNumberArgument(instruction);
+    if (count < 0 || count * 2 > this.#stack.length) {
+      this.runtimeError('vm-stack-underflow', 'BUILD_MAP does not have enough key and value pairs on the stack.', instruction.span);
+    }
+    const entries: DictHeapEntry[] = [];
+    const values = this.#stack.slice(this.#stack.length - count * 2);
+    for (let index = 0; index < values.length; index += 2) {
+      const key = values[index];
+      const value = values[index + 1];
+      if (!key || !value) this.runtimeError('vm-stack-underflow', 'BUILD_MAP received an incomplete key and value pair.', instruction.span);
+      if (!isDictionaryKey(key)) this.typeError('dictionary key', [key], instruction.span);
+      const existing = entries.find((entry) => dictionaryKeysEqual(entry.key, key));
+      if (existing) existing.value = value;
+      else entries.push({ key, value });
+      if (entries.length > MAX_CONTAINER_ENTRIES) {
+        this.runtimeError('container-size-limit-exceeded', `A dictionary cannot contain more than ${MAX_CONTAINER_ENTRIES} entries.`, instruction.span);
+      }
+    }
+    if (this.#heap.size >= MAX_HEAP_OBJECTS) {
+      this.runtimeError('heap-object-limit-exceeded', `Teaching VM reached its ${MAX_HEAP_OBJECTS}-object allocation limit.`, instruction.span);
+    }
+    if (this.#allocatedHeapEntryCount + entries.length > MAX_HEAP_ENTRIES) {
+      this.runtimeError('heap-entry-limit-exceeded', `Teaching VM reached its ${MAX_HEAP_ENTRIES}-entry allocation limit.`, instruction.span);
+    }
+
+    const objectId = this.#nextHeapObjectId;
+    this.#nextHeapObjectId += 1;
+    this.#allocatedHeapEntryCount += entries.length;
+    this.#heap.set(objectId, { id: objectId, type: 'dict', entries });
+    this.#stack.splice(this.#stack.length - count * 2, count * 2, { type: 'dict', objectId });
+  }
+
   private isTruthy(value: RuntimeValue): boolean {
     switch (value.type) {
       case 'none': return false;
@@ -551,20 +606,39 @@ export class TeachingMachine {
       case 'str': return value.value.length > 0;
       case 'range': return rangeContains(value, value.start);
       case 'iterator': return true;
-      case 'list': return (this.#heap.get(value.objectId)?.items.length ?? 0) > 0;
+      case 'list': {
+        const object = this.#heap.get(value.objectId);
+        return object?.type === 'list' && object.items.length > 0;
+      }
+      case 'dict': {
+        const object = this.#heap.get(value.objectId);
+        return object?.type === 'dict' && object.entries.length > 0;
+      }
     }
   }
 
   private executeSubscript(instruction: TeachingInstruction): void {
     const [container, index] = this.peekPair(instruction);
-    if (container.type !== 'list') this.typeError('subscript', [container], instruction.span);
-    if (!isNumeric(index)) this.typeError('list index', [index], instruction.span);
-    const object = this.#heap.get(container.objectId);
-    if (!object) this.runtimeError('invalid-object-reference', `List object #${container.objectId} does not exist.`, instruction.span);
-    const normalizedIndex = normalizeListIndex(index, object.items.length, instruction.span);
-    const value = object.items[normalizedIndex];
-    if (!value) this.runtimeError('index-out-of-range', 'List index is out of range.', instruction.span);
-    this.replacePair(value);
+    if (container.type === 'list') {
+      if (!isNumeric(index)) this.typeError('list index', [index], instruction.span);
+      const object = this.#heap.get(container.objectId);
+      if (!object || object.type !== 'list') this.runtimeError('invalid-object-reference', `List object #${container.objectId} does not exist.`, instruction.span);
+      const normalizedIndex = normalizeListIndex(index, object.items.length, instruction.span);
+      const value = object.items[normalizedIndex];
+      if (!value) this.runtimeError('index-out-of-range', 'List index is out of range.', instruction.span);
+      this.replacePair(value);
+      return;
+    }
+    if (container.type === 'dict') {
+      if (!isDictionaryKey(index)) this.typeError('dictionary key', [index], instruction.span);
+      const object = this.#heap.get(container.objectId);
+      if (!object || object.type !== 'dict') this.runtimeError('invalid-object-reference', `Dictionary object #${container.objectId} does not exist.`, instruction.span);
+      const entry = object.entries.find(({ key }) => dictionaryKeysEqual(key, index));
+      if (!entry) this.runtimeError('key-not-found', `Dictionary key ${snapshotValue(index).display} was not found.`, instruction.span);
+      this.replacePair(entry.value);
+      return;
+    }
+    this.typeError('subscript', [container], instruction.span);
   }
 
   private executeStoreSubscript(instruction: TeachingInstruction): void {
@@ -577,13 +651,36 @@ export class TeachingMachine {
     if (!value || !container || !index) {
       this.runtimeError('vm-stack-underflow', 'STORE_SUBSCR requires a value, container, and index.', instruction.span);
     }
-    if (container.type !== 'list') this.typeError('subscript assignment', [container], instruction.span);
-    if (!isNumeric(index)) this.typeError('list index', [index], instruction.span);
-    const object = this.#heap.get(container.objectId);
-    if (!object) this.runtimeError('invalid-object-reference', `List object #${container.objectId} does not exist.`, instruction.span);
-    const normalizedIndex = normalizeListIndex(index, object.items.length, instruction.span);
-    object.items[normalizedIndex] = value;
-    this.#stack.splice(this.#stack.length - 3, 3);
+    if (container.type === 'list') {
+      if (!isNumeric(index)) this.typeError('list index', [index], instruction.span);
+      const object = this.#heap.get(container.objectId);
+      if (!object || object.type !== 'list') this.runtimeError('invalid-object-reference', `List object #${container.objectId} does not exist.`, instruction.span);
+      const normalizedIndex = normalizeListIndex(index, object.items.length, instruction.span);
+      object.items[normalizedIndex] = value;
+      this.#stack.splice(this.#stack.length - 3, 3);
+      return;
+    }
+    if (container.type === 'dict') {
+      if (!isDictionaryKey(index)) this.typeError('dictionary key', [index], instruction.span);
+      const object = this.#heap.get(container.objectId);
+      if (!object || object.type !== 'dict') this.runtimeError('invalid-object-reference', `Dictionary object #${container.objectId} does not exist.`, instruction.span);
+      const entry = object.entries.find(({ key }) => dictionaryKeysEqual(key, index));
+      if (entry) {
+        entry.value = value;
+      } else {
+        if (object.entries.length >= MAX_CONTAINER_ENTRIES) {
+          this.runtimeError('container-size-limit-exceeded', `A dictionary cannot contain more than ${MAX_CONTAINER_ENTRIES} entries.`, instruction.span);
+        }
+        if (this.#allocatedHeapEntryCount + 1 > MAX_HEAP_ENTRIES) {
+          this.runtimeError('heap-entry-limit-exceeded', `Teaching VM reached its ${MAX_HEAP_ENTRIES}-entry allocation limit.`, instruction.span);
+        }
+        object.entries.push({ key: index, value });
+        this.#allocatedHeapEntryCount += 1;
+      }
+      this.#stack.splice(this.#stack.length - 3, 3);
+      return;
+    }
+    this.typeError('subscript assignment', [container], instruction.span);
   }
 
   private executeForIteration(instruction: TeachingInstruction): number | null {
@@ -688,19 +785,31 @@ export class TeachingMachine {
     const pending = [...roots];
     for (let index = 0; index < pending.length; index += 1) {
       const value = pending[index];
-      if (value?.type !== 'list' || reachableIds.has(value.objectId)) continue;
+      if ((value?.type !== 'list' && value?.type !== 'dict') || reachableIds.has(value.objectId)) continue;
       reachableIds.add(value.objectId);
       const object = this.#heap.get(value.objectId);
-      if (object) pending.push(...object.items);
+      if (object?.type === 'list') pending.push(...object.items);
+      if (object?.type === 'dict') {
+        for (const entry of object.entries) pending.push(entry.key, entry.value);
+      }
     }
 
     return Object.freeze([...this.#heap.values()]
       .filter(({ id }) => reachableIds.has(id))
-      .map((object) => Object.freeze({
-        id: object.id,
-        type: object.type,
-        items: Object.freeze(object.items.map(snapshotValue)),
-      })));
+      .map((object) => object.type === 'list'
+        ? Object.freeze({
+          id: object.id,
+          type: object.type,
+          items: Object.freeze(object.items.map(snapshotValue)),
+        })
+        : Object.freeze({
+          id: object.id,
+          type: object.type,
+          entries: Object.freeze(object.entries.map(({ key, value }) => Object.freeze({
+            key: snapshotValue(key),
+            value: snapshotValue(value),
+          }))),
+        })));
   }
 
   private createFrameSnapshot(frame: RuntimeFrame): TeachingFrameSnapshot {
@@ -752,8 +861,8 @@ function runtimeValueFromConstant(constant: TeachingConstant): RuntimeValue {
 }
 
 function snapshotValue(value: RuntimeValue): TeachingValueSnapshot {
-  if (value.type === 'list') {
-    const text = `list #${value.objectId}`;
+  if (value.type === 'list' || value.type === 'dict') {
+    const text = `${value.type} #${value.objectId}`;
     return Object.freeze({ type: value.type, value: text, display: text, objectId: value.objectId });
   }
   const text = (() => {
@@ -783,14 +892,27 @@ function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticS
   });
 }
 
-function formatPrintValue(value: RuntimeValue, heap: Map<number, ListHeapObject>): string {
+function formatPrintValue(value: RuntimeValue, heap: Map<number, HeapObject>): string {
   if (value.type === 'function') return `<function ${value.function.name}>`;
   if (value.type === 'none') return 'None';
   if (value.type === 'bool') return value.value ? 'True' : 'False';
   if (value.type === 'range') return formatRange(value);
   if (value.type === 'iterator') return formatIterator(value);
   if (value.type === 'list') return heap.has(value.objectId) ? `list #${value.objectId}` : '<missing list>';
+  if (value.type === 'dict') return heap.has(value.objectId) ? `dict #${value.objectId}` : '<missing dict>';
   return value.value.toString();
+}
+
+function isDictionaryKey(value: RuntimeValue): value is Extract<RuntimeValue, { type: 'int' | 'bool' | 'str' | 'none' }> {
+  return value.type === 'int' || value.type === 'bool' || value.type === 'str' || value.type === 'none';
+}
+
+function dictionaryKeysEqual(left: RuntimeValue, right: RuntimeValue): boolean {
+  if (isNumeric(left) && isNumeric(right)) return numericValue(left) === numericValue(right);
+  if (left.type !== right.type) return false;
+  if (left.type === 'none' && right.type === 'none') return true;
+  if (left.type === 'str' && right.type === 'str') return left.value === right.value;
+  return false;
 }
 
 function isNumeric(value: RuntimeValue): value is Extract<RuntimeValue, { type: 'int' | 'bool' }> {

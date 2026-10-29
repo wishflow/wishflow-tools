@@ -55,11 +55,11 @@ test('allocates lists with stable IDs and immutable per-step heap snapshots', ()
     ['nested', 'list', 4],
     ['other', 'list', 5],
   ]);
-  assert.deepEqual(machine.current.heap.map(({ id, type, items }) => [
-    id,
-    type,
-    items.map(({ type: itemType, value, objectId }) => [itemType, value, objectId]),
-  ]), [
+  assert.deepEqual(machine.current.heap.map((object) => object.type === 'list' ? [
+    object.id,
+    object.type,
+    object.items.map(({ type: itemType, value, objectId }) => [itemType, value, objectId]),
+  ] : [object.id, object.type, []]), [
     [1, 'list', []],
     [2, 'list', [['int', '1', undefined], ['str', 'x', undefined]]],
     [3, 'list', []],
@@ -72,6 +72,7 @@ test('allocates lists with stable IDs and immutable per-step heap snapshots', ()
   assert.ok(nestedObject);
   assert.ok(Object.isFrozen(nestedSnapshot?.heap));
   assert.ok(Object.isFrozen(nestedObject));
+  if (nestedObject.type !== 'list') assert.fail('expected list snapshot');
   assert.ok(Object.isFrozen(nestedObject.items));
 });
 
@@ -101,10 +102,16 @@ test('reads and writes list indices through shared aliases without changing prio
   const a = machine.current.variables.find(({ name }) => name === 'a')?.value;
   const b = machine.current.variables.find(({ name }) => name === 'b')?.value;
   assert.equal(a?.objectId, b?.objectId);
-  assert.deepEqual(machine.current.heap.find(({ id }) => id === a?.objectId)?.items.map(({ value }) => value), ['9', '2']);
+  const currentList = machine.current.heap.find(({ id }) => id === a?.objectId);
+  assert.ok(currentList);
+  if (currentList.type !== 'list') assert.fail('expected list snapshot');
+  assert.deepEqual(currentList.items.map(({ value }) => value), ['9', '2']);
 
   const beforeWrite = snapshots.find(({ variables }) => variables.some(({ name }) => name === 'before'));
-  assert.deepEqual(beforeWrite?.heap.find(({ id }) => id === a?.objectId)?.items.map(({ value }) => value), ['1', '2']);
+  const previousList = beforeWrite?.heap.find(({ id }) => id === a?.objectId);
+  assert.ok(previousList);
+  if (previousList.type !== 'list') assert.fail('expected list snapshot');
+  assert.deepEqual(previousList.items.map(({ value }) => value), ['1', '2']);
 });
 
 test('writes through nested subscript targets', () => {
@@ -116,7 +123,9 @@ test('writes through nested subscript targets', () => {
   while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
   assert.equal(machine.current.status, 'finished');
   assert.deepEqual(machine.current.output, ['1 9 4']);
-  assert.deepEqual(machine.current.heap.map(({ id, items }) => [id, items.map(({ value, objectId }) => [value, objectId])]), [
+  assert.deepEqual(machine.current.heap.map((object) => object.type === 'list'
+    ? [object.id, object.items.map(({ value, objectId }) => [value, objectId])]
+    : [object.id, []]), [
     [1, [['1', undefined], ['9', undefined]]],
     [2, [['3', undefined], ['4', undefined]]],
     [3, [['list #1', 1], ['list #2', 2]]],
@@ -159,6 +168,79 @@ test('evaluates subscript assignment value before container and index expression
   while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
   assert.equal(machine.current.status, 'finished');
   assert.deepEqual(machine.current.output, ['value', 'container', 'index', '9']);
+});
+
+test('preserves dictionary insertion order and merges bool/integer-equivalent keys', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'mapping = {True: "first", 1: "second", False: "third", 0: "fourth", "x": None, "nested": {"child": 3,},}',
+    'alias = mapping',
+    'alias[True] = "updated"',
+    'alias[None] = "none key"',
+    'print(mapping[True], mapping[1], mapping[False], mapping[0], mapping["x"], mapping[None], mapping["nested"]["child"])',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['updated updated fourth fourth None none key 3']);
+  const mapping = machine.current.variables.find(({ name }) => name === 'mapping')?.value;
+  assert.equal(mapping?.type, 'dict');
+  const dictionary = machine.current.heap.find(({ id }) => id === mapping?.objectId);
+  assert.ok(dictionary);
+  if (dictionary.type !== 'dict') assert.fail('expected dictionary snapshot');
+  assert.deepEqual(dictionary.entries.map(({ key, value }) => [key.type, key.value, value.value]), [
+    ['bool', 'True', 'updated'],
+    ['bool', 'False', 'fourth'],
+    ['str', 'x', 'None'],
+    ['str', 'nested', 'dict #1'],
+    ['none', 'None', 'none key'],
+  ]);
+});
+
+test('evaluates dictionary keys and values from left to right and uses dict truthiness', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def first_key():',
+    '  print("key 1")',
+    '  return "first"',
+    'def first_value():',
+    '  print("value 1")',
+    '  return 1',
+    'def second_key():',
+    '  print("key 2")',
+    '  return "second"',
+    'def second_value():',
+    '  print("value 2")',
+    '  return 2',
+    'empty = {}',
+    'mapping = {first_key(): first_value(), second_key(): second_value()}',
+    'if empty:',
+    '  print("wrong empty truth value")',
+    'else:',
+    '  print("empty is false")',
+    'if mapping:',
+    '  print(mapping["first"], mapping["second"])',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['key 1', 'value 1', 'key 2', 'value 2', 'empty is false', '1 2']);
+});
+
+test('rejects unhashable dictionary keys and reports missing keys', () => {
+  const unhashable = createTeachingMachine(compileTeachingSource('mapping = {[]: 1}'));
+  while (unhashable.current.status !== 'error' && unhashable.current.status !== 'finished') stepTeachingMachine(unhashable);
+  assert.equal(unhashable.current.diagnostic?.code, 'type-error');
+
+  const missing = createTeachingMachine(compileTeachingSource('mapping = {"x": 1}\nprint(mapping["missing"])'));
+  while (missing.current.status !== 'error' && missing.current.status !== 'finished') stepTeachingMachine(missing);
+  assert.equal(missing.current.diagnostic?.code, 'key-not-found');
+});
+
+test('enforces the per-dictionary entry limit before creating the object', () => {
+  const entries = Array.from({ length: 257 }, (_, index) => `${index}: ${index}`).join(', ');
+  const machine = createTeachingMachine(compileTeachingSource(`mapping = {${entries}}`));
+  while (machine.current.status !== 'error' && machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'container-size-limit-exceeded');
+  assert.deepEqual(machine.current.heap, []);
+  assert.deepEqual(machine.current.variables, []);
 });
 
 test('prints strings and zero arguments using Python-like output formatting', () => {
