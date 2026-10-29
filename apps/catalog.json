@@ -16,6 +16,14 @@
     "icon": "🟠"
   },
   {
+    "slug": "python-interpreter-lab",
+    "title": "Python Interpreter Lab",
+    "titleZh": "Python 解释器实验室",
+    "description": "Inspect real CPython syntax trees, code objects, and bytecode in your browser.",
+    "descriptionZh": "在浏览器中查看真实 CPython 生成的语法树、代码对象和字节码。",
+    "icon": "🐍"
+  },
+  {
     "slug": "gunsnglory",
     "title": "Guns’n’Glory Learning Edition",
     "titleZh": "Guns’n’Glory 学习版",

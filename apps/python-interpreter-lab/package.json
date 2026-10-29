@@ -1,0 +1,29 @@
+{
+  "name": "@wishflow/python-interpreter-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "pnpm run typecheck && vite build",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node --import tsx --test tests/*.test.ts",
+    "serve:test": "node scripts/serve-dist.mjs",
+    "test:e2e": "playwright test",
+    "test:ci": "pnpm run typecheck && pnpm run test:unit && pnpm run build && pnpm run test:e2e"
+  },
+  "dependencies": {
+    "@wishflow/site-shell": "file:../../packages/site-shell",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "tsx": "^4.22.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14"
+  }
+}
