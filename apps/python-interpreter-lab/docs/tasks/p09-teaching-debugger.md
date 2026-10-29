@@ -1,6 +1,6 @@
 # P9 tasks：教学调试控制
 
-对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01–T05 已完成本地实现和验证，T06 本地完整回归及文档已完成，合并、部署与线上验收待完成。** 本阶段不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
+对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01–T06 已完成并发布。** `pi` 实际加载因当前未配置 provider credentials 未验证，详见 T06。P9 不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
 
 ## 依赖和约束
 
@@ -79,7 +79,9 @@ flowchart LR
 - **验收**：应用完整 CI、catalog、共享站点构建通过；回归历史游标、对象图、函数帧、循环、语言、Worker 过期响应和真实 CPython 视图；workflow 部署成功；正式页面按两种视图实测。
 - **本地验证**：`env CI=1 PLAYWRIGHT_PORT=43839 pnpm run test:ci` 通过：类型检查、125 项单测、生产构建和 41 项 Playwright E2E 均成功，覆盖真实 CPython 编译/运行轨迹、教学 VM 断点/步进/速度、历史对象图、函数帧、语言、资源预算和过期状态。根 `pnpm run test:catalog` 通过 14/14，`pnpm run build:site` 成功，`git diff --check` 通过。最初端口 `43825` 被旧进程占用，未终止该进程；改用独立端口 `43839` 后完整 CI 通过。
 - **Agent 文档加载**：`pi auth check --provider openai-codex --no-refresh --json` 返回 `{"status":"not_ready","provider":"openai-codex","reason":"credentials_not_configured"}`，当前配置无法运行真实模型调用，因此尚未验证 `AGENTS.md` 的 `pi` 实际加载。此前访问本机 provider 配置的提权重试曾被自动审核拒绝，因为可能将仓库 `AGENTS.md` 内容发送到外部模型提供商；本轮未重试，也未声称通过。
-- **发布验收**：合并、workflow 部署、正式页面双视图实测和 Markdown 副本核验待完成；完成后将记录提交、workflow 与线上验收证据。
+- **发布验收**：已完成。功能分支同步远端最新 `master` 后，以快进方式合入并推送 `master`，发布提交为 `cedda47567487e8e08db8d121a90cf6d80ecb824`。GitHub Actions [40937834141](https://github.com/wishflow/wishflow-tools/actions/runs/40937834141) 总体成功：`test-shared`、所有应用测试任务和 Windows 测试成功；GitHub Pages 与 Cloudflare Pages 部署成功；Cloudflare Worker 按静态站变更分类跳过。正式页面：[wishflow-tools.pages.dev/python-interpreter-lab/](https://wishflow-tools.pages.dev/python-interpreter-lab/)。
+- **线上验收**：Codex 内置浏览器访问正式子路径。真实视图加载 Pyodide `314.0.7` / CPython `3.14.2`，真实 AST 列出两个代码对象，模块字节码为 17 条指令；运行默认示例记录 5 个事件，输出 `3`。教学 VM `mini-vm-v4` 的循环样例编译为 14 条指令；源码第 3 行断点在循环中两次按预期暂停，Reset 后断点保留，修改源码后断点清除，最终输出 `2`。函数样例中 Step Into 进入 `inner` 帧，Step Over 停在下一源码行，Step Out 回到 `outer` 调用位置；切换到快速档（每 16 毫秒最多 32 条）后 Continue 完成程序并输出 `2`。
+- **Markdown 副本**：README、应用 `AGENTS.md`、整体计划和 P9 tasks 按仓库规则复制到 `/tmp/var/wishflow-tools/apps/python-interpreter-lab/`，使用 `cmp` 核对一致；`git diff --check` 通过。
 - **依赖**：T01–T05。
 
 ## 已确认语义

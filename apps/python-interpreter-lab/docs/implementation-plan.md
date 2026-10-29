@@ -154,7 +154,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **前置**：P7/P8；产品语义已于 2026-10-30 确认。Step Line 与 Step Over 合并；源码断点绑定首条可执行指令；Continue 仅跳过当前命中一次；Reset 保留断点，编辑/重新编译清除；速度档为慢 1 条/250ms、标准 8 条/16ms、快 32 条/16ms。
 - **交付**：源码行和教学指令断点、单指令 Step、Step Into/Over/Out、Continue、Pause、Reset 及执行速度控制。时间轴浏览旧快照时，继续执行先返回执行头；不实现历史分叉。
 - **验收**：同一行多条指令、同一行循环、递归、调用后返回、断点后继续都停在规定位置；Continue 不在同一暂停点立即重复命中；根帧 Step Out 和结束后的操作有明确反馈。
-- **进度**：T01–T05 已完成本地实现和验证；T06 的应用完整 CI（125 项单测、41 项 Playwright）、catalog（14/14）和共享站点构建均通过。README、应用 `AGENTS.md` 与 catalog 描述已更新。P9 尚未发布，GitHub workflow 和正式页面验收待完成；详细结果见 [P9 tasks](tasks/p09-teaching-debugger.md)。
+- **进度**：P9 已完成并发布。应用完整 CI（125 项单测、41 项 Playwright）、catalog（14/14）、共享站点构建、GitHub Actions 及 GitHub Pages/Cloudflare Pages 部署均通过；正式页面已验证真实 CPython 编译与运行，以及教学 VM 循环断点、函数帧步进和快速运行。应用 `pi` 契约实际加载因当前未配置 provider credentials 未验证；详情和发布证据见 [P9 tasks](tasks/p09-teaching-debugger.md)。
 - **详细文档**：[P9 规格](specs/p09-teaching-debugger.md) 与 [P9 tasks](tasks/p09-teaching-debugger.md)。
 - **回滚**：撤回高级调试入口，P5 的逐指令单步及各阶段语言能力仍工作。
 
