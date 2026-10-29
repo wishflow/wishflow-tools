@@ -379,6 +379,7 @@ test('compares the function subset with Pyodide CPython output and error categor
 test('matches CPython repr and structural equality for supported cyclic containers', async ({ page }) => {
   await page.goto(appPath);
   const source = page.getByRole('textbox', { name: 'Python source' });
+  const nonPrintable = String.fromCodePoint(0x85, 0x2028, 0x200b, 0xa0);
   await source.fill([
     'cycle_list = [None]',
     'cycle_list[0] = cycle_list',
@@ -387,11 +388,12 @@ test('matches CPython repr and structural equality for supported cyclic containe
     'left = [1, {"x": True}]',
     'right = [True, {"x": 1}]',
     'print(cycle_list, cycle_dict, left == right)',
+    `print(["${nonPrintable}"])`,
   ].join('\n'));
 
   await page.getByRole('button', { name: 'Run Python' }).click();
   await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
-  const expected = "[[...]] {'self': {...}} True\n";
+  const expected = "[[...]] {'self': {...}} True\n['\\x85\\u2028\\u200b\\xa0']\n";
   await expect(page.locator('#execution-output')).toHaveText(expected);
 
   await page.getByRole('combobox', { name: 'Execution view' }).selectOption('teaching');

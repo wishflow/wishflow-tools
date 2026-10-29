@@ -275,6 +275,13 @@ test('prints nested containers, repeated shared references, and self-cycles with
   ]);
 });
 
+test('escapes non-printable Unicode in nested string repr like CPython', () => {
+  const nonPrintable = String.fromCodePoint(0x85, 0x2028, 0x200b, 0xa0);
+  const machine = createTeachingMachine(compileTeachingSource(`print(["${nonPrintable}"])`));
+  while (machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.deepEqual(machine.current.output, ["['\\x85\\u2028\\u200b\\xa0']"]);
+});
+
 test('formats large shared acyclic graphs within the output budget without expanding without bound', () => {
   const source = [
     'value = ["x"]',

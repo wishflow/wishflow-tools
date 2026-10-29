@@ -1074,6 +1074,8 @@ function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticS
   });
 }
 
+const NON_PRINTABLE_UNICODE = /[\p{C}\p{Z}]/u;
+
 function formatStringRepr(value: string): string {
   const quote = value.includes("'") && !value.includes('"') ? '"' : "'";
   let result = quote;
@@ -1085,9 +1087,10 @@ function formatStringRepr(value: string): string {
     else if (character === '\t') result += '\\t';
     else {
       const codePoint = character.codePointAt(0) ?? 0;
-      result += codePoint < 0x20 || codePoint === 0x7f
-        ? `\\x${codePoint.toString(16).padStart(2, '0')}`
-        : character;
+      if (character === ' ' || !NON_PRINTABLE_UNICODE.test(character)) result += character;
+      else if (codePoint <= 0xff) result += `\\x${codePoint.toString(16).padStart(2, '0')}`;
+      else if (codePoint <= 0xffff) result += `\\u${codePoint.toString(16).padStart(4, '0')}`;
+      else result += `\\U${codePoint.toString(16).padStart(8, '0')}`;
     }
   }
   return `${result}${quote}`;
