@@ -1,13 +1,13 @@
 # Python 解释器实验室
 
-在浏览器中切换两种独立执行视图：查看固定版本真实 CPython 的编译结果和运行轨迹，或逐步运行一个明确限定语法的教学 VM。当前教学 VM 函数与帧栈阶段已发布，部署和线上验收记录见 [P7 tasks](docs/tasks/p07-functions-and-frames.md)。
+在浏览器中切换两种独立执行视图：查看固定版本真实 CPython 的编译结果和运行轨迹，或逐步运行一个明确限定语法的教学 VM。当前教学 VM 的列表、字典和对象引用阶段已发布，部署和线上验收记录见 [P8 tasks](docs/tasks/p08-mutable-containers.md)。
 
 | 执行视图 | 可观察内容 | 执行语义 |
 | --- | --- | --- |
 | 真实 CPython | AST、Tokens、代码对象、真实字节码、行级执行轨迹、变量快照和输出 | 使用 Pyodide 内固定版本 CPython；轨迹是执行后回放，不提供真实 CPython 内部值栈或实时单步 |
-| 教学 VM | `mini-vm-v3` AST、教学指令、值栈、模块/函数帧、变量、输出和有界历史 | 支持表达式、布尔/比较/短路、`if/elif/else`、`while`、`for/range`，以及模块级函数、必需位置参数、递归和 `return`；单步和运行推进 TypeScript 教学 VM，不执行 Python，也不代表 CPython 内部状态 |
+| 教学 VM | `mini-vm-v4` AST、教学指令、值栈、模块/函数帧、变量、可变列表/字典、对象图、输出和有界历史 | 支持表达式、布尔/比较/短路、条件/循环、模块级函数、必需位置参数、递归和 `return`，以及列表/字典字面量、下标读写、别名、结构相等和循环安全打印；单步和运行推进 TypeScript 教学 VM，不执行 Python，也不代表 CPython 内部状态 |
 
-教学 VM v3 延续 P5/P6 的标量表达式与控制流，并支持函数局部名、模块全局回退、显式调用帧和递归。活动帧上限为 64（含模块帧），单次运行最多执行 5,000 条动态教学指令；函数不支持默认参数、关键字参数、闭包、`global`/`nonlocal` 或作为普通值传递。完整语义和限制见 [P5 规格](docs/specs/p05-minimal-teaching-vm.md)、[P6 规格](docs/specs/p06-control-flow.md) 与 [P7 规格](docs/specs/p07-functions-and-frames.md)；列表、字典等仍未实现。架构路线与发布证据见[整体实施计划](docs/implementation-plan.md)。
+教学 VM v4 延续 P5/P6 的标量表达式与控制流、P7 函数帧，并增加 P8 可变容器。列表支持字面量、正/负/布尔下标读写和别名；字典支持字面量、整数/布尔/字符串/`None` 键以及读取和更新；列表与字典支持结构相等，打印循环对象时使用有界递归标记。对象身份通过教学 VM 的 ID 与对象图观察，不代表 CPython 地址。活动帧上限为 64（含模块帧），单次运行最多执行 5,000 条动态教学指令；函数不支持默认参数、关键字参数、闭包、`global`/`nonlocal` 或作为普通值传递。容器不支持切片、方法、推导式或一般迭代。完整语义和限制见 [P5 规格](docs/specs/p05-minimal-teaching-vm.md)、[P6 规格](docs/specs/p06-control-flow.md)、[P7 规格](docs/specs/p07-functions-and-frames.md) 与 [P8 规格](docs/specs/p08-mutable-containers.md)；架构路线与发布证据见[整体实施计划](docs/implementation-plan.md)。
 
 ## 本地运行
 
@@ -34,7 +34,7 @@ pnpm run dev
 
 ## 架构与文档
 
-React + TypeScript + Vite 页面通过共享 `@wishflow/site-shell` 展示。主线程管理编辑和界面；Pyodide Worker 负责真实 CPython，独立的教学 VM Worker 负责 `mini-vm-v3`。两个引擎只共享源码编辑和必要的展示交互，不混用编译结果、指令或运行状态。
+React + TypeScript + Vite 页面通过共享 `@wishflow/site-shell` 展示。主线程管理编辑和界面；Pyodide Worker 负责真实 CPython，独立的教学 VM Worker 负责 `mini-vm-v4`。两个引擎只共享源码编辑和必要的展示交互，不混用编译结果、指令或运行状态。
 
 - [协作约束](AGENTS.md)：前端、站点壳、语言、验证和文档规则。
 - [ADR-0001](docs/adr/0001-browser-python-visualizer.md)：引擎路线与架构取舍。
