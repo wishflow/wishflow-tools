@@ -584,6 +584,14 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
       ? t('teachingPausedBeforeSourceLine').replace('{line}', snapshot.hitBreakpointId.slice('source-line:'.length))
       : t('teachingPausedBeforeInstruction').replace('{index}', snapshot.hitBreakpointId.slice('instruction:'.length))
     : null;
+  const pausedInstruction = snapshot?.nextInstructionIndex === null || snapshot?.nextInstructionIndex === undefined
+    ? undefined
+    : program.instructions[snapshot.nextInstructionIndex];
+  const stepPauseLabel = snapshot?.pauseReason === 'step' && pausedInstruction
+    ? t('teachingPausedAtStep')
+      .replace('{line}', String(pausedInstruction.span.line))
+      .replace('{index}', String(pausedInstruction.index))
+    : null;
 
   return (
     <section className="panel output-panel" aria-labelledby="teaching-bytecode-heading">
@@ -597,6 +605,7 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
           <span className="small-meta">{breakpointCount} / {MAX_BREAKPOINT_COUNT}</span>
         </div>
         {breakpointPauseLabel && <p className="teaching-breakpoint-status" role="status">{breakpointPauseLabel}</p>}
+        {stepPauseLabel && <p className="teaching-step-status" role="status">{stepPauseLabel}</p>}
         {breakpointCount === 0 ? (
           <p className="empty-state">{t('teachingNoBreakpoints')}</p>
         ) : (

@@ -74,6 +74,7 @@ button:disabled { cursor: not-allowed; }
 .source-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; }
 .quiet-actions, .primary-actions { display: flex; align-items: center; gap: 11px; }
 .primary-actions { flex-wrap: wrap; }
+.teaching-step-controls { display: flex; width: 100%; min-width: 0; flex-wrap: wrap; gap: 8px; }
 .text-button { min-height: 36px; padding: 4px 2px; border: 0; background: transparent; color: #52617c; font-size: 12px; font-weight: 650; cursor: pointer; text-decoration: underline; text-decoration-color: #b6becc; text-underline-offset: 3px; }
 .text-button:hover { color: var(--ink); }
 .button { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; padding: 0 14px; border: 1px solid transparent; border-radius: 9px 9px 9px 3px; font-size: 13px; font-weight: 750; cursor: pointer; transition: background 120ms ease, transform 120ms ease; }
@@ -125,6 +126,8 @@ button:disabled { cursor: not-allowed; }
 .teaching-breakpoint-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .teaching-breakpoint-heading h4 { margin: 0; color: #58647c; font-size: 11px; }
 .teaching-breakpoint-status { margin: 6px 0 0; color: #8d3f33; font-size: 10px; font-weight: 700; }
+.teaching-step-status { margin: 6px 0 0; color: #52617c; font-size: 10px; font-weight: 700; }
+.teaching-step-out-reason { align-self: center; max-width: 280px; white-space: normal; overflow-wrap: anywhere; }
 .teaching-breakpoint-panel > .empty-state { margin: 2px 0 0; padding: 3px 0 0; font-size: 10px; }
 .teaching-breakpoint-list { display: grid; gap: 4px; max-height: 150px; overflow: auto; margin: 6px 0 0; padding: 0; list-style: none; }
 .teaching-breakpoint-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; padding: 5px 0; border-top: 1px dotted #e1d7cf; font-size: 10px; }

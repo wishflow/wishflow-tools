@@ -7,6 +7,7 @@ import type {
 } from './types';
 import { MAX_BREAKPOINT_COUNT, MAX_HISTORY_CONTAINER_RECORDS, MAX_HISTORY_SNAPSHOTS } from './resource-limits';
 import type { TeachingHistoryUpdate, TeachingWorkerIdentity, TeachingWorkerRequest, TeachingWorkerResponse } from './worker-protocol';
+import type { TeachingSourceStepMode } from './source-step';
 
 export type TeachingStatus = 'loading' | 'ready' | 'compiling' | 'running' | 'paused' | 'finished' | 'error';
 
@@ -203,6 +204,13 @@ export function useTeachingVm() {
     workerRef.current?.postMessage({ type: 'step', ...sessionIdentity() } satisfies TeachingWorkerRequest);
   }, [history, historyCursor, program, sessionIdentity, status]);
 
+  const stepSource = useCallback((mode: TeachingSourceStepMode) => {
+    const worker = workerRef.current;
+    if (!worker || !program || !isAtHead(history, historyCursor) || (status !== 'ready' && status !== 'paused')) return;
+    setStatus('running');
+    worker.postMessage({ type: 'step-source', mode, ...sessionIdentity() } satisfies TeachingWorkerRequest);
+  }, [history, historyCursor, program, sessionIdentity, status]);
+
   const run = useCallback(() => {
     const worker = workerRef.current;
     if (!worker || !program || !isAtHead(history, historyCursor) || (status !== 'ready' && status !== 'paused')) return;
@@ -248,6 +256,7 @@ export function useTeachingVm() {
     instructionBreakpointIndexes,
     compile,
     step,
+    stepSource,
     run,
     pause,
     reset,

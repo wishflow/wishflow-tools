@@ -271,10 +271,10 @@ export class TeachingMachine {
     return this.recordStep();
   }
 
-  setStatus(status: NonTerminalStatus): TeachingVmSnapshot {
+  setStatus(status: NonTerminalStatus, pauseReason: 'step' | 'user' = 'user'): TeachingVmSnapshot {
     if (this.#status === 'finished' || this.#status === 'error') return this.#current;
     this.#status = status;
-    this.#pauseReason = status === 'paused' ? 'user' : null;
+    this.#pauseReason = status === 'paused' ? pauseReason : null;
     this.#hitBreakpointId = null;
     this.#current = this.createSnapshot();
     if (this.#history.length > 0) this.#history[this.#history.length - 1] = this.#current;
@@ -1083,8 +1083,12 @@ export function stepTeachingMachine(
   return machine.step(statusAfter);
 }
 
-export function setTeachingMachineStatus(machine: TeachingMachine, status: NonTerminalStatus): TeachingVmSnapshot {
-  return machine.setStatus(status);
+export function setTeachingMachineStatus(
+  machine: TeachingMachine,
+  status: NonTerminalStatus,
+  pauseReason: 'step' | 'user' = 'user',
+): TeachingVmSnapshot {
+  return machine.setStatus(status, pauseReason);
 }
 
 export function getTeachingHistory(machine: TeachingMachine): TeachingVmHistory {

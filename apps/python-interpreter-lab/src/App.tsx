@@ -137,6 +137,7 @@ export default function App() {
           teachingStatus={teaching.status}
           teachingHasProgram={Boolean(teaching.program)}
           teachingAtHead={teaching.atHead}
+          teachingCanStepOut={teaching.headSnapshot?.frames.at(-1)?.kind === 'function'}
           error={sourceError}
           tokens={analysis.result?.tokens ?? []}
           positionIndex={positionIndex}
@@ -151,6 +152,7 @@ export default function App() {
           onRetry={analysis.retry}
           onCompileTeaching={compileTeaching}
           onStepTeaching={teaching.step}
+          onStepSourceTeaching={teaching.stepSource}
           onRunTeaching={teaching.run}
           onPauseTeaching={teaching.pause}
           onResetTeaching={teaching.reset}

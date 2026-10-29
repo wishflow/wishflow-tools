@@ -1,6 +1,6 @@
 # P9 tasks：教学调试控制
 
-对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01、T02 已完成本地实现和验证，T03–T06 按序推进。** 本阶段不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
+对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01–T03 已完成本地实现和验证，T04–T06 按序推进。** 本阶段不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
 
 ## 依赖和约束
 
@@ -47,10 +47,11 @@ flowchart LR
 
 ## T03：源码步进和调用帧控制
 
-- **用户结果**：从现有单指令 Step 扩展到确认后的源码级步进，并能进入、越过和离开函数调用。
-- **改动范围**：Teaching VM 运行目标与 worker command；按已确认的行/帧条件推进；把完成/暂停原因写入快照；根模块帧上的 Step Out 反馈。
-- **验收**：同一源码行多条指令不会被误作多行步进；Into/Over/Out 对嵌套和递归函数保持帧 ID、调用者续行与状态栈正确；单指令 Step 保持原行为。
-- **验证**：VM 单测逐步核对指令、行号、帧 ID、pc、变量和栈；Worker 测试确认命令取消/完成的响应顺序。
+- **状态**：已完成代码实现和本地验证，尚未随 P9 发布。
+- **用户结果**：保留单指令 Step，并可按源码行 Into、Over 或 Out；步进会真实推进教学 VM，调用期间能观察活动函数帧，完成后停在规定的下一源码位置。
+- **改动范围**：增加可序列化的 `step-source` Worker 命令和来源步进目标；目标由起始帧 ID、源码行和快照步号组成。Worker 复用现有有界批次与暂停/历史通道；完成时以 `pauseReason: step` 记录快照。源码工具栏增加 Into/Over/Out；模块帧没有调用者时禁用 Out 并说明原因。未改变单指令 Step、语法或 `mini-vm-v4` 指令集。
+- **验收**：Into 在同帧跨到下一源码行或进入/返回另一个帧时暂停；Over 执行当前行及其调用，停在原帧下一行或调用者续行；Out 在当前函数帧退出后停在调用者续行。多指令行和循环按源码行推进；递归时不同帧 ID 不混淆；模块帧 Out 禁用；暂停快照保留变量、栈和帧状态。
+- **验证**：`pnpm run typecheck` 及 `pnpm run build` 通过；`pnpm run test:unit` 通过 123 项，其中调试映射、断点和源码步进共 12 项；`PLAYWRIGHT_PORT=43825 pnpm exec playwright test e2e/teaching-vm.spec.ts` 通过 20 项；最终 Worker 改动及键盘 Enter 断言加入后，以 `PLAYWRIGHT_PORT=43827` 单独复跑步进端到端用例，1 项通过。覆盖普通/递归函数帧、循环源码行、Step Over 键盘操作、Step Out 根帧禁用、320px 溢出和原有教学 VM 流程。
 - **依赖**：T01 和已确认的 Step Line 关系。
 
 ## T04：断点 Continue/Pause 和历史时间轴集成

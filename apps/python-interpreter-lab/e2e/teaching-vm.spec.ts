@@ -126,6 +126,58 @@ test('sets source-line and instruction breakpoints with keyboard controls and lo
   await expect(instructions.getByRole('button', { name: '移除第 4 行源码断点' })).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('steps over source lines and into or out of function frames', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'def twice(n):',
+    '  value = n * 2',
+    '  return value',
+    'result = twice(3)',
+    'print(result)',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+
+  const stepOut = page.getByRole('button', { name: 'Step Out' });
+  await expect(stepOut).toBeDisabled();
+  await expect(page.locator('#teaching-step-out-reason')).toContainText('module frame because it has no caller');
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.getByRole('button', { name: 'Step one instruction' }).click();
+  const stepOver = page.getByRole('button', { name: 'Step Over' });
+  await stepOver.focus();
+  await stepOver.press('Enter');
+  await expect(page.locator('.teaching-step-status')).toContainText('Paused before line 5');
+  const variables = page.locator('.teaching-state-grid section[aria-labelledby="teaching-variables-heading"]');
+  await expect(variables).toContainText('result');
+  await expect(variables).toContainText('6');
+
+  await page.getByRole('button', { name: 'Reset teaching VM' }).click();
+  await page.getByRole('button', { name: 'Step one instruction' }).click();
+  await page.getByRole('button', { name: 'Step Into' }).click();
+  await expect(page.locator('.teaching-frames-panel .is-active-frame summary')).toContainText('twice');
+  await expect(page.locator('.teaching-step-status')).toContainText('Paused before line 2');
+  await expect(stepOut).toBeEnabled();
+
+  await page.getByRole('button', { name: 'Step Over' }).click();
+  await expect(page.locator('.teaching-step-status')).toContainText('Paused before line 3');
+  await expect(variables).toContainText('value');
+  await expect(variables).toContainText('6');
+
+  await stepOut.click();
+  await expect(page.locator('.teaching-frames-panel .is-active-frame summary')).toContainText('Module frame');
+  await expect(page.locator('.teaching-step-status')).toContainText('Paused before line 4');
+  const stack = page.locator('.teaching-state-grid section[aria-labelledby="teaching-stack-heading"] .teaching-value-list');
+  await expect(stack).toContainText('6');
+
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText('6');
+});
+
 test('shows localized teaching syntax and runtime errors with source locations', async ({ page }) => {
   await chooseTeachingVm(page);
   const source = page.getByRole('textbox', { name: 'Python source' });

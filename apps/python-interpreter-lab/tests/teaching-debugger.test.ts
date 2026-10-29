@@ -3,7 +3,13 @@ import test from 'node:test';
 import { compileTeachingSource } from '../src/teaching-vm/compiler';
 import { mapTeachingSourceLines } from '../src/teaching-vm/source-mapping';
 import {
+  createTeachingSourceStepGoal,
+  isTeachingSourceStepGoalReached,
+  type TeachingSourceStepMode,
+} from '../src/teaching-vm/source-step';
+import {
   createTeachingMachine,
+  setTeachingMachineStatus,
   stepTeachingMachine,
 } from '../src/teaching-vm/vm';
 
@@ -127,3 +133,138 @@ test('skips the current breakpoint once and pauses again when a loop returns to 
   assert.equal(snapshot.hitBreakpointId, 'source-line:2');
   assert.ok(snapshot.executedInstructionCount > firstHitCount + 1);
 });
+
+test('Step Into stops at the first instruction in the called function', () => {
+  const program = compileTeachingSource([
+    'def twice(n):',
+    '  value = n * 2',
+    '  return value',
+    'result = twice(3)',
+    'print(result)',
+  ].join('\n'));
+  const machine = createTeachingMachine(program);
+  stepTeachingMachine(machine);
+
+  const paused = advanceSourceStep(machine, 'into');
+  const activeFrame = paused.frames.at(-1);
+
+  assert.equal(paused.pauseReason, 'step');
+  assert.equal(paused.frames.length, 2);
+  assert.equal(activeFrame?.functionName, 'twice');
+  assert.equal(activeFrame?.pc, program.functions[0]?.entryIndex);
+  assert.equal(program.instructions[paused.nextInstructionIndex ?? -1]?.span.line, 2);
+  assert.equal(paused.executedInstructionCount, 3);
+});
+
+test('Step Over runs a multi-instruction caller line and its function call to the next line', () => {
+  const program = compileTeachingSource([
+    'def twice(n):',
+    '  value = n * 2',
+    '  return value',
+    'result = twice(3)',
+    'print(result)',
+  ].join('\n'));
+  const machine = createTeachingMachine(program);
+  stepTeachingMachine(machine);
+
+  const paused = advanceSourceStep(machine, 'over');
+
+  assert.equal(paused.pauseReason, 'step');
+  assert.equal(paused.frames.length, 1);
+  assert.equal(paused.variables.find(({ name }) => name === 'result')?.value.value, '6');
+  assert.equal(program.instructions[paused.nextInstructionIndex ?? -1]?.span.line, 5);
+});
+
+test('Step Over stays in the current function line and Step Out stops at caller continuation', () => {
+  const program = compileTeachingSource([
+    'def twice(n):',
+    '  value = n * 2',
+    '  return value',
+    'result = twice(3)',
+    'print(result)',
+  ].join('\n'));
+  const machine = createTeachingMachine(program);
+  stepTeachingMachine(machine);
+  advanceSourceStep(machine, 'into');
+
+  const afterOver = advanceSourceStep(machine, 'over');
+  assert.equal(afterOver.pauseReason, 'step');
+  assert.equal(afterOver.frames.at(-1)?.functionName, 'twice');
+  assert.equal(program.instructions[afterOver.nextInstructionIndex ?? -1]?.span.line, 3);
+  assert.equal(afterOver.variables.find(({ name }) => name === 'value')?.value.value, '6');
+
+  const afterOut = advanceSourceStep(machine, 'out');
+  assert.equal(afterOut.pauseReason, 'step');
+  assert.equal(afterOut.frames.length, 1);
+  assert.equal(afterOut.frames[0]?.kind, 'module');
+  assert.equal(program.instructions[afterOut.nextInstructionIndex ?? -1]?.span.line, 4);
+  assert.equal(afterOut.stack.at(-1)?.value, '6');
+  assert.equal(createTeachingSourceStepGoal('out', program, afterOut), null);
+});
+
+test('source stepping crosses a loop condition as one source line and returns to it after the body', () => {
+  const program = compileTeachingSource([
+    'i = 0',
+    'while i < 2:',
+    '  i = i + 1',
+    'print(i)',
+  ].join('\n'));
+  const machine = createTeachingMachine(program);
+
+  const afterAssign = advanceSourceStep(machine, 'over');
+  assert.equal(program.instructions[afterAssign.nextInstructionIndex ?? -1]?.span.line, 2);
+  const beforeCondition = afterAssign.executedInstructionCount;
+  const afterCondition = advanceSourceStep(machine, 'over');
+  assert.equal(program.instructions[afterCondition.nextInstructionIndex ?? -1]?.span.line, 3);
+  assert.ok(afterCondition.executedInstructionCount - beforeCondition > 1);
+
+  const afterBody = advanceSourceStep(machine, 'over');
+  assert.equal(program.instructions[afterBody.nextInstructionIndex ?? -1]?.span.line, 2);
+  assert.equal(afterBody.variables.find(({ name }) => name === 'i')?.value.value, '1');
+});
+
+test('recursive Step Into and Step Out preserve the caller frame and continuation', () => {
+  const program = compileTeachingSource([
+    'def countdown(n):',
+    '  if n > 0:',
+    '    return countdown(n - 1)',
+    '  return 0',
+    'result = countdown(2)',
+  ].join('\n'));
+  const machine = createTeachingMachine(program);
+  stepTeachingMachine(machine);
+  const outerCall = advanceSourceStep(machine, 'into');
+  assert.equal(program.instructions[outerCall.nextInstructionIndex ?? -1]?.span.line, 2);
+  const outerFrameId = outerCall.frames.at(-1)?.id;
+
+  const beforeRecursiveCall = advanceSourceStep(machine, 'over');
+  assert.equal(program.instructions[beforeRecursiveCall.nextInstructionIndex ?? -1]?.span.line, 3);
+  const innerCall = advanceSourceStep(machine, 'into');
+  assert.equal(innerCall.frames.length, 3);
+  assert.notEqual(innerCall.frames.at(-1)?.id, outerFrameId);
+  assert.equal(innerCall.frames.at(-1)?.functionName, 'countdown');
+  assert.equal(program.instructions[innerCall.nextInstructionIndex ?? -1]?.span.line, 2);
+
+  const afterOut = advanceSourceStep(machine, 'out');
+  assert.equal(afterOut.frames.length, 2);
+  assert.equal(afterOut.frames.at(-1)?.id, outerFrameId);
+  assert.equal(program.instructions[afterOut.nextInstructionIndex ?? -1]?.span.line, 3);
+  assert.equal(afterOut.pauseReason, 'step');
+});
+
+function advanceSourceStep(
+  machine: ReturnType<typeof createTeachingMachine>,
+  mode: TeachingSourceStepMode,
+) {
+  const goal = createTeachingSourceStepGoal(mode, machine.program, machine.current);
+  assert.ok(goal, `${mode} should have a valid source-step target`);
+
+  for (let count = 0; count < 5_000; count += 1) {
+    const snapshot = stepTeachingMachine(machine, 'running');
+    if (snapshot.status !== 'running') return snapshot;
+    if (isTeachingSourceStepGoalReached(goal, machine.program, snapshot)) {
+      return setTeachingMachineStatus(machine, 'paused', 'step');
+    }
+  }
+  throw new Error(`${mode} did not reach a source-step boundary within the instruction budget.`);
+}

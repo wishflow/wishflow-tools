@@ -3,6 +3,7 @@ import { findTokenAtOffset, rangesEqual, tokenSourceRange, type SourceLink, type
 import type { PythonToken } from '../analysis/types';
 import type { AnalysisStatus } from '../analysis/usePyodideAnalysis';
 import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
+import type { TeachingSourceStepMode } from '../teaching-vm/source-step';
 import { MAX_SOURCE_LENGTH } from '../analysis/source-limit';
 import type { MessageKey } from '../locales';
 
@@ -13,6 +14,7 @@ interface SourcePanelProps {
   teachingStatus: TeachingStatus;
   teachingHasProgram: boolean;
   teachingAtHead: boolean;
+  teachingCanStepOut: boolean;
   error: string;
   tokens: PythonToken[];
   positionIndex: SourcePositionIndex;
@@ -27,6 +29,7 @@ interface SourcePanelProps {
   onRetry(): void;
   onCompileTeaching(): void;
   onStepTeaching(): void;
+  onStepSourceTeaching(mode: TeachingSourceStepMode): void;
   onRunTeaching(): void;
   onPauseTeaching(): void;
   onResetTeaching(): void;
@@ -34,8 +37,11 @@ interface SourcePanelProps {
   onRestore(): void;
 }
 
-export function SourcePanel({ mode, source, status, teachingStatus, teachingHasProgram, teachingAtHead, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onRunTeaching, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
+export function SourcePanel({ mode, source, status, teachingStatus, teachingHasProgram, teachingAtHead, teachingCanStepOut, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onStepSourceTeaching, onRunTeaching, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const canControlTeaching = teachingHasProgram
+    && teachingAtHead
+    && (teachingStatus === 'ready' || teachingStatus === 'paused');
 
   useEffect(() => {
     if (!sourceLink || sourceLink.origin.kind === 'editor') return;
@@ -115,7 +121,21 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingHasP
               ) : (
                 <button type="button" className="button button-primary" disabled={Boolean(error) || teachingStatus === 'loading' || teachingStatus === 'compiling'} onClick={onCompileTeaching}>{t('compileTeaching')}</button>
               )}
-              <button type="button" className="button button-secondary" disabled={!teachingHasProgram || !teachingAtHead || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onStepTeaching}>{t('stepTeaching')}</button>
+              <div className="teaching-step-controls" role="group" aria-label={t('teachingSourceStepControls')}>
+                <button type="button" className="button button-secondary" disabled={!canControlTeaching} onClick={onStepTeaching}>{t('stepTeaching')}</button>
+                <button type="button" className="button button-secondary" disabled={!canControlTeaching} onClick={() => onStepSourceTeaching('into')}>{t('stepIntoTeaching')}</button>
+                <button type="button" className="button button-secondary" disabled={!canControlTeaching} onClick={() => onStepSourceTeaching('over')}>{t('stepOverTeaching')}</button>
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  disabled={!canControlTeaching || !teachingCanStepOut}
+                  aria-describedby={!teachingCanStepOut ? 'teaching-step-out-reason' : undefined}
+                  onClick={() => onStepSourceTeaching('out')}
+                >{t('stepOutTeaching')}</button>
+                {canControlTeaching && !teachingCanStepOut && (
+                  <span id="teaching-step-out-reason" className="small-meta teaching-step-out-reason">{t('teachingStepOutUnavailable')}</span>
+                )}
+              </div>
               {teachingStatus !== 'running' && (
                 <button type="button" className="button button-primary" disabled={!teachingHasProgram || !teachingAtHead || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onRunTeaching}>{t('runTeaching')}</button>
               )}

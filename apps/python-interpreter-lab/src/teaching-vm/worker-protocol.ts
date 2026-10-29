@@ -4,6 +4,7 @@ import type {
   TeachingVmHistory,
   TeachingVmSnapshot,
 } from './types';
+import type { TeachingSourceStepMode } from './source-step';
 
 export type TeachingHistoryUpdate =
   | { kind: 'replace'; history: TeachingVmHistory }
@@ -20,6 +21,7 @@ export type TeachingWorkerRequest =
   | ({ type: 'compile'; source: string } & TeachingWorkerIdentity)
   | ({ type: 'invalidate' } & TeachingWorkerIdentity)
   | ({ type: 'step' } & TeachingWorkerIdentity)
+  | ({ type: 'step-source'; mode: TeachingSourceStepMode } & TeachingWorkerIdentity)
   | ({ type: 'set-breakpoints'; sourceLines: number[]; instructionIndexes: number[] } & TeachingWorkerIdentity)
   | ({ type: 'run' } & TeachingWorkerIdentity)
   | ({ type: 'pause' } & TeachingWorkerIdentity)

@@ -1,6 +1,11 @@
 import { compileTeachingSource } from '../teaching-vm/compiler';
 import { MAX_RUN_BATCH_SIZE, TEACHING_RUN_BATCH_DELAY_MS } from '../teaching-vm/resource-limits';
 import {
+  createTeachingSourceStepGoal,
+  isTeachingSourceStepGoalReached,
+  type TeachingSourceStepGoal,
+} from '../teaching-vm/source-step';
+import {
   createTeachingMachine,
   getTeachingHistory,
   setTeachingMachineStatus,
@@ -114,7 +119,11 @@ function sendSnapshot(type: 'snapshot' | 'paused' | 'run-complete', identity: Te
   respond({ type, ...identityOf(identity), snapshot: machine.current, historyUpdate: updateHistory() });
 }
 
-async function runLoop(identity: TeachingWorkerIdentity, generation: number): Promise<void> {
+async function runLoop(
+  identity: TeachingWorkerIdentity,
+  generation: number,
+  sourceStepGoal: TeachingSourceStepGoal | null = null,
+): Promise<void> {
   while (generation === runGeneration && identityMatches(identity) && machine) {
     if (pauseRequested) {
       pauseRequested = false;
@@ -129,6 +138,10 @@ async function runLoop(identity: TeachingWorkerIdentity, generation: number): Pr
       if (pauseRequested) break;
       const snapshot = stepTeachingMachine(machine, 'running');
       if (snapshot.status !== 'running') break;
+      if (sourceStepGoal && program && isTeachingSourceStepGoalReached(sourceStepGoal, program, snapshot)) {
+        setTeachingMachineStatus(machine, 'paused', 'step');
+        break;
+      }
     }
 
     if (generation !== runGeneration || !identityMatches(identity) || !machine) return;
@@ -246,8 +259,15 @@ function handleRequest(request: TeachingWorkerRequest): void {
     return;
   }
 
-  if (request.type === 'run') {
+  if (request.type === 'run' || request.type === 'step-source') {
     if (isRunning || machine.current.status === 'finished' || machine.current.status === 'error') return;
+    const sourceStepGoal = request.type === 'step-source'
+      ? createTeachingSourceStepGoal(request.mode, program, machine.current)
+      : null;
+    if (request.type === 'step-source' && !sourceStepGoal) {
+      sendSnapshot('snapshot', request);
+      return;
+    }
     isRunning = true;
     pauseRequested = false;
     const generation = ++runGeneration;
@@ -259,7 +279,7 @@ function handleRequest(request: TeachingWorkerRequest): void {
       historyUpdate: updateHistory(),
     });
     const identity = identityOf(request);
-    void runLoop(identity, generation).catch((error: unknown) => {
+    void runLoop(identity, generation, sourceStepGoal).catch((error: unknown) => {
       if (!identityMatches(identity)) return;
       isRunning = false;
       respond({
