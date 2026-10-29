@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线、P1 真实编译工作区、P2 Token/源码联动和 P3 真实执行轨迹均已完成并发布到 `master`。P1–P3 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)。下一阶段为 P4 结构化变量与历史观察；开始前按第 2 节补充独立 spec 和 tasks。
+P0 文档基线、P1 真实编译工作区、P2 Token/源码联动和 P3 真实执行轨迹均已完成并发布到 `master`。P1–P3 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)。P4 的详细规格和任务已起草；其 Worker 快照 DTO、帧身份语义与资源预算属于新增数据契约，须在实现前确认，之后按第 2 节执行。
 
 P0 建立了以下文档：
 
@@ -108,9 +108,9 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 ### P4：结构化变量与历史观察
 
-- **前置**：P3；确认快照序列化、容器摘要和展示上限。
+- **前置**：P3 已发布；[P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md) 已起草，待用户确认快照 DTO、帧身份语义和资源预算后实施。
 - **交付**：按事件查看各帧局部/全局变量、基础容器、有限深度展开和相邻事件变化；历史快照保持事件发生时的值。P3 的基础值摘要继续可用。
-- **验收**：列表先后修改不会污染旧事件；大整数不失真；循环引用、长字符串和深容器可控展示；自定义 `repr` 不会因查看变量被执行；异常与连续运行后代理和采集资源正确释放。
+- **验收**：局部/全局作用域与帧切换正确；列表先后修改不会污染旧事件；大整数不失真；循环引用、长字符串和深容器可控展示；自定义 `repr`、属性或迭代器不会因查看变量被执行；截断范围不误报变量增删；异常与连续运行后代理和采集资源正确释放。详见 P4 spec §6。
 - **回滚**：恢复 P3 的基础摘要；本阶段不引入跨版本历史持久化，不需要存档迁移。
 
 ### P5：最小教学 VM，打通真正逐指令执行
