@@ -1,9 +1,9 @@
-import { cowGulchContent } from './cow-gulch';
+import { cowGulchP1aSampleContent } from './cow-gulch';
 import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
 
 /** A controlled no-defender variant used to verify the one-life defeat path. */
 export const cowGulchDefeatContent = {
-  ...cowGulchContent,
+  ...cowGulchP1aSampleContent,
   id: 'cow-gulch-defeat',
   formalSettlementSupported: false,
   units: [],

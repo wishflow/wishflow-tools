@@ -6,7 +6,7 @@ import {
   createBrowserProgress,
   getBrowserScenarioContentVersion,
 } from './bootstrap/browser';
-import { cowGulchContent } from './content/cow-gulch';
+import { cowGulchP1aSampleContent, cowGulchP1bCampaignContent } from './content/cow-gulch';
 import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
@@ -42,6 +42,7 @@ app.innerHTML = [
   '    <section class="campaign-panel" aria-labelledby="campaign-title">',
   '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
   '      <p class="campaign-note" data-locale="These two acceptance stages reuse Cow Gulch; they are not production campaign levels.">These two acceptance stages reuse Cow Gulch; they are not production campaign levels.</p>',
+  '      <button type="button" data-testid="open-original-waves" data-action="open-original-waves">Play original first two waves</button>',
   '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
   '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
   '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
@@ -85,6 +86,8 @@ app.innerHTML = [
   '      <p data-testid="upgrade-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="recruit-pool-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
+  '      <button type="button" data-testid="hire-map-unit" data-action="hire-map-unit" hidden>Hire selected map unit</button>',
+  '      <p data-testid="map-hire-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="start-wave">Start one pioneer sample</button>',
   '      <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
   '      <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
@@ -176,7 +179,7 @@ app.innerHTML = [
   '        <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
   '      </div>',
   '    </dialog>',
-  '    <p class="scene-caption">The normal sample resolves a victory; the one-life test verifies defeat. Later waves and the campaign are out of scope.</p>',
+  '    <p class="scene-caption" data-locale="The first two source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.">The first two source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.</p>',
   '  </section>',
   '</section>',
 ].join('');
@@ -207,6 +210,8 @@ const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid=
 const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-status"]');
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
 const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-status"]');
+const mapHireButtonElement = app.querySelector<HTMLButtonElement>('[data-action="hire-map-unit"]');
+const mapHireStatusElement = app.querySelector<HTMLElement>('[data-testid="map-hire-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
 const retrySettingsButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-settings-save"]');
 const reloadProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="reload-saved-profile"]');
@@ -222,6 +227,7 @@ const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-t
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
+const openOriginalWavesButton = app.querySelector<HTMLButtonElement>('[data-action="open-original-waves"]');
 const recruitButton = app.querySelector<HTMLButtonElement>('[data-action="recruit-unit"]');
 const upgradeButton = app.querySelector<HTMLButtonElement>('[data-action="upgrade-unit"]');
 const startUpgradeSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-upgrade-sample"]');
@@ -267,7 +273,8 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !campaignDifficultySelectElement || !campaignDifficultyStatusElement
   || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
-  || !recruitPoolStatusElement || !recruitStatusElement || !recruitButton || !recruitConfirmationElement
+  || !recruitPoolStatusElement || !recruitStatusElement || !mapHireButtonElement || !mapHireStatusElement
+  || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
@@ -276,6 +283,7 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
+  || !openOriginalWavesButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
   || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
@@ -310,6 +318,8 @@ const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
 const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
 const recruitStatus: HTMLElement = recruitStatusElement;
+const mapHireControl: HTMLButtonElement = mapHireButtonElement;
+const mapHireStatus: HTMLElement = mapHireStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
 const retrySettingsButton: HTMLButtonElement = retrySettingsButtonElement;
 const reloadProfileButton: HTMLButtonElement = reloadProfileButtonElement;
@@ -324,6 +334,7 @@ const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
+const openOriginalWavesControl: HTMLButtonElement = openOriginalWavesButton;
 const recruitControl: HTMLButtonElement = recruitButton;
 const upgradeControl: HTMLButtonElement = upgradeButton;
 const startUpgradeSampleControl: HTMLButtonElement = startUpgradeSampleButton;
@@ -377,8 +388,8 @@ const experiments = createExperiments({
   }],
 });
 let session = await game.open({
-  scenarioId: cowGulchContent.id,
-  contentVersion: cowGulchContent.contentVersion ?? 'unversioned',
+  scenarioId: cowGulchP1aSampleContent.id,
+  contentVersion: cowGulchP1aSampleContent.contentVersion ?? 'unversioned',
   mode: 'formal',
 });
 let view = session.observe();
@@ -424,8 +435,10 @@ type ReplayStatusState =
 let replayStatusState: ReplayStatusState | undefined;
 let lastDefeatReward: number | undefined;
 let lastRecruitmentEvent: Extract<GameEvent, { type: 'unit-recruited' | 'unit-recruitment-rejected' }> | undefined;
+let lastMapHireEvent: Extract<GameEvent, { type: 'map-unit-hired' | 'map-unit-hire-rejected' }> | undefined;
 let pendingRecruitmentType: string | undefined;
 let recruitmentCommandNumber = 0;
+let mapHireCommandNumber = 0;
 let lastUpgradeEvent: Extract<GameEvent, { type: 'unit-upgraded' | 'unit-upgrade-rejected' }> | undefined;
 let pendingUpgradeUnitId: string | undefined;
 let upgradeCommandNumber = 0;
@@ -455,6 +468,14 @@ const languageMessages = {
     unitName: (type: string) => type === 'mexican' ? 'Mexican' : 'Gunslinger',
     selected: (name: string) => `${name} selected`,
     selectedSleeping: (name: string) => `${name} is waiting to be hired`,
+    mapHireButton: (name: string, price: number) => `Hire map ${name} · $${price}`,
+    mapHired: (name: string, price: number) => `${name} hired from the map for $${price}.`,
+    mapHireRejected: (name: string, price: number, cash: number) => `Not enough cash to hire ${name}: need $${price}, have $${cash}.`,
+    startSample: 'Start one pioneer sample',
+    openOriginalWaves: 'Play original first two waves',
+    originalWaveContext: 'ORIGINAL WAVES · 1–2 OF 8',
+    originalWaveNotice: 'Original wave data is active. This build stops after wave 2 of 8 and does not settle campaign progress.',
+    returnCowGulchSample: 'Return to Cow Gulch sample',
     failed: 'Game scene failed to load',
     retrySceneOpen: 'Retry loading requested scene',
     returnPreviousScene: 'Return to previous scene',
@@ -484,9 +505,11 @@ const languageMessages = {
     position: (x: string, y: string) => `at (${x}, ${y})`,
     unitRange: (range: string, boundary: string) => ` · range ${boundary} ${range} cells`,
     enemyHealth: (hp: number, maxHp: number) => ` · HP ${hp}/${maxHp}`,
-    waiting: (lives: number, number: number, cash: number) => `Wave ${number} ready · Lives ${lives} · Cash $${cash}`,
-    active: (lives: number, number: number, enemies: number, cash: number) => `Wave ${number} · Lives ${lives} · Enemies ${enemies} · Cash $${cash}`,
-    complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `Wave ${number} complete · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
+    waiting: (lives: number, number: number, cash: number, total?: number) => `Wave ${number}${total ? `/${total}` : ''} ready · Lives ${lives} · Cash $${cash}`,
+    active: (lives: number, number: number, enemies: number, cash: number, total?: number) => `Wave ${number}${total ? `/${total}` : ''} · Lives ${lives} · Enemies ${enemies} · Cash $${cash}`,
+    complete: (lives: number, number: number, escaped: number, defeated: number, cash: number, total?: number) => `Wave ${number}${total ? `/${total}` : ''} complete · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
+    campaignWavesUnavailable: (next: number, total: number) => `Wave ${next} of ${total} is not implemented in this build.`,
+    startCampaignWave: (number: number, total: number) => `Start wave ${number} of ${total}`,
     defeated: (cashReward: number) => `Pioneer defeated · +$${cashReward}`,
     recruitButton: (name: string, price: number) => `Hire ${name} · $${price}`,
     recruitPool: (units: string) => `Recruit pool: ${units}`,
@@ -586,6 +609,14 @@ const languageMessages = {
     unitName: (type: string) => type === 'mexican' ? '墨西哥人' : '枪手',
     selected: (name: string) => `已选择${name}`,
     selectedSleeping: (name: string) => `${name}待招募，尚未雇用`,
+    mapHireButton: (name: string, price: number) => `雇佣地图上的${name} · $${price}`,
+    mapHired: (name: string, price: number) => `已花费 $${price} 雇佣地图上的${name}。`,
+    mapHireRejected: (name: string, price: number, cash: number) => `现金不足，无法雇佣${name}：需要 $${price}，当前 $${cash}。`,
+    startSample: '开始单个拓荒者样本',
+    openOriginalWaves: '游玩原版前两波',
+    originalWaveContext: '原版波次 · 第 1–2 / 8 波',
+    originalWaveNotice: '当前使用原版波次数据；本版本在第 2/8 波后停止，不会结算战役进度。',
+    returnCowGulchSample: '返回牛溪谷样本',
     failed: '游戏场景加载失败',
     retrySceneOpen: '重试加载请求的场景',
     returnPreviousScene: '返回之前的场景',
@@ -615,9 +646,11 @@ const languageMessages = {
     position: (x: string, y: string) => `位置 (${x}, ${y})`,
     unitRange: (range: string, boundary: string) => ` · 射程 ${boundary} ${range} 格`,
     enemyHealth: (hp: number, maxHp: number) => ` · 生命 ${hp}/${maxHp}`,
-    waiting: (lives: number, number: number, cash: number) => `第 ${number} 波待开始 · 生命 ${lives} · 现金 $${cash}`,
-    active: (lives: number, number: number, enemies: number, cash: number) => `第 ${number} 波 · 生命 ${lives} · 敌人 ${enemies} · 现金 $${cash}`,
-    complete: (lives: number, number: number, escaped: number, defeated: number, cash: number) => `第 ${number} 波完成 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
+    waiting: (lives: number, number: number, cash: number, total?: number) => `第 ${number}${total ? `/${total}` : ''} 波待开始 · 生命 ${lives} · 现金 $${cash}`,
+    active: (lives: number, number: number, enemies: number, cash: number, total?: number) => `第 ${number}${total ? `/${total}` : ''} 波 · 生命 ${lives} · 敌人 ${enemies} · 现金 $${cash}`,
+    complete: (lives: number, number: number, escaped: number, defeated: number, cash: number, total?: number) => `第 ${number}${total ? `/${total}` : ''} 波完成 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
+    campaignWavesUnavailable: (next: number, total: number) => `当前版本尚未实现第 ${next}/${total} 波。`,
+    startCampaignWave: (number: number, total: number) => `开始第 ${number}/${total} 波`,
     defeated: (cashReward: number) => `拓荒者被击败 · +$${cashReward}`,
     recruitButton: (name: string, price: number) => `招募${name} · $${price}`,
     recruitPool: (units: string) => `预备单位：${units}`,
@@ -1243,6 +1276,11 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (recruitmentEvent?.type === 'unit-recruited' || recruitmentEvent?.type === 'unit-recruitment-rejected') {
     lastRecruitmentEvent = recruitmentEvent;
   }
+  const mapHireEvent = [...events].reverse().find((event) =>
+    event.type === 'map-unit-hired' || event.type === 'map-unit-hire-rejected');
+  if (mapHireEvent?.type === 'map-unit-hired' || mapHireEvent?.type === 'map-unit-hire-rejected') {
+    lastMapHireEvent = mapHireEvent;
+  }
   const upgradeEvent = [...events].reverse().find((event) =>
     event.type === 'unit-upgraded' || event.type === 'unit-upgrade-rejected');
   if (upgradeEvent?.type === 'unit-upgraded' || upgradeEvent?.type === 'unit-upgrade-rejected') {
@@ -1302,11 +1340,20 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (view.wave) {
     const wave = view.wave;
     const waveText = wave.phase === 'not-started'
-      ? messages.waiting(wave.lives, wave.number, wave.cash)
+      ? messages.waiting(wave.lives, wave.number, wave.cash, wave.totalWaves)
       : wave.phase === 'active'
-        ? messages.active(wave.lives, wave.number, wave.activeEnemies, wave.cash)
-        : messages.complete(wave.lives, wave.number, wave.escapedEnemies, wave.defeatedEnemies, wave.cash);
-    if (waveStatus.textContent !== waveText) waveStatus.textContent = waveText;
+        ? messages.active(wave.lives, wave.number, wave.activeEnemies, wave.cash, wave.totalWaves)
+        : messages.complete(wave.lives, wave.number, wave.escapedEnemies, wave.defeatedEnemies, wave.cash, wave.totalWaves);
+    const campaignExhausted = wave.phase === 'complete' && wave.totalWaves !== undefined && !wave.settlement;
+    const displayedWaveText = campaignExhausted
+      ? `${waveText} · ${messages.campaignWavesUnavailable(wave.number + 1, wave.totalWaves!)}`
+      : waveText;
+    if (waveStatus.textContent !== displayedWaveText) waveStatus.textContent = displayedWaveText;
+    startWaveControl.textContent = campaignExhausted
+      ? messages.campaignWavesUnavailable(wave.number + 1, wave.totalWaves!)
+      : wave.totalWaves
+        ? messages.startCampaignWave(wave.number, wave.totalWaves)
+        : messages.startSample;
   }
   const combatText = lastDefeatReward === undefined ? '' : messages.defeated(lastDefeatReward);
   if (combatStatus.textContent !== combatText) combatStatus.textContent = combatText;
@@ -1330,19 +1377,46 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     );
   }
   if (recruitStatus.textContent !== recruitText) recruitStatus.textContent = recruitText;
+  const selectedSleepingMapUnit = unit?.activity === 4 && unit.hirePrice !== undefined ? unit : undefined;
+  mapHireControl.hidden = !selectedSleepingMapUnit;
+  if (selectedSleepingMapUnit) {
+    mapHireControl.textContent = messages.mapHireButton(
+      messages.unitName(selectedSleepingMapUnit.type),
+      selectedSleepingMapUnit.hirePrice!,
+    );
+    mapHireControl.disabled = actionLocked || view.paused || Boolean(view.wave?.settlement)
+      || (view.wave?.cash ?? 0) < selectedSleepingMapUnit.hirePrice!;
+  }
+  const mapHireText = lastMapHireEvent?.type === 'map-unit-hired'
+    ? messages.mapHired(messages.unitName(lastMapHireEvent.unitType), lastMapHireEvent.price)
+    : lastMapHireEvent?.type === 'map-unit-hire-rejected'
+      ? messages.mapHireRejected(
+        messages.unitName(lastMapHireEvent.unitType),
+        lastMapHireEvent.price,
+        lastMapHireEvent.availableCash,
+      )
+      : '';
+  if (mapHireStatus.textContent !== mapHireText) mapHireStatus.textContent = mapHireText;
   if (recruitDefinition) {
     const recruitLabel = messages.recruitButton(recruitDefinition.name[language], recruitDefinition.price);
     if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
   }
   const upgradeScenario = view.scenarioId === 'cow-gulch-upgrade-sample';
+  const originalWaveScenario = view.scenarioId === cowGulchP1bCampaignContent.id;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
+    : originalWaveScenario
+      ? cowGulchP1bCampaignContent.title[language]
     : activeCampaignStage?.title[language] ?? 'Cow Gulch';
   sceneContext.textContent = upgradeScenario
     ? messages.upgradeSceneContext
+    : originalWaveScenario
+      ? messages.originalWaveContext
     : activeCampaignStage ? language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE' : 'NEW MEXICO · 01';
-  upgradeSampleStatus.textContent = upgradeScenario ? messages.debugUpgradeFixture : messages.originalUpgradeLimit;
+  upgradeSampleStatus.textContent = upgradeScenario
+    ? messages.debugUpgradeFixture
+    : originalWaveScenario ? messages.originalWaveNotice : messages.originalUpgradeLimit;
   const selectedUnit = unit;
   const nextUpgrade = selectedUnit?.nextUpgrade;
   let upgradeText = '';
@@ -1431,8 +1505,11 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   recruitControl.disabled = actionLocked || Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
   upgradeControl.disabled = actionLocked || Boolean(settlement) || !nextUpgrade || view.paused;
-  startUpgradeSampleControl.hidden = upgradeScenario;
-  returnCowGulchControl.hidden = !upgradeScenario;
+  startUpgradeSampleControl.hidden = upgradeScenario || originalWaveScenario;
+  openOriginalWavesControl.hidden = upgradeScenario || originalWaveScenario;
+  openOriginalWavesControl.textContent = messages.openOriginalWaves;
+  returnCowGulchControl.hidden = !upgradeScenario && !originalWaveScenario;
+  returnCowGulchControl.textContent = messages.returnCowGulchSample;
   startDefeatControl.disabled = actionLocked || !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
   clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
   const canvasLabel = upgradeScenario
@@ -1498,6 +1575,12 @@ const assetNames = new Set([
   ...view.units.map((unit) => unit.asset),
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
   'pioneer_male',
+  'pioneer_female',
+  'player_gunslinger_shot',
+  'player_mexican',
+  'player_mexican_shot',
+  'sfx_mexican_dynamite',
+  'sfx_explosion',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 
@@ -1573,6 +1656,25 @@ function stopGameLoop(): void {
   simulationTime.reset();
 }
 
+const audioElements = new Map<string, HTMLAudioElement>();
+
+function playRequestedSounds(events: readonly GameEvent[]): void {
+  if ('soundEnabled' in profile.settings && profile.settings.soundEnabled === false) return;
+  for (const event of events) {
+    if (event.type !== 'sound-requested') continue;
+    let audio = audioElements.get(event.sound);
+    if (!audio) {
+      audio = new Audio(new URL(
+        import.meta.env.BASE_URL + 'assets/sounds/' + event.sound + '.ogg',
+        window.location.href,
+      ).toString());
+      audioElements.set(event.sound, audio);
+    }
+    audio.currentTime = 0;
+    void audio.play().catch(() => undefined);
+  }
+}
+
 function activateSession(
   nextSession: GameSession,
   nextReplayStatus?: ReplayStatusState,
@@ -1587,6 +1689,7 @@ function activateSession(
   previousSession.close();
   lastDefeatReward = undefined;
   lastRecruitmentEvent = undefined;
+  lastMapHireEvent = undefined;
   pendingRecruitmentType = undefined;
   recruitmentCommandNumber = 0;
   lastUpgradeEvent = undefined;
@@ -2028,6 +2131,7 @@ function startGameLoop(): void {
       frameEvents.push(...view.events);
       if (view.wave?.phase !== 'active') break;
     }
+    playRequestedSounds(frameEvents);
     renderStatus(frameEvents);
     redraw();
     animationFrame = window.requestAnimationFrame(tick);
@@ -2039,6 +2143,7 @@ function dispatch(intent: GameIntent): void {
   if (replaying || replacingSession) return;
   if (!session.submitIntent(intent)) return;
   view = session.advance();
+  playRequestedSounds(view.events);
   renderStatus();
   redraw();
   if (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)) startGameLoop();
@@ -2068,6 +2173,7 @@ pauseControl.addEventListener('click', () => {
 singleStepControl.addEventListener('click', () => {
   if (!view.paused || singleStepControl.disabled) return;
   view = session.singleStep({ deltaMs: 16 });
+  playRequestedSounds(view.events);
   renderStatus();
   redraw();
 });
@@ -2086,7 +2192,20 @@ campaignStageList.addEventListener('click', (event: MouseEvent) => {
   void openCampaignStage(scenarioId);
 });
 
+openOriginalWavesControl.addEventListener('click', () => {
+  void replaceSession(requestScenarioOpen(cowGulchP1bCampaignContent.id, 'formal'));
+});
+
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
+mapHireControl.addEventListener('click', () => {
+  const unit = view.units.find((candidate) => candidate.selected && candidate.activity === 4);
+  if (!unit) return;
+  dispatch({
+    type: 'hire-map-unit',
+    unitId: unit.id,
+    commandId: `${session.id}:map-hire:${++mapHireCommandNumber}`,
+  });
+});
 recruitControl.addEventListener('click', () => {
   const recruit = view.recruitPool[0];
   const cash = view.wave?.cash;
@@ -2128,7 +2247,7 @@ startUpgradeSampleControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen('cow-gulch-upgrade-sample', 'debug'));
 });
 returnCowGulchControl.addEventListener('click', () => {
-  void replaceSession(requestScenarioOpen('cow-gulch', 'formal'));
+  void replaceSession(requestScenarioOpen(cowGulchP1aSampleContent.id, 'formal'));
 });
 upgradeControl.addEventListener('click', () => {
   const unit = view.units.find((candidate) => candidate.selected && candidate.nextUpgrade);

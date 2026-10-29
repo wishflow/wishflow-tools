@@ -30,7 +30,7 @@ async function scheme(id: string, version: string, reward: number): Promise<Nume
   const prepared = {
     scenarioId: 'cow-gulch',
     contentVersion: 'cow-gulch-v1',
-    rulesVersion: 'gng-rules-1',
+    rulesVersion: 'gng-rules-2',
     parameters: [{ path: 'previewWave/enemy/cashReward', value: reward }],
   };
   return {
@@ -53,7 +53,7 @@ async function comparison(id: string, savedAt: number, reward: number): Promise<
       version: '1',
       gameScenarioId: 'cow-gulch',
       contentVersion: 'cow-gulch-v1',
-      rulesVersion: 'gng-rules-1',
+      rulesVersion: 'gng-rules-2',
       observationLevel: 'player-visible' as const,
       decisionIntervalFrames: 1,
       deltaMs: 100,

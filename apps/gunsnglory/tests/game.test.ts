@@ -91,6 +91,11 @@ const upgradeScenario: ScenarioContent = {
   units: combatScenario.units.map((unit) => ({ ...unit, upgradeLevels: [gunslingerUpgradeLevelOne] })),
 };
 const noCombatCowGulch: ScenarioContent = { ...cowGulchContent, units: [] };
+const formalPreviewCowGulch: ScenarioContent = {
+  ...cowGulchContent,
+  campaignWaveCount: undefined,
+  campaignWaves: undefined,
+};
 
 function advanceFor(session: GameSession, durationMs: number) {
   let view = session.observe();
@@ -114,6 +119,75 @@ test('opens a controlled scene with one unselected unit and isolates observation
     (initial.units[0] as { selected: boolean }).selected = true;
   }, TypeError);
   assert.equal(session.observe().units[0]?.selected, false);
+});
+
+test('Cow Gulch exposes the unscaled APK requests for the first two campaign waves', () => {
+  assert.equal(cowGulchContent.campaignWaveCount, 8);
+  assert.deepEqual(cowGulchContent.campaignWaves?.map((wave) => ({
+    number: wave.number,
+    hitPointMultiplierPercent: wave.hitPointMultiplierPercent,
+    speedMultiplierPercent: wave.speedMultiplierPercent,
+    spawnPools: wave.spawnPools.map((pool) => ({
+      spawnPointId: pool.spawnPointId,
+      intervalMs: pool.intervalMs,
+      requests: [...pool.requests],
+    })),
+  })), [
+    {
+      number: 1,
+      hitPointMultiplierPercent: 70,
+      speedMultiplierPercent: 100,
+      spawnPools: [{ spawnPointId: 0, intervalMs: 1500, requests: [6, 2, 2, 0, 0, 0, 0, 0, 0, 0] }],
+    },
+    {
+      number: 2,
+      hitPointMultiplierPercent: 75,
+      speedMultiplierPercent: 100,
+      spawnPools: [{ spawnPointId: 0, intervalMs: 2000, requests: [0, 2, 2, 3, 0, 0, 0, 0, 0, 0] }],
+    },
+  ]);
+});
+
+test('runs the first two original Cow Gulch waves without settling a partial campaign', async () => {
+  const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({
+    scenarioId: 'cow-gulch',
+    mode: 'formal',
+    randomSeed: 42,
+  });
+  const runWave = async (number: number) => {
+    const groups: Array<{ requestType: number; groupSize: number }> = [];
+    assert.equal(session.submitIntent({ type: 'start-wave' }), true);
+    let view = session.advance({ deltaMs: 0 });
+    let steps = 0;
+    while (view.wave?.phase === 'active' && view.wave.number === number && steps < 4000) {
+      view = session.advance({ deltaMs: 100 });
+      groups.push(...view.events.flatMap((event) => event.type === 'enemy-group-spawned'
+        ? [{ requestType: event.requestType, groupSize: event.groupSize }]
+        : []));
+      steps += 1;
+    }
+    assert.ok(steps < 4000, `wave ${number} should drain its original spawn pool and route`);
+    return { view, groups };
+  };
+
+  const waveOne = await runWave(1);
+  assert.equal(waveOne.view.wave?.number, 2);
+  assert.equal(waveOne.view.wave?.phase, 'not-started');
+  assert.equal(waveOne.view.wave?.lives, 34);
+  assert.equal(waveOne.view.wave?.dynamicDifficulty, 507);
+  assert.equal(waveOne.view.wave?.pendingSpawnRequests, 4);
+  assert.equal(waveOne.groups.length, 10);
+  assert.equal(waveOne.groups.reduce((sum, group) => sum + group.groupSize, 0), 16);
+
+  const waveTwo = await runWave(2);
+  assert.equal(waveTwo.view.wave?.number, 2);
+  assert.equal(waveTwo.view.wave?.phase, 'complete');
+  assert.equal(waveTwo.view.wave?.lives, 21);
+  assert.equal(waveTwo.view.wave?.pendingSpawnRequests, 0);
+  assert.equal(waveTwo.groups.length, 4);
+  assert.equal(waveTwo.groups.reduce((sum, group) => sum + group.groupSize, 0), 13);
+  assert.equal(waveTwo.view.wave?.settlement, undefined, 'two of eight waves are not a level victory');
+  assert.equal(session.terminalRecord(), undefined);
 });
 
 test('a retried recruitment command charges once and adds one unit to the spawn pool', async () => {
@@ -224,6 +298,173 @@ test('insufficient cash rejects recruitment without changing cash or the pool', 
   const retried = session.advance({ deltaMs: 0 });
   assert.equal(retried.wave?.cash, 74);
   assert.equal(retried.recruitPool[0]?.count, 0);
+});
+
+test('hires the selected sleeping map unit in place and acknowledges a duplicate command without another charge', async () => {
+  const sleepingGunslinger = {
+    ...combatScenario.units[0]!,
+    id: 'sleeping-gunslinger-1',
+    type: 'gunslinger',
+    activity: 4 as const,
+    asset: 'player_gunslinger_sleep',
+    awakeAsset: 'player_gunslinger',
+    hirePrice: 75,
+  };
+  const mapHireScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'map-hire-fixture',
+    previewWave: { ...combatScenario.previewWave!, initialCash: 75 },
+    units: [sleepingGunslinger],
+  };
+  const session = await createGame({ scenarios: { [mapHireScenario.id]: mapHireScenario } }).open({
+    scenarioId: mapHireScenario.id,
+  });
+
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.advance({ deltaMs: 0 });
+  const hire = { type: 'hire-map-unit', unitId: sleepingGunslinger.id, commandId: 'hire-slot-1' } as never;
+  assert.equal(session.submitIntent(hire), true);
+  assert.equal(session.submitIntent(hire), true, 'retrying the same command is acknowledged');
+  const view = session.advance({ deltaMs: 0 });
+
+  assert.equal(view.wave?.cash, 0);
+  assert.equal(view.units.length, 1, 'hiring activates the original map object instead of creating a pool entry');
+  assert.equal(view.units[0]?.id, sleepingGunslinger.id);
+  assert.equal(view.units[0]?.activity, 5);
+  assert.equal(view.units[0]?.asset, 'player_gunslinger');
+  assert.equal(view.units[0]?.selected, true);
+  assert.equal(view.recruitPool.every((entry) => entry.count === 0), true);
+  assert.equal(view.events.filter((event) => event.type === 'map-unit-hired').length, 1);
+  assert.equal(view.events.filter((event) => event.type === 'map-unit-hire-rejected').length, 0);
+});
+
+test('rejects an unaffordable map-slot hire without waking or charging the same unit', async () => {
+  const sleepingMexican = {
+    ...combatScenario.units[0]!,
+    id: 'sleeping-mexican-1',
+    type: 'mexican',
+    activity: 4 as const,
+    asset: 'player_mexican_sleep',
+    awakeAsset: 'player_mexican',
+    hirePrice: 100,
+  };
+  const poorScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'poor-map-hire-fixture',
+    previewWave: { ...combatScenario.previewWave!, initialCash: 99 },
+    units: [sleepingMexican],
+  };
+  const session = await createGame({ scenarios: { [poorScenario.id]: poorScenario } }).open({ scenarioId: poorScenario.id });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.advance({ deltaMs: 0 });
+  session.submitIntent({ type: 'hire-map-unit', unitId: sleepingMexican.id, commandId: 'hire-mexican-poor' } as never);
+  const rejected = session.advance({ deltaMs: 0 });
+
+  assert.equal(rejected.wave?.cash, 99);
+  assert.equal(rejected.units[0]?.activity, 4);
+  assert.equal(rejected.units[0]?.asset, 'player_mexican_sleep');
+  assert.deepEqual(rejected.events, [{
+    type: 'map-unit-hire-rejected',
+    unitId: sleepingMexican.id,
+    unitType: 'mexican',
+    reason: 'insufficient-funds',
+    price: 100,
+    availableCash: 99,
+  }]);
+});
+
+test('the original Mexican hire slot wakes in place but remains immobile at its researched speed of zero', async () => {
+  const originalMexican = cowGulchContent.units.find((unit) => unit.type === 'mexican' && unit.activity === 4);
+  assert.ok(originalMexican);
+  assert.equal(originalMexican.hirePrice, 100);
+  assert.equal(originalMexican.movementSpeedFinePer100Ms, 0);
+  assert.equal(originalMexican.awakeAsset, 'player_mexican');
+  assert.equal(originalMexican.weapon?.damage, 500);
+  assert.equal(originalMexican.weapon?.damageType, 'heavy');
+  assert.equal(originalMexican.weapon?.areaDamageFine, 7680);
+
+  const fundedScenario: ScenarioContent = {
+    ...cowGulchContent,
+    id: 'mexican-immobile-fixture',
+    formalSettlementSupported: false,
+    previewWave: { ...cowGulchContent.previewWave!, initialCash: 100 },
+    units: [originalMexican],
+  };
+  const session = await createGame({ scenarios: { [fundedScenario.id]: fundedScenario } }).open({
+    scenarioId: fundedScenario.id,
+    mode: 'debug',
+  });
+  session.submitIntent({ type: 'select-at', x: originalMexican.cell.x + 0.5, y: originalMexican.cell.y + 0.25 });
+  session.advance({ deltaMs: 0 });
+  assert.equal(session.submitIntent({ type: 'hire-map-unit', unitId: originalMexican.id, commandId: 'hire-original-mexican' }), true);
+  const hired = session.advance({ deltaMs: 0 });
+
+  assert.equal(hired.wave?.cash, 0);
+  assert.equal(hired.units[0]?.activity, 5);
+  assert.equal(hired.units[0]?.movementSpeedFinePer100Ms, 0);
+  assert.equal(hired.units[0]?.asset, 'player_mexican');
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 8 }), false);
+});
+
+test('applies the Gunslinger special reload after the sixth actual shot', async () => {
+  const specialScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'gunslinger-special-reload-fixture',
+    units: [{
+      ...combatScenario.units[0]!,
+      weapon: {
+        ...combatScenario.units[0]!.weapon!,
+        specialReloadTimeMs: 1500,
+        specialReloadFrequency: 6,
+      },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 100000 },
+    },
+  };
+  const session = await createGame({ scenarios: { [specialScenario.id]: specialScenario } }).open({
+    scenarioId: specialScenario.id,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+
+  const shots: Array<{ elapsedMs: number; specialReload: boolean }> = [];
+  for (let frame = 0; frame < 48; frame += 1) {
+    const view = session.advance({ deltaMs: 100 });
+    for (const event of view.events) {
+      if (event.type === 'unit-fired') shots.push({ elapsedMs: view.elapsedMs, specialReload: event.specialReload });
+    }
+  }
+
+  assert.deepEqual(shots.map(({ elapsedMs }) => elapsedMs), [300, 800, 1300, 1800, 2300, 2800, 4800]);
+  assert.deepEqual(shots.map(({ specialReload }) => specialReload), [false, false, false, false, false, true, false]);
+});
+
+test('the original Cow Gulch first wave reaches the Gunslinger special reload through real campaign content', async () => {
+  const session = await createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } }).open({
+    scenarioId: cowGulchContent.id,
+    mode: 'formal',
+    randomSeed: 42,
+  });
+  assert.equal(session.submitIntent({ type: 'start-wave' }), true);
+
+  let view = session.advance({ deltaMs: 0 });
+  const shots: Array<{ specialReload: boolean }> = [];
+  let steps = 0;
+  while (view.wave?.number === 1 && view.wave.phase === 'active' && steps < 2000) {
+    view = session.advance({ deltaMs: 100 });
+    for (const event of view.events) {
+      if (event.type === 'unit-fired' && event.unitId === 'gunslinger-1') {
+        shots.push({ specialReload: event.specialReload });
+      }
+    }
+    steps += 1;
+  }
+
+  assert.equal(view.wave?.number, 2, 'the first real wave clears and advances to wave two');
+  assert.ok(shots.length >= 6, 'the active original Gunslinger fires at least six real shots');
+  assert.deepEqual(shots.slice(0, 6).map(({ specialReload }) => specialReload), [false, false, false, false, false, true]);
 });
 
 test('upgrades a selected Gunslinger once, charges the next-level price, and applies its researched stats', async () => {
@@ -571,6 +812,68 @@ test('the first in-range Desperado shot follows its target, deals damage, kills 
   assert.equal(view.wave?.cash, 66, 'a dead enemy cannot pay twice');
   assert.equal(view.wave?.defeatedEnemies, 1);
   assert.equal(view.wave?.phase, 'complete');
+});
+
+test('the Mexican dynamite hits inside the strict one-tile radius and leaves boundary targets unharmed', async () => {
+  const mexicanScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'mexican-area-fixture',
+    units: [{
+      ...combatScenario.units[0]!,
+      type: 'mexican',
+      weapon: {
+        ...combatScenario.units[0]!.weapon!,
+        damage: 500,
+        damageType: 'heavy',
+        reloadTimeMs: 500,
+        projectileSpeed: 1500,
+        damageStyle: 3,
+        areaDamageFine: 7680,
+      },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
+      additionalSpawns: [
+        { cell: { x: 11.4, y: 8 }, direction: 'east' },
+        { cell: { x: 12, y: 8 }, direction: 'east' },
+        { cell: { x: 12.1, y: 8 }, direction: 'east' },
+      ],
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 100, penetration: {
+        ...combatScenario.previewWave!.enemy!.penetration,
+        heavy: 100,
+      } },
+    },
+  };
+  const session = await createGame({ scenarios: { [mexicanScenario.id]: mexicanScenario } }).open({
+    scenarioId: mexicanScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+  advanceFor(session, 300);
+  const view = session.advance({ deltaMs: 100 });
+
+  assert.deepEqual(view.events.filter((event) => event.type === 'shot-exploded'), [{
+    type: 'shot-exploded',
+    shotId: 'preview-shot-1',
+    targetId: 'preview-pioneer-1',
+    affectedEnemyIds: ['preview-pioneer-1', 'preview-pioneer-2'],
+  }]);
+  assert.equal(view.enemies[0]?.alive, false);
+  assert.equal(view.enemies[1]?.alive, false);
+  assert.equal(view.enemies[2]?.alive, true, 'the target exactly one tile away is outside the strict radius');
+  assert.equal(view.enemies[3]?.alive, true, 'the target beyond the radius remains unharmed');
+  assert.equal(view.wave?.cash, 67, 'each killed enemy pays exactly once');
+  assert.equal(view.shots[0]?.imageAsset, 'sfx_mexican_dynamite');
+  assert.equal(view.shots[0]?.explosionRemainingMs, 799);
+  assert.deepEqual(view.units[0]?.shootingAnimation, {
+    asset: 'player_mexican_shot',
+    frame: 0,
+    row: 0,
+    mirrored: true,
+  });
+  assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
 });
 
 test('does not attack at or beyond the strict outer range boundary', async () => {
@@ -1065,7 +1368,7 @@ test('reopens a clean session from the same seed and leaves the previous session
 
 test('produces one stable formal terminal record only after a supported wave settles', async () => {
   const game = createGame({
-    scenarios: { [cowGulchContent.id]: cowGulchContent },
+    scenarios: { [cowGulchContent.id]: formalPreviewCowGulch },
     sessionIdSource: () => 'formal-session-1',
   });
   const session = await game.open({ scenarioId: cowGulchContent.id, mode: 'formal', randomSeed: 42 });
@@ -1110,7 +1413,7 @@ test('keeps the one-life defeat fixture in debug mode and rejects unsupported fo
 
 test('records consumed frame inputs and replays checkpoints to the same terminal result', async () => {
   const game = createGame({
-    scenarios: { [cowGulchContent.id]: cowGulchContent },
+    scenarios: { [cowGulchContent.id]: formalPreviewCowGulch },
     sessionIdSource: (() => {
       let id = 0;
       return () => `replay-session-${++id}`;
@@ -1226,7 +1529,7 @@ test('prepares a complete immutable numeric setup without allocating a session o
 
   assert.equal(prepared.scenarioId, cowGulchContent.id);
   assert.equal(prepared.contentVersion, cowGulchContent.contentVersion);
-  assert.equal(prepared.rulesVersion, 'gng-rules-1');
+  assert.equal(prepared.rulesVersion, 'gng-rules-2');
   assert.ok(prepared.parameters.some(({ path, value }) =>
     path === 'units/gunslinger-1/weapon/damage' && value === 140));
   assert.ok(prepared.parameters.some(({ path, value }) => path === 'maxUpgrades' && value === 0));

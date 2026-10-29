@@ -10,6 +10,8 @@ test('uses the selected difficulty for enemy hit points and separately rounded s
     ...cowGulchContent,
     id: 'difficulty-sample',
     contentVersion: 'difficulty-sample-v1',
+    campaignWaveCount: undefined,
+    campaignWaves: undefined,
     units: [],
     previewWave: {
       ...cowGulchContent.previewWave!,
@@ -51,6 +53,8 @@ test('replays preserve selected difficulty and its settled result', async () => 
     ...cowGulchContent,
     id: 'difficulty-replay-sample',
     contentVersion: 'difficulty-replay-sample-v1',
+    campaignWaveCount: undefined,
+    campaignWaves: undefined,
     units: [],
     previewWave: {
       ...cowGulchContent.previewWave!,

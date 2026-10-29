@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
-import { cowGulchContent, cowGulchUpgradeSampleContent } from '../src/content/cow-gulch';
+import {
+  cowGulchContent,
+  cowGulchP1aSampleContent,
+  cowGulchP1bCampaignContent,
+  cowGulchUpgradeSampleContent,
+} from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
@@ -52,6 +57,14 @@ test('contains the researched Cow Gulch scenario and exactly its first-map unit'
   assert.equal(content.map.background.length, 289);
   assert.ok(content.map.streets.length > 30);
   assert.match(content.source.variationPolicy, /fixed.*seed/i);
+});
+
+test('keeps the legacy one-wave sample separate from the incomplete two-wave campaign slice', () => {
+  assert.equal(cowGulchP1aSampleContent.id, 'cow-gulch');
+  assert.equal(cowGulchP1aSampleContent.campaignWaves, undefined);
+  assert.equal(cowGulchP1bCampaignContent.id, 'cow-gulch-original-waves');
+  assert.equal(cowGulchP1bCampaignContent.campaignWaveCount, 8);
+  assert.deepEqual(cowGulchP1bCampaignContent.campaignWaves?.map(({ number }) => number), [1, 2]);
 });
 
 test('keeps the converted Cow Gulch grid and route controls aligned with the raw TDM bytes', () => {

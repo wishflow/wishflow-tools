@@ -829,6 +829,10 @@ body {
     font-size: 0.85rem;
   }
 
+  .game-controls button[data-action="start-wave"] {
+    grid-column: 1 / -1;
+  }
+
   .game-controls p {
     font-size: 0.85rem;
   }

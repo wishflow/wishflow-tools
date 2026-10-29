@@ -1,4 +1,5 @@
 import cowGulchMap from './cow-gulch.json';
+import { cowGulchCampaignWaves } from './cow-gulch-campaign-waves';
 import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
 import type { ScenarioContent, ScenarioUnit } from '../game';
 
@@ -13,11 +14,31 @@ const firstMapGunslingerWeapon = Object.freeze({
   specialReloadFrequency: 6,
 } as const);
 
+const firstMapMexicanWeapon = Object.freeze({
+  damage: 500,
+  damageType: 'heavy',
+  rangeFine: 30720,
+  reloadTimeMs: 2500,
+  projectileSpeed: 1500,
+  damageStyle: 3,
+  areaDamageFine: 7680,
+  specialReloadTimeMs: 0,
+  specialReloadFrequency: 1,
+} as const);
+
 const firstMapGunslingerMovementSpeedFinePer100Ms = 1500;
 
 const sleepingUnitMarkers = {
-  96: { prefix: 'gunslinger-hire', type: 'gunslinger', asset: 'player_gunslinger_sleep', speed: 1500 },
-  97: { prefix: 'mexican-hire', type: 'mexican', asset: 'player_mexican_sleep', speed: 1750 },
+  96: {
+    prefix: 'gunslinger-hire', type: 'gunslinger', asset: 'player_gunslinger_sleep', awakeAsset: 'player_gunslinger',
+    awakeFrame: { x: 0, y: 0, width: 32, height: 44 },
+    hirePrice: 75, speed: firstMapGunslingerMovementSpeedFinePer100Ms, weapon: firstMapGunslingerWeapon,
+  },
+  97: {
+    prefix: 'mexican-hire', type: 'mexican', asset: 'player_mexican_sleep', awakeAsset: 'player_mexican',
+    awakeFrame: { x: 0, y: 0, width: 32, height: 44 },
+    hirePrice: 100, speed: 0, weapon: firstMapMexicanWeapon,
+  },
 } as const;
 
 function createSleepingMapUnits(): ScenarioUnit[] {
@@ -34,12 +55,18 @@ function createSleepingMapUnits(): ScenarioUnit[] {
         id: `${marker.prefix}-${String(index).padStart(2, '0')}`,
         type: marker.type,
         activity: 4,
+        hirePrice: marker.hirePrice,
+        awakeAsset: marker.awakeAsset,
+        awakeFrame: marker.awakeFrame,
         cell: { x, y },
         movementSpeedFinePer100Ms: marker.speed,
         asset: marker.asset,
         frame: { x: 0, y: 0, width: 32, height: 32 },
         render,
         hitArea: { ...render },
+        awakeRender: { x, y: y - 0.375, width: 1, height: 1.375 },
+        awakeHitArea: { x, y: y - 0.375, width: 1, height: 1.375 },
+        weapon: marker.weapon,
       });
     }
   }
@@ -62,7 +89,7 @@ const firstMapGunslingerUpgradeLevelOne = Object.freeze({
 
 export const cowGulchContent: ScenarioContent = {
   ...cowGulchMap,
-  contentVersion: 'gng-free-1.8.6-map1-objects-v2',
+  contentVersion: 'gng-free-1.8.6-map1-cow-gulch-wave02-v3',
   formalSettlementSupported: true,
   maxUpgrades: 0,
   recruitableUnits: [{
@@ -82,12 +109,35 @@ export const cowGulchContent: ScenarioContent = {
     })),
     ...createSleepingMapUnits(),
   ],
+  campaignWaveCount: 8,
+  campaignWaves: cowGulchCampaignWaves,
+  campaignEnemy: {
+    hitPoints: 18,
+    cashReward: 1,
+    penetration: { light: 100, fire: 50, heavy: 25, poison: 75 },
+  },
   previewWave: cowGulchPreviewWave,
+};
+
+/** One-wave formal sample retained for the P1-A progress and settlement checks. */
+export const cowGulchP1aSampleContent: ScenarioContent = {
+  ...cowGulchContent,
+  contentVersion: 'gng-free-1.8.6-map1-p1a-sample-v1',
+  campaignWaveCount: undefined,
+  campaignWaves: undefined,
+};
+
+/** The original map and first two waves, exposed separately until P1-D completes all eight. */
+export const cowGulchP1bCampaignContent: ScenarioContent = {
+  ...cowGulchContent,
+  id: 'cow-gulch-original-waves',
+  contentVersion: 'gng-free-1.8.6-map1-p1b-waves-1-2-v1',
+  title: { en: 'Cow Gulch · Original waves 1–2', zh: '牛溪谷 · 原版第 1–2 波' },
 };
 
 /** Debug-only fixture for the otherwise locked Cow Gulch Gunslinger upgrade path. */
 export const cowGulchUpgradeSampleContent: ScenarioContent = {
-  ...cowGulchContent,
+  ...cowGulchP1aSampleContent,
   id: 'cow-gulch-upgrade-sample',
   formalSettlementSupported: false,
   maxUpgrades: 1,

@@ -169,7 +169,11 @@ test('returns a Game defeat as an experiment outcome', async () => {
   });
   const experiments = createExperiments({ game, policies: [policy] });
   const result = await experiments.run(request({
-    scenario: { ...request().scenario, gameScenarioId: cowGulchDefeatContent.id },
+    scenario: {
+      ...request().scenario,
+      gameScenarioId: cowGulchDefeatContent.id,
+      contentVersion: cowGulchDefeatContent.contentVersion!,
+    },
   }));
 
   assert.equal(result.status, 'completed');

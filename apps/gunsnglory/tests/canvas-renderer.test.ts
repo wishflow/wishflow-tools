@@ -262,3 +262,92 @@ test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the uni
   assert.equal((effectX as number) + (effectWidth as number) / 2, feetX);
   assert.equal((effectY as number) + (effectHeight as number), feetY - 32 * viewport.scaleFactor);
 });
+
+test('draws original firing, Mexican dynamite, and explosion atlas frames', () => {
+  const ground = {} as HTMLImageElement;
+  const gunslinger = {} as HTMLImageElement;
+  const dynamite = {} as HTMLImageElement;
+  const explosion = {} as HTMLImageElement;
+  const gunslingerShot = {} as HTMLImageElement;
+  const drawCalls: unknown[][] = [];
+  const transforms: unknown[][] = [];
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+    translate(...args: number[]) { transforms.push(['translate', ...args]); },
+    scale(...args: number[]) { transforms.push(['scale', ...args]); },
+    arc() {},
+    fill() {},
+    stroke() {},
+  } as unknown as CanvasRenderingContext2D;
+  const view: GameView = {
+    frame: 1,
+    elapsedMs: 100,
+    paused: false,
+    scenarioId: 'cow-gulch',
+    map: {
+      width: 1,
+      height: 1,
+      tileSize: 32,
+      background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 1, height: 1 }],
+      streets: [],
+    },
+    units: [{
+      id: 'gunslinger-1',
+      type: 'gunslinger',
+      asset: 'player_gunslinger',
+      cell: { x: 0, y: 0 },
+      movementSpeedFinePer100Ms: 1500,
+      frame: { x: 0, y: 0, width: 32, height: 44 },
+      render: { x: 0, y: -0.375, width: 1, height: 1.375 },
+      hitArea: { x: 0, y: -0.375, width: 1, height: 1.375 },
+      selected: false,
+      moving: false,
+      positionFine: { x: 3840, y: 5760 },
+      upgradeLevel: 0,
+      shootingAnimation: { asset: 'player_gunslinger_shot', frame: 1, row: 2, mirrored: true },
+    }],
+    enemies: [],
+    shots: [
+      {
+        id: 'flight', shooterId: 'mexican-1', targetId: 'enemy-1',
+        positionFine: { x: 3840, y: 3840 }, remainingMs: 100,
+        damageStyle: 3, imageAsset: 'sfx_mexican_dynamite', animationFrame: 2,
+      },
+      {
+        id: 'impact', shooterId: 'mexican-1', targetId: 'enemy-2',
+        positionFine: { x: 3840, y: 3840 }, remainingMs: 599,
+        damageStyle: 3, imageAsset: 'sfx_mexican_dynamite', animationFrame: 1,
+        explosionRemainingMs: 599,
+      },
+    ],
+    recruitPool: [],
+    events: [],
+  };
+
+  drawGame(context, view, {
+    ground,
+    player_gunslinger: gunslinger,
+    sfx_mexican_dynamite: dynamite,
+    sfx_explosion: explosion,
+    player_gunslinger_shot: gunslingerShot,
+  });
+
+  const dynamiteDraw = drawCalls.find(([image]) => image === dynamite);
+  assert.ok(dynamiteDraw);
+  assert.deepEqual(dynamiteDraw.slice(1, 5), [32, 0, 16, 16]);
+  const explosionDraw = drawCalls.find(([image]) => image === explosion);
+  assert.ok(explosionDraw);
+  assert.deepEqual(explosionDraw.slice(1, 5), [48, 0, 48, 52]);
+  const firingDraw = drawCalls.find(([image]) => image === gunslingerShot);
+  assert.ok(firingDraw);
+  assert.deepEqual(firingDraw.slice(1, 5), [32, 88, 32, 44]);
+  assert.deepEqual(transforms.map(([name]) => name), ['translate', 'scale']);
+  assert.deepEqual(transforms[1], ['scale', -1, 1]);
+});

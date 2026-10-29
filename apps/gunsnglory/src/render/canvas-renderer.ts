@@ -4,6 +4,8 @@ import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type M
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
+const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
+const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
 
 export type GameImages = Readonly<Record<string, HTMLImageElement>>;
 
@@ -112,10 +114,55 @@ function drawEnemy(
   }
 }
 
-function drawShot(context: CanvasRenderingContext2D, shot: ShotView, viewport: MapViewport): void {
+function drawShot(
+  context: CanvasRenderingContext2D,
+  shot: ShotView,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
   const tileScale = viewport.scaleFactor;
   const x = viewport.origin.x + (shot.positionFine.x / 240) * tileScale;
   const y = viewport.origin.y + (shot.positionFine.y / 240) * tileScale;
+  if (shot.imageAsset) {
+    if (shot.explosionRemainingMs !== undefined) {
+      const image = images.sfx_explosion;
+      if (!image) throw new Error('Missing game image: sfx_explosion');
+      const frame = Math.min(EXPLOSION_FRAME.count - 1, Math.max(0, shot.animationFrame));
+      const width = EXPLOSION_FRAME.width * tileScale;
+      const height = EXPLOSION_FRAME.height * tileScale;
+      context.drawImage(
+        image,
+        frame * EXPLOSION_FRAME.width,
+        0,
+        EXPLOSION_FRAME.width,
+        EXPLOSION_FRAME.height,
+        x - width / 2,
+        y - height,
+        width,
+        height,
+      );
+      return;
+    }
+
+    const image = images[shot.imageAsset];
+    if (!image) throw new Error('Missing game image: ' + shot.imageAsset);
+    const frame = Math.min(MEXICAN_DYNAMITE_FRAME.count - 1, Math.max(0, shot.animationFrame));
+    const width = MEXICAN_DYNAMITE_FRAME.width * tileScale;
+    const height = MEXICAN_DYNAMITE_FRAME.height * tileScale;
+    context.drawImage(
+      image,
+      frame * MEXICAN_DYNAMITE_FRAME.width,
+      0,
+      MEXICAN_DYNAMITE_FRAME.width,
+      MEXICAN_DYNAMITE_FRAME.height,
+      x - width / 2,
+      y - height / 2,
+      width,
+      height,
+    );
+    return;
+  }
+
   context.beginPath();
   context.arc(x, y, Math.max(1.5, 2.2 * tileScale), 0, Math.PI * 2);
   context.fillStyle = '#8f2118';
@@ -265,7 +312,7 @@ export function drawGame(
   drawTiles(context, view.map.background, images, viewport);
   for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
   drawTiles(context, view.map.streets, images, viewport);
-  for (const shot of view.shots) drawShot(context, shot, viewport);
+  for (const shot of view.shots) drawShot(context, shot, images, viewport);
 
   for (const unit of view.units) {
     const left = viewport.origin.x + unit.render.x * viewport.tileSize;
@@ -280,19 +327,20 @@ export function drawGame(
       context.fill();
     }
 
-    const image = images[unit.asset];
-    if (!image) throw new Error('Missing game image: ' + unit.asset);
-    context.drawImage(
-      image,
-      unit.frame.x,
-      unit.frame.y,
-      unit.frame.width,
-      unit.frame.height,
-      left,
-      top,
-      width,
-      height,
-    );
+    const firing = unit.shootingAnimation;
+    const asset = firing?.asset ?? unit.asset;
+    const image = images[asset];
+    if (!image) throw new Error('Missing game image: ' + asset);
+    const frame = firing
+      ? { x: firing.frame * unit.frame.width, y: firing.row * unit.frame.height, width: unit.frame.width, height: unit.frame.height }
+      : unit.frame;
+    context.save();
+    if (firing?.mirrored) {
+      context.translate(left * 2 + width, 0);
+      context.scale(-1, 1);
+    }
+    context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
+    context.restore();
 
     if (unit.activity === 4) {
       const effectImage = images.sfx_sleeping;

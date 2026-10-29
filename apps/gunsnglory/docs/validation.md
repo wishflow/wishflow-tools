@@ -641,3 +641,26 @@ CI 首次运行暴露设置冲突和保存重试用例无法点击：长升级�
 依据：`R/data/waves.json`、`R/data/level-config.json`、`R/recovered-source/java/.../GameDesignWaves.java`、`Wave.java`、`WaveManager.java`、`EnemyDirector.smali`；pool 类型2–5分别为拓荒者 x1–x4，简单难度动态人数上限见[产品规格 §4.3](spec.md#43-参数确定单位与规则消费)。
 
 **已调整 P1-B 验收：**真实65现金开局只要求在真实 Wave01–02 路线中赚到 `$75` 并雇用同一枪手对象，验证控制与特殊装填；Mexican 的 `$99/$100` 雇用边界、AOE 群体攻击、弹道/爆炸、表现与声音改由独立 Game 行为 fixture 验证。Fixture 不进入正式档案、不计为真实关卡进度，也不改变真实场景现金。不得用“同时购买两类单位”作为一局通关门槛。
+
+另核对 `GameObjectUnit` 构造时从 `unitDataMexican[0][0]` 读取速度0，`move()` 将速度乘以移动方向形成位移，`hire()` 不修改 `speed`。因此 P1-B 的 Mexican 验收修正为“可选中并原地攻击，不可移动”；先前计划中要求 Mexican 移动的条文已删除。该边界来自代码数据与消费路径核对，不依赖原版运行观察。
+
+## 36. P1-B 原版前两波与战斗切片
+
+本轮从 P1-A 的 Cow Gulch 原始对象开局继续实现，范围包括原版 Wave01–02 调度、地图 Gunslinger 的真实 `$75` 雇用、Gunslinger 第六次实际射击后的特殊装填，以及 Mexican 雇用与重型炸药攻击。为避免把未完成内容伪装成正式关卡，保留原来的单波 `cow-gulch` 样本和存档身份；新增独立的 `cow-gulch-original-waves` 场景，仅提供已实现的前两波。其总波数仍显示为8；第3–8波和整关结算明确不可用，不写战役进度。
+
+Mexican 的 `$99` 拒绝、`$100` 原地唤醒、零移速不可移动、重型 AOE 群体命中及边界目标、击杀奖励、投射物/爆炸帧和炸药音效事件由独立 Game fixture 验证。该 fixture 使用显式测试身份，不改变真实关卡现金或存档。枪手特殊装填同时有通用固定时间测试和直接使用原版 Cow Gulch 波次内容的真实规则测试；真实第一波推进到第二波，并核对第六次枪手射击使用特殊装填。
+
+| 验收面 | 实际结果 |
+| --- | --- |
+| 原版内容身份 | `cow-gulch` 一波正式样本保持独立内容版本；新场景 ID 为 `cow-gulch-original-waves`，内容版本为 `gng-free-1.8.6-map1-p1b-waves-1-2-v1`。原始 Wave01/02 数据以 `cowGulchCampaignWaves` 装载，源向量和缩放规则见[产品规格 §4.3](spec.md#43-参数确定单位与规则消费)。 |
+| 真实首波规则 | Game 行为测试使用真实 Cow Gulch 内容和 seed 42，确认 Wave01 清除后进入 Wave02，原地图枪手至少完成6次实际射击，前六发只有第六发触发特殊装填。前两波内容测试核对原始HP/速度倍率、spawn pool、请求向量、入口间隔与波次身份。 |
+| 真实枪手雇用 | Playwright 以4×从 `$65` 原始开局运行 Wave01，等待实际击杀收入达到 `$75`，在地图 Gunslinger 槽确认雇用并扣款，随后再次点选同一地图位置确认枪手可控；启动 Wave02。浏览器路径没有注入现金。 |
+| Mexican 规则与音画 | Game fixture 覆盖 `$99` 资金不足、`$100` 雇用、原地攻击/零移速，以及一颗炸药命中半径内两个敌人，半径边界及外侧目标不受伤、现金奖励各一次。画面事件绑定 APK 弹道/爆炸及枪手/Mexican 射击图集；Mexican 用例断言 `sound_dynamite` 请求，真实浏览器另确认 `sound_revolver.ogg` 被请求。 |
+| APK 资源 | 构建并加载 `pioneer_female.png`、`player_gunslinger_shot.png`、`player_mexican.png`、`player_mexican_shot.png`、`sfx_mexican_dynamite.png`、`sfx_explosion.png`，以及 `sound_revolver.ogg`、`sound_revolver2.ogg`、`sound_dynamite.ogg`、`sound_desperado_yihaa.ogg`、`sound_mexican_arriba.ogg`。Canvas 单测核对原始图集裁切、攻击帧、弹道和爆炸；本轮没有宣称所有音频变体都已逐一听辨。 |
+| 本地 CI | `pnpm run test:ci` 通过：TypeScript 检查、134 项单元测试、生产构建及49个 Playwright 场景。E2E 覆盖桌面真实前两波/雇用、OGG 请求，并回归原先的桌面选择、手机触控、存档、倍速和其它既有流程。 |
+| 回归测试灵敏度 | 临时把波次缩放的 `count <= 0` 守卫改为 `count < 0`，真实两波规则测试因 Wave02 剩余请求由预期4变成11而失败；自动恢复源文件后，同一测试再次通过。 |
+| Codex 内置浏览器本地实测 | 在 `http://localhost:5176/` 打开原版前两波场景，使用4×运行 Wave01，显示 Wave02、50生命、$81；在地图槽确认以$75雇用后，现金为$6、预备池显示 `Gunslinger ×1`，再选中同一槽。启动 Wave02 后显示 Wave02 完成、47生命、3名逃脱、44名击败、现金$34，并明确提示 Wave03 未实现。没有生成正式战役结算；恢复1×并返回原单波样本后，档案仍显示没有 Cow Gulch 结算。 |
+| 浏览器适配回归 | 新增前两波入口后，原有窄屏主操作按钮宽度回归被 E2E 捕获；将手机视口下的“开始波次”设为跨两列后，原始宽度断言保留并通过，触控与页面布局测试全部通过。 |
+| 发布状态 | 本节记录本地验证和内置浏览器结果；开发分支提交、合并 `master`、CI 部署及公开站点实测完成后，再补充对应证据。 |
+
+此处只标记 P1-B 切片已完成本地验收，不表示 P1 完成。Wave03–08、运输组、完整首关结算、正式战役入口及完整 Cow Gulch 仍待对应 P1-C–F 实现，完整原版关卡仍计为0/60。

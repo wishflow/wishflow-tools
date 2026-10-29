@@ -69,6 +69,13 @@ export interface ScenarioUnit {
   /** Original map-object activity: 4 is sleeping, 5 is active. */
   activity?: 4 | 5;
   type: string;
+  /** Price for activating this existing activity-4 map object. */
+  hirePrice?: number;
+  /** Sprite atlas used after this existing map object is hired. */
+  awakeAsset?: string;
+  awakeFrame?: Rectangle;
+  awakeRender?: Rectangle;
+  awakeHitArea?: Rectangle;
   cell: { x: number; y: number };
   /** Recovered GameDesignData speed value, applied as fine units per 100 ms. */
   movementSpeedFinePer100Ms: number;
@@ -115,7 +122,9 @@ export interface UnitWeaponDefinition {
   rangeFine: number;
   reloadTimeMs: number;
   projectileSpeed: number;
-  damageStyle: 0;
+  damageStyle: 0 | 1 | 2 | 3 | 4 | 5 | 6;
+  /** Original GameDesignData AOE radius in fine units; absent or zero means single-target damage. */
+  areaDamageFine?: number;
   specialReloadTimeMs?: number;
   specialReloadFrequency?: number;
 }
@@ -156,6 +165,20 @@ export interface PreviewWaveDefinition {
   exit: { x: number; y: number };
 }
 
+export interface CampaignSpawnPoolDefinition {
+  spawnPointId: number;
+  intervalMs: number;
+  /** Remaining request counts for original pool types 2 through 11, in order. */
+  requests: readonly number[];
+}
+
+export interface CampaignWaveDefinition {
+  number: number;
+  hitPointMultiplierPercent: number;
+  speedMultiplierPercent: number;
+  spawnPools: readonly CampaignSpawnPoolDefinition[];
+}
+
 export interface ScenarioContent {
   id: string;
   contentVersion?: string;
@@ -175,6 +198,11 @@ export interface ScenarioContent {
   maxUpgrades?: number;
   recruitableUnits?: readonly RecruitableUnitDefinition[];
   previewWave?: PreviewWaveDefinition;
+  /** Available original campaign waves; the total may exceed this partial implementation. */
+  campaignWaveCount?: number;
+  campaignWaves?: readonly CampaignWaveDefinition[];
+  /** Base type-1 settler data before level, wave, and dynamic-difficulty multipliers. */
+  campaignEnemy?: PreviewEnemyDefinition;
 }
 
 export type GameIntent =
@@ -184,6 +212,7 @@ export type GameIntent =
   | { type: 'clear-selection' }
   | { type: 'start-wave' }
   | { type: 'recruit-unit'; unitType: string; commandId: string }
+  | { type: 'hire-map-unit'; unitId: string; commandId: string }
   | { type: 'upgrade-unit'; unitId: string; commandId: string };
 
 export interface UnitView extends ScenarioUnit {
@@ -199,12 +228,18 @@ export interface UnitView extends ScenarioUnit {
   };
   upgradeLevel: number;
   nextUpgrade?: UnitUpgradeDefinition;
+  shootingAnimation?: {
+    asset: 'player_gunslinger_shot' | 'player_mexican_shot';
+    frame: number;
+    row: number;
+    mirrored: boolean;
+  };
 }
 
 export interface EnemyView {
   id: string;
-  type: 1;
-  asset: 'pioneer_male';
+  type: 1 | 2;
+  asset: 'pioneer_male' | 'pioneer_female';
   speed: number;
   direction: Direction;
   positionFine: { x: number; y: number };
@@ -222,13 +257,24 @@ export interface ShotView {
   targetId: string;
   positionFine: { x: number; y: number };
   remainingMs: number;
+  damageStyle: UnitWeaponDefinition['damageStyle'];
+  imageAsset?: 'sfx_mexican_dynamite';
+  animationFrame: number;
+  explosionRemainingMs?: number;
 }
 
 export type GameEvent =
+  | { type: 'enemy-group-spawned'; enemyIds: readonly string[]; waveNumber: number; spawnPointId: number; requestType: number; groupSize: number }
   | { type: 'enemy-hit'; enemyId: string; damage: number; hitPoints: number }
   | { type: 'enemy-defeated'; enemyId: string; cashReward: number }
+  | { type: 'unit-fired'; unitId: string; targetId: string; specialReload: boolean }
+  | { type: 'sound-requested'; sound: 'sound_revolver' | 'sound_dynamite' | 'sound_desperado_yihaa' | 'sound_mexican_arriba' }
+  | { type: 'shot-exploded'; shotId: string; targetId: string; affectedEnemyIds: readonly string[] }
+  | { type: 'wave-cleared'; waveNumber: number; escapedEnemies: number; defeatedEnemies: number }
   | { type: 'unit-recruited'; unitType: string; price: number; count: number }
   | { type: 'unit-recruitment-rejected'; unitType: string; reason: 'insufficient-funds'; price: number; availableCash: number }
+  | { type: 'map-unit-hired'; unitId: string; unitType: string; price: number }
+  | { type: 'map-unit-hire-rejected'; unitId: string; unitType: string; reason: 'insufficient-funds'; price: number; availableCash: number }
   | { type: 'unit-upgraded'; unitId: string; level: number; price: number }
   | { type: 'unit-upgrade-rejected'; unitId: string; reason: 'insufficient-funds' | 'upgrade-limit'; price: number; availableCash: number }
   | { type: 'wave-settled'; settlement: WaveSettlement };
@@ -265,12 +311,15 @@ export interface GameSettlementRecord extends WaveSettlement {
 
 export interface WaveView {
   number: number;
+  totalWaves?: number;
   phase: 'not-started' | 'active' | 'complete';
   lives: number;
   escapedEnemies: number;
   defeatedEnemies: number;
   cash: number;
   activeEnemies: number;
+  pendingSpawnRequests?: number;
+  dynamicDifficulty?: number;
   settlement?: WaveSettlement;
 }
 
@@ -332,8 +381,8 @@ interface PendingIntent {
 
 interface MutableEnemy {
   id: string;
-  type: 1;
-  asset: 'pioneer_male';
+  type: 1 | 2;
+  asset: 'pioneer_male' | 'pioneer_female';
   speed: number;
   direction: Direction;
   positionFine: { x: number; y: number };
@@ -344,6 +393,9 @@ interface MutableEnemy {
   alive: boolean;
   deathRemainingMs: number;
   hitFlashMs: number;
+  animationDistance: number;
+  animationFrame: number;
+  despawnOnNextFieldCounter: number;
 }
 
 interface MutableShot {
@@ -352,10 +404,23 @@ interface MutableShot {
   targetId: string;
   damage: number;
   damageType: DamageType;
+  damageStyle: UnitWeaponDefinition['damageStyle'];
+  areaDamageFine: number;
+  imageAsset: ShotView['imageAsset'];
+  animationFrame: number;
   startFine: { x: number; y: number };
   positionFine: { x: number; y: number };
   totalTravelTimeMs: number;
   remainingMs: number;
+  impactResolved: boolean;
+  explosionRemainingMs: number;
+}
+
+interface MutableCampaignSpawnPool {
+  spawnPointId: number;
+  intervalMs: number;
+  delayMs: number;
+  requests: number[];
 }
 
 interface MutableUnit {
@@ -367,9 +432,13 @@ interface MutableUnit {
   movementSpeedFinePer100Ms: number;
   weapon?: UnitWeaponDefinition;
   weaponCooldownMs: number;
+  shotsUntilSpecialReload: number;
+  shootingAnimationElapsedMs?: number;
+  shootingDirection?: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
 }
 
 interface MutableWave {
+  number: number;
   phase: WaveView['phase'];
   lives: number;
   escapedEnemies: number;
@@ -381,6 +450,10 @@ interface MutableWave {
   shots: MutableShot[];
   recruitPool: Record<string, number>;
   events: GameEvent[];
+  campaignSpawnPools?: MutableCampaignSpawnPool[];
+  dynamicDifficulty?: number;
+  difficultyValue?: number;
+  difficultyValueCounter?: number;
 }
 
 const FINE_UNITS_PER_CELL = 7680;
@@ -427,6 +500,7 @@ const WEAPON_NUMERIC_PARAMETERS = [
   'rangeFine',
   'reloadTimeMs',
   'projectileSpeed',
+  'areaDamageFine',
   'specialReloadTimeMs',
   'specialReloadFrequency',
 ] as const;
@@ -537,6 +611,7 @@ function nextUpgrade(unit: MutableUnit, maxUpgrades: number): UnitUpgradeDefinit
 function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): UnitView {
   const { definition, positionFine } = unit;
   const upgrade = nextUpgrade(unit, maxUpgrades);
+  const shootingAnimation = shootingAnimationView(unit);
   const { x: offsetX, y: offsetY } = unitRenderOffsetAt(definition, positionFine);
   const render = { ...definition.render, x: definition.render.x + offsetX, y: definition.render.y + offsetY };
   const hitArea = { ...definition.hitArea, x: definition.hitArea.x + offsetX, y: definition.hitArea.y + offsetY };
@@ -563,8 +638,49 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
       },
     } : {}),
     upgradeLevel: unit.upgradeLevel,
+    ...(shootingAnimation ? { shootingAnimation } : {}),
     ...(upgrade ? { nextUpgrade: clone(upgrade) } : {}),
   };
+}
+
+function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation'] {
+  const elapsedMs = unit.shootingAnimationElapsedMs;
+  const direction = unit.shootingDirection;
+  if (elapsedMs === undefined || !direction) return undefined;
+
+  const animation = unit.definition.type === 'gunslinger'
+    ? { asset: 'player_gunslinger_shot' as const, frames: [[0, 100], [1, 200], [0, 1000]] as const }
+    : unit.definition.type === 'mexican'
+      ? { asset: 'player_mexican_shot' as const, frames: [[0, 200], [1, 400]] as const }
+      : undefined;
+  if (!animation) return undefined;
+
+  const frame = animation.frames.find(([, endMs]) => elapsedMs <= endMs)?.[0];
+  if (frame === undefined) return undefined;
+
+  let row: number;
+  if (direction.y < 0 && direction.x === 0) row = 4;
+  else if (direction.y > 0 && direction.x === 0) row = 3;
+  else if (direction.y < 0) row = 2;
+  else if (direction.y > 0) row = 0;
+  else row = 1;
+
+  return { asset: animation.asset, frame, row, mirrored: direction.x > 0 };
+}
+
+function advanceShootingAnimation(unit: MutableUnit, deltaMs: number): void {
+  if (unit.shootingAnimationElapsedMs === undefined) return;
+  if (unit.movementTargetFine) {
+    unit.shootingAnimationElapsedMs = undefined;
+    unit.shootingDirection = undefined;
+    return;
+  }
+  unit.shootingAnimationElapsedMs = Math.trunc(unit.shootingAnimationElapsedMs + deltaMs);
+  const maximumDuration = unit.definition.type === 'gunslinger' ? 1000 : 400;
+  if (unit.shootingAnimationElapsedMs > maximumDuration) {
+    unit.shootingAnimationElapsedMs = undefined;
+    unit.shootingDirection = undefined;
+  }
 }
 
 function isBackgroundCollisionCode(code: number): boolean {
@@ -658,7 +774,11 @@ function validSeed(seed: number): boolean {
   return Number.isInteger(seed) && seed >= 0 && seed <= 0xffff_ffff;
 }
 
-function calculateSettlement(wave: MutableWave, difficultyScorePercent: number): WaveSettlement {
+function calculateSettlement(
+  wave: MutableWave,
+  difficultyScorePercent: number,
+  outcome: WaveSettlement['outcome'] = wave.lives <= 0 ? 'defeat' : 'victory',
+): WaveSettlement {
   // The original game keeps both the score base and saved high score in Java int arithmetic.
   const scoreBase = Math.imul(1, wave.cashMade + wave.cash);
   const displayMultiplier = Math.fround(difficultyScorePercent / 100);
@@ -666,7 +786,7 @@ function calculateSettlement(wave: MutableWave, difficultyScorePercent: number):
   const highScoreCandidate = Math.trunc(Math.imul(scoreBase, difficultyScorePercent) / 100);
 
   return {
-    outcome: wave.lives <= 0 ? 'defeat' : 'victory',
+    outcome,
     scoreBase,
     displayScore,
     highScoreCandidate,
@@ -758,7 +878,170 @@ function createPreviewEnemy(
     alive: true,
     deathRemainingMs: 0,
     hitFlashMs: 0,
+    animationDistance: 0,
+    animationFrame: 0,
+    despawnOnNextFieldCounter: 0,
   };
+}
+
+function campaignSpawnPools(definition: CampaignWaveDefinition, dynamicDifficulty: number, scale: boolean): MutableCampaignSpawnPool[] {
+  return definition.spawnPools.map((pool) => ({
+    spawnPointId: pool.spawnPointId,
+    intervalMs: pool.intervalMs,
+    delayMs: 0,
+    requests: pool.requests.map((count) => {
+      if (!scale || count <= 0) return count;
+      return Math.max(1, Math.floor(((count * dynamicDifficulty) / 1000) + 0.5));
+    }),
+  }));
+}
+
+function campaignPendingRequests(pools: readonly MutableCampaignSpawnPool[] | undefined): number {
+  return pools?.reduce((total, pool) => total + pool.requests.reduce((sum, count) => sum + count, 0), 0) ?? 0;
+}
+
+function campaignEnemyHitPoints(
+  scenario: ScenarioContent,
+  wave: CampaignWaveDefinition,
+  dynamicDifficulty: number,
+  difficulty: GameDifficulty,
+): number {
+  const baseHitPoints = scenario.campaignEnemy?.hitPoints ?? 1;
+  const levelMultiplier = scenario.previewWave?.enemyHitPointMultiplierPercentByDifficulty?.[difficulty] ?? 100;
+  const scaledWaveHitPoints = Math.trunc((levelMultiplier * wave.hitPointMultiplierPercent) / 100);
+  const hpFactor = Math.trunc((dynamicDifficulty * scaledWaveHitPoints * 2) / 10);
+  return Math.max(1, Math.trunc((baseHitPoints * hpFactor) / 2000));
+}
+
+function createCampaignEnemy(
+  id: string,
+  type: 1 | 2,
+  spawn: WaveSpawn,
+  offset: { x: number; y: number },
+  speed: number,
+  hitPoints: number,
+  definition: PreviewEnemyDefinition,
+): MutableEnemy {
+  const direction = directionVector(spawn.direction);
+  const spawnX = (spawn.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF - (direction.x * 2 * FINE_UNITS_PER_CELL);
+  const spawnY = (spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF - (direction.y * 2 * FINE_UNITS_PER_CELL);
+  return {
+    id,
+    type,
+    asset: type === 1 ? 'pioneer_male' : 'pioneer_female',
+    speed,
+    direction: spawn.direction,
+    positionFine: { x: spawnX + offset.x, y: spawnY + offset.y },
+    hitPoints,
+    maxHitPoints: hitPoints,
+    cashReward: definition.cashReward,
+    penetration: definition.penetration,
+    alive: true,
+    deathRemainingMs: 0,
+    hitFlashMs: 0,
+    animationDistance: 0,
+    animationFrame: 0,
+    despawnOnNextFieldCounter: 0,
+  };
+}
+
+const SETTLER_SPAWN_OFFSETS = Object.freeze([
+  Object.freeze({ x: -2560, y: -2080 }),
+  Object.freeze({ x: 2560, y: -2080 }),
+  Object.freeze({ x: -2560, y: 4000 }),
+  Object.freeze({ x: 2560, y: 4000 }),
+]);
+
+function spawnSettlerGroup(
+  scenario: ScenarioContent,
+  pool: MutableCampaignSpawnPool,
+  requestType: number,
+  waveNumber: number,
+  dynamicDifficulty: number,
+  waveDefinition: CampaignWaveDefinition,
+  difficulty: GameDifficulty,
+  random: JavaRandom,
+  nextEnemyId: () => string,
+): MutableEnemy[] | undefined {
+  const spawnPoints = [scenario.previewWave?.spawn, ...(scenario.previewWave?.additionalSpawns ?? [])]
+    .filter((spawn): spawn is WaveSpawn => spawn !== undefined);
+  if (pool.spawnPointId < 0 || pool.spawnPointId >= spawnPoints.length) return undefined;
+
+  // The original chooses a matching action-1 field before applying the two-cell backstep.
+  const spawn = spawnPoints[pool.spawnPointId]!;
+  random.nextInt(1);
+  const speedPercent = 90 + random.nextInt(20);
+  const waveSpeed = Math.trunc((waveDefinition.speedMultiplierPercent * speedPercent) / 100);
+  const speed = Math.trunc(((scenario.previewWave?.baseEnemySpeed ?? 0) * waveSpeed) / 100);
+  const groupSize = requestType - 1;
+  const hp = campaignEnemyHitPoints(scenario, waveDefinition, dynamicDifficulty, difficulty);
+  const enemyDefinition = scenario.campaignEnemy ?? {
+    hitPoints: 1,
+    cashReward: 0,
+    penetration: { light: 0, fire: 0, heavy: 0, poison: 0 },
+  };
+  const availableSlots = [0, 1, 2, 3];
+  const enemies: MutableEnemy[] = [];
+
+  while (enemies.length < groupSize && availableSlots.length > 0) {
+    const slotPosition = random.nextInt(availableSlots.length);
+    const slot = availableSlots.splice(slotPosition, 1)[0]!;
+    const type = (random.nextInt(2) + 1) as 1 | 2;
+    // GameObjectEnemy consumes this value for mIsWhite, including for settlers.
+    random.nextInt(2);
+    enemies.push(createCampaignEnemy(
+      nextEnemyId(), type, spawn, SETTLER_SPAWN_OFFSETS[slot]!, speed, hp, enemyDefinition,
+    ));
+  }
+
+  return enemies.length === groupSize ? enemies : undefined;
+}
+
+function recordCampaignEscape(wave: MutableWave, livesMax: number, penalty: number): void {
+  if (wave.dynamicDifficulty === undefined || wave.difficultyValue === undefined
+    || wave.difficultyValueCounter === undefined) return;
+  const weight = Math.trunc(200 / livesMax) * penalty;
+  wave.difficultyValueCounter += weight;
+}
+
+function cowGulchPriority(scenario: ScenarioContent, positionFine: { x: number; y: number }): number {
+  const definition = scenario.previewWave;
+  if (!definition) return 0;
+  const waypoints = [definition.spawn.cell, ...definition.redirects.map(({ cell }) => cell), definition.exit];
+  const cells: Array<{ x: number; y: number }> = [];
+  for (let index = 0; index < waypoints.length - 1; index += 1) {
+    const start = waypoints[index]!;
+    const end = waypoints[index + 1]!;
+    const dx = Math.sign(end.x - start.x);
+    const dy = Math.sign(end.y - start.y);
+    const steps = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
+    for (let step = 0; step < steps; step += 1) {
+      const cell = { x: start.x + (dx * step), y: start.y + (dy * step) };
+      if (cells.at(-1)?.x !== cell.x || cells.at(-1)?.y !== cell.y) cells.push(cell);
+    }
+  }
+  const last = waypoints.at(-1)!;
+  if (cells.at(-1)?.x !== last.x || cells.at(-1)?.y !== last.y) cells.push({ x: last.x, y: last.y });
+  const priority = new Map(cells.map((cell, index) => [
+    `${cell.x},${cell.y}`,
+    255 - (cells.length - 1 - index),
+  ]));
+  const redirectPriorities = definition.redirects
+    .map(({ cell }) => priority.get(`${cell.x},${cell.y}`))
+    .filter((value): value is number => value !== undefined);
+  const minimum = Math.min(255, ...redirectPriorities);
+  const cellX = fullCell(positionFine.x);
+  const cellY = fullCell(positionFine.y);
+  const mapPriority = priority.get(`${cellX},${cellY}`) ?? 0;
+  return Math.trunc(((mapPriority - minimum) * 1000) / (255 - minimum));
+}
+
+function recordCampaignKill(wave: MutableWave, scenario: ScenarioContent, enemy: MutableEnemy): void {
+  if (wave.dynamicDifficulty === undefined || wave.difficultyValue === undefined
+    || wave.difficultyValueCounter === undefined) return;
+  const routeValue = cowGulchPriority(scenario, enemy.positionFine);
+  wave.difficultyValue += (1500 - routeValue);
+  wave.difficultyValueCounter += 1;
 }
 
 function unitEnemyDistanceSquare(unit: MutableUnit, enemy: MutableEnemy): number {
@@ -767,6 +1050,12 @@ function unitEnemyDistanceSquare(unit: MutableUnit, enemy: MutableEnemy): number
   const enemyY = tenthTileCoordinate(enemy.positionFine.y);
   const dx = unitCenter.x - enemyX;
   const dy = unitCenter.y - enemyY;
+  return (dx * dx) + (dy * dy);
+}
+
+function enemyDistanceSquare(first: MutableEnemy, second: MutableEnemy): number {
+  const dx = tenthTileCoordinate(first.positionFine.x) - tenthTileCoordinate(second.positionFine.x);
+  const dy = tenthTileCoordinate(first.positionFine.y) - tenthTileCoordinate(second.positionFine.y);
   return (dx * dx) + (dy * dy);
 }
 
@@ -820,8 +1109,10 @@ function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[]): Muta
   return bestTarget;
 }
 
-function moveEnemy(enemy: MutableEnemy, deltaMs: number, definition: PreviewWaveDefinition, random: JavaRandom): boolean {
+function moveEnemy(enemy: MutableEnemy, deltaMs: number, scenario: ScenarioContent, random: JavaRandom): boolean {
   if (deltaMs === 0) return false;
+  const definition = scenario.previewWave;
+  if (!definition) return false;
 
   const previous = { ...enemy.positionFine };
   const vector = directionVector(enemy.direction);
@@ -830,29 +1121,50 @@ function moveEnemy(enemy: MutableEnemy, deltaMs: number, definition: PreviewWave
     x: Math.trunc(Math.fround(previous.x + vector.x * distance)),
     y: Math.trunc(Math.fround(previous.y + vector.y * distance)),
   };
+  const movedFine = Math.abs(enemy.positionFine.x - previous.x) + Math.abs(enemy.positionFine.y - previous.y);
+  if (movedFine > 0) {
+    enemy.animationDistance = (enemy.animationDistance + movedFine) % 3072;
+    if (enemy.animationDistance <= 768) enemy.animationFrame = 0;
+    else if (enemy.animationDistance <= 1536) enemy.animationFrame = 1;
+    else if (enemy.animationDistance <= 2304) enemy.animationFrame = 0;
+    else enemy.animationFrame = 2;
+  }
 
   const passedCenter = vector.x !== 0
     ? passesFieldCenter(previous.x, enemy.positionFine.x)
     : passesFieldCenter(previous.y, enemy.positionFine.y);
   if (!passedCenter) return false;
 
-  const cell = { x: fullCell(enemy.positionFine.x), y: fullCell(enemy.positionFine.y) };
-  if (cell.x === definition.exit.x && cell.y === definition.exit.y) return true;
-
-  const redirect = definition.redirects.find((candidate) =>
-    candidate.cell.x === cell.x && candidate.cell.y === cell.y);
-  if (redirect) {
-    const nextDirection = redirect.directions[random.nextInt(redirect.directions.length)]!;
-    if (nextDirection !== enemy.direction) {
-      enemy.direction = nextDirection;
-      const nextVector = directionVector(enemy.direction);
-      enemy.positionFine = {
-        x: (cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.x * 2),
-        y: (cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.y * 2),
-      };
+  if (passedCenter) {
+    if (enemy.despawnOnNextFieldCounter > 0) {
+      enemy.despawnOnNextFieldCounter -= 1;
+      if (enemy.despawnOnNextFieldCounter === 0) return true;
+    } else {
+      const cell = { x: fullCell(enemy.positionFine.x), y: fullCell(enemy.positionFine.y) };
+      if (cell.x === definition.exit.x && cell.y === definition.exit.y) {
+        enemy.despawnOnNextFieldCounter = 2;
+      } else {
+        const redirect = definition.redirects.find((candidate) =>
+          candidate.cell.x === cell.x && candidate.cell.y === cell.y);
+        if (redirect) {
+          const nextDirection = redirect.directions[random.nextInt(redirect.directions.length)]!;
+          if (nextDirection !== enemy.direction) {
+            enemy.direction = nextDirection;
+            const nextVector = directionVector(enemy.direction);
+            enemy.positionFine = {
+              x: (cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.x * 2),
+              y: (cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.y * 2),
+            };
+          }
+        }
+      }
     }
   }
-  return false;
+
+  const cellX = fullCell(enemy.positionFine.x);
+  const cellY = fullCell(enemy.positionFine.y);
+  return cellX >= scenario.map.width + 3 || cellY >= scenario.map.height + 3
+    || cellX <= -3 || cellY <= -3;
 }
 
 export function createGame(options: {
@@ -939,14 +1251,15 @@ export function createGame(options: {
     return { scenario, setup };
   };
 
-  const openSession: Game['open'] = async ({
+  const openSession = async ({
     scenarioId,
     contentVersion,
     randomSeed,
     difficulty: requestedDifficulty,
     mode = 'debug',
     preparedSetup,
-  }) => {
+    replaySourceMode,
+  }: Parameters<Game['open']>[0] & { replaySourceMode?: GameMode }): Promise<GameSession> => {
       const sourceScenario = scenarios.get(scenarioId);
       if (!sourceScenario) throw new GameOpenError('scenario-unavailable', 'Unknown scenario: ' + scenarioId);
       if (contentVersion !== undefined && contentVersion !== (sourceScenario.contentVersion ?? 'unversioned')) {
@@ -978,6 +1291,24 @@ export function createGame(options: {
           ));
         }
       }
+      const campaignWaves = scenario.campaignWaves;
+      const campaignWaveCount = scenario.campaignWaveCount ?? campaignWaves?.length ?? 0;
+      const campaignMode = (mode === 'formal' || (mode === 'replay' && replaySourceMode === 'formal'))
+        && Boolean(campaignWaves?.length);
+      if (campaignWaves) {
+        if (!Number.isSafeInteger(campaignWaveCount) || campaignWaveCount < campaignWaves.length
+          || campaignWaves.some((campaignWave, index) => campaignWave.number !== index + 1
+            || !Number.isSafeInteger(campaignWave.hitPointMultiplierPercent)
+            || campaignWave.hitPointMultiplierPercent < 1
+            || !Number.isSafeInteger(campaignWave.speedMultiplierPercent)
+            || campaignWave.speedMultiplierPercent < 1
+            || campaignWave.spawnPools.some((pool) => !Number.isSafeInteger(pool.spawnPointId)
+              || pool.spawnPointId < 0 || !Number.isSafeInteger(pool.intervalMs) || pool.intervalMs < 0
+              || pool.requests.length !== 10
+              || pool.requests.some((count) => !Number.isSafeInteger(count) || count < 0)))) {
+          throw new GameOpenError('scenario-unavailable', 'Campaign wave data is invalid');
+        }
+      }
       if (mode === 'formal' && preparedSetup) {
         const baseline = await prepare({ scenarioId });
         if (baseline.digest !== resolved.setup.digest) {
@@ -987,7 +1318,7 @@ export function createGame(options: {
       if (mode === 'formal' && scenario.formalSettlementSupported !== true) {
         throw new Error('Formal mode is not supported for scenario: ' + scenarioId);
       }
-      if (mode === 'formal' && !scenario.previewWave) {
+      if (mode === 'formal' && !scenario.previewWave && !campaignWaves?.length) {
         throw new Error('Formal mode requires a settleable scenario: ' + scenarioId);
       }
 
@@ -1005,21 +1336,26 @@ export function createGame(options: {
         movementSpeedFinePer100Ms: definition.movementSpeedFinePer100Ms,
         ...(definition.weapon ? { weapon: clone(definition.weapon) } : {}),
         weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
+        shotsUntilSpecialReload: definition.weapon?.specialReloadFrequency ?? 0,
       }));
       const recruitableUnits = new Map((scenario.recruitableUnits ?? []).map((definition) => [definition.id, definition]));
       const recruitmentCommands = new Map<string, string>();
+      const mapHireCommands = new Map<string, string>();
       const upgradeCommands = new Map<string, string>();
       const recordedFrames: GameReplayFrame[] = [];
       const replayStates = new Map<number, ReplayState>();
       const pending: PendingIntent[] = [];
       let nextIntentSequence = 1;
       let nextShotNumber = 1;
+      let nextCampaignEnemyNumber = 1;
       let frame = 0;
       let elapsedMs = 0;
       let closed = false;
       let paused = false;
+      const firstCampaignWave = campaignWaves?.find(({ number }) => number === 1);
       let wave: MutableWave | undefined = scenario.previewWave
         ? {
+          number: firstCampaignWave?.number ?? scenario.previewWave.number,
           phase: 'not-started',
           lives: scenario.previewWave.initialLives,
           escapedEnemies: 0,
@@ -1030,6 +1366,12 @@ export function createGame(options: {
           shots: [],
           recruitPool: {},
           events: [],
+          ...(campaignMode && firstCampaignWave ? {
+            campaignSpawnPools: campaignSpawnPools(firstCampaignWave, 1000, false),
+            dynamicDifficulty: 1000,
+            difficultyValue: 1000,
+            difficultyValueCounter: 1,
+          } : {}),
         }
         : undefined;
 
@@ -1068,7 +1410,7 @@ export function createGame(options: {
             alive: enemy.alive,
             deathRemainingMs: enemy.deathRemainingMs,
             hitFlashMs: enemy.hitFlashMs,
-            animationFrame: Math.floor(elapsedMs / 128) % 3,
+            animationFrame: enemy.animationFrame,
           })),
           shots: (wave?.shots ?? []).map((shot) => ({
             id: shot.id,
@@ -1076,6 +1418,10 @@ export function createGame(options: {
             targetId: shot.targetId,
             positionFine: { ...shot.positionFine },
             remainingMs: shot.remainingMs,
+            damageStyle: shot.damageStyle,
+            ...(shot.imageAsset ? { imageAsset: shot.imageAsset } : {}),
+            animationFrame: shot.animationFrame,
+            ...(shot.explosionRemainingMs > 0 ? { explosionRemainingMs: shot.explosionRemainingMs } : {}),
           })),
           recruitPool: (scenario.recruitableUnits ?? []).map((definition) => ({
             unitType: definition.id,
@@ -1087,13 +1433,18 @@ export function createGame(options: {
           events: clone(wave?.events ?? []),
           ...(wave && scenario.previewWave ? {
             wave: {
-              number: scenario.previewWave.number,
+              number: wave.number,
+              ...(campaignMode ? { totalWaves: campaignWaveCount } : {}),
               phase: wave.phase,
               lives: wave.lives,
               escapedEnemies: wave.escapedEnemies,
               defeatedEnemies: wave.defeatedEnemies,
               cash: wave.cash,
               activeEnemies: wave.enemies.filter((enemy) => enemy.alive).length,
+              ...(campaignMode ? {
+                pendingSpawnRequests: campaignPendingRequests(wave.campaignSpawnPools),
+                dynamicDifficulty: wave.dynamicDifficulty!,
+              } : {}),
               ...(wave.settlement ? { settlement: clone(wave.settlement) } : {}),
             },
           } : {}),
@@ -1175,6 +1526,24 @@ export function createGame(options: {
             return true;
           }
 
+          if (intent.type === 'hire-map-unit') {
+            if (!wave || typeof intent.unitId !== 'string' || typeof intent.commandId !== 'string'
+              || !intent.commandId.trim() || intent.commandId.length > 128) return false;
+            const unit = units.find((candidate) => candidate.definition.id === intent.unitId);
+            const price = unit?.definition.hirePrice;
+            if (!unit?.selected || unit.definition.activity !== 4 || !Number.isSafeInteger(price)
+              || (price as number) < 0) return false;
+            const existingUnitId = mapHireCommands.get(intent.commandId);
+            if (existingUnitId !== undefined) return existingUnitId === intent.unitId;
+            mapHireCommands.set(intent.commandId, intent.unitId);
+            pending.push({
+              sequence: nextIntentSequence,
+              intent: { type: 'hire-map-unit', unitId: intent.unitId, commandId: intent.commandId },
+            });
+            nextIntentSequence += 1;
+            return true;
+          }
+
           if (intent.type === 'upgrade-unit') {
             if (!wave || typeof intent.unitId !== 'string' || typeof intent.commandId !== 'string'
               || !intent.commandId.trim() || intent.commandId.length > 128) return false;
@@ -1246,12 +1615,14 @@ export function createGame(options: {
 
             if (command.intent.type === 'start-wave') {
               if (wave?.phase !== 'not-started' || !scenario.previewWave) continue;
-              const spawns = [scenario.previewWave.spawn, ...(scenario.previewWave.additionalSpawns ?? [])];
-              for (const [index, spawn] of spawns.entries()) {
-                const speedMultiplier = scenario.previewWave.speedMultiplierMin
-                  + random.nextInt(scenario.previewWave.speedMultiplierCount);
-                const speed = Math.trunc((scenario.previewWave.baseEnemySpeed * speedMultiplier) / 100);
-                wave.enemies.push(createPreviewEnemy('preview-pioneer-' + (index + 1), spawn, scenario.previewWave, speed));
+              if (!campaignMode) {
+                const spawns = [scenario.previewWave.spawn, ...(scenario.previewWave.additionalSpawns ?? [])];
+                for (const [index, spawn] of spawns.entries()) {
+                  const speedMultiplier = scenario.previewWave.speedMultiplierMin
+                    + random.nextInt(scenario.previewWave.speedMultiplierCount);
+                  const speed = Math.trunc((scenario.previewWave.baseEnemySpeed * speedMultiplier) / 100);
+                  wave.enemies.push(createPreviewEnemy('preview-pioneer-' + (index + 1), spawn, scenario.previewWave, speed));
+                }
               }
               wave.phase = 'active';
               waveStarted = true;
@@ -1279,6 +1650,47 @@ export function createGame(options: {
                 price: recruitable.price,
                 count: wave.recruitPool[recruitable.id],
               });
+              continue;
+            }
+
+            if (command.intent.type === 'hire-map-unit') {
+              const unitId = command.intent.unitId;
+              const unit = units.find((candidate) => candidate.definition.id === unitId);
+              const price = unit?.definition.hirePrice;
+              if (!wave || !unit || unit.definition.activity !== 4 || !Number.isSafeInteger(price)) continue;
+              const hirePrice = price as number;
+              if (wave.cash < hirePrice) {
+                wave.events.push({
+                  type: 'map-unit-hire-rejected',
+                  unitId: unit.definition.id,
+                  unitType: unit.definition.type,
+                  reason: 'insufficient-funds',
+                  price: hirePrice,
+                  availableCash: wave.cash,
+                });
+                continue;
+              }
+              wave.cash -= hirePrice;
+              unit.definition.activity = 5;
+              if (unit.definition.awakeAsset) unit.definition.asset = unit.definition.awakeAsset;
+              if (unit.definition.awakeFrame) unit.definition.frame = clone(unit.definition.awakeFrame);
+              if (unit.definition.awakeRender) unit.definition.render = clone(unit.definition.awakeRender);
+              if (unit.definition.awakeHitArea) unit.definition.hitArea = clone(unit.definition.awakeHitArea);
+              unit.weapon = unit.definition.weapon ? clone(unit.definition.weapon) : undefined;
+              unit.weaponCooldownMs = unit.weapon ? Math.trunc(unit.weapon.reloadTimeMs / 2) : 0;
+              unit.shotsUntilSpecialReload = unit.weapon?.specialReloadFrequency ?? 0;
+              wave.events.push({
+                type: 'map-unit-hired',
+                unitId: unit.definition.id,
+                unitType: unit.definition.type,
+                price: hirePrice,
+              });
+              if (unit.definition.type === 'gunslinger' || unit.definition.type === 'mexican') {
+                wave.events.push({
+                  type: 'sound-requested',
+                  sound: unit.definition.type === 'gunslinger' ? 'sound_desperado_yihaa' : 'sound_mexican_arriba',
+                });
+              }
               continue;
             }
 
@@ -1312,6 +1724,7 @@ export function createGame(options: {
               unit.movementSpeedFinePer100Ms = upgrade.movementSpeedFinePer100Ms;
               unit.weapon = clone(upgrade.weapon);
               unit.weaponCooldownMs = Math.trunc(upgrade.weapon.reloadTimeMs / 2);
+              unit.shotsUntilSpecialReload = upgrade.weapon.specialReloadFrequency ?? 0;
               wave.events.push({
                 type: 'unit-upgraded',
                 unitId: unit.definition.id,
@@ -1344,9 +1757,60 @@ export function createGame(options: {
             }
           }
 
-          for (const unit of units) moveUnit(unit, scenario, deltaMs);
+          for (const unit of units) {
+            moveUnit(unit, scenario, deltaMs);
+            advanceShootingAnimation(unit, deltaMs);
+          }
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
+            if (campaignMode && wave.campaignSpawnPools) {
+              const campaignDefinition = campaignWaves?.find(({ number }) => number === wave!.number);
+              for (const pool of wave.campaignSpawnPools) {
+                if (pool.delayMs > 0) {
+                  pool.delayMs = Math.max(0, pool.delayMs - deltaMs);
+                  continue;
+                }
+                const totalRequests = pool.requests.reduce((sum, count) => sum + count, 0);
+                if (totalRequests <= 0) continue;
+                let selection = random.nextInt(totalRequests);
+                let selectedRequestIndex = -1;
+                for (let index = 0; index < pool.requests.length; index += 1) {
+                  selection -= pool.requests[index]!;
+                  if (selection < 0) {
+                    selectedRequestIndex = index;
+                    break;
+                  }
+                }
+                if (selectedRequestIndex < 0 || !campaignDefinition || wave.dynamicDifficulty === undefined) continue;
+                const requestType = selectedRequestIndex + 2;
+                const spawned = spawnSettlerGroup(
+                  scenario,
+                  pool,
+                  requestType,
+                  wave.number,
+                  wave.dynamicDifficulty,
+                  campaignDefinition,
+                  difficulty,
+                  random,
+                  () => `campaign-${wave!.number}-enemy-${nextCampaignEnemyNumber++}`,
+                );
+                if (!spawned) {
+                  pool.delayMs = Math.trunc(pool.intervalMs / 2);
+                  continue;
+                }
+                wave.enemies.push(...spawned);
+                pool.requests[selectedRequestIndex] = pool.requests[selectedRequestIndex]! - 1;
+                pool.delayMs = pool.intervalMs;
+                wave.events.push({
+                  type: 'enemy-group-spawned',
+                  enemyIds: spawned.map(({ id }) => id),
+                  waveNumber: wave.number,
+                  spawnPointId: pool.spawnPointId,
+                  requestType,
+                  groupSize: spawned.length,
+                });
+              }
+            }
             for (const enemy of [...wave.enemies]) {
               if (!enemy.alive) {
                 enemy.deathRemainingMs = Math.max(0, enemy.deathRemainingMs - deltaMs);
@@ -1354,13 +1818,17 @@ export function createGame(options: {
                 continue;
               }
               enemy.hitFlashMs = Math.max(0, enemy.hitFlashMs - deltaMs);
-              if (!moveEnemy(enemy, deltaMs, scenario.previewWave, random)) continue;
+              if (!moveEnemy(enemy, deltaMs, scenario, random)) continue;
               wave.enemies = wave.enemies.filter((candidate) => candidate !== enemy);
+              if (campaignMode) {
+                recordCampaignEscape(wave, scenario.previewWave.initialLives, scenario.previewWave.escapePenalty);
+              }
               wave.lives = Math.max(0, wave.lives - scenario.previewWave.escapePenalty);
               wave.escapedEnemies += 1;
             }
 
             for (const unit of units) {
+              if ((unit.definition.activity ?? 5) !== 5) continue;
               const weapon = unit.weapon;
               if (!weapon) continue;
               if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
@@ -1381,16 +1849,49 @@ export function createGame(options: {
                 targetId: target.id,
                 damage: weapon.damage,
                 damageType: weapon.damageType,
+                damageStyle: weapon.damageStyle,
+                areaDamageFine: weapon.areaDamageFine ?? 0,
+                imageAsset: weapon.damageStyle === 3 ? 'sfx_mexican_dynamite' : undefined,
+                animationFrame: 0,
                 startFine,
                 positionFine: { ...startFine },
                 totalTravelTimeMs: travelMs,
                 remainingMs: travelMs,
+                impactResolved: false,
+                explosionRemainingMs: 0,
               });
               nextShotNumber += 1;
+              unit.shootingAnimationElapsedMs = 0;
+              unit.shootingDirection = {
+                x: Math.sign(target.positionFine.x - unit.positionFine.x) as -1 | 0 | 1,
+                y: Math.sign(target.positionFine.y - (unit.positionFine.y - FIELD_CENTER_HALF)) as -1 | 0 | 1,
+              };
               unit.weaponCooldownMs = weapon.reloadTimeMs;
+              let specialReload = false;
+              if (weapon.specialReloadFrequency !== undefined && weapon.specialReloadFrequency > 0) {
+                unit.shotsUntilSpecialReload -= 1;
+                if (unit.shotsUntilSpecialReload <= 0) {
+                  unit.weaponCooldownMs += weapon.specialReloadTimeMs ?? 0;
+                  unit.shotsUntilSpecialReload = weapon.specialReloadFrequency;
+                  specialReload = true;
+                }
+              }
+              wave.events.push({ type: 'unit-fired', unitId: unit.definition.id, targetId: target.id, specialReload });
+              if (unit.definition.type === 'gunslinger' && weapon.damageStyle === 0) {
+                wave.events.push({ type: 'sound-requested', sound: 'sound_revolver' });
+              }
             }
 
             for (const shot of [...wave.shots]) {
+              if (shot.impactResolved) {
+                shot.explosionRemainingMs = Math.max(0, shot.explosionRemainingMs - deltaMs);
+                shot.remainingMs = shot.explosionRemainingMs;
+                shot.animationFrame = Math.min(7, Math.floor((799 - shot.explosionRemainingMs) / 100));
+                if (shot.explosionRemainingMs === 0) {
+                  wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+                }
+                continue;
+              }
               const target = wave.enemies.find((enemy) => enemy.id === shot.targetId);
               if (!target || !target.alive) {
                 wave.shots = wave.shots.filter((candidate) => candidate !== shot);
@@ -1402,34 +1903,104 @@ export function createGame(options: {
                 x: Math.trunc(((shot.startFine.x * shot.remainingMs) + (target.positionFine.x * elapsedShotMs)) / shot.totalTravelTimeMs),
                 y: Math.trunc(((shot.startFine.y * shot.remainingMs) + (target.positionFine.y * elapsedShotMs)) / shot.totalTravelTimeMs),
               };
+              shot.animationFrame = Math.floor(elapsedShotMs / 100) % (shot.damageStyle === 3 ? 3 : 10);
               if (shot.remainingMs > 0) continue;
 
-              const damage = Math.trunc((shot.damage * damagePenetration(target, shot.damageType)) / 100);
-              target.hitPoints -= damage;
-              target.hitFlashMs = 120;
-              wave.events.push({ type: 'enemy-hit', enemyId: target.id, damage, hitPoints: target.hitPoints });
-              if (target.hitPoints <= 0 && target.alive) {
-                target.alive = false;
-                target.deathRemainingMs = 799;
-                wave.cash += target.cashReward;
-                wave.cashMade += target.cashReward;
-                wave.defeatedEnemies += 1;
-                wave.events.push({ type: 'enemy-defeated', enemyId: target.id, cashReward: target.cashReward });
+              const areaRadiusTenthTiles = Math.trunc((shot.areaDamageFine * 10) / FINE_UNITS_PER_CELL);
+              const areaSquare = areaRadiusTenthTiles * areaRadiusTenthTiles;
+              const affected = shot.areaDamageFine > 0
+                ? wave.enemies.filter((enemy) => enemy.alive && (enemy.id === target.id
+                  || enemyDistanceSquare(target, enemy) < areaSquare))
+                : [target];
+              const affectedEnemyIds: string[] = [];
+              for (const hitEnemy of affected) {
+                if (!hitEnemy.alive) continue;
+                affectedEnemyIds.push(hitEnemy.id);
+                const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
+                hitEnemy.hitPoints -= damage;
+                hitEnemy.hitFlashMs = 120;
+                wave.events.push({ type: 'enemy-hit', enemyId: hitEnemy.id, damage, hitPoints: hitEnemy.hitPoints });
+                if (hitEnemy.hitPoints <= 0) {
+                  hitEnemy.alive = false;
+                  hitEnemy.deathRemainingMs = campaignMode ? 599 : 799;
+                  if (campaignMode) recordCampaignKill(wave, scenario, hitEnemy);
+                  wave.cash += hitEnemy.cashReward;
+                  wave.cashMade += hitEnemy.cashReward;
+                  wave.defeatedEnemies += 1;
+                  wave.events.push({ type: 'enemy-defeated', enemyId: hitEnemy.id, cashReward: hitEnemy.cashReward });
+                }
               }
-              wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+              if (shot.damageStyle === 3 || shot.areaDamageFine > 0) {
+                shot.impactResolved = true;
+                shot.explosionRemainingMs = 799;
+                shot.remainingMs = 799;
+                shot.animationFrame = 0;
+                shot.positionFine = { ...target.positionFine };
+                wave.events.push({
+                  type: 'shot-exploded',
+                  shotId: shot.id,
+                  targetId: target.id,
+                  affectedEnemyIds,
+                });
+                if (shot.damageStyle === 3) wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite' });
+              } else {
+                wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+              }
             }
 
             wave.enemies = wave.enemies.filter((enemy) => enemy.alive || enemy.deathRemainingMs > 0);
+            const pendingCampaignRequests = campaignMode ? campaignPendingRequests(wave.campaignSpawnPools) : 0;
             const waveCleared = wave.enemies.length === 0
               && wave.shots.length === 0
-              && (wave.escapedEnemies > 0 || wave.defeatedEnemies > 0);
-            if (wave.lives <= 0 || waveCleared) {
+              && pendingCampaignRequests === 0
+              && (campaignMode || wave.escapedEnemies > 0 || wave.defeatedEnemies > 0);
+            if (wave.lives <= 0) {
               for (const unit of units) unit.movementTargetFine = undefined;
               wave.phase = 'complete';
               const difficultyScorePercent = difficulty === 'easy'
                 ? scenario.previewWave.difficultyScorePercent ?? GAME_DIFFICULTY_SCORE_PERCENT.easy
                 : GAME_DIFFICULTY_SCORE_PERCENT[difficulty];
-              wave.settlement = calculateSettlement(wave, difficultyScorePercent);
+              wave.settlement = calculateSettlement(wave, difficultyScorePercent, 'defeat');
+              wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
+            } else if (waveCleared && campaignMode) {
+              for (const unit of units) unit.movementTargetFine = undefined;
+              wave.events.push({
+                type: 'wave-cleared',
+                waveNumber: wave.number,
+                escapedEnemies: wave.escapedEnemies,
+                defeatedEnemies: wave.defeatedEnemies,
+              });
+              const averageDifficulty = Math.trunc((wave.difficultyValue ?? wave.dynamicDifficulty ?? 1000)
+                / (wave.difficultyValueCounter ?? 1));
+              const rawNextDifficulty = Math.trunc(((wave.dynamicDifficulty ?? 1000) + averageDifficulty) / 2);
+              const minDifficulty = 500;
+              const maxDifficulty = difficulty === 'easy' ? 1250 : 1500;
+              const nextDifficulty = Math.max(minDifficulty, Math.min(maxDifficulty, rawNextDifficulty));
+              const nextCampaignWave = campaignWaves?.find(({ number }) => number === wave!.number + 1);
+              if (nextCampaignWave) {
+                wave.number = nextCampaignWave.number;
+                wave.dynamicDifficulty = nextDifficulty;
+                wave.difficultyValue = nextDifficulty;
+                wave.difficultyValueCounter = 1;
+                wave.campaignSpawnPools = campaignSpawnPools(nextCampaignWave, nextDifficulty, true);
+                wave.phase = 'not-started';
+              } else if (wave.number >= campaignWaveCount && (campaignWaves?.length ?? 0) >= campaignWaveCount) {
+                wave.phase = 'complete';
+                const difficultyScorePercent = difficulty === 'easy'
+                  ? scenario.previewWave.difficultyScorePercent ?? GAME_DIFFICULTY_SCORE_PERCENT.easy
+                  : GAME_DIFFICULTY_SCORE_PERCENT[difficulty];
+                wave.settlement = calculateSettlement(wave, difficultyScorePercent, 'victory');
+                wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
+              } else {
+                wave.phase = 'complete';
+              }
+            } else if (waveCleared) {
+              for (const unit of units) unit.movementTargetFine = undefined;
+              wave.phase = 'complete';
+              const difficultyScorePercent = difficulty === 'easy'
+                ? scenario.previewWave.difficultyScorePercent ?? GAME_DIFFICULTY_SCORE_PERCENT.easy
+                : GAME_DIFFICULTY_SCORE_PERCENT[difficulty];
+              wave.settlement = calculateSettlement(wave, difficultyScorePercent, 'victory');
               wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
             }
           }
@@ -1450,11 +2021,11 @@ export function createGame(options: {
           if (!wave?.settlement || !scenario.previewWave) return undefined;
           return freezeDeep({
             ...clone(wave.settlement),
-            settlementId: `${sessionId}:${scenario.id}:${scenario.previewWave.number}`,
+            settlementId: `${sessionId}:${scenario.id}:${wave.number}`,
             sessionId,
             scenarioId: scenario.id,
             mode,
-            waveNumber: scenario.previewWave.number,
+            waveNumber: wave.number,
           });
         },
         close(): void {
@@ -1522,6 +2093,7 @@ export function createGame(options: {
         randomSeed: record.startRecord.randomSeed,
         difficulty: record.startRecord.difficulty ?? 'easy',
         mode: 'replay',
+        replaySourceMode: record.startRecord.mode,
         ...(record.startRecord.preparedSetup ? { preparedSetup: record.startRecord.preparedSetup } : {}),
       });
       const verifiedCheckpointFrames: number[] = [];

@@ -1,22 +1,22 @@
-import { cowGulchContent } from './cow-gulch';
+import { cowGulchP1aSampleContent } from './cow-gulch';
 import type { ScenarioContent } from '../game';
 import type { CampaignStageDefinition } from '../progress';
 
 /** T20-only acceptance content. Both stages reuse the researched Cow Gulch map. */
 export const campaignProgressSampleOne: ScenarioContent = {
-  ...cowGulchContent,
+  ...cowGulchP1aSampleContent,
   id: 'campaign-cow-gulch-sample-1',
   contentVersion: 'web-campaign-sample-1',
   title: { en: 'Cow Gulch · Progress sample 1', zh: '牛溪谷 · 进度样本 1' },
 };
 
 export const campaignProgressSampleTwo: ScenarioContent = {
-  ...cowGulchContent,
+  ...cowGulchP1aSampleContent,
   id: 'campaign-cow-gulch-sample-2',
   contentVersion: 'web-campaign-sample-2',
   title: { en: 'Cow Gulch · Progress sample 2', zh: '牛溪谷 · 进度样本 2' },
   previewWave: {
-    ...cowGulchContent.previewWave!,
+    ...cowGulchP1aSampleContent.previewWave!,
     initialLives: 40,
     initialCash: 75,
   },
