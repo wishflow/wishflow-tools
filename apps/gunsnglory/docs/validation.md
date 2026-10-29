@@ -843,6 +843,6 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 | 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4180 CI=1 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、152 项单元测试、生产构建及52项 Playwright 测试。 |
 | Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5177/` 以 1280×720 视口检查 Cow Gulch；截图可见 HUD、峡谷岩壁、两座桥、静态装饰、枪手、敌人及车厢碎片。检查时本地测试页显示 Wave04/8，生命46，敌人7，现金$139；随即暂停，正式档案仍为0/1，未产生结算。该画面核对地图与层级呈现，不作为战斗随机结果的验收证据。 |
 | 浏览器控制台 | 本地内置浏览器错误及警告日志为空。 |
-| 发布与公网实测 | 待本轮提交、集成、推送及 Pages workflow 成功后补记；此项完成前不得报告已发布。 |
+| 发布与公网实测 | `master` 提交 `816f98fa74b885b6a526b04205d3ac8ac6b04acd` 已推送。GitHub Actions [run 40922924699](https://github.com/wishflow/wishflow-tools/actions/runs/40922924699) 的 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 与 GitHub Pages 均通过；Worker/config 检查按静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=816f98f)，截图核对 Cow Gulch 峡谷道路、桥、静态装饰、枪手、敌人和车厢；暂停时为 Wave01/8、生命50、敌人13、现金$68。已保存战役档案前后均为1/1、最高分$356；速度仍为4×，没有提交结算或改动设置。浏览器控制台错误与警告为空。战斗 HUD 的短时数值仅记录当次观察，不作规则预期。 |
 
 本轮只验证共享地面深度队列和车厢碎片锚点。特殊投射物的动态 `fineZ`、敌人/投射物/装饰的完整跨图层对照、同深度插入次序及其它地图仍待处理；Cow Gulch 首关仍为0/60。
