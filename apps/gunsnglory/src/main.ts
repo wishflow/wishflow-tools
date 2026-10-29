@@ -179,7 +179,7 @@ app.innerHTML = [
   '        <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
   '      </div>',
   '    </dialog>',
-  '    <p class="scene-caption" data-locale="The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.">The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.</p>',
+  '    <p class="scene-caption" data-locale="The Cow Gulch battle has eight playable waves and settles after wave eight.">The Cow Gulch battle has eight playable waves and settles after wave eight.</p>',
   '  </section>',
   '</section>',
 ].join('');

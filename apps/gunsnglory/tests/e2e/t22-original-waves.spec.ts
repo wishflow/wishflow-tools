@@ -6,6 +6,7 @@ test('automatically plays the complete original eight-wave campaign at 4×', asy
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
 
+  await expect(page.locator('.scene-caption')).toHaveText('The Cow Gulch battle has eight playable waves and settles after wave eight.');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await speed.focus();
   await speed.press('End');
