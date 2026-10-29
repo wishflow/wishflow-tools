@@ -7,7 +7,7 @@ import {
   getBrowserScenarioContentVersion,
 } from './bootstrap/browser';
 import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent, cowGulchP1dCampaignContent } from './content/cow-gulch';
-import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
+import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cowGulchLevelOneContent } from './content/official-campaign';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
@@ -1679,6 +1679,14 @@ const assetNames = new Set([
   'player_mexican_shot',
   'sfx_mexican_dynamite',
   'sfx_explosion',
+  'gng_hud_0_top',
+  'gng_hud_0_top_left',
+  'gng_hud_0_top_right',
+  'gng_hud_1_top_pause',
+  'gng_hud_1_top_pause_pressed',
+  'gng_hud_1_top_star',
+  'gng_hud_1_top_star_0',
+  'hud_font_numbers_scaled',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 
@@ -2551,6 +2559,14 @@ canvas.addEventListener('pointerdown', (event: PointerEvent) => {
 
   const point = pointerLogicalPosition(event.clientX, event.clientY);
   if (!point) return;
+  if (view.wave) {
+    const hudAction = gameHudPointerActionAt(point.x, point.y);
+    if (hudAction) {
+      event.preventDefault();
+      if (hudAction === 'pause') pauseControl.click();
+      return;
+    }
+  }
   event.preventDefault();
   try {
     canvas.setPointerCapture(event.pointerId);

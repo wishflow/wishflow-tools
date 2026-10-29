@@ -333,6 +333,217 @@ function drawUnitInspection(
   );
 }
 
+const HUD_TOP = { width: 480, height: 67 } as const;
+const HUD_TOP_END = { width: 30, height: 67 } as const;
+const HUD_PAUSE = { x: 5, y: 0, width: 74, height: 49 } as const;
+const HUD_MINIMAP = { x: 174, y: 2, width: 66, height: 50 } as const;
+const HUD_MINIMAP_REFERENCE_COLUMNS = 32;
+const HUD_MINIMAP_REFERENCE_ROWS = 24;
+
+function requiredImage(images: GameImages, asset: string): HTMLImageElement {
+  const image = images[asset];
+  if (!image) throw new Error('Missing game image: ' + asset);
+  return image;
+}
+
+function hudNumber(value: number, padded: boolean): string {
+  const number = String(Math.max(0, Math.trunc(value)));
+  return padded ? number.padStart(2, '0') : number;
+}
+
+function drawHudNumber(
+  context: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  value: string,
+  bounds: { x: number; y: number; width: number; height: number },
+  align: 'center' | 'right',
+): void {
+  const glyphWidth = image.width / 10;
+  const glyphHeight = image.height;
+  const textWidth = glyphWidth * value.length;
+  const startX = align === 'right'
+    ? bounds.x + bounds.width - textWidth
+    : bounds.x + (bounds.width - textWidth) / 2;
+  const y = bounds.y + (bounds.height - glyphHeight) / 2;
+
+  for (const [index, character] of [...value].entries()) {
+    const digit = Number(character);
+    context.drawImage(
+      image,
+      digit * glyphWidth,
+      0,
+      glyphWidth,
+      glyphHeight,
+      startX + index * glyphWidth,
+      y,
+      glyphWidth,
+      glyphHeight,
+    );
+  }
+}
+
+function minimapTerrainColor(tile: number, tileAbove?: number): string {
+  if (tile >= 120 && tile <= 126) return '#609db3';
+  if (tile >= 160 && tile < 164) return '#8bcfe5';
+  if (tile === 32 || tile === 48 || tile === 80 || tile === 81 || tile === 110
+    || (tile >= 40 && tile <= 46) || (tile >= 52 && tile <= 66)
+    || ((tile === 88 || tile === 89) && (tileAbove === 88 || tileAbove === 89))) {
+    return '#bc8156';
+  }
+  if (tile === 0 || tile === 36 || (tile >= 16 && tile <= 35)) return '#fbd19f';
+  // BackgroundMap maps unrecognized BasicMap values to desert before it applies terrain variations.
+  return '#fbd19f';
+}
+
+function drawHudOutline(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  context.lineWidth = 1;
+  context.strokeStyle = '#fff';
+  context.strokeRect(x + 0.5, y + 0.5, width, height);
+  context.strokeStyle = '#000';
+  context.strokeRect(x + 1.5, y + 1.5, Math.max(0, width - 2), Math.max(0, height - 2));
+}
+
+function drawHudMinimap(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  viewport: MapViewport,
+): void {
+  const { width: panelWidth, height: panelHeight } = HUD_MINIMAP;
+  const pixelSize = Math.min(
+    Math.floor(panelWidth / HUD_MINIMAP_REFERENCE_COLUMNS),
+    Math.max(Math.floor(panelHeight / HUD_MINIMAP_REFERENCE_ROWS), 1),
+  );
+  const mapWidth = view.map.width * pixelSize;
+  const mapHeight = view.map.height * pixelSize;
+  const panelX = GAME_VIEWPORT.width / 2 + HUD_MINIMAP.x;
+  const panelY = HUD_MINIMAP.y;
+  const mapX = panelX + Math.floor((panelWidth - mapWidth) / 2);
+  const mapY = panelY + Math.floor((panelHeight - mapHeight) / 2);
+  const terrain = view.map.originalTileGrid;
+
+  if (terrain) {
+    for (let y = 0; y < Math.min(view.map.height, terrain.length); y += 1) {
+      const row = terrain[y];
+      if (!row) continue;
+      for (let x = 0; x < Math.min(view.map.width, row.length); x += 1) {
+        context.fillStyle = minimapTerrainColor(row[x] ?? 0, y > 0 ? terrain[y - 1]?.[x] : undefined);
+        context.fillRect(mapX + x * pixelSize, mapY + y * pixelSize, pixelSize, pixelSize);
+      }
+    }
+  }
+
+  context.fillStyle = '#f2b780';
+  for (const street of view.map.streets) {
+    const startX = Math.max(0, Math.floor(street.x));
+    const startY = Math.max(0, Math.floor(street.y));
+    const endX = Math.min(view.map.width, Math.ceil(street.x + street.width));
+    const endY = Math.min(view.map.height, Math.ceil(street.y + street.height));
+    for (let y = startY; y < endY; y += 1) {
+      for (let x = startX; x < endX; x += 1) {
+        context.fillRect(mapX + x * pixelSize, mapY + y * pixelSize, pixelSize, pixelSize);
+      }
+    }
+  }
+
+  for (const enemy of view.enemies) {
+    const x = enemy.positionFine.x / 7680;
+    const y = enemy.positionFine.y / 7680;
+    if (x < 0 || y < 0 || x >= view.map.width || y >= view.map.height) continue;
+    context.fillStyle = '#fff';
+    context.fillRect(mapX + Math.floor(x) * pixelSize, mapY + Math.floor(y) * pixelSize, pixelSize, pixelSize);
+  }
+
+  for (const unit of view.units) {
+    const x = unit.positionFine.x / 7680;
+    const y = unit.positionFine.y / 7680;
+    if (x < 0 || y < 0 || x >= view.map.width || y >= view.map.height) continue;
+    context.fillStyle = unit.activity === 5 ? '#f00' : '#000';
+    context.fillRect(mapX + Math.floor(x) * pixelSize, mapY + Math.floor(y) * pixelSize, pixelSize, pixelSize);
+  }
+
+  const left = mapX + (Math.max(0, Math.min(viewport.mapWidth, -viewport.origin.x)) / viewport.mapWidth) * mapWidth;
+  const top = mapY + (Math.max(0, Math.min(viewport.mapHeight, -viewport.origin.y)) / viewport.mapHeight) * mapHeight;
+  const right = mapX + (Math.max(0, Math.min(viewport.mapWidth, GAME_VIEWPORT.width - viewport.origin.x)) / viewport.mapWidth) * mapWidth;
+  const bottom = mapY + (Math.max(0, Math.min(viewport.mapHeight, GAME_VIEWPORT.height - viewport.origin.y)) / viewport.mapHeight) * mapHeight;
+  drawHudOutline(context, left, top, Math.max(2, right - left), Math.max(2, bottom - top));
+}
+
+function drawGameHud(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const wave = view.wave;
+  if (!wave) return;
+
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
+  context.clip();
+
+  const left = (GAME_VIEWPORT.width - HUD_TOP.width) / 2;
+  context.drawImage(requiredImage(images, 'gng_hud_0_top_left'), left - HUD_TOP_END.width, 0, HUD_TOP_END.width, HUD_TOP_END.height);
+  context.drawImage(requiredImage(images, 'gng_hud_0_top'), left, 0, HUD_TOP.width, HUD_TOP.height);
+  context.drawImage(requiredImage(images, 'gng_hud_0_top_right'), left + HUD_TOP.width, 0, HUD_TOP_END.width, HUD_TOP_END.height);
+  context.drawImage(
+    requiredImage(images, view.paused ? 'gng_hud_1_top_pause_pressed' : 'gng_hud_1_top_pause'),
+    left + HUD_PAUSE.x,
+    HUD_PAUSE.y,
+    HUD_PAUSE.width,
+    HUD_PAUSE.height,
+  );
+
+  const numberFont = requiredImage(images, 'hud_font_numbers_scaled');
+  const starBackground = requiredImage(images, 'gng_hud_1_top_star_0');
+  const starFill = requiredImage(images, 'gng_hud_1_top_star');
+  const starArea = { x: GAME_VIEWPORT.width / 2 - 39, y: 0, width: 78, height: 74 };
+  const starX = starArea.x + (starArea.width - starBackground.width) / 2;
+  const starY = starArea.y + (starArea.height - starBackground.height) / 2;
+  context.drawImage(starBackground, starX, starY, starBackground.width, starBackground.height);
+  const maxLives = Math.max(1, wave.maxLives ?? 50);
+  const livesRemaining = Math.max(0, Math.min(maxLives, wave.lives));
+  const starSourceY = Math.floor(starFill.height * livesRemaining / maxLives);
+  if (starSourceY < starFill.height) {
+    context.drawImage(
+      starFill,
+      0,
+      starSourceY,
+      starFill.width,
+      starFill.height - starSourceY,
+      starX,
+      starY + starSourceY,
+      starFill.width,
+      starFill.height - starSourceY,
+    );
+  }
+
+  drawHudNumber(context, numberFont, hudNumber(wave.cash, false), { x: left + 136, y: 6, width: 48, height: 24 }, 'right');
+  drawHudNumber(context, numberFont, hudNumber(wave.number, true), { x: left + 292, y: 6, width: 24, height: 24 }, 'center');
+  drawHudNumber(context, numberFont, hudNumber(wave.totalWaves ?? 1, true), { x: left + 326, y: 6, width: 24, height: 24 }, 'center');
+  drawHudNumber(context, numberFont, hudNumber(wave.lives, true), starArea, 'center');
+  drawHudMinimap(context, view, viewport);
+  context.restore();
+}
+
+export type GameHudPointerAction = 'pause' | 'covered';
+
+export function gameHudPointerActionAt(x: number, y: number): GameHudPointerAction | undefined {
+  const left = (GAME_VIEWPORT.width - HUD_TOP.width) / 2;
+  const hudLeft = left - HUD_TOP_END.width;
+  const hudRight = left + HUD_TOP.width + HUD_TOP_END.width;
+  if (x < hudLeft || x >= hudRight || y < 0 || y >= HUD_TOP.height) return undefined;
+  if (x >= left + HUD_PAUSE.x && x < left + HUD_PAUSE.x + HUD_PAUSE.width
+    && y < HUD_PAUSE.y + HUD_PAUSE.height) return 'pause';
+  return 'covered';
+}
+
 export function drawGame(
   context: CanvasRenderingContext2D,
   view: GameView,
@@ -427,4 +638,5 @@ export function drawGame(
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 
   context.restore();
+  drawGameHud(context, view, images, viewport);
 }

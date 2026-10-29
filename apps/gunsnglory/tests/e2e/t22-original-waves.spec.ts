@@ -35,13 +35,13 @@ test('completes official Cow Gulch level one and restores only settled campaign 
   const cash = Number((await waveStatus.innerText()).match(/Cash \$(\d+)/)?.[1] ?? 0);
   expect(cash).toBeGreaterThanOrEqual(75);
 
-  await clickCanvasPoint(page, cowGulchMarkerPoint(5, 4));
+  await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   const mapHire = page.getByTestId('hire-map-unit');
   await expect(mapHire).toHaveText('Hire map Gunslinger · $75');
   await expect(mapHire).toBeEnabled();
   await mapHire.click();
   await expect(page.getByTestId('map-hire-status')).toHaveText('Gunslinger hired from the map for $75.');
-  await clickCanvasPoint(page, cowGulchMarkerPoint(5, 4));
+  await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(page.getByTestId('selection-status')).toContainText('Gunslinger selected');
 
   await page.clock.runFor(8 * 60_000);

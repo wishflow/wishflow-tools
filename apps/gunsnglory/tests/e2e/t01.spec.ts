@@ -26,10 +26,12 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await clickCanvasPoint(page, { x: 512, y: 288 });
   await expect(status).toContainText('Gunslinger selected');
 
-  await clickCanvasPoint(page, cowGulchMarkerPoint(5, 4));
+  await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(status).toContainText('Gunslinger is waiting to be hired');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   await expect(page.getByTestId('recruit-pool-status')).toContainText('empty');
+  await clickCanvasPoint(page, { x: 250, y: 24 });
+  await expect(status).toContainText('Gunslinger is waiting to be hired');
 
   await clickCanvasPoint(page, cowGulchMarkerPoint(6, 5));
   await expect(status).toContainText('Mexican is waiting to be hired');
@@ -40,7 +42,7 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await page.getByRole('button', { name: '切换界面语言为英文' }).click();
   await expect(status).toContainText('Mexican is waiting to be hired');
 
-  await clickCanvasPoint(page, { x: 272, y: 48 });
+  await clickCanvasPoint(page, { x: 272, y: 80 });
   await expect(status).toContainText('No unit selected');
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -78,12 +80,47 @@ test('selects and clears the unit with mobile touch input', async ({ browser }) 
 
   await tapCanvasPoint(page, { x: 512, y: 288 });
   await expect(status).toContainText('Gunslinger selected');
-  await tapCanvasPoint(page, { x: 272, y: 48 });
+  await tapCanvasPoint(page, { x: 272, y: 80 });
   await expect(status).toContainText('No unit selected');
 
-  await tapCanvasPoint(page, cowGulchMarkerPoint(5, 4));
+  await tapCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(status).toContainText('Gunslinger is waiting to be hired');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   await expect(page.getByTestId('recruit-pool-status')).toContainText('empty');
   await context.close();
+});
+
+test('renders the original battle HUD and routes its pause tap away from map selection', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  const pauseStatus = page.getByTestId('pause-status');
+  const selectionStatus = page.getByTestId('selection-status');
+  const canvas = page.getByTestId('game-canvas');
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
+  await expect(page.getByRole('button', { name: 'Pause battle' })).toBeEnabled();
+  const minimapTerrain = await canvas.evaluate((element) => {
+    const canvasElement = element as HTMLCanvasElement;
+    const context = canvasElement.getContext('2d');
+    if (!context) throw new Error('Canvas 2D is unavailable');
+    const scale = canvasElement.width / 1024;
+    const sampleTile = (tileX: number, tileY: number) => {
+      const x = 702 + tileX * 2;
+      const y = 10 + tileY * 2;
+      return [...context.getImageData(Math.ceil(x * scale), Math.ceil(y * scale), 1, 1).data];
+    };
+    return {
+      water: sampleTile(2, 1), desert: sampleTile(8, 2),
+    };
+  });
+  expect(minimapTerrain.water).toEqual([96, 157, 179, 255]);
+  expect(minimapTerrain.desert).toEqual([251, 209, 159, 255]);
+
+  await clickCanvasPoint(page, { x: 314, y: 24 });
+  await expect(pauseStatus).toHaveText('Battle paused.');
+  await clickCanvasPoint(page, { x: 250, y: 24 });
+  await expect(selectionStatus).toHaveText('No unit selected');
+
+  await clickCanvasPoint(page, { x: 314, y: 24 });
+  await expect(pauseStatus).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Pause battle' })).toBeEnabled();
 });
