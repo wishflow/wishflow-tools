@@ -24,6 +24,7 @@
 | `globals` | 事件时模块用户命名空间中的有界变量快照；过滤 `__builtins__`、`__name__`、`__doc__`、`__annotations__` 等运行器内部名称 |
 | `globalsTruncated` | 全局项或其子树因数量、深度、单事件或总预算而不完整 |
 | `frames` | 从模块帧到当前用户帧的活动 `<input>` 帧，顺序与调用栈一致；每帧含 `frameId`、函数名、当前行、`locals` 和 `localsTruncated` |
+| `currentFrameId` | 触发当前事件的帧身份；默认选中它，即使递归调用中多个帧函数名相同 |
 | `truncated` | 本事件至少一个快照范围或子树因资源限制不完整；与 P3 的 `traceTruncated` 互相独立 |
 
 快照值使用有限递归 DTO，所有 Python 数值均以文本表达，不传 JavaScript `Number`：
@@ -53,6 +54,7 @@ interface EventSnapshot {
   globals: SnapshotValue[];
   globalsTruncated: boolean;
   frames: FrameSnapshot[];
+  currentFrameId: number;
   truncated: boolean;
 }
 ```
