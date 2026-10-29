@@ -81,6 +81,8 @@ stateDiagram-v2
 
 ## 6. 前端与静态站点契约
 
+页面接入、目录路径、共享语言、公共导航、可访问性和独立构建规则遵循[应用协作约束](../../AGENTS.md)与[站点外壳契约](../../../../packages/site-shell/README.md)。本节记录 P1 的具体落地与验收，不另设一套站点或语言机制。
+
 - 独立 React + TypeScript + Vite；类型检查作为 build 前置。
 - `base: './'`、产物写入应用 `dist/`；所有站内静态资源与 Worker 由相对路径打包，生产测试部署到 `/python-interpreter-lab/` 子路径。
 - `index.html` 使用 `wishflow-site-shell`，设置 app slug、`../` 站点链接及中英文标题；React 根节点放入 `slot="content"`。单页不启用本地侧栏。

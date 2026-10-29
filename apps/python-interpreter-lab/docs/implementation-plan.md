@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线、P1 真实编译工作区、P2 Token/源码联动和 P3 真实执行轨迹均已完成并发布到 `master`。P1–P3 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)。P4 的详细规格和任务已起草；其 Worker 快照 DTO、帧身份语义与资源预算属于新增数据契约，须在实现前确认，之后按第 2 节执行。
+P0 文档基线、P1 真实编译工作区、P2 Token/源码联动和 P3 真实执行轨迹均已完成并发布到 `master`。P1–P3 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)。P4 的详细规格和任务已确认并进入实现；Worker 快照 DTO、帧身份语义与资源预算以 P4 spec 为准。P4 尚未完成完整回归、发布和线上验收，不能视为已交付。
 
 P0 建立了以下文档：
 
@@ -31,6 +31,7 @@ P0 建立了以下文档：
 | 项目 | 必须具体化的内容 |
 | --- | --- |
 | 用户目标与范围 | 何种代码、哪些操作、可观察的学习结果；明确尚不支持什么 |
+| 前端集成 | 遵循应用 [AGENTS.md](../AGENTS.md) 与[站点外壳契约](../../../packages/site-shell/README.md)；spec 记录本阶段新增或改变的界面行为、语言、键盘、窄屏及构建验证，不另起共享导航或语言方案 |
 | 引擎与版本 | Pyodide/CPython 或教学指令集版本，支持语法与可视化能力 |
 | 状态与事件 | 初态、操作顺序、分析/执行/回放状态、异常和取消、源码变更后的行为 |
 | 数据与接口 | 当前实际消费者需要的输入输出、身份和来源、顺序、生命周期及错误约定 |
@@ -106,9 +107,9 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **当前结果**：应用 `pnpm run test:ci` 通过（13 条单测、15 条 Playwright）；根 `pnpm run test:catalog` 14 项通过，`pnpm run build:site` 成功。Playwright 实测 CPython 调用/行/返回与异常、全局读取、循环重复行、事件回放不重复输出、停止/超时/Retry、源码编辑清理旧轨迹、事件与输出上限及 320/768/1024/1440px 布局。提交 `bdba3e8` 推送后，workflow [40810018154](https://github.com/wishflow/wishflow-tools/actions/runs/40810018154) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。线上固定版本 CPython 3.14.2 实测全局变量函数输出 `42`、8 个事件、源码行定位及回放输出；死循环可停止，重载运行时后再次运行成功。P3 已独立发布，下一阶段按 P4 启动规则补充 spec/tasks。
 - **回滚**：回退运行与轨迹入口，保留静态编译观察。终止或超限留下的历史明确标为不完整。
 
-### P4：结构化变量与历史观察
+### P4：结构化变量与历史观察（实现中）
 
-- **前置**：P3 已发布；[P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md) 已起草，待用户确认快照 DTO、帧身份语义和资源预算后实施。
+- **前置**：P3 已发布；[P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md) 已确认，当前实现按用户已授权的整体迭代继续推进。
 - **交付**：按事件查看各帧局部/全局变量、基础容器、有限深度展开和相邻事件变化；历史快照保持事件发生时的值。P3 的基础值摘要继续可用。
 - **验收**：局部/全局作用域与帧切换正确；列表先后修改不会污染旧事件；大整数不失真；循环引用、长字符串和深容器可控展示；自定义 `repr`、属性或迭代器不会因查看变量被执行；截断范围不误报变量增删；异常与连续运行后代理和采集资源正确释放。详见 P4 spec §6。
 - **回滚**：恢复 P3 的基础摘要；本阶段不引入跨版本历史持久化，不需要存档迁移。
