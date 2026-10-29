@@ -6,7 +6,7 @@ import { TeachingDiagnostic } from '../src/teaching-vm/types';
 test('compiles arithmetic precedence and print into versioned teaching instructions', () => {
   const result = compileTeachingSource('x = 1 + 2 * 3\nprint(x)');
 
-  assert.equal(result.version, 'mini-vm-v2');
+  assert.equal(result.version, 'mini-vm-v3');
   assert.deepEqual(result.constants, [
     { type: 'int', value: '1' },
     { type: 'int', value: '2' },
@@ -24,6 +24,18 @@ test('compiles arithmetic precedence and print into versioned teaching instructi
     ['HALT', null],
   ]);
   assert.deepEqual(result.instructions.map(({ index }) => index), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
+test('compiles None to a dedicated constant without treating it as a name', () => {
+  const result = compileTeachingSource('x = None\nprint(x)');
+  assert.deepEqual(result.constants, [{ type: 'none', value: 'None' }]);
+  assert.deepEqual(result.instructions.map(({ opcode, argument }) => [opcode, argument]), [
+    ['LOAD_CONST', 0],
+    ['STORE_NAME', 'x'],
+    ['LOAD_NAME', 'x'],
+    ['PRINT', 1],
+    ['HALT', null],
+  ]);
 });
 
 test('compiles short-circuit jumps with patched instruction-index targets', () => {

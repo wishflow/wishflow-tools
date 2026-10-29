@@ -297,6 +297,7 @@ class Parser {
       const token = this.previous();
       return { type: 'BooleanLiteral', value: token.type === 'TRUE', span: token.span };
     }
+    if (this.match('NONE')) return { type: 'NoneLiteral', span: this.previous().span };
     if (this.match('NAME')) {
       const token = this.previous();
       return { type: 'Name', name: token.lexeme, span: token.span };
@@ -383,7 +384,7 @@ class Parser {
   }
 
   private unsupportedKeyword(token: TeachingToken): never {
-    this.fail('unsupported-keyword', `Keyword '${token.lexeme}' is outside mini-vm-v2.`, token);
+    this.fail('unsupported-keyword', `Keyword '${token.lexeme}' is outside mini-vm-v3.`, token);
   }
 
   private fail(code: string, message: string, token: TeachingToken): never {

@@ -13,7 +13,7 @@ export const messages = {
   cpythonSourceHint: { en: 'Analyze compiles without running. Run executes your code in this browser.', zh: '分析只编译、不执行；运行会在当前浏览器执行代码。' },
   teachingSourceHint: { en: 'Compile the supported subset, then inspect and control each teaching VM instruction.', zh: '编译当前支持的语法子集，然后查看并控制教学 VM 的逐条指令执行。' },
   teachingPrivacyNote: { en: 'Teaching VM runs a bounded TypeScript subset. It does not execute Python or access browser APIs.', zh: '教学 VM 只运行有明确边界的 TypeScript 子集，不会执行 Python 或访问浏览器 API。' },
-  teachingVersion: { en: 'Teaching instruction set mini-vm-v2', zh: '教学指令集 mini-vm-v2' },
+  teachingVersion: { en: 'Teaching instruction set mini-vm-v3', zh: '教学指令集 mini-vm-v3' },
   teachingLoading: { en: 'Preparing teaching VM…', zh: '正在准备教学 VM…' },
   teachingReady: { en: 'Ready to compile teaching program', zh: '可以编译教学程序' },
   teachingCompiling: { en: 'Compiling teaching program…', zh: '正在编译教学程序…' },
@@ -199,7 +199,7 @@ export const messages = {
   valueType: { en: 'Type', zh: '类型' },
   valueSummary: { en: 'Value summary', zh: '值摘要' },
   footerLeft: { en: 'CPython compilation view', zh: 'CPython 编译观察' },
-  footerTeaching: { en: 'Teaching VM · mini-vm-v2', zh: '教学 VM · mini-vm-v2' },
+  footerTeaching: { en: 'Teaching VM · mini-vm-v3', zh: '教学 VM · mini-vm-v3' },
   footerRight: { en: 'AST → Code objects → Bytecode', zh: 'AST → 代码对象 → 字节码' },
 } satisfies Record<string, LocalizedText>;
 

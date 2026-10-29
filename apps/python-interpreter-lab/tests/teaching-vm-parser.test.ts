@@ -145,6 +145,24 @@ test('parses Python boolean, comparison, not, and logical precedence', () => {
   );
 });
 
+test('tokenizes and parses None as a dedicated literal with a source span', () => {
+  assert.deepEqual(tokenizeTeachingSource('x = None').map(({ type }) => type), [
+    'NAME', 'EQUAL', 'NONE', 'EOF',
+  ]);
+  const program = parseTeachingSource('x = None');
+  const statement = program.statements[0];
+  assert.equal(statement?.type, 'Assign');
+  if (statement?.type !== 'Assign') assert.fail('expected assignment');
+  assert.deepEqual(statement.value, {
+    type: 'NoneLiteral',
+    span: { start: 4, end: 8, line: 1, column: 5, endLine: 1, endColumn: 9 },
+  });
+  assert.throws(
+    () => parseTeachingSource('None = 1'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.stage === 'parse',
+  );
+});
+
 test('parses nested if/elif/else suites and closes a final block at end of source', () => {
   const program = parseTeachingSource([
     'if 0:',

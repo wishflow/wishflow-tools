@@ -3,7 +3,7 @@ import { MAX_STRING_CODE_POINTS, MAX_TOKEN_COUNT } from './resource-limits';
 import { TeachingDiagnostic, type SourceSpan, type TeachingToken, type TokenType } from './types';
 
 const unsupportedKeywords = new Set([
-  'None', 'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
+  'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
   'def', 'del', 'except', 'finally', 'from', 'global', 'import',
   'is', 'lambda', 'nonlocal', 'pass', 'raise', 'return', 'try',
   'with', 'yield',
@@ -135,6 +135,7 @@ class Tokenizer {
     const lexeme = this.source.slice(start.offset, this.offset);
     const keywordTypes: Record<string, TokenType> = {
       False: 'FALSE',
+      None: 'NONE',
       True: 'TRUE',
       and: 'AND',
       elif: 'ELIF',

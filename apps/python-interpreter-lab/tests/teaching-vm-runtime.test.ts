@@ -69,6 +69,29 @@ test('compares bools and ints numerically and strings by Unicode code point', ()
   assert.equal(mismatch.current.diagnostic?.code, 'type-error');
 });
 
+test('prints None, treats it as false, and compares it by identity-like scalar rules', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'value = None',
+    'if value:',
+    '  print("wrong")',
+    'else:',
+    '  print(value, not value, value == None, value != None, value != False, value == 0, value != "")',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['None True True False True False True']);
+  assert.equal(machine.current.variables.find(({ name }) => name === 'value')?.value.type, 'none');
+  assert.equal(machine.current.variables.find(({ name }) => name === 'value')?.value.display, 'None');
+
+  const ordered = createTeachingMachine(compileTeachingSource('print(None < 1)'));
+  while (ordered.current.status !== 'error') stepTeachingMachine(ordered);
+  assert.equal(ordered.current.diagnostic?.code, 'type-error');
+
+  const sameTypeOrdering = createTeachingMachine(compileTeachingSource('print(None < None)'));
+  while (sameTypeOrdering.current.status !== 'error' && sameTypeOrdering.current.status !== 'finished') stepTeachingMachine(sameTypeOrdering);
+  assert.equal(sameTypeOrdering.current.diagnostic?.code, 'type-error');
+});
+
 test('records the actual next instruction and result of a short-circuit decision', () => {
   const machine = createTeachingMachine(compileTeachingSource('print(False and missing)'));
   stepTeachingMachine(machine);

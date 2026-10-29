@@ -24,6 +24,7 @@ type RuntimeValue =
   | { type: 'int'; value: bigint }
   | { type: 'bool'; value: boolean }
   | { type: 'str'; value: string }
+  | { type: 'none' }
   | RangeRuntimeValue
   | IteratorRuntimeValue;
 
@@ -256,6 +257,9 @@ export class TeachingMachine {
       const leftValue = numericValue(left);
       const rightValue = numericValue(right);
       result = comparePrimitive(leftValue, rightValue, operator);
+    } else if (left.type === 'none' && right.type === 'none') {
+      if (operator === '==' || operator === '!=') result = operator === '==';
+      else this.typeError(operator, [left, right], instruction.span);
     } else if (left.type === 'str' && right.type === 'str') {
       result = comparePrimitive(compareCodePoints(left.value, right.value), 0, operator);
     } else if (operator === '==' || operator === '!=') {
@@ -447,19 +451,22 @@ export function getTeachingHistory(machine: TeachingMachine): TeachingVmHistory 
 function runtimeValueFromConstant(constant: TeachingConstant): RuntimeValue {
   if (constant.type === 'int') return { type: 'int', value: BigInt(constant.value) };
   if (constant.type === 'bool') return { type: 'bool', value: constant.value === 'True' };
+  if (constant.type === 'none') return { type: 'none' };
   return { type: 'str', value: constant.value };
 }
 
 function snapshotValue(value: RuntimeValue): TeachingValueSnapshot {
-  const text = value.type === 'int'
-    ? value.value.toString(10)
-    : value.type === 'bool'
-      ? value.value ? 'True' : 'False'
-      : value.type === 'str'
-        ? value.value
-        : value.type === 'range'
-          ? formatRange(value)
-          : formatIterator(value);
+  const text = value.type === 'none'
+    ? 'None'
+    : value.type === 'int'
+      ? value.value.toString(10)
+      : value.type === 'bool'
+        ? value.value ? 'True' : 'False'
+        : value.type === 'str'
+          ? value.value
+          : value.type === 'range'
+            ? formatRange(value)
+            : formatIterator(value);
   return Object.freeze({
     type: value.type,
     value: text,
@@ -477,6 +484,7 @@ function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticS
 }
 
 function formatPrintValue(value: RuntimeValue): string {
+  if (value.type === 'none') return 'None';
   if (value.type === 'bool') return value.value ? 'True' : 'False';
   if (value.type === 'range') return formatRange(value);
   if (value.type === 'iterator') return formatIterator(value);
@@ -493,6 +501,7 @@ function numericValue(value: Extract<RuntimeValue, { type: 'int' | 'bool' }>): b
 
 function isTruthy(value: RuntimeValue): boolean {
   switch (value.type) {
+    case 'none': return false;
     case 'bool': return value.value;
     case 'int': return value.value !== 0n;
     case 'str': return value.value.length > 0;

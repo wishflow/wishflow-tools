@@ -30,6 +30,7 @@ export type TokenType =
   | 'STRING'
   | 'TRUE'
   | 'FALSE'
+  | 'NONE'
   | 'AND'
   | 'OR'
   | 'NOT'
@@ -122,6 +123,7 @@ export type TeachingExpression =
   | IntegerLiteralExpression
   | StringLiteralExpression
   | BooleanLiteralExpression
+  | NoneLiteralExpression
   | NameExpression
   | UnaryExpression
   | BinaryExpression
@@ -144,6 +146,11 @@ export interface StringLiteralExpression {
 export interface BooleanLiteralExpression {
   type: 'BooleanLiteral';
   value: boolean;
+  span: SourceSpan;
+}
+
+export interface NoneLiteralExpression {
+  type: 'NoneLiteral';
   span: SourceSpan;
 }
 
@@ -185,7 +192,7 @@ export interface LogicalExpression {
 }
 
 export interface TeachingConstant {
-  type: 'int' | 'str' | 'bool';
+  type: 'int' | 'str' | 'bool' | 'none';
   value: string;
 }
 
@@ -217,7 +224,7 @@ export interface TeachingInstruction {
 }
 
 export interface TeachingCompileResult {
-  version: 'mini-vm-v2';
+  version: 'mini-vm-v3';
   ast: TeachingProgram;
   constants: TeachingConstant[];
   instructions: TeachingInstruction[];
@@ -226,7 +233,7 @@ export interface TeachingCompileResult {
 export type TeachingVmStatus = 'ready' | 'running' | 'paused' | 'finished' | 'error';
 
 export interface TeachingValueSnapshot {
-  type: 'int' | 'str' | 'bool' | 'range' | 'iterator';
+  type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator';
   value: string;
   display: string;
 }

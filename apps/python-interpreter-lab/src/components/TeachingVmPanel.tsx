@@ -104,6 +104,9 @@ function ExpressionTree({
     case 'BooleanLiteral':
       detail = <code className="ast-literal">{expression.value ? 'True' : 'False'}</code>;
       break;
+    case 'NoneLiteral':
+      detail = <code className="ast-literal">None</code>;
+      break;
     case 'Name':
       detail = <code>{expression.name}</code>;
       break;

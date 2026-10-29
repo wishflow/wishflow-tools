@@ -26,7 +26,7 @@ class Compiler {
     for (const statement of this.ast.statements) this.compileStatement(statement);
     this.emit('HALT', null, this.ast.span);
     return {
-      version: 'mini-vm-v2',
+      version: 'mini-vm-v3',
       ast: this.ast,
       constants: this.constants,
       instructions: this.instructions,
@@ -101,6 +101,9 @@ class Compiler {
         return;
       case 'BooleanLiteral':
         this.emit('LOAD_CONST', this.addConstant({ type: 'bool', value: expression.value ? 'True' : 'False' }), expression.span);
+        return;
+      case 'NoneLiteral':
+        this.emit('LOAD_CONST', this.addConstant({ type: 'none', value: 'None' }), expression.span);
         return;
       case 'Name':
         this.emit('LOAD_NAME', expression.name, expression.span);
