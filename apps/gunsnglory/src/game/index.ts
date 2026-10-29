@@ -64,6 +64,13 @@ export interface RenderTile {
   height: number;
 }
 
+export interface MapDecoration {
+  asset: string;
+  cell: { x: number; y: number };
+  /** Horizontal sprite-anchor offset from the cell center, in map cells. */
+  anchorOffsetX?: number;
+}
+
 export interface ScenarioUnit {
   id: string;
   /** Original map-object activity: 4 is sleeping, 5 is active. */
@@ -195,6 +202,7 @@ export interface ScenarioContent {
     tileSize: number;
     background: readonly RenderTile[];
     streets: readonly RenderTile[];
+    decorations?: readonly MapDecoration[];
     /** Original TDM terrain values for source-faithful HUD minimap rendering. */
     originalTileGrid?: readonly (readonly number[])[];
   };

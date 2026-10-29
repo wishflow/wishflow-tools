@@ -1,4 +1,4 @@
-import type { Direction, EnemyView, GameView, RenderTile, ShotView, UnitView } from '../game';
+import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView } from '../game';
 import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
@@ -44,6 +44,51 @@ export function getMapViewport(
     camera,
     displayPixelScale,
   );
+}
+
+export interface MapDecorationDestination {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export function mapDecorationDestination(
+  decoration: MapDecoration,
+  imageSize: { width: number; height: number },
+  viewport: MapViewport,
+): MapDecorationDestination {
+  const width = imageSize.width * viewport.scaleFactor;
+  const height = imageSize.height * viewport.scaleFactor;
+  const centerX = viewport.origin.x + (decoration.cell.x + 0.5 + (decoration.anchorOffsetX ?? 0)) * viewport.tileSize;
+  const feetY = viewport.origin.y + (decoration.cell.y + 1) * viewport.tileSize;
+  const x = Math.trunc(centerX - width / 2);
+  const y = Math.trunc(feetY - height);
+  return {
+    x,
+    y,
+    width: Math.trunc(x + width) - x,
+    height: Math.trunc(y + height) - y,
+  };
+}
+
+function drawMapDecorations(
+  context: CanvasRenderingContext2D,
+  decorations: readonly MapDecoration[],
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const drawOrder = [...decorations].sort((a, b) => a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+  for (const decoration of drawOrder) {
+    const image = images[decoration.asset];
+    if (!image) throw new Error('Missing game image: ' + decoration.asset);
+    const destination = mapDecorationDestination(
+      decoration,
+      { width: image.naturalWidth, height: image.naturalHeight },
+      viewport,
+    );
+    context.drawImage(image, destination.x, destination.y, destination.width, destination.height);
+  }
 }
 
 function drawTiles(
@@ -562,6 +607,7 @@ export function drawGame(
   context.beginPath();
   context.rect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   context.clip();
+  context.save();
   context.beginPath();
   context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
   context.clip();
@@ -634,6 +680,9 @@ export function drawGame(
       context.setLineDash([]);
     }
   }
+
+  context.restore();
+  drawMapDecorations(context, view.map.decorations ?? [], images, viewport);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 
