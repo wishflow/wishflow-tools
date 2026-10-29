@@ -800,3 +800,26 @@ P1-E 已完成并发布，但不代表 P1-F 对原版首关的地图/对象、�
 | 内置浏览器与发布 | 待合并发布后，在 Codex 内置浏览器核对线上装饰阻挡；此增量不代表 P1-F 整关已通过，首关仍为0/60。 |
 
 本轮只修复玩家单位与静态装饰碰撞框的相交判定。敌人路线、其他地图的装饰类型及所有对象组合仍需各自依据对应内容与原版行为核验；Cow Gulch 整关对照仍未完成，继续不计入已通过的60关分母。
+
+## 44. P1-F Cow Gulch 装饰与单位深度排序
+
+网页原先先绘制全部玩家单位，再统一绘制静态装饰，因此无论对象在地图中的前后位置，装饰都会覆盖单位。此轮将两类场景对象放入同一深度队列，保留地图、敌人、道路、投射物和残骸的现有图层顺序。
+
+### APK 静态依据
+
+REA/JADX 归档中的 `GunsAndGloryThread` 绘制路径按背景、敌人、网格框、道路层、`drawObjects` 的顺序执行（DEX `0x3ff632–0x3ff66a`）。`GameObjectManager.getValueByObject` 的对象排序值为 `fineY + drawingOffsetY + fineZ × 100`（DEX `0x407a30–0x407a44`）；`insertDrawOrder` 按此值升序插入，值相同时新对象插在已有对象之前（DEX `0x408674–0x4086e8`）。Cow Gulch 地图对象由 `createGameObjectsFromBasicMap` 按行列扫描，装饰对象以格中心坐标和 `fineZ=7680` 创建（DEX `0x407d2c–0x407d38`、`0x407dfa–0x407e1a`）。
+
+在本轮比较的 Cow Gulch 静态装饰和玩家单位中，深度随地面锚点的 `fineY` 增长，二者 `fineZ` 相同；装饰地面锚点为其地图格底边，单位使用当前 `positionFine.y`。网页据此按 `(decoration.cell.y + 1) × 7680` 和 `unit.positionFine.y` 排序。REA/JADX 反编译文本是分析产物，不是原始 Java 源码。相同深度时网页使用确定性的集合顺序；动态新建对象与原版插入序列的逐项一致性尚未纳入此切片。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 回归测试 | 先修改 Canvas 测试，使单位位于后排树木与前排灌木之间；旧实现因所有装饰都在单位之后绘制而失败。按深度排序后，树先于单位、单位先于灌木；地图背景/敌人/道路层级、装饰锚点和逻辑画布裁切断言保持通过。 |
+| 单位绘制行为 | 单位绘制函数只从既有循环提取，射击帧、镜像、睡眠 Zzz、选中标记和命中框保留原逻辑；同文件测试继续覆盖睡眠动画和其它 Canvas 表现。 |
+| 专项测试 | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4180 nvm exec 22.23.3 pnpm --dir apps/gunsnglory exec node --import tsx --test tests/canvas-renderer.test.ts` 通过5项测试。 |
+| 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4180 CI=1 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、152 项单元测试、生产构建及52项 Playwright 测试。 |
+| Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5176/gunsnglory/` 检查 Cow Gulch 静态装饰、单位、敌人、桥和 HUD；地图检查叠层可显示路线、单位锚点和射程，关闭叠层后原画正常。暂停在 Wave02/8，状态显示50条命且正式档案无结果；未完成关卡结算。浏览器实测用于确认发布前页面绘制正常，单位与装饰的深度顺序由上述 Canvas 回归测试作精确断言。 |
+| 发布与公网实测 | 待记录；本轮只验证 Cow Gulch 装饰与单位遮挡切片，不代表 P1-F 首关整体验收。 |
+
+同深度插入顺序、动态对象、敌人与装饰的遮挡对照及其它关卡仍属于 P1-F 后续对照范围；本轮不据此调整路线、地形或战斗逻辑，也不将 Cow Gulch 计为已验收关卡。
