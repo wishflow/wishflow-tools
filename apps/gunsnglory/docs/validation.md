@@ -683,6 +683,6 @@ Wave03 原始请求向量为 [0,0,0,0,0,3,0,0,0,0]。第6项是 pool type7，映
 | 语言与入口 | 站点共享语言状态下，中英文入口、前三波标题及未完成范围说明同步更新。现有 P1-B 入口仍注册，以保留旧内容版本的可读取性。 |
 | 本地 CI | pnpm run test:ci 通过：TypeScript 检查、141 项单元测试、生产构建、49 个 Playwright 场景。专项 pnpm exec playwright test tests/e2e/t22-original-waves.spec.ts 通过，从 Wave01 开始、取得雇用资金、雇佣地图枪手、清除 Wave02 并启动 Wave03。 |
 | 本地内置浏览器 | Codex 内置浏览器本次以4×实际运行前三波：Wave01 结算后显示50生命、$81；Wave02 结算后显示50生命、$107；Wave03 活动截图可见运输组贴图沿地图路线移动，地图保持视口裁切。Wave03 结算时显示44生命、逃脱6、击败45、现金$119。该手动场景未固定随机种子，这些是本次观察值而非稳定断言。随后显示 Wave04 未实现；正式档案仍无 Cow Gulch 结算，战役进度为0/2。 |
-| 发布与公网验证 | 待合并、推送及 GitHub Actions 完成后补记提交、工作流和公网内置浏览器检查结果。 |
+| 发布与公网验证 | 实现提交 `ebeb7ef` 经集成提交 `588b2d5` 合入并推送 `master`（`588b2d52a493b344edcf7bb8ab31a9f26da3d1cf`）。GitHub Actions [run 40818009364](https://github.com/wishflow/wishflow-tools/actions/runs/40818009364) 成功：应用测试、共享站点测试、GitHub Pages 与 Cloudflare Pages 部署均通过；Worker/config 校验按变更范围跳过。Codex 内置浏览器在 `https://wishflow-tools.pages.dev/gunsnglory/?release=588b2d5` 实际运行前三波：Wave01 后生命50/$81，Wave02 后生命50/$107；Wave03 活动截图可见马匹与车厢沿峡谷路线移动，结算显示生命44、逃脱6、击败43、现金$117，并明确停在3/8、Wave04未实现。浏览器控制台 error/warn 为空；既有样本最高分$50、战役进度0/2未变化。本次运行未固定随机种子，结算数字仅为观察值。 |
 
 本节只证明 Cow Gulch Wave03 的 type4/type8 运输切片通过测试；不表示 type5/6 运输对象、其他地图组合、完整战役或 Cow Gulch 整关已完成。完整原版关卡仍为0/60。
