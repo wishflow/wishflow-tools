@@ -48,6 +48,19 @@ test('creates stable source-line breakpoint IDs and rejects unmapped, duplicate,
   assert.throws(() => machine.setBreakpoints(Array(2_001).fill(1)), /exceeds 2000/);
 });
 
+test('combines bounded source and instruction breakpoints in one compiled program', () => {
+  const program = compileTeachingSource('x = 1\nprint(x)');
+  const machine = createTeachingMachine(program);
+
+  assert.deepEqual(machine.setBreakpoints([2], [3]), [
+    { id: 'source-line:2', line: 2, instructionIndex: 2 },
+    { id: 'instruction:3', instructionIndex: 3 },
+  ]);
+  assert.throws(() => machine.setBreakpoints([], [-1]), /outside the compiled program/);
+  assert.throws(() => machine.setBreakpoints([], [program.instructions.length]), /outside the compiled program/);
+  assert.throws(() => machine.setBreakpoints([1], Array(2_000).fill(0)), /exceeds 2000/);
+});
+
 test('pauses before a source breakpoint without changing runtime state or instruction budget', () => {
   const machine = createTeachingMachine(compileTeachingSource('items = [1]\nitems[0] = 2\nprint(items)'));
   const breakpoint = machine.setBreakpoints([2])[0];
@@ -68,6 +81,20 @@ test('pauses before a source breakpoint without changing runtime state or instru
   assert.deepEqual(paused.variables, beforeBreakpoint.variables);
   assert.deepEqual(paused.heap, beforeBreakpoint.heap);
   assert.deepEqual(paused.output, beforeBreakpoint.output);
+});
+
+test('pauses before an instruction breakpoint and records its stable identifier', () => {
+  const machine = createTeachingMachine(compileTeachingSource('x = 1'));
+  machine.setBreakpoints([], [1]);
+
+  stepTeachingMachine(machine);
+  const snapshot = stepTeachingMachine(machine);
+
+  assert.equal(snapshot.pauseReason, 'breakpoint');
+  assert.equal(snapshot.hitBreakpointId, 'instruction:1');
+  assert.equal(snapshot.pc, 1);
+  assert.equal(snapshot.executedInstructionCount, 1);
+  assert.deepEqual(snapshot.stack.map(({ value }) => value), ['1']);
 });
 
 test('skips the current breakpoint once and pauses again when a loop returns to it', () => {

@@ -5,7 +5,7 @@ import type {
   TeachingVmHistory,
   TeachingVmSnapshot,
 } from './types';
-import { MAX_HISTORY_CONTAINER_RECORDS, MAX_HISTORY_SNAPSHOTS } from './resource-limits';
+import { MAX_BREAKPOINT_COUNT, MAX_HISTORY_CONTAINER_RECORDS, MAX_HISTORY_SNAPSHOTS } from './resource-limits';
 import type { TeachingHistoryUpdate, TeachingWorkerIdentity, TeachingWorkerRequest, TeachingWorkerResponse } from './worker-protocol';
 
 export type TeachingStatus = 'loading' | 'ready' | 'compiling' | 'running' | 'paused' | 'finished' | 'error';
@@ -19,11 +19,24 @@ export function useTeachingVm() {
   const sourceRevisionRef = useRef(0);
   const workerReadyRef = useRef(false);
   const historyRef = useRef(EMPTY_HISTORY);
+  const breakpointsRef = useRef({ sourceLines: [] as number[], instructionIndexes: [] as number[] });
   const [status, setStatus] = useState<TeachingStatus>('loading');
   const [program, setProgram] = useState<TeachingCompileResult | null>(null);
   const [history, setHistory] = useState<TeachingVmHistory>(EMPTY_HISTORY);
   const [historyCursor, setHistoryCursor] = useState<number | null>(null);
   const [diagnostic, setDiagnostic] = useState<TeachingDiagnosticSnapshot | null>(null);
+  const [sourceBreakpointLines, setSourceBreakpointLines] = useState<readonly number[]>([]);
+  const [instructionBreakpointIndexes, setInstructionBreakpointIndexes] = useState<readonly number[]>([]);
+
+  const replaceBreakpoints = useCallback((sourceLines: readonly number[], instructionIndexes: readonly number[]) => {
+    const next = {
+      sourceLines: [...sourceLines].sort((left, right) => left - right),
+      instructionIndexes: [...instructionIndexes].sort((left, right) => left - right),
+    };
+    breakpointsRef.current = next;
+    setSourceBreakpointLines(next.sourceLines);
+    setInstructionBreakpointIndexes(next.instructionIndexes);
+  }, []);
 
   const receiveHistoryUpdate = useCallback((update: TeachingHistoryUpdate) => {
     const next = applyHistoryUpdate(historyRef.current, update);
@@ -68,7 +81,12 @@ export function useTeachingVm() {
         receiveHistoryUpdate(message.historyUpdate);
         setHistoryCursor(null);
         setDiagnostic(null);
+        replaceBreakpoints([], []);
         setStatus('ready');
+        return;
+      }
+      if (message.type === 'breakpoints-updated') {
+        replaceBreakpoints(message.sourceLines, message.instructionIndexes);
         return;
       }
       if (message.type === 'run-started') {
@@ -119,7 +137,7 @@ export function useTeachingVm() {
       if (workerRef.current === worker) workerRef.current = null;
       workerReadyRef.current = false;
     };
-  }, [receiveHistoryUpdate]);
+  }, [receiveHistoryUpdate, replaceBreakpoints]);
 
   const invalidate = useCallback(() => {
     const identity = { ...sessionIdentity(), sourceRevision: sourceRevisionRef.current + 1 };
@@ -129,9 +147,10 @@ export function useTeachingVm() {
     setHistory(EMPTY_HISTORY);
     setHistoryCursor(null);
     setDiagnostic(null);
+    replaceBreakpoints([], []);
     setStatus(workerReadyRef.current ? 'ready' : 'loading');
     workerRef.current?.postMessage({ type: 'invalidate', ...identity } satisfies TeachingWorkerRequest);
-  }, [sessionIdentity]);
+  }, [replaceBreakpoints, sessionIdentity]);
 
   const compile = useCallback((source: string) => {
     const worker = workerRef.current;
@@ -143,9 +162,41 @@ export function useTeachingVm() {
     setHistory(EMPTY_HISTORY);
     setHistoryCursor(null);
     setDiagnostic(null);
+    replaceBreakpoints([], []);
     setStatus('compiling');
     worker.postMessage({ type: 'compile', ...identity, source } satisfies TeachingWorkerRequest);
-  }, [sessionIdentity]);
+  }, [replaceBreakpoints, sessionIdentity]);
+
+  const updateBreakpoints = useCallback((sourceLines: readonly number[], instructionIndexes: readonly number[]) => {
+    const worker = workerRef.current;
+    if (!worker || !program || sourceLines.length + instructionIndexes.length > MAX_BREAKPOINT_COUNT) return;
+    const nextSourceLines = [...new Set(sourceLines)].sort((left, right) => left - right);
+    const nextInstructionIndexes = [...new Set(instructionIndexes)].sort((left, right) => left - right);
+    if (nextSourceLines.length + nextInstructionIndexes.length > MAX_BREAKPOINT_COUNT) return;
+    replaceBreakpoints(nextSourceLines, nextInstructionIndexes);
+    worker.postMessage({
+      type: 'set-breakpoints',
+      ...sessionIdentity(),
+      sourceLines: nextSourceLines,
+      instructionIndexes: nextInstructionIndexes,
+    } satisfies TeachingWorkerRequest);
+  }, [program, replaceBreakpoints, sessionIdentity]);
+
+  const toggleSourceBreakpoint = useCallback((line: number) => {
+    const current = breakpointsRef.current;
+    const sourceLines = current.sourceLines.includes(line)
+      ? current.sourceLines.filter((candidate) => candidate !== line)
+      : [...current.sourceLines, line];
+    updateBreakpoints(sourceLines, current.instructionIndexes);
+  }, [updateBreakpoints]);
+
+  const toggleInstructionBreakpoint = useCallback((instructionIndex: number) => {
+    const current = breakpointsRef.current;
+    const instructionIndexes = current.instructionIndexes.includes(instructionIndex)
+      ? current.instructionIndexes.filter((candidate) => candidate !== instructionIndex)
+      : [...current.instructionIndexes, instructionIndex];
+    updateBreakpoints(current.sourceLines, instructionIndexes);
+  }, [updateBreakpoints]);
 
   const step = useCallback(() => {
     if (!program || !isAtHead(history, historyCursor) || (status !== 'ready' && status !== 'paused')) return;
@@ -193,6 +244,8 @@ export function useTeachingVm() {
     historyCursor,
     atHead,
     diagnostic,
+    sourceBreakpointLines,
+    instructionBreakpointIndexes,
     compile,
     step,
     run,
@@ -201,6 +254,8 @@ export function useTeachingVm() {
     invalidate,
     selectHistory,
     goToHead,
+    toggleSourceBreakpoint,
+    toggleInstructionBreakpoint,
   };
 }
 

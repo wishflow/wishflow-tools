@@ -28,6 +28,8 @@ let runGeneration = 0;
 let isRunning = false;
 let pauseRequested = false;
 let lastPublishedStepIndex = -1;
+let breakpointSourceLines: number[] = [];
+let breakpointInstructionIndexes: number[] = [];
 
 function respond(message: TeachingWorkerResponse): void {
   workerScope.postMessage(message);
@@ -73,6 +75,8 @@ function advanceIdentity(identity: TeachingWorkerIdentity): boolean {
     activeIdentity = { ...identity };
     program = null;
     machine = null;
+    breakpointSourceLines = [];
+    breakpointInstructionIndexes = [];
     lastPublishedStepIndex = -1;
   }
   return true;
@@ -124,10 +128,16 @@ async function runLoop(identity: TeachingWorkerIdentity, generation: number): Pr
       if (generation !== runGeneration || !identityMatches(identity) || !machine) return;
       if (pauseRequested) break;
       const snapshot = stepTeachingMachine(machine, 'running');
-      if (snapshot.status === 'finished' || snapshot.status === 'error') break;
+      if (snapshot.status !== 'running') break;
     }
 
     if (generation !== runGeneration || !identityMatches(identity) || !machine) return;
+    if (machine.current.status === 'paused') {
+      isRunning = false;
+      pauseRequested = false;
+      sendSnapshot('paused', identity);
+      return;
+    }
     if (pauseRequested) continue;
     if (machine.current.status === 'finished' || machine.current.status === 'error') {
       isRunning = false;
@@ -155,6 +165,8 @@ function handleRequest(request: TeachingWorkerRequest): void {
   if (request.type === 'compile') {
     if (!advanceIdentity(request)) return;
     try {
+      breakpointSourceLines = [];
+      breakpointInstructionIndexes = [];
       program = compileTeachingSource(request.source);
       machine = createTeachingMachine(program);
       respond({
@@ -179,6 +191,27 @@ function handleRequest(request: TeachingWorkerRequest): void {
   }
 
   if (!identityMatches(request)) return;
+  if (request.type === 'set-breakpoints') {
+    if (!machine || !program || isRunning) return;
+    try {
+      machine.setBreakpoints(request.sourceLines, request.instructionIndexes);
+      breakpointSourceLines = [...request.sourceLines];
+      breakpointInstructionIndexes = [...request.instructionIndexes];
+      respond({
+        type: 'breakpoints-updated',
+        ...identityOf(request),
+        sourceLines: [...breakpointSourceLines],
+        instructionIndexes: [...breakpointInstructionIndexes],
+      });
+    } catch (error) {
+      respond({
+        type: 'worker-error',
+        ...identityOf(request),
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
   if (request.type === 'pause') {
     if (isRunning) pauseRequested = true;
     return;
@@ -191,6 +224,7 @@ function handleRequest(request: TeachingWorkerRequest): void {
     }
     cancelRun();
     machine = createTeachingMachine(program);
+    machine.setBreakpoints(breakpointSourceLines, breakpointInstructionIndexes);
     respond({
       type: 'snapshot',
       ...identityOf(request),

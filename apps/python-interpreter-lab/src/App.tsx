@@ -179,10 +179,14 @@ export default function App() {
             status={teaching.status}
             sourceLink={sourceLink}
             isBusy={teaching.status === 'compiling' || teaching.status === 'running'}
+            sourceBreakpointLines={teaching.sourceBreakpointLines}
+            instructionBreakpointIndexes={teaching.instructionBreakpointIndexes}
             t={t}
             onSelectHistory={teaching.selectHistory}
             onGoToHead={teaching.goToHead}
             onLink={setSourceLink}
+            onToggleSourceBreakpoint={teaching.toggleSourceBreakpoint}
+            onToggleInstructionBreakpoint={teaching.toggleInstructionBreakpoint}
           />
         )}
       </div>

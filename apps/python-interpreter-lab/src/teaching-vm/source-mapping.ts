@@ -2,6 +2,7 @@ import { MAX_BREAKPOINT_COUNT } from './resource-limits';
 import type {
   TeachingBreakpoint,
   TeachingCompileResult,
+  TeachingInstructionBreakpoint,
   TeachingSourceLineMapping,
 } from './types';
 
@@ -55,4 +56,35 @@ export function createTeachingBreakpoints(
   }
 
   return Object.freeze(breakpoints.sort((left, right) => left.line - right.line));
+}
+
+/** Creates canonical, serializable instruction breakpoints for one compiled program. */
+export function createTeachingInstructionBreakpoints(
+  program: TeachingCompileResult,
+  instructionIndexes: readonly number[],
+): readonly TeachingInstructionBreakpoint[] {
+  if (instructionIndexes.length > MAX_BREAKPOINT_COUNT) {
+    throw new RangeError(`Breakpoint count exceeds ${MAX_BREAKPOINT_COUNT}.`);
+  }
+
+  const seenIndexes = new Set<number>();
+  const breakpoints: TeachingInstructionBreakpoint[] = [];
+
+  for (const instructionIndex of instructionIndexes) {
+    if (!Number.isSafeInteger(instructionIndex)
+      || instructionIndex < 0
+      || instructionIndex >= program.instructions.length) {
+      throw new RangeError(`Instruction breakpoint ${instructionIndex} is outside the compiled program.`);
+    }
+    if (seenIndexes.has(instructionIndex)) {
+      throw new RangeError(`Duplicate instruction ${instructionIndex} breakpoint.`);
+    }
+    seenIndexes.add(instructionIndex);
+    breakpoints.push(Object.freeze({
+      id: `instruction:${instructionIndex}`,
+      instructionIndex,
+    }));
+  }
+
+  return Object.freeze(breakpoints.sort((left, right) => left.instructionIndex - right.instructionIndex));
 }

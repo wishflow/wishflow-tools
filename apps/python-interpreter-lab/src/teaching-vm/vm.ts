@@ -1,7 +1,9 @@
 import {
   createTeachingBreakpoints,
+  createTeachingInstructionBreakpoints,
 } from './source-mapping';
 import {
+  MAX_BREAKPOINT_COUNT,
   MAX_HISTORY_SNAPSHOTS,
   MAX_ACTIVE_FRAME_COUNT,
   MAX_CONTAINER_ENTRIES,
@@ -25,6 +27,8 @@ import {
   type TeachingFunction,
   type TeachingHeapObjectSnapshot,
   type TeachingInstruction,
+  type TeachingInstructionBreakpoint,
+  type TeachingBreakpointState,
   type TeachingValueSnapshot,
   type TeachingVmHistory,
   type TeachingPauseReason,
@@ -125,7 +129,8 @@ export class TeachingMachine {
   #diagnostic: TeachingDiagnosticSnapshot | null = null;
   #pauseReason: TeachingPauseReason = null;
   #hitBreakpointId: string | null = null;
-  #breakpoints = new Map<number, TeachingBreakpoint>();
+  #sourceBreakpoints = new Map<number, TeachingBreakpoint>();
+  #instructionBreakpoints = new Map<number, TeachingInstructionBreakpoint>();
   #skipBreakpointInstructionIndex: number | null = null;
   #history: TeachingVmSnapshot[] = [];
   #historyContainerRecordCount = 0;
@@ -177,13 +182,25 @@ export class TeachingMachine {
     });
   }
 
-  get breakpoints(): readonly TeachingBreakpoint[] {
-    return Object.freeze([...this.#breakpoints.values()]);
+  get breakpoints(): readonly TeachingBreakpointState[] {
+    return Object.freeze([
+      ...this.#sourceBreakpoints.values(),
+      ...this.#instructionBreakpoints.values(),
+    ]);
   }
 
-  setBreakpoints(sourceLines: readonly number[]): readonly TeachingBreakpoint[] {
-    const breakpoints = createTeachingBreakpoints(this.program, sourceLines);
-    this.#breakpoints = new Map(breakpoints.map((breakpoint) => [breakpoint.instructionIndex, breakpoint]));
+  setBreakpoints(
+    sourceLines: readonly number[],
+    instructionIndexes: readonly number[] = [],
+  ): readonly TeachingBreakpointState[] {
+    const totalCount = sourceLines.length + instructionIndexes.length;
+    if (totalCount > MAX_BREAKPOINT_COUNT) {
+      throw new RangeError(`Breakpoint count exceeds ${MAX_BREAKPOINT_COUNT}.`);
+    }
+    const sourceBreakpoints = createTeachingBreakpoints(this.program, sourceLines);
+    const instructionBreakpoints = createTeachingInstructionBreakpoints(this.program, instructionIndexes);
+    this.#sourceBreakpoints = new Map(sourceBreakpoints.map((breakpoint) => [breakpoint.instructionIndex, breakpoint]));
+    this.#instructionBreakpoints = new Map(instructionBreakpoints.map((breakpoint) => [breakpoint.instructionIndex, breakpoint]));
     this.#skipBreakpointInstructionIndex = null;
     return this.breakpoints;
   }
@@ -201,7 +218,8 @@ export class TeachingMachine {
       return this.recordStep();
     }
 
-    const breakpoint = this.#breakpoints.get(executingFrame.pc);
+    const breakpoint = this.#sourceBreakpoints.get(executingFrame.pc)
+      ?? this.#instructionBreakpoints.get(executingFrame.pc);
     const skipBreakpoint = this.#skipBreakpointInstructionIndex === executingFrame.pc;
     this.#skipBreakpointInstructionIndex = null;
     if (breakpoint && !skipBreakpoint) {

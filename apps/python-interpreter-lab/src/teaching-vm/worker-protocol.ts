@@ -20,6 +20,7 @@ export type TeachingWorkerRequest =
   | ({ type: 'compile'; source: string } & TeachingWorkerIdentity)
   | ({ type: 'invalidate' } & TeachingWorkerIdentity)
   | ({ type: 'step' } & TeachingWorkerIdentity)
+  | ({ type: 'set-breakpoints'; sourceLines: number[]; instructionIndexes: number[] } & TeachingWorkerIdentity)
   | ({ type: 'run' } & TeachingWorkerIdentity)
   | ({ type: 'pause' } & TeachingWorkerIdentity)
   | ({ type: 'reset' } & TeachingWorkerIdentity);
@@ -33,6 +34,7 @@ export type TeachingWorkerResponse =
   | ({ type: 'run-batch'; snapshot: TeachingVmSnapshot; historyUpdate: TeachingHistoryUpdate } & TeachingWorkerIdentity)
   | ({ type: 'paused'; snapshot: TeachingVmSnapshot; historyUpdate: TeachingHistoryUpdate } & TeachingWorkerIdentity)
   | ({ type: 'run-complete'; snapshot: TeachingVmSnapshot; historyUpdate: TeachingHistoryUpdate } & TeachingWorkerIdentity)
+  | ({ type: 'breakpoints-updated'; sourceLines: number[]; instructionIndexes: number[] } & TeachingWorkerIdentity)
   | ({ type: 'error'; diagnostic: TeachingDiagnosticSnapshot } & TeachingWorkerIdentity)
   | ({ type: 'worker-error'; message: string } & TeachingWorkerIdentity);
 

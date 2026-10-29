@@ -64,6 +64,68 @@ test('compiles teaching instructions, steps the value stack, prints, and browses
   await expect(page.getByRole('combobox', { name: 'Execution view' })).toHaveValue('teaching');
 });
 
+test('sets source-line and instruction breakpoints with keyboard controls and locates their pauses', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill('# ignored comment\n\nx = 1\nprint(x)');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+
+  const instructions = page.locator('.teaching-instruction-table');
+  const sourceBreakpoint = instructions.getByRole('button', { name: 'Set source breakpoint at line 4' });
+  await expect(sourceBreakpoint).toBeVisible();
+  await expect(instructions.getByRole('button', { name: 'Set source breakpoint at line 1' })).toHaveCount(0);
+  await expect(instructions.getByRole('button', { name: 'Set source breakpoint at line 2' })).toHaveCount(0);
+
+  await sourceBreakpoint.focus();
+  await sourceBreakpoint.press('Enter');
+  const instructionBreakpoint = instructions.getByRole('button', { name: 'Set instruction breakpoint at instruction 3' });
+  await instructionBreakpoint.focus();
+  await instructionBreakpoint.press('Enter');
+
+  const breakpointList = page.getByRole('region', { name: 'Teaching breakpoints' });
+  await expect(breakpointList).toContainText('Source line 4');
+  await expect(breakpointList).toContainText('Instruction 3');
+  await expect(instructions.getByRole('button', { name: 'Remove source breakpoint at line 4' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(instructions.getByRole('button', { name: 'Remove instruction breakpoint at instruction 3' })).toHaveAttribute('aria-pressed', 'true');
+  await breakpointList.getByRole('button', { name: 'Locate source breakpoint at line 4' }).click();
+  await expect.poll(() => source.evaluate((editor: HTMLTextAreaElement) => editor.value.slice(editor.selectionStart, editor.selectionEnd))).toBe('x');
+  await breakpointList.getByRole('button', { name: 'Locate instruction breakpoint at instruction 3' }).click();
+  await expect.poll(() => source.evaluate((editor: HTMLTextAreaElement) => editor.value.slice(editor.selectionStart, editor.selectionEnd))).toBe('print(x)');
+
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.locator('.teaching-breakpoint-status')).toContainText('Paused before source line 4');
+  await expect(instructions.locator('tbody tr').nth(2)).toHaveClass(/is-vm-breakpoint/);
+  await expect(page.locator('.teaching-instruction-count')).toContainText('2 of 5,000');
+
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.locator('.teaching-breakpoint-status')).toContainText('Paused before instruction 3');
+  await expect(page.locator('.teaching-instruction-count')).toContainText('3 of 5,000');
+
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText('1');
+
+  await page.getByRole('button', { name: 'Reset teaching VM' }).click();
+  await expect(instructions.getByRole('button', { name: 'Remove source breakpoint at line 4' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(instructions.getByRole('button', { name: 'Remove instruction breakpoint at instruction 3' })).toHaveAttribute('aria-pressed', 'true');
+
+  await breakpointList.getByRole('button', { name: 'Remove source breakpoint at line 4' }).click();
+  await breakpointList.getByRole('button', { name: 'Remove instruction breakpoint at instruction 3' }).click();
+  await expect(breakpointList).toContainText('No breakpoints are set.');
+
+  await instructions.getByRole('button', { name: 'Set source breakpoint at line 4' }).click();
+  await source.fill('# ignored comment\n\nx = 1\nprint(x)\n');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  const refreshedBreakpointList = page.getByRole('region', { name: 'Teaching breakpoints' });
+  await expect(refreshedBreakpointList).toContainText('No breakpoints are set.');
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  const localizedBreakpointList = page.getByRole('region', { name: '教学断点' });
+  await expect(localizedBreakpointList).toContainText('尚未设置断点。');
+  await instructions.getByRole('button', { name: '在第 4 行设置源码断点' }).click();
+  await expect(localizedBreakpointList).toContainText('源码第 4 行');
+  await expect(instructions.getByRole('button', { name: '移除第 4 行源码断点' })).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('shows localized teaching syntax and runtime errors with source locations', async ({ page }) => {
   await chooseTeachingVm(page);
   const source = page.getByRole('textbox', { name: 'Python source' });

@@ -11,6 +11,8 @@ import type {
 } from '../teaching-vm/types';
 import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
 import type { MessageKey } from '../locales';
+import { MAX_BREAKPOINT_COUNT } from '../teaching-vm/resource-limits';
+import { mapTeachingSourceLines } from '../teaching-vm/source-mapping';
 import { TeachingHeapPanel, TeachingValueDisplay, useTeachingHeapNavigation } from './TeachingHeapPanel';
 
 interface TeachingVmPanelProps {
@@ -23,10 +25,14 @@ interface TeachingVmPanelProps {
   status: TeachingStatus;
   sourceLink: SourceLink | null;
   isBusy: boolean;
+  sourceBreakpointLines: readonly number[];
+  instructionBreakpointIndexes: readonly number[];
   t: (key: MessageKey) => string;
   onSelectHistory(stepIndex: number): void;
   onGoToHead(): void;
   onLink(link: SourceLink): void;
+  onToggleSourceBreakpoint(line: number): void;
+  onToggleInstructionBreakpoint(instructionIndex: number): void;
 }
 
 function sourceRange(span: SourceSpan) {
@@ -453,6 +459,13 @@ const TeachingInstructionRow = memo(function TeachingInstructionRow({
   isCurrent,
   isNext,
   isFault,
+  isBreakpointHit,
+  isSourceBreakpoint,
+  isInstructionBreakpoint,
+  breakpointCount,
+  isBusy,
+  onToggleSourceBreakpoint,
+  onToggleInstructionBreakpoint,
 }: {
   instruction: TeachingCompileResult['instructions'][number];
   program: TeachingCompileResult;
@@ -462,6 +475,13 @@ const TeachingInstructionRow = memo(function TeachingInstructionRow({
   isCurrent: boolean;
   isNext: boolean;
   isFault: boolean;
+  isBreakpointHit: boolean;
+  isSourceBreakpoint: boolean | null;
+  isInstructionBreakpoint: boolean;
+  breakpointCount: number;
+  isBusy: boolean;
+  onToggleSourceBreakpoint(line: number): void;
+  onToggleInstructionBreakpoint(instructionIndex: number): void;
 }) {
   const isOrigin = sourceLink?.origin.kind === 'teaching' && sourceLink.origin.index === instruction.index;
   const classes = [
@@ -470,7 +490,10 @@ const TeachingInstructionRow = memo(function TeachingInstructionRow({
     isCurrent ? 'is-vm-current' : '',
     isNext ? 'is-vm-next' : '',
     isFault ? 'is-vm-fault' : '',
+    isSourceBreakpoint || isInstructionBreakpoint ? 'has-vm-breakpoint' : '',
+    isBreakpointHit ? 'is-vm-breakpoint' : '',
   ].filter(Boolean).join(' ');
+  const breakpointLimitReached = breakpointCount >= MAX_BREAKPOINT_COUNT;
 
   return (
     <tr className={classes}>
@@ -487,6 +510,34 @@ const TeachingInstructionRow = memo(function TeachingInstructionRow({
           {positionLabel(instruction.span, t)}
         </button>
       </td>
+      <td className="instruction-breakpoint-actions">
+        <div role="group" aria-label={t('teachingBreakpointControls').replace('{index}', String(instruction.index))}>
+          {isSourceBreakpoint !== null && (
+            <button
+              type="button"
+              className="breakpoint-toggle"
+              aria-pressed={isSourceBreakpoint}
+              aria-label={t(isSourceBreakpoint ? 'teachingRemoveSourceBreakpoint' : 'teachingSetSourceBreakpoint').replace('{line}', String(instruction.span.line))}
+              disabled={isBusy || (!isSourceBreakpoint && breakpointLimitReached)}
+              onClick={() => onToggleSourceBreakpoint(instruction.span.line)}
+            >
+              <span className="breakpoint-indicator" aria-hidden="true">●</span>
+              <span>{t('teachingSourceBreakpointShort')}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="breakpoint-toggle"
+            aria-pressed={isInstructionBreakpoint}
+            aria-label={t(isInstructionBreakpoint ? 'teachingRemoveInstructionBreakpoint' : 'teachingSetInstructionBreakpoint').replace('{index}', String(instruction.index))}
+            disabled={isBusy || (!isInstructionBreakpoint && breakpointLimitReached)}
+            onClick={() => onToggleInstructionBreakpoint(instruction.index)}
+          >
+            <span className="breakpoint-indicator" aria-hidden="true">◆</span>
+            <span>{t('teachingInstructionBreakpointShort')}</span>
+          </button>
+        </div>
+      </td>
     </tr>
   );
 });
@@ -495,21 +546,92 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
   program,
   snapshot,
   sourceLink,
+  sourceBreakpointLines,
+  instructionBreakpointIndexes,
+  isBusy,
   t,
   onLink,
+  onToggleSourceBreakpoint,
+  onToggleInstructionBreakpoint,
 }: {
   program: TeachingCompileResult;
   snapshot: TeachingVmSnapshot | null;
   sourceLink: SourceLink | null;
+  sourceBreakpointLines: readonly number[];
+  instructionBreakpointIndexes: readonly number[];
+  isBusy: boolean;
   t: (key: MessageKey) => string;
   onLink(link: SourceLink): void;
+  onToggleSourceBreakpoint(line: number): void;
+  onToggleInstructionBreakpoint(instructionIndex: number): void;
 }) {
+  const sourceInstructionByLine = new Map(mapTeachingSourceLines(program)
+    .map(({ line, instructionIndex }) => [line, instructionIndex]));
+  const sourceBreakpoints = sourceBreakpointLines.flatMap((line) => {
+    const instructionIndex = sourceInstructionByLine.get(line);
+    const instruction = instructionIndex === undefined ? undefined : program.instructions[instructionIndex];
+    return instruction ? [{ line, instruction }] : [];
+  });
+  const instructionBreakpoints = instructionBreakpointIndexes.flatMap((instructionIndex) => {
+    const instruction = program.instructions[instructionIndex];
+    return instruction ? [{ instructionIndex, instruction }] : [];
+  });
+  const sourceBreakpointLineSet = new Set(sourceBreakpointLines);
+  const instructionBreakpointIndexSet = new Set(instructionBreakpointIndexes);
+  const breakpointCount = sourceBreakpoints.length + instructionBreakpoints.length;
+  const breakpointPauseLabel = snapshot?.pauseReason === 'breakpoint' && snapshot.hitBreakpointId
+    ? snapshot.hitBreakpointId.startsWith('source-line:')
+      ? t('teachingPausedBeforeSourceLine').replace('{line}', snapshot.hitBreakpointId.slice('source-line:'.length))
+      : t('teachingPausedBeforeInstruction').replace('{index}', snapshot.hitBreakpointId.slice('instruction:'.length))
+    : null;
+
   return (
     <section className="panel output-panel" aria-labelledby="teaching-bytecode-heading">
       <div className="output-panel-heading">
         <h3 id="teaching-bytecode-heading">{t('teachingBytecode')}</h3>
         <span className="small-meta">{program.version}</span>
       </div>
+      <section className="teaching-breakpoint-panel" role="region" aria-label={t('teachingBreakpoints')} aria-live="polite">
+        <div className="teaching-breakpoint-heading">
+          <h4>{t('teachingBreakpoints')}</h4>
+          <span className="small-meta">{breakpointCount} / {MAX_BREAKPOINT_COUNT}</span>
+        </div>
+        {breakpointPauseLabel && <p className="teaching-breakpoint-status" role="status">{breakpointPauseLabel}</p>}
+        {breakpointCount === 0 ? (
+          <p className="empty-state">{t('teachingNoBreakpoints')}</p>
+        ) : (
+          <ul className="teaching-breakpoint-list">
+            {sourceBreakpoints.map(({ line, instruction }) => (
+              <li key={`source-${line}`}>
+                <span><strong>{t('teachingSourceBreakpointEntry').replace('{line}', String(line))}</strong><code>{t('teachingInstructionIndex')} {instruction.index}</code></span>
+                <button
+                  type="button"
+                  className="bytecode-locator"
+                  aria-label={t('teachingLocateSourceBreakpoint').replace('{line}', String(line))}
+                  onClick={() => onLink({ origin: { kind: 'teaching', index: instruction.index }, range: sourceRange(instruction.span) })}
+                >{positionLabel(instruction.span, t)}</button>
+                <button type="button" className="text-button" onClick={() => onToggleSourceBreakpoint(line)}>
+                  {t('teachingRemoveSourceBreakpoint').replace('{line}', String(line))}
+                </button>
+              </li>
+            ))}
+            {instructionBreakpoints.map(({ instructionIndex, instruction }) => (
+              <li key={`instruction-${instructionIndex}`}>
+                <span><strong>{t('teachingInstructionBreakpointEntry').replace('{index}', String(instructionIndex))}</strong><code>{positionLabel(instruction.span, t)}</code></span>
+                <button
+                  type="button"
+                  className="bytecode-locator"
+                  aria-label={t('teachingLocateInstructionBreakpoint').replace('{index}', String(instructionIndex))}
+                  onClick={() => onLink({ origin: { kind: 'teaching', index: instructionIndex }, range: sourceRange(instruction.span) })}
+                >{t('locate')}</button>
+                <button type="button" className="text-button" onClick={() => onToggleInstructionBreakpoint(instructionIndex)}>
+                  {t('teachingRemoveInstructionBreakpoint').replace('{index}', String(instructionIndex))}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
       <div className="teaching-instruction-legend" aria-label={t('teachingBytecode')}>
         <span><i className="teaching-state-swatch swatch-current" aria-hidden="true" />{t('teachingCurrentInstruction')}</span>
         <span><i className="teaching-state-swatch swatch-next" aria-hidden="true" />{t('teachingNextInstruction')}</span>
@@ -523,6 +645,7 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
               <th scope="col">{t('opcode')}</th>
               <th scope="col">{t('argument')}</th>
               <th scope="col">{t('line')}</th>
+              <th scope="col">{t('teachingBreakpoints')}</th>
             </tr>
           </thead>
           <tbody>
@@ -530,6 +653,7 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
               const isFault = snapshot?.faultInstructionIndex === instruction.index;
               const isCurrent = snapshot?.lastExecutedInstructionIndex === instruction.index && !isFault;
               const isNext = snapshot?.nextInstructionIndex === instruction.index && !isFault && !isCurrent;
+              const firstInstructionForLine = sourceInstructionByLine.get(instruction.span.line) === instruction.index;
               return (
                 <TeachingInstructionRow
                   key={instruction.index}
@@ -541,6 +665,18 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
                   isCurrent={isCurrent}
                   isNext={isNext}
                   isFault={isFault}
+                  isBreakpointHit={Boolean(snapshot?.pauseReason === 'breakpoint'
+                    && snapshot.nextInstructionIndex === instruction.index
+                    && (snapshot.hitBreakpointId === `source-line:${instruction.span.line}`
+                      || snapshot.hitBreakpointId === `instruction:${instruction.index}`))}
+                  isSourceBreakpoint={firstInstructionForLine
+                    ? sourceBreakpointLineSet.has(instruction.span.line)
+                    : null}
+                  isInstructionBreakpoint={instructionBreakpointIndexSet.has(instruction.index)}
+                  breakpointCount={breakpointCount}
+                  isBusy={isBusy}
+                  onToggleSourceBreakpoint={onToggleSourceBreakpoint}
+                  onToggleInstructionBreakpoint={onToggleInstructionBreakpoint}
                 />
               );
             })}
@@ -552,7 +688,7 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
 });
 
 export function TeachingVmPanel(props: TeachingVmPanelProps) {
-  const { program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, t, onSelectHistory, onGoToHead, onLink } = props;
+  const { program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, sourceBreakpointLines, instructionBreakpointIndexes, t, onSelectHistory, onGoToHead, onLink, onToggleSourceBreakpoint, onToggleInstructionBreakpoint } = props;
   const { focusedObjectId, onLocateObject } = useTeachingHeapNavigation(snapshot);
   const shownDiagnostic = diagnostic ?? snapshot?.diagnostic ?? null;
   const historyStart = history.items[0]?.stepIndex ?? 0;
@@ -575,7 +711,18 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
         <div className="teaching-content">
           <div className="teaching-structure-grid">
             <TeachingAstPanel program={program} sourceLink={sourceLink} t={t} onLink={onLink} />
-            <TeachingInstructionPanel program={program} snapshot={snapshot} sourceLink={sourceLink} t={t} onLink={onLink} />
+            <TeachingInstructionPanel
+              program={program}
+              snapshot={snapshot}
+              sourceLink={sourceLink}
+              sourceBreakpointLines={sourceBreakpointLines}
+              instructionBreakpointIndexes={instructionBreakpointIndexes}
+              isBusy={isBusy}
+              t={t}
+              onLink={onLink}
+              onToggleSourceBreakpoint={onToggleSourceBreakpoint}
+              onToggleInstructionBreakpoint={onToggleInstructionBreakpoint}
+            />
           </div>
 
           <section className="panel teaching-runtime-panel" aria-labelledby="teaching-runtime-heading">
@@ -598,7 +745,7 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
               />
               <span className="small-meta">{t('teachingHistoryPosition').replace('{current}', String(historyValue)).replace('{last}', String(historyEnd))}</span>
             </div>
-            <p className="small-meta">
+            <p className="small-meta teaching-instruction-count">
               {t('teachingInstructionCount').replace('{count}', String(snapshot?.executedInstructionCount ?? 0))}
             </p>
             <div className="teaching-history-state" role="status">

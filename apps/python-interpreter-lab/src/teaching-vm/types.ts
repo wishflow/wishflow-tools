@@ -314,6 +314,13 @@ export interface TeachingBreakpoint {
   instructionIndex: number;
 }
 
+export interface TeachingInstructionBreakpoint {
+  id: string;
+  instructionIndex: number;
+}
+
+export type TeachingBreakpointState = TeachingBreakpoint | TeachingInstructionBreakpoint;
+
 export interface TeachingFunction {
   id: number;
   name: string;
