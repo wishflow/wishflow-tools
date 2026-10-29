@@ -55,7 +55,7 @@
 - **检查点 A（T01）**：已通过真实 Pyodide/CPython 边界用例；事件 DTO 是有界普通数据，快照耗尽不影响 P3 事件。
 - **检查点 B（T02）**：已通过回放、全局/帧切换和键盘展开用例；用户仅移动观察位置，不重新执行 Python。
 - **检查点 C（T03）**：已通过独立差异单测和浏览器回放用例；截断范围不误报新增/移除。
-- **完成门（T04）**：本地、CI/CD 与线上验收均通过后，才将 P4 标为完成并开始 P5。
+- **完成门（T04）**：本地、CI/CD 与线上验收均已通过；P4 已发布，可以按 P5 启动规则继续。
 
 ## 执行记录
 
@@ -64,4 +64,4 @@
 | T01 Worker 有界快照 | 本地通过 | 应用 Playwright 真实 Pyodide/CPython 用例验证历史值冻结、递归帧身份、标量与容器安全、循环引用、自定义对象边界，以及每事件/每运行快照预算。 |
 | T02 变量快照界面 | 本地通过 | Playwright 验证全局/帧切换、回放同步、原生容器键盘展开及 320/768/1024/1440px 无横向溢出。 |
 | T03 相邻事件差异 | 本地通过 | 19/19 单测及 Playwright 验证新增/变化、帧返回移除、差异上下文和键盘切换；行事件仍标明执行前状态。 |
-| T04 回归与发布 | 本地回归通过，待发布 | 应用 `pnpm run test:ci`：类型检查、19/19 单测、构建、20/20 Playwright 通过；根 `pnpm run test:catalog` 14/14、`pnpm run build:site` 通过。提交、CI/CD 和线上验收尚未完成。 |
+| T04 回归与发布 | 已完成并发布 | 本地应用 `pnpm run test:ci`：类型检查、19/19 单测、构建、20/20 Playwright 通过；根 `pnpm run test:catalog` 14/14、`pnpm run build:site` 通过。提交 `85719da` 合入并推送 `master`（发布提交 `ec062c7`）；workflow [40819932964](https://github.com/wishflow/wishflow-tools/actions/runs/40819932964) 的共享检查、Python 应用 CI、Cloudflare Pages 和 GitHub Pages 均成功，Worker 部署按变更分类跳过。线上 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/) 确认 Pyodide 314.0.7 / CPython 3.14.2；嵌套帧切换正确显示父子局部变量；相邻事件差异显示列表从 `[1]` 变为 `[1, 2]`，切换观察视图未重新执行代码。 |

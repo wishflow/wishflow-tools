@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线、P1 真实编译工作区、P2 Token/源码联动和 P3 真实执行轨迹均已完成并发布到 `master`。P1–P3 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)。P4 的详细规格和任务已确认，Worker 快照 DTO、帧身份语义与资源预算以 P4 spec 为准。P4 实现和本地回归已通过，CI/CD 发布及线上验收仍待完成，当前不能视为已发布。
+P0 文档基线、P1 真实编译工作区、P2 Token/源码联动、P3 真实执行轨迹和 P4 结构化变量与历史观察均已完成并发布到 `master`。P1–P4 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)。P4 实现、CI/CD 发布和线上验收均已通过，可按 P5 启动规则进入教学 Mini VM 阶段。
 
 P0 建立了以下文档：
 
@@ -107,12 +107,12 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **当前结果**：应用 `pnpm run test:ci` 通过（13 条单测、15 条 Playwright）；根 `pnpm run test:catalog` 14 项通过，`pnpm run build:site` 成功。Playwright 实测 CPython 调用/行/返回与异常、全局读取、循环重复行、事件回放不重复输出、停止/超时/Retry、源码编辑清理旧轨迹、事件与输出上限及 320/768/1024/1440px 布局。提交 `bdba3e8` 推送后，workflow [40810018154](https://github.com/wishflow/wishflow-tools/actions/runs/40810018154) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。线上固定版本 CPython 3.14.2 实测全局变量函数输出 `42`、8 个事件、源码行定位及回放输出；死循环可停止，重载运行时后再次运行成功。P3 已独立发布，下一阶段按 P4 启动规则补充 spec/tasks。
 - **回滚**：回退运行与轨迹入口，保留静态编译观察。终止或超限留下的历史明确标为不完整。
 
-### P4：结构化变量与历史观察（本地验证通过，待发布）
+### P4：结构化变量与历史观察（已发布）
 
 - **前置**：P3 已发布；[P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md) 已确认。
 - **交付**：按事件查看各帧局部/全局变量、基础容器、有限深度展开和相邻事件变化；历史快照保持事件发生时的值。P3 的基础值摘要继续可用。
 - **验收**：局部/全局作用域与帧切换正确；列表先后修改不会污染旧事件；大整数不失真；循环引用、长字符串和深容器可控展示；自定义 `repr`、属性或迭代器不会因查看变量被执行；截断范围不误报变量增删；异常与连续运行后代理和采集资源正确释放。详见 P4 spec §6。
-- **本地验证**：应用 `pnpm run test:ci` 通过（19 条单测、20 条 Playwright）；根 `pnpm run test:catalog` 14/14 通过，`pnpm run build:site` 成功。发布 workflow 与正式站点实测仍待完成。
+- **验证与发布**：应用 `pnpm run test:ci` 通过（19 条单测、20 条 Playwright）；根 `pnpm run test:catalog` 14/14 通过，`pnpm run build:site` 成功。提交 `85719da` 合入 `master` 后推送提交 `ec062c7`；workflow [40819932964](https://github.com/wishflow/wishflow-tools/actions/runs/40819932964) 中共享检查、Python 应用测试、Cloudflare Pages 和 GitHub Pages 均成功，Worker 部署按变更分类跳过。线上 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/) 实测 Pyodide 314.0.7 / CPython 3.14.2：嵌套 `outer`/`inner` 帧分别显示 `parent`、`child` 局部变量；相邻事件差异显示列表从 `[1]` 变为 `[1, 2]`；移动观察位置和切换视图未重新运行代码或增加事件。
 - **回滚**：恢复 P3 的基础摘要；本阶段不引入跨版本历史持久化，不需要存档迁移。
 
 ### P5：最小教学 VM，打通真正逐指令执行
