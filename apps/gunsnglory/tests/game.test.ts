@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { cowGulchContent } from '../src/content/cow-gulch';
+import { cowGulchContent, cowGulchP1aSampleContent } from '../src/content/cow-gulch';
 import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { createGame, type GameSession, type ScenarioContent, type UnitView } from '../src/game';
@@ -90,7 +90,13 @@ const upgradeScenario: ScenarioContent = {
   },
   units: combatScenario.units.map((unit) => ({ ...unit, upgradeLevels: [gunslingerUpgradeLevelOne] })),
 };
-const noCombatCowGulch: ScenarioContent = { ...cowGulchContent, units: [] };
+const noCombatCowGulch: ScenarioContent = {
+  ...cowGulchContent,
+  units: [],
+  campaignWaveCount: undefined,
+  campaignWaves: undefined,
+};
+const noCombatCowGulchCampaign: ScenarioContent = { ...cowGulchContent, units: [] };
 const formalPreviewCowGulch: ScenarioContent = {
   ...cowGulchContent,
   campaignWaveCount: undefined,
@@ -107,6 +113,17 @@ function advanceFor(session: GameSession, durationMs: number) {
   }
   return view;
 }
+
+test('starts an original campaign automatically without a start-wave intent', async () => {
+  const session = await createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } }).open({
+    scenarioId: cowGulchContent.id,
+    mode: 'formal',
+    randomSeed: 1234,
+  });
+
+  assert.equal(session.observe().wave?.phase, 'active');
+  assert.equal(session.submitIntent({ type: 'start-wave' }), false);
+});
 
 test('opens a controlled scene with one unselected unit and isolates observations', async () => {
   const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
@@ -149,15 +166,15 @@ test('Cow Gulch exposes the unscaled APK requests for the first two campaign wav
 });
 
 test('runs the first two original Cow Gulch waves without settling a partial campaign', async () => {
-  const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } }).open({
+  const session = await createGame({ scenarios: { 'cow-gulch': noCombatCowGulchCampaign } }).open({
     scenarioId: 'cow-gulch',
     mode: 'formal',
     randomSeed: 42,
   });
   const runWave = async (number: number) => {
     const groups: Array<{ requestType: number; groupSize: number }> = [];
-    assert.equal(session.submitIntent({ type: 'start-wave' }), true);
-    let view = session.advance({ deltaMs: 0 });
+    let view = session.observe();
+    assert.equal(view.wave?.phase, 'active');
     let steps = 0;
     while (view.wave?.phase === 'active' && view.wave.number === number && steps < 4000) {
       view = session.advance({ deltaMs: 100 });
@@ -172,7 +189,7 @@ test('runs the first two original Cow Gulch waves without settling a partial cam
 
   const waveOne = await runWave(1);
   assert.equal(waveOne.view.wave?.number, 2);
-  assert.equal(waveOne.view.wave?.phase, 'not-started');
+  assert.equal(waveOne.view.wave?.phase, 'active', 'the following original wave starts automatically');
   assert.equal(waveOne.view.wave?.lives, 34);
   assert.equal(waveOne.view.wave?.dynamicDifficulty, 507);
   assert.equal(waveOne.view.wave?.pendingSpawnRequests, 4);
@@ -447,9 +464,9 @@ test('the original Cow Gulch first wave reaches the Gunslinger special reload th
     mode: 'formal',
     randomSeed: 42,
   });
-  assert.equal(session.submitIntent({ type: 'start-wave' }), true);
+  assert.equal(session.observe().wave?.phase, 'active');
 
-  let view = session.advance({ deltaMs: 0 });
+  let view = session.observe();
   const shots: Array<{ specialReload: boolean }> = [];
   let steps = 0;
   while (view.wave?.number === 1 && view.wave.phase === 'active' && steps < 2000) {
@@ -750,7 +767,7 @@ test('keeps sessions independent and rejects unknown scenarios', async () => {
 });
 
 test('does not create the controlled wave until the start intent advances', async () => {
-  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+  const session = await createGame({ scenarios: { 'cow-gulch': cowGulchP1aSampleContent } }).open({
     scenarioId: 'cow-gulch',
     randomSeed: 1234,
   });
@@ -937,7 +954,7 @@ test('truncates damage percent multiplication toward zero and keeps equal-score 
 
 test('the researched Cow Gulch sample is killed before escape and pays its configured reward', async () => {
   const run = async () => {
-    const session = await createGame({ scenarios: { 'cow-gulch': cowGulchContent } }).open({
+    const session = await createGame({ scenarios: { 'cow-gulch': formalPreviewCowGulch } }).open({
       scenarioId: 'cow-gulch',
       randomSeed: 1234,
     });
@@ -1044,7 +1061,7 @@ test('keeps the pioneer inside the TDM route cells from spawn through the exit',
 });
 
 test('observing a running wave does not advance time, position, or its random stream', async () => {
-  const createSession = () => createGame({ scenarios: { 'cow-gulch': cowGulchContent } })
+  const createSession = () => createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } })
     .open({ scenarioId: 'cow-gulch', randomSeed: 9876 });
   const observed = await createSession();
   const control = await createSession();
@@ -1116,7 +1133,7 @@ test('single-stepping advances exactly one ordinary frame and remains paused', a
 });
 
 test('keeps preview waves and random streams isolated between sessions', async () => {
-  const game = createGame({ scenarios: { 'cow-gulch': cowGulchContent } });
+  const game = createGame({ scenarios: { 'cow-gulch': noCombatCowGulch } });
   const first = await game.open({ scenarioId: 'cow-gulch', randomSeed: 77 });
   const second = await game.open({ scenarioId: 'cow-gulch', randomSeed: 77 });
 
@@ -1347,8 +1364,8 @@ test('settles zero lives as defeat before wave clear and does not advance or rep
 });
 
 test('reopens a clean session from the same seed and leaves the previous session closed', async () => {
-  const game = createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } });
-  const previous = await game.open({ scenarioId: cowGulchContent.id, randomSeed: 42 });
+  const game = createGame({ scenarios: { [cowGulchP1aSampleContent.id]: cowGulchP1aSampleContent } });
+  const previous = await game.open({ scenarioId: cowGulchP1aSampleContent.id, randomSeed: 42 });
   previous.submitIntent({ type: 'start-wave' });
   const firstStartedView = previous.advance({ deltaMs: 0 });
   const restartSeed = previous.startRecord.randomSeed;
@@ -1356,7 +1373,7 @@ test('reopens a clean session from the same seed and leaves the previous session
   previous.close();
 
   assert.throws(() => previous.advance({ deltaMs: 100 }), /session is closed/i);
-  const restarted = await game.open({ scenarioId: cowGulchContent.id, randomSeed: restartSeed });
+  const restarted = await game.open({ scenarioId: cowGulchP1aSampleContent.id, randomSeed: restartSeed });
   assert.notEqual(restarted.id, previous.id);
   assert.equal(restarted.observe().frame, 0);
   assert.equal(restarted.observe().wave?.phase, 'not-started');
@@ -1580,7 +1597,7 @@ test('rejects unavailable content and rules versions before allocating a session
 });
 
 test('opens and replays the exact prepared numeric configuration', async () => {
-  const game = createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } });
+  const game = createGame({ scenarios: { [cowGulchContent.id]: formalPreviewCowGulch } });
   const prepared = await game.prepare({
     scenarioId: cowGulchContent.id,
     overrides: [{ path: 'previewWave/enemy/cashReward', value: 5 }],
@@ -1631,13 +1648,14 @@ test('rejects a tampered setup and prevents custom setups from entering formal p
 test('selects a sleeping first-map unit without activating it, charging cash, or allowing movement', async () => {
   const session = await createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } }).open({
     scenarioId: cowGulchContent.id,
+    mode: 'formal',
     difficulty: 'easy',
   });
   const initial = session.observe();
   const sleeping = initial.units.find((unit) => unit.id === 'gunslinger-hire-01');
   assert.ok(sleeping);
   assert.equal(initial.units.length, 16);
-  assert.equal(initial.wave?.phase, 'not-started');
+  assert.equal(initial.wave?.phase, 'active');
   assert.equal(initial.wave?.lives, 50);
   assert.equal(initial.wave?.cash, 65);
   assert.equal(sleeping.activity, 4);

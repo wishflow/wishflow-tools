@@ -3,6 +3,7 @@ import {
   cowGulchP1aSampleContent,
   cowGulchP1bCampaignContent,
   cowGulchP1cCampaignContent,
+  cowGulchP1dCampaignContent,
   cowGulchUpgradeSampleContent,
 } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
@@ -27,6 +28,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchP1aSampleContent.id]: cowGulchP1aSampleContent,
   [cowGulchP1bCampaignContent.id]: cowGulchP1bCampaignContent,
   [cowGulchP1cCampaignContent.id]: cowGulchP1cCampaignContent,
+  [cowGulchP1dCampaignContent.id]: cowGulchP1dCampaignContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
