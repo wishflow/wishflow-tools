@@ -820,6 +820,6 @@ REA/JADX 归档中的 `GunsAndGloryThread` 绘制路径按背景、敌人、网�
 | 专项测试 | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4180 nvm exec 22.23.3 pnpm --dir apps/gunsnglory exec node --import tsx --test tests/canvas-renderer.test.ts` 通过5项测试。 |
 | 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4180 CI=1 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、152 项单元测试、生产构建及52项 Playwright 测试。 |
 | Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5176/gunsnglory/` 检查 Cow Gulch 静态装饰、单位、敌人、桥和 HUD；地图检查叠层可显示路线、单位锚点和射程，关闭叠层后原画正常。暂停在 Wave02/8，状态显示50条命且正式档案无结果；未完成关卡结算。浏览器实测用于确认发布前页面绘制正常，单位与装饰的深度顺序由上述 Canvas 回归测试作精确断言。 |
-| 发布与公网实测 | 待记录；本轮只验证 Cow Gulch 装饰与单位遮挡切片，不代表 P1-F 首关整体验收。 |
+| 发布与公网实测 | `master` 合并提交 `1ff50d3` 已推送。GitHub Actions [run 40911621390](https://github.com/wishflow/wishflow-tools/actions/runs/40911621390) 中 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 和 GitHub Pages 均成功；Worker/config 检查因静态应用变更而跳过。Codex 内置浏览器访问 [公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=1ff50d3)，确认 Cow Gulch 地图、道路/桥、静态装饰、单位和战斗 HUD 正常；暂停在 Wave01/8，50条生命，未结算。测试前后原有正式档案均为1/1、最高分 $356；没有修改速度或档案。随后 master 上的 P8 文档提交 `86aba9e` 触发 [run 40911778860](https://github.com/wishflow/wishflow-tools/actions/runs/40911778860)，文档检查通过，应用测试和部署按 docs-only 变更规则跳过。 |
 
 同深度插入顺序、动态对象、敌人与装饰的遮挡对照及其它关卡仍属于 P1-F 后续对照范围；本轮不据此调整路线、地形或战斗逻辑，也不将 Cow Gulch 计为已验收关卡。
