@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 test('single-step advances one frame and inspection overlays leave the paused battle unchanged', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
+  await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
   await page.getByRole('button', { name: 'Pause battle' }).click();
@@ -65,6 +67,7 @@ test('inspection and single-step controls remain usable on a phone-sized touch v
   const page = await context.newPage();
   try {
     await page.goto('/');
+    await openSingleWaveSample(page, 'tap');
     await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
     await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
     await page.getByRole('button', { name: 'Pause battle' }).tap();

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 async function clickMapCenter(page: import('@playwright/test').Page): Promise<void> {
   const canvas = page.getByTestId('game-canvas');
@@ -11,8 +12,10 @@ async function clickMapCenter(page: import('@playwright/test').Page): Promise<vo
 test('keeps the original level locked and upgrades the selected Gunslinger in the debug rules sample', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
+  await openSingleWaveSample(page);
 
   await expect(page.getByTestId('upgrade-sample-status')).toContainText('upgrade limit of 0');
+  await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
   await expect(page.getByTestId('upgrade-unit')).toBeHidden();
   await page.getByRole('button', { name: 'Open upgrade rules sample' }).click();
   await expect(page.getByTestId('scene-context')).toHaveText('DEBUG RULE TEST');
@@ -61,6 +64,7 @@ test('upgrades a selected unit with touch on a phone-sized viewport', async ({ b
   const page = await context.newPage();
   try {
     await page.goto('/');
+    await openSingleWaveSample(page, 'tap');
     await page.getByRole('button', { name: 'Open upgrade rules sample' }).tap();
     const canvas = page.getByTestId('game-canvas');
     await canvas.scrollIntoViewIfNeeded();

@@ -9,6 +9,7 @@ import {
 } from '../src/content/cow-gulch';
 import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { campaignProgressSampleOne, campaignProgressSampleTwo } from '../src/content/campaign-progress-samples';
+import { cowGulchLevelOneContent } from '../src/content/official-campaign';
 
 test('browser scene requests resolve the exact registered content version', () => {
   assert.equal(getBrowserScenarioContentVersion(cowGulchP1aSampleContent.id), cowGulchP1aSampleContent.contentVersion);
@@ -18,5 +19,6 @@ test('browser scene requests resolve the exact registered content version', () =
   assert.equal(getBrowserScenarioContentVersion(cowGulchDefeatContent.id), cowGulchDefeatContent.contentVersion);
   assert.equal(getBrowserScenarioContentVersion(campaignProgressSampleOne.id), campaignProgressSampleOne.contentVersion);
   assert.equal(getBrowserScenarioContentVersion(campaignProgressSampleTwo.id), campaignProgressSampleTwo.contentVersion);
+  assert.equal(getBrowserScenarioContentVersion(cowGulchLevelOneContent.id), cowGulchLevelOneContent.contentVersion);
   assert.equal(getBrowserScenarioContentVersion('missing-scene'), undefined);
 });

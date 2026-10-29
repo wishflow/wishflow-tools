@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 test('keeps the full map visible and clips the pioneer until it enters the map bounds', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
+  await openSingleWaveSample(page);
   const canvas = page.getByTestId('game-canvas');
   const waveStatus = page.getByTestId('wave-status');
   await expect(canvas).toBeVisible();
@@ -214,6 +216,7 @@ test('preserves malformed IndexedDB settings when a user tries to save a new spe
 test('applies the selected speed to an active combat wave', async ({ page }) => {
   const startedAt = Date.now();
   await page.goto('/');
+  await openSingleWaveSample(page);
   const waveStatus = page.getByTestId('wave-status');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await expect(speed).toBeEnabled();
@@ -235,6 +238,7 @@ test('starts the preview wave from a mobile touch control', async ({ browser }) 
   });
   const page = await context.newPage();
   await page.goto('/');
+  await openSingleWaveSample(page, 'tap');
   const waveStatus = page.getByTestId('wave-status');
   await expect(page.getByRole('slider', { name: 'Simulation speed' })).toBeVisible();
   await expect(waveStatus).toContainText('Wave 1 ready · Lives 50');
@@ -245,6 +249,7 @@ test('starts the preview wave from a mobile touch control', async ({ browser }) 
 
 test('keeps defeat feedback when accelerated time is processed in multiple game steps', async ({ page }) => {
   await page.goto('/');
+  await openSingleWaveSample(page);
   const waveStatus = page.getByTestId('wave-status');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await speed.focus();
@@ -266,6 +271,7 @@ test('keeps defeat feedback when accelerated time is processed in multiple game 
 test('the Cow Gulch gunslinger kills the pioneer and updates the cash display', async ({ page }) => {
   test.setTimeout(45000);
   await page.goto('/');
+  await openSingleWaveSample(page);
   const waveStatus = page.getByTestId('wave-status');
   const combatStatus = page.getByTestId('combat-status');
   await expect(waveStatus).toContainText('Cash $65');

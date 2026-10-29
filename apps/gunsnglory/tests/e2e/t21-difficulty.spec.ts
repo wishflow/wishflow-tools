@@ -18,6 +18,8 @@ test('persists the next-battle difficulty, applies it to a scene, and keeps Hard
 
   await difficulty.selectOption('medium');
   await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
+  await expect(page.getByTestId('scene-difficulty')).toHaveText('DIFFICULTY · EASY');
+  await page.getByTestId('campaign-stage-button-1').click();
   await expect(page.getByTestId('scene-difficulty')).toHaveText('DIFFICULTY · MEDIUM');
   const storedDifficulty = await page.evaluate(async () => {
     const database = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -45,6 +47,7 @@ test('persists the next-battle difficulty, applies it to a scene, and keeps Hard
   await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
   await page.getByTestId('campaign-stage-button-1').click();
   await expect(page.getByTestId('scene-difficulty')).toHaveText('DIFFICULTY · MEDIUM');
+  await page.getByTestId('open-single-wave-sample').click();
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory', { timeout: 10_000 });
   await expect(page.getByTestId('settlement-score')).toHaveText('Displayed score: $67');
@@ -70,6 +73,8 @@ test('difficulty selection and lock feedback fit the mobile campaign panel', asy
   await expect(page.getByTestId('difficulty-select').locator('option[value="hard"]')).toHaveAttribute('disabled', '');
   await page.getByTestId('difficulty-select').selectOption('medium');
   await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
+  await expect(page.getByTestId('scene-difficulty')).toHaveText('DIFFICULTY · EASY');
+  await page.getByTestId('campaign-stage-button-1').tap();
   await expect(page.getByTestId('scene-difficulty')).toHaveText('DIFFICULTY · MEDIUM');
   const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
   expect(horizontalOverflow).toBe(false);
