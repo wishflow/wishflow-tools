@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线及 P1–P5 双引擎首版均已完成并发布到 `master`；P6 教学 VM 控制流也已完成并发布。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)，P6 验收、发布及线上证据见 [P6 spec](specs/p06-control-flow.md) 与 [P6 tasks](tasks/p06-control-flow.md)。P7 函数、作用域与帧栈的规格和 tasks 已获用户确认；当前在 `codex/python-interpreter-lab-p7` 分支实施。
+P0 文档基线及 P1–P7 双引擎路线均已完成并发布到 `master`。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)，P6 验收、发布及线上证据见 [P6 spec](specs/p06-control-flow.md) 与 [P6 tasks](tasks/p06-control-flow.md)。P7 函数、作用域与帧栈已于 2026-10-29 合并并发布，线上验证与尚未完成的 `pi` 检查见 [P7 tasks](tasks/p07-functions-and-frames.md)。
 
 P0 建立了以下文档：
 
@@ -138,7 +138,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **交付**：`def`、必需位置参数调用、返回及递归范围内的执行；逐步展示新帧进入、每帧独立值栈与变量、返回值如何回到调用方。闭包、默认参数、关键字/可变参数、`global/nonlocal` 和函数值均不在本阶段支持范围。
 - **详细文档**：[P7 规格](specs/p07-functions-and-frames.md)与[P7 tasks](tasks/p07-functions-and-frames.md)。本阶段将教学指令集从 `mini-vm-v2` 升至 `mini-vm-v3`；当前任务状态与验证记录见 tasks。
 - **验收**：函数调用与嵌套调用结果正确；同名局部变量不污染其他帧；递归帧身份不同；局部未绑定错误与名字绑定规则一致；活动帧和动态指令上限可恢复；Pyodide/CPython 3.14.2 对照支持子集结果。
-- **进度**：T01–T05 实现与本地验证已完成；T06 发布文档、线上工作流和正式页面实测进度以 [P7 tasks](tasks/p07-functions-and-frames.md) 为准。
+- **进度**：T01–T05 实现与本地验证已完成；功能已合入并发布。T06 的 CI、部署和正式页面实测已完成，应用契约的 `pi` 实际加载仍待验证，详见 [P7 tasks](tasks/p07-functions-and-frames.md)。
 - **回滚**：撤回函数能力及相关示例，P6 的模块级执行仍可用。
 
 ### P8：列表、字典与对象引用
@@ -269,3 +269,16 @@ P0 交付只有文档，因此当时没有应用构建、解释器测试、浏�
 | 正式 CI、部署与线上实测 | GitHub CLI 跟进 workflow `40750421138`；Codex 内置浏览器访问正式 URL | 通过：应用测试、共享检查、GitHub Pages 和 Cloudflare Pages 全部成功；真实运行时版本、AST、模块/嵌套函数字节码及中英切换均在线验证 |
 
 首次远端安装失败已由应用本地 `allowBuilds.esbuild` 配置修复；修复后的远端 workflow、两种 Pages 部署及正式 URL 实测均通过。P1 已完成并发布，后续阶段仍按本计划的启动门另行准备 spec 与 tasks。
+
+### 8.4 P7 发布与线上实测
+
+P7 在 `451f4b6` 合并到 `master` 并推送；GitHub Actions workflow [40867914499](https://github.com/wishflow/wishflow-tools/actions/runs/40867914499) 中共享检查、Python 应用测试、GitHub Pages 与 Cloudflare Pages 部署均成功，Worker 发布按静态站变更分类跳过。正式页面为 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/?p7-verification=451f4b6)。
+
+| 验证 | 操作或命令 | 结果 |
+| --- | --- | --- |
+| 应用完整 CI | `env CI=1 PLAYWRIGHT_PORT=49340 pnpm run test:ci`（应用目录） | 通过：84 项单测、31 项 Playwright 浏览器用例及生产构建 |
+| catalog 检查 | `pnpm run test:catalog`（仓库根目录） | 通过：14/14 |
+| 共享站点构建 | `pnpm run build:site`（仓库根目录） | 成功，包含 Python 解释器实验室静态资源 |
+| 真实 CPython | Codex 内置浏览器，Pyodide `314.0.7` / CPython `3.14.2` | 通过：分析递归 `factorial` 得到真实 `FunctionDef` AST、两个代码对象及 CPython `CALL` 字节码；运行结果为 `120`，执行轨迹显示 24 个事件 |
+| Teaching VM | Codex 内置浏览器，`mini-vm-v3` | 通过：递归 `factorial` 编译为 19 条教学指令；执行 55 步后输出 `120`，帧栈回到模块帧 |
+| `pi` 应用契约加载 | `pi` 只读加载验证 | 尚未验证：隔离调用因当前 provider 没有可用 API key 失败；访问本机 provider 配置的提权重试被自动审核拒绝，理由是可能将仓库 `AGENTS.md` 内容发送给未获明确授权的外部模型提供商。未通过其他途径重试；T06 仍待用户明确授权该数据流，或提供不涉及此传输的可运行配置。 |

@@ -74,4 +74,4 @@ T01–T05 按可运行的端到端子集递增；每项均保留已完成能力�
 | T03 位置参数与表达式调用 | 完成 | 支持必需位置参数、左到右实参、嵌套调用；重复形参在编译期报错，参数数量错误不创建新帧。 |
 | T04 函数体控制流与名字作用域 | 完成 | P5/P6 语句可在函数中运行；测试静态局部名、`for` 目标、全局回退、未绑定局部和嵌套块提前返回。 |
 | T05 递归、预算、帧栈 UI 与完整回归 | 完成 | 递归/互递归、64 帧和 5,000 动态指令边界、跨帧名称预算、不可变帧历史已覆盖；应用完整 CI 通过（84 项单测、31 项 Playwright）。 |
-| T06 文档、发布与线上验证 | 进行中 | 应用完整 CI 通过（84 项单测、31 项 Playwright），根 `pnpm run test:catalog` 14/14 通过，`pnpm run build:site` 成功；待按仓库流程发布及线上实测。`pi` 加载验证尚未完成：当前 provider 无可用 API key，提权调用被安全审核拒绝。 |
+| T06 文档、发布与线上验证 | 进行中 | 功能已合并到 `master`（`451f4b6`）并发布；[workflow 40867914499](https://github.com/wishflow/wishflow-tools/actions/runs/40867914499) 的共享检查、Python 应用测试及 GitHub Pages / Cloudflare Pages 部署均成功，Worker 按静态变更分类跳过。应用 CI 为 84 项单测、31 项 Playwright；catalog 14/14，整站构建成功。线上实测确认 Pyodide 314.0.7 / CPython 3.14.2 可分析递归 `factorial` 的 AST 和真实 `CALL` 字节码，并运行得出 `120`；教学 VM `mini-vm-v3` 编译 19 条指令，运行 55 步输出 `120`，活动帧返回模块帧。`pi` 加载验证仍未完成：隔离调用因 provider 无 API key 失败；提权读取 provider 配置的重试被自动审核拒绝，因为可能把仓库 `AGENTS.md` 发送给未明确授权的外部模型提供商。没有绕过拒绝；T06 尚待安全可行的 `pi` 验证。 |
