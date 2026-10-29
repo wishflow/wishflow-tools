@@ -6,7 +6,7 @@ import {
   getTeachingHistory,
   stepTeachingMachine,
 } from '../src/teaching-vm/vm';
-import { MAX_ACTIVE_FRAME_COUNT, MAX_DYNAMIC_INSTRUCTION_COUNT, MAX_NAME_COUNT } from '../src/teaching-vm/resource-limits';
+import { MAX_ACTIVE_FRAME_COUNT, MAX_DYNAMIC_INSTRUCTION_COUNT, MAX_HISTORY_CONTAINER_RECORDS, MAX_NAME_COUNT } from '../src/teaching-vm/resource-limits';
 
 test('steps each bytecode instruction and records stack, variables, output, and finish state', () => {
   const machine = createTeachingMachine(compileTeachingSource('x = 1 + 2 * 3\nprint(x)'));
@@ -789,4 +789,25 @@ test('keeps immutable bounded history and reports when earlier snapshots were dr
   assert.deepEqual(initial.stack, []);
   assert.equal(Object.isFrozen(initial), true);
   assert.equal(Object.isFrozen(initial.stack), true);
+});
+
+test('trims history by retained container records while keeping the complete current heap snapshot', () => {
+  const listItems = Array.from({ length: 256 }, () => '0').join(', ');
+  const updates = Array.from({ length: 200 }, (_, index) => `items[0] = ${index + 1}`).join('\n');
+  const machine = createTeachingMachine(compileTeachingSource(`items = [${listItems}]\n${updates}`));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+
+  assert.equal(machine.current.status, 'finished');
+  const history = getTeachingHistory(machine);
+  const retainedRecords = history.items.reduce((total, snapshot) => total + snapshot.heap.reduce(
+    (snapshotTotal, object) => snapshotTotal + 1 + (object.type === 'list' ? object.items.length : object.entries.length),
+    0,
+  ), 0);
+  assert.equal(history.truncated, true);
+  assert.ok(history.items.length < 500);
+  assert.ok(retainedRecords <= MAX_HISTORY_CONTAINER_RECORDS);
+  assert.equal(history.items.at(-1)?.stepIndex, machine.current.stepIndex);
+  assert.equal(machine.current.heap[0]?.type, 'list');
+  if (machine.current.heap[0]?.type !== 'list') assert.fail('expected current list snapshot');
+  assert.equal(machine.current.heap[0].items.length, 256);
 });

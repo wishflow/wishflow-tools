@@ -141,6 +141,23 @@ button:disabled { cursor: not-allowed; }
 .teaching-value-list li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 7px; padding: 5px 6px; border-bottom: 1px dotted #e4e4dd; color: #718097; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
 .teaching-value-list code { min-width: 0; color: #39445f; overflow-wrap: anywhere; white-space: pre-wrap; }
 .teaching-variable-list { max-height: 250px; overflow: auto; }
+.teaching-heap-panel { min-width: 0; margin-top: 14px; padding-top: 10px; border-top: 1px solid #e3e5dc; }
+.teaching-heap-panel > h4 { margin: 0 0 8px; color: #58647c; font-size: 12px; }
+.teaching-heap-scroll { max-height: 320px; overflow: auto; }
+.teaching-heap-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.teaching-heap-object { min-width: 0; padding: 8px 9px; border: 1px solid #e0e3da; border-radius: 6px; background: #fbfbf5; scroll-margin: 8px; }
+.teaching-heap-object.is-object-target { border-color: #90a98a; background: #f0f6ed; }
+.teaching-heap-object h5 { display: flex; align-items: baseline; gap: 7px; margin: 0 0 5px; color: #405c4d; font-size: 10px; }
+.teaching-heap-object h5 code { color: #65728a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.teaching-heap-object > .empty-state { margin: 0; }
+.teaching-heap-entries { display: grid; gap: 3px; margin: 0; }
+.teaching-heap-entries > div { display: grid; grid-template-columns: minmax(45px, .4fr) minmax(0, 1fr); gap: 7px; align-items: baseline; min-width: 0; padding: 2px 0; border-top: 1px dotted #e4e4dd; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+.teaching-heap-entries dt, .teaching-heap-entries dd { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.teaching-heap-entries dt { color: #718097; }
+.teaching-heap-entries dd { color: #39445f; }
+.teaching-object-reference { max-width: 100%; padding: 1px 3px; border: 0; border-radius: 3px; background: #e9eee4; color: #294c43; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: inherit; text-align: left; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 2px; overflow-wrap: anywhere; cursor: pointer; }
+.teaching-object-reference:hover { background: #dce8d4; }
+.teaching-object-reference:focus-visible, .teaching-heap-object:focus-visible { outline: 2px solid #294c76; outline-offset: 2px; }
 .teaching-frames-panel { min-width: 0; margin-top: 16px; padding-top: 12px; border-top: 1px solid #e3e5dc; }
 .teaching-frames-panel > h4 { margin: 0 0 8px; color: #58647c; font-size: 12px; }
 .teaching-frame-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }

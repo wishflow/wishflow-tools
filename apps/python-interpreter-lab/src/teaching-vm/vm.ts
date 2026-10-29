@@ -3,6 +3,7 @@ import {
   MAX_ACTIVE_FRAME_COUNT,
   MAX_CONTAINER_ENTRIES,
   MAX_DYNAMIC_INSTRUCTION_COUNT,
+  MAX_HISTORY_CONTAINER_RECORDS,
   MAX_HEAP_ENTRIES,
   MAX_HEAP_OBJECTS,
   MAX_INTEGER_BITS,
@@ -111,6 +112,7 @@ export class TeachingMachine {
   #controlFlow: TeachingVmSnapshot['controlFlow'] = null;
   #diagnostic: TeachingDiagnosticSnapshot | null = null;
   #history: TeachingVmSnapshot[] = [];
+  #historyContainerRecordCount = 0;
   #historyTruncated = false;
   #current: TeachingVmSnapshot;
 
@@ -127,6 +129,7 @@ export class TeachingMachine {
     }];
     this.#current = this.createSnapshot();
     this.#history.push(this.#current);
+    this.#historyContainerRecordCount = countSnapshotContainerRecords(this.#current);
   }
 
   get #frame(): RuntimeFrame {
@@ -747,8 +750,13 @@ export class TeachingMachine {
     this.#stepIndex += 1;
     this.#current = this.createSnapshot();
     this.#history.push(this.#current);
-    if (this.#history.length > MAX_HISTORY_SNAPSHOTS) {
-      this.#history.shift();
+    this.#historyContainerRecordCount += countSnapshotContainerRecords(this.#current);
+    while (this.#history.length > 1 && (
+      this.#history.length > MAX_HISTORY_SNAPSHOTS
+      || this.#historyContainerRecordCount > MAX_HISTORY_CONTAINER_RECORDS
+    )) {
+      const removed = this.#history.shift();
+      if (removed) this.#historyContainerRecordCount -= countSnapshotContainerRecords(removed);
       this.#historyTruncated = true;
     }
     return this.#current;
@@ -881,6 +889,12 @@ function snapshotValue(value: RuntimeValue): TeachingValueSnapshot {
     value: text,
     display: value.type === 'str' ? JSON.stringify(value.value) : text,
   });
+}
+
+function countSnapshotContainerRecords(snapshot: TeachingVmSnapshot): number {
+  return snapshot.heap.reduce((total, object) => total + 1 + (
+    object.type === 'list' ? object.items.length : object.entries.length
+  ), 0);
 }
 
 function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticSnapshot {

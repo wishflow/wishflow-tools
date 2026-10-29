@@ -139,7 +139,7 @@ test('transfers list references through the teaching Worker snapshot DTO', async
   await expect(variables).toContainText('separate');
   const displayedValues = await variables.locator(':scope > div').evaluateAll((items) => items.map((item) => [
     item.querySelector('dt')?.textContent,
-    item.querySelector('dd code')?.textContent,
+    item.querySelector('dd .teaching-object-reference, dd code')?.textContent,
   ]));
   expect(displayedValues).toEqual([
     ['empty', 'list #1'],
@@ -168,7 +168,7 @@ test('reads and mutates a list through aliases in the teaching Worker', async ({
   const variables = page.locator('.teaching-state-grid section[aria-labelledby="teaching-variables-heading"] .teaching-variable-list');
   const displayedValues = await variables.locator(':scope > div').evaluateAll((items) => items.map((item) => [
     item.querySelector('dt')?.textContent,
-    item.querySelector('dd code')?.textContent,
+    item.querySelector('dd .teaching-object-reference, dd code')?.textContent,
   ]));
   expect(displayedValues).toEqual([
     ['a', 'list #1'],
@@ -199,7 +199,7 @@ test('compiles and runs dictionary literals and subscript updates in the teachin
   const variables = page.locator('.teaching-state-grid section[aria-labelledby="teaching-variables-heading"] .teaching-variable-list');
   const displayedValues = await variables.locator(':scope > div').evaluateAll((items) => items.map((item) => [
     item.querySelector('dt')?.textContent,
-    item.querySelector('dd code')?.textContent,
+    item.querySelector('dd .teaching-object-reference, dd code')?.textContent,
   ]));
   expect(displayedValues).toEqual([
     ['mapping', 'dict #2'],
@@ -210,6 +210,52 @@ test('compiles and runs dictionary literals and subscript updates in the teachin
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('Dictionary key not found');
+});
+
+test('browses object references and immutable container contents across teaching history', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill('items = [1]\nitems[0] = 2');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+
+  const heap = page.getByRole('region', { name: 'Object heap' });
+  const history = page.getByRole('slider', { name: 'Instruction history' });
+  await history.focus();
+  await history.press('Home');
+  for (let step = 0; step < 3; step += 1) await history.press('ArrowRight');
+  const list = heap.locator('#teaching-heap-object-1');
+  await expect(list).toContainText('[0]');
+  await expect(list).toContainText('1');
+  await page.getByRole('button', { name: 'Locate list object #1' }).first().focus();
+  await page.keyboard.press('Enter');
+  await expect(list).toBeFocused();
+
+  for (let step = 0; step < 4; step += 1) await history.press('ArrowRight');
+  await expect(list).toContainText('2');
+  await expect(page.getByRole('button', { name: 'Locate list object #1' }).first()).toBeVisible();
+
+  for (const width of [320, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 800 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+  }
+});
+
+test('keeps the browser history within the container-record budget', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  const listItems = Array.from({ length: 256 }, () => '0').join(', ');
+  const updates = Array.from({ length: 200 }, (_, index) => `items[0] = ${index + 1}`).join('\n');
+  await source.fill(`items = [${listItems}]\n${updates}`);
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+
+  const history = page.getByRole('slider', { name: 'Instruction history' });
+  await expect.poll(async () => Number(await history.getAttribute('min'))).toBeGreaterThan(0);
+  await expect(page.locator('.teaching-history-state')).toContainText('50,000-container-record limits');
+  await expect(page.locator('#teaching-heap-object-1 .teaching-heap-entries > div')).toHaveCount(256);
 });
 
 test('steps a zero-argument function through an observable frame stack in the Worker', async ({ page }) => {
@@ -422,7 +468,7 @@ test('streams long-run history incrementally and retains the complete bounded wi
   const history = page.getByRole('slider', { name: 'Instruction history' });
   await expect(history).toHaveAttribute('min', '504');
   await expect(history).toHaveAttribute('max', '1003');
-  await expect(page.getByText('Only the latest 500 snapshots are kept; earlier history was dropped.')).toBeVisible();
+  await expect(page.getByText('Older snapshots were dropped to stay within the 500-snapshot and 50,000-container-record limits.')).toBeVisible();
   await expect.poll(async () => (await page.locator('.teaching-output').textContent() ?? '').split('\n').length).toBe(500);
   await expect(page.locator('.teaching-output')).toContainText(payload);
 });

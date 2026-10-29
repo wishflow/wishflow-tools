@@ -5,7 +5,7 @@ import type {
   TeachingVmHistory,
   TeachingVmSnapshot,
 } from './types';
-import { MAX_HISTORY_SNAPSHOTS } from './resource-limits';
+import { MAX_HISTORY_CONTAINER_RECORDS, MAX_HISTORY_SNAPSHOTS } from './resource-limits';
 import type { TeachingHistoryUpdate, TeachingWorkerIdentity, TeachingWorkerRequest, TeachingWorkerResponse } from './worker-protocol';
 
 export type TeachingStatus = 'loading' | 'ready' | 'compiling' | 'running' | 'paused' | 'finished' | 'error';
@@ -18,11 +18,21 @@ export function useTeachingVm() {
   const sessionIdRef = useRef(0);
   const sourceRevisionRef = useRef(0);
   const workerReadyRef = useRef(false);
+  const historyRef = useRef(EMPTY_HISTORY);
   const [status, setStatus] = useState<TeachingStatus>('loading');
   const [program, setProgram] = useState<TeachingCompileResult | null>(null);
   const [history, setHistory] = useState<TeachingVmHistory>(EMPTY_HISTORY);
   const [historyCursor, setHistoryCursor] = useState<number | null>(null);
   const [diagnostic, setDiagnostic] = useState<TeachingDiagnosticSnapshot | null>(null);
+
+  const receiveHistoryUpdate = useCallback((update: TeachingHistoryUpdate) => {
+    const next = applyHistoryUpdate(historyRef.current, update);
+    historyRef.current = next;
+    setHistory(next);
+    setHistoryCursor((cursor) => cursor !== null && next.items.some(({ stepIndex }) => stepIndex === cursor)
+      ? cursor
+      : null);
+  }, []);
 
   const sessionIdentity = useCallback((): TeachingWorkerIdentity => ({
     sessionId: sessionIdRef.current,
@@ -55,14 +65,14 @@ export function useTeachingVm() {
       }
       if (message.type === 'compiled') {
         setProgram(message.program);
-        setHistory(applyHistoryUpdate(EMPTY_HISTORY, message.historyUpdate));
+        receiveHistoryUpdate(message.historyUpdate);
         setHistoryCursor(null);
         setDiagnostic(null);
         setStatus('ready');
         return;
       }
       if (message.type === 'run-started') {
-        setHistory((current) => applyHistoryUpdate(current, message.historyUpdate));
+        receiveHistoryUpdate(message.historyUpdate);
         setStatus(message.snapshot.status);
         return;
       }
@@ -82,7 +92,7 @@ export function useTeachingVm() {
         return;
       }
 
-      setHistory((current) => applyHistoryUpdate(current, message.historyUpdate));
+      receiveHistoryUpdate(message.historyUpdate);
       if (message.type === 'snapshot' || message.type === 'paused' || message.type === 'run-complete' || message.type === 'run-batch') {
         setDiagnostic(message.snapshot.diagnostic);
         setStatus(message.snapshot.status);
@@ -109,12 +119,13 @@ export function useTeachingVm() {
       if (workerRef.current === worker) workerRef.current = null;
       workerReadyRef.current = false;
     };
-  }, []);
+  }, [receiveHistoryUpdate]);
 
   const invalidate = useCallback(() => {
     const identity = { ...sessionIdentity(), sourceRevision: sourceRevisionRef.current + 1 };
     sourceRevisionRef.current = identity.sourceRevision;
     setProgram(null);
+    historyRef.current = EMPTY_HISTORY;
     setHistory(EMPTY_HISTORY);
     setHistoryCursor(null);
     setDiagnostic(null);
@@ -128,6 +139,7 @@ export function useTeachingVm() {
     const identity = { ...sessionIdentity(), sourceRevision: sourceRevisionRef.current + 1 };
     sourceRevisionRef.current = identity.sourceRevision;
     setProgram(null);
+    historyRef.current = EMPTY_HISTORY;
     setHistory(EMPTY_HISTORY);
     setHistoryCursor(null);
     setDiagnostic(null);
@@ -209,9 +221,24 @@ function applyHistoryUpdate(current: TeachingVmHistory, update: TeachingHistoryU
     items.push(update.snapshot);
   }
 
-  const exceededLimit = items.length > MAX_HISTORY_SNAPSHOTS;
+  let retainedContainerRecords = items.reduce((total, snapshot) => total + countSnapshotContainerRecords(snapshot), 0);
+  let exceededLimit = false;
+  while (items.length > 1 && (
+    items.length > MAX_HISTORY_SNAPSHOTS
+    || retainedContainerRecords > MAX_HISTORY_CONTAINER_RECORDS
+  )) {
+    const removed = items.shift();
+    if (removed) retainedContainerRecords -= countSnapshotContainerRecords(removed);
+    exceededLimit = true;
+  }
   return Object.freeze({
-    items: Object.freeze(items.slice(-MAX_HISTORY_SNAPSHOTS)),
+    items: Object.freeze(items),
     truncated: current.truncated || update.truncated || exceededLimit,
   });
+}
+
+function countSnapshotContainerRecords(snapshot: TeachingVmSnapshot): number {
+  return snapshot.heap.reduce((total, object) => total + 1 + (
+    object.type === 'list' ? object.items.length : object.entries.length
+  ), 0);
 }

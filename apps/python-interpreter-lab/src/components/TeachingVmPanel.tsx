@@ -11,6 +11,7 @@ import type {
 } from '../teaching-vm/types';
 import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
 import type { MessageKey } from '../locales';
+import { TeachingHeapPanel, TeachingValueDisplay, useTeachingHeapNavigation } from './TeachingHeapPanel';
 
 interface TeachingVmPanelProps {
   program: TeachingCompileResult | null;
@@ -311,10 +312,11 @@ function formatInstructionArgument(instruction: TeachingCompileResult['instructi
   return instruction.argument === null ? '—' : String(instruction.argument);
 }
 
-function TeachingFrameStack({ snapshot, t, onLink }: {
+function TeachingFrameStack({ snapshot, t, onLink, onLocateObject }: {
   snapshot: TeachingVmSnapshot | null;
   t: (key: MessageKey) => string;
   onLink(link: SourceLink): void;
+  onLocateObject(objectId: number): void;
 }) {
   const activeFrameId = snapshot?.frames.at(-1)?.id;
   const [expandedFrameIds, setExpandedFrameIds] = useState<ReadonlySet<number>>(() => new Set());
@@ -373,7 +375,7 @@ function TeachingFrameStack({ snapshot, t, onLink }: {
                       <h5>{t('teachingStack')}</h5>
                       {frame.stack.length === 0 ? <p className="empty-state">{t('teachingNoStack')}</p> : (
                         <ol className="teaching-value-list">
-                          {frame.stack.map((value, valueIndex) => <li key={`${valueIndex}-${value.type}-${value.value}`}><span>{valueIndex}</span><code>{value.display}</code></li>)}
+                          {frame.stack.map((value, valueIndex) => <li key={`${valueIndex}-${value.type}-${value.value}`}><span>{valueIndex}</span><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></li>)}
                         </ol>
                       )}
                     </section>
@@ -381,7 +383,7 @@ function TeachingFrameStack({ snapshot, t, onLink }: {
                       <h5>{t('teachingVariables')}</h5>
                       {frame.variables.length === 0 && frame.unboundLocalNames.length === 0 ? <p className="empty-state">{t('teachingNoVariables')}</p> : (
                         <dl className="trace-values teaching-variable-list">
-                          {frame.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><code>{value.display}</code></dd></div>)}
+                          {frame.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>)}
                           {frame.unboundLocalNames.map((name) => <div key={name}><dt>{name}</dt><dd>{t('teachingUnboundLocal')}</dd></div>)}
                         </dl>
                       )}
@@ -549,7 +551,9 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
   );
 });
 
-export function TeachingVmPanel({ program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, t, onSelectHistory, onGoToHead, onLink }: TeachingVmPanelProps) {
+export function TeachingVmPanel(props: TeachingVmPanelProps) {
+  const { program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, t, onSelectHistory, onGoToHead, onLink } = props;
+  const { focusedObjectId, onLocateObject } = useTeachingHeapNavigation(snapshot);
   const shownDiagnostic = diagnostic ?? snapshot?.diagnostic ?? null;
   const historyStart = history.items[0]?.stepIndex ?? 0;
   const historyEnd = headSnapshot?.stepIndex ?? historyStart;
@@ -625,7 +629,7 @@ export function TeachingVmPanel({ program, history, snapshot, headSnapshot, atHe
                 <h4 id="teaching-variables-heading">{t('teachingVariables')}</h4>
                 {!snapshot || snapshot.variables.length === 0 ? <p className="empty-state">{t('teachingNoVariables')}</p> : (
                   <dl className="trace-values teaching-variable-list">
-                    {snapshot.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><code>{value.display}</code></dd></div>)}
+                    {snapshot.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>)}
                   </dl>
                 )}
               </section>
@@ -636,7 +640,8 @@ export function TeachingVmPanel({ program, history, snapshot, headSnapshot, atHe
                 )}
               </section>
             </div>
-            <TeachingFrameStack snapshot={snapshot} t={t} onLink={onLink} />
+            <TeachingHeapPanel snapshot={snapshot} t={t} focusedObjectId={focusedObjectId} onLocateObject={onLocateObject} />
+            <TeachingFrameStack snapshot={snapshot} t={t} onLink={onLink} onLocateObject={onLocateObject} />
           </section>
         </div>
       )}
