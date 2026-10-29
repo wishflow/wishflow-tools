@@ -4,8 +4,8 @@
 
 - 日期：2026-10-29。
 - 已确认方向：用户选择先用 Pyodide 展示真实 CPython AST、字节码和执行轨迹，再逐步加入教学 Mini VM。
-- 应用：Python 解释器实验室，目录 `apps/python-interpreter-lab/`，未来发布路径 `/python-interpreter-lab/`。
-- P0 文档基线及 P1–P4 真实 CPython 视图已完成；发布和验收证据以[整体实施计划](../implementation-plan.md)为准。P5 v1 的实施范围与任务见对应 [spec](../specs/p05-minimal-teaching-vm.md) 和 [tasks](../tasks/p05-minimal-teaching-vm.md)，进度也由整体计划维护。
+- 应用：Python 解释器实验室，目录 `apps/python-interpreter-lab/`，发布路径 `/python-interpreter-lab/`。
+- P0 文档基线及 P1–P5 双引擎首版已完成并发布；P5 v1 的范围与验收证据见对应 [spec](../specs/p05-minimal-teaching-vm.md) 和 [tasks](../tasks/p05-minimal-teaching-vm.md)，发布状态以[整体实施计划](../implementation-plan.md)为准。P6 控制流方案仍按阶段规格单独确认。
 - 本文中的模块划分和边界用于指导阶段规格；各阶段的具体公共接口和消息字段只在对应 spec 中约定，不预建通用框架。
 
 阶段、依赖与交付状态由[整体实施计划](../implementation-plan.md)维护。本文负责解释为什么采用这条路线、各引擎能展示什么，以及哪些边界必须保留。
@@ -46,11 +46,11 @@ flowchart LR
 | 两个引擎首版同时实现 | 可以同时覆盖两类目标，但会同时引入运行时、语言语义和 UI 的验证成本 | 不采用；用户已选择先真实视图后教学 VM |
 | 其他 Python 实现或修改 CPython/WASM 内核 | 可探索其他执行接口，但不能默认等价于真实 CPython；内核维护另有成本 | 不作为当前路线，出现无法满足的明确目标时另立 ADR |
 
-双引擎是分阶段演进目标，不要求预建通用引擎插件框架。当前已发布版本只有真实 CPython 视图；只有 P5 语义获确认并实现后，才加入模式选择及必要的公共展示结构。
+双引擎是分阶段演进目标，不要求预建通用引擎插件框架。当前已发布版本包含真实 CPython 视图与教学 `mini-vm-v1`；后续教学语义按 P6–P10 的阶段规格逐步扩展，保持教学状态与真实 CPython 产物相互独立。
 
 ## 4. 观察能力与真实性边界
 
-| 能力 | CPython 真实视图 | 计划中的教学 VM 视图 |
+| 能力 | CPython 真实视图 | 教学 VM 视图（按阶段扩展） |
 | --- | --- | --- |
 | AST、代码对象、指令 | 使用所选 Pyodide 内 CPython 的实际结果 | 使用教学解析器和编译器自己的结果 |
 | 字节码版本 | 显示 Pyodide 和 Python 版本，按该版本解释 offset、跳转和缓存 | 使用独立的教学指令集版本，指令序号不伪装成 CPython 字节偏移 |
@@ -78,7 +78,7 @@ flowchart TB
     subgraph Workers[浏览器 Web Worker；各引擎按需创建]
         Bridge[会话校验与请求处理]
         Py[Pyodide：编译、执行、trace]
-        Mini[后续 Mini VM：解析、编译、步进]
+        Mini[教学 VM：解析、编译、步进]
         Capture[有界序列化与事件或快照]
     end
     Editor --> Session
