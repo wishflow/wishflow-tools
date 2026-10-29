@@ -1,6 +1,6 @@
 # P9 tasks：教学调试控制
 
-对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01–T03 已完成本地实现和验证，T04–T06 按序推进。** 本阶段不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
+对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01–T04 已完成本地实现和验证，T05–T06 按序推进。** 本阶段不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
 
 ## 依赖和约束
 
@@ -56,10 +56,11 @@ flowchart LR
 
 ## T04：断点 Continue/Pause 和历史时间轴集成
 
-- **用户结果**：运行到断点自动暂停，可继续、暂停、复位，并可从历史快照返回执行头后继续。
-- **改动范围**：runLoop 断点检查与当前位置一次性抑制；原子指令边界 Pause；当前执行头与历史游标的控制可用状态及提示。
-- **验收**：Continue 从命中断点启动时不会立即再次命中；后续循环/递归再次到达同一位置时正常暂停；多个断点按运行次序生效；历史 Continue 先回执行头、不分叉、不覆盖旧对象快照；错误、预算耗尽和完成状态不可继续。
-- **验证**：Worker 测试覆盖断点和 Pause 竞争、无限循环预算、历史更新/截断和 Reset；Playwright 覆盖真实 Worker 的完整交互。
+- **状态**：已完成代码实现和本地验证，尚未随 P9 发布。
+- **用户结果**：运行到断点自动暂停，可继续、暂停、复位，并可从历史快照直接继续真实执行头。
+- **改动范围**：历史游标处 Continue 清除观察游标并提交现有 Worker 的 `run` 命令；单步仍要求游标处于执行头。暂停时更改断点集合会保留当前命中位置的一次性跳过标记，避免 Continue 立刻重复命中。Pause 仍在批内指令边界处理，Reset 通过运行代次使旧运行失效。暂停状态按钮显示 Continue；准备状态显示 Run。
+- **验收**：断点继续不会立即再次命中；暂停后新增断点不会重放当前命中；后续断点按执行顺序生效；历史 Continue 清除历史游标并从真实执行头继续，不分叉；Pause 后指令计数稳定，Reset 后计数/运行状态归零；终态没有继续入口。
+- **验证**：`node --import tsx --test tests/teaching-debugger.test.ts` 通过 13 项；`pnpm run test:unit` 通过 124 项；`pnpm run build` 的类型检查和生产构建通过；`PLAYWRIGHT_PORT=43825 pnpm exec playwright test e2e/teaching-vm.spec.ts` 通过 20 项。Playwright 覆盖历史位置 Continue、暂停时更新断点后继续、Pause 后状态稳定、Reset 和完整教学 VM 回归。
 - **依赖**：T02、T03。
 
 ## T05：运行速度和操作体验

@@ -30,6 +30,7 @@ export const messages = {
   teachingStepOutUnavailable: { en: 'Step Out is unavailable in the module frame because it has no caller.', zh: '模块帧没有调用者，无法执行 Step Out。' },
   teachingPausedAtStep: { en: 'Paused before line {line} · instruction {index}', zh: '已在第 {line} 行、第 {index} 条指令执行前暂停' },
   runTeaching: { en: 'Run teaching program', zh: '运行教学程序' },
+  continueTeaching: { en: 'Continue teaching program', zh: '继续教学程序' },
   pauseTeaching: { en: 'Pause teaching program', zh: '暂停教学程序' },
   resetTeaching: { en: 'Reset teaching VM', zh: '重置教学 VM' },
   teachingAst: { en: 'Teaching AST', zh: '教学 AST' },

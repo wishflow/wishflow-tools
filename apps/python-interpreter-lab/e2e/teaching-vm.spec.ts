@@ -37,9 +37,11 @@ test('compiles teaching instructions, steps the value stack, prints, and browses
   await history.press('Home');
   await expect(page.getByRole('status')).toContainText('Viewing history. Return to the head before continuing.');
   await expect(page.getByRole('button', { name: 'Step one instruction' })).toBeDisabled();
-  await page.getByRole('button', { name: 'Return to execution head' }).click();
-  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  const continueButton = page.getByRole('button', { name: 'Continue teaching program' });
+  await expect(continueButton).toBeEnabled();
+  await continueButton.click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-history-state')).toContainText('Viewing the current execution head.');
   await expect(page.locator('.teaching-output')).toHaveText('7');
   await expect(page.locator('.teaching-state-grid section[aria-labelledby="teaching-variables-heading"] .teaching-variable-list')).toContainText('x');
   expect(pageErrors).toEqual([]);
@@ -97,19 +99,22 @@ test('sets source-line and instruction breakpoints with keyboard controls and lo
   await expect(instructions.locator('tbody tr').nth(2)).toHaveClass(/is-vm-breakpoint/);
   await expect(page.locator('.teaching-instruction-count')).toContainText('2 of 5,000');
 
-  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await instructions.getByRole('button', { name: 'Set source breakpoint at line 3' }).click();
+  await page.getByRole('button', { name: 'Continue teaching program' }).click();
   await expect(page.locator('.teaching-breakpoint-status')).toContainText('Paused before instruction 3');
   await expect(page.locator('.teaching-instruction-count')).toContainText('3 of 5,000');
 
-  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await page.getByRole('button', { name: 'Continue teaching program' }).click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
   await expect(page.locator('.teaching-output')).toHaveText('1');
 
   await page.getByRole('button', { name: 'Reset teaching VM' }).click();
   await expect(instructions.getByRole('button', { name: 'Remove source breakpoint at line 4' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(instructions.getByRole('button', { name: 'Remove source breakpoint at line 3' })).toHaveAttribute('aria-pressed', 'true');
   await expect(instructions.getByRole('button', { name: 'Remove instruction breakpoint at instruction 3' })).toHaveAttribute('aria-pressed', 'true');
 
   await breakpointList.getByRole('button', { name: 'Remove source breakpoint at line 4' }).click();
+  await breakpointList.getByRole('button', { name: 'Remove source breakpoint at line 3' }).click();
   await breakpointList.getByRole('button', { name: 'Remove instruction breakpoint at instruction 3' }).click();
   await expect(breakpointList).toContainText('No breakpoints are set.');
 
@@ -173,7 +178,7 @@ test('steps over source lines and into or out of function frames', async ({ page
   const stack = page.locator('.teaching-state-grid section[aria-labelledby="teaching-stack-heading"] .teaching-value-list');
   await expect(stack).toContainText('6');
 
-  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await page.getByRole('button', { name: 'Continue teaching program' }).click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
   await expect(page.locator('.teaching-output')).toHaveText('6');
 });
@@ -408,7 +413,7 @@ test('steps a zero-argument function through an observable frame stack in the Wo
   await page.getByRole('button', { name: 'Step one instruction' }).click();
   await expect(frames.locator(':scope > li')).toHaveCount(1);
   await expect(frames).toContainText('42');
-  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await page.getByRole('button', { name: 'Continue teaching program' }).click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
   await expect(page.locator('.teaching-output')).toHaveText('42');
   expect(pageErrors).toEqual([]);
@@ -441,7 +446,7 @@ test('replays recursive positional calls and locates argument-count errors in th
   await page.setViewportSize({ width: 320, height: 800 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 
-  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await page.getByRole('button', { name: 'Continue teaching program' }).click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
   await expect(page.locator('.teaching-output')).toHaveText('120');
   await expect(frames.locator(':scope > li')).toHaveCount(1);
@@ -602,6 +607,9 @@ test('pauses and resets a long teaching run and invalidates stale mode/source st
   await expect(pauseButton).toBeVisible();
   await pauseButton.click();
   await expect(page.getByText('Teaching VM paused').first()).toBeVisible();
+  const pausedCount = await page.locator('.teaching-instruction-count').textContent();
+  await page.waitForTimeout(100);
+  await expect(page.locator('.teaching-instruction-count')).toHaveText(pausedCount ?? '');
 
   await page.getByRole('button', { name: 'Reset teaching VM' }).click();
   await expect(page.getByText('Step 0 of 0')).toBeVisible();

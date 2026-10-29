@@ -213,10 +213,11 @@ export function useTeachingVm() {
 
   const run = useCallback(() => {
     const worker = workerRef.current;
-    if (!worker || !program || !isAtHead(history, historyCursor) || (status !== 'ready' && status !== 'paused')) return;
+    if (!worker || !program || (status !== 'ready' && status !== 'paused')) return;
+    setHistoryCursor(null);
     setStatus('running');
     worker.postMessage({ type: 'run', ...sessionIdentity() } satisfies TeachingWorkerRequest);
-  }, [history, historyCursor, program, sessionIdentity, status]);
+  }, [program, sessionIdentity, status]);
 
   const pause = useCallback(() => {
     const worker = workerRef.current;

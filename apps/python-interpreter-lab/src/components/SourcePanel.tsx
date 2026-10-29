@@ -137,7 +137,7 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingHasP
                 )}
               </div>
               {teachingStatus !== 'running' && (
-                <button type="button" className="button button-primary" disabled={!teachingHasProgram || !teachingAtHead || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onRunTeaching}>{t('runTeaching')}</button>
+                <button type="button" className="button button-primary" disabled={!teachingHasProgram || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onRunTeaching}>{t(teachingStatus === 'paused' ? 'continueTeaching' : 'runTeaching')}</button>
               )}
               <button type="button" className="button button-secondary" disabled={!teachingHasProgram || teachingStatus === 'compiling' || teachingStatus === 'loading'} onClick={onResetTeaching}>{t('resetTeaching')}</button>
             </>

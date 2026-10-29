@@ -134,6 +134,33 @@ test('skips the current breakpoint once and pauses again when a loop returns to 
   assert.ok(snapshot.executedInstructionCount > firstHitCount + 1);
 });
 
+test('keeps the one-time breakpoint skip when breakpoint configuration changes while paused', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'i = 0',
+    'while i < 2:',
+    '  i = i + 1',
+    'print(i)',
+  ].join('\n')));
+  const breakpoint = machine.setBreakpoints([2])[0];
+  assert.ok(breakpoint);
+
+  let snapshot = machine.current;
+  while (snapshot.nextInstructionIndex !== breakpoint.instructionIndex) {
+    snapshot = stepTeachingMachine(machine);
+  }
+  snapshot = stepTeachingMachine(machine);
+  assert.equal(snapshot.pauseReason, 'breakpoint');
+  const firstHitCount = snapshot.executedInstructionCount;
+
+  machine.setBreakpoints([2, 3]);
+  snapshot = stepTeachingMachine(machine, 'running');
+
+  assert.equal(snapshot.status, 'running');
+  assert.equal(snapshot.pauseReason, null);
+  assert.equal(snapshot.executedInstructionCount, firstHitCount + 1);
+  assert.notEqual(snapshot.hitBreakpointId, 'source-line:2');
+});
+
 test('Step Into stops at the first instruction in the called function', () => {
   const program = compileTeachingSource([
     'def twice(n):',

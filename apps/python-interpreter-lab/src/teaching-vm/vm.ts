@@ -201,7 +201,6 @@ export class TeachingMachine {
     const instructionBreakpoints = createTeachingInstructionBreakpoints(this.program, instructionIndexes);
     this.#sourceBreakpoints = new Map(sourceBreakpoints.map((breakpoint) => [breakpoint.instructionIndex, breakpoint]));
     this.#instructionBreakpoints = new Map(instructionBreakpoints.map((breakpoint) => [breakpoint.instructionIndex, breakpoint]));
-    this.#skipBreakpointInstructionIndex = null;
     return this.breakpoints;
   }
 
