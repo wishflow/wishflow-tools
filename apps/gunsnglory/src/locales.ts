@@ -42,12 +42,12 @@ export const messages = {
   'Battle replay': { en: 'Battle replay', zh: '战局重放' },
   'Export settled battle': { en: 'Export settled battle', zh: '导出已结算战局' },
   'Import replay': { en: 'Import replay', zh: '导入重放文件' },
-  'The first two source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.': {
-    en: 'The first two source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.',
-    zh: '目前可玩原版前两波；其余波次及完整战役结算尚未实现。',
+  'The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.': {
+    en: 'The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.',
+    zh: '目前可玩原版前三波；其余波次及完整战役结算尚未实现。',
   },
   'Hire selected map unit': { en: 'Hire selected map unit', zh: '雇佣选中的地图单位' },
-  'Play original first two waves': { en: 'Play original first two waves', zh: '游玩原版前两波' },
+  'Play original first three waves': { en: 'Play original first three waves', zh: '游玩原版前三波' },
   'Cow Gulch game map': { en: 'Cow Gulch game map', zh: '牛溪谷游戏地图' },
   'Compare numeric schemes': { en: 'Compare numeric schemes', zh: '比较数值方案' },
   'Compare the original Cow Gulch reward with an immutable draft using matched random samples.': {

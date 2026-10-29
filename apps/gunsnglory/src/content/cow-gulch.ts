@@ -1,5 +1,5 @@
 import cowGulchMap from './cow-gulch.json';
-import { cowGulchCampaignWaves } from './cow-gulch-campaign-waves';
+import { cowGulchCampaignWaves, cowGulchCampaignWavesP1c } from './cow-gulch-campaign-waves';
 import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
 import type { ScenarioContent, ScenarioUnit } from '../game';
 
@@ -133,6 +133,19 @@ export const cowGulchP1bCampaignContent: ScenarioContent = {
   id: 'cow-gulch-original-waves',
   contentVersion: 'gng-free-1.8.6-map1-p1b-waves-1-2-v1',
   title: { en: 'Cow Gulch · Original waves 1–2', zh: '牛溪谷 · 原版第 1–2 波' },
+};
+
+/** Original Cow Gulch waves 1–3, including the covered-wagon group. */
+export const cowGulchP1cCampaignContent: ScenarioContent = {
+  ...cowGulchContent,
+  id: 'cow-gulch-original-waves-1-3',
+  contentVersion: 'gng-free-1.8.6-map1-p1c-waves-1-3-v1',
+  title: { en: 'Cow Gulch · Original waves 1–3', zh: '牛溪谷 · 原版第 1–3 波' },
+  campaignWaves: cowGulchCampaignWavesP1c,
+  campaignEnemyByType: {
+    4: { hitPoints: 200, cashReward: 10, penetration: { light: 50, fire: 100, heavy: 66, poison: 100 }, turningDurationMs: 200 },
+    8: { hitPoints: 200, cashReward: 0, penetration: { light: 100, fire: 100, heavy: 100, poison: 100 }, turningDurationMs: 100 },
+  },
 };
 
 /** Debug-only fixture for the otherwise locked Cow Gulch Gunslinger upgrade path. */

@@ -6,7 +6,7 @@ import {
   createBrowserProgress,
   getBrowserScenarioContentVersion,
 } from './bootstrap/browser';
-import { cowGulchP1aSampleContent, cowGulchP1bCampaignContent } from './content/cow-gulch';
+import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent } from './content/cow-gulch';
 import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
@@ -41,8 +41,8 @@ app.innerHTML = [
   '  <section class="game-panel" aria-labelledby="scene-title">',
   '    <section class="campaign-panel" aria-labelledby="campaign-title">',
   '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
-  '      <p class="campaign-note" data-locale="These two acceptance stages reuse Cow Gulch; they are not production campaign levels.">These two acceptance stages reuse Cow Gulch; they are not production campaign levels.</p>',
-  '      <button type="button" data-testid="open-original-waves" data-action="open-original-waves">Play original first two waves</button>',
+  '      <p class="campaign-note" data-locale="This research stage reuses Cow Gulch; it is not a production campaign level.">This research stage reuses Cow Gulch; it is not a production campaign level.</p>',
+  '      <button type="button" data-testid="open-original-waves" data-action="open-original-waves">Play original first three waves</button>',
   '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
   '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
   '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
@@ -179,7 +179,7 @@ app.innerHTML = [
   '        <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
   '      </div>',
   '    </dialog>',
-  '    <p class="scene-caption" data-locale="The first two source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.">The first two source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.</p>',
+  '    <p class="scene-caption" data-locale="The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.">The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.</p>',
   '  </section>',
   '</section>',
 ].join('');
@@ -472,9 +472,9 @@ const languageMessages = {
     mapHired: (name: string, price: number) => `${name} hired from the map for $${price}.`,
     mapHireRejected: (name: string, price: number, cash: number) => `Not enough cash to hire ${name}: need $${price}, have $${cash}.`,
     startSample: 'Start one pioneer sample',
-    openOriginalWaves: 'Play original first two waves',
-    originalWaveContext: 'ORIGINAL WAVES · 1–2 OF 8',
-    originalWaveNotice: 'Original wave data is active. This build stops after wave 2 of 8 and does not settle campaign progress.',
+    openOriginalWaves: 'Play original first three waves',
+    originalWaveContext: 'ORIGINAL WAVES · 1–3 OF 8',
+    originalWaveNotice: 'Original wave data is active. This build stops after wave 3 of 8 and does not settle campaign progress.',
     returnCowGulchSample: 'Return to Cow Gulch sample',
     failed: 'Game scene failed to load',
     retrySceneOpen: 'Retry loading requested scene',
@@ -613,9 +613,9 @@ const languageMessages = {
     mapHired: (name: string, price: number) => `已花费 $${price} 雇佣地图上的${name}。`,
     mapHireRejected: (name: string, price: number, cash: number) => `现金不足，无法雇佣${name}：需要 $${price}，当前 $${cash}。`,
     startSample: '开始单个拓荒者样本',
-    openOriginalWaves: '游玩原版前两波',
-    originalWaveContext: '原版波次 · 第 1–2 / 8 波',
-    originalWaveNotice: '当前使用原版波次数据；本版本在第 2/8 波后停止，不会结算战役进度。',
+    openOriginalWaves: '游玩原版前三波',
+    originalWaveContext: '原版波次 · 第 1–3 / 8 波',
+    originalWaveNotice: '当前使用原版波次数据；本版本在第 3/8 波后停止，不会结算战役进度。',
     returnCowGulchSample: '返回牛溪谷样本',
     failed: '游戏场景加载失败',
     retrySceneOpen: '重试加载请求的场景',
@@ -1402,12 +1402,12 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
   }
   const upgradeScenario = view.scenarioId === 'cow-gulch-upgrade-sample';
-  const originalWaveScenario = view.scenarioId === cowGulchP1bCampaignContent.id;
+  const originalWaveScenario = view.scenarioId === cowGulchP1cCampaignContent.id;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
     : originalWaveScenario
-      ? cowGulchP1bCampaignContent.title[language]
+      ? cowGulchP1cCampaignContent.title[language]
     : activeCampaignStage?.title[language] ?? 'Cow Gulch';
   sceneContext.textContent = upgradeScenario
     ? messages.upgradeSceneContext
@@ -1576,6 +1576,14 @@ const assetNames = new Set([
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
   'pioneer_male',
   'pioneer_female',
+  'wagon',
+  'wagon_turn',
+  'horse_wagon',
+  'horse_wagon_white',
+  'horse_wagon_turn',
+  'horse_wagon_turn_white',
+  'sfx_smoke_explosion',
+  'sfx_exploding_parts',
   'player_gunslinger_shot',
   'player_mexican',
   'player_mexican_shot',
@@ -2193,7 +2201,7 @@ campaignStageList.addEventListener('click', (event: MouseEvent) => {
 });
 
 openOriginalWavesControl.addEventListener('click', () => {
-  void replaceSession(requestScenarioOpen(cowGulchP1bCampaignContent.id, 'formal'));
+  void replaceSession(requestScenarioOpen(cowGulchP1cCampaignContent.id, 'formal'));
 });
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));

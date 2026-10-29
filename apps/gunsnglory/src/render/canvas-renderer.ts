@@ -81,29 +81,56 @@ function drawEnemy(
   images: GameImages,
   viewport: MapViewport,
 ): void {
-  const image = images[enemy.asset];
-  if (!image) throw new Error('Missing game image: ' + enemy.asset);
+  const vehicle = enemy.type === 4 || enemy.type === 8;
+  const turn = enemy.turningAnimation;
+  const asset = turn?.asset ?? enemy.asset;
+  const image = images[asset];
+  if (!image) throw new Error('Missing game image: ' + asset);
 
-  const sourceWidth = 16;
-  const sourceHeight = 24;
+  const sourceWidth = vehicle ? 32 : 16;
+  const sourceHeight = vehicle ? 40 : 24;
   const tileScale = viewport.scaleFactor;
   const width = sourceWidth * tileScale;
   const height = sourceHeight * tileScale;
-  const centerX = viewport.origin.x + (enemy.positionFine.x / 240) * tileScale;
-  const feetY = viewport.origin.y + (enemy.positionFine.y / 240) * tileScale;
+  const offset = enemy.drawingOffsetFine ?? { x: 0, y: 0 };
+  const centerX = viewport.origin.x + ((enemy.positionFine.x + offset.x) / 240) * tileScale;
+  const feetY = viewport.origin.y + ((enemy.positionFine.y + offset.y) / 240) * tileScale;
   const left = centerX - width / 2;
   const top = feetY - height;
-  const sourceX = (enemy.animationFrame % 3) * sourceWidth;
-  const sourceY = spriteRow(enemy.direction) * sourceHeight;
+  const frameCount = enemy.type === 8 ? 4 : 3;
+  const sourceX = turn ? turn.frame * sourceWidth : (enemy.animationFrame % frameCount) * sourceWidth;
+  const sourceY = turn ? 0 : spriteRow(enemy.direction) * sourceHeight;
 
   context.save();
-  if (!enemy.alive) context.globalAlpha = Math.max(0.15, enemy.deathRemainingMs / 799);
-  if (enemy.direction === 'west') {
+  if (!vehicle && !enemy.alive) context.globalAlpha = Math.max(0.15, enemy.deathRemainingMs / 799);
+  const mirrored = turn ? turn.mirrored : enemy.direction === 'west';
+  if (mirrored) {
     context.translate((left * 2) + width, 0);
     context.scale(-1, 1);
   }
-  context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, width, height);
+  if (!vehicle || enemy.alive || enemy.deathRemainingMs > 350) {
+    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, width, height);
+  }
   context.restore();
+
+  if (!enemy.alive && vehicle && enemy.deathRemainingMs > 0) {
+    const smoke = images.sfx_smoke_explosion;
+    if (!smoke) throw new Error('Missing game image: sfx_smoke_explosion');
+    const smokeWidth = 48 * tileScale;
+    const smokeHeight = 64 * tileScale;
+    const smokeFrame = Math.max(0, Math.min(7, 7 - Math.floor(enemy.deathRemainingMs / 100)));
+    context.drawImage(
+      smoke,
+      smokeFrame * 48,
+      0,
+      48,
+      64,
+      centerX - smokeWidth / 2,
+      feetY - smokeHeight,
+      smokeWidth,
+      smokeHeight,
+    );
+  }
 
   if (enemy.hitFlashMs > 0 || !enemy.alive) {
     context.beginPath();
@@ -111,6 +138,24 @@ function drawEnemy(
     context.strokeStyle = enemy.alive ? '#ffe28a' : '#d85b42';
     context.lineWidth = Math.max(1, 1.5 * tileScale);
     context.stroke();
+  }
+}
+
+function drawWagonDebris(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const image = images.sfx_exploding_parts;
+  for (const part of view.wagonDebris ?? []) {
+    if (!image) throw new Error('Missing game image: sfx_exploding_parts');
+    const tileScale = viewport.scaleFactor;
+    const width = 12 * tileScale;
+    const height = 12 * tileScale;
+    const centerX = viewport.origin.x + (part.positionFine.x / 240) * tileScale;
+    const feetY = viewport.origin.y + ((part.positionFine.y - part.heightFine) / 240) * tileScale;
+    context.drawImage(image, part.frame * 12, 0, 12, 12, centerX - width / 2, feetY - height, width, height);
   }
 }
 
@@ -313,6 +358,7 @@ export function drawGame(
   for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
   drawTiles(context, view.map.streets, images, viewport);
   for (const shot of view.shots) drawShot(context, shot, images, viewport);
+  drawWagonDebris(context, view, images, viewport);
 
   for (const unit of view.units) {
     const left = viewport.origin.x + unit.render.x * viewport.tileSize;

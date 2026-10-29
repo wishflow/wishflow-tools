@@ -2,6 +2,7 @@ import { createGame } from '../game';
 import {
   cowGulchP1aSampleContent,
   cowGulchP1bCampaignContent,
+  cowGulchP1cCampaignContent,
   cowGulchUpgradeSampleContent,
 } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
@@ -25,6 +26,7 @@ function createSessionId(): string {
 const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchP1aSampleContent.id]: cowGulchP1aSampleContent,
   [cowGulchP1bCampaignContent.id]: cowGulchP1bCampaignContent,
+  [cowGulchP1cCampaignContent.id]: cowGulchP1cCampaignContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
