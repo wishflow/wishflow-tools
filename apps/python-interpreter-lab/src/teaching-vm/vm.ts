@@ -1,5 +1,6 @@
 import {
   MAX_HISTORY_SNAPSHOTS,
+  MAX_ACTIVE_FRAME_COUNT,
   MAX_DYNAMIC_INSTRUCTION_COUNT,
   MAX_INTEGER_BITS,
   MAX_NAME_COUNT,
@@ -12,6 +13,8 @@ import {
   type TeachingCompileResult,
   type TeachingConstant,
   type TeachingDiagnosticSnapshot,
+  type TeachingFrameSnapshot,
+  type TeachingFunction,
   type TeachingInstruction,
   type TeachingValueSnapshot,
   type TeachingVmHistory,
@@ -25,6 +28,7 @@ type RuntimeValue =
   | { type: 'bool'; value: boolean }
   | { type: 'str'; value: string }
   | { type: 'none' }
+  | { type: 'function'; function: TeachingFunction }
   | RangeRuntimeValue
   | IteratorRuntimeValue;
 
@@ -45,12 +49,23 @@ interface IteratorRuntimeValue {
 
 type NonTerminalStatus = 'running' | 'paused';
 
+interface RuntimeFrame {
+  id: number;
+  function: TeachingFunction | null;
+  pc: number;
+  returnPc: number | null;
+  callSite: SourceSpan | null;
+  stack: RuntimeValue[];
+  locals: Map<string, RuntimeValue>;
+  lastExecutedInstructionIndex: number | null;
+}
+
 export class TeachingMachine {
-  #pc = 0;
   #stepIndex = 0;
   #executedInstructionCount = 0;
   #status: TeachingVmStatus = 'ready';
-  #stack: RuntimeValue[] = [];
+  #frames: RuntimeFrame[];
+  #nextFrameId = 1;
   #variables = new Map<string, RuntimeValue>();
   #output: string[] = [];
   #lastExecutedInstructionIndex: number | null = null;
@@ -62,8 +77,36 @@ export class TeachingMachine {
   #current: TeachingVmSnapshot;
 
   constructor(readonly program: TeachingCompileResult) {
+    this.#frames = [{
+      id: 0,
+      function: null,
+      pc: 0,
+      returnPc: null,
+      callSite: null,
+      stack: [],
+      locals: new Map(),
+      lastExecutedInstructionIndex: null,
+    }];
     this.#current = this.createSnapshot();
     this.#history.push(this.#current);
+  }
+
+  get #frame(): RuntimeFrame {
+    const frame = this.#frames.at(-1);
+    if (!frame) throw new Error('Teaching VM frame stack cannot be empty.');
+    return frame;
+  }
+
+  get #pc(): number {
+    return this.#frame.pc;
+  }
+
+  set #pc(value: number) {
+    this.#frame.pc = value;
+  }
+
+  get #stack(): RuntimeValue[] {
+    return this.#frame.stack;
   }
 
   get current(): TeachingVmSnapshot {
@@ -79,10 +122,11 @@ export class TeachingMachine {
 
   step(statusAfter: NonTerminalStatus = 'paused'): TeachingVmSnapshot {
     if (this.#status === 'finished' || this.#status === 'error') return this.#current;
-    const instruction = this.program.instructions[this.#pc];
+    const executingFrame = this.#frame;
+    const instruction = this.program.instructions[executingFrame.pc];
     if (!instruction) {
       this.failInstruction(
-        { index: this.#pc, opcode: 'HALT', argument: null, span: this.program.ast.span },
+        { index: executingFrame.pc, opcode: 'HALT', argument: null, span: this.program.ast.span },
         'invalid-program-counter',
         'Instruction pointer is outside the teaching program.',
       );
@@ -102,9 +146,14 @@ export class TeachingMachine {
     this.#diagnostic = null;
     this.#executedInstructionCount += 1;
     try {
-      const nextPc = this.execute(instruction);
+      const nextPc = this.execute(instruction, executingFrame);
       this.#lastExecutedInstructionIndex = instruction.index;
-      this.#pc = nextPc ?? this.#pc + 1;
+      executingFrame.lastExecutedInstructionIndex = instruction.index;
+      if (instruction.opcode !== 'CALL_FUNCTION'
+        && instruction.opcode !== 'RETURN_VALUE'
+        && instruction.opcode !== 'RETURN_NONE') {
+        executingFrame.pc = nextPc ?? executingFrame.pc + 1;
+      }
       this.#status = instruction.opcode === 'HALT' ? 'finished' : statusAfter;
     } catch (error) {
       const diagnostic = error instanceof TeachingDiagnostic
@@ -126,7 +175,7 @@ export class TeachingMachine {
     return this.#current;
   }
 
-  private execute(instruction: TeachingInstruction): number | null {
+  private execute(instruction: TeachingInstruction, frame: RuntimeFrame): number | null {
     switch (instruction.opcode) {
       case 'LOAD_CONST': {
         const index = requireNumberArgument(instruction);
@@ -137,21 +186,41 @@ export class TeachingMachine {
       }
       case 'LOAD_NAME': {
         const name = requireStringArgument(instruction);
-        const value = this.#variables.get(name);
-        if (!value) this.runtimeError('name-error', `Name '${name}' is not defined.`, instruction.span);
+        const value = this.resolveName(name, frame, instruction);
+        if (value.type === 'function') {
+          this.runtimeError('function-value-unsupported', 'Functions can only be used as direct call targets.', instruction.span);
+        }
         this.#stack.push(value);
         return null;
       }
       case 'STORE_NAME': {
         const name = requireStringArgument(instruction);
         const value = this.peek(instruction);
-        if (!this.#variables.has(name) && this.#variables.size >= MAX_NAME_COUNT) {
-          this.runtimeError('too-many-names', `Program exceeds ${MAX_NAME_COUNT} variable names.`, instruction.span);
-        }
+        this.storeName(name, value, frame, instruction);
         this.#stack.pop();
-        this.#variables.set(name, value);
         return null;
       }
+      case 'DEFINE_FUNCTION': {
+        const functionId = requireNumberArgument(instruction);
+        const functionInfo = this.program.functions[functionId];
+        if (!functionInfo) this.runtimeError('invalid-function-index', `Function ${functionId} does not exist.`, instruction.span);
+        if (!this.#variables.has(functionInfo.name) && this.#variables.size >= MAX_NAME_COUNT) {
+          this.runtimeError('too-many-names', `Program exceeds ${MAX_NAME_COUNT} variable names.`, instruction.span);
+        }
+        this.#variables.set(functionInfo.name, { type: 'function', function: functionInfo });
+        return null;
+      }
+      case 'CALL_FUNCTION':
+        this.executeCall(instruction, frame);
+        return null;
+      case 'RETURN_VALUE': {
+        const value = this.peek(instruction);
+        this.returnFromFunction(value, frame, instruction);
+        return null;
+      }
+      case 'RETURN_NONE':
+        this.returnFromFunction({ type: 'none' }, frame, instruction);
+        return null;
       case 'UNARY_NEGATIVE': {
         const value = this.peek(instruction);
         if (!isNumeric(value)) this.typeError('unary -', [value], instruction.span);
@@ -196,8 +265,93 @@ export class TeachingMachine {
         this.executePrint(instruction);
         return null;
       case 'HALT':
+        if (frame.function) this.runtimeError('invalid-function-halt', 'A function cannot execute the module HALT instruction.', instruction.span);
         return null;
     }
+  }
+
+  private resolveName(name: string, frame: RuntimeFrame, instruction: TeachingInstruction): RuntimeValue {
+    if (frame.function?.localNames.includes(name)) {
+      const local = frame.locals.get(name);
+      if (!local) {
+        this.runtimeError('unbound-local-error', `Local name '${name}' is not bound yet.`, instruction.span);
+      }
+      return local;
+    }
+    const global = this.#variables.get(name);
+    if (!global) this.runtimeError('name-error', `Name '${name}' is not defined.`, instruction.span);
+    return global;
+  }
+
+  private storeName(name: string, value: RuntimeValue, frame: RuntimeFrame, instruction: TeachingInstruction): void {
+    if (frame.function) {
+      if (!frame.function.localNames.includes(name)) {
+        this.runtimeError('invalid-local-store', `Name '${name}' was not declared local by the compiler.`, instruction.span);
+      }
+      frame.locals.set(name, value);
+      return;
+    }
+    if (!this.#variables.has(name) && this.#variables.size >= MAX_NAME_COUNT) {
+      this.runtimeError('too-many-names', `Program exceeds ${MAX_NAME_COUNT} variable names.`, instruction.span);
+    }
+    this.#variables.set(name, value);
+  }
+
+  private executeCall(instruction: TeachingInstruction, caller: RuntimeFrame): void {
+    const name = requireStringArgument(instruction);
+    const value = this.resolveName(name, caller, instruction);
+    if (value.type !== 'function') this.runtimeError('not-callable', `Name '${name}' is not a function.`, instruction.span);
+    const argumentCount = instruction.argumentCount;
+    if (argumentCount === undefined || !Number.isInteger(argumentCount) || argumentCount < 0) {
+      this.runtimeError('invalid-instruction-argument', 'CALL_FUNCTION requires a non-negative argument count.', instruction.span);
+    }
+    if (argumentCount !== value.function.parameters.length) {
+      this.runtimeError(
+        'argument-count-mismatch',
+        `Function '${name}' expects ${value.function.parameters.length} arguments but received ${argumentCount}.`,
+        instruction.span,
+      );
+    }
+    if (argumentCount > caller.stack.length) {
+      this.runtimeError('vm-stack-underflow', 'CALL_FUNCTION does not have enough argument values on the stack.', instruction.span);
+    }
+    if (this.#frames.length >= MAX_ACTIVE_FRAME_COUNT) {
+      this.runtimeError('frame-limit-exceeded', `Teaching VM reached its ${MAX_ACTIVE_FRAME_COUNT}-frame limit.`, instruction.span);
+    }
+    const activeLocalCount = this.#frames.reduce((count, frame) => count + (frame.function?.localNames.length ?? 0), 0);
+    if (this.#variables.size + activeLocalCount + value.function.localNames.length > MAX_NAME_COUNT) {
+      this.runtimeError('too-many-names', `Active frames exceed the ${MAX_NAME_COUNT}-name limit.`, instruction.span);
+    }
+
+    const arguments_ = caller.stack.splice(caller.stack.length - argumentCount, argumentCount);
+    const locals = new Map<string, RuntimeValue>();
+    value.function.parameters.forEach((parameter, index) => {
+      const argument = arguments_[index];
+      if (argument) locals.set(parameter, argument);
+    });
+    const returnPc = caller.pc + 1;
+    caller.pc = returnPc;
+    this.#frames.push({
+      id: this.#nextFrameId,
+      function: value.function,
+      pc: value.function.entryIndex,
+      returnPc,
+      callSite: instruction.span,
+      stack: [],
+      locals,
+      lastExecutedInstructionIndex: null,
+    });
+    this.#nextFrameId += 1;
+  }
+
+  private returnFromFunction(value: RuntimeValue, frame: RuntimeFrame, instruction: TeachingInstruction): void {
+    if (!frame.function || this.#frames.length <= 1) {
+      this.runtimeError('return-outside-function', 'RETURN cannot exit the module frame.', instruction.span);
+    }
+    if (instruction.opcode === 'RETURN_VALUE') frame.stack.pop();
+    this.#frames.pop();
+    const caller = this.#frame;
+    caller.stack.push(value);
   }
 
   private executeAdd(instruction: TeachingInstruction): void {
@@ -409,22 +563,44 @@ export class TeachingMachine {
   }
 
   private createSnapshot(): TeachingVmSnapshot {
+    const frames = Object.freeze(this.#frames.map((frame) => this.createFrameSnapshot(frame)));
+    const activeFrame = frames.at(-1);
+    if (!activeFrame) throw new Error('Teaching VM snapshot requires an active frame.');
     return Object.freeze({
       stepIndex: this.#stepIndex,
       executedInstructionCount: this.#executedInstructionCount,
-      pc: this.#pc,
+      pc: activeFrame.pc,
       status: this.#status,
       lastExecutedInstructionIndex: this.#lastExecutedInstructionIndex,
-      nextInstructionIndex: this.#status === 'finished' ? null : this.#pc,
+      nextInstructionIndex: this.#status === 'finished' ? null : activeFrame.pc,
       faultInstructionIndex: this.#faultInstructionIndex,
       controlFlow: this.#controlFlow,
-      stack: Object.freeze(this.#stack.map(snapshotValue)),
-      variables: Object.freeze([...this.#variables].map(([name, value]) => Object.freeze({
+      frames,
+      stack: activeFrame.stack,
+      variables: activeFrame.variables,
+      output: Object.freeze([...this.#output]),
+      diagnostic: this.#diagnostic,
+    });
+  }
+
+  private createFrameSnapshot(frame: RuntimeFrame): TeachingFrameSnapshot {
+    const variables = frame.function ? frame.locals : this.#variables;
+    return Object.freeze({
+      id: frame.id,
+      functionName: frame.function?.name ?? '<module>',
+      kind: frame.function ? 'function' : 'module',
+      pc: frame.pc,
+      lastExecutedInstructionIndex: frame.lastExecutedInstructionIndex,
+      returnPc: frame.returnPc,
+      callSite: frame.callSite ? Object.freeze({ ...frame.callSite }) : null,
+      stack: Object.freeze(frame.stack.map(snapshotValue)),
+      variables: Object.freeze([...variables].map(([name, value]) => Object.freeze({
         name,
         value: snapshotValue(value),
       }))),
-      output: Object.freeze([...this.#output]),
-      diagnostic: this.#diagnostic,
+      unboundLocalNames: Object.freeze(frame.function
+        ? frame.function.localNames.filter((name) => !frame.locals.has(name))
+        : []),
     });
   }
 }
@@ -466,7 +642,9 @@ function snapshotValue(value: RuntimeValue): TeachingValueSnapshot {
           ? value.value
           : value.type === 'range'
             ? formatRange(value)
-            : formatIterator(value);
+          : value.type === 'iterator'
+            ? formatIterator(value)
+            : `<function ${value.function.name}(${value.function.parameters.join(', ')})>`;
   return Object.freeze({
     type: value.type,
     value: text,
@@ -484,6 +662,7 @@ function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticS
 }
 
 function formatPrintValue(value: RuntimeValue): string {
+  if (value.type === 'function') return `<function ${value.function.name}>`;
   if (value.type === 'none') return 'None';
   if (value.type === 'bool') return value.value ? 'True' : 'False';
   if (value.type === 'range') return formatRange(value);
@@ -502,6 +681,7 @@ function numericValue(value: Extract<RuntimeValue, { type: 'int' | 'bool' }>): b
 function isTruthy(value: RuntimeValue): boolean {
   switch (value.type) {
     case 'none': return false;
+    case 'function': return true;
     case 'bool': return value.value;
     case 'int': return value.value !== 0n;
     case 'str': return value.value.length > 0;

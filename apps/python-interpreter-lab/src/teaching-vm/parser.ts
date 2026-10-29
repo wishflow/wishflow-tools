@@ -13,6 +13,7 @@ class Parser {
   private current = 0;
   private expressionNestingDepth = 0;
   private blockNestingDepth = 0;
+  private functionNestingDepth = 0;
 
   constructor(private readonly tokens: TeachingToken[], private readonly sourceLength: number) {}
 
@@ -23,7 +24,7 @@ class Parser {
       const statement = this.parseStatement();
       statements.push(statement);
       if (this.match('NEWLINE')) continue;
-      if (statement.type === 'If' || statement.type === 'While' || statement.type === 'For') continue;
+      if (isCompoundStatement(statement)) continue;
       if (!this.isAtEnd()) this.fail('expected-newline', 'Expected a newline between statements.', this.peek());
     }
 
@@ -44,6 +45,8 @@ class Parser {
 
   private parseStatement(): TeachingStatement {
     if (this.check('UNSUPPORTED_KEYWORD')) this.unsupportedKeyword(this.peek());
+    if (this.match('DEF')) return this.parseFunctionDefinition(this.previous());
+    if (this.match('RETURN')) return this.parseReturnStatement(this.previous());
     if (this.match('IF')) return this.parseIfStatement(this.previous());
     if (this.match('WHILE')) {
       const start = this.previous();
@@ -67,6 +70,57 @@ class Parser {
     }
     if (this.match('PRINT')) return this.parsePrintStatement(this.previous());
     this.fail('expected-statement', 'Expected a name assignment or print(...) statement.', this.peek());
+  }
+
+  private parseFunctionDefinition(start: TeachingToken): TeachingStatement {
+    if (this.blockNestingDepth > 0) {
+      this.fail('nested-function-definition', 'Function definitions must be at module level.', start);
+    }
+    const name = this.consume('NAME', 'expected-function-name', 'Expected a function name after def.');
+    this.consume('LEFT_PAREN', 'expected-function-parenthesis', "Expected '(' after the function name.");
+    const parameters: string[] = [];
+    const parameterSpans: SourceSpan[] = [];
+    if (!this.check('RIGHT_PAREN')) {
+      while (true) {
+        const parameter = this.consume('NAME', 'expected-parameter-name', 'Expected a parameter name.');
+        parameters.push(parameter.lexeme);
+        parameterSpans.push(parameter.span);
+        if (!this.match('COMMA')) break;
+        if (this.check('RIGHT_PAREN')) {
+          this.fail('trailing-parameter-comma', 'Trailing commas are not supported in function parameters.', this.peek());
+        }
+      }
+    }
+    this.consume('RIGHT_PAREN', 'expected-function-parenthesis', "Expected ')' after function parameters.");
+    this.consume('COLON', 'expected-colon', "Expected ':' after the function signature.");
+    this.consume('NEWLINE', 'expected-newline', 'Expected a newline after the function header.');
+    this.functionNestingDepth += 1;
+    let body: TeachingStatement[];
+    try {
+      body = this.parseSuite(start);
+    } finally {
+      this.functionNestingDepth -= 1;
+    }
+    return {
+      type: 'FunctionDef',
+      name: name.lexeme,
+      parameters,
+      parameterSpans,
+      body,
+      span: mergeSpans(start.span, body.at(-1)?.span ?? name.span),
+    };
+  }
+
+  private parseReturnStatement(start: TeachingToken): TeachingStatement {
+    if (this.functionNestingDepth === 0) {
+      this.fail('return-outside-function', "'return' is only valid inside a function.", start);
+    }
+    const value = this.check('NEWLINE') || this.check('DEDENT') ? null : this.parseExpression();
+    return {
+      type: 'Return',
+      value,
+      span: value ? mergeSpans(start.span, value.span) : start.span,
+    };
   }
 
   private parseIfStatement(start: TeachingToken): TeachingStatement {
@@ -147,7 +201,7 @@ class Parser {
         const statement = this.parseStatement();
         statements.push(statement);
         if (this.match('NEWLINE')) continue;
-        if (statement.type === 'If' || statement.type === 'While' || statement.type === 'For') continue;
+        if (isCompoundStatement(statement)) continue;
         if (!this.check('DEDENT') && !this.isAtEnd()) {
           this.fail('expected-newline', 'Expected a newline between statements.', this.peek());
         }
@@ -300,6 +354,27 @@ class Parser {
     if (this.match('NONE')) return { type: 'NoneLiteral', span: this.previous().span };
     if (this.match('NAME')) {
       const token = this.previous();
+      if (this.match('LEFT_PAREN')) {
+        return this.withExpressionNesting(token, () => {
+          const args: TeachingExpression[] = [];
+          if (!this.check('RIGHT_PAREN')) {
+            while (true) {
+              args.push(this.parseExpression());
+              if (!this.match('COMMA')) break;
+              if (this.check('RIGHT_PAREN')) {
+                this.fail('trailing-call-comma', 'Trailing commas are not supported in function calls.', this.peek());
+              }
+            }
+          }
+          const end = this.consume('RIGHT_PAREN', 'expected-closing-parenthesis', "Expected ')' after call arguments.");
+          return {
+            type: 'Call',
+            name: token.lexeme,
+            arguments: args,
+            span: mergeSpans(token.span, end.span),
+          };
+        });
+      }
       return { type: 'Name', name: token.lexeme, span: token.span };
     }
     if (this.match('UNSUPPORTED_KEYWORD')) this.unsupportedKeyword(this.previous());
@@ -311,7 +386,7 @@ class Parser {
         return expression;
       });
     }
-    this.fail('expected-expression', 'Expected an integer, string, name, or parenthesized expression.', this.peek());
+    this.fail('expected-expression', 'Expected an integer, string, None, name, call, or parenthesized expression.', this.peek());
   }
 
   private withExpressionNesting<T>(token: TeachingToken, parseNested: () => T): T {
@@ -394,6 +469,13 @@ class Parser {
 
 export function parseTeachingSource(source: string): TeachingProgram {
   return new Parser(tokenizeTeachingSource(source), source.length).parse();
+}
+
+function isCompoundStatement(statement: TeachingStatement): boolean {
+  return statement.type === 'If'
+    || statement.type === 'While'
+    || statement.type === 'For'
+    || statement.type === 'FunctionDef';
 }
 
 function mergeSpans(start: SourceSpan, end: SourceSpan): SourceSpan {

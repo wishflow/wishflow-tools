@@ -37,6 +37,8 @@ export type TokenType =
   | 'IF'
   | 'ELIF'
   | 'ELSE'
+  | 'DEF'
+  | 'RETURN'
   | 'WHILE'
   | 'FOR'
   | 'IN'
@@ -75,7 +77,29 @@ export interface TeachingProgram {
   span: SourceSpan;
 }
 
-export type TeachingStatement = AssignmentStatement | PrintStatement | IfStatement | WhileStatement | ForStatement;
+export type TeachingStatement =
+  | AssignmentStatement
+  | PrintStatement
+  | IfStatement
+  | WhileStatement
+  | ForStatement
+  | FunctionDefinitionStatement
+  | ReturnStatement;
+
+export interface FunctionDefinitionStatement {
+  type: 'FunctionDef';
+  name: string;
+  parameters: string[];
+  parameterSpans: SourceSpan[];
+  body: TeachingStatement[];
+  span: SourceSpan;
+}
+
+export interface ReturnStatement {
+  type: 'Return';
+  value: TeachingExpression | null;
+  span: SourceSpan;
+}
 
 export interface AssignmentStatement {
   type: 'Assign';
@@ -128,7 +152,8 @@ export type TeachingExpression =
   | UnaryExpression
   | BinaryExpression
   | ComparisonExpression
-  | LogicalExpression;
+  | LogicalExpression
+  | CallExpression;
 
 export interface IntegerLiteralExpression {
   type: 'IntegerLiteral';
@@ -191,6 +216,13 @@ export interface LogicalExpression {
   span: SourceSpan;
 }
 
+export interface CallExpression {
+  type: 'Call';
+  name: string;
+  arguments: TeachingExpression[];
+  span: SourceSpan;
+}
+
 export interface TeachingConstant {
   type: 'int' | 'str' | 'bool' | 'none';
   value: string;
@@ -214,12 +246,27 @@ export type TeachingOpcode =
   | 'JUMP_IF_FALSE_OR_POP'
   | 'JUMP_IF_TRUE_OR_POP'
   | 'PRINT'
+  | 'DEFINE_FUNCTION'
+  | 'CALL_FUNCTION'
+  | 'RETURN_VALUE'
+  | 'RETURN_NONE'
   | 'HALT';
 
 export interface TeachingInstruction {
   index: number;
   opcode: TeachingOpcode;
   argument: number | string | null;
+  argumentCount?: number;
+  span: SourceSpan;
+}
+
+export interface TeachingFunction {
+  id: number;
+  name: string;
+  parameters: string[];
+  localNames: string[];
+  entryIndex: number;
+  endIndex: number;
   span: SourceSpan;
 }
 
@@ -228,12 +275,13 @@ export interface TeachingCompileResult {
   ast: TeachingProgram;
   constants: TeachingConstant[];
   instructions: TeachingInstruction[];
+  functions: TeachingFunction[];
 }
 
 export type TeachingVmStatus = 'ready' | 'running' | 'paused' | 'finished' | 'error';
 
 export interface TeachingValueSnapshot {
-  type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator';
+  type: 'int' | 'str' | 'bool' | 'none' | 'range' | 'iterator' | 'function';
   value: string;
   display: string;
 }
@@ -259,10 +307,24 @@ export interface TeachingVmSnapshot {
   nextInstructionIndex: number | null;
   faultInstructionIndex: number | null;
   controlFlow: TeachingControlFlowSnapshot | null;
+  frames: readonly TeachingFrameSnapshot[];
   stack: readonly TeachingValueSnapshot[];
   variables: readonly TeachingVariableSnapshot[];
   output: readonly string[];
   diagnostic: TeachingDiagnosticSnapshot | null;
+}
+
+export interface TeachingFrameSnapshot {
+  id: number;
+  functionName: string;
+  kind: 'module' | 'function';
+  pc: number;
+  lastExecutedInstructionIndex: number | null;
+  returnPc: number | null;
+  callSite: SourceSpan | null;
+  stack: readonly TeachingValueSnapshot[];
+  variables: readonly TeachingVariableSnapshot[];
+  unboundLocalNames: readonly string[];
 }
 
 export interface TeachingControlFlowSnapshot {

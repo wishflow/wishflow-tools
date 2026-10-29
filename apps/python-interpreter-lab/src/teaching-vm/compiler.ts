@@ -8,7 +8,9 @@ import {
   type TeachingCompileResult,
   type TeachingConstant,
   type TeachingExpression,
+  type FunctionDefinitionStatement,
   type TeachingInstruction,
+  type TeachingFunction,
   type TeachingProgram,
   type TeachingStatement,
   type TeachingOpcode,
@@ -23,32 +25,72 @@ class Compiler {
   constructor(private readonly ast: TeachingProgram) {}
 
   compile(): TeachingCompileResult {
-    for (const statement of this.ast.statements) this.compileStatement(statement);
+    const definitions: Array<{ id: number; statement: FunctionDefinitionStatement }> = [];
+    for (const statement of this.ast.statements) {
+      if (statement.type === 'FunctionDef') {
+        const id = definitions.length;
+        definitions.push({ id, statement });
+        this.emit('DEFINE_FUNCTION', id, statement.span);
+      } else {
+        this.compileStatement(statement);
+      }
+    }
     this.emit('HALT', null, this.ast.span);
+    const functions: TeachingFunction[] = definitions.map(({ id, statement }) => {
+      validateFunctionParameters(statement);
+      const localNames = [...new Set([...statement.parameters, ...collectLocalNames(statement.body)])];
+      const entryIndex = this.instructions.length;
+      for (const child of statement.body) this.compileStatement(child);
+      this.emit('RETURN_NONE', null, statement.span);
+      return {
+        id,
+        name: statement.name,
+        parameters: statement.parameters,
+        localNames,
+        entryIndex,
+        endIndex: this.instructions.length,
+        span: statement.span,
+      };
+    });
     return {
       version: 'mini-vm-v3',
       ast: this.ast,
       constants: this.constants,
       instructions: this.instructions,
+      functions,
     };
   }
 
   private compileStatement(statement: TeachingStatement): void {
-    if (statement.type === 'Assign') {
-      this.compileExpression(statement.value);
-      this.emit('STORE_NAME', statement.name, statement.span);
-      return;
+    switch (statement.type) {
+      case 'Assign':
+        this.compileExpression(statement.value);
+        this.emit('STORE_NAME', statement.name, statement.span);
+        return;
+      case 'Print':
+        for (const argument of statement.arguments) this.compileExpression(argument);
+        this.emit('PRINT', statement.arguments.length, statement.span);
+        return;
+      case 'If':
+        this.compileIf(statement);
+        return;
+      case 'While':
+        this.compileWhile(statement);
+        return;
+      case 'For':
+        this.compileFor(statement);
+        return;
+      case 'Return':
+        if (statement.value) {
+          this.compileExpression(statement.value);
+          this.emit('RETURN_VALUE', null, statement.span);
+        } else {
+          this.emit('RETURN_NONE', null, statement.span);
+        }
+        return;
+      case 'FunctionDef':
+        throw new TeachingDiagnostic('compile', 'nested-function-definition', 'Function definitions must be at module level.', statement.span);
     }
-
-    if (statement.type === 'Print') {
-      for (const argument of statement.arguments) this.compileExpression(argument);
-      this.emit('PRINT', statement.arguments.length, statement.span);
-      return;
-    }
-
-    if (statement.type === 'If') this.compileIf(statement);
-    else if (statement.type === 'While') this.compileWhile(statement);
-    else this.compileFor(statement);
   }
 
   private compileIf(statement: Extract<TeachingStatement, { type: 'If' }>): void {
@@ -108,6 +150,10 @@ class Compiler {
       case 'Name':
         this.emit('LOAD_NAME', expression.name, expression.span);
         return;
+      case 'Call':
+        for (const argument of expression.arguments) this.compileExpression(argument);
+        this.emit('CALL_FUNCTION', expression.name, expression.span, expression.arguments.length);
+        return;
       case 'Unary':
         this.compileExpression(expression.operand);
         this.emit(expression.operator === '-' ? 'UNARY_NEGATIVE' : 'UNARY_NOT', null, expression.span);
@@ -147,7 +193,12 @@ class Compiler {
     return index;
   }
 
-  private emit(opcode: TeachingOpcode, argument: number | string | null, span: SourceSpan): number {
+  private emit(
+    opcode: TeachingOpcode,
+    argument: number | string | null,
+    span: SourceSpan,
+    argumentCount?: number,
+  ): number {
     if (this.instructions.length >= MAX_INSTRUCTION_COUNT) {
       throw new TeachingDiagnostic(
         'compile',
@@ -160,6 +211,7 @@ class Compiler {
       index: this.instructions.length,
       opcode,
       argument,
+      ...(argumentCount === undefined ? {} : { argumentCount }),
       span,
     });
     return this.instructions.length - 1;
@@ -170,6 +222,49 @@ class Compiler {
     if (!instruction) throw new Error('Cannot patch a missing teaching instruction.');
     this.instructions[instructionIndex] = { ...instruction, argument: target };
   }
+}
+
+function validateFunctionParameters(statement: FunctionDefinitionStatement): void {
+  const seen = new Set<string>();
+  statement.parameters.forEach((name, index) => {
+    if (seen.has(name)) {
+      throw new TeachingDiagnostic(
+        'compile',
+        'duplicate-parameter',
+        `Duplicate parameter name '${name}'.`,
+        statement.parameterSpans[index] ?? statement.span,
+      );
+    }
+    seen.add(name);
+  });
+}
+
+function collectLocalNames(statements: TeachingStatement[]): string[] {
+  const names = new Set<string>();
+  const visit = (statement: TeachingStatement): void => {
+    switch (statement.type) {
+      case 'Assign':
+        names.add(statement.name);
+        return;
+      case 'For':
+        names.add(statement.name);
+        statement.body.forEach(visit);
+        return;
+      case 'If':
+        statement.branches.forEach(({ body }) => body.forEach(visit));
+        statement.elseBody?.forEach(visit);
+        return;
+      case 'While':
+        statement.body.forEach(visit);
+        return;
+      case 'FunctionDef':
+      case 'Return':
+      case 'Print':
+        return;
+    }
+  };
+  statements.forEach(visit);
+  return [...names];
 }
 
 export function compileTeachingSource(source: string): TeachingCompileResult {

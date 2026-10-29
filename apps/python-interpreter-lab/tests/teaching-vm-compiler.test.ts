@@ -38,6 +38,53 @@ test('compiles None to a dedicated constant without treating it as a name', () =
   ]);
 });
 
+test('keeps function bodies after module HALT and compiles a zero-argument call and return', () => {
+  const result = compileTeachingSource('def answer():\n  return 42\nresult = answer()\nprint(result)');
+  assert.deepEqual(result.instructions.map(({ opcode, argument, argumentCount }) => [opcode, argument, argumentCount ?? null]), [
+    ['DEFINE_FUNCTION', 0, null],
+    ['CALL_FUNCTION', 'answer', 0],
+    ['STORE_NAME', 'result', null],
+    ['LOAD_NAME', 'result', null],
+    ['PRINT', 1, null],
+    ['HALT', null, null],
+    ['LOAD_CONST', 0, null],
+    ['RETURN_VALUE', null, null],
+    ['RETURN_NONE', null, null],
+  ]);
+  assert.deepEqual(result.functions.map(({ id, name, parameters, localNames, entryIndex, endIndex }) => ({
+    id, name, parameters, localNames, entryIndex, endIndex,
+  })), [{ id: 0, name: 'answer', parameters: [], localNames: [], entryIndex: 6, endIndex: 9 }]);
+});
+
+test('includes parameters in local slots and emits ordered positional call arguments', () => {
+  const result = compileTeachingSource('def add(left, right):\n  return left + right\nprint(add(2, 3))');
+  const fn = result.functions[0];
+  assert.deepEqual(fn?.parameters, ['left', 'right']);
+  assert.deepEqual(fn?.localNames, ['left', 'right']);
+  assert.deepEqual(result.instructions.map(({ opcode, argument, argumentCount }) => [opcode, argument, argumentCount ?? null]), [
+    ['DEFINE_FUNCTION', 0, null],
+    ['LOAD_CONST', 0, null],
+    ['LOAD_CONST', 1, null],
+    ['CALL_FUNCTION', 'add', 2],
+    ['PRINT', 1, null],
+    ['HALT', null, null],
+    ['LOAD_NAME', 'left', null],
+    ['LOAD_NAME', 'right', null],
+    ['BINARY_ADD', null, null],
+    ['RETURN_VALUE', null, null],
+    ['RETURN_NONE', null, null],
+  ]);
+});
+
+test('rejects duplicate parameter names during compilation', () => {
+  assert.throws(
+    () => compileTeachingSource('def duplicate(value, value):\n  return value'),
+    (error: unknown) => error instanceof TeachingDiagnostic
+      && error.stage === 'compile'
+      && error.code === 'duplicate-parameter',
+  );
+});
+
 test('compiles short-circuit jumps with patched instruction-index targets', () => {
   const result = compileTeachingSource('print(False and missing, True or fallback)');
   assert.deepEqual(result.constants, [

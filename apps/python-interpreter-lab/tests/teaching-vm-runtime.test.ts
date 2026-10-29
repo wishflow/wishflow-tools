@@ -6,6 +6,7 @@ import {
   getTeachingHistory,
   stepTeachingMachine,
 } from '../src/teaching-vm/vm';
+import { MAX_ACTIVE_FRAME_COUNT, MAX_DYNAMIC_INSTRUCTION_COUNT, MAX_NAME_COUNT } from '../src/teaching-vm/resource-limits';
 
 test('steps each bytecode instruction and records stack, variables, output, and finish state', () => {
   const machine = createTeachingMachine(compileTeachingSource('x = 1 + 2 * 3\nprint(x)'));
@@ -90,6 +91,306 @@ test('prints None, treats it as false, and compares it by identity-like scalar r
   const sameTypeOrdering = createTeachingMachine(compileTeachingSource('print(None < None)'));
   while (sameTypeOrdering.current.status !== 'error' && sameTypeOrdering.current.status !== 'finished') stepTeachingMachine(sameTypeOrdering);
   assert.equal(sameTypeOrdering.current.diagnostic?.code, 'type-error');
+});
+
+test('enters a distinct function frame and returns the value to its paused caller', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def answer():',
+    '  return 42',
+    'result = answer()',
+    'print(result)',
+  ].join('\n')));
+
+  const moduleFrame = machine.current.frames[0];
+  assert.equal(machine.current.frames.length, 1);
+  assert.equal(moduleFrame?.functionName, '<module>');
+
+  const defined = stepTeachingMachine(machine);
+  assert.equal(defined.frames.length, 1);
+  assert.equal(defined.variables[0]?.name, 'answer');
+  assert.equal(defined.variables[0]?.value.type, 'function');
+
+  const entered = stepTeachingMachine(machine);
+  assert.equal(entered.frames.length, 2);
+  assert.equal(entered.frames[0]?.pc, 2);
+  assert.equal(entered.frames[1]?.functionName, 'answer');
+  assert.notEqual(entered.frames[0]?.id, entered.frames[1]?.id);
+  assert.deepEqual(entered.stack, []);
+
+  const loaded = stepTeachingMachine(machine);
+  assert.deepEqual(loaded.stack.map(({ value }) => value), ['42']);
+  const returned = stepTeachingMachine(machine);
+  assert.equal(returned.frames.length, 1);
+  assert.deepEqual(returned.stack.map(({ value }) => value), ['42']);
+  assert.equal(returned.nextInstructionIndex, 2);
+
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['42']);
+});
+
+test('returns None for bare and implicit function returns', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def bare():',
+    '  return',
+    'def implicit():',
+    '  x = 1',
+    'print(bare(), implicit())',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['None None']);
+});
+
+test('passes required positional arguments through nested calls in source order', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def add(left, right):',
+    '  return left + right',
+    'def wrap(value):',
+    '  return add(value, 3)',
+    'def first():',
+    '  print("first")',
+    '  return 1',
+    'def second():',
+    '  print("second")',
+    '  return 2',
+    'def combine(left, right):',
+    '  return left * 10 + right',
+    'print(wrap(4), add(1 + 1, wrap(2)))',
+    'print(combine(first(), second()))',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['7 7', 'first', 'second', '12']);
+  assert.deepEqual(machine.current.frames.map(({ functionName }) => functionName), ['<module>']);
+});
+
+test('reports too few and too many positional arguments at runtime', () => {
+  for (const source of [
+    'def one(value):\n  return value\nprint(one())',
+    'def one(value):\n  return value\nprint(one(1, 2))',
+  ]) {
+    const machine = createTeachingMachine(compileTeachingSource(source));
+    while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+    assert.equal(machine.current.status, 'error');
+    assert.equal(machine.current.diagnostic?.code, 'argument-count-mismatch');
+    assert.equal(machine.current.frames.length, 1);
+  }
+});
+
+test('keeps function-local assignments separate while falling back to module globals', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'value = 10',
+    'def local_value():',
+    '  value = 2',
+    '  return value',
+    'def global_value():',
+    '  return value',
+    'print(local_value(), global_value(), value)',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['2 10 10']);
+});
+
+test('classifies a later assignment as local and reports an unbound read without global fallback', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'value = 10',
+    'def read_before_assignment():',
+    '  if False:',
+    '    value = 2',
+    '  print(value)',
+    'print(read_before_assignment())',
+  ].join('\n')));
+  while (machine.current.status !== 'error' && machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'unbound-local-error');
+  assert.deepEqual(machine.current.frames.at(-1)?.unboundLocalNames, ['value']);
+  assert.equal(machine.current.frames[0]?.variables.find(({ name }) => name === 'value')?.value.value, '10');
+});
+
+test('returns from a selected nested conditional block and discards the function frame', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'choice = 2',
+    'def select_choice():',
+    '  if choice == 1:',
+    '    return 10',
+    '  elif choice == 2:',
+    '    return 20',
+    '  else:',
+    '    return 30',
+    'print(select_choice())',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['20']);
+  assert.equal(machine.current.frames.length, 1);
+});
+
+test('uses function scope for branch and for-loop targets and returns from a nested loop', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'value = 100',
+    'def sum_prefix(limit):',
+    '  total = 0',
+    '  for value in range(limit):',
+    '    if value == 3:',
+    '      return total',
+    '    total = total + value',
+    '  return total',
+    'def early_while(limit):',
+    '  index = 0',
+    '  while index < limit:',
+    '    if index == 2:',
+    '      return index',
+    '    index = index + 1',
+    '  return -1',
+    'print(sum_prefix(5), value, early_while(4))',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['3 100 2']);
+  assert.deepEqual(machine.program.functions[0]?.localNames, ['limit', 'total', 'value']);
+  assert.equal(machine.current.frames.length, 1);
+});
+
+test('reports a missing non-local name as a name error', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def missing_global():',
+    '  return absent',
+    'print(missing_global())',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'name-error');
+});
+
+test('allows a function local to shadow a module function name', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def value(item):',
+    '  return item',
+    'def identity(value):',
+    '  return value',
+    'print(identity(5))',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['5']);
+});
+
+test('allows a function name to be rebound to a scalar and rejects bare function values', () => {
+  const rebound = createTeachingMachine(compileTeachingSource([
+    'def value():',
+    '  return 1',
+    'value = 5',
+    'print(value)',
+  ].join('\n')));
+  while (rebound.current.status !== 'finished' && rebound.current.status !== 'error') stepTeachingMachine(rebound);
+  assert.equal(rebound.current.status, 'finished');
+  assert.deepEqual(rebound.current.output, ['5']);
+
+  const bareFunction = createTeachingMachine(compileTeachingSource([
+    'def value():',
+    '  return 1',
+    'print(value)',
+  ].join('\n')));
+  while (bareFunction.current.status !== 'finished' && bareFunction.current.status !== 'error') stepTeachingMachine(bareFunction);
+  assert.equal(bareFunction.current.status, 'error');
+  assert.equal(bareFunction.current.diagnostic?.code, 'function-value-unsupported');
+});
+
+test('executes recursive and mutually recursive functions', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def factorial(n):',
+    '  if n <= 1:',
+    '    return 1',
+    '  return n * factorial(n - 1)',
+    'def is_even(n):',
+    '  if n == 0:',
+    '    return True',
+    '  return is_odd(n - 1)',
+    'def is_odd(n):',
+    '  if n == 0:',
+    '    return False',
+    '  return is_even(n - 1)',
+    'print(factorial(5), is_even(4), is_odd(4))',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['120 True False']);
+  assert.deepEqual(machine.current.frames.map(({ functionName }) => functionName), ['<module>']);
+});
+
+test('caps recursive calls at 64 total active frames including the module frame', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def recurse():',
+    '  return recurse()',
+    'print(recurse())',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'frame-limit-exceeded');
+  assert.equal(machine.current.frames.length, MAX_ACTIVE_FRAME_COUNT);
+  assert.equal(machine.current.frames[0]?.functionName, '<module>');
+  assert.ok(machine.current.frames.slice(1).every(({ functionName }) => functionName === 'recurse'));
+});
+
+test('counts calls and returns against the shared 5,000-instruction runtime budget', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'counter = 0',
+    'def tick():',
+    '  return None',
+    'while counter < 1000:',
+    '  result = tick()',
+    '  counter = counter + 1',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'instruction-budget-exceeded');
+  assert.equal(machine.current.executedInstructionCount, MAX_DYNAMIC_INSTRUCTION_COUNT);
+});
+
+test('counts all active local slots against the name budget before creating a frame', () => {
+  const makeSource = (localCount: number) => [
+    'def allocate():',
+    ...Array.from({ length: localCount }, (_, index) => `  value_${index} = ${index}`),
+    '  return None',
+    'print(allocate())',
+  ].join('\n');
+
+  const fits = createTeachingMachine(compileTeachingSource(makeSource(MAX_NAME_COUNT - 1)));
+  while (fits.current.status !== 'finished' && fits.current.status !== 'error') stepTeachingMachine(fits);
+  assert.equal(fits.current.status, 'finished');
+  assert.deepEqual(fits.current.output, ['None']);
+
+  const exceeds = createTeachingMachine(compileTeachingSource(makeSource(MAX_NAME_COUNT)));
+  while (exceeds.current.status !== 'finished' && exceeds.current.status !== 'error') stepTeachingMachine(exceeds);
+  assert.equal(exceeds.current.status, 'error');
+  assert.equal(exceeds.current.diagnostic?.code, 'too-many-names');
+  assert.equal(exceeds.current.frames.length, 1);
+});
+
+test('retains immutable full-frame snapshots across recursive return', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def count_down(value):',
+    '  if value == 0:',
+    '    return 0',
+    '  return count_down(value - 1) + 1',
+    'print(count_down(3))',
+  ].join('\n')));
+  let deepestSnapshot = machine.current;
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') {
+    const snapshot = stepTeachingMachine(machine);
+    if (snapshot.frames.length > deepestSnapshot.frames.length) deepestSnapshot = snapshot;
+  }
+  assert.equal(machine.current.status, 'finished');
+  assert.equal(machine.current.output[0], '3');
+  assert.equal(deepestSnapshot.frames.length, 5);
+  assert.equal(Object.isFrozen(deepestSnapshot.frames), true);
+  assert.equal(Object.isFrozen(deepestSnapshot.frames[1]), true);
+  assert.equal(Object.isFrozen(deepestSnapshot.frames[1]?.stack), true);
+  assert.equal(Object.isFrozen(deepestSnapshot.frames[1]?.variables), true);
+  assert.equal(deepestSnapshot.frames.length, 5);
+  assert.ok(getTeachingHistory(machine).items.includes(deepestSnapshot));
 });
 
 test('records the actual next instruction and result of a short-circuit decision', () => {

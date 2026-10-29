@@ -4,8 +4,8 @@ import { TeachingDiagnostic, type SourceSpan, type TeachingToken, type TokenType
 
 const unsupportedKeywords = new Set([
   'as', 'assert', 'async', 'await', 'break', 'class', 'continue',
-  'def', 'del', 'except', 'finally', 'from', 'global', 'import',
-  'is', 'lambda', 'nonlocal', 'pass', 'raise', 'return', 'try',
+  'del', 'except', 'finally', 'from', 'global', 'import',
+  'is', 'lambda', 'nonlocal', 'pass', 'raise', 'try',
   'with', 'yield',
 ]);
 
@@ -138,6 +138,7 @@ class Tokenizer {
       None: 'NONE',
       True: 'TRUE',
       and: 'AND',
+      def: 'DEF',
       elif: 'ELIF',
       else: 'ELSE',
       for: 'FOR',
@@ -146,6 +147,7 @@ class Tokenizer {
       not: 'NOT',
       or: 'OR',
       print: 'PRINT',
+      return: 'RETURN',
       while: 'WHILE',
     };
     const type: TokenType = keywordTypes[lexeme]

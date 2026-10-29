@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import { memo, useEffect, useState, type ReactNode } from 'react';
 import { rangesOverlap, type SourceLink } from '../analysis/source-position';
 import type {
   SourceSpan,
@@ -51,23 +51,29 @@ function DiagnosticPanel({ diagnostic, t }: { diagnostic: TeachingDiagnosticSnap
       : diagnostic.stage === 'compile'
         ? 'teachingCompileError'
         : 'teachingRuntimeError';
-  const codeKey: MessageKey = diagnostic.code === 'name-error'
-    ? 'teachingCodeNameError'
-    : diagnostic.code === 'type-error'
-      ? 'teachingCodeTypeError'
-      : diagnostic.code === 'zero-range-step'
-        ? 'teachingCodeZeroRangeStep'
-      : diagnostic.code === 'instruction-budget-exceeded'
-        ? 'teachingCodeInstructionBudget'
-      : ['too-many-names', 'string-too-long', 'output-too-long', 'integer-too-large'].includes(diagnostic.code)
-        ? 'teachingCodeResourceLimit'
-        : diagnostic.stage === 'lex'
-          ? 'teachingCodeLexError'
-          : diagnostic.stage === 'parse'
-          ? 'teachingCodeSyntaxError'
-          : diagnostic.stage === 'compile'
-            ? 'teachingCodeCompilerError'
-            : 'teachingCodeExecutionError';
+  const diagnosticCodeKeys: Record<string, MessageKey> = {
+    'name-error': 'teachingCodeNameError',
+    'unbound-local-error': 'teachingCodeUnboundLocal',
+    'argument-count-mismatch': 'teachingCodeArgumentCount',
+    'frame-limit-exceeded': 'teachingCodeFrameLimit',
+    'function-value-unsupported': 'teachingCodeFunctionValue',
+    'type-error': 'teachingCodeTypeError',
+    'not-callable': 'teachingCodeTypeError',
+    'zero-range-step': 'teachingCodeZeroRangeStep',
+    'instruction-budget-exceeded': 'teachingCodeInstructionBudget',
+    'too-many-names': 'teachingCodeResourceLimit',
+    'string-too-long': 'teachingCodeResourceLimit',
+    'output-too-long': 'teachingCodeResourceLimit',
+    'integer-too-large': 'teachingCodeResourceLimit',
+  };
+  const fallbackCodeKey: MessageKey = diagnostic.stage === 'lex'
+    ? 'teachingCodeLexError'
+    : diagnostic.stage === 'parse'
+      ? 'teachingCodeSyntaxError'
+      : diagnostic.stage === 'compile'
+        ? 'teachingCodeCompilerError'
+        : 'teachingCodeExecutionError';
+  const codeKey = diagnosticCodeKeys[diagnostic.code] ?? fallbackCodeKey;
   const location = t('teachingErrorLocation')
     .replace('{code}', t(codeKey))
     .replace('{line}', String(diagnostic.span.line))
@@ -109,6 +115,10 @@ function ExpressionTree({
       break;
     case 'Name':
       detail = <code>{expression.name}</code>;
+      break;
+    case 'Call':
+      detail = <code>{expression.name}(...)</code>;
+      children = expression.arguments;
       break;
     case 'Unary':
       detail = <code>{expression.operator}</code>;
@@ -174,7 +184,9 @@ function StatementTree({
         ? [statement.condition]
         : statement.type === 'For'
           ? statement.rangeArguments
-          : [];
+          : statement.type === 'Return' && statement.value
+            ? [statement.value]
+            : [];
   const statementLabel = statement.type === 'Assign'
     ? statement.name
     : statement.type === 'Print'
@@ -183,7 +195,11 @@ function StatementTree({
         ? 'if / elif / else'
         : statement.type === 'While'
           ? 'while'
-          : `for ${statement.name} in range(...)`;
+          : statement.type === 'For'
+            ? `for ${statement.name} in range(...)`
+            : statement.type === 'FunctionDef'
+              ? `def ${statement.name}(${statement.parameters.join(', ')})`
+              : statement.value ? 'return ...' : 'return';
 
   return (
     <li className={`teaching-ast-node${isSourceMatch(statement.span, sourceLink) ? ' is-source-match' : ''}${isOrigin ? ' is-source-origin' : ''}`}>
@@ -247,6 +263,13 @@ function StatementTree({
           ))}
         </ol>
       )}
+      {statement.type === 'FunctionDef' && (
+        <ol className="teaching-ast-list">
+          {statement.body.map((child, childIndex) => (
+            <StatementTree key={`${child.type}-${child.span.start}-${childIndex}`} statement={child} sourceLink={sourceLink} t={t} onLink={onLink} />
+          ))}
+        </ol>
+      )}
     </li>
   );
 }
@@ -259,10 +282,102 @@ function formatInstructionArgument(instruction: TeachingCompileResult['instructi
       return `#${instruction.argument} · ${value}`;
     }
   }
+  if (instruction.opcode === 'DEFINE_FUNCTION' && typeof instruction.argument === 'number') {
+    return program.functions[instruction.argument]?.name ?? String(instruction.argument);
+  }
+  if (instruction.opcode === 'CALL_FUNCTION') {
+    return `${String(instruction.argument)} · ${instruction.argumentCount ?? 0}`;
+  }
   if (['JUMP', 'POP_JUMP_IF_FALSE', 'JUMP_IF_FALSE_OR_POP', 'JUMP_IF_TRUE_OR_POP', 'FOR_ITER'].includes(instruction.opcode)) {
     return `→ ${String(instruction.argument)}`;
   }
   return instruction.argument === null ? '—' : String(instruction.argument);
+}
+
+function TeachingFrameStack({ snapshot, t, onLink }: {
+  snapshot: TeachingVmSnapshot | null;
+  t: (key: MessageKey) => string;
+  onLink(link: SourceLink): void;
+}) {
+  const activeFrameId = snapshot?.frames.at(-1)?.id;
+  const [expandedFrameIds, setExpandedFrameIds] = useState<ReadonlySet<number>>(() => new Set());
+  useEffect(() => {
+    if (activeFrameId === undefined) return;
+    setExpandedFrameIds((current) => new Set(current).add(activeFrameId));
+  }, [activeFrameId]);
+  if (!snapshot) return null;
+  return (
+    <section className="teaching-frames-panel" aria-labelledby="teaching-frames-heading">
+      <h4 id="teaching-frames-heading">{t('teachingFrames')}</h4>
+      <ol className="teaching-frame-list">
+        {snapshot.frames.map((frame) => {
+          const isActive = frame.id === activeFrameId;
+          const frameName = frame.kind === 'module' ? t('teachingModuleFrame') : frame.functionName;
+          const callSite = frame.callSite;
+          return (
+            <li className={isActive ? 'is-active-frame' : ''} key={frame.id}>
+              <details
+                className="teaching-frame-details"
+                open={expandedFrameIds.has(frame.id)}
+                onToggle={(event) => {
+                  const isOpen = event.currentTarget.open;
+                  setExpandedFrameIds((current) => {
+                    const next = new Set(current);
+                    if (isOpen) next.add(frame.id);
+                    else next.delete(frame.id);
+                    return next;
+                  });
+                }}
+              >
+                <summary aria-current={isActive ? 'step' : undefined}>
+                  <span>{frameName}</span>
+                  <code>#{frame.id}</code>
+                  <code>{t('teachingFramePc').replace('{index}', String(frame.pc))}</code>
+                  {isActive && <span className="teaching-frame-active-label">{t('teachingActiveFrame')}</span>}
+                </summary>
+                <div className="teaching-frame-content">
+                  {callSite && (
+                    <p className="small-meta">
+                      {t('teachingCallSite')} ·{' '}
+                      <button
+                        type="button"
+                        className="bytecode-locator"
+                        onClick={() => onLink({ origin: { kind: 'teaching', index: null }, range: sourceRange(callSite) })}
+                      >
+                        {positionLabel(callSite, t)}
+                      </button>
+                    </p>
+                  )}
+                  {frame.returnPc !== null && (
+                    <p className="small-meta">{t('teachingReturnAddress').replace('{index}', String(frame.returnPc))}</p>
+                  )}
+                  <div className="teaching-frame-grid">
+                    <section>
+                      <h5>{t('teachingStack')}</h5>
+                      {frame.stack.length === 0 ? <p className="empty-state">{t('teachingNoStack')}</p> : (
+                        <ol className="teaching-value-list">
+                          {frame.stack.map((value, valueIndex) => <li key={`${valueIndex}-${value.type}-${value.value}`}><span>{valueIndex}</span><code>{value.display}</code></li>)}
+                        </ol>
+                      )}
+                    </section>
+                    <section>
+                      <h5>{t('teachingVariables')}</h5>
+                      {frame.variables.length === 0 && frame.unboundLocalNames.length === 0 ? <p className="empty-state">{t('teachingNoVariables')}</p> : (
+                        <dl className="trace-values teaching-variable-list">
+                          {frame.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><code>{value.display}</code></dd></div>)}
+                          {frame.unboundLocalNames.map((name) => <div key={name}><dt>{name}</dt><dd>{t('teachingUnboundLocal')}</dd></div>)}
+                        </dl>
+                      )}
+                    </section>
+                  </div>
+                </div>
+              </details>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
 }
 
 function statusLabel(status: TeachingStatus, t: (key: MessageKey) => string): string {
@@ -504,6 +619,7 @@ export function TeachingVmPanel({ program, history, snapshot, headSnapshot, atHe
                 )}
               </section>
             </div>
+            <TeachingFrameStack snapshot={snapshot} t={t} onLink={onLink} />
           </section>
         </div>
       )}

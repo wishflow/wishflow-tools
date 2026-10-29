@@ -163,6 +163,65 @@ test('tokenizes and parses None as a dedicated literal with a source span', () =
   );
 });
 
+test('parses module-level zero-parameter functions, return statements, and direct calls', () => {
+  const program = parseTeachingSource('def answer():\n  return\nx = answer()');
+  const definition = program.statements[0];
+  assert.equal(definition?.type, 'FunctionDef');
+  if (definition?.type !== 'FunctionDef') assert.fail('expected function definition');
+  assert.equal(definition.name, 'answer');
+  assert.deepEqual(definition.parameters, []);
+  assert.equal(definition.body[0]?.type, 'Return');
+  if (definition.body[0]?.type !== 'Return') assert.fail('expected return statement');
+  assert.equal(definition.body[0].value, null);
+
+  const assignment = program.statements[1];
+  assert.equal(assignment?.type, 'Assign');
+  if (assignment?.type !== 'Assign') assert.fail('expected assignment');
+  assert.deepEqual(assignment.value, {
+    type: 'Call',
+    name: 'answer',
+    arguments: [],
+    span: { start: 27, end: 35, line: 3, column: 5, endLine: 3, endColumn: 13 },
+  });
+});
+
+test('parses required positional parameters and positional call arguments', () => {
+  const program = parseTeachingSource('def add(left, right):\n  return left + right\nresult = add(1, 2)');
+  const definition = program.statements[0];
+  assert.equal(definition?.type, 'FunctionDef');
+  if (definition?.type !== 'FunctionDef') assert.fail('expected function definition');
+  assert.deepEqual(definition.parameters, ['left', 'right']);
+  const assignment = program.statements[1];
+  assert.equal(assignment?.type, 'Assign');
+  if (assignment?.type !== 'Assign') assert.fail('expected assignment');
+  assert.equal(assignment.value.type, 'Call');
+  if (assignment.value.type !== 'Call') assert.fail('expected function call');
+  assert.deepEqual(assignment.value.arguments.map((argument) => argument.type), ['IntegerLiteral', 'IntegerLiteral']);
+});
+
+test('rejects trailing commas in function parameters and call arguments', () => {
+  for (const source of [
+    'def one(value,):\n  return value',
+    'def one(value):\n  return value\nprint(one(1,))',
+  ]) {
+    assert.throws(
+      () => parseTeachingSource(source),
+      (error: unknown) => error instanceof TeachingDiagnostic && error.stage === 'parse',
+    );
+  }
+});
+
+test('rejects return outside a function and nested function definitions', () => {
+  assert.throws(
+    () => parseTeachingSource('return 1'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'return-outside-function',
+  );
+  assert.throws(
+    () => parseTeachingSource('if True:\n  def inner():\n    return 1'),
+    (error: unknown) => error instanceof TeachingDiagnostic && error.code === 'nested-function-definition',
+  );
+});
+
 test('parses nested if/elif/else suites and closes a final block at end of source', () => {
   const program = parseTeachingSource([
     'if 0:',
