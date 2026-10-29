@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('automatically plays the complete original eight-wave campaign at 4×', async ({ page }) => {
+test('completes official Cow Gulch level one and restores only settled campaign progress', async ({ page }) => {
   test.setTimeout(120_000);
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -12,8 +12,9 @@ test('automatically plays the complete original eight-wave campaign at 4×', asy
   await speed.press('End');
   await expect(speed).toHaveValue('4');
 
-  await page.getByTestId('open-original-waves').click();
-  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Original waves 1–8');
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+  await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
+  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/locked/i);
   const waveStatus = page.getByTestId('wave-status');
   await expect(waveStatus).toContainText('Wave 1/8');
   await expect(waveStatus).not.toContainText('ready');
@@ -51,4 +52,35 @@ test('automatically plays the complete original eight-wave campaign at 4×', asy
   await expect(page.getByTestId('settlement')).toBeVisible();
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
   await expect(page.getByTestId('settlement-summary')).toContainText('Wave 8');
+  await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
+  await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
+  await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
+  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/unlocked/i);
+
+  const profile = await page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {
+    const request = indexedDB.open('gunsnglory-profile', 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction('profiles', 'readonly');
+      const read = transaction.objectStore('profiles').get('default');
+      read.onsuccess = () => resolve(read.result as Record<string, unknown>);
+      read.onerror = () => reject(read.error);
+      transaction.oncomplete = () => database.close();
+    };
+  }));
+  expect(profile.schemaVersion).toBe(2);
+  expect(profile.completedScenarios).toEqual(['campaign-new-mexico-01']);
+  expect(profile.highScores).toHaveProperty('campaign-new-mexico-01');
+  expect((profile.appliedSettlementIds as string[])).toHaveLength(1);
+
+  await page.reload();
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50 ·');
+  await expect(page.getByTestId('wave-status')).not.toContainText('ready');
+  await expect(page.getByTestId('settlement')).toBeHidden();
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
+  await expect(page.getByTestId('campaign-stage-list')).toContainText('Completed');
+  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/unlocked/i);
 });

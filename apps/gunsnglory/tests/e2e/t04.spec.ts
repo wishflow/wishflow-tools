@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise<void> {
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -11,6 +12,7 @@ async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise
 test('shows a victory settlement and restarts the same sample from clean state', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
+  await openSingleWaveSample(page);
   await setFourTimesSpeed(page);
 
   const canvas = page.getByTestId('game-canvas');
@@ -28,7 +30,7 @@ test('shows a victory settlement and restarts the same sample from clean state',
   await expect(page.getByTestId('settlement-score')).toHaveText('Displayed score: $50');
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
   await expect(page.getByTestId('settlement-high-score')).toHaveText('High-score saved: $50');
-  await expect(page.getByTestId('profile-status')).toContainText('Cow Gulch sample complete · Best $50');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
   await expect(page.getByTestId('combat-status')).toContainText('Pioneer defeated · +$1');
   await expect(page.getByRole('button', { name: 'Restart this sample' })).toBeFocused();
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
@@ -51,6 +53,7 @@ test('shows a defeat settlement when the last life is lost and restarts without 
   test.setTimeout(60000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
+  await openSingleWaveSample(page);
   await setFourTimesSpeed(page);
   await page.getByRole('button', { name: 'Test defeat with one life' }).click();
 
@@ -78,6 +81,7 @@ test('keeps the settlement and restart usable with mobile touch input', async ({
   });
   const page = await context.newPage();
   await page.goto('/');
+  await openSingleWaveSample(page, 'tap');
   await setFourTimesSpeed(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
@@ -92,6 +96,7 @@ test('stops the active session when the page is leaving', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.goto('/');
+  await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1 · Lives 50 · Enemies 1');
 
@@ -100,5 +105,5 @@ test('stops the active session when the page is leaving', async ({ page }) => {
   expect(pageErrors).toEqual([]);
 
   await page.reload();
-  await expect(page.getByTestId('wave-status')).toHaveText('Wave 1 ready · Lives 50 · Cash $65');
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
 });

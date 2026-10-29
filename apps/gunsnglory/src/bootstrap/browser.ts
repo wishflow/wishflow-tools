@@ -7,9 +7,9 @@ import {
   cowGulchUpgradeSampleContent,
 } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
+import { cowGulchLevelOneContent, officialCampaignStages } from '../content/official-campaign';
 import {
   campaignProgressSampleOne,
-  campaignProgressSampleStages,
   campaignProgressSampleTwo,
 } from '../content/campaign-progress-samples';
 import { createProgress } from '../progress';
@@ -29,6 +29,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchP1bCampaignContent.id]: cowGulchP1bCampaignContent,
   [cowGulchP1cCampaignContent.id]: cowGulchP1cCampaignContent,
   [cowGulchP1dCampaignContent.id]: cowGulchP1dCampaignContent,
+  [cowGulchLevelOneContent.id]: cowGulchLevelOneContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
@@ -53,7 +54,7 @@ export function createBrowserGame() {
 }
 
 export function createBrowserProgress() {
-  return createProgress(createIndexedDbProfileRepository(), campaignProgressSampleStages);
+  return createProgress(createIndexedDbProfileRepository(), officialCampaignStages);
 }
 
 export function createBrowserExperimentRepository() {

@@ -8,6 +8,7 @@ import {
 } from './bootstrap/browser';
 import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent, cowGulchP1dCampaignContent } from './content/cow-gulch';
 import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
+import { cowGulchLevelOneContent } from './content/official-campaign';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
@@ -34,18 +35,18 @@ if (!app) throw new Error('Game root is missing');
 app.innerHTML = [
   '<section class="game-page" id="game">',
   '  <header class="game-heading">',
-  '    <p class="eyebrow">FIRST COMBAT SLICE</p>',
+  '    <p class="eyebrow" data-locale="ORIGINAL CAMPAIGN">ORIGINAL CAMPAIGN</p>',
   '    <h1>Guns’n’Glory</h1>',
-  '    <p class="intro">Use the Cow Gulch map to defeat a pioneer and collect the reward.</p>',
+  '    <p class="intro" data-locale="Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.">Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.</p>',
   '  </header>',
   '  <section class="game-panel" aria-labelledby="scene-title">',
   '    <section class="campaign-panel" aria-labelledby="campaign-title">',
   '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
-  '      <p class="campaign-note" data-locale="This research stage reuses Cow Gulch; it is not a production campaign level.">This research stage reuses Cow Gulch; it is not a production campaign level.</p>',
-  '      <button type="button" data-testid="open-original-waves" data-action="open-original-waves">Play original eight waves</button>',
+  '      <p class="campaign-note" data-locale="Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.">Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.</p>',
   '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
   '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
   '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
+  '      <section class="asset-load-error" data-testid="asset-load-error" role="alert" hidden><p data-testid="asset-load-error-message"></p><button type="button" data-testid="retry-assets" data-action="retry-assets">Retry loading game resources</button></section>',
   '    </section>',
   '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
   '    <div class="game-frame">',
@@ -88,11 +89,11 @@ app.innerHTML = [
   '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-testid="hire-map-unit" data-action="hire-map-unit" hidden>Hire selected map unit</button>',
   '      <p data-testid="map-hire-status" role="status" aria-live="polite"></p>',
-  '      <button type="button" data-action="start-wave">Start one pioneer sample</button>',
+  '      <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
   '      <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
   '      <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
   '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
-  '      <button type="button" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
+  '      <button type="button" data-testid="open-single-wave-sample" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <button type="button" data-action="clear-selection">Clear selection</button>',
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
@@ -196,6 +197,9 @@ const sceneOpenErrorElement = app.querySelector<HTMLElement>('[data-testid="scen
 const sceneOpenErrorMessageElement = app.querySelector<HTMLElement>('[data-testid="scene-open-error-message"]');
 const retrySceneOpenButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-scene-open"]');
 const returnPreviousSceneButtonElement = app.querySelector<HTMLButtonElement>('[data-action="return-to-previous-scene"]');
+const assetLoadErrorElement = app.querySelector<HTMLElement>('[data-testid="asset-load-error"]');
+const assetLoadErrorMessageElement = app.querySelector<HTMLElement>('[data-testid="asset-load-error-message"]');
+const retryAssetsButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-assets"]');
 const campaignProgressSummaryElement = app.querySelector<HTMLElement>('[data-testid="campaign-progress-summary"]');
 const campaignStageListElement = app.querySelector<HTMLOListElement>('[data-testid="campaign-stage-list"]');
 const campaignStatusElement = app.querySelector<HTMLElement>('[data-testid="campaign-status"]');
@@ -227,7 +231,6 @@ const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-t
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
-const openOriginalWavesButton = app.querySelector<HTMLButtonElement>('[data-action="open-original-waves"]');
 const recruitButton = app.querySelector<HTMLButtonElement>('[data-action="recruit-unit"]');
 const upgradeButton = app.querySelector<HTMLButtonElement>('[data-action="upgrade-unit"]');
 const startUpgradeSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-upgrade-sample"]');
@@ -269,6 +272,7 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
   || !retrySceneOpenButtonElement || !returnPreviousSceneButtonElement || !waveStatusElement || !combatStatusElement
+  || !assetLoadErrorElement || !assetLoadErrorMessageElement || !retryAssetsButtonElement
   || !campaignProgressSummaryElement || !campaignStageListElement || !campaignStatusElement
   || !campaignDifficultySelectElement || !campaignDifficultyStatusElement
   || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement
@@ -283,7 +287,6 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !clearButton || !startWaveButton
-  || !openOriginalWavesButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
   || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
@@ -304,6 +307,9 @@ const sceneOpenErrorPanel: HTMLElement = sceneOpenErrorElement;
 const sceneOpenErrorMessage: HTMLElement = sceneOpenErrorMessageElement;
 const retrySceneOpenControl: HTMLButtonElement = retrySceneOpenButtonElement;
 const returnPreviousSceneControl: HTMLButtonElement = returnPreviousSceneButtonElement;
+const assetLoadErrorPanel: HTMLElement = assetLoadErrorElement;
+const assetLoadErrorMessage: HTMLElement = assetLoadErrorMessageElement;
+const retryAssetsControl: HTMLButtonElement = retryAssetsButtonElement;
 const waveStatus: HTMLElement = waveStatusElement;
 const combatStatus: HTMLElement = combatStatusElement;
 const campaignProgressSummary: HTMLElement = campaignProgressSummaryElement;
@@ -334,7 +340,6 @@ const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
-const openOriginalWavesControl: HTMLButtonElement = openOriginalWavesButton;
 const recruitControl: HTMLButtonElement = recruitButton;
 const upgradeControl: HTMLButtonElement = upgradeButton;
 const startUpgradeSampleControl: HTMLButtonElement = startUpgradeSampleButton;
@@ -417,6 +422,8 @@ let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | '
 let activeSettlementRecord: GameSettlementRecord | undefined;
 let replaying = false;
 let replacingSession = false;
+let assetLoadFailureNames: string[] = [];
+let assetLoadBusy = false;
 type SessionOpenRequest = {
   scenarioId: string;
   contentVersion?: string;
@@ -455,6 +462,11 @@ const languageMessages = {
     campaignStageLocked: 'Locked',
     campaignStageCompleted: 'Completed',
     campaignStageScore: (score: number) => `Best $${score}`,
+    nextLevelTitle: 'New Mexico · Level 2',
+    nextLevelLockedUnavailable: 'Locked · content is not implemented yet.',
+    nextLevelUnlockedUnavailable: 'Unlocked · content is not implemented yet.',
+    retryAssets: 'Retry loading game resources',
+    assetLoadFailed: (count: number) => `${count} required game image${count === 1 ? '' : 's'} could not load. The recovery scene remains available; retry before starting a battle.`,
     difficultyNames: { easy: 'Easy', medium: 'Medium', hard: 'Hard' } satisfies Record<GameDifficulty, string>,
     campaignDifficultyLocked: 'Hard unlocks after completing the 10th level in any region.',
     campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
@@ -472,7 +484,6 @@ const languageMessages = {
     mapHired: (name: string, price: number) => `${name} hired from the map for $${price}.`,
     mapHireRejected: (name: string, price: number, cash: number) => `Not enough cash to hire ${name}: need $${price}, have $${cash}.`,
     startSample: 'Start one pioneer sample',
-    openOriginalWaves: 'Play original eight waves',
     originalWaveContext: 'ORIGINAL CAMPAIGN · 1–8',
     originalWaveNotice: 'This archived slice stops after wave 3 of 8 and does not settle the campaign.',
     originalCampaignNotice: 'All eight original waves are active. Clear Wave 8 to settle the battle.',
@@ -545,7 +556,7 @@ const languageMessages = {
     'profile-reset': 'A new empty profile is ready.',
     retrySettings: 'Retry saving settings',
     reloadProfile: 'Reload saved profile',
-    noSavedProfile: 'Saved profile: no Cow Gulch result yet.',
+    noSavedProfile: 'Saved profile: no official Cow Gulch level 1 result yet.',
     profileLoadFailed: 'Saved profile could not be read.',
     profileCorrupt: 'Saved profile is damaged. Download a backup before replacing it.',
     profileUnsupported: 'Saved profile uses a newer format. Download a backup and open it with a compatible version.',
@@ -558,7 +569,9 @@ const languageMessages = {
     profileRefreshed: 'A newer valid profile was found and loaded.',
     confirmResetProfile: 'Replace this damaged profile with a new empty one? Make sure the backup was downloaded.',
     profileSaved: (completed: boolean, score: number | undefined) =>
-      `Saved profile: Cow Gulch${completed ? ' sample complete' : ''}${score === undefined ? '' : ` · Best $${score}`}.`,
+      `Saved profile: Cow Gulch level 1${completed ? ' complete' : ''}${score === undefined ? '' : ` · Best $${score}`}.`,
+    restartSample: 'Restart this sample',
+    restartLevel: 'Restart level',
     settlementSaving: 'Saving result to this browser…',
     settlementSaved: 'Result saved to this browser.',
     settlementFailed: 'Result is not saved. Retry to save it.',
@@ -597,6 +610,11 @@ const languageMessages = {
     campaignStageLocked: '未解锁',
     campaignStageCompleted: '已完成',
     campaignStageScore: (score: number) => `最高分 $${score}`,
+    nextLevelTitle: '新墨西哥州 · 第 2 关',
+    nextLevelLockedUnavailable: '尚未解锁 · 关卡内容尚未实现。',
+    nextLevelUnlockedUnavailable: '已解锁 · 关卡内容尚未实现。',
+    retryAssets: '重试加载游戏资源',
+    assetLoadFailed: (count: number) => `${count} 项必需游戏图片未能加载。恢复场景仍可查看；请重试加载后再开始战斗。`,
     difficultyNames: { easy: '简单', medium: '中等', hard: '困难' } satisfies Record<GameDifficulty, string>,
     campaignDifficultyLocked: '完成任意区域的第 10 关后解锁困难模式。',
     campaignDifficultyUnlocked: '困难模式已解锁。',
@@ -614,7 +632,6 @@ const languageMessages = {
     mapHired: (name: string, price: number) => `已花费 $${price} 雇佣地图上的${name}。`,
     mapHireRejected: (name: string, price: number, cash: number) => `现金不足，无法雇佣${name}：需要 $${price}，当前 $${cash}。`,
     startSample: '开始单个拓荒者样本',
-    openOriginalWaves: '游玩原版八波',
     originalWaveContext: '原版战役 · 第 1–8 波',
     originalWaveNotice: '该历史切片在第 3/8 波后停止，不结算战役。',
     originalCampaignNotice: '原版八波内容已启用；完成第 8 波后结算战局。',
@@ -687,7 +704,7 @@ const languageMessages = {
     'profile-reset': '新的空档案已就绪。',
     retrySettings: '重试保存设置',
     reloadProfile: '重新加载已保存档案',
-    noSavedProfile: '已保存档案：尚无牛溪谷结算。',
+    noSavedProfile: '已保存档案：尚无牛溪谷正式第 1 关结算。',
     profileLoadFailed: '无法读取已保存档案。',
     profileCorrupt: '已保存档案损坏。替换前请先下载备份。',
     profileUnsupported: '档案使用了较新格式。请下载备份，并在兼容版本中打开。',
@@ -700,7 +717,9 @@ const languageMessages = {
     profileRefreshed: '发现并加载了较新的有效档案。',
     confirmResetProfile: '要将损坏档案替换为空档案吗？请确认备份已下载。',
     profileSaved: (completed: boolean, score: number | undefined) =>
-      `已保存档案：牛溪谷${completed ? '样本已完成' : ''}${score === undefined ? '' : ` · 最高分 $${score}`}。`,
+      `已保存档案：牛溪谷第 1 关${completed ? '已完成' : ''}${score === undefined ? '' : ` · 最高分 $${score}`}。`,
+    restartSample: '重新开始本样本',
+    restartLevel: '重新开始本关',
     settlementSaving: '正在将结算保存到此浏览器…',
     settlementSaved: '结算已保存到此浏览器。',
     settlementFailed: '结算尚未保存。请重试保存。',
@@ -739,8 +758,8 @@ function profileMessage(language: keyof typeof languageMessages): string {
     if (profileLoadErrorCode === 'unsupported-version') return messages.profileUnsupported;
     return messages.profileLoadFailed;
   }
-  const completed = profile.completedScenarios.includes('cow-gulch');
-  const score = profile.highScores['cow-gulch'];
+  const completed = profile.completedScenarios.includes(cowGulchLevelOneContent.id);
+  const score = profile.highScores[cowGulchLevelOneContent.id];
   if (!completed && score === undefined) return messages.noSavedProfile;
   return messages.profileSaved(completed, score);
 }
@@ -780,8 +799,10 @@ function renderCampaign(): void {
     campaignDifficultyStatus.textContent = difficultyStatusText;
   }
   const rows = Array.from(campaignStageList.children) as HTMLLIElement[];
-  const rowsMatch = rows.length === stages.length
-    && rows.every((row, index) => row.dataset.scenarioId === stages[index]?.scenarioId);
+  const unavailableNextLevelRowId = 'unavailable:campaign-new-mexico-02';
+  const rowsMatch = rows.length === stages.length + 1
+    && stages.every((stage, index) => rows[index]?.dataset.scenarioId === stage.scenarioId)
+    && rows[stages.length]?.dataset.scenarioId === unavailableNextLevelRowId;
 
   if (!rowsMatch) {
     const fragment = document.createDocumentFragment();
@@ -806,6 +827,27 @@ function renderCampaign(): void {
       row.append(details, button);
       fragment.append(row);
     });
+    const nextRow = document.createElement('li');
+    nextRow.className = 'campaign-stage';
+    nextRow.dataset.scenarioId = unavailableNextLevelRowId;
+    const nextDetails = document.createElement('div');
+    nextDetails.className = 'campaign-stage-details';
+    const nextName = document.createElement('span');
+    nextName.className = 'campaign-stage-name';
+    nextName.dataset.role = 'stage-name';
+    const nextState = document.createElement('span');
+    nextState.className = 'campaign-stage-state';
+    nextState.dataset.role = 'stage-state';
+    nextState.dataset.testid = 'campaign-next-level-status';
+    nextDetails.append(nextName, nextState);
+    const nextButton = document.createElement('button');
+    nextButton.type = 'button';
+    nextButton.dataset.action = 'open-campaign-stage';
+    nextButton.dataset.scenarioId = 'campaign-new-mexico-02';
+    nextButton.setAttribute('data-testid', `campaign-stage-button-${stages.length + 1}`);
+    nextButton.disabled = true;
+    nextRow.append(nextDetails, nextButton);
+    fragment.append(nextRow);
     campaignStageList.replaceChildren(fragment);
   }
 
@@ -827,10 +869,26 @@ function renderCampaign(): void {
     if (state.textContent !== statusText) state.textContent = statusText;
     const buttonText = copy.openCampaignStage(title);
     if (button.textContent !== buttonText) button.textContent = buttonText;
-    const disabled = campaignSelectionBusy || settingsSaveBusy || profileLoadFailed || replacingSession || replaying
+    const disabled = assetLoadFailureNames.length > 0 || campaignSelectionBusy || settingsSaveBusy || profileLoadFailed || replacingSession || replaying
       || stage.status === 'locked';
     if (button.disabled !== disabled) button.disabled = disabled;
   });
+
+  const nextLevelRow = campaignStageList.children[stages.length] as HTMLLIElement | undefined;
+  const nextLevelName = nextLevelRow?.querySelector<HTMLElement>('[data-role="stage-name"]');
+  const nextLevelState = nextLevelRow?.querySelector<HTMLElement>('[data-role="stage-state"]');
+  const nextLevelButton = nextLevelRow?.querySelector<HTMLButtonElement>('[data-action="open-campaign-stage"]');
+  if (nextLevelName && nextLevelState && nextLevelButton) {
+    const completedFirstLevel = profile.completedScenarios.includes(cowGulchLevelOneContent.id);
+    const nextStatus = completedFirstLevel
+      ? copy.nextLevelUnlockedUnavailable
+      : copy.nextLevelLockedUnavailable;
+    if (nextLevelName.textContent !== copy.nextLevelTitle) nextLevelName.textContent = copy.nextLevelTitle;
+    if (nextLevelState.textContent !== nextStatus) nextLevelState.textContent = nextStatus;
+    const buttonText = copy.openCampaignStage(copy.nextLevelTitle);
+    if (nextLevelButton.textContent !== buttonText) nextLevelButton.textContent = buttonText;
+    nextLevelButton.disabled = true;
+  }
 
   const summaryText = campaignProgressView
     ? copy.campaignSummary(campaignProgressView.completedCount, campaignProgressView.stages.length)
@@ -1254,6 +1312,12 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   retrySceneOpenControl.disabled = actionLocked;
   returnPreviousSceneControl.textContent = messages.returnPreviousScene;
   returnPreviousSceneControl.disabled = actionLocked;
+  assetLoadErrorPanel.hidden = assetLoadFailureNames.length === 0;
+  assetLoadErrorMessage.textContent = assetLoadFailureNames.length > 0
+    ? messages.assetLoadFailed(assetLoadFailureNames.length)
+    : '';
+  retryAssetsControl.textContent = messages.retryAssets;
+  retryAssetsControl.disabled = assetLoadBusy;
   if (sceneOpenFailure) {
     sceneOpenErrorMessage.textContent = messages.sceneOpenErrors[sceneOpenFailure.code];
   }
@@ -1412,6 +1476,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const originalWaveNotice = originalWaveContent.id === cowGulchP1dCampaignContent.id
     ? messages.originalCampaignNotice
     : messages.originalWaveNotice;
+  const officialCampaignScenario = view.scenarioId === cowGulchLevelOneContent.id;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
@@ -1422,10 +1487,12 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? messages.upgradeSceneContext
     : originalWaveScenario
       ? messages.originalWaveContext
-    : activeCampaignStage ? language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE' : 'NEW MEXICO · 01';
+    : officialCampaignScenario ? 'NEW MEXICO · 01'
+      : activeCampaignStage ? language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE' : 'NEW MEXICO · 01';
   upgradeSampleStatus.textContent = upgradeScenario
     ? messages.debugUpgradeFixture
-    : originalWaveScenario ? originalWaveNotice : messages.originalUpgradeLimit;
+    : originalWaveScenario ? originalWaveNotice
+      : officialCampaignScenario ? messages.originalCampaignNotice : messages.originalUpgradeLimit;
   const selectedUnit = unit;
   const nextUpgrade = selectedUnit?.nextUpgrade;
   let upgradeText = '';
@@ -1512,15 +1579,14 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const waveNotStarted = view.wave?.phase === 'not-started';
   const campaignExhausted = view.wave?.phase === 'complete' && view.wave.totalWaves !== undefined && !view.wave.settlement;
   startWaveControl.hidden = Boolean(view.wave?.totalWaves && !campaignExhausted);
-  startWaveControl.disabled = actionLocked || !waveNotStarted || view.paused;
+  startWaveControl.disabled = assetLoadFailureNames.length > 0 || actionLocked || !waveNotStarted || view.paused;
   recruitControl.disabled = actionLocked || Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
   upgradeControl.disabled = actionLocked || Boolean(settlement) || !nextUpgrade || view.paused;
-  startUpgradeSampleControl.hidden = upgradeScenario || originalWaveScenario;
-  openOriginalWavesControl.hidden = upgradeScenario || originalWaveScenario;
-  openOriginalWavesControl.textContent = messages.openOriginalWaves;
-  returnCowGulchControl.hidden = !upgradeScenario && !originalWaveScenario;
+  startUpgradeSampleControl.hidden = upgradeScenario || originalWaveScenario || officialCampaignScenario;
+  returnCowGulchControl.hidden = !upgradeScenario && !originalWaveScenario && !officialCampaignScenario;
   returnCowGulchControl.textContent = messages.returnCowGulchSample;
+  restartControl.textContent = officialCampaignScenario ? messages.restartLevel : messages.restartSample;
   startDefeatControl.disabled = actionLocked || !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
   clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
   const canvasLabel = upgradeScenario
@@ -1630,14 +1696,23 @@ async function loadImage(assetName: string): Promise<void> {
   images[assetName] = image;
 }
 
-try {
-  await Promise.all([...assetNames].map(loadImage).concat(loadSettings()));
-  redraw(true);
-  renderStatus();
-} catch (error) {
-  status.textContent = languageMessages[getLanguage()].failed;
-  throw error;
+async function loadGameAssets(): Promise<string[]> {
+  const results = await Promise.all([...assetNames].map(async (assetName) => {
+    try {
+      await loadImage(assetName);
+      return undefined;
+    } catch {
+      delete images[assetName];
+      return assetName;
+    }
+  }));
+  return results.filter((assetName): assetName is string => assetName !== undefined);
 }
+
+const [failedAssets] = await Promise.all([loadGameAssets(), loadSettings()]);
+assetLoadFailureNames = failedAssets;
+redraw(true);
+renderStatus();
 
 const frame = app.querySelector<HTMLElement>('.game-frame');
 if (frame && typeof ResizeObserver !== 'undefined') {
@@ -1751,7 +1826,7 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
 }
 
 async function openCampaignStage(scenarioId: string): Promise<void> {
-  if (campaignSelectionBusy || settingsSaveBusy) return;
+  if (assetLoadFailureNames.length > 0 || campaignSelectionBusy || settingsSaveBusy) return;
   const requestedDifficulty = selectedDifficulty;
   campaignSelectionBusy = true;
   campaignFeedback = { type: 'loading' };
@@ -2211,10 +2286,6 @@ campaignStageList.addEventListener('click', (event: MouseEvent) => {
   void openCampaignStage(scenarioId);
 });
 
-openOriginalWavesControl.addEventListener('click', () => {
-  void replaceSession(requestScenarioOpen(cowGulchP1dCampaignContent.id, 'formal'));
-});
-
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
 mapHireControl.addEventListener('click', () => {
   const unit = view.units.find((candidate) => candidate.selected && candidate.activity === 4);
@@ -2306,6 +2377,21 @@ startDefeatControl.addEventListener('click', () => {
 });
 retrySceneOpenControl.addEventListener('click', () => {
   if (sceneOpenFailure) void replaceSession(sceneOpenFailure.request);
+});
+retryAssetsControl.addEventListener('click', () => {
+  if (assetLoadBusy || assetLoadFailureNames.length === 0) return;
+  assetLoadBusy = true;
+  renderStatus();
+  void loadGameAssets().then(async (failedAssets) => {
+    assetLoadFailureNames = failedAssets;
+    redraw(true);
+    if (failedAssets.length === 0 && campaignProgressView) {
+      await openCampaignStage(cowGulchLevelOneContent.id);
+    }
+  }).finally(() => {
+    assetLoadBusy = false;
+    renderStatus();
+  });
 });
 returnPreviousSceneControl.addEventListener('click', () => {
   sceneOpenFailure = undefined;
@@ -2549,6 +2635,8 @@ subscribeLanguage(() => {
   redraw();
 });
 
-if (session.startRecord.mode === 'formal' && session.startRecord.difficulty !== selectedDifficulty) {
-  await replaceSession(requestScenarioOpen(session.startRecord.scenarioId, 'formal', selectedDifficulty));
+if (assetLoadFailureNames.length === 0 && campaignProgressView) {
+  await openCampaignStage(cowGulchLevelOneContent.id);
+} else {
+  renderStatus();
 }

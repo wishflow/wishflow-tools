@@ -1,14 +1,14 @@
 export const messages = {
-  'FIRST COMBAT SLICE': { en: 'FIRST COMBAT SLICE', zh: '首个战斗切片' },
-  'Use the Cow Gulch map to defeat a pioneer and collect the reward.': {
-    en: 'Finish a Cow Gulch combat sample, review the result, and restart from a clean state.',
-    zh: '结束牛溪谷战斗样本，查看结算，并从干净状态重新开始。',
+  'ORIGINAL CAMPAIGN': { en: 'ORIGINAL CAMPAIGN', zh: '原版战役' },
+  'Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.': {
+    en: 'Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.',
+    zh: '游玩牛溪谷原版战役；需要单独验证规则时可切换到样本场景。',
   },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
   'Campaign progress': { en: 'Campaign progress', zh: '战役进度' },
-  'These two acceptance stages reuse Cow Gulch; they are not production campaign levels.': {
-    en: 'These two acceptance stages reuse Cow Gulch; they are not production campaign levels.',
-    zh: '这两个验收关卡复用牛溪谷地图，不代表正式战役关卡。',
+  'Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.': {
+    en: 'Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.',
+    zh: '牛溪谷是正式战役第 1 关；之前的样本结果仍与战役进度隔离。',
   },
   'Difficulty for the next battle': { en: 'Difficulty for the next battle', zh: '下一场战斗难度' },
   Easy: { en: 'Easy', zh: '简单' },

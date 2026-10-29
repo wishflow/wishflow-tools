@@ -5,6 +5,7 @@ import { createMemoryProfileRepository } from '../src/progress/memory-profile-re
 import { verifyProfileRepositoryContract } from './profile-repository-contract';
 import type { GameSettlementRecord } from '../src/game';
 import type { CampaignStageDefinition } from '../src/progress';
+import { cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
 
 test('loads Easy and a default speed for a new or older profile without the setting', async () => {
   for (const settings of [undefined, {}, { soundEnabled: true }]) {
@@ -120,6 +121,59 @@ test('projects only campaign-specific completions into available and locked stag
   assert.equal(advanced.hardModeUnlocked, false);
   assert.equal(advanced.stages[0]?.highScore, 50);
   assert.equal(advanced.stages[1]?.contentVersion, 'campaign-sample-2');
+});
+
+test('keeps legacy samples isolated while official Cow Gulch progress preserves the existing profile', async () => {
+  const legacyCompleted = [
+    'cow-gulch',
+    'campaign-cow-gulch-sample-1',
+    'campaign-cow-gulch-sample-2',
+    'cow-gulch-original-waves-1-8',
+  ];
+  const legacyScores = {
+    'cow-gulch': 50,
+    'campaign-cow-gulch-sample-1': 50,
+    'campaign-cow-gulch-sample-2': 61,
+    'cow-gulch-original-waves-1-8': 80,
+  };
+  const repository = createMemoryProfileRepository({
+    settings: { simulationSpeed: 1.5, difficulty: 'medium' },
+    completedScenarios: legacyCompleted,
+    highScores: legacyScores,
+    appliedSettlementIds: ['legacy-session:cow-gulch:1'],
+  });
+  const progress = createProgress(repository, officialCampaignStages);
+
+  const before = await progress.loadCampaign();
+  assert.deepEqual(before.stages.map(({ scenarioId, status, highScore }) => ({ scenarioId, status, highScore })), [{
+    scenarioId: cowGulchLevelOneContent.id,
+    status: 'available',
+    highScore: undefined,
+  }]);
+  assert.equal(before.completedCount, 0);
+  assert.deepEqual(before.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium' });
+
+  const officialSettlement = settlement({
+    settlementId: `official-session:${cowGulchLevelOneContent.id}:8`,
+    sessionId: 'official-session',
+    scenarioId: cowGulchLevelOneContent.id,
+    waveNumber: 8,
+    scoreBase: 120,
+    displayScore: 90,
+    highScoreCandidate: 90,
+  });
+  const saved = await progress.applySettlement(officialSettlement);
+  assert.equal(saved.status, 'saved');
+  assert.deepEqual(saved.profile.completedScenarios, [...legacyCompleted, cowGulchLevelOneContent.id]);
+  assert.deepEqual(saved.profile.highScores, { ...legacyScores, [cowGulchLevelOneContent.id]: 90 });
+  assert.deepEqual((await repository.readProfile())?.data.appliedSettlementIds, [
+    'legacy-session:cow-gulch:1', officialSettlement.settlementId,
+  ]);
+
+  const reloaded = await createProgress(repository, officialCampaignStages).loadCampaign();
+  assert.deepEqual(reloaded.stages.map(({ status }) => status), ['completed']);
+  assert.equal(reloaded.completedCount, 1);
+  assert.deepEqual(reloaded.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium' });
 });
 
 test('refreshing campaign progress preserves a pending settings retry', async () => {
