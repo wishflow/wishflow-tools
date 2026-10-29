@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cowGulchContent, cowGulchP1cCampaignContent } from '../src/content/cow-gulch';
-import { createGame, type CampaignWaveDefinition, type ScenarioContent } from '../src/game';
+import { createGame, type CampaignWaveDefinition, type GameSession, type ScenarioContent } from '../src/game';
 
 const emptyRequests = Object.freeze([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
+async function advanceToWave(session: GameSession, number: number) {
+  let view = session.observe();
+  for (let step = 0; step < 20 && view.wave?.number !== number; step += 1) {
+    view = session.advance({ deltaMs: 0 });
+  }
+  assert.equal(view.wave?.number, number, `campaign should automatically reach wave ${number}`);
+  return view;
+}
 
 function makeTransportFixture(requestCount = 1): ScenarioContent {
   const waves = cowGulchP1cCampaignContent.campaignWaves!;
@@ -43,16 +52,7 @@ test('Wave03 creates one type-8/type-4 group with fixed wave speed', async () =>
     mode: 'formal',
     randomSeed: 1,
   });
-  const clearEmptyWave = () => {
-    assert.equal(session.submitIntent({ type: 'start-wave' }), true);
-    session.advance({ deltaMs: 0 });
-    return session.advance({ deltaMs: 0 });
-  };
-
-  assert.equal(clearEmptyWave().wave?.number, 2);
-  assert.equal(clearEmptyWave().wave?.number, 3);
-  assert.equal(session.submitIntent({ type: 'start-wave' }), true);
-  session.advance({ deltaMs: 0 });
+  await advanceToWave(session, 3);
   const view = session.advance({ deltaMs: 0 });
   const spawn = view.events.find((event) => event.type === 'enemy-group-spawned');
   assert.equal(spawn?.type, 'enemy-group-spawned');
@@ -97,15 +97,7 @@ test('covered wagon death rewards once, waits until 499 ms, and emits visual-onl
     mode: 'formal',
     randomSeed: 2,
   });
-  const clearEmptyWave = () => {
-    session.submitIntent({ type: 'start-wave' });
-    session.advance({ deltaMs: 0 });
-    return session.advance({ deltaMs: 0 });
-  };
-  clearEmptyWave();
-  clearEmptyWave();
-  session.submitIntent({ type: 'start-wave' });
-  session.advance({ deltaMs: 0 });
+  await advanceToWave(session, 3);
   let view = session.advance({ deltaMs: 0 });
   const wagon = view.enemies.find(({ type }) => type === 4)!;
   const tow = view.enemies.find(({ type }) => type === 8)!;
@@ -152,17 +144,7 @@ test('original Wave03 emits all three covered-wagon pairs at the six-second inte
     mode: 'formal',
     randomSeed: 7,
   });
-  const clearEmptyWave = () => {
-    assert.equal(session.submitIntent({ type: 'start-wave' }), true);
-    session.advance({ deltaMs: 0 });
-    return session.advance({ deltaMs: 0 });
-  };
-
-  clearEmptyWave();
-  clearEmptyWave();
-  assert.equal(session.submitIntent({ type: 'start-wave' }), true);
-  session.advance({ deltaMs: 0 });
-
+  await advanceToWave(session, 3);
   let view = session.advance({ deltaMs: 0 });
   const spawnedGroups = () => view.events.filter((event) => event.type === 'enemy-group-spawned').length;
   const advanceFor = (durationMs: number) => {
@@ -223,16 +205,7 @@ test('a blocked transport spawn keeps its request and retries after the three-se
     mode: 'formal',
     randomSeed: 11,
   });
-  const clearEmptyWave = () => {
-    session.submitIntent({ type: 'start-wave' });
-    session.advance({ deltaMs: 0 });
-    return session.advance({ deltaMs: 0 });
-  };
-  clearEmptyWave();
-  clearEmptyWave();
-  session.submitIntent({ type: 'start-wave' });
-  session.advance({ deltaMs: 0 });
-
+  await advanceToWave(session, 3);
   let view = session.advance({ deltaMs: 0 });
   assert.equal(view.events.filter((event) => event.type === 'enemy-group-spawned').length, 1);
   assert.equal(view.wave?.pendingSpawnRequests, 1, 'the colliding spawn remains in its pool');
@@ -278,15 +251,7 @@ test('transport admission probes ahead using physical coordinates without displa
     mode: 'formal',
     randomSeed: 5,
   });
-  const clearEmptyWave = () => {
-    session.submitIntent({ type: 'start-wave' });
-    session.advance({ deltaMs: 0 });
-    session.advance({ deltaMs: 0 });
-  };
-  clearEmptyWave();
-  clearEmptyWave();
-  session.submitIntent({ type: 'start-wave' });
-  session.advance({ deltaMs: 0 });
+  await advanceToWave(session, 3);
   const view = session.advance({ deltaMs: 0 });
 
   assert.equal(view.events.filter((event) => event.type === 'enemy-group-spawned').length, 2);

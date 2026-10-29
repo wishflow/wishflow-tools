@@ -6,7 +6,7 @@ import {
   createBrowserProgress,
   getBrowserScenarioContentVersion,
 } from './bootstrap/browser';
-import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent } from './content/cow-gulch';
+import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent, cowGulchP1dCampaignContent } from './content/cow-gulch';
 import { drawGame, GAME_VIEWPORT, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
@@ -42,7 +42,7 @@ app.innerHTML = [
   '    <section class="campaign-panel" aria-labelledby="campaign-title">',
   '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
   '      <p class="campaign-note" data-locale="This research stage reuses Cow Gulch; it is not a production campaign level.">This research stage reuses Cow Gulch; it is not a production campaign level.</p>',
-  '      <button type="button" data-testid="open-original-waves" data-action="open-original-waves">Play original first three waves</button>',
+  '      <button type="button" data-testid="open-original-waves" data-action="open-original-waves">Play original eight waves</button>',
   '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
   '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
   '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
@@ -472,9 +472,10 @@ const languageMessages = {
     mapHired: (name: string, price: number) => `${name} hired from the map for $${price}.`,
     mapHireRejected: (name: string, price: number, cash: number) => `Not enough cash to hire ${name}: need $${price}, have $${cash}.`,
     startSample: 'Start one pioneer sample',
-    openOriginalWaves: 'Play original first three waves',
-    originalWaveContext: 'ORIGINAL WAVES · 1–3 OF 8',
-    originalWaveNotice: 'Original wave data is active. This build stops after wave 3 of 8 and does not settle campaign progress.',
+    openOriginalWaves: 'Play original eight waves',
+    originalWaveContext: 'ORIGINAL CAMPAIGN · 1–8',
+    originalWaveNotice: 'This archived slice stops after wave 3 of 8 and does not settle the campaign.',
+    originalCampaignNotice: 'All eight original waves are active. Clear Wave 8 to settle the battle.',
     returnCowGulchSample: 'Return to Cow Gulch sample',
     failed: 'Game scene failed to load',
     retrySceneOpen: 'Retry loading requested scene',
@@ -613,9 +614,10 @@ const languageMessages = {
     mapHired: (name: string, price: number) => `已花费 $${price} 雇佣地图上的${name}。`,
     mapHireRejected: (name: string, price: number, cash: number) => `现金不足，无法雇佣${name}：需要 $${price}，当前 $${cash}。`,
     startSample: '开始单个拓荒者样本',
-    openOriginalWaves: '游玩原版前三波',
-    originalWaveContext: '原版波次 · 第 1–3 / 8 波',
-    originalWaveNotice: '当前使用原版波次数据；本版本在第 3/8 波后停止，不会结算战役进度。',
+    openOriginalWaves: '游玩原版八波',
+    originalWaveContext: '原版战役 · 第 1–8 波',
+    originalWaveNotice: '该历史切片在第 3/8 波后停止，不结算战役。',
+    originalCampaignNotice: '原版八波内容已启用；完成第 8 波后结算战局。',
     returnCowGulchSample: '返回牛溪谷样本',
     failed: '游戏场景加载失败',
     retrySceneOpen: '重试加载请求的场景',
@@ -1402,12 +1404,19 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
   }
   const upgradeScenario = view.scenarioId === 'cow-gulch-upgrade-sample';
-  const originalWaveScenario = view.scenarioId === cowGulchP1cCampaignContent.id;
+  const originalWaveScenario = view.scenarioId === cowGulchP1cCampaignContent.id
+    || view.scenarioId === cowGulchP1dCampaignContent.id;
+  const originalWaveContent = view.scenarioId === cowGulchP1dCampaignContent.id
+    ? cowGulchP1dCampaignContent
+    : cowGulchP1cCampaignContent;
+  const originalWaveNotice = originalWaveContent.id === cowGulchP1dCampaignContent.id
+    ? messages.originalCampaignNotice
+    : messages.originalWaveNotice;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
     : originalWaveScenario
-      ? cowGulchP1cCampaignContent.title[language]
+      ? originalWaveContent.title[language]
     : activeCampaignStage?.title[language] ?? 'Cow Gulch';
   sceneContext.textContent = upgradeScenario
     ? messages.upgradeSceneContext
@@ -1416,7 +1425,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : activeCampaignStage ? language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE' : 'NEW MEXICO · 01';
   upgradeSampleStatus.textContent = upgradeScenario
     ? messages.debugUpgradeFixture
-    : originalWaveScenario ? messages.originalWaveNotice : messages.originalUpgradeLimit;
+    : originalWaveScenario ? originalWaveNotice : messages.originalUpgradeLimit;
   const selectedUnit = unit;
   const nextUpgrade = selectedUnit?.nextUpgrade;
   let upgradeText = '';
@@ -1501,6 +1510,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     retrySettlementControl.hidden = true;
   }
   const waveNotStarted = view.wave?.phase === 'not-started';
+  const campaignExhausted = view.wave?.phase === 'complete' && view.wave.totalWaves !== undefined && !view.wave.settlement;
+  startWaveControl.hidden = Boolean(view.wave?.totalWaves && !campaignExhausted);
   startWaveControl.disabled = actionLocked || !waveNotStarted || view.paused;
   recruitControl.disabled = actionLocked || Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
@@ -1735,7 +1746,7 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
   } finally {
     replacingSession = false;
     renderStatus();
-    if (sceneOpenFailure && resumePreviousSession) startGameLoop();
+    if (!view.paused && (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving))) startGameLoop();
   }
 }
 
@@ -2201,7 +2212,7 @@ campaignStageList.addEventListener('click', (event: MouseEvent) => {
 });
 
 openOriginalWavesControl.addEventListener('click', () => {
-  void replaceSession(requestScenarioOpen(cowGulchP1cCampaignContent.id, 'formal'));
+  void replaceSession(requestScenarioOpen(cowGulchP1dCampaignContent.id, 'formal'));
 });
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));

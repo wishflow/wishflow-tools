@@ -686,3 +686,19 @@ Wave03 原始请求向量为 [0,0,0,0,0,3,0,0,0,0]。第6项是 pool type7，映
 | 发布与公网验证 | 实现提交 `ebeb7ef` 经集成提交 `588b2d5` 合入并推送 `master`（`588b2d52a493b344edcf7bb8ab31a9f26da3d1cf`）。GitHub Actions [run 40818009364](https://github.com/wishflow/wishflow-tools/actions/runs/40818009364) 成功：应用测试、共享站点测试、GitHub Pages 与 Cloudflare Pages 部署均通过；Worker/config 校验按变更范围跳过。Codex 内置浏览器在 `https://wishflow-tools.pages.dev/gunsnglory/?release=588b2d5` 实际运行前三波：Wave01 后生命50/$81，Wave02 后生命50/$107；Wave03 活动截图可见马匹与车厢沿峡谷路线移动，结算显示生命44、逃脱6、击败43、现金$117，并明确停在3/8、Wave04未实现。浏览器控制台 error/warn 为空；既有样本最高分$50、战役进度0/2未变化。本次运行未固定随机种子，结算数字仅为观察值。 |
 
 本节只证明 Cow Gulch Wave03 的 type4/type8 运输切片通过测试；不表示 type5/6 运输对象、其他地图组合、完整战役或 Cow Gulch 整关已完成。完整原版关卡仍为0/60。
+
+
+## 38. P1-D Cow Gulch 原版八波与自动推进
+
+本轮将原版 Wave04–08 加入独立内容版本 `cow-gulch-original-waves-1-8`，并把原版 campaign 的首波和后续波改为自动开始。Cow Gulch L01 八次 `newWave` 的 `waveDelay` 均为0，因此本场景不显示逐波开波按钮或波间倒数；单波预览仍保留手动开始。Wave08 的请求、敌人、投射物及死亡清理结束后才胜利；生命降至0时败北，重开从 Wave01 初态开始。
+
+原始波次数据仍来自 REA/JADX 归档的 `R/data/waves.json` 与 `GameDesignWaves` 调用行。Wave04–08 的HP/速度倍率、pool type 2–11 请求向量和间隔由独立常量测试逐项核对；完整规则测试以空请求隔离夹具验证八次自动推进、终局胜利和无人工开波输入的确定性回放，另以败北夹具验证重开。正式战役入口、关卡解锁和 P1-E 档案接通仍未由本轮实现。
+
+| 验收面 | 本地结果 |
+| --- | --- |
+| 自动状态机 | 正式 campaign 开局即为活动态；`start-wave` 输入被拒绝；清除一波后直接进入下一波。单波预览测试仍验证必须输入 `start-wave`。 |
+| 波次与结算 | P1-D 测试逐项检查8波原始倍率/间隔/请求，验证第1–7波不结算、第8波胜利、失败后以同一随机种子重新打开时恢复 Wave01。 |
+| 浏览器入口与循环 | 页面切换到活动场景后在替换锁解除时启动帧循环；E2E 选择4×、确认 Wave01 自动开始、手动开波控件隐藏、真实地图雇佣枪手，并完成 Wave08 胜利。E2E 用虚拟时钟和100ms帧间隔加速等待，游戏仍调用正式时间累加器并遵守4×与单步上限。 |
+| 变异审查 | 临时反转 campaign 首波初始 phase 后，自动开波与败北/重开测试按预期失败；恢复后 P1-D 测试通过。 |
+| 全量本地 CI | `pnpm run test:ci` 通过：145项单元测试、生产构建、49项 Playwright 测试；TypeScript 检查通过。审查后受影响的64项 Game/P1-C/P1-D 单元测试再次通过。 |
+| 发布与公开浏览器 | 本记录待集成分支发布后补充 Actions、公开站点和 Codex 内置浏览器观察结果。 |

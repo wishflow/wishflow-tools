@@ -6,6 +6,8 @@ import {
   cowGulchContent,
   cowGulchP1aSampleContent,
   cowGulchP1bCampaignContent,
+  cowGulchP1cCampaignContent,
+  cowGulchP1dCampaignContent,
   cowGulchUpgradeSampleContent,
 } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
@@ -59,12 +61,16 @@ test('contains the researched Cow Gulch scenario and exactly its first-map unit'
   assert.match(content.source.variationPolicy, /fixed.*seed/i);
 });
 
-test('keeps the legacy one-wave sample separate from the incomplete two-wave campaign slice', () => {
+test('keeps the one-wave sample and prior campaign slices separate from the full eight-wave build', () => {
   assert.equal(cowGulchP1aSampleContent.id, 'cow-gulch');
   assert.equal(cowGulchP1aSampleContent.campaignWaves, undefined);
   assert.equal(cowGulchP1bCampaignContent.id, 'cow-gulch-original-waves');
   assert.equal(cowGulchP1bCampaignContent.campaignWaveCount, 8);
   assert.deepEqual(cowGulchP1bCampaignContent.campaignWaves?.map(({ number }) => number), [1, 2]);
+  assert.deepEqual(cowGulchP1cCampaignContent.campaignWaves?.map(({ number }) => number), [1, 2, 3]);
+  assert.equal(cowGulchP1dCampaignContent.id, 'cow-gulch-original-waves-1-8');
+  assert.equal(cowGulchP1dCampaignContent.campaignWaveCount, 8);
+  assert.deepEqual(cowGulchP1dCampaignContent.campaignWaves?.map(({ number }) => number), [1, 2, 3, 4, 5, 6, 7, 8]);
 });
 
 test('keeps the converted Cow Gulch grid and route controls aligned with the raw TDM bytes', () => {

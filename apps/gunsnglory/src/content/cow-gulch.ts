@@ -1,5 +1,5 @@
 import cowGulchMap from './cow-gulch.json';
-import { cowGulchCampaignWaves, cowGulchCampaignWavesP1c } from './cow-gulch-campaign-waves';
+import { cowGulchCampaignWaves, cowGulchCampaignWavesP1c, cowGulchCampaignWavesP1d } from './cow-gulch-campaign-waves';
 import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
 import type { ScenarioContent, ScenarioUnit } from '../game';
 
@@ -146,6 +146,15 @@ export const cowGulchP1cCampaignContent: ScenarioContent = {
     4: { hitPoints: 200, cashReward: 10, penetration: { light: 50, fire: 100, heavy: 66, poison: 100 }, turningDurationMs: 200 },
     8: { hitPoints: 200, cashReward: 0, penetration: { light: 100, fire: 100, heavy: 100, poison: 100 }, turningDurationMs: 100 },
   },
+};
+
+/** Full original Cow Gulch campaign, with automatic wave progression and terminal settlement. */
+export const cowGulchP1dCampaignContent: ScenarioContent = {
+  ...cowGulchP1cCampaignContent,
+  id: 'cow-gulch-original-waves-1-8',
+  contentVersion: 'gng-free-1.8.6-map1-p1d-waves-1-8-v1',
+  title: { en: 'Cow Gulch · Original waves 1–8', zh: '牛溪谷 · 原版第 1–8 波' },
+  campaignWaves: cowGulchCampaignWavesP1d,
 };
 
 /** Debug-only fixture for the otherwise locked Cow Gulch Gunslinger upgrade path. */
