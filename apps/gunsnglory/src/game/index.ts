@@ -1565,7 +1565,7 @@ export function createGame(options: {
       let wave: MutableWave | undefined = scenario.previewWave
         ? {
           number: firstCampaignWave?.number ?? scenario.previewWave.number,
-          phase: 'not-started',
+          phase: campaignMode ? 'active' : 'not-started',
           lives: scenario.previewWave.initialLives,
           escapedEnemies: 0,
           defeatedEnemies: 0,
@@ -2279,7 +2279,7 @@ export function createGame(options: {
                 wave.difficultyValue = nextDifficulty;
                 wave.difficultyValueCounter = 1;
                 wave.campaignSpawnPools = campaignSpawnPools(nextCampaignWave, nextDifficulty, true);
-                wave.phase = 'not-started';
+                wave.phase = 'active';
               } else if (wave.number >= campaignWaveCount && (campaignWaves?.length ?? 0) >= campaignWaveCount) {
                 wave.phase = 'complete';
                 const difficultyScorePercent = difficulty === 'easy'

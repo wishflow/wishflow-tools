@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise<void> {
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -12,19 +13,22 @@ async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise
 
 test('saves a formal result across reload and discards an unfinished wave', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no Cow Gulch result yet.');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
   await setFourTimesSpeed(page);
 
+  await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
   await page.reload();
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
+  await openSingleWaveSample(page);
   await expect(page.getByTestId('wave-status')).toHaveText('Wave 1 ready · Lives 50 · Cash $65');
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no Cow Gulch result yet.');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.', { timeout: 10000 });
-  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: Cow Gulch sample complete · Best $50.');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
   const stored = await page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {
     const request = indexedDB.open('gunsnglory-profile', 1);
@@ -44,9 +48,9 @@ test('saves a formal result across reload and discards an unfinished wave', asyn
   expect((stored.appliedSettlementIds as string[]).length).toBe(1);
 
   await page.reload();
-  await expect(page.getByTestId('wave-status')).toHaveText('Wave 1 ready · Lives 50 · Cash $65');
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: Cow Gulch sample complete · Best $50.');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 });
 
 test('IndexedDB profile adapter enforces conditional writes and idempotent operation IDs', async ({ page }) => {
@@ -72,6 +76,7 @@ test('IndexedDB profile adapter enforces conditional writes and idempotent opera
 test('reports a real IndexedDB transaction abort and retries the pending settlement', async ({ page }) => {
   await page.goto('/');
   await setFourTimesSpeed(page);
+  await openSingleWaveSample(page);
   await page.evaluate(() => {
     const state = window as Window & { __abortNextProfilePut?: boolean };
     state.__abortNextProfilePut = true;
@@ -93,19 +98,19 @@ test('reports a real IndexedDB transaction abort and retries the pending settlem
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result is not saved. Retry to save it.', { timeout: 10000 });
   await expect(page.getByRole('button', { name: 'Retry saving result' })).toBeVisible();
-  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no Cow Gulch result yet.');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
   await page.getByRole('button', { name: 'Retry saving result' }).click();
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
-  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: Cow Gulch sample complete · Best $50.');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 });
 
 test('a stale tab sees a settings conflict and can reload the newer saved value', async ({ context }) => {
   const first = await context.newPage();
   const second = await context.newPage();
   await Promise.all([first.goto('/'), second.goto('/')]);
-  await expect(first.getByTestId('profile-status')).toHaveText('Saved profile: no Cow Gulch result yet.');
-  await expect(second.getByTestId('profile-status')).toHaveText('Saved profile: no Cow Gulch result yet.');
+  await expect(first.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
+  await expect(second.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
   const firstSpeed = first.getByRole('slider', { name: 'Simulation speed' });
   await firstSpeed.focus();
@@ -197,7 +202,7 @@ test('exports a damaged profile before allowing its replacement', async ({ page 
 
   page.on('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Replace damaged profile' }).click();
-  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no Cow Gulch result yet.');
+  await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
   await expect(page.getByTestId('profile-recovery-status'))
     .toHaveText('Damaged profile replaced. The downloaded backup keeps the original record.');
 });

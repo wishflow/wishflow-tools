@@ -1,14 +1,14 @@
 export const messages = {
-  'FIRST COMBAT SLICE': { en: 'FIRST COMBAT SLICE', zh: '首个战斗切片' },
-  'Use the Cow Gulch map to defeat a pioneer and collect the reward.': {
-    en: 'Finish a Cow Gulch combat sample, review the result, and restart from a clean state.',
-    zh: '结束牛溪谷战斗样本，查看结算，并从干净状态重新开始。',
+  'ORIGINAL CAMPAIGN': { en: 'ORIGINAL CAMPAIGN', zh: '原版战役' },
+  'Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.': {
+    en: 'Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.',
+    zh: '游玩牛溪谷原版战役；需要单独验证规则时可切换到样本场景。',
   },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
   'Campaign progress': { en: 'Campaign progress', zh: '战役进度' },
-  'These two acceptance stages reuse Cow Gulch; they are not production campaign levels.': {
-    en: 'These two acceptance stages reuse Cow Gulch; they are not production campaign levels.',
-    zh: '这两个验收关卡复用牛溪谷地图，不代表正式战役关卡。',
+  'Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.': {
+    en: 'Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.',
+    zh: '牛溪谷是正式战役第 1 关；之前的样本结果仍与战役进度隔离。',
   },
   'Difficulty for the next battle': { en: 'Difficulty for the next battle', zh: '下一场战斗难度' },
   Easy: { en: 'Easy', zh: '简单' },
@@ -42,12 +42,11 @@ export const messages = {
   'Battle replay': { en: 'Battle replay', zh: '战局重放' },
   'Export settled battle': { en: 'Export settled battle', zh: '导出已结算战局' },
   'Import replay': { en: 'Import replay', zh: '导入重放文件' },
-  'The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.': {
-    en: 'The first three source campaign waves are playable. Later waves and full-campaign settlement remain unimplemented.',
-    zh: '目前可玩原版前三波；其余波次及完整战役结算尚未实现。',
+  'The Cow Gulch battle has eight playable waves and settles after wave eight.': {
+    en: 'The Cow Gulch battle has eight playable waves and settles after wave eight.',
+    zh: '牛溪谷战斗共 8 波；完成第 8 波后结算。',
   },
   'Hire selected map unit': { en: 'Hire selected map unit', zh: '雇佣选中的地图单位' },
-  'Play original first three waves': { en: 'Play original first three waves', zh: '游玩原版前三波' },
   'Cow Gulch game map': { en: 'Cow Gulch game map', zh: '牛溪谷游戏地图' },
   'Compare numeric schemes': { en: 'Compare numeric schemes', zh: '比较数值方案' },
   'Compare the original Cow Gulch reward with an immutable draft using matched random samples.': {

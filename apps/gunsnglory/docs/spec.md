@@ -197,7 +197,7 @@ flowchart LR
 
 切换行为须用不同真实地图及资源组合验证：目标开局对象和规则正确，旧对象、投射物、计时器和选中状态清理，资源缺失保留明确可恢复入口，不留下可操作的半初始化战局。Game、Progress、内部 Content 与 Render 的协作及资源生命周期见[架构设计](architecture.md)。
 
-一波结束与整关终局分别判断。每次逻辑更新先检查 `lives <= 0` 并进入败北；否则只有 `WaveManager.waveEmpty` 且敌人列表为空，才调用 `nextWave()` 决定进入下一波或终止战局。仍有活动请求池、等待中的波次、敌人或死亡动画尚未清理的运输对象时，不得提前结算；单波清空不等于整关胜利。只有正式 Game 终局可由 Progress 写入进度，同一 settlement ID 只应用一次。重开从该关初态开始；旧样本胜利不自动转成真实战役完成，失败或未完成关卡也不能标为已通关。静态依据为 `GunsAndGloryThread` 终局分支、`WaveManager.updateWave()` 与 Progress 档案契约；首关验收场景见[实施计划](implementation-plan.md)。
+一波结束与整关终局分别判断。每次逻辑更新先检查 `lives <= 0` 并进入败北；否则只有 `WaveManager.waveEmpty` 且敌人列表为空，原版游戏循环才自动调用 `nextWave()`，不要求玩家逐波确认开波。正 `waveDelay` 在更新中倒数；原版倒数按钮只加速该倒数，不负责启动下一波。Cow Gulch L01 八次 `newWave` 的 `waveDelay` 参数均为0，因此首波开始及清波后的下一波都不增加人工确认或倒数等待。仍有活动请求池、等待中的正延迟、敌人或死亡动画尚未清理的运输对象时，不得提前结算；单波清空不等于整关胜利。只有第8波请求、敌人及待清理对象均为空时才胜利。只有正式 Game 终局可由 Progress 写入进度，同一 settlement ID 只应用一次。重开从该关初态开始；旧样本胜利不自动转成真实战役完成，失败或未完成关卡也不能标为已通关。静态依据为 `GunsAndGloryThread` 每帧调用、`WaveManager.updateWave()`、L01 `GameDesignWaves.newWave()` 参数与 Progress 档案契约；首关验收场景见[实施计划](implementation-plan.md)。
 
 ## 5. 已确认的实现决策（Implementation Decisions）
 

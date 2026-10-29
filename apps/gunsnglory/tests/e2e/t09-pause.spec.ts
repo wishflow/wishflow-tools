@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise<void> {
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -10,6 +11,7 @@ async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise
 async function startLongWave(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/');
   await setFourTimesSpeed(page);
+  await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Open upgrade rules sample' }).click();
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
@@ -101,6 +103,7 @@ test('pause and resume controls remain usable with touch on a phone-sized viewpo
   try {
     await page.goto('/');
     await setFourTimesSpeed(page);
+    await openSingleWaveSample(page, 'tap');
     await page.getByRole('button', { name: 'Open upgrade rules sample' }).tap();
     await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
     await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');

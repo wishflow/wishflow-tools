@@ -1,11 +1,14 @@
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 async function mapPoint(
   page: import('@playwright/test').Page,
   cellX: number,
   cellY: number,
 ): Promise<{ x: number; y: number }> {
-  return page.getByTestId('game-canvas').evaluate((element, cell) => {
+  const canvasLocator = page.getByTestId('game-canvas');
+  await canvasLocator.scrollIntoViewIfNeeded();
+  return canvasLocator.evaluate((element, cell) => {
     const canvas = element as HTMLCanvasElement;
     const bounds = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -47,6 +50,7 @@ test('two-finger map zoom follows its focal point and preserves touch hit testin
   const cdp = await context.newCDPSession(page);
   try {
     await page.goto('/');
+    await openSingleWaveSample(page, 'tap');
     const canvas = page.getByTestId('game-canvas');
     const selection = page.getByTestId('selection-status');
     await expect(selection).toHaveText('No unit selected');
@@ -94,6 +98,7 @@ test('converting a one-finger drag to a pinch stops movement and locks the remai
   const cdp = await context.newCDPSession(page);
   try {
     await page.goto('/');
+    await openSingleWaveSample(page, 'tap');
     const selection = page.getByTestId('selection-status');
     const start = await mapPoint(page, 8.5, 8.25);
     const target = await mapPoint(page, 11.5, 8.75);

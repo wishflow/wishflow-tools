@@ -58,7 +58,7 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
     return bounds.width / bounds.height;
   });
   expect(Math.abs(ratio - 16 / 9)).toBeLessThan(0.02);
-  const startButtonBox = await page.getByRole('button', { name: 'Start one pioneer sample' }).boundingBox();
+  const startButtonBox = await page.getByTestId('open-single-wave-sample').boundingBox();
   expect(startButtonBox?.width).toBeGreaterThan(170);
 
   await clickWorld(512, 288);

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { openSingleWaveSample } from './helpers';
 
 async function mapPoint(
   page: import('@playwright/test').Page,
@@ -28,6 +29,7 @@ async function canvasPixels(page: import('@playwright/test').Page): Promise<stri
 test('drags the unit to a terrain boundary, then stops when the pointer is released', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
+  await openSingleWaveSample(page);
   const status = page.getByTestId('selection-status');
   const start = await mapPoint(page, 8.5, 8.25);
   const beyondCanyonWall = await mapPoint(page, 15, 8.75);
@@ -50,6 +52,7 @@ test('stops a drag on pointer cancellation or lost capture', async ({ page }) =>
 
   for (const eventType of ['pointercancel', 'lostpointercapture']) {
     await page.goto('/');
+    await openSingleWaveSample(page);
     await page.evaluate(() => {
       const state = window as Window & { __gngPointerId?: number };
       document.querySelector('[data-testid="game-canvas"]')?.addEventListener('pointerdown', (event) => {
@@ -92,6 +95,7 @@ test('moves and releases a unit through a real mobile touch drag', async ({ brow
   const page = await context.newPage();
   try {
     await page.goto('/');
+    await openSingleWaveSample(page, 'tap');
     const status = page.getByTestId('selection-status');
     const start = await mapPoint(page, 8.5, 8.25);
     const target = await mapPoint(page, 11.5, 8.75);

@@ -6,9 +6,12 @@ import {
   cowGulchContent,
   cowGulchP1aSampleContent,
   cowGulchP1bCampaignContent,
+  cowGulchP1cCampaignContent,
+  cowGulchP1dCampaignContent,
   cowGulchUpgradeSampleContent,
 } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
+import { cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 const content = JSON.parse(readFileSync(path.join(appRoot, 'src/content/cow-gulch.json'), 'utf8'));
@@ -59,12 +62,34 @@ test('contains the researched Cow Gulch scenario and exactly its first-map unit'
   assert.match(content.source.variationPolicy, /fixed.*seed/i);
 });
 
-test('keeps the legacy one-wave sample separate from the incomplete two-wave campaign slice', () => {
+test('keeps the one-wave sample and prior campaign slices separate from the full eight-wave build', () => {
   assert.equal(cowGulchP1aSampleContent.id, 'cow-gulch');
   assert.equal(cowGulchP1aSampleContent.campaignWaves, undefined);
   assert.equal(cowGulchP1bCampaignContent.id, 'cow-gulch-original-waves');
   assert.equal(cowGulchP1bCampaignContent.campaignWaveCount, 8);
   assert.deepEqual(cowGulchP1bCampaignContent.campaignWaves?.map(({ number }) => number), [1, 2]);
+  assert.deepEqual(cowGulchP1cCampaignContent.campaignWaves?.map(({ number }) => number), [1, 2, 3]);
+  assert.equal(cowGulchP1dCampaignContent.id, 'cow-gulch-original-waves-1-8');
+  assert.equal(cowGulchP1dCampaignContent.campaignWaveCount, 8);
+  assert.deepEqual(cowGulchP1dCampaignContent.campaignWaves?.map(({ number }) => number), [1, 2, 3, 4, 5, 6, 7, 8]);
+});
+
+test('binds the full Cow Gulch battle to a distinct official level-one identity', () => {
+  assert.equal(cowGulchLevelOneContent.id, 'campaign-new-mexico-01');
+  assert.equal(cowGulchLevelOneContent.contentVersion, 'gng-free-1.8.6-new-mexico-01-p1e-v1');
+  assert.notEqual(cowGulchLevelOneContent.id, cowGulchContent.id);
+  assert.notEqual(cowGulchLevelOneContent.id, cowGulchP1aSampleContent.id);
+  assert.notEqual(cowGulchLevelOneContent.id, cowGulchP1bCampaignContent.id);
+  assert.notEqual(cowGulchLevelOneContent.id, cowGulchP1cCampaignContent.id);
+  assert.notEqual(cowGulchLevelOneContent.id, cowGulchP1dCampaignContent.id);
+  assert.deepEqual(cowGulchLevelOneContent.campaignWaves, cowGulchP1dCampaignContent.campaignWaves);
+  assert.deepEqual(officialCampaignStages, [{
+    scenarioId: cowGulchLevelOneContent.id,
+    contentVersion: cowGulchLevelOneContent.contentVersion,
+    title: cowGulchLevelOneContent.title,
+    globalLevel: 1,
+    requiresCompletedScenarioIds: [],
+  }]);
 });
 
 test('keeps the converted Cow Gulch grid and route controls aligned with the raw TDM bytes', () => {
