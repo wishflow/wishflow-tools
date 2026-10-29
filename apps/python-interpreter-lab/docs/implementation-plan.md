@@ -146,7 +146,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **前置**：P5；本阶段无需等待调试控制或异常捕获。
 - **交付**：在明确支持的索引、读写和构造规则内支持列表/字典；展示变量绑定和对象身份，观察别名与修改；对象图在引用 DTO 稳定后接入。模块边界见 [P8 能力地图](../P8-CAPABILITY-MAP.md)，具体规则见 [P8 spec](specs/p08-mutable-containers.md) 和 [P8 tasks](tasks/p08-mutable-containers.md)。教学指令集升为 `mini-vm-v4`；不改变真实 CPython 视图。
 - **验收**：依次执行三行 `a = [1, 2]`、`b = a`、`b[0] = 9`，两个名字指向同一对象；历史中修改前的对象保持原值；复制、新建对象与别名可区分；不支持的键类型、越界和循环引用均有清晰行为。
-- **进度**：T01–T05 已实现，覆盖列表/字典构造与别名、对象快照/对象图、循环安全打印与结构相等、资源预算及 P7 函数引用传递。111 项单测、类型检查、应用构建、catalog 14/14 和整站构建通过；完整 E2E 有 2 项因 Pyodide CDN 初始化超时失败，隔离复跑两项均通过。Codex 内置浏览器在本地生产子路径手验显示 `mini-vm-v4`、`a/b` 共用列表对象 ID、循环字典格式、结构相等及 CPython Unicode repr 一致。T06 文档已更新，功能分支已重放到最新 `origin/master`；应用契约 `pi` 加载、合并发布和正式页面实测仍待完成，详见 [P8 tasks](tasks/p08-mutable-containers.md)。
+- **进度**：T01–T06 已完成并发布，覆盖列表/字典构造与别名、对象快照/对象图、循环安全打印与结构相等、资源预算及 P7 函数引用传递。111 项单测、类型检查、应用构建、catalog 14/14 和整站构建通过；完整 E2E 有 2 项因 Pyodide CDN 初始化超时失败，隔离复跑两项均通过。GitHub Actions [40909591943](https://github.com/wishflow/wishflow-tools/actions/runs/40909591943) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 部署均成功。Codex 内置浏览器在线验收确认真实 CPython 视图可用，教学 VM 为 `mini-vm-v4`；别名对象身份、列表修改、结构相等与循环字典输出符合规格。应用契约 `pi` 加载仍未验证：当前环境没有 provider key，提权读取配置的调用被自动审核拒绝（可能向外部模型提供商发送仓库 `AGENTS.md` 内容）；未重试。具体结果见 [P8 tasks](tasks/p08-mutable-containers.md)。
 - **回滚**：撤回容器语法及对象图，既有 `mini-vm-v3` 标量、控制流和函数执行继续可用；不改变其他引擎输出格式。
 
 ### P9：教学调试控制
