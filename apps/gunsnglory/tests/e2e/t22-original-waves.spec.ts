@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { clickCanvasPoint, cowGulchMarkerPoint } from './helpers';
 
 test('completes official Cow Gulch level one and restores only settled campaign progress', async ({ page }) => {
   test.setTimeout(120_000);
@@ -34,17 +35,13 @@ test('completes official Cow Gulch level one and restores only settled campaign 
   const cash = Number((await waveStatus.innerText()).match(/Cash \$(\d+)/)?.[1] ?? 0);
   expect(cash).toBeGreaterThanOrEqual(75);
 
-  const canvas = page.getByTestId('game-canvas');
-  await canvas.scrollIntoViewIfNeeded();
-  const bounds = await canvas.boundingBox();
-  if (!bounds) throw new Error('Game canvas has no layout box');
-  await page.mouse.click(bounds.x + bounds.width * 446 / 1024, bounds.y + bounds.height * 49 / 576);
+  await clickCanvasPoint(page, cowGulchMarkerPoint(5, 4));
   const mapHire = page.getByTestId('hire-map-unit');
   await expect(mapHire).toHaveText('Hire map Gunslinger · $75');
   await expect(mapHire).toBeEnabled();
   await mapHire.click();
   await expect(page.getByTestId('map-hire-status')).toHaveText('Gunslinger hired from the map for $75.');
-  await page.mouse.click(bounds.x + bounds.width * 446 / 1024, bounds.y + bounds.height * 49 / 576);
+  await clickCanvasPoint(page, cowGulchMarkerPoint(5, 4));
   await expect(page.getByTestId('selection-status')).toContainText('Gunslinger selected');
 
   await page.clock.runFor(8 * 60_000);

@@ -12,6 +12,14 @@ import {
 export interface GameSettings {
   simulationSpeed: number;
   difficulty: GameDifficulty;
+  soundEnabled: boolean;
+}
+
+/** Settings supplied by existing consumers may omit the additive sound preference. */
+export interface GameSettingsInput {
+  simulationSpeed: number;
+  difficulty: GameDifficulty;
+  soundEnabled?: boolean;
 }
 
 export interface ProfileView {
@@ -49,7 +57,7 @@ export interface Progress {
   loadProfile(): Promise<ProfileView>;
   loadCampaign(): Promise<CampaignProgressView>;
   loadSettings(): Promise<GameSettings>;
-  saveSettings(settings: GameSettings): Promise<GameSettings>;
+  saveSettings(settings: GameSettingsInput): Promise<GameSettings>;
   retrySettings(): Promise<GameSettings>;
   exportSavedProfile(): Promise<string | null>;
   resetCorruptProfile(snapshot: string): Promise<ProfileView>;
@@ -72,7 +80,7 @@ function progressError(error: unknown): Error {
 
 function createDefaultProfileData(): ProfileData {
   return {
-    settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy' },
+    settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy', soundEnabled: true },
     completedScenarios: [],
     highScores: {},
     appliedSettlementIds: [],
@@ -88,10 +96,15 @@ function publicProfile(data: ProfileData): ProfileView {
   if (difficulty !== undefined && !isGameDifficulty(difficulty)) {
     throw new ProgressError('corrupt-data', 'Invalid saved game difficulty');
   }
+  const soundEnabled = data.settings.soundEnabled;
+  if (soundEnabled !== undefined && typeof soundEnabled !== 'boolean') {
+    throw new ProgressError('corrupt-data', 'Invalid saved sound setting');
+  }
   return Object.freeze({
     settings: Object.freeze({
       simulationSpeed: simulationSpeed === undefined ? DEFAULT_SIMULATION_SPEED : simulationSpeed,
       difficulty: difficulty === undefined ? 'easy' : difficulty,
+      soundEnabled: soundEnabled === undefined ? true : soundEnabled,
     }),
     completedScenarios: Object.freeze([...data.completedScenarios]),
     highScores: Object.freeze({ ...data.highScores }),
@@ -115,8 +128,13 @@ function settlementOperationId(settlement: GameSettlementRecord, expectedRevisio
   return `settlement:${settlement.settlementId}:${expectedRevision ?? 'new'}`;
 }
 
-function settingsOperationId(speed: number, difficulty: GameDifficulty, expectedRevision: number | null): string {
-  return `settings:${expectedRevision ?? 'new'}:${speed}:${difficulty}`;
+function settingsOperationId(
+  speed: number,
+  difficulty: GameDifficulty,
+  soundEnabled: boolean,
+  expectedRevision: number | null,
+): string {
+  return `settings:${expectedRevision ?? 'new'}:${speed}:${difficulty}:${soundEnabled}`;
 }
 
 function hardModeUnlocked(data: ProfileData, campaignStages: readonly CampaignStageDefinition[]): boolean {
@@ -267,15 +285,8 @@ export function createProgress(
     return (await loadProfile()).settings;
   }
 
-  async function saveSettings(settings: GameSettings): Promise<GameSettings> {
-    const difficulty = settings.difficulty ?? lastKnownData.settings.difficulty ?? 'easy';
-    if (!isGameDifficulty(difficulty)) {
-      throw new ProgressError('invalid-input', 'Game difficulty is invalid');
-    }
-    const saved = {
-      simulationSpeed: normalizeSimulationSpeed(settings.simulationSpeed),
-      difficulty,
-    };
+  async function saveSettings(settings: GameSettingsInput): Promise<GameSettings> {
+    const simulationSpeed = normalizeSimulationSpeed(settings.simulationSpeed);
     return serialize(async () => {
       if (!hasLoadedProfile) {
         try {
@@ -285,7 +296,16 @@ export function createProgress(
         }
       }
       publicProfile(lastKnownData);
-      if (difficulty === 'hard' && !hardModeUnlocked(lastKnownData, campaignStages)) {
+      const difficulty = settings.difficulty ?? (lastKnownData.settings.difficulty as GameDifficulty | undefined) ?? 'easy';
+      const soundEnabled = settings.soundEnabled ?? (lastKnownData.settings.soundEnabled as boolean | undefined) ?? true;
+      if (!isGameDifficulty(difficulty)) {
+        throw new ProgressError('invalid-input', 'Game difficulty is invalid');
+      }
+      if (typeof soundEnabled !== 'boolean') {
+        throw new ProgressError('invalid-input', 'Sound setting is invalid');
+      }
+      const saved: GameSettings = { simulationSpeed, difficulty, soundEnabled };
+      if (saved.difficulty === 'hard' && !hardModeUnlocked(lastKnownData, campaignStages)) {
         throw new ProgressError('difficulty-locked', 'Hard difficulty is locked until a level divisible by ten is completed');
       }
       const nextData = cloneProfileData(lastKnownData);
@@ -293,7 +313,7 @@ export function createProgress(
       const request: WriteProfileRequest = {
         data: nextData,
         expectedRevision: lastKnownRevision,
-        operationId: settingsOperationId(saved.simulationSpeed, saved.difficulty, lastKnownRevision),
+        operationId: settingsOperationId(saved.simulationSpeed, saved.difficulty, saved.soundEnabled, lastKnownRevision),
       };
       pendingSettingsRequest = request;
       try {
@@ -314,11 +334,15 @@ export function createProgress(
       if (!request) throw new ProgressError('invalid-input', 'No pending settings save is available to retry');
       const speed = request.data.settings.simulationSpeed;
       const difficulty = request.data.settings.difficulty;
+      const soundEnabled = request.data.settings.soundEnabled;
       if (!isSimulationSpeed(speed)) {
         throw new ProgressError('corrupt-data', 'Pending simulation speed is corrupt');
       }
       if (!isGameDifficulty(difficulty)) {
         throw new ProgressError('corrupt-data', 'Pending game difficulty is corrupt');
+      }
+      if (soundEnabled !== undefined && typeof soundEnabled !== 'boolean') {
+        throw new ProgressError('corrupt-data', 'Pending sound setting is corrupt');
       }
       try {
         const result = await repository.writeProfile(request);
@@ -328,6 +352,7 @@ export function createProgress(
         return {
           simulationSpeed: speed,
           difficulty,
+          soundEnabled: soundEnabled === undefined ? true : soundEnabled,
         };
       } catch (error) {
         throw progressError(error);

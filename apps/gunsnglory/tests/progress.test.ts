@@ -13,7 +13,7 @@ test('loads Easy and a default speed for a new or older profile without the sett
       settings,
     });
     const progress = createProgress(repository);
-    assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1, difficulty: 'easy' });
+    assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1, difficulty: 'easy', soundEnabled: true });
   }
 });
 
@@ -22,12 +22,18 @@ test('loads and saves supported speeds through the shared profile repository', a
     settings: { simulationSpeed: 1.5, soundEnabled: false },
   }));
 
-  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1.5, difficulty: 'easy' });
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 1.5, difficulty: 'easy', soundEnabled: false });
   assert.deepEqual(await progress.saveSettings({ simulationSpeed: 4.25, difficulty: 'medium' }), {
     simulationSpeed: 4,
     difficulty: 'medium',
+    soundEnabled: false,
   });
-  assert.deepEqual((await progress.loadProfile()).settings, { simulationSpeed: 4, difficulty: 'medium' });
+  assert.deepEqual((await progress.loadProfile()).settings, { simulationSpeed: 4, difficulty: 'medium', soundEnabled: false });
+  assert.deepEqual(await progress.saveSettings({ simulationSpeed: 4, difficulty: 'medium', soundEnabled: true }), {
+    simulationSpeed: 4,
+    difficulty: 'medium',
+    soundEnabled: true,
+  });
 });
 
 test('reports a stale settings write instead of silently replacing another profile update', async () => {
@@ -64,8 +70,8 @@ test('retains a failed settings write for an idempotent retry', async () => {
   const progress = createProgress(repository);
   await progress.loadProfile();
   await assert.rejects(progress.saveSettings({ simulationSpeed: 2, difficulty: 'easy' }), /IndexedDB unavailable/);
-  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2, difficulty: 'easy' });
-  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2, difficulty: 'easy' });
+  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2, difficulty: 'easy', soundEnabled: true });
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2, difficulty: 'easy', soundEnabled: true });
 });
 
 function settlement(overrides: Partial<GameSettlementRecord> = {}): GameSettlementRecord {
@@ -151,7 +157,7 @@ test('keeps legacy samples isolated while official Cow Gulch progress preserves 
     highScore: undefined,
   }]);
   assert.equal(before.completedCount, 0);
-  assert.deepEqual(before.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium' });
+  assert.deepEqual(before.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium', soundEnabled: true });
 
   const officialSettlement = settlement({
     settlementId: `official-session:${cowGulchLevelOneContent.id}:8`,
@@ -173,7 +179,7 @@ test('keeps legacy samples isolated while official Cow Gulch progress preserves 
   const reloaded = await createProgress(repository, officialCampaignStages).loadCampaign();
   assert.deepEqual(reloaded.stages.map(({ status }) => status), ['completed']);
   assert.equal(reloaded.completedCount, 1);
-  assert.deepEqual(reloaded.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium' });
+  assert.deepEqual(reloaded.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium', soundEnabled: true });
 });
 
 test('refreshing campaign progress preserves a pending settings retry', async () => {
@@ -196,7 +202,7 @@ test('refreshing campaign progress preserves a pending settings retry', async ()
   await assert.rejects(progress.saveSettings({ simulationSpeed: 2, difficulty: 'easy' }), /IndexedDB unavailable/);
 
   await progress.loadCampaign();
-  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2, difficulty: 'easy' });
+  assert.deepEqual(await progress.retrySettings(), { simulationSpeed: 2, difficulty: 'easy', soundEnabled: true });
 });
 
 test('records a formal sample settlement once and keeps the best score', async () => {
@@ -231,7 +237,7 @@ test('does not apply debug, experiment, or replay settlements to a formal profil
     await assert.rejects(progress.applySettlement(settlement({ mode })), /formal/i);
   }
   assert.deepEqual(await progress.loadProfile(), {
-    settings: { simulationSpeed: 1, difficulty: 'easy' },
+    settings: { simulationSpeed: 1, difficulty: 'easy', soundEnabled: true },
     completedScenarios: [],
     highScores: {},
   });
@@ -311,6 +317,9 @@ test('rejects corrupt persisted settings and does not hide repository write fail
   const corrupt = createProgress(createMemoryProfileRepository({ settings: { simulationSpeed: 1.1 } }));
   await assert.rejects(corrupt.loadSettings(), (error: unknown) =>
     error instanceof ProgressError && error.code === 'corrupt-data' && /Invalid saved simulation speed/.test(error.message));
+  const invalidSound = createProgress(createMemoryProfileRepository({ settings: { soundEnabled: 'off' } }));
+  await assert.rejects(invalidSound.loadSettings(), (error: unknown) =>
+    error instanceof ProgressError && error.code === 'corrupt-data' && /Invalid saved sound setting/.test(error.message));
 
   const memory = createMemoryProfileRepository();
   const failingRepository = {
@@ -325,7 +334,7 @@ test('rejects corrupt persisted settings and does not hide repository write fail
 
 test('defaults legacy settings to Easy and rejects an invalid saved difficulty', async () => {
   const legacy = createProgress(createMemoryProfileRepository({ settings: { simulationSpeed: 2 } }));
-  assert.deepEqual(await legacy.loadSettings(), { simulationSpeed: 2, difficulty: 'easy' });
+  assert.deepEqual(await legacy.loadSettings(), { simulationSpeed: 2, difficulty: 'easy', soundEnabled: true });
 
   const corrupt = createProgress(createMemoryProfileRepository({ settings: { simulationSpeed: 2, difficulty: 'expert' } }));
   await assert.rejects(corrupt.loadSettings(), (error: unknown) =>
@@ -344,7 +353,7 @@ test('exports the damaged record and resets it only against the exported snapsho
 
   const restored = await progress.resetCorruptProfile(backup);
   assert.deepEqual(restored, {
-    settings: { simulationSpeed: 1, difficulty: 'easy' },
+    settings: { simulationSpeed: 1, difficulty: 'easy', soundEnabled: true },
     completedScenarios: [],
     highScores: {},
   });
@@ -357,5 +366,5 @@ test('does not allow the corrupt-data recovery operation to delete a valid profi
   assert.ok(snapshot);
   await assert.rejects(progress.resetCorruptProfile(snapshot), (error: unknown) =>
     error instanceof ProgressError && error.code === 'invalid-input');
-  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2, difficulty: 'easy' });
+  assert.deepEqual(await progress.loadSettings(), { simulationSpeed: 2, difficulty: 'easy', soundEnabled: true });
 });
