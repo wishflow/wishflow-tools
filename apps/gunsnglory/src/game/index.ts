@@ -195,6 +195,8 @@ export interface ScenarioContent {
     tileSize: number;
     background: readonly RenderTile[];
     streets: readonly RenderTile[];
+    /** Original TDM terrain values for source-faithful HUD minimap rendering. */
+    originalTileGrid?: readonly (readonly number[])[];
   };
   /** Original TDM terrain codes, indexed as [row][column]. */
   originalTileGrid?: readonly (readonly number[])[];
@@ -332,6 +334,8 @@ export interface WaveView {
   totalWaves?: number;
   phase: 'not-started' | 'active' | 'complete';
   lives: number;
+  /** Initial lives for this level, used to render the original sheriff-star meter. */
+  maxLives?: number;
   escapedEnemies: number;
   defeatedEnemies: number;
   cash: number;
@@ -1605,7 +1609,12 @@ export function createGame(options: {
           elapsedMs,
           paused,
           scenarioId: scenario.id,
-          map: scenario.map,
+          map: {
+            ...scenario.map,
+            ...(scenario.originalTileGrid
+              ? { originalTileGrid: scenario.originalTileGrid.map((row) => [...row]) }
+              : {}),
+          },
           ...(route ? { route } : {}),
           units: units.map((unit) => unitView(unit, scenario.maxUpgrades ?? 0, elapsedMs)),
           enemies: (wave?.enemies ?? []).map((enemy) => ({
@@ -1664,6 +1673,7 @@ export function createGame(options: {
               ...(campaignMode ? { totalWaves: campaignWaveCount } : {}),
               phase: wave.phase,
               lives: wave.lives,
+              maxLives: scenario.previewWave.initialLives,
               escapedEnemies: wave.escapedEnemies,
               defeatedEnemies: wave.defeatedEnemies,
               cash: wave.cash,

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { GameView } from '../src/game';
-import { drawGame, GAME_VIEWPORT, getMapViewport } from '../src/render/canvas-renderer';
+import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
 test('clips the map and keeps the enemy atlas frame and feet aligned with its route cell', () => {
@@ -280,6 +280,126 @@ test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the uni
   const feetY = viewport.origin.y + (view.units[0]!.positionFine.y / 240) * viewport.scaleFactor;
   assert.equal((effectX as number) + (effectWidth as number) / 2, feetX);
   assert.equal((effectY as number) + (effectHeight as number), feetY - 32 * viewport.scaleFactor);
+});
+
+test('renders the original campaign HUD artwork and numeric atlas over the game map', () => {
+  const ground = {} as HTMLImageElement;
+  const hudImages = {
+    gng_hud_0_top: { width: 480, height: 67 } as HTMLImageElement,
+    gng_hud_0_top_left: { width: 30, height: 67 } as HTMLImageElement,
+    gng_hud_0_top_right: { width: 30, height: 67 } as HTMLImageElement,
+    gng_hud_1_top_pause: { width: 74, height: 49 } as HTMLImageElement,
+    gng_hud_1_top_pause_pressed: { width: 74, height: 49 } as HTMLImageElement,
+    gng_hud_1_top_star: { width: 68, height: 64 } as HTMLImageElement,
+    gng_hud_1_top_star_0: { width: 68, height: 64 } as HTMLImageElement,
+    hud_font_numbers_scaled: { width: 120, height: 24 } as HTMLImageElement,
+  };
+  const images = { ground, ...hudImages };
+  const drawCalls: unknown[][] = [];
+  const fillStyles: string[] = [];
+  const fills: { color: string; rect: number[] }[] = [];
+  const strokes: { color: string; rect: number[] }[] = [];
+  let fillStyle = '';
+  let strokeStyle = '';
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect(...rect: number[]) { fillStyles.push(fillStyle); fills.push({ color: fillStyle, rect }); },
+    strokeRect(...rect: number[]) { strokes.push({ color: strokeStyle, rect }); },
+    get fillStyle() { return fillStyle; },
+    set fillStyle(value: string) { fillStyle = value; },
+    get strokeStyle() { return strokeStyle; },
+    set strokeStyle(value: string) { strokeStyle = value; },
+    lineWidth: 1,
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+  } as unknown as CanvasRenderingContext2D;
+  const view: GameView = {
+    frame: 0,
+    elapsedMs: 0,
+    paused: false,
+    scenarioId: 'campaign-new-mexico-01',
+    map: {
+      width: 17,
+      height: 17,
+      tileSize: 32,
+      background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 1, height: 1 }],
+      streets: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 1, y: 0, width: 1, height: 1 }],
+      originalTileGrid: [[0, 48, 124, 160, 32, 88], [96, 17, 36, 80, 89, 89]],
+    },
+    units: [],
+    enemies: [],
+    shots: [],
+    recruitPool: [],
+    events: [],
+    wave: {
+      number: 1,
+      totalWaves: 8,
+      phase: 'active',
+      lives: 50,
+      escapedEnemies: 0,
+      defeatedEnemies: 0,
+      cash: 70,
+      activeEnemies: 0,
+    },
+  };
+
+  drawGame(context, view, images);
+
+  const hudCallImages = drawCalls.slice(1).map(([image]) => image);
+  for (const asset of [
+    hudImages.gng_hud_0_top_left,
+    hudImages.gng_hud_0_top,
+    hudImages.gng_hud_0_top_right,
+    hudImages.gng_hud_1_top_pause,
+    hudImages.gng_hud_1_top_star_0,
+    hudImages.hud_font_numbers_scaled,
+  ]) {
+    assert.ok(hudCallImages.includes(asset), 'draws each original HUD bitmap above the world');
+  }
+  const centerBar = drawCalls.find(([image]) => image === hudImages.gng_hud_0_top);
+  assert.deepEqual(centerBar?.slice(1), [272, 0, 480, 67]);
+  const numberGlyphs = drawCalls
+    .filter(([image]) => image === hudImages.hud_font_numbers_scaled)
+    .map((call) => call.slice(1, 5));
+  assert.deepEqual(numberGlyphs, [
+    [84, 0, 12, 24], [0, 0, 12, 24], // cash 70
+    [0, 0, 12, 24], [12, 0, 12, 24], // wave 01
+    [0, 0, 12, 24], [96, 0, 12, 24], // total 08
+    [60, 0, 12, 24], [0, 0, 12, 24], // lives 50
+  ]);
+  for (const terrainColor of ['#fbd19f', '#bc8156', '#609db3', '#8bcfe5', '#f2b780']) {
+    assert.ok(fillStyles.includes(terrainColor), `minimap uses original ${terrainColor} terrain color`);
+  }
+  const firstMinimapCellColor = (x: number, y: number) => fills.find(({ rect }) => rect[0] === x && rect[1] === y)?.color;
+  assert.equal(firstMinimapCellColor(702, 10), '#fbd19f', 'raw empty terrain is desert');
+  assert.equal(firstMinimapCellColor(704, 10), '#bc8156', 'original canyon codes use canyon color');
+  assert.equal(firstMinimapCellColor(706, 10), '#609db3', 'TDM water source codes map to water');
+  assert.equal(firstMinimapCellColor(708, 10), '#8bcfe5', 'original ice codes use ice color');
+  assert.equal(firstMinimapCellColor(712, 10), '#fbd19f', 'an 88/89 cliff edge without a matching tile above stays desert');
+  assert.equal(firstMinimapCellColor(702, 12), '#fbd19f', 'raw BasicMap 96 is a unit marker on desert, not BackgroundMap water');
+  const [outerFrame, innerFrame] = strokes;
+  assert.equal(outerFrame?.color, '#fff');
+  assert.equal(innerFrame?.color, '#000');
+  assert.deepEqual(innerFrame?.rect, [
+    (outerFrame?.rect[0] ?? 0) + 1,
+    (outerFrame?.rect[1] ?? 0) + 1,
+    (outerFrame?.rect[2] ?? 0) - 2,
+    (outerFrame?.rect[3] ?? 0) - 2,
+  ], 'camera frame uses the original nested white/black outline without filling the minimap');
+  assert.equal(gameHudPointerActionAt(314, 24), 'pause');
+  assert.equal(gameHudPointerActionAt(250, 24), 'covered');
+  assert.equal(gameHudPointerActionAt(100, 24), undefined);
+  assert.equal(gameHudPointerActionAt(314, 80), undefined);
+
+  const partialLivesStart = drawCalls.length;
+  drawGame(context, { ...view, wave: { ...view.wave!, lives: 25 } }, images);
+  const partialLivesStar = drawCalls.slice(partialLivesStart)
+    .find(([image]) => image === hudImages.gng_hud_1_top_star);
+  assert.deepEqual(partialLivesStar?.slice(1), [0, 32, 68, 32, 478, 37, 68, 32]);
 });
 
 test('draws original firing, Mexican dynamite, and explosion atlas frames', () => {
