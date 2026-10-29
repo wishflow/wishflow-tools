@@ -182,6 +182,225 @@ test('summarizes large values without calling user repr methods or breaking trac
   expect(boundedFunctionName?.endsWith('…')).toBe(true);
 });
 
+test('records immutable structured global and frame snapshots for each CPython event', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'items = [1, {"x": 2}]',
+    'def mutate():',
+    '    local = [1, {"x": 2}]',
+    '    local[1]["x"] = 9',
+    '    print("done")',
+    'mutate()',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  await expect(page.getByRole('heading', { name: 'Variable snapshots' })).toBeVisible({ timeout: 2_000 });
+
+  const position = page.getByRole('slider', { name: 'Event position' });
+  const eventCard = page.locator('.trace-event-card');
+  const maxEvent = Number(await position.getAttribute('max'));
+  const readItems = () => page.locator('[data-snapshot-scope="globals"] [data-variable-name="items"]')
+    .evaluate((element) => element.textContent ?? '');
+
+  async function selectLine(line: number) {
+    await position.focus();
+    await page.keyboard.press('Home');
+    for (let index = 0; index <= maxEvent; index += 1) {
+      if (await eventCard.getAttribute('data-event') === 'line' && await eventCard.getAttribute('data-line') === String(line)) return;
+      await page.keyboard.press('ArrowRight');
+    }
+    throw new Error(`No line event found for line ${line}`);
+  }
+
+  await selectLine(4);
+  await expect(page.getByLabel('Frame').locator('option:checked')).toContainText('mutate');
+  const locals = page.locator('[data-snapshot-scope="locals"] [data-variable-name="local"]');
+  await expect(locals).toHaveCount(1);
+  expect(await locals.evaluate((element) => element.textContent ?? '')).toContain('2');
+  expect(await locals.evaluate((element) => element.textContent ?? '')).not.toContain('9');
+  expect(await readItems()).toContain('2');
+
+  await selectLine(5);
+  expect(await locals.evaluate((element) => element.textContent ?? '')).toContain('9');
+  expect(await readItems()).toContain('2');
+
+  await selectLine(4);
+  expect(await locals.evaluate((element) => element.textContent ?? '')).toContain('2');
+  expect(await locals.evaluate((element) => element.textContent ?? '')).not.toContain('9');
+});
+
+test('keeps recursive CPython frames distinct while their trace segments are active', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'def descend(value):',
+    '    current = value',
+    '    if value:',
+    '        return descend(value - 1)',
+    '    return current',
+    'result = descend(2)',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+
+  const position = page.getByRole('slider', { name: 'Event position' });
+  const eventCard = page.locator('.trace-event-card');
+  const maxEvent = Number(await position.getAttribute('max'));
+  await position.focus();
+  await page.keyboard.press('Home');
+  let selectedLine = false;
+  for (let index = 0; index <= maxEvent; index += 1) {
+    if (await eventCard.getAttribute('data-event') === 'line' && await eventCard.getAttribute('data-line') === '5') {
+      selectedLine = true;
+      break;
+    }
+    await page.keyboard.press('ArrowRight');
+  }
+  expect(selectedLine).toBe(true);
+  const frames = await page.getByLabel('Frame').locator('option').evaluateAll((options) =>
+    options.map((option) => ({ value: (option as HTMLOptionElement).value, label: option.textContent ?? '' }))
+      .filter((option) => option.label.includes('descend')));
+  expect(frames).toHaveLength(3);
+  expect(new Set(frames.map((frame) => frame.value)).size).toBe(3);
+  await expect(page.getByLabel('Frame').locator('option:checked')).toContainText('descend');
+
+  const framePicker = page.getByRole('combobox', { name: 'Observed frame' });
+  const selectedValue = page.locator('[data-snapshot-scope="locals"] > div[data-variable-name="value"]');
+  await expect(selectedValue).toContainText('0');
+  await framePicker.selectOption(frames[1].value);
+  await expect(selectedValue).toContainText('1', { timeout: 3_000 });
+  await framePicker.selectOption(frames[0].value);
+  await expect(selectedValue).toContainText('2', { timeout: 3_000 });
+});
+
+test('bounds scalar snapshots and avoids user object methods while representing cycles', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'number = 2 ** 80',
+    'huge = 10 ** 100000',
+    'text = "🐍" + "x" * 500',
+    'raw = b"\\x00\\xff" * 40',
+    'cycle = []',
+    'alias = cycle',
+    'cycle.append(cycle)',
+    'class Loud:',
+    '    @property',
+    '    def secret(self):',
+    '        print("property-called")',
+    '        raise RuntimeError("property should not run")',
+    '    def __iter__(self):',
+    '        print("iter-called")',
+    '        raise RuntimeError("iterator should not run")',
+    '    def __repr__(self):',
+    '        print("repr-called")',
+    '        raise RuntimeError("repr should not run")',
+    'item = Loud()',
+    'print("done")',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  await expect(page.locator('#execution-output')).toHaveText('done\n');
+  await expect(page.getByText(/snapshot limits/)).toBeVisible();
+
+  const globals = page.locator('[data-snapshot-scope="globals"]');
+  const global = (name: string) => globals.locator(`> div[data-variable-name="${name}"]`);
+  await expect(global('number')).toContainText('1208925819614629174706176', { timeout: 3_000 });
+  await expect(global('huge')).toContainText('bits', { timeout: 3_000 });
+  await expect(global('text')).toContainText('chars', { timeout: 3_000 });
+  await expect(global('raw')).toContainText('bytes', { timeout: 3_000 });
+  await expect(global('alias')).toHaveAttribute('data-snapshot-kind', 'container');
+  await expect(global('alias').locator('[data-snapshot-kind="reference"]')).toHaveCount(1);
+  const aliasDetails = global('alias').locator('details');
+  const aliasSummary = aliasDetails.locator('summary');
+  await aliasSummary.focus();
+  await page.keyboard.press('Enter');
+  await expect(aliasDetails).toHaveJSProperty('open', true);
+  await expect(global('cycle')).toHaveAttribute('data-snapshot-kind', 'reference');
+  await expect(global('item')).toContainText('<Loud>');
+});
+
+test('shows adjacent changes with event timing and variables removed from returned frames', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'items = [1]',
+    'def update():',
+    '    local = 1',
+    '    items.append(2)',
+    '    local = 3',
+    'update()',
+    'print("done")',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+
+  const position = page.getByRole('slider', { name: 'Event position' });
+  const eventCard = page.locator('.trace-event-card');
+  const maxEvent = Number(await position.getAttribute('max'));
+  async function selectLine(line: number) {
+    await position.focus();
+    await page.keyboard.press('Home');
+    for (let index = 0; index <= maxEvent; index += 1) {
+      if (await eventCard.getAttribute('data-event') === 'line' && await eventCard.getAttribute('data-line') === String(line)) return;
+      await page.keyboard.press('ArrowRight');
+    }
+    throw new Error(`No line event found for line ${line}`);
+  }
+
+  await selectLine(5);
+  const adjacentChanges = page.getByRole('button', { name: 'Adjacent changes' });
+  await adjacentChanges.focus();
+  await page.keyboard.press('Enter');
+  await expect(adjacentChanges).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#snapshot-diff-context')).toContainText('Comparing event');
+  await expect(page.locator('.snapshot-diff-list li[data-change-status="changed"]')).toContainText('items');
+  await expect(page.locator('.snapshot-diff-hint')).toContainText('before the selected line runs');
+
+  await selectLine(7);
+  const removedLocal = page.locator('.snapshot-diff-list li[data-change-status="removed"]');
+  await expect(removedLocal).toContainText('local');
+  await expect(removedLocal).toContainText('update');
+});
+
+test('keeps snapshots within per-event and per-run node budgets while recording trace events', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  const row = '[0, 1, 2, 3, 4, 5, 6, 7]';
+  const nested = `[${Array.from({ length: 8 }, () => row).join(', ')}]`;
+  const eventBudgetSource = [
+    ...Array.from({ length: 20 }, (_, index) => `value_${String(index).padStart(2, '0')} = ${nested}`),
+    'print("event-budget")',
+  ].join('\n');
+  await source.fill(eventBudgetSource);
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  await expect(page.getByText(/Some variable values are partial/)).toBeVisible({ timeout: 3_000 });
+  const eventNodes = await page.locator('[data-snapshot-scope="globals"] [data-snapshot-kind]').count();
+  expect(eventNodes).toBeLessThanOrEqual(200);
+
+  const runBudgetSource = [
+    ...Array.from({ length: 20 }, (_, index) => `value_${String(index).padStart(2, '0')} = list(range(8))`),
+    'for index in range(300):',
+    '    marker = index',
+    'print("run-budget")',
+  ].join('\n');
+  await source.fill(runBudgetSource);
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  await expect(page.getByText(/50,000-node run budget/)).toBeVisible({ timeout: 3_000 });
+  const eventCount = Number((await page.locator('#trace-event-count').innerText()).replace(/\D/g, ''));
+  expect(eventCount).toBeGreaterThan(0);
+  expect(eventCount).toBeLessThan(5_000);
+  await expect(page.locator('#execution-output')).toHaveText('run-budget\n');
+});
+
 test('records repeated CPython line events for a loop without rerunning output during playback', async ({ page }) => {
   await page.goto(appPath);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();

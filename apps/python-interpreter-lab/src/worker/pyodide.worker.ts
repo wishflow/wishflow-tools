@@ -250,49 +250,85 @@ MAX_TRACE_EVENTS = 5000
 MAX_OUTPUT_CHARACTERS = 32768
 MAX_CALL_DEPTH = 40
 MAX_LOCALS = 20
+MAX_NAME_CANDIDATES = 64
 MAX_NAME_LENGTH = 100
 MAX_VALUE_LENGTH = 120
 MAX_STRING_PREVIEW = 10
 MAX_BYTES_PREVIEW = 16
 MAX_INTEGER_PREVIEW_BITS = 256
+MAX_SNAPSHOT_NODES_PER_EVENT = 200
+MAX_SNAPSHOT_NODES_PER_RUN = 50000
+MAX_SNAPSHOT_DEPTH = 3
+MAX_SNAPSHOT_CHILDREN = 8
+MAX_SNAPSHOT_STRING_LENGTH = 120
+MAX_SNAPSHOT_BYTES_LENGTH = 32
+MAX_SNAPSHOT_INTEGER_BITS = 1024
 BATCH_EVENTS = 32
 BATCH_OUTPUT_CHARACTERS = 1024
 SOURCE_FILENAME = '<input>'
+
+_SAFE_TYPE = type
+_SAFE_TYPE_GETATTRIBUTE = type.__getattribute__
+_SAFE_LEN = len
+_SAFE_STR = str
+_SAFE_REPR = repr
+_SAFE_RANGE = range
+_SAFE_SORTED = sorted
+_SAFE_ID = id
+_SAFE_ITER = iter
+_SAFE_NEXT = next
+_SAFE_DICT_ITEMS = dict.items
+_SAFE_LIST_GETITEM = list.__getitem__
+_SAFE_TUPLE_GETITEM = tuple.__getitem__
+_SAFE_BYTES_HEX = bytes.hex
+_SAFE_INT_BIT_LENGTH = int.bit_length
+_SAFE_STR_TYPE = str
+_SAFE_BYTES_TYPE = bytes
+_SAFE_INT_TYPE = int
+_SAFE_FLOAT_TYPE = float
+_SAFE_BOOL_TYPE = bool
+_SAFE_LIST_TYPE = list
+_SAFE_TUPLE_TYPE = tuple
+_SAFE_DICT_TYPE = dict
+_SAFE_SET_TYPE = set
 
 started_at = time.perf_counter()
 source = __lab_source
 
 def bounded_name(value):
-    if len(value) > MAX_NAME_LENGTH:
+    if _SAFE_LEN(value) > MAX_NAME_LENGTH:
         return value[:MAX_NAME_LENGTH - 1] + '…'
     return value
 
 def type_name(value):
-    return bounded_name(type.__getattribute__(type(value), '__name__'))
+    name = _SAFE_TYPE_GETATTRIBUTE(_SAFE_TYPE(value), '__name__')
+    if _SAFE_TYPE(name) is not _SAFE_STR_TYPE:
+        return 'object'
+    return bounded_name(name)
 
 def safe_value(name, value):
-    value_type = type(value)
+    value_type = _SAFE_TYPE(value)
     value_type_name = type_name(value)
-    if value_type is str:
+    if value_type is _SAFE_STR_TYPE:
         preview = value[:MAX_STRING_PREVIEW]
-        summary = repr(preview)
-        if len(value) > MAX_STRING_PREVIEW:
+        summary = _SAFE_REPR(preview)
+        if _SAFE_LEN(value) > MAX_STRING_PREVIEW:
             summary = summary[:-1] + '…' + summary[-1]
-    elif value_type is bytes:
+    elif value_type is _SAFE_BYTES_TYPE:
         preview = value[:MAX_BYTES_PREVIEW]
-        summary = repr(preview)
-        if len(value) > MAX_BYTES_PREVIEW:
+        summary = _SAFE_REPR(preview)
+        if _SAFE_LEN(value) > MAX_BYTES_PREVIEW:
             summary = summary[:-1] + '…' + summary[-1]
-    elif value_type is int and int.bit_length(value) > MAX_INTEGER_PREVIEW_BITS:
-        summary = '<int · ' + str(int.bit_length(value)) + ' bits>'
-    elif value_type in (type(None), bool, int, float):
-        summary = repr(value)
-    elif value_type in (list, tuple, set, dict):
-        summary = '<' + value_type_name + ' · ' + str(len(value)) + ' items>'
+    elif value_type is _SAFE_INT_TYPE and _SAFE_INT_BIT_LENGTH(value) > MAX_INTEGER_PREVIEW_BITS:
+        summary = '<int · ' + _SAFE_STR(_SAFE_INT_BIT_LENGTH(value)) + ' bits>'
+    elif value_type in (_SAFE_TYPE(None), _SAFE_BOOL_TYPE, _SAFE_INT_TYPE, _SAFE_FLOAT_TYPE):
+        summary = _SAFE_REPR(value)
+    elif value_type in (_SAFE_LIST_TYPE, _SAFE_TUPLE_TYPE, _SAFE_SET_TYPE, _SAFE_DICT_TYPE):
+        summary = '<' + value_type_name + ' · ' + _SAFE_STR(_SAFE_LEN(value)) + ' items>'
     else:
         summary = '<' + value_type_name + '>'
     name = bounded_name(name)
-    if len(summary) > MAX_VALUE_LENGTH:
+    if _SAFE_LEN(summary) > MAX_VALUE_LENGTH:
         summary = summary[:MAX_VALUE_LENGTH] + '…'
     return {'name': name, 'type': value_type_name, 'summary': summary}
 
@@ -365,6 +401,9 @@ event_count = 0
 trace_truncated = False
 trace_enabled = True
 emitter_failed = False
+snapshot_node_count = 0
+active_frame_ids = {}
+next_frame_id = 1
 
 def flush_batch(force=False):
     global emitter_failed
@@ -388,26 +427,255 @@ def flush_batch(force=False):
     except BaseException:
         emitter_failed = True
 
-def call_stack_for(frame):
+def snapshot_names(mapping):
     names = []
+    iterator = _SAFE_ITER(mapping)
+    truncated = False
+    for _ in _SAFE_RANGE(MAX_NAME_CANDIDATES):
+        try:
+            name = _SAFE_NEXT(iterator)
+        except StopIteration:
+            break
+        if _SAFE_TYPE(name) is _SAFE_STR_TYPE and name not in ('__builtins__', '__name__', '__doc__', '__annotations__'):
+            names.append(name)
+    else:
+        try:
+            _SAFE_NEXT(iterator)
+        except StopIteration:
+            pass
+        else:
+            truncated = True
+    names = _SAFE_SORTED(names)
+    if _SAFE_LEN(names) > MAX_LOCALS:
+        truncated = True
+    return names[:MAX_LOCALS], truncated
+
+def bounded_summary(value):
+    if _SAFE_LEN(value) <= MAX_VALUE_LENGTH:
+        return value
+    return value[:MAX_VALUE_LENGTH - 1] + '…'
+
+def safe_key_label(value, index):
+    value_type = _SAFE_TYPE(value)
+    if value_type is _SAFE_STR_TYPE:
+        preview = value[:40]
+        return _SAFE_REPR(preview) + ('…' if _SAFE_LEN(value) > 40 else '')
+    if value_type is _SAFE_INT_TYPE:
+        bits = _SAFE_INT_BIT_LENGTH(value)
+        return _SAFE_STR(value) if bits <= MAX_SNAPSHOT_INTEGER_BITS else '<int · ' + _SAFE_STR(bits) + ' bits>'
+    if value_type in (_SAFE_TYPE(None), _SAFE_BOOL_TYPE, _SAFE_FLOAT_TYPE):
+        return _SAFE_REPR(value)
+    if value_type is _SAFE_BYTES_TYPE:
+        preview = value[:16]
+        return _SAFE_REPR(preview) + ('…' if _SAFE_LEN(value) > 16 else '')
+    return 'key ' + _SAFE_STR(index + 1) + ' · ' + type_name(value)
+
+def snapshot_node(name, value, depth, state):
+    global snapshot_node_count
+    if state['nodes'] >= MAX_SNAPSHOT_NODES_PER_EVENT or snapshot_node_count >= MAX_SNAPSHOT_NODES_PER_RUN:
+        state['truncated'] = True
+        if snapshot_node_count >= MAX_SNAPSHOT_NODES_PER_RUN:
+            state['budgetExhausted'] = True
+        return None
+    state['nodes'] += 1
+    snapshot_node_count += 1
+
+    value_type = _SAFE_TYPE(value)
+    value_type_name = type_name(value)
+    name = bounded_name(name)
+    if value_type is _SAFE_TYPE(None):
+        return {'name': name, 'type': value_type_name, 'kind': 'scalar', 'summary': 'None', 'valueText': 'None'}
+    if value_type is _SAFE_BOOL_TYPE:
+        text = _SAFE_REPR(value)
+        return {'name': name, 'type': value_type_name, 'kind': 'scalar', 'summary': text, 'valueText': text}
+    if value_type is _SAFE_INT_TYPE:
+        bits = _SAFE_INT_BIT_LENGTH(value)
+        if bits > MAX_SNAPSHOT_INTEGER_BITS:
+            state['truncated'] = True
+            return {
+                'name': name,
+                'type': value_type_name,
+                'kind': 'scalar',
+                'summary': '<int · ' + _SAFE_STR(bits) + ' bits>',
+                'truncated': True,
+            }
+        text = _SAFE_STR(value)
+        return {'name': name, 'type': value_type_name, 'kind': 'scalar', 'summary': text, 'valueText': text}
+    if value_type is _SAFE_FLOAT_TYPE:
+        text = _SAFE_REPR(value)
+        return {'name': name, 'type': value_type_name, 'kind': 'scalar', 'summary': text, 'valueText': text}
+    if value_type is _SAFE_STR_TYPE:
+        preview = value[:MAX_SNAPSHOT_STRING_LENGTH]
+        truncated = _SAFE_LEN(value) > MAX_SNAPSHOT_STRING_LENGTH
+        summary = _SAFE_REPR(preview)
+        if truncated:
+            summary = '<str · ' + _SAFE_STR(_SAFE_LEN(value)) + ' chars> ' + summary
+            state['truncated'] = True
+        return {
+            'name': name,
+            'type': value_type_name,
+            'kind': 'scalar',
+            'summary': bounded_summary(summary),
+            'valueText': preview,
+            'truncated': truncated,
+        }
+    if value_type is _SAFE_BYTES_TYPE:
+        preview = value[:MAX_SNAPSHOT_BYTES_LENGTH]
+        truncated = _SAFE_LEN(value) > MAX_SNAPSHOT_BYTES_LENGTH
+        summary = _SAFE_REPR(preview)
+        if truncated:
+            summary = '<bytes · ' + _SAFE_STR(_SAFE_LEN(value)) + ' bytes> ' + summary
+            state['truncated'] = True
+        return {
+            'name': name,
+            'type': value_type_name,
+            'kind': 'scalar',
+            'summary': bounded_summary(summary),
+            'valueText': '0x' + _SAFE_BYTES_HEX(preview),
+            'truncated': truncated,
+        }
+
+    if value_type not in (_SAFE_LIST_TYPE, _SAFE_TUPLE_TYPE, _SAFE_DICT_TYPE):
+        if value_type is _SAFE_SET_TYPE:
+            summary = '<set · ' + _SAFE_STR(_SAFE_LEN(value)) + ' items>'
+        else:
+            summary = '<' + value_type_name + '>'
+        return {'name': name, 'type': value_type_name, 'kind': 'object', 'summary': bounded_summary(summary)}
+
+    identity = _SAFE_ID(value)
+    reference_id = state['references'].get(identity)
+    if reference_id is not None:
+        return {
+            'name': name,
+            'type': value_type_name,
+            'kind': 'reference',
+            'summary': 'reference',
+            'referenceId': reference_id,
+        }
+    reference_id = state['nextReferenceId']
+    state['nextReferenceId'] += 1
+    state['references'][identity] = reference_id
+    item_count = _SAFE_LEN(value)
+    node = {
+        'name': name,
+        'type': value_type_name,
+        'kind': 'container',
+        'summary': '<' + value_type_name + ' · ' + _SAFE_STR(item_count) + ' items>',
+        'itemCount': item_count,
+        'referenceId': reference_id,
+        'children': [],
+    }
+    if depth >= MAX_SNAPSHOT_DEPTH:
+        if item_count:
+            node['truncated'] = True
+            state['truncated'] = True
+        return node
+
+    children = []
+    child_limit = min(item_count, MAX_SNAPSHOT_CHILDREN)
+    dict_iterator = _SAFE_ITER(_SAFE_DICT_ITEMS(value)) if value_type is _SAFE_DICT_TYPE else None
+    for index in _SAFE_RANGE(child_limit):
+        if value_type is _SAFE_LIST_TYPE:
+            child_name = '[' + _SAFE_STR(index) + ']'
+            child_value = _SAFE_LIST_GETITEM(value, index)
+        elif value_type is _SAFE_TUPLE_TYPE:
+            child_name = '[' + _SAFE_STR(index) + ']'
+            child_value = _SAFE_TUPLE_GETITEM(value, index)
+        else:
+            key, child_value = _SAFE_NEXT(dict_iterator)
+            child_name = '[' + safe_key_label(key, index) + ']'
+        child = snapshot_node(child_name, child_value, depth + 1, state)
+        if child is None:
+            node['truncated'] = True
+            break
+        children.append(child)
+        if child.get('truncated'):
+            node['truncated'] = True
+    if item_count > child_limit or node.get('truncated'):
+        node['truncated'] = True
+        state['truncated'] = True
+    node['children'] = children
+    return node
+
+def snapshot_scope(mapping, state):
+    if state['nodes'] >= MAX_SNAPSHOT_NODES_PER_EVENT or snapshot_node_count >= MAX_SNAPSHOT_NODES_PER_RUN:
+        state['truncated'] = True
+        if snapshot_node_count >= MAX_SNAPSHOT_NODES_PER_RUN:
+            state['budgetExhausted'] = True
+        return [], True
+    names, truncated = snapshot_names(mapping)
+    values = []
+    for name in names:
+        node = snapshot_node(name, mapping[name], 0, state)
+        if node is None:
+            truncated = True
+            break
+        values.append(node)
+        if node.get('truncated'):
+            truncated = True
+    return values, truncated
+
+def frame_id_for(frame):
+    global next_frame_id
+    identity = _SAFE_ID(frame)
+    frame_id = active_frame_ids.get(identity)
+    if frame_id is None:
+        frame_id = next_frame_id
+        next_frame_id += 1
+        active_frame_ids[identity] = frame_id
+    return frame_id
+
+def frames_for(frame):
+    newest_first = []
     current = frame
     while current is not None:
         if current.f_code.co_filename == SOURCE_FILENAME:
-            names.append(bounded_name(current.f_code.co_name))
+            newest_first.append(current)
         current = current.f_back
-    names.reverse()
-    truncated = len(names) > MAX_CALL_DEPTH
-    return names[-MAX_CALL_DEPTH:], truncated
+    for active in reversed(newest_first):
+        frame_id_for(active)
+    truncated = _SAFE_LEN(newest_first) > MAX_CALL_DEPTH
+    frames = list(reversed(newest_first[:MAX_CALL_DEPTH]))
+    call_stack = [bounded_name(active.f_code.co_name) for active in frames]
+    return frames, call_stack, truncated
 
-def locals_for(frame):
-    values = frame.f_locals
-    names = sorted(
-        name for name in values
-        if type(name) is str and name not in ('__builtins__', '__name__', '__doc__', '__annotations__')
-    )
-    truncated = len(names) > MAX_LOCALS
-    summaries = [safe_value(name, values[name]) for name in names[:MAX_LOCALS]]
-    return summaries, truncated
+def snapshot_for(frame, frames, call_stack_truncated):
+    state = {
+        'nodes': 0,
+        'references': {},
+        'nextReferenceId': 1,
+        'truncated': call_stack_truncated,
+        'budgetExhausted': snapshot_node_count >= MAX_SNAPSHOT_NODES_PER_RUN,
+    }
+    global_values, globals_truncated = snapshot_scope(user_globals, state)
+    frame_values = []
+    current_frame_id = frame_id_for(frame)
+    for active in frames:
+        frame_id = frame_id_for(active)
+        if active.f_code.co_name == '<module>':
+            local_values = []
+            locals_truncated = False
+        else:
+            local_values, locals_truncated = snapshot_scope(active.f_locals, state)
+        frame_values.append({
+            'frameId': frame_id,
+            'functionName': bounded_name(active.f_code.co_name),
+            'line': active.f_lineno,
+            'locals': local_values,
+            'localsTruncated': locals_truncated,
+        })
+        if locals_truncated:
+            state['truncated'] = True
+    if globals_truncated:
+        state['truncated'] = True
+    return {
+        'globals': global_values,
+        'globalsTruncated': globals_truncated,
+        'frames': frame_values,
+        'currentFrameId': current_frame_id,
+        'truncated': state['truncated'],
+        'budgetExhausted': state['budgetExhausted'],
+    }
 
 def record_event(frame, event, argument):
     global event_count, trace_truncated, trace_enabled
@@ -417,8 +685,8 @@ def record_event(frame, event, argument):
         trace_truncated = True
         trace_enabled = False
         return None
-    call_stack, call_stack_truncated = call_stack_for(frame)
-    local_values, locals_truncated = locals_for(frame)
+    frames, call_stack, call_stack_truncated = frames_for(frame)
+    snapshot = snapshot_for(frame, frames, call_stack_truncated)
     event_data = {
         'index': event_count,
         'event': event,
@@ -432,8 +700,7 @@ def record_event(frame, event, argument):
         'functionName': bounded_name(frame.f_code.co_name),
         'callStack': call_stack,
         'callStackTruncated': call_stack_truncated,
-        'locals': local_values,
-        'localsTruncated': locals_truncated,
+        'snapshot': snapshot,
         'stdoutOffset': stdout.length,
         'stderrOffset': stderr.length,
     }
@@ -444,6 +711,8 @@ def record_event(frame, event, argument):
         event_data['exception'] = exception_summary(error, traceback_object)
     pending_events.append(event_data)
     event_count += 1
+    if event == 'return':
+        active_frame_ids.pop(_SAFE_ID(frame), None)
     if len(pending_events) >= BATCH_EVENTS:
         flush_batch()
     return record_event if trace_enabled else None

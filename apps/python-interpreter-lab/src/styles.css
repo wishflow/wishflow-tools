@@ -124,6 +124,30 @@ button:disabled { cursor: not-allowed; }
 .trace-values dd { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; margin: 0; color: #39445f; }
 .trace-values dd span { color: #557345; }
 .trace-values dd code { min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.snapshot-view { margin-top: 12px; padding-top: 8px; border-top: 1px solid #e7e7df; }
+.snapshot-view-toggle { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 9px; }
+.snapshot-view-toggle .button { min-height: 32px; padding: 0 9px; font-size: 10px; }
+.snapshot-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 12px; }
+.snapshot-grid section { min-width: 0; }
+.snapshot-grid h5 { margin: 3px 0 7px; color: #58647c; font-size: 10px; }
+.snapshot-frame-label { display: grid; gap: 4px; margin-bottom: 7px; color: #66728b; font-size: 10px; font-weight: 700; }
+.snapshot-frame-label select { width: 100%; min-width: 0; min-height: 32px; padding: 4px 7px; border: 1px solid #d9dbd5; border-radius: 6px; background: #fbfaf5; color: var(--ink); }
+.trace-values dd .snapshot-container { flex-basis: 100%; min-width: 0; }
+.snapshot-container > summary { width: fit-content; max-width: 100%; color: #58647c; font-size: 10px; cursor: pointer; overflow-wrap: anywhere; }
+.snapshot-children { margin: 5px 0 0 5px; padding-left: 8px; border-left: 1px solid #dfe4da; }
+.snapshot-truncated-label, .snapshot-reference { color: #805a1d !important; font-size: 9px; overflow-wrap: anywhere; }
+.snapshot-diff-view { min-width: 0; }
+.snapshot-diff-view > p { margin: 5px 0; }
+.snapshot-diff-hint { color: #66728b; font-size: 10px; line-height: 1.45; }
+.snapshot-diff-list { display: grid; gap: 6px; margin: 7px 0 0; padding: 0; list-style: none; }
+.snapshot-diff-list li { min-width: 0; padding: 7px 0; border-bottom: 1px dotted #e4e4dd; }
+.snapshot-diff-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 8px; min-width: 0; font-size: 10px; }
+.snapshot-diff-title strong { color: #405c4d; }
+.snapshot-diff-title span { color: #66728b; }
+.snapshot-diff-title code, .snapshot-diff-values code { overflow-wrap: anywhere; white-space: pre-wrap; }
+.snapshot-diff-values { display: grid; gap: 3px; margin-top: 4px; }
+.snapshot-diff-values p { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; color: #66728b; font-size: 9px; }
+.snapshot-diff-values code { min-width: 0; color: #39445f; }
 .trace-output pre { max-height: 180px; overflow: auto; margin: 0 0 10px; padding: 9px 10px; border: 1px solid #e2e4dc; border-radius: 7px; background: var(--code); color: #33405a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .output-panel-heading { display: flex; min-height: 30px; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .output-panel-heading h3 { margin: 0; color: var(--ink); font-size: 15px; letter-spacing: -.02em; }
@@ -190,6 +214,7 @@ button:disabled { cursor: not-allowed; }
   .output-grid { grid-template-columns: minmax(0, 1fr); }
   .output-panel { min-height: 0; }
   .trace-details-grid { grid-template-columns: minmax(0, 1fr); }
+  .snapshot-grid { grid-template-columns: minmax(0, 1fr); }
   .trace-playback { grid-template-columns: minmax(0, 1fr) auto; }
   .trace-buttons { grid-column: 1 / -1; }
   .trace-slider-label { grid-column: 1; }

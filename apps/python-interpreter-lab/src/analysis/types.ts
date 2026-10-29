@@ -86,6 +86,35 @@ export interface TraceValueSummary {
   summary: string;
 }
 
+export interface SnapshotValue {
+  name: string;
+  type: string;
+  kind: 'scalar' | 'container' | 'object' | 'reference';
+  summary: string;
+  valueText?: string;
+  itemCount?: number;
+  referenceId?: number;
+  children?: SnapshotValue[];
+  truncated?: boolean;
+}
+
+export interface FrameSnapshot {
+  frameId: number;
+  functionName: string;
+  line: number;
+  locals: SnapshotValue[];
+  localsTruncated: boolean;
+}
+
+export interface EventSnapshot {
+  globals: SnapshotValue[];
+  globalsTruncated: boolean;
+  frames: FrameSnapshot[];
+  currentFrameId: number;
+  truncated: boolean;
+  budgetExhausted: boolean;
+}
+
 export interface RuntimeExceptionSummary {
   type: string;
   message: string;
@@ -100,8 +129,7 @@ export interface TraceEvent {
   functionName: string;
   callStack: string[];
   callStackTruncated: boolean;
-  locals: TraceValueSummary[];
-  localsTruncated: boolean;
+  snapshot: EventSnapshot;
   returnValue?: TraceValueSummary;
   exception?: RuntimeExceptionSummary;
   stdoutOffset: number;

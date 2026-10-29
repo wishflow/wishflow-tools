@@ -1,5 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
+const testPort = Number(process.env.PLAYWRIGHT_PORT ?? 4173);
+const baseURL = `http://127.0.0.1:${testPort}`;
+
 export default defineConfig({
   testDir: './e2e',
   timeout: 120_000,
@@ -8,7 +11,7 @@ export default defineConfig({
   workers: 1,
   reporter: 'list',
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL,
     browserName: 'chromium',
     launchOptions: process.env.CHROME_EXEC ? { executablePath: process.env.CHROME_EXEC } : undefined,
     headless: true,
@@ -17,7 +20,8 @@ export default defineConfig({
   },
   webServer: {
     command: 'pnpm run serve:test',
-    url: 'http://127.0.0.1:4173/python-interpreter-lab/',
+    url: `${baseURL}/python-interpreter-lab/`,
+    env: { PORT: String(testPort) },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
