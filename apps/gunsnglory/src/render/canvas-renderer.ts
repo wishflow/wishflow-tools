@@ -3,6 +3,7 @@ import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type M
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
+const FINE_UNITS_PER_CELL = 7680;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
 const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
 const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
@@ -72,23 +73,119 @@ export function mapDecorationDestination(
   };
 }
 
-function drawMapDecorations(
+function drawMapDecoration(
   context: CanvasRenderingContext2D,
+  decoration: MapDecoration,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const image = images[decoration.asset];
+  if (!image) throw new Error('Missing game image: ' + decoration.asset);
+  const destination = mapDecorationDestination(
+    decoration,
+    { width: image.naturalWidth, height: image.naturalHeight },
+    viewport,
+  );
+  context.drawImage(image, destination.x, destination.y, destination.width, destination.height);
+}
+
+function drawUnit(
+  context: CanvasRenderingContext2D,
+  unit: UnitView,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const left = viewport.origin.x + unit.render.x * viewport.tileSize;
+  const top = viewport.origin.y + unit.render.y * viewport.tileSize;
+  const width = unit.render.width * viewport.tileSize;
+  const height = unit.render.height * viewport.tileSize;
+
+  if (unit.selected) {
+    context.beginPath();
+    context.ellipse(left + width / 2, top + height - 1, width * 0.6, viewport.tileSize * 0.2, 0, 0, Math.PI * 2);
+    context.fillStyle = 'rgba(255, 196, 70, 0.8)';
+    context.fill();
+  }
+
+  const firing = unit.shootingAnimation;
+  const asset = firing?.asset ?? unit.asset;
+  const image = images[asset];
+  if (!image) throw new Error('Missing game image: ' + asset);
+  const frame = firing
+    ? { x: firing.frame * unit.frame.width, y: firing.row * unit.frame.height, width: unit.frame.width, height: unit.frame.height }
+    : unit.frame;
+  context.save();
+  if (firing?.mirrored) {
+    context.translate(left * 2 + width, 0);
+    context.scale(-1, 1);
+  }
+  context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
+  context.restore();
+
+  if (unit.activity === 4) {
+    const effectImage = images.sfx_sleeping;
+    if (!effectImage) throw new Error('Missing game image: sfx_sleeping');
+    const animationFrame = Math.max(0, Math.trunc(unit.sleepingAnimationFrame ?? 0)) % SLEEPING_EFFECT_FRAME.count;
+    const feetX = viewport.origin.x + (unit.positionFine.x / 240) * viewport.scaleFactor;
+    const feetY = viewport.origin.y + (unit.positionFine.y / 240) * viewport.scaleFactor;
+    const effectScale = viewport.scaleFactor;
+    const effectWidth = SLEEPING_EFFECT_FRAME.width * effectScale;
+    const effectHeight = SLEEPING_EFFECT_FRAME.height * effectScale;
+    context.drawImage(
+      effectImage,
+      animationFrame * SLEEPING_EFFECT_FRAME.width,
+      0,
+      SLEEPING_EFFECT_FRAME.width,
+      SLEEPING_EFFECT_FRAME.height,
+      feetX - effectWidth / 2,
+      feetY - (32 * effectScale) - effectHeight,
+      effectWidth,
+      effectHeight,
+    );
+  }
+
+  if (unit.selected) {
+    context.strokeStyle = '#ffe28a';
+    context.lineWidth = 2;
+    context.setLineDash([5, 3]);
+    context.strokeRect(
+      viewport.origin.x + unit.hitArea.x * viewport.tileSize,
+      viewport.origin.y + unit.hitArea.y * viewport.tileSize,
+      unit.hitArea.width * viewport.tileSize,
+      unit.hitArea.height * viewport.tileSize,
+    );
+    context.setLineDash([]);
+  }
+}
+
+function drawSceneObjects(
+  context: CanvasRenderingContext2D,
+  units: readonly UnitView[],
   decorations: readonly MapDecoration[],
   images: GameImages,
   viewport: MapViewport,
 ): void {
+  const drawItems: { depth: number; order: number; draw: () => void }[] = [];
   const drawOrder = [...decorations].sort((a, b) => a.cell.y - b.cell.y || a.cell.x - b.cell.x);
-  for (const decoration of drawOrder) {
-    const image = images[decoration.asset];
-    if (!image) throw new Error('Missing game image: ' + decoration.asset);
-    const destination = mapDecorationDestination(
-      decoration,
-      { width: image.naturalWidth, height: image.naturalHeight },
-      viewport,
-    );
-    context.drawImage(image, destination.x, destination.y, destination.width, destination.height);
-  }
+
+  drawOrder.forEach((decoration, order) => {
+    drawItems.push({
+      depth: (decoration.cell.y + 1) * FINE_UNITS_PER_CELL,
+      order,
+      draw: () => drawMapDecoration(context, decoration, images, viewport),
+    });
+  });
+
+  units.forEach((unit, index) => {
+    drawItems.push({
+      depth: unit.positionFine.y,
+      order: drawOrder.length + index,
+      draw: () => drawUnit(context, unit, images, viewport),
+    });
+  });
+
+  drawItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
+  for (const item of drawItems) item.draw();
 }
 
 function drawTiles(
@@ -326,7 +423,7 @@ function drawInspectionOverlay(
 
   for (const unit of view.units) drawUnitInspection(context, unit, viewport, toScreen, language);
   for (const enemy of view.enemies) {
-    const logical = { x: enemy.positionFine.x / 7680, y: enemy.positionFine.y / 7680 };
+    const logical = { x: enemy.positionFine.x / FINE_UNITS_PER_CELL, y: enemy.positionFine.y / FINE_UNITS_PER_CELL };
     const screen = toScreen(logical.x, logical.y);
     drawInspectionLabel(
       context,
@@ -497,16 +594,16 @@ function drawHudMinimap(
   }
 
   for (const enemy of view.enemies) {
-    const x = enemy.positionFine.x / 7680;
-    const y = enemy.positionFine.y / 7680;
+    const x = enemy.positionFine.x / FINE_UNITS_PER_CELL;
+    const y = enemy.positionFine.y / FINE_UNITS_PER_CELL;
     if (x < 0 || y < 0 || x >= view.map.width || y >= view.map.height) continue;
     context.fillStyle = '#fff';
     context.fillRect(mapX + Math.floor(x) * pixelSize, mapY + Math.floor(y) * pixelSize, pixelSize, pixelSize);
   }
 
   for (const unit of view.units) {
-    const x = unit.positionFine.x / 7680;
-    const y = unit.positionFine.y / 7680;
+    const x = unit.positionFine.x / FINE_UNITS_PER_CELL;
+    const y = unit.positionFine.y / FINE_UNITS_PER_CELL;
     if (x < 0 || y < 0 || x >= view.map.width || y >= view.map.height) continue;
     context.fillStyle = unit.activity === 5 ? '#f00' : '#000';
     context.fillRect(mapX + Math.floor(x) * pixelSize, mapY + Math.floor(y) * pixelSize, pixelSize, pixelSize);
@@ -616,73 +713,8 @@ export function drawGame(
   drawTiles(context, view.map.streets, images, viewport);
   for (const shot of view.shots) drawShot(context, shot, images, viewport);
   drawWagonDebris(context, view, images, viewport);
-
-  for (const unit of view.units) {
-    const left = viewport.origin.x + unit.render.x * viewport.tileSize;
-    const top = viewport.origin.y + unit.render.y * viewport.tileSize;
-    const width = unit.render.width * viewport.tileSize;
-    const height = unit.render.height * viewport.tileSize;
-
-    if (unit.selected) {
-      context.beginPath();
-      context.ellipse(left + width / 2, top + height - 1, width * 0.6, viewport.tileSize * 0.2, 0, 0, Math.PI * 2);
-      context.fillStyle = 'rgba(255, 196, 70, 0.8)';
-      context.fill();
-    }
-
-    const firing = unit.shootingAnimation;
-    const asset = firing?.asset ?? unit.asset;
-    const image = images[asset];
-    if (!image) throw new Error('Missing game image: ' + asset);
-    const frame = firing
-      ? { x: firing.frame * unit.frame.width, y: firing.row * unit.frame.height, width: unit.frame.width, height: unit.frame.height }
-      : unit.frame;
-    context.save();
-    if (firing?.mirrored) {
-      context.translate(left * 2 + width, 0);
-      context.scale(-1, 1);
-    }
-    context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
-    context.restore();
-
-    if (unit.activity === 4) {
-      const effectImage = images.sfx_sleeping;
-      if (!effectImage) throw new Error('Missing game image: sfx_sleeping');
-      const animationFrame = Math.max(0, Math.trunc(unit.sleepingAnimationFrame ?? 0)) % SLEEPING_EFFECT_FRAME.count;
-      const feetX = viewport.origin.x + (unit.positionFine.x / 240) * viewport.scaleFactor;
-      const feetY = viewport.origin.y + (unit.positionFine.y / 240) * viewport.scaleFactor;
-      const effectScale = viewport.scaleFactor;
-      const effectWidth = SLEEPING_EFFECT_FRAME.width * effectScale;
-      const effectHeight = SLEEPING_EFFECT_FRAME.height * effectScale;
-      context.drawImage(
-        effectImage,
-        animationFrame * SLEEPING_EFFECT_FRAME.width,
-        0,
-        SLEEPING_EFFECT_FRAME.width,
-        SLEEPING_EFFECT_FRAME.height,
-        feetX - effectWidth / 2,
-        feetY - (32 * effectScale) - effectHeight,
-        effectWidth,
-        effectHeight,
-      );
-    }
-
-    if (unit.selected) {
-      context.strokeStyle = '#ffe28a';
-      context.lineWidth = 2;
-      context.setLineDash([5, 3]);
-      context.strokeRect(
-        viewport.origin.x + unit.hitArea.x * viewport.tileSize,
-        viewport.origin.y + unit.hitArea.y * viewport.tileSize,
-        unit.hitArea.width * viewport.tileSize,
-        unit.hitArea.height * viewport.tileSize,
-      );
-      context.setLineDash([]);
-    }
-  }
-
   context.restore();
-  drawMapDecorations(context, view.map.decorations ?? [], images, viewport);
+  drawSceneObjects(context, view.units, view.map.decorations ?? [], images, viewport);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 
