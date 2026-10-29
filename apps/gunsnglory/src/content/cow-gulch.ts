@@ -1,7 +1,7 @@
 import cowGulchMap from './cow-gulch.json';
 import { cowGulchCampaignWaves, cowGulchCampaignWavesP1c, cowGulchCampaignWavesP1d } from './cow-gulch-campaign-waves';
 import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
-import type { ScenarioContent, ScenarioUnit } from '../game';
+import type { MapDecoration, ScenarioContent, ScenarioUnit } from '../game';
 
 const firstMapGunslingerWeapon = Object.freeze({
   damage: 140,
@@ -40,6 +40,31 @@ const sleepingUnitMarkers = {
     hirePrice: 100, speed: 0, weapon: firstMapMexicanWeapon,
   },
 } as const;
+
+// TDM object codes emitted by GameObjectManager.createGameObjectsFromBasicMap for Cow Gulch.
+const cowGulchDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
+  68: { asset: 'e_1x1_cactus_a' },
+  69: { asset: 'e_1x1_rocks_a' },
+  70: { asset: 'e_1x1_rocks_b' },
+  71: { asset: 'e_1x1_tree' },
+  73: { asset: 'e_1x1_cactus_b' },
+  74: { asset: 'b_1x1_windmill' },
+  76: { asset: 'e_1x1_bush' },
+  77: { asset: 'e_1x2_bones' },
+  116: { asset: 'b_2x1_shack', anchorOffsetX: -0.5 },
+  126: { asset: 'e_1x1_rocks_water' },
+});
+
+function createCowGulchMapDecorations(): MapDecoration[] {
+  const decorations: MapDecoration[] = [];
+  for (const [y, row] of (cowGulchMap.originalTileGrid ?? []).entries()) {
+    for (const [x, code] of row.entries()) {
+      const decoration = cowGulchDecorationCodes[code];
+      if (decoration) decorations.push({ ...decoration, cell: { x, y } });
+    }
+  }
+  return decorations;
+}
 
 function createSleepingMapUnits(): ScenarioUnit[] {
   const counters = new Map<number, number>();
@@ -89,6 +114,10 @@ const firstMapGunslingerUpgradeLevelOne = Object.freeze({
 
 export const cowGulchContent: ScenarioContent = {
   ...cowGulchMap,
+  map: {
+    ...cowGulchMap.map,
+    decorations: createCowGulchMapDecorations(),
+  },
   contentVersion: 'gng-free-1.8.6-map1-cow-gulch-wave02-v3',
   formalSettlementSupported: true,
   maxUpgrades: 0,

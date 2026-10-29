@@ -12,6 +12,8 @@ import {
 } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
+import { calculateMapViewport } from '../src/render/map-viewport';
+import { mapDecorationDestination } from '../src/render/canvas-renderer';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 const content = JSON.parse(readFileSync(path.join(appRoot, 'src/content/cow-gulch.json'), 'utf8'));
@@ -182,12 +184,59 @@ test('every map draw command resolves to a bundled APK atlas', () => {
   const assets = new Set([
     ...content.map.background.map((tile: { asset: string }) => tile.asset),
     ...content.map.streets.map((tile: { asset: string }) => tile.asset),
+    ...(cowGulchContent.map.decorations ?? []).map((decoration) => decoration.asset),
     ...cowGulchContent.units.map((unit) => unit.asset),
     'sfx_sleeping',
   ]);
   for (const asset of assets) {
     assert.ok(existsSync(path.join(appRoot, 'public/assets', asset + '.png')), asset + '.png must be bundled');
   }
+});
+
+test('reconstructs the first map decorations from original TDM object codes', () => {
+  const tdm = readFileSync(path.join(appRoot, 'public/content/maps/td_map_01.tdm'));
+  const width = tdm[0]!;
+  const height = tdm[1]!;
+  const decorationCodes = new Map([
+    [68, { asset: 'e_1x1_cactus_a' }],
+    [69, { asset: 'e_1x1_rocks_a' }],
+    [70, { asset: 'e_1x1_rocks_b' }],
+    [71, { asset: 'e_1x1_tree' }],
+    [73, { asset: 'e_1x1_cactus_b' }],
+    [74, { asset: 'b_1x1_windmill' }],
+    [76, { asset: 'e_1x1_bush' }],
+    [77, { asset: 'e_1x2_bones' }],
+    [116, { asset: 'b_2x1_shack', anchorOffsetX: -0.5 }],
+    [126, { asset: 'e_1x1_rocks_water' }],
+  ]);
+  const expected = [];
+
+  for (let index = 0; index < width * height; index += 1) {
+    const object = decorationCodes.get(tdm[index + 2]!);
+    if (object) {
+      expected.push({
+        ...object,
+        cell: { x: index % width, y: Math.floor(index / width) },
+      });
+    }
+  }
+
+  assert.equal(expected.length, 31, 'the raw Cow Gulch TDM contains 31 static scene objects');
+  assert.deepEqual(cowGulchContent.map.decorations, expected);
+});
+
+test('anchors scenery sprites at each source cell foot and preserves wide-object alignment', () => {
+  const viewport = calculateMapViewport(17, 17, 1024, 576);
+  assert.deepEqual(mapDecorationDestination(
+    { asset: 'e_1x1_cactus_a', cell: { x: 5, y: 6 } },
+    { width: 32, height: 44 },
+    viewport,
+  ), { x: 302, y: 115, width: 60, height: 82 });
+  assert.deepEqual(mapDecorationDestination(
+    { asset: 'b_2x1_shack', cell: { x: 15, y: 7 }, anchorOffsetX: -0.5 },
+    { width: 64, height: 48 },
+    viewport,
+  ), { x: 842, y: 168, width: 120, height: 90 });
 });
 
 test('materializes every fresh Cow Gulch unit marker with original activity and stable tile coordinates', () => {
