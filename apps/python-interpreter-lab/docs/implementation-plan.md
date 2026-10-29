@@ -4,7 +4,7 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
-P0 文档基线及 P1–P5 双引擎首版均已完成并发布到 `master`；P6 教学 VM 控制流也已完成并发布。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)，P6 验收、发布及线上证据见 [P6 spec](specs/p06-control-flow.md) 与 [P6 tasks](tasks/p06-control-flow.md)。后续阶段按各自启动规则推进。
+P0 文档基线及 P1–P5 双引擎首版均已完成并发布到 `master`；P6 教学 VM 控制流也已完成并发布。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)，P6 验收、发布及线上证据见 [P6 spec](specs/p06-control-flow.md) 与 [P6 tasks](tasks/p06-control-flow.md)。P7 函数、作用域与帧栈的规格和 tasks 已获用户确认；当前在 `codex/python-interpreter-lab-p7` 分支实施。
 
 P0 建立了以下文档：
 
@@ -15,7 +15,7 @@ P0 建立了以下文档：
 | [ADR-0001](adr/0001-browser-python-visualizer.md) | 总体路线、备选方案、执行边界及取舍 |
 | 本文 | 阶段、依赖、启动条件、验收与回滚 |
 
-详细 spec 和 tasks 在对应阶段开始实施前创建，不预建空文件，也不把整体路线视为已批准所有依赖和接口细节。P1–P6 的规格记录各自已发布范围；P7 的参数、返回、作用域和递归边界须在该阶段开始时具体确认。
+详细 spec 和 tasks 在对应阶段开始实施前创建，不预建空文件，也不把整体路线视为已批准所有依赖和接口细节。P1–P6 的规格记录各自已发布范围；P7 的参数、返回、作用域和递归边界已在 [P7 规格](specs/p07-functions-and-frames.md)中确认，按 [P7 tasks](tasks/p07-functions-and-frames.md)实施。
 
 ## 2. 阶段启动方式
 
@@ -134,10 +134,10 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 
 ### P7：函数、作用域与帧栈
 
-- **前置**：P6；确认参数、返回、局部/全局名字解析和递归边界。
-- **交付**：`def`、位置参数调用、返回及递归范围内的执行；逐步展示新帧进入、每帧独立值栈与变量、返回值如何回到调用方。支持表明确闭包、默认参数、`global/nonlocal` 等是否可用。
-- **详细文档**：[P7 候选规格](specs/p07-functions-and-frames.md)。函数定义与调用形式、作用域、`None`/返回语义及递归上限待用户审阅；确认后再建立 P7 tasks，确认前不实现。
-- **验收**：函数调用与嵌套调用结果正确；同名局部变量不污染其他帧；递归帧身份不同；局部未绑定错误与声明语义一致；帧数上限可恢复。初版缺省返回也需明确展示 `None`。
+- **前置**：P6；用户已确认参数、返回、局部/全局名字解析、`None` 和递归边界。
+- **交付**：`def`、必需位置参数调用、返回及递归范围内的执行；逐步展示新帧进入、每帧独立值栈与变量、返回值如何回到调用方。闭包、默认参数、关键字/可变参数、`global/nonlocal` 和函数值均不在本阶段支持范围。
+- **详细文档**：[P7 规格](specs/p07-functions-and-frames.md)与[P7 tasks](tasks/p07-functions-and-frames.md)。本阶段将教学指令集从 `mini-vm-v2` 升至 `mini-vm-v3`；当前任务状态与验证记录见 tasks。
+- **验收**：函数调用与嵌套调用结果正确；同名局部变量不污染其他帧；递归帧身份不同；局部未绑定错误与名字绑定规则一致；活动帧和动态指令上限可恢复；Pyodide/CPython 3.14.2 对照支持子集结果。
 - **回滚**：撤回函数能力及相关示例，P6 的模块级执行仍可用。
 
 ### P8：列表、字典与对象引用
