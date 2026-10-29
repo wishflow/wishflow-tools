@@ -41,18 +41,25 @@ const sleepingUnitMarkers = {
   },
 } as const;
 
+const commonDecorationCollisionBox = Object.freeze({ x: 1920, y: -1228, width: 3840, height: 2534 });
+
 // TDM object codes emitted by GameObjectManager.createGameObjectsFromBasicMap for Cow Gulch.
+// Bounds are CollisionManager.createCollisionObject() rectangles translated from the source
+// object's cell-center anchor to this cell's top-left, in 7,680 fine units per map cell.
 const cowGulchDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
-  68: { asset: 'e_1x1_cactus_a' },
-  69: { asset: 'e_1x1_rocks_a' },
-  70: { asset: 'e_1x1_rocks_b' },
-  71: { asset: 'e_1x1_tree' },
-  73: { asset: 'e_1x1_cactus_b' },
-  74: { asset: 'b_1x1_windmill' },
-  76: { asset: 'e_1x1_bush' },
-  77: { asset: 'e_1x2_bones' },
-  116: { asset: 'b_2x1_shack', anchorOffsetX: -0.5 },
-  126: { asset: 'e_1x1_rocks_water' },
+  68: { asset: 'e_1x1_cactus_a', collisionBoxFine: commonDecorationCollisionBox },
+  69: { asset: 'e_1x1_rocks_a', collisionBoxFine: commonDecorationCollisionBox },
+  70: { asset: 'e_1x1_rocks_b', collisionBoxFine: { x: 1306, y: -1920, width: 5068, height: 3840 } },
+  71: { asset: 'e_1x1_tree', collisionBoxFine: commonDecorationCollisionBox },
+  73: { asset: 'e_1x1_cactus_b', collisionBoxFine: commonDecorationCollisionBox },
+  74: { asset: 'b_1x1_windmill', collisionBoxFine: commonDecorationCollisionBox },
+  76: { asset: 'e_1x1_bush', collisionBoxFine: commonDecorationCollisionBox },
+  77: { asset: 'e_1x2_bones', collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 } },
+  116: {
+    asset: 'b_2x1_shack', anchorOffsetX: -0.5,
+    collisionBoxFine: { x: -3840, y: -1228, width: 15360, height: 3840 },
+  },
+  126: { asset: 'e_1x1_rocks_water', collisionBoxFine: commonDecorationCollisionBox },
 });
 
 function createCowGulchMapDecorations(): MapDecoration[] {
@@ -118,7 +125,7 @@ export const cowGulchContent: ScenarioContent = {
     ...cowGulchMap.map,
     decorations: createCowGulchMapDecorations(),
   },
-  contentVersion: 'gng-free-1.8.6-map1-cow-gulch-wave02-v3',
+  contentVersion: 'gng-free-1.8.6-map1-cow-gulch-wave02-v4',
   formalSettlementSupported: true,
   maxUpgrades: 0,
   recruitableUnits: [{
@@ -151,7 +158,7 @@ export const cowGulchContent: ScenarioContent = {
 /** One-wave formal sample retained for the P1-A progress and settlement checks. */
 export const cowGulchP1aSampleContent: ScenarioContent = {
   ...cowGulchContent,
-  contentVersion: 'gng-free-1.8.6-map1-p1a-sample-v1',
+  contentVersion: 'gng-free-1.8.6-map1-p1a-sample-v2',
   campaignWaveCount: undefined,
   campaignWaves: undefined,
 };
@@ -160,7 +167,7 @@ export const cowGulchP1aSampleContent: ScenarioContent = {
 export const cowGulchP1bCampaignContent: ScenarioContent = {
   ...cowGulchContent,
   id: 'cow-gulch-original-waves',
-  contentVersion: 'gng-free-1.8.6-map1-p1b-waves-1-2-v1',
+  contentVersion: 'gng-free-1.8.6-map1-p1b-waves-1-2-v2',
   title: { en: 'Cow Gulch · Original waves 1–2', zh: '牛溪谷 · 原版第 1–2 波' },
 };
 
@@ -168,7 +175,7 @@ export const cowGulchP1bCampaignContent: ScenarioContent = {
 export const cowGulchP1cCampaignContent: ScenarioContent = {
   ...cowGulchContent,
   id: 'cow-gulch-original-waves-1-3',
-  contentVersion: 'gng-free-1.8.6-map1-p1c-waves-1-3-v1',
+  contentVersion: 'gng-free-1.8.6-map1-p1c-waves-1-3-v2',
   title: { en: 'Cow Gulch · Original waves 1–3', zh: '牛溪谷 · 原版第 1–3 波' },
   campaignWaves: cowGulchCampaignWavesP1c,
   campaignEnemyByType: {
@@ -181,7 +188,7 @@ export const cowGulchP1cCampaignContent: ScenarioContent = {
 export const cowGulchP1dCampaignContent: ScenarioContent = {
   ...cowGulchP1cCampaignContent,
   id: 'cow-gulch-original-waves-1-8',
-  contentVersion: 'gng-free-1.8.6-map1-p1d-waves-1-8-v1',
+  contentVersion: 'gng-free-1.8.6-map1-p1d-waves-1-8-v2',
   title: { en: 'Cow Gulch · Original waves 1–8', zh: '牛溪谷 · 原版第 1–8 波' },
   campaignWaves: cowGulchCampaignWavesP1d,
 };

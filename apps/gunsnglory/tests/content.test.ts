@@ -78,7 +78,7 @@ test('keeps the one-wave sample and prior campaign slices separate from the full
 
 test('binds the full Cow Gulch battle to a distinct official level-one identity', () => {
   assert.equal(cowGulchLevelOneContent.id, 'campaign-new-mexico-01');
-  assert.equal(cowGulchLevelOneContent.contentVersion, 'gng-free-1.8.6-new-mexico-01-p1e-v1');
+  assert.equal(cowGulchLevelOneContent.contentVersion, 'gng-free-1.8.6-new-mexico-01-p1e-v2');
   assert.notEqual(cowGulchLevelOneContent.id, cowGulchContent.id);
   assert.notEqual(cowGulchLevelOneContent.id, cowGulchP1aSampleContent.id);
   assert.notEqual(cowGulchLevelOneContent.id, cowGulchP1bCampaignContent.id);
@@ -197,17 +197,21 @@ test('reconstructs the first map decorations from original TDM object codes', ()
   const tdm = readFileSync(path.join(appRoot, 'public/content/maps/td_map_01.tdm'));
   const width = tdm[0]!;
   const height = tdm[1]!;
+  const commonCollisionBox = { x: 1920, y: -1228, width: 3840, height: 2534 };
   const decorationCodes = new Map([
-    [68, { asset: 'e_1x1_cactus_a' }],
-    [69, { asset: 'e_1x1_rocks_a' }],
-    [70, { asset: 'e_1x1_rocks_b' }],
-    [71, { asset: 'e_1x1_tree' }],
-    [73, { asset: 'e_1x1_cactus_b' }],
-    [74, { asset: 'b_1x1_windmill' }],
-    [76, { asset: 'e_1x1_bush' }],
-    [77, { asset: 'e_1x2_bones' }],
-    [116, { asset: 'b_2x1_shack', anchorOffsetX: -0.5 }],
-    [126, { asset: 'e_1x1_rocks_water' }],
+    [68, { asset: 'e_1x1_cactus_a', collisionBoxFine: commonCollisionBox }],
+    [69, { asset: 'e_1x1_rocks_a', collisionBoxFine: commonCollisionBox }],
+    [70, { asset: 'e_1x1_rocks_b', collisionBoxFine: { x: 1306, y: -1920, width: 5068, height: 3840 } }],
+    [71, { asset: 'e_1x1_tree', collisionBoxFine: commonCollisionBox }],
+    [73, { asset: 'e_1x1_cactus_b', collisionBoxFine: commonCollisionBox }],
+    [74, { asset: 'b_1x1_windmill', collisionBoxFine: commonCollisionBox }],
+    [76, { asset: 'e_1x1_bush', collisionBoxFine: commonCollisionBox }],
+    [77, { asset: 'e_1x2_bones', collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 } }],
+    [116, {
+      asset: 'b_2x1_shack', anchorOffsetX: -0.5,
+      collisionBoxFine: { x: -3840, y: -1228, width: 15360, height: 3840 },
+    }],
+    [126, { asset: 'e_1x1_rocks_water', collisionBoxFine: commonCollisionBox }],
   ]);
   const expected = [];
 
