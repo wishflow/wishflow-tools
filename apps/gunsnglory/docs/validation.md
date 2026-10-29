@@ -868,6 +868,6 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 | Canvas 绘制 | Canvas 测试断言低层投射物画在道路下方，炸药 sprite 的绘制底边对齐弹道锚点；背景、敌人、道路及对象深度队列已有层级测试继续运行。 |
 | 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4181 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、154 项单元测试、生产构建及52项 Playwright 测试；`pnpm run test:catalog` 的14项共享站点检查通过。首次在受限沙箱内运行构建时，Vite 写入工作树 `node_modules/.vite-temp` 被系统拒绝；获准在该工作树运行同一测试命令后完整通过。 |
 | Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5176/`、1280×720视口检查导航、Cow Gulch、HUD、地图和测试控件。自动战局短暂运行至 Wave06/8、36条生命、26名敌人、$179 后立即暂停；正式档案仍显示1/1、最佳分数 $360，没有产生新结算。浏览器 error/warn 为空。页面目视不用于宣称动态炸药画面已实测；其高度、锚点与道路前后层级由本节固定数值和 Canvas 断言验证。 |
-| 发布与公网实测 | 待合并发布后通过 Codex 内置浏览器核验线上版本；本轮不推进完整战役或提交新档案。 |
+| 发布与公网实测 | `master` 发布提交 `666c6c1b5b6a493adac7cef674a8cf7b8530499a` 已推送。GitHub Actions [run 40933632292](https://github.com/wishflow/wishflow-tools/actions/runs/40933632292) 中 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 和 GitHub Pages 均通过；Worker/config 检查按静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=666c6c1)，以1280×720视口确认导航、战役档案、Cow Gulch 地图与战斗 HUD 正常。战局暂停在 Wave01/8、50条生命、5名敌人、$76；正式档案测试前后均为1/1、最高分 $356，速度保持原存档4×，未产生结算。浏览器 error/warn 为空。 |
 
 本轮只补齐 Cow Gulch 当前实现所用特殊投射物的高度和道路层级，不代表所有弹道帧、拖尾动画、所有地图对象遮挡及整关原版对照完成。Cow Gulch 首关仍为0/60。
