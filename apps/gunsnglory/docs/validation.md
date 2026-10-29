@@ -701,4 +701,4 @@ Wave03 原始请求向量为 [0,0,0,0,0,3,0,0,0,0]。第6项是 pool type7，映
 | 浏览器入口与循环 | 页面切换到活动场景后在替换锁解除时启动帧循环；E2E 选择4×、确认 Wave01 自动开始、手动开波控件隐藏、真实地图雇佣枪手，并完成 Wave08 胜利。E2E 用虚拟时钟和100ms帧间隔加速等待，游戏仍调用正式时间累加器并遵守4×与单步上限。 |
 | 变异审查 | 临时反转 campaign 首波初始 phase 后，自动开波与败北/重开测试按预期失败；恢复后 P1-D 测试通过。 |
 | 全量本地 CI | `pnpm run test:ci` 通过：145项单元测试、生产构建、49项 Playwright 测试；TypeScript 检查通过。审查后受影响的64项 Game/P1-C/P1-D 单元测试再次通过。 |
-| 发布与公开浏览器 | 本记录待集成分支发布后补充 Actions、公开站点和 Codex 内置浏览器观察结果。 |
+| 发布与公开浏览器 | P1-D 实现提交 `139a48a` 经 `837c2a2` 合入并推送，首次部署 [run 40824917785](https://github.com/wishflow/wishflow-tools/actions/runs/40824917785)。首次公网核对发现静态说明仍写“目前可玩原版前三波”；修复提交 `7386738` 经 `0280903` 再次合并发布，后续 [run 40826519688](https://github.com/wishflow/wishflow-tools/actions/runs/40826519688) 的应用测试、共享检查及 Cloudflare Pages、GitHub Pages 部署成功。Codex 内置浏览器在 `?release=0280903` 验证中文和英文说明、4× 自动开波；约10秒后进入 Wave02，继续至 Wave03/8 时暂停，生命50、现金$107。控制台 error/warn 为空；波次与现金为本次随机观察值，完整八波胜利由 Playwright 覆盖。 |
