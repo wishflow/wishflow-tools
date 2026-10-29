@@ -158,6 +158,36 @@ function drawUnit(
   }
 }
 
+function drawBelowStreetObjects(
+  context: CanvasRenderingContext2D,
+  enemies: readonly EnemyView[],
+  shots: readonly ShotView[],
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const drawItems: { depth: number; order: number; draw: () => void }[] = [];
+  let order = 0;
+  enemies.forEach((enemy) => {
+    drawItems.push({
+      depth: enemy.positionFine.y + (enemy.drawingOffsetFine?.y ?? 0),
+      order,
+      draw: () => drawEnemy(context, enemy, images, viewport),
+    });
+    order += 1;
+  });
+  shots.forEach((shot) => {
+    if (shot.fineZ !== 0) return;
+    drawItems.push({
+      depth: shot.positionFine.y,
+      order,
+      draw: () => drawShot(context, shot, images, viewport),
+    });
+    order += 1;
+  });
+  drawItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
+  for (const item of drawItems) item.draw();
+}
+
 function drawSceneObjects(
   context: CanvasRenderingContext2D,
   units: readonly UnitView[],
@@ -189,10 +219,8 @@ function drawSceneObjects(
     order += 1;
   });
 
-  // GameView does not expose the source shot's fineZ. This orders the current
-  // Cow Gulch scene by ground Y; special projectiles that switch fineZ in canyon
-  // cells remain part of the full P1-F comparison.
   shots.forEach((shot) => {
+    if (shot.fineZ === 0) return;
     drawItems.push({
       depth: shot.positionFine.y,
       order,
@@ -333,7 +361,7 @@ function drawShot(
 ): void {
   const tileScale = viewport.scaleFactor;
   const x = viewport.origin.x + (shot.positionFine.x / 240) * tileScale;
-  const y = viewport.origin.y + (shot.positionFine.y / 240) * tileScale;
+  const y = viewport.origin.y + ((shot.positionFine.y - shot.heightFine) / 240) * tileScale;
   if (shot.imageAsset) {
     if (shot.explosionRemainingMs !== undefined) {
       const image = images.sfx_explosion;
@@ -367,7 +395,7 @@ function drawShot(
       MEXICAN_DYNAMITE_FRAME.width,
       MEXICAN_DYNAMITE_FRAME.height,
       x - width / 2,
-      y - height / 2,
+      y - height,
       width,
       height,
     );
@@ -733,7 +761,7 @@ export function drawGame(
   context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
   context.clip();
   drawTiles(context, view.map.background, images, viewport);
-  for (const enemy of view.enemies) drawEnemy(context, enemy, images, viewport);
+  drawBelowStreetObjects(context, view.enemies, view.shots, images, viewport);
   drawTiles(context, view.map.streets, images, viewport);
   context.restore();
   drawSceneObjects(context, view.units, view.shots, view.wagonDebris ?? [], view.map.decorations ?? [], images, viewport);

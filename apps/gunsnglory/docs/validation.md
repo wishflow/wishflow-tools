@@ -832,7 +832,7 @@ REA/JADX 归档中的 `GunsAndGloryThread` 绘制路径按背景、敌人、网�
 
 REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.gameObjectsDraworder` 遍历并绘制 `getValueByObject() < 768000` 的对象，然后绘制道路；`drawObjects()` 再绘制剩余非敌人对象。排序值为 `fineY + drawingOffsetY + fineZ × 100`，同一 `fineZ` 下等价于按地面 Y 排序。Cow Gulch 静态装饰、玩家单位和 `GameObjectWagonParts` 使用 `fineZ=7680`；碎片由 `GameObjectWagonParts` 按父对象固定 `fineY` 绘制。依据位于研究分支 `codex/gunsnglory-spec` 的 `apps/gunsnglory/docs/research/recovered-source/java/com/hg/gunsandglory/game/GunsAndGloryThread.java`、`gamelogic/GameObjectManager.java` 与 `gamelogic/GameObjectWagonParts.java`；这些 REA/JADX 反编译文件是分析产物，不是原始 Java 源码。
 
-`GameObjectShot` 初始继承射手的 `fineZ`；伤害类型 3、4、5、6 的投射物在满足峡谷地形、非道路及飞行高度等条件后会把 `fineZ` 从 7680 改为0，并更新 draw order（研究分支同目录 `gamelogic/GameObjectShot.java`）。当前网页 `ShotView` 未暴露 `fineZ` 和原版弹道高度状态，因此本轮只能将投射物按细坐标 Y 排入道路之后的队列；特殊投射物应处于道路下方时的层级差异仍未修复。该限制不影响本轮对玩家单位、静态装饰和车厢残骸排序的结论，也不代表完整投射物视觉复刻。
+`GameObjectShot` 初始继承射手的 `fineZ`。伤害类型 3、4、5、6 的未命中投射物在 `f < 0.5`、计算出的垂直偏移 `< 7680` 且 `fullZ == 1` 时把 `fineZ` 从 7680 改为0，并更新 draw order；峡谷且非道路条件只包围拖尾线绘制，不限制深度切换。依据为研究分支同目录 `gamelogic/GameObjectShot.java` 与 Smali `GameObjectShot.draw()` 的独立分支。本节记录的是本轮开始前的网页状态：`ShotView` 未暴露 `fineZ` 和原版弹道高度，因此投射物被统一排在道路之后；该实现缺口已由验证记录第 46 节处理。
 
 ### 验证
 
@@ -845,4 +845,29 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 | 浏览器控制台 | 本地内置浏览器错误及警告日志为空。 |
 | 发布与公网实测 | `master` 提交 `816f98fa74b885b6a526b04205d3ac8ac6b04acd` 已推送。GitHub Actions [run 40922924699](https://github.com/wishflow/wishflow-tools/actions/runs/40922924699) 的 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 与 GitHub Pages 均通过；Worker/config 检查按静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=816f98f)，截图核对 Cow Gulch 峡谷道路、桥、静态装饰、枪手、敌人和车厢；暂停时为 Wave01/8、生命50、敌人13、现金$68。已保存战役档案前后均为1/1、最高分$356；速度仍为4×，没有提交结算或改动设置。浏览器控制台错误与警告为空。战斗 HUD 的短时数值仅记录当次观察，不作规则预期。 |
 
-本轮只验证共享地面深度队列和车厢碎片锚点。特殊投射物的动态 `fineZ`、敌人/投射物/装饰的完整跨图层对照、同深度插入次序及其它地图仍待处理；Cow Gulch 首关仍为0/60。
+本轮验证的是共享地面深度队列和车厢碎片锚点；特殊投射物的动态 `fineZ` 在当时尚未实现，现由第 46 节补齐。敌人/投射物/装饰的完整跨图层对照、同深度插入次序及其它地图仍待处理；Cow Gulch 首关仍为0/60。
+
+## 46. P1-F Cow Gulch 特殊投射物弹道与道路图层
+
+本轮补齐伤害类型 3、4、5、6 未命中投射物的弹道偏移与动态 `fineZ`。投射物的地面锚点保持原位置，绘制位置使用 `positionFine.y - heightFine`；当原版条件满足时，弹道高度与地面层级分开维护，低层投射物在道路之前绘制。
+
+### 规则依据与实现
+
+依据为研究分支 `codex/gunsnglory-spec` 中的 `GameObjectShot.java`、`GameObjectShot.draw()` Smali 和 `GameObjectUnit.UNIT_PLACEMENT_OFFSET_Y=1920`。原版 `f` 是 Java float，计算弹道前保留 float32 舍入；位置项乘法也保留 float32，传给正弦函数时再提升为 double。`fullZ==1` 的投射物仅在 `f < 0.5`、垂直偏移 `< 7680` 且尚未命中时从 `fineZ=7680` 切到0。峡谷且非道路只决定拖尾线绘制。完整公式见[产品规格 §4.7](spec.md#47-动画与声音必须对应真实行为)。
+
+网页在 `ShotView` 中加入派生高度和绘制深度；回放 canonical state 继续排除两项渲染字段，保持规则状态格式不变。为了保持同一模拟帧的 `advance()`、`observe()` 和暂停重绘一致，满足条件后先记录待切层标记，待下一游戏帧开始时应用；这对应原版在绘制当前投射物后更新顺序、下一帧显示新层级的行为。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| Java 数值精度 | 以飞行总时长 300 ms、剩余 50 ms 的固定夹具验证伤害类型 3/4/5/6；分别断言高度 7681、6080、7681、1088 fine units，覆盖 Java float32 比值、位置项舍入和整数截断。 |
+| 切层时序 | Game 测试先复现高弹道保持 `fineZ=7680`，再验证下降且偏移 `<7680` 时当前帧仍绘制于道路上方，后续游戏帧切至0；在阈值帧重复 `observe()`、暂停重绘及暂停推进，均断言 `fineZ` 不变。 |
+| 地形适用范围 | 特殊投射物夹具没有峡谷或道路，仍按高度与飞行进度切层；确认深度转换没有错误依赖拖尾专用的地形条件。 |
+| 回放状态边界 | 断言 `fineZ` 与 `heightFine` 不进入 replay canonical shot shape；已有 replay 确定性测试继续覆盖帧推进。 |
+| Canvas 绘制 | Canvas 测试断言低层投射物画在道路下方，炸药 sprite 的绘制底边对齐弹道锚点；背景、敌人、道路及对象深度队列已有层级测试继续运行。 |
+| 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4181 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、154 项单元测试、生产构建及52项 Playwright 测试；`pnpm run test:catalog` 的14项共享站点检查通过。首次在受限沙箱内运行构建时，Vite 写入工作树 `node_modules/.vite-temp` 被系统拒绝；获准在该工作树运行同一测试命令后完整通过。 |
+| Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5176/`、1280×720视口检查导航、Cow Gulch、HUD、地图和测试控件。自动战局短暂运行至 Wave06/8、36条生命、26名敌人、$179 后立即暂停；正式档案仍显示1/1、最佳分数 $360，没有产生新结算。浏览器 error/warn 为空。页面目视不用于宣称动态炸药画面已实测；其高度、锚点与道路前后层级由本节固定数值和 Canvas 断言验证。 |
+| 发布与公网实测 | 待合并发布后通过 Codex 内置浏览器核验线上版本；本轮不推进完整战役或提交新档案。 |
+
+本轮只补齐 Cow Gulch 当前实现所用特殊投射物的高度和道路层级，不代表所有弹道帧、拖尾动画、所有地图对象遮挡及整关原版对照完成。Cow Gulch 首关仍为0/60。

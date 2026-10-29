@@ -142,6 +142,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       damageStyle: 3,
       imageAsset: 'sfx_mexican_dynamite',
       animationFrame: 0,
+      fineZ: 0,
+      heightFine: 3840,
     }],
     wagonDebris: [{
       id: 'wagon-part-1',
@@ -200,9 +202,16 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, enemyImage, bridgeImage, cactusImage, treeImage, unitImage,
-      images.sfx_mexican_dynamite, images.sfx_exploding_parts, bushImage],
-    'enemies stay under roads while units, shots, wagon parts, and scenery share original scene depth',
+    [mapImage, enemyImage, images.sfx_mexican_dynamite, bridgeImage, cactusImage, treeImage,
+      unitImage, images.sfx_exploding_parts, bushImage],
+    'a low-depth shot shares the under-road draw pass while other scene objects keep their ground-depth order',
+  );
+  const dynamiteDraw = drawCalls.find((args) => args[0] === images.sfx_mexican_dynamite);
+  assert.ok(dynamiteDraw);
+  assert.equal(
+    (dynamiteDraw[6] as number) + (dynamiteDraw[8] as number),
+    viewport.origin.y + ((view.shots[0]!.positionFine.y - view.shots[0]!.heightFine) / 240) * viewport.scaleFactor,
+    'the elevated sprite remains bottom-anchored to its ground position minus the original arc offset',
   );
 
   const topRouteView = {
@@ -520,12 +529,13 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
         id: 'flight', shooterId: 'mexican-1', targetId: 'enemy-1',
         positionFine: { x: 3840, y: 3840 }, remainingMs: 100,
         damageStyle: 3, imageAsset: 'sfx_mexican_dynamite', animationFrame: 2,
+        fineZ: 0, heightFine: 3840,
       },
       {
         id: 'impact', shooterId: 'mexican-1', targetId: 'enemy-2',
         positionFine: { x: 3840, y: 3840 }, remainingMs: 599,
         damageStyle: 3, imageAsset: 'sfx_mexican_dynamite', animationFrame: 1,
-        explosionRemainingMs: 599,
+        explosionRemainingMs: 599, fineZ: 7680, heightFine: 0,
       },
     ],
     recruitPool: [],
@@ -543,6 +553,12 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
   const dynamiteDraw = drawCalls.find(([image]) => image === dynamite);
   assert.ok(dynamiteDraw);
   assert.deepEqual(dynamiteDraw.slice(1, 5), [32, 0, 16, 16]);
+  const shotViewport = getMapViewport(view);
+  assert.equal(
+    (dynamiteDraw[6] as number) + (dynamiteDraw[8] as number),
+    shotViewport.origin.y + ((3840 - 3840) / 240) * shotViewport.scaleFactor,
+    'flight atlas frames use the original bottom anchor after subtracting their arc height',
+  );
   const explosionDraw = drawCalls.find(([image]) => image === explosion);
   assert.ok(explosionDraw);
   assert.deepEqual(explosionDraw.slice(1, 5), [48, 0, 48, 52]);
