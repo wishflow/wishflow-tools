@@ -376,6 +376,50 @@ test('compares the function subset with Pyodide CPython output and error categor
   await expect(page.getByRole('alert')).toContainText('Unbound local name');
 });
 
+test('matches CPython repr and structural equality for supported cyclic containers', async ({ page }) => {
+  await page.goto(appPath);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'cycle_list = [None]',
+    'cycle_list[0] = cycle_list',
+    'cycle_dict = {"self": None}',
+    'cycle_dict["self"] = cycle_dict',
+    'left = [1, {"x": True}]',
+    'right = [True, {"x": 1}]',
+    'print(cycle_list, cycle_dict, left == right)',
+  ].join('\n'));
+
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  const expected = "[[...]] {'self': {...}} True\n";
+  await expect(page.locator('#execution-output')).toHaveText(expected);
+
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('teaching');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText(expected.trimEnd());
+});
+
+test('restarts container identities and clears heap history when the teaching VM resets', async ({ page }) => {
+  await chooseTeachingVm(page);
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill('items = [1]');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Locate list object #1' }).first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Reset teaching VM' }).click();
+  await expect(page.getByText('Ready to compile teaching program').first()).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Object heap' })).toContainText('No reachable container objects');
+  await expect(page.locator('.teaching-history-control')).toContainText('Step 0 of 0');
+
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Locate list object #1' }).first()).toBeVisible();
+});
+
 test('renders operands for comparison and logical expressions in the teaching AST', async ({ page }) => {
   await chooseTeachingVm(page);
   const source = page.getByRole('textbox', { name: 'Python source' });

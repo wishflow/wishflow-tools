@@ -249,6 +249,46 @@ test('prints strings and zero arguments using Python-like output formatting', ()
   assert.deepEqual(machine.current.output, ['hello 🐍 42', '']);
 });
 
+test('prints nested containers, repeated shared references, and self-cycles with Python-style repr', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'items = [1, "x"]',
+    'mapping = {"items": items, "nothing": None}',
+    'shared = ["same"]',
+    'print(items, mapping)',
+    'print([shared, shared])',
+    `print(["a'b", 'a"b', "line\\nnext"])`,
+    'cycle_list = [None]',
+    'cycle_list[0] = cycle_list',
+    'print(cycle_list)',
+    'cycle_dict = {"self": None}',
+    'cycle_dict["self"] = cycle_dict',
+    'print(cycle_dict)',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, [
+    "[1, 'x'] {'items': [1, 'x'], 'nothing': None}",
+    "[['same'], ['same']]",
+    '["a\'b", \'a"b\', \'line\\nnext\']',
+    '[[...]]',
+    "{'self': {...}}",
+  ]);
+});
+
+test('formats large shared acyclic graphs within the output budget without expanding without bound', () => {
+  const source = [
+    'value = ["x"]',
+    ...Array.from({ length: 100 }, (_, index) => `value${index} = [${index === 0 ? 'value' : `value${index - 1}`}, ${index === 0 ? 'value' : `value${index - 1}`}]`),
+    'print(value99)',
+  ].join('\n');
+  const machine = createTeachingMachine(compileTeachingSource(source));
+  while (machine.current.status !== 'error' && machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'output-too-long');
+  assert.deepEqual(machine.current.output, []);
+  assert.equal(machine.current.stack[0]?.type, 'list');
+});
+
 test('uses Python truthiness, operand-returning short circuit, and boolean integer arithmetic', () => {
   const source = [
     'print(False and missing, True or missing)',
@@ -275,6 +315,72 @@ test('compares bools and ints numerically and strings by Unicode code point', ()
   const mismatch = createTeachingMachine(compileTeachingSource('print("a" < 1)'));
   while (mismatch.current.status !== 'error') stepTeachingMachine(mismatch);
   assert.equal(mismatch.current.diagnostic?.code, 'type-error');
+});
+
+test('compares nested lists and dictionaries structurally while ignoring dictionary insertion order', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'left = [1, {"a": True, "b": [None]}]',
+    'right = [True, {"b": [None], "a": 1}]',
+    'same_mapping = {"y": 2, "x": [True]}',
+    'other_mapping = {"x": [1], "y": 2}',
+    'print(left == right, left != right, same_mapping == other_mapping, [1, 2] == [2, 1], [] == {})',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['True False True False False']);
+});
+
+test('compares cyclic container graphs using visited object pairs', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'first = [None, 1]',
+    'first[0] = first',
+    'same = [None, True]',
+    'same[0] = same',
+    'different = [None, 2]',
+    'different[0] = different',
+    'print(first == same, first != same, first == different)',
+    'left = {"self": None, "value": 1}',
+    'left["self"] = left',
+    'right = {"value": True, "self": None}',
+    'right["self"] = right',
+    'print(left == right)',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['True False False', 'True']);
+});
+
+test('passes container references into functions, mutates them, and returns nested references', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'items = [1]',
+    'def wrap(value):',
+    '  value[0] = 7',
+    '  return {"items": value}',
+    'result = wrap(items)',
+    'result["items"][0] = 8',
+    'print(items[0], result["items"][0])',
+  ].join('\n')));
+  while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'finished');
+  assert.deepEqual(machine.current.output, ['8 8']);
+  const itemsId = machine.current.variables.find(({ name }) => name === 'items')?.value.objectId;
+  const result = machine.current.variables.find(({ name }) => name === 'result')?.value;
+  assert.equal(result?.type, 'dict');
+  const resultObject = machine.current.heap.find(({ id }) => id === result?.objectId);
+  assert.ok(resultObject);
+  if (resultObject.type !== 'dict') assert.fail('expected result dictionary snapshot');
+  assert.equal(resultObject.entries[0]?.value.objectId, itemsId);
+  assert.ok(getTeachingHistory(machine).items.some((snapshot) => snapshot.frames.some((frame) => (
+    frame.functionName === 'wrap' && frame.variables.some(({ name, value }) => name === 'value' && value.objectId === itemsId)
+  ))));
+});
+
+test('enforces the total heap-entry budget across repeated bounded container literals', () => {
+  const pairs = Array.from({ length: 256 }, (_, index) => `${index}: ${index}`).join(', ');
+  const machine = createTeachingMachine(compileTeachingSource(`for i in range(9):\n  mapping = {${pairs}}`));
+  while (machine.current.status !== 'error' && machine.current.status !== 'finished') stepTeachingMachine(machine);
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'heap-entry-limit-exceeded');
 });
 
 test('prints None, treats it as false, and compares it by identity-like scalar rules', () => {

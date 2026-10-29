@@ -96,6 +96,13 @@ interface RuntimeFrame {
   lastExecutedInstructionIndex: number | null;
 }
 
+interface PrintFormatContext {
+  chunks: string[];
+  codePoints: number;
+  maxCodePoints: number;
+  activeObjectIds: Set<number>;
+}
+
 export class TeachingMachine {
   #stepIndex = 0;
   #executedInstructionCount = 0;
@@ -443,14 +450,110 @@ export class TeachingMachine {
       this.runtimeError('vm-stack-underflow', 'PRINT does not have enough values on the stack.', instruction.span);
     }
     const values = this.#stack.slice(this.#stack.length - count);
-    const line = values.map((value) => formatPrintValue(value, this.#heap)).join(' ');
-    const addedCodePoints = codePointLength(line) + 1;
     const currentCodePoints = this.#output.reduce((total, item) => total + codePointLength(item) + 1, 0);
-    if (currentCodePoints + addedCodePoints > MAX_OUTPUT_CODE_POINTS) {
+    const maxLineCodePoints = MAX_OUTPUT_CODE_POINTS - currentCodePoints - 1;
+    if (maxLineCodePoints < 0) {
       this.runtimeError('output-too-long', `Standard output exceeds ${MAX_OUTPUT_CODE_POINTS} code points.`, instruction.span);
     }
+    const context: PrintFormatContext = {
+      chunks: [],
+      codePoints: 0,
+      maxCodePoints: maxLineCodePoints,
+      activeObjectIds: new Set(),
+    };
+    for (let index = 0; index < values.length; index += 1) {
+      const value = values[index];
+      if (!value) this.runtimeError('vm-stack-underflow', 'PRINT does not have enough values on the stack.', instruction.span);
+      if (index > 0) this.appendPrintText(context, ' ', instruction.span);
+      this.appendPrintValue(context, value, instruction.span, false);
+    }
+    const line = context.chunks.join('');
     this.#output.push(line);
     if (count > 0) this.#stack.splice(this.#stack.length - count, count);
+  }
+
+  private appendPrintText(context: PrintFormatContext, text: string, span: SourceSpan): void {
+    const addedCodePoints = codePointLength(text);
+    if (context.codePoints + addedCodePoints > context.maxCodePoints) {
+      this.runtimeError('output-too-long', `Standard output exceeds ${MAX_OUTPUT_CODE_POINTS} code points.`, span);
+    }
+    context.chunks.push(text);
+    context.codePoints += addedCodePoints;
+  }
+
+  private appendPrintValue(
+    context: PrintFormatContext,
+    value: RuntimeValue,
+    span: SourceSpan,
+    nested: boolean,
+  ): void {
+    switch (value.type) {
+      case 'none':
+        this.appendPrintText(context, 'None', span);
+        return;
+      case 'int':
+        this.appendPrintText(context, value.value.toString(10), span);
+        return;
+      case 'bool':
+        this.appendPrintText(context, value.value ? 'True' : 'False', span);
+        return;
+      case 'str':
+        this.appendPrintText(context, nested ? formatStringRepr(value.value) : value.value, span);
+        return;
+      case 'range':
+        this.appendPrintText(context, formatRange(value), span);
+        return;
+      case 'iterator':
+        this.appendPrintText(context, formatIterator(value), span);
+        return;
+      case 'function':
+        this.appendPrintText(context, `<function ${value.function.name}>`, span);
+        return;
+      case 'list': {
+        const object = this.#heap.get(value.objectId);
+        if (!object || object.type !== 'list') {
+          this.runtimeError('invalid-object-reference', `List object #${value.objectId} does not exist.`, span);
+        }
+        if (context.activeObjectIds.has(value.objectId)) {
+          this.appendPrintText(context, '[...]', span);
+          return;
+        }
+        context.activeObjectIds.add(value.objectId);
+        this.appendPrintText(context, '[', span);
+        for (let index = 0; index < object.items.length; index += 1) {
+          const item = object.items[index];
+          if (!item) this.runtimeError('invalid-object-reference', `List object #${value.objectId} has a missing item.`, span);
+          if (index > 0) this.appendPrintText(context, ', ', span);
+          this.appendPrintValue(context, item, span, true);
+        }
+        this.appendPrintText(context, ']', span);
+        context.activeObjectIds.delete(value.objectId);
+        return;
+      }
+      case 'dict': {
+        const object = this.#heap.get(value.objectId);
+        if (!object || object.type !== 'dict') {
+          this.runtimeError('invalid-object-reference', `Dictionary object #${value.objectId} does not exist.`, span);
+        }
+        if (context.activeObjectIds.has(value.objectId)) {
+          this.appendPrintText(context, '{...}', span);
+          return;
+        }
+        context.activeObjectIds.add(value.objectId);
+        this.appendPrintText(context, '{', span);
+        for (let index = 0; index < object.entries.length; index += 1) {
+          const entry = object.entries[index];
+          if (!entry) this.runtimeError('invalid-object-reference', `Dictionary object #${value.objectId} has a missing entry.`, span);
+          if (index > 0) this.appendPrintText(context, ', ', span);
+          this.appendPrintValue(context, entry.key, span, true);
+          this.appendPrintText(context, ': ', span);
+          this.appendPrintValue(context, entry.value, span, true);
+        }
+        this.appendPrintText(context, '}', span);
+        context.activeObjectIds.delete(value.objectId);
+        return;
+      }
+    }
   }
 
   private executeComparison(instruction: TeachingInstruction): void {
@@ -460,21 +563,86 @@ export class TeachingMachine {
     }
     const [left, right] = this.peekPair(instruction);
     let result: boolean;
-    if (isNumeric(left) && isNumeric(right)) {
+    if (operator === '==' || operator === '!=') {
+      const equal = this.areValuesEqual(left, right, instruction.span);
+      result = operator === '==' ? equal : !equal;
+    } else if (isNumeric(left) && isNumeric(right)) {
       const leftValue = numericValue(left);
       const rightValue = numericValue(right);
       result = comparePrimitive(leftValue, rightValue, operator);
     } else if (left.type === 'none' && right.type === 'none') {
-      if (operator === '==' || operator === '!=') result = operator === '==';
-      else this.typeError(operator, [left, right], instruction.span);
+      this.typeError(operator, [left, right], instruction.span);
     } else if (left.type === 'str' && right.type === 'str') {
       result = comparePrimitive(compareCodePoints(left.value, right.value), 0, operator);
-    } else if (operator === '==' || operator === '!=') {
-      result = operator === '!=';
     } else {
       this.typeError(operator, [left, right], instruction.span);
     }
     this.replacePair({ type: 'bool', value: result });
+  }
+
+  private areValuesEqual(left: RuntimeValue, right: RuntimeValue, span: SourceSpan): boolean {
+    const pending: Array<[RuntimeValue, RuntimeValue]> = [[left, right]];
+    const comparedPairs = new Set<string>();
+    while (pending.length > 0) {
+      const pair = pending.pop();
+      if (!pair) continue;
+      const [leftValue, rightValue] = pair;
+      if (isNumeric(leftValue) && isNumeric(rightValue)) {
+        if (numericValue(leftValue) !== numericValue(rightValue)) return false;
+        continue;
+      }
+      if (leftValue.type !== rightValue.type) return false;
+      if (leftValue.type === 'none' && rightValue.type === 'none') continue;
+      if (leftValue.type === 'str' && rightValue.type === 'str') {
+        if (leftValue.value !== rightValue.value) return false;
+        continue;
+      }
+      if (leftValue.type === 'list' && rightValue.type === 'list') {
+        if (leftValue.objectId === rightValue.objectId) continue;
+        const pairKey = `list:${leftValue.objectId}:${rightValue.objectId}`;
+        if (comparedPairs.has(pairKey)) continue;
+        comparedPairs.add(pairKey);
+        const leftObject = this.#heap.get(leftValue.objectId);
+        const rightObject = this.#heap.get(rightValue.objectId);
+        if (!leftObject || leftObject.type !== 'list') {
+          this.runtimeError('invalid-object-reference', `List object #${leftValue.objectId} does not exist.`, span);
+        }
+        if (!rightObject || rightObject.type !== 'list') {
+          this.runtimeError('invalid-object-reference', `List object #${rightValue.objectId} does not exist.`, span);
+        }
+        if (leftObject.items.length !== rightObject.items.length) return false;
+        for (let index = 0; index < leftObject.items.length; index += 1) {
+          const leftItem = leftObject.items[index];
+          const rightItem = rightObject.items[index];
+          if (!leftItem || !rightItem) this.runtimeError('invalid-object-reference', 'A list object has a missing item.', span);
+          pending.push([leftItem, rightItem]);
+        }
+        continue;
+      }
+      if (leftValue.type === 'dict' && rightValue.type === 'dict') {
+        if (leftValue.objectId === rightValue.objectId) continue;
+        const pairKey = `dict:${leftValue.objectId}:${rightValue.objectId}`;
+        if (comparedPairs.has(pairKey)) continue;
+        comparedPairs.add(pairKey);
+        const leftObject = this.#heap.get(leftValue.objectId);
+        const rightObject = this.#heap.get(rightValue.objectId);
+        if (!leftObject || leftObject.type !== 'dict') {
+          this.runtimeError('invalid-object-reference', `Dictionary object #${leftValue.objectId} does not exist.`, span);
+        }
+        if (!rightObject || rightObject.type !== 'dict') {
+          this.runtimeError('invalid-object-reference', `Dictionary object #${rightValue.objectId} does not exist.`, span);
+        }
+        if (leftObject.entries.length !== rightObject.entries.length) return false;
+        for (const leftEntry of leftObject.entries) {
+          const rightEntry = rightObject.entries.find(({ key }) => dictionaryKeysEqual(key, leftEntry.key));
+          if (!rightEntry) return false;
+          pending.push([leftEntry.value, rightEntry.value]);
+        }
+        continue;
+      }
+      return false;
+    }
+    return true;
   }
 
   private executeShortCircuit(instruction: TeachingInstruction): number | null {
@@ -906,15 +1074,23 @@ function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticS
   });
 }
 
-function formatPrintValue(value: RuntimeValue, heap: Map<number, HeapObject>): string {
-  if (value.type === 'function') return `<function ${value.function.name}>`;
-  if (value.type === 'none') return 'None';
-  if (value.type === 'bool') return value.value ? 'True' : 'False';
-  if (value.type === 'range') return formatRange(value);
-  if (value.type === 'iterator') return formatIterator(value);
-  if (value.type === 'list') return heap.has(value.objectId) ? `list #${value.objectId}` : '<missing list>';
-  if (value.type === 'dict') return heap.has(value.objectId) ? `dict #${value.objectId}` : '<missing dict>';
-  return value.value.toString();
+function formatStringRepr(value: string): string {
+  const quote = value.includes("'") && !value.includes('"') ? '"' : "'";
+  let result = quote;
+  for (const character of value) {
+    if (character === '\\') result += '\\\\';
+    else if (character === quote) result += `\\${quote}`;
+    else if (character === '\n') result += '\\n';
+    else if (character === '\r') result += '\\r';
+    else if (character === '\t') result += '\\t';
+    else {
+      const codePoint = character.codePointAt(0) ?? 0;
+      result += codePoint < 0x20 || codePoint === 0x7f
+        ? `\\x${codePoint.toString(16).padStart(2, '0')}`
+        : character;
+    }
+  }
+  return `${result}${quote}`;
 }
 
 function isDictionaryKey(value: RuntimeValue): value is Extract<RuntimeValue, { type: 'int' | 'bool' | 'str' | 'none' }> {
