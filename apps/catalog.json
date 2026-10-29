@@ -19,7 +19,7 @@
     "slug": "python-interpreter-lab",
     "title": "Python Interpreter Lab",
     "titleZh": "Python 解释器实验室",
-    "description": "Inspect real CPython compilation and step through a bounded teaching VM in your browser.",
+    "description": "Inspect real CPython compilation or debug a bounded teaching VM with breakpoints and source stepping.",
     "descriptionZh": "在浏览器中观察真实 CPython 编译结果，并逐步运行有界教学 VM 子集。",
     "icon": "🐍"
   },

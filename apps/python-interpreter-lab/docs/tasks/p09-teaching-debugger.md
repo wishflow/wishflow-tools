@@ -1,6 +1,6 @@
 # P9 tasks：教学调试控制
 
-对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01–T05 已完成本地实现和验证，T06 待完成。** 本阶段不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
+对应规格：[P9 教学调试控制规格](../specs/p09-teaching-debugger.md)，阶段基线见[整体实施计划](../implementation-plan.md)。**状态：产品语义已确认；T01–T05 已完成本地实现和验证，T06 本地完整回归及文档已完成，合并、部署与线上验收待完成。** 本阶段不增加语法或教学指令，沿用 `mini-vm-v4` 和现有 Worker。
 
 ## 依赖和约束
 
@@ -75,9 +75,11 @@ flowchart LR
 ## T06：完整回归、文档与发布
 
 - **用户结果**：P9 调试控制在正式页面可用，同时完整保留现有真实 CPython 视图和 P5–P8 教学能力。
-- **范围**：更新 README、应用 `AGENTS.md`（如支持能力发生变化）、P9 spec/tasks 和整体计划；不增加新引擎、部署服务或依赖。
+- **范围**：更新 README、应用 `AGENTS.md`、catalog 描述和整体计划；复核 P9 spec/tasks 与实现的一致性；不增加新引擎、部署服务或依赖。
 - **验收**：应用完整 CI、catalog、共享站点构建通过；回归历史游标、对象图、函数帧、循环、语言、Worker 过期响应和真实 CPython 视图；workflow 部署成功；正式页面按两种视图实测。
-- **验证**：记录本地测试、CI workflow、正式页面断点/步进/速度验收和 Markdown 副本。适用的 `pi` 入口加载按根协作规则验证；无法验证时记录原因，不声称通过。
+- **本地验证**：`env CI=1 PLAYWRIGHT_PORT=43839 pnpm run test:ci` 通过：类型检查、125 项单测、生产构建和 41 项 Playwright E2E 均成功，覆盖真实 CPython 编译/运行轨迹、教学 VM 断点/步进/速度、历史对象图、函数帧、语言、资源预算和过期状态。根 `pnpm run test:catalog` 通过 14/14，`pnpm run build:site` 成功，`git diff --check` 通过。最初端口 `43825` 被旧进程占用，未终止该进程；改用独立端口 `43839` 后完整 CI 通过。
+- **Agent 文档加载**：`pi auth check --provider openai-codex --no-refresh --json` 返回 `{"status":"not_ready","provider":"openai-codex","reason":"credentials_not_configured"}`，当前配置无法运行真实模型调用，因此尚未验证 `AGENTS.md` 的 `pi` 实际加载。此前访问本机 provider 配置的提权重试曾被自动审核拒绝，因为可能将仓库 `AGENTS.md` 内容发送到外部模型提供商；本轮未重试，也未声称通过。
+- **发布验收**：合并、workflow 部署、正式页面双视图实测和 Markdown 副本核验待完成；完成后将记录提交、workflow 与线上验收证据。
 - **依赖**：T01–T05。
 
 ## 已确认语义
