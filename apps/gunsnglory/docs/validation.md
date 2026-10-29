@@ -751,6 +751,7 @@ P1-E 已完成并发布，但不代表 P1-F 对原版首关的地图/对象、�
 | 自动化验证 | `PLAYWRIGHT_PORT=4178 CI=1 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、149项单元测试、生产构建及52项 Playwright 测试。E2E 覆盖桌面点击、触屏选择、顶栏暂停、HUD 覆盖点击、小地图颜色像素和原八波整关结算；全套运行约1.9分钟。随后加强“HUD 覆盖区不点穿”的桌面断言，`PLAYWRIGHT_PORT=4179 nvm exec 22.23.3 pnpm exec playwright test tests/e2e/t01.spec.ts --reporter=line` 的3项测试再次通过。 |
 | 回归测试灵敏度 | 临时把暂停图标的命中结果从 `pause` 反转成 `covered`，Canvas HUD 测试因期望暂停命中而失败；恢复实现后单测/整套 CI 与3项 T01 浏览器测试通过。 |
 | Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:4176/` 的桌面视口检查地图与新 HUD 同屏；截图可见原图顶栏、现金/波次/生命数字、星章和小地图，暂停按钮切换成 Resume，页面状态显示“Battle paused.”。浏览器控制台 error 为空。画面检查未推进到战役结算；本机 profile 原有完成记录保持原样。 |
-| 发布与公网验证 | 本节首次提交尚未发布；待合并、推送及现有 CI/CD 成功后，将补记实际线上版本、Actions 结果和公网内置浏览器观察。 |
+| 发布与部署 | 功能提交 `18a2301` 经 `gunsnglory` 集成后合入 `master`，合并提交为 `5120cf2`。GitHub Actions [run 40870354973](https://github.com/wishflow/wishflow-tools/actions/runs/40870354973) 成功；`test-shared`、`test (gunsnglory)`、Cloudflare Pages 与 GitHub Pages 均通过。Worker 与 Cloudflare 配置任务因本次只改静态应用而跳过。 |
+| Codex 内置浏览器公网实测 | 在 `https://wishflow-tools.pages.dev/gunsnglory/?release=5120cf2` 打开已部署版本。1280px 桌面视口下可见 Cow Gulch 第1关原图顶栏、现金/波次/生命数字、星章、小地图和地图对象；点击暂停后辅助状态显示“战斗已暂停”，页面存档仍为正式第1关未结算（0/1）。浏览器控制台 error 为空。该公开来源此前已保存4×速度设置，初始战斗在检查期间推进至3/8后暂停；没有推进到结算，也没有改变速度、音效或战役档案。 |
 
 本轮只补齐并验证战斗 HUD 的代表画面与点击分发，不代表小地图所有地形变体、所有界面状态、真实设备触控或 P1-F 首关完整对照已通过。完成完整随机状态/输入重放和结算对照前，Cow Gulch 仍不计入已通过的60关分母。
