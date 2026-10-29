@@ -702,3 +702,21 @@ Wave03 原始请求向量为 [0,0,0,0,0,3,0,0,0,0]。第6项是 pool type7，映
 | 变异审查 | 临时反转 campaign 首波初始 phase 后，自动开波与败北/重开测试按预期失败；恢复后 P1-D 测试通过。 |
 | 全量本地 CI | `pnpm run test:ci` 通过：145项单元测试、生产构建、49项 Playwright 测试；TypeScript 检查通过。审查后受影响的64项 Game/P1-C/P1-D 单元测试再次通过。 |
 | 发布与公开浏览器 | P1-D 实现提交 `139a48a` 经 `837c2a2` 合入并推送，首次部署 [run 40824917785](https://github.com/wishflow/wishflow-tools/actions/runs/40824917785)。首次公网核对发现静态说明仍写“目前可玩原版前三波”；修复提交 `7386738` 经 `0280903` 再次合并发布，后续 [run 40826519688](https://github.com/wishflow/wishflow-tools/actions/runs/40826519688) 的应用测试、共享检查及 Cloudflare Pages、GitHub Pages 部署成功。Codex 内置浏览器在 `?release=0280903` 验证中文和英文说明、4× 自动开波；约10秒后进入 Wave02，继续至 Wave03/8 时暂停，生命50、现金$107。控制台 error/warn 为空；波次与现金为本次随机观察值，完整八波胜利由 Playwright 覆盖。 |
+
+
+## 39. P1-E 正式战役入口与档案
+
+P1-E 将 Cow Gulch L01 接入正式战役流程，同时保留旧样本和 P1-D 内容身份。正式关卡 ID 为 `campaign-new-mexico-01`，内容版本为 `gng-free-1.8.6-new-mexico-01-p1e-v1`，全局关卡号为1，正式结算已启用。Progress/IndexedDB 既有 schema 与数据库版本不变；正式通关和最高分只写入该关卡 ID，旧 `cow-gulch`、P1-D 波次场景及两个进度样本的既有记录不会自动转换成正式进度。新墨西哥州第2关在第1关通关后可显示为已解锁，但关卡内容未实现，仍不能进入。
+
+启动时在资源和设置加载完成后进入正式牛溪谷第1关。默认难度从已保存设置读取，并只影响下一场战斗；已经开始的战局不因设置切换而改变。设置面板的模拟速度范围为0.25×–4×，速度设置与站点共享语言偏好均能在刷新后保留。未完成战局不保存波次状态，刷新后从 Wave01 初态重开。正式胜利/失败结算使用独立战役 ID 更新档案；缺少必需资源时阻止正式关卡进入，同时保留可操作的恢复场景和重试入口。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 身份与内容 | 内容测试核对正式场景 ID、版本、全局关卡号、八波及正式结算标记；旧样本 ID 与内容版本继续独立。 |
+| 正式档案隔离 | 进度测试及浏览器测试证明，旧样本胜利不会完成官方 L01；完成正式八波后，`completedScenarios` 与 `highScores` 只按 `campaign-new-mexico-01` 写入，刷新后正式进度仍显示已完成。 |
+| 战局生命周期与设置 | Playwright 覆盖未完成战局刷新后回到 Wave01、难度只应用于下一场、模拟速度边界和持久化，以及资源缺失时禁用正式入口并允许重试。 |
+| 本地 CI | `pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、147项单元测试、生产构建及50项 Playwright 测试。 |
+| 公开页面 | GitHub Actions [run 40833708396](https://github.com/wishflow/wishflow-tools/actions/runs/40833708396) 成功；`test-shared`、`test (gunsnglory)`、`deploy-cloudflare-pages`、`deploy-github-pages` 均通过，Worker/config 检查因静态应用变更而跳过。Codex 内置浏览器访问 `https://wishflow-tools.pages.dev/gunsnglory/?release=593fe5a`，确认中文正式入口、0/1 初始进度、L01 可进入、L02 显示未实现且禁用；切到英文后相同信息正常本地化。 |
+| 内置浏览器操作与视口 | 公开页面核对了模拟速度4×和0.25×边界，设置保存反馈正常；暂停后刷新，战局回到 Wave01，速度设置保留。390×844 手机视口下页面改为单列、地图保持比例，截图未见横向溢出；检查后恢复桌面视口、中文和原有4×设置。公网检查只运行并暂停首关，完整八波胜利由本地 Playwright 覆盖。 |
+
+P1-E 已完成并发布，但不代表 P1-F 对原版首关的地图/对象、规则、表现及输入行为完成整体对照。真实 Android AVD 触控仍未验证；P1-F 通过前，完整原版关卡计数仍为0/60。
