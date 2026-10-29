@@ -13,19 +13,28 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
   const clipRects: number[][] = [];
   const overlayText: string[] = [];
   const routeCommands: string[] = [];
+  const enemyDrawAlphas: number[] = [];
+  const alphaStack: number[] = [];
+  let currentAlpha = 1;
   let pendingRect: number[] | undefined;
   const context = {
-    save() {},
-    restore() {},
+    save() { alphaStack.push(currentAlpha); },
+    restore() { currentAlpha = alphaStack.pop() ?? 1; },
+    get globalAlpha() { return currentAlpha; },
+    set globalAlpha(value: number) { currentAlpha = value; },
     clearRect() {},
     fillRect() {},
     beginPath() {},
     rect(...args: number[]) { pendingRect = args; },
     clip() { if (pendingRect) clipRects.push(pendingRect); },
-    drawImage(...args: unknown[]) { drawCalls.push(args); },
+    drawImage(...args: unknown[]) {
+      drawCalls.push(args);
+      if (args[0] === enemyImage) enemyDrawAlphas.push(currentAlpha);
+    },
     moveTo() { routeCommands.push('moveTo'); },
     lineTo() { routeCommands.push('lineTo'); },
     arc() {},
+    ellipse() {},
     stroke() {},
     fill() {},
     setLineDash() {},
@@ -194,6 +203,16 @@ test('clips the map and keeps the enemy atlas frame and feet aligned with its ro
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
+  drawGame(context, {
+    ...view,
+    enemies: [{ ...view.enemies[0]!, alive: false, deathRemainingMs: 399 }],
+  }, {
+    ground: mapImage,
+    bridge: bridgeImage,
+    pioneer_male: enemyImage,
+    unit: unitImage,
+  });
+  assert.equal(enemyDrawAlphas.at(-1), Math.max(0.15, 399 / 799), 'ordinary enemy death keeps the existing fade');
 });
 
 test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {
@@ -350,4 +369,72 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
   assert.deepEqual(firingDraw.slice(1, 5), [32, 88, 32, 44]);
   assert.deepEqual(transforms.map(([name]) => name), ['translate', 'scale']);
   assert.deepEqual(transforms[1], ['scale', -1, 1]);
+});
+
+
+test('turning vehicle sprites use only the mirroring direction chosen by the turn atlas', () => {
+  const drawCalls: unknown[][] = [];
+  const scales: number[][] = [];
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+    translate() {},
+    scale(x: number, y: number) { scales.push([x, y]); },
+  } as unknown as CanvasRenderingContext2D;
+  const baseView: GameView = {
+    frame: 0,
+    elapsedMs: 0,
+    paused: false,
+    scenarioId: 'p1c-turn-render-fixture',
+    map: {
+      width: 1,
+      height: 1,
+      tileSize: 32,
+      background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 1, height: 1 }],
+      streets: [],
+    },
+    units: [],
+    enemies: [{
+      id: 'wagon',
+      type: 4,
+      asset: 'wagon',
+      speed: 500,
+      direction: 'west',
+      positionFine: { x: 3840, y: 3840 },
+      drawingOffsetFine: { x: 0, y: 0 },
+      groupId: 'wagon-group',
+      damageable: true,
+      turningAnimation: { asset: 'wagon_turn', frame: 1, mirrored: false },
+      hitPoints: 200,
+      maxHitPoints: 200,
+      alive: true,
+      deathRemainingMs: 0,
+      hitFlashMs: 0,
+      animationFrame: 0,
+    }],
+    shots: [],
+    recruitPool: [],
+    events: [],
+  };
+  const images = { ground: {} as HTMLImageElement, wagon_turn: {} as HTMLImageElement };
+
+  drawGame(context, baseView, images);
+  assert.deepEqual(scales, [], 'a west-facing direction must not override a non-mirrored turn atlas frame');
+  const turnDraw = drawCalls.find((args) => args[0] === images.wagon_turn);
+  assert.deepEqual(turnDraw?.slice(1, 5), [32, 0, 32, 40]);
+
+  scales.length = 0;
+  drawCalls.length = 0;
+  drawGame(context, {
+    ...baseView,
+    enemies: [{ ...baseView.enemies[0]!, direction: 'east', turningAnimation: { asset: 'wagon_turn', frame: 0, mirrored: true } }],
+  }, images);
+  assert.deepEqual(scales, [[-1, 1]], 'a mirrored turn atlas frame must flip even when the next direction is east');
+  assert.deepEqual(drawCalls.find((args) => args[0] === images.wagon_turn)?.slice(1, 5), [0, 0, 32, 40]);
 });

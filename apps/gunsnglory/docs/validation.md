@@ -666,3 +666,23 @@ Mexican 的 `$99` 拒绝、`$100` 原地唤醒、零移速不可移动、重型 
 | 发布状态 | 实现提交 `91a69ec` 经集成提交 `9960266`、CI 修复提交 `3a8f7f6` 快进进入 `master`；`master` 已推送至 `3a8f7f6601f7b99d8a7bc788e745040725218fa5`。GitHub Actions run `40804914440` 成功：`test (gunsnglory)`、`test-shared`、`deploy-cloudflare-pages`、`deploy-github-pages` 通过；Worker 与配置校验因本次不涉及而跳过。公网验收使用上述发布 URL。 |
 
 此处只标记 P1-B 切片已完成本地验收，不表示 P1 完成。Wave03–08、运输组、完整首关结算、正式战役入口及完整 Cow Gulch 仍待对应 P1-C–F 实现，完整原版关卡仍计为0/60。
+
+
+## 37. P1-C 原版第三波运输队
+
+本轮将原版 Cow Gulch Wave03 加入独立内容版本 cow-gulch-original-waves-1-3。既有单波样本与 P1-B 的 cow-gulch-original-waves 身份保留；公共入口改为打开前三波版本。当前范围止于 Wave03，不保存战役结算，Wave04–08 仍不可玩。
+
+Wave03 原始请求向量为 [0,0,0,0,0,3,0,0,0,0]。第6项是 pool type7，映射成 EnemyDirector request type4；每次成功生成一组 type8 马匹牵引与 type4 车厢，普通速度按波次100%。原始 base delay 3000ms 乘成功间隔系数2后为6000ms；生成冲突保留池请求，并以3000ms首轮间隔重试。车辆死亡链依据已归档的 EnemyDirector、GameObjectEnemy、EnemyWagonPart 反编译结果实现：type4 击毁奖励一次并使同组牵引件死亡；死亡计数从799降至499时一次性生成20个残片及0–4名乘员，计数为500时不生成。乘员按原行进方向移动，偏移不改变寻路坐标；原版只在目标优先级、绘制和投射物落点等明确分支消费偏移，碰撞仍使用物理坐标。乘员组号独立，速度比例为90–109%。type8不可被普通武器选为目标。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 内容与数值 | 固定数据测试核对 Wave03 的HP/速度倍率、spawn ID、pool type7 请求3次及 pool type 到 request type 的区分。P1-C 使用独立 content version，不改变 P1-B 场景 ID。 |
+| 生成与重试 | Game 行为测试验证原始三次配对请求、每次 type8/type4 组大小、6000ms成功间隔、待处理请求数及运输组仍存活时不提前结束波次；独立冲突 fixture 验证请求不扣减且3000ms重试后可生成。 |
+| 战斗与派生 | 固定随机种子测试验证type8不可受击、type4奖励与组死亡只执行一次、500/499ms边界、20个残片、乘员数量/类型/速度、路由坐标和绘制偏移、独立组号；额外覆盖原版运输预检框位于临时 spawn field 前一格、只比较 type4/type8 物理碰撞坐标，乘员显示偏移不会错误阻塞后续生成。 |
+| 贴图与效果 | 迁入 horse_wagon、wagon 及转向图集、烟雾/残片图集和 sound_wagon_explode.ogg。Canvas 测试覆盖车辆帧裁切、脚底锚点、转向图集镜像与死亡效果；修正了转向帧的镜像选择，不再同时叠加当前方向镜像。 |
+| 语言与入口 | 站点共享语言状态下，中英文入口、前三波标题及未完成范围说明同步更新。现有 P1-B 入口仍注册，以保留旧内容版本的可读取性。 |
+| 本地 CI | pnpm run test:ci 通过：TypeScript 检查、141 项单元测试、生产构建、49 个 Playwright 场景。专项 pnpm exec playwright test tests/e2e/t22-original-waves.spec.ts 通过，从 Wave01 开始、取得雇用资金、雇佣地图枪手、清除 Wave02 并启动 Wave03。 |
+| 本地内置浏览器 | Codex 内置浏览器本次以4×实际运行前三波：Wave01 结算后显示50生命、$81；Wave02 结算后显示50生命、$107；Wave03 活动截图可见运输组贴图沿地图路线移动，地图保持视口裁切。Wave03 结算时显示44生命、逃脱6、击败45、现金$119。该手动场景未固定随机种子，这些是本次观察值而非稳定断言。随后显示 Wave04 未实现；正式档案仍无 Cow Gulch 结算，战役进度为0/2。 |
+| 发布与公网验证 | 待合并、推送及 GitHub Actions 完成后补记提交、工作流和公网内置浏览器检查结果。 |
+
+本节只证明 Cow Gulch Wave03 的 type4/type8 运输切片通过测试；不表示 type5/6 运输对象、其他地图组合、完整战役或 Cow Gulch 整关已完成。完整原版关卡仍为0/60。

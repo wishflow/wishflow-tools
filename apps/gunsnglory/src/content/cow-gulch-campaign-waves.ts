@@ -23,3 +23,19 @@ export const cowGulchCampaignWaves: readonly CampaignWaveDefinition[] = Object.f
     })]),
   }),
 ]);
+
+/** P1-C adds the original third-wave covered-wagon pair request. */
+export const cowGulchCampaignWavesP1c: readonly CampaignWaveDefinition[] = Object.freeze([
+  ...cowGulchCampaignWaves,
+  Object.freeze({
+    number: 3,
+    hitPointMultiplierPercent: 60,
+    speedMultiplierPercent: 100,
+    spawnPools: Object.freeze([Object.freeze({
+      spawnPointId: 0,
+      intervalMs: 3000,
+      intervalMultiplier: 2,
+      requests: Object.freeze([0, 0, 0, 0, 0, 3, 0, 0, 0, 0]),
+    })]),
+  }),
+]);

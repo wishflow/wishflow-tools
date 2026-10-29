@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-test('plays the first original waves, earns cash, and hires a map Gunslinger', async ({ page }) => {
-  test.setTimeout(60_000);
+test('plays the first three original waves, earns cash, and hires a map Gunslinger', async ({ page }) => {
+  test.setTimeout(90_000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
 
@@ -11,7 +11,7 @@ test('plays the first original waves, earns cash, and hires a map Gunslinger', a
   await expect(speed).toHaveValue('4');
 
   await page.getByTestId('open-original-waves').click();
-  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Original waves 1–2');
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Original waves 1–3');
   const waveStatus = page.getByTestId('wave-status');
   await expect(waveStatus).toContainText('Wave 1/8 ready · Lives 50 · Cash $65');
   const revolverAudioRequest = page.waitForRequest(
@@ -43,4 +43,7 @@ test('plays the first original waves, earns cash, and hires a map Gunslinger', a
   await expect(waveStatus).toContainText(/Cash \$6$/);
   await page.getByRole('button', { name: 'Start wave 2 of 8' }).click();
   await expect(waveStatus).toContainText('Wave 2/8 · Lives');
+  await expect(waveStatus).toContainText('Wave 3/8 ready', { timeout: 30_000 });
+  await page.getByRole('button', { name: 'Start wave 3 of 8' }).click();
+  await expect(waveStatus).toContainText(/Wave 3\/8 · Lives \d+ · Enemies [1-9]\d*/, { timeout: 15_000 });
 });
