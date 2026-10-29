@@ -4,27 +4,39 @@ import type { GameView } from '../src/game';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
-test('clips map layers and draws source-aligned scenery above roads and units', () => {
+test('clips map layers and sorts scenery with units by original ground depth', () => {
   const mapImage = {} as HTMLImageElement;
   const bridgeImage = {} as HTMLImageElement;
   const enemyImage = {} as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
   const cactusImage = { naturalWidth: 32, naturalHeight: 44 } as HTMLImageElement;
   const treeImage = { naturalWidth: 32, naturalHeight: 64 } as HTMLImageElement;
+  const bushImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
   const drawCalls: unknown[][] = [];
   const clipRects: number[][] = [];
   const decorationClipStates: boolean[] = [];
+  const decorationViewportClipStates: boolean[] = [];
   const overlayText: string[] = [];
   const routeCommands: string[] = [];
   const enemyDrawAlphas: number[] = [];
   const alphaStack: number[] = [];
   const mapClipStack: boolean[] = [];
+  const viewportClipStack: boolean[] = [];
   let currentAlpha = 1;
   let mapClipActive = false;
+  let viewportClipActive = false;
   let pendingRect: number[] | undefined;
   const context = {
-    save() { alphaStack.push(currentAlpha); mapClipStack.push(mapClipActive); },
-    restore() { currentAlpha = alphaStack.pop() ?? 1; mapClipActive = mapClipStack.pop() ?? false; },
+    save() {
+      alphaStack.push(currentAlpha);
+      mapClipStack.push(mapClipActive);
+      viewportClipStack.push(viewportClipActive);
+    },
+    restore() {
+      currentAlpha = alphaStack.pop() ?? 1;
+      mapClipActive = mapClipStack.pop() ?? false;
+      viewportClipActive = viewportClipStack.pop() ?? false;
+    },
     get globalAlpha() { return currentAlpha; },
     set globalAlpha(value: number) { currentAlpha = value; },
     clearRect() {},
@@ -34,13 +46,17 @@ test('clips map layers and draws source-aligned scenery above roads and units', 
     clip() {
       if (pendingRect) {
         clipRects.push(pendingRect);
+        if (clipRects.length === 1) viewportClipActive = true;
         if (clipRects.length === 2) mapClipActive = true;
       }
     },
     drawImage(...args: unknown[]) {
       drawCalls.push(args);
       if (args[0] === enemyImage) enemyDrawAlphas.push(currentAlpha);
-      if (args[0] === cactusImage || args[0] === treeImage) decorationClipStates.push(mapClipActive);
+      if (args[0] === cactusImage || args[0] === treeImage || args[0] === bushImage) {
+        decorationClipStates.push(mapClipActive);
+        decorationViewportClipStates.push(viewportClipActive);
+      }
     },
     moveTo() { routeCommands.push('moveTo'); },
     lineTo() { routeCommands.push('lineTo'); },
@@ -73,6 +89,7 @@ test('clips map layers and draws source-aligned scenery above roads and units', 
       decorations: [
         { asset: 'tree', cell: { x: 6, y: 7 } },
         { asset: 'cactus', cell: { x: 5, y: 6 } },
+        { asset: 'bush', cell: { x: 9, y: 9 } },
       ],
     },
     units: [{
@@ -126,6 +143,7 @@ test('clips map layers and draws source-aligned scenery above roads and units', 
     unit: unitImage,
     cactus: cactusImage,
     tree: treeImage,
+    bush: bushImage,
   });
 
   const viewport = getMapViewport(view);
@@ -140,14 +158,19 @@ test('clips map layers and draws source-aligned scenery above roads and units', 
   assert.ok(enemyDraw);
   assert.deepEqual(enemyDraw.slice(1, 5), [32, 24, 16, 24]);
 
-  const decorationDraws = drawCalls.filter((args) => args[0] === cactusImage || args[0] === treeImage);
-  assert.deepEqual(decorationDraws.map(([image]) => image), [cactusImage, treeImage], 'draws scenery back-to-front by source row');
+  const decorationDraws = drawCalls.filter((args) => args[0] === cactusImage || args[0] === treeImage || args[0] === bushImage);
+  assert.deepEqual(decorationDraws.map(([image]) => image), [cactusImage, treeImage, bushImage], 'draws scenery back-to-front by source row');
   assert.deepEqual(decorationDraws[0]?.slice(1), [302, 115, 60, 82]);
   assert.deepEqual(decorationDraws[1]?.slice(1), [362, 138, 60, 120]);
-  assert.deepEqual(decorationClipStates, [false, false], 'tall scenery may overhang a map edge but stays within the game viewport');
+  assert.deepEqual(decorationClipStates, [false, false, false], 'tall scenery may overhang a map edge but stays within the game viewport');
+  assert.deepEqual(decorationViewportClipStates, [true, true, true], 'scenery overhang remains clipped to the game viewport');
   assert.ok(
-    drawCalls.findIndex(([image]) => image === unitImage) < drawCalls.findIndex(([image]) => image === cactusImage),
-    'static scenery renders above units like the original high-z map objects',
+    drawCalls.findIndex(([image]) => image === treeImage) < drawCalls.findIndex(([image]) => image === unitImage),
+    'a unit with a lower ground anchor renders in front of scenery behind it',
+  );
+  assert.ok(
+    drawCalls.findIndex(([image]) => image === unitImage) < drawCalls.findIndex(([image]) => image === bushImage),
+    'scenery with a lower ground anchor renders in front of a unit behind it',
   );
 
   const routeCellCenter = mapCellToScreen(viewport, 4.5, 6.5);
@@ -156,8 +179,8 @@ test('clips map layers and draws source-aligned scenery above roads and units', 
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, enemyImage, bridgeImage, unitImage, cactusImage, treeImage],
-    'enemies render under roads, while units and high-z scenery render above them',
+    [mapImage, enemyImage, bridgeImage, cactusImage, treeImage, unitImage, bushImage],
+    'enemies render under roads and scenery/units follow their source ground depth',
   );
 
   const topRouteView = {
@@ -227,6 +250,7 @@ test('clips map layers and draws source-aligned scenery above roads and units', 
     unit: unitImage,
     cactus: cactusImage,
     tree: treeImage,
+    bush: bushImage,
   }, 1, undefined, true);
   assert.equal(routeCommands.filter((command) => command === 'lineTo').length, view.route!.length - 1);
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
@@ -242,6 +266,7 @@ test('clips map layers and draws source-aligned scenery above roads and units', 
     unit: unitImage,
     cactus: cactusImage,
     tree: treeImage,
+    bush: bushImage,
   });
   assert.equal(enemyDrawAlphas.at(-1), Math.max(0.15, 399 / 799), 'ordinary enemy death keeps the existing fade');
 });
