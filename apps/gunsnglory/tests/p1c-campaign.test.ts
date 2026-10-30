@@ -71,7 +71,7 @@ test('Wave03 creates one type-8/type-4 group with fixed wave speed', async () =>
   assert.equal(members[1]?.asset, 'wagon');
 });
 
-test('covered wagon death rewards once, waits until 499 ms, and emits visual-only debris and routed passengers', async () => {
+test('covered wagon death rewards once, emits debris and passengers, and remains through the zero frame', async () => {
   const fixture = makeTransportFixture();
   const baseGun = cowGulchContent.units.find((unit) => unit.id === 'gunslinger-1')!;
   const scenario: ScenarioContent = {
@@ -142,6 +142,13 @@ test('covered wagon death rewards once, waits until 499 ms, and emits visual-onl
     'the parent depth anchor stays fixed while parts move');
   assert.ok(view.wagonDebris?.some((part) => part.positionFine.y !== part.depthFineY),
     'at least one airborne part moves away from its parent draw depth');
+
+  for (const deltaMs of [100, 100, 100, 99]) view = session.advance({ deltaMs });
+  assert.equal(view.enemies.find(({ id }) => id === wagon.id)?.deathRemainingMs, 0);
+  assert.equal(view.enemies.find(({ id }) => id === tow.id)?.deathRemainingMs, 0);
+  view = session.advance({ deltaMs: 1 });
+  assert.ok(!view.enemies.some(({ id }) => id === wagon.id || id === tow.id),
+    'the original manager keeps dead objects at counter zero and removes them only after it becomes negative');
 });
 
 

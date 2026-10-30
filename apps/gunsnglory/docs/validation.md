@@ -797,7 +797,8 @@ P1-E 已完成并发布，但不代表 P1-F 对原版首关的地图/对象、�
 | 拖拽与触屏 | Playwright 桌面拖拽验证路径被 Cow Gulch 原始仙人掌/石堆挡住、释放后停止；pointercancel、lostpointercapture 和手机触屏拖动回归通过。 |
 | 测试修正记录 | 首个新增 fixture 只推进500ms，单位尚未到障碍，因此无碰撞的旧实现也误通过。延长持续移动并比较 AABB 与障碍边界后稳定复现穿行（枪手中心 x 从11520推进到24912）；后续不再用“尚未走到下一格”作为阻挡证据。 |
 | 本地完整 CI | `CI=1 PLAYWRIGHT_PORT=4180 pnpm run test:ci` 通过：TypeScript 检查、152项单元测试、生产构建及52项 Playwright 测试。桌面拖动用例改为断言单位在原始仙人掌/石堆前停止，桌面、触屏及指针取消回归通过。 |
-| 内置浏览器与发布 | 待合并发布后，在 Codex 内置浏览器核对线上装饰阻挡；此增量不代表 P1-F 整关已通过，首关仍为0/60。 |
+| Codex 内置浏览器公网实测 | 在 `https://wishflow-tools.pages.dev/gunsnglory/?release=1968397` 打开已发布页面；中文正式关卡和 Cow Gulch 地图正常加载，进度为0/1。战局推进到第7/8波后暂停；检查面板显示初始枪手位置为`(8.50, 8.75)`、生命30，路线起点为`(-1.5, 10.5)`；截图中画布外敌人不可见。模拟速度临时调至0.25×后恢复为用户原存档4×，未提交结算或更改战役档案。暂停时拖动不会下达移动指令；继续战斗以实测装饰碰撞的操作被浏览器自动审批拦截，因此公网移动/碰撞交互未验证，也未绕过限制。页面加载和暂停交互通过；碰撞回归以本地规则与Playwright测试为证。 |
+| 集成与发布 | 功能提交`80d7d1c`已合入`gunsnglory`，并以`1968397`合入、推送`master`。GitHub Actions [run 40894857581](https://github.com/wishflow/wishflow-tools/actions/runs/40894857581)成功；应用测试、共享站点检查、Cloudflare Pages和GitHub Pages部署均通过，Worker/config检查按静态站变更范围跳过。 |
 
 本轮只修复玩家单位与静态装饰碰撞框的相交判定。敌人路线、其他地图的装饰类型及所有对象组合仍需各自依据对应内容与原版行为核验；Cow Gulch 整关对照仍未完成，继续不计入已通过的60关分母。
 
@@ -976,4 +977,24 @@ Cow Gulch 的静态装饰深度为 `(cell.y + 1) × 7680` fine units，同一行
 | Codex 内置浏览器本地检查 | 在 `http://localhost:5186/` 用内置浏览器启动单个 Pioneer 样例并确认胜利结算、击败数、现金和样例档案保存；速度设置曾调至0.25×后恢复1×。控制台 error/warn 为空。该浏览器观察确认页面交互和存档可用，但没有把截图作为死亡动画逐帧证据；帧裁切与计时边界由上方 Canvas 行为测试验证。 |
 | 发布与公网验证 | `master` 提交 `d609bea` 已推送。GitHub Actions [run 41002619950](https://github.com/wishflow/wishflow-tools/actions/runs/41002619950) 完成且结论为 success：`test-shared`、`test (gunsnglory)`、Cloudflare Pages 与 GitHub Pages 通过；`docs-only`、宠物 Windows、Cloudflare 配置和 Worker 作业按变更范围跳过。Codex 内置浏览器访问[发布页](https://wishflow-tools.pages.dev/gunsnglory/?release=d609bea)，确认标题、Cow Gulch 地图/HUD、现有档案1/1关卡与最高分 `$356`。资源加载后页面自动进入首关；为避免推进战役，短时运行后暂停在 Wave 3/8、生命50、敌人4、现金$107，未结算并关闭临时标签。模拟速度沿用页面读取到的4×偏好，没有更改设置；浏览器 error/warn 为空。直接打开[线上死亡图集](https://wishflow-tools.pages.dev/gunsnglory/assets/sfx_death_pioneers.png?release=d609bea)显示96×24 PNG。浏览器检查验证发布页和资源可加载，不替代 Canvas 帧阈值测试。 |
 
-本轮仅闭合 Cow Gulch 已实现 type1/2 步兵的死亡图集帧选择。车辆死亡烟雾、其他敌型、受击/状态效果的完整逐帧视觉对照，以及 Cow Gulch 首关整体验收仍未完成；关卡计数保持0/60。
+本轮仅闭合 Cow Gulch 已实现 type1/2 步兵的死亡图集帧选择；车辆烟雾的计时零边界由第51节补齐。其他敌型、受击/状态效果的完整逐帧视觉对照，以及 Cow Gulch 首关整体验收仍未完成；关卡计数保持0/60。
+
+## 51. P1-F Cow Gulch 死亡动画计时零边界
+
+原版 type1/2 步兵在死亡计时恰为0时仍绘制死亡图集最后一帧；type4 车厢和 type8 牵引马车仍绘制烟雾第7帧。EnemyDirector 逐帧减去 dt，并在计时严格小于0时才移除死亡对象。网页此前将计时钳制到0，却在大于0时才保留对象，因此精确抵达0会跳过最后一帧，也可能提前一帧清空波次。
+
+APK 依据是研究分支 REA/JADX 的 GameObjectEnemy 构造、draw() 和 EnemyDirector 更新分析：type4 使用死亡样式11，type8使用21，二者初始计时均为799 ms；主体仅在计时大于350 ms时绘制。烟雾资源 `sfx_smoke_explosion.png` 为384×64，横向八帧，每帧48×64；帧号为 `7 - floor(counter / 100)`，以中心和脚底为锚点。type1/2 仍按第50节的599 ms六帧死亡图集规则处理。REA/JADX 文件是分析产物，不是原始源码。
+
+网页现在保留死亡计时的负值计算，并在计时大于或等于0时保留敌人对象；烟雾在0 ms仍绘制第7帧，下一次推进后计时变负并清理。该修正保持死亡计时为 Game 的规则状态，不更改正式档案、内容版本或回放字段。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 红灯用例 | 修改前，Canvas 用例在0 ms未找到 type4/8 烟雾；Game 用例在预期保留0 ms车厢时得到`undefined`。 |
+| Canvas 动画边界 | type1/2在0 ms绘制第5帧；type4/8在799、700、699、351、350、1、0 ms分别使用烟雾帧0、0、1、4、4、7、7。断言车体在350 ms停止、烟雾帧裁切及48×64绘制区域与脚底锚点。 |
+| Game 生命周期 | Wave03运输死亡用例确认车厢和牵引件在0 ms仍保留，推进1 ms后因计时为负而一并清除；现有499 ms残车、乘员派生、奖励一次性与清理断言继续通过。 |
+| 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4188 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript检查、156项单元测试、生产构建及52项Playwright测试。 |
+| 集成与公网实测 | 待本轮提交、合并、部署后补录；完成前不标记本轮发布闭环。 |
+
+完整 Cow Gulch 首关仍为0/60。动态对象跨类型的同深度队列、其他动画/状态和音频实测仍待逐项处理。

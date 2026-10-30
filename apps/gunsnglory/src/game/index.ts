@@ -2149,7 +2149,7 @@ export function createGame(options: {
             }
             for (const enemy of [...wave.enemies]) {
               if (!enemy.alive) {
-                enemy.deathRemainingMs = Math.max(0, enemy.deathRemainingMs - deltaMs);
+                enemy.deathRemainingMs -= deltaMs;
                 enemy.hitFlashMs = Math.max(0, enemy.hitFlashMs - deltaMs);
                 if (campaignMode && enemy.type === 4 && enemy.deathRemainingMs < 500 && !enemy.wagonPartsCreated
                   && campaignDefinition && wave.dynamicDifficulty !== undefined) {
@@ -2331,7 +2331,7 @@ export function createGame(options: {
               }
             }
 
-            wave.enemies = wave.enemies.filter((enemy) => enemy.alive || enemy.deathRemainingMs > 0);
+            wave.enemies = wave.enemies.filter((enemy) => enemy.alive || enemy.deathRemainingMs >= 0);
             const pendingCampaignRequests = campaignMode ? campaignPendingRequests(wave.campaignSpawnPools) : 0;
             const waveCleared = wave.enemies.length === 0
               && wave.shots.length === 0

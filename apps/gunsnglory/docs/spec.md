@@ -185,6 +185,8 @@ flowchart LR
 
 Cow Gulch 普通步兵 type1/2 死亡时使用 `sfx_death_pioneers` 六帧横向图集，单帧为16×24；死亡计时初值599 ms，帧号按 `5 - floor(remainingMs / 100)` 选择，期间保持原图不透明度。该行为由 APK 反编译分析与图集资源核实，详见[验证记录第50节](validation.md#50-p1-f-cow-gulch-普通步兵死亡动画)。
 
+Cow Gulch 运输组 type4 车厢和 type8 牵引马车的死亡计时初值为799 ms，分别使用死亡样式11和21。两类车辆的主体只在剩余计时大于350 ms时绘制；烟雾使用384×64的八帧横向图集，每帧48×64，帧号为 `7 - floor(remainingMs / 100)`，以对象中心和脚底为绘制锚点。计时恰为0时仍绘制第7帧；EnemyDirector 只在计时小于0时移除对象。来源为研究分支中的 GameObjectEnemy 构造与 draw()、EnemyDirector 更新分支及应用内 APK 图集；反编译文件是分析产物，不是原始源码。对照与回归见[验证记录第51节](validation.md#51-p1-f-cow-gulch-死亡动画计时零边界)。
+
 敌方生命条按 `GunsAndGloryThread.drawEnemies()` 显示：仅当敌人类型大于2且不为9、仍存活、当前 HP 大于0，并且 `HP < (maxHP × 95) / 100` 的整数除法结果时绘制。背景色为 `RGB(63,0,0)`。按原版 `scale=6` 和 `mScalingFactor`，背景左上角为 `(centerX - 18×mScalingFactor, feetY - 6×mScalingFactor - 3×floor(realTilesize/2))`，宽度为 `36×mScalingFactor`，高度为 `12×mScalingFactor`；当 `mScalingFactor < 1` 时，原版分支再将背景底边减1个画布像素。HP 填充从 `(centerX - 15×mScalingFactor, feetY - 3×mScalingFactor - 3×floor(realTilesize/2))` 开始，高度为 `6×mScalingFactor`，即背景高度的一半。填充宽度为 `trunc(float32(HP × 10 × scale × mScalingFactor))` 再除以 `(2 × maxHP)` 的整数商；颜色通道先按 Java float32 计算 `((maxHP-HP)×255.0f)/maxHP` 和 `(HP×255.0f)/maxHP`，再向零截断为整数。复刻需保留浮点精度和整数除法顺序。网页的48像素原版格换算为32逻辑像素格，`mScalingFactor` 对应 `viewport.tileSize / 48`；数据依据为研究分支 `codex/gunsnglory-spec` 的 REA/JADX 反编译 `GunsAndGloryThread.java`，反编译结果不是原始源码。
 
 运输车辆还须显示牵引/车体关系、残车和乘员出现时机；投射物/效果须随实际方向、寿命和绘制顺序呈现；音频须在真实事件及循环、暂停、静音、恢复流程中检查。原版部分表现消费共享随机数，相关顺序仍由同一模拟过程维护；无画面运行省去绘制，不能跳过会改变结果的随机调用。完整时间和环境契约只在[模拟与自动化契约](simulation-and-automation.md)维护。

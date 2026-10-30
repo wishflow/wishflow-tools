@@ -9,6 +9,9 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const bridgeImage = {} as HTMLImageElement;
   const enemyImage = {} as HTMLImageElement;
   const pioneerDeathImage = { naturalWidth: 96, naturalHeight: 24 } as HTMLImageElement;
+  const wagonImage = {} as HTMLImageElement;
+  const horseWagonImage = {} as HTMLImageElement;
+  const smokeImage = { naturalWidth: 384, naturalHeight: 64 } as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
   const shotImage = {} as HTMLImageElement;
   const wagonPartsImage = {} as HTMLImageElement;
@@ -173,6 +176,9 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     bridge: bridgeImage,
     pioneer_male: enemyImage,
     sfx_death_pioneers: pioneerDeathImage,
+    wagon: wagonImage,
+    horse_wagon: horseWagonImage,
+    sfx_smoke_explosion: smokeImage,
     unit: unitImage,
     cactus: cactusImage,
     tree: treeImage,
@@ -297,7 +303,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
-  for (const [deathRemainingMs, frame] of [[599, 0], [500, 0], [499, 1], [100, 4], [99, 5]] as const) {
+  for (const [deathRemainingMs, frame] of [[599, 0], [500, 0], [499, 1], [100, 4], [99, 5], [0, 5]] as const) {
     pioneerDeathDraws.length = 0;
     drawGame(context, {
       ...view,
@@ -307,6 +313,50 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     assert.ok(deathDraw, `ordinary enemy death uses its sprite sheet at ${deathRemainingMs}ms remaining`);
     assert.deepEqual(deathDraw.args.slice(1, 5), [frame * 16, 0, 16, 24]);
     assert.equal(deathDraw.alpha, 1, 'the original death animation stays fully opaque');
+  }
+
+  for (const [type, asset, bodyImage] of [
+    [4, 'wagon', wagonImage],
+    [8, 'horse_wagon', horseWagonImage],
+  ] as const) {
+    for (const [deathRemainingMs, smokeFrame, bodyVisible] of [
+      [799, 0, true],
+      [700, 0, true],
+      [699, 1, true],
+      [351, 4, true],
+      [350, 4, false],
+      [1, 7, false],
+      [0, 7, false],
+    ] as const) {
+      drawCalls.length = 0;
+      const deadVehicle = {
+        ...view.enemies[0]!,
+        type,
+        asset,
+        alive: false,
+        deathRemainingMs,
+      };
+      drawGame(context, { ...view, enemies: [deadVehicle] }, images);
+      const bodyDraws = drawCalls.filter(([image]) => image === bodyImage);
+      assert.equal(bodyDraws.length, bodyVisible ? 1 : 0,
+        'vehicle body visibility matches the original 350 ms cutoff at ' + deathRemainingMs + ' ms');
+      const smokeDraw = drawCalls.find(([image]) => image === smokeImage);
+      assert.ok(smokeDraw, 'death style for enemy type ' + type + ' keeps its smoke at ' + deathRemainingMs + ' ms');
+      assert.deepEqual(smokeDraw.slice(1, 5), [smokeFrame * 48, 0, 48, 64],
+        'enemy type ' + type + ' uses the original smoke frame at ' + deathRemainingMs + ' ms');
+      const centerX = viewport.origin.x + (deadVehicle.positionFine.x / 240) * viewport.scaleFactor;
+      const feetY = viewport.origin.y + (deadVehicle.positionFine.y / 240) * viewport.scaleFactor;
+      assert.deepEqual(smokeDraw.slice(5), [
+        centerX - (24 * viewport.scaleFactor),
+        feetY - (64 * viewport.scaleFactor),
+        48 * viewport.scaleFactor,
+        64 * viewport.scaleFactor,
+      ], 'the smoke atlas stays aligned to the enemy ground anchor');
+      if (bodyDraws[0]) {
+        assert.ok(drawCalls.indexOf(bodyDraws[0]) < drawCalls.indexOf(smokeDraw),
+          'the smoke draws over the vehicle body');
+      }
+    }
   }
 
   const damagedWagon = {

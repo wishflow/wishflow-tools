@@ -353,7 +353,7 @@ function drawEnemy(
 
   drawEnemyHealthBar(context, enemy, centerX, feetY, viewport);
 
-  if (!enemy.alive && vehicle && enemy.deathRemainingMs > 0) {
+  if (!enemy.alive && vehicle && enemy.deathRemainingMs >= 0) {
     const smoke = images.sfx_smoke_explosion;
     if (!smoke) throw new Error('Missing game image: sfx_smoke_explosion');
     const smokeWidth = 48 * tileScale;
