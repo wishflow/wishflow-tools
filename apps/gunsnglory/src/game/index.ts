@@ -270,7 +270,6 @@ export interface EnemyView {
   maxHitPoints: number;
   alive: boolean;
   deathRemainingMs: number;
-  hitFlashMs: number;
   animationFrame: number;
 }
 
@@ -440,7 +439,6 @@ interface MutableEnemy {
   penetration: Readonly<Record<DamageType, number>>;
   alive: boolean;
   deathRemainingMs: number;
-  hitFlashMs: number;
   animationDistance: number;
   animationFrame: number;
   despawnOnNextFieldCounter: number;
@@ -998,7 +996,6 @@ function createPreviewEnemy(
     penetration: enemyDefinition?.penetration ?? { light: 0, fire: 0, heavy: 0, poison: 0 },
     alive: true,
     deathRemainingMs: 0,
-    hitFlashMs: 0,
     animationDistance: 0,
     animationFrame: 0,
     despawnOnNextFieldCounter: 0,
@@ -1100,7 +1097,6 @@ function createCampaignEnemy(
     penetration: definition.penetration,
     alive: true,
     deathRemainingMs: 0,
-    hitFlashMs: 0,
     animationDistance: 0,
     animationFrame: 0,
     despawnOnNextFieldCounter: 0,
@@ -1721,7 +1717,6 @@ export function createGame(options: {
             maxHitPoints: enemy.maxHitPoints,
             alive: enemy.alive,
             deathRemainingMs: enemy.deathRemainingMs,
-            hitFlashMs: enemy.hitFlashMs,
             animationFrame: enemy.animationFrame,
           })),
           wagonDebris: (wave?.wagonDebris ?? []).map(({ id, positionFine, depthFineY, heightFine, frame }) => ({
@@ -2169,7 +2164,6 @@ export function createGame(options: {
             for (const enemy of [...wave.enemies]) {
               if (!enemy.alive) {
                 enemy.deathRemainingMs -= deltaMs;
-                enemy.hitFlashMs = Math.max(0, enemy.hitFlashMs - deltaMs);
                 if (campaignMode && enemy.type === 4 && enemy.deathRemainingMs < 500 && !enemy.wagonPartsCreated
                   && campaignDefinition && wave.dynamicDifficulty !== undefined) {
                   enemy.wagonPartsCreated = true;
@@ -2207,7 +2201,6 @@ export function createGame(options: {
                 }
                 continue;
               }
-              enemy.hitFlashMs = Math.max(0, enemy.hitFlashMs - deltaMs);
               if (!moveEnemy(enemy, deltaMs, scenario, random)) continue;
               wave.enemies = wave.enemies.filter((candidate) => candidate !== enemy);
               if (campaignMode) {
@@ -2312,7 +2305,6 @@ export function createGame(options: {
                 affectedEnemyIds.push(hitEnemy.id);
                 const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
                 hitEnemy.hitPoints -= damage;
-                hitEnemy.hitFlashMs = 120;
                 wave.events.push({ type: 'enemy-hit', enemyId: hitEnemy.id, damage, hitPoints: hitEnemy.hitPoints });
                 if (hitEnemy.hitPoints <= 0) {
                   hitEnemy.alive = false;

@@ -1016,3 +1016,23 @@ APK 依据为研究分支 `codex/gunsnglory-spec` 的 JADX 分析产物：`GameD
 | 合并、部署与公网实测 | 开发提交 `580d5cf` 已合入并推送到 `master`。GitHub Actions [run 41011178936](https://github.com/wishflow/wishflow-tools/actions/runs/41011178936) 成功：Guns’n’Glory CI、共享检查、Cloudflare Pages 和 GitHub Pages 通过；Worker/config 与文档专用作业按变更范围跳过。Codex 内置浏览器打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=580d5cf)，标题、战役档案、Cow Gulch 地图、桥和 HUD 正常；页面自动进入第1/8波后暂停，显示生命50、敌人7、现金$74。正式档案仍为1/1、最高分 `$356`；模拟速度仍为4×，没有产生新结算。浏览器控制台 error/warn 为空。公网烟测核对部署、画面、暂停交互和存档展示；逐帧阈值由上述固定 `Game` Interface 测试验证。 |
 
 本轮闭合 Cow Gulch Gunslinger/Mexican 攻击帧的阈值顺序和实际位移取消行为，不代表其他单位、动画状态或首关整体验收完成；Cow Gulch 首关仍为0/60。
+
+## 53. P1-F Cow Gulch 移除通用受击光圈
+
+网页此前在每次命中后设置120ms的`hitFlashMs`，并在所有存活敌人周围画金色椭圆。该状态和表现不属于原版：本轮从游戏状态和渲染端一并移除；实际生命变化、投射物定义的持续伤害/减速，以及受损敌人生命条保持原样。
+
+### APK 静态依据
+
+REA-005（`GameObjectEnemy` 类清单）未列出通用命中闪光字段；REA-420（`getsDamaged()`）只扣除生命值，并按投射物设置持续伤害或减速计时；REA-012（`draw()`）绘制敌人图集、死亡动画及实际存在的持续伤害、减速和治疗效果，没有按普通命中画轮廓的分支。REA/JADX 是 APK 静态分析证据，不等同原始 Java 源码或运行时观察。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 红灯回归 | 在旧渲染实现中，Canvas 测试注入兼容用的120ms旧字段并检查描边颜色；旧实现检测到`#ffe28a`后按预期失败。 |
+| 修复后渲染测试 | 移除`EnemyView`/内部敌人状态中的`hitFlashMs`、命中赋值、计时更新和金色椭圆后，Canvas 渲染测试文件5项全部通过；敌人图集、死亡帧、生命条、地图绘制顺序等既有断言继续通过。 |
+| 本地完整验证 | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4389 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、158项单元测试、Vite生产构建及52项Playwright测试。另运行 `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog`，14项全部通过。 |
+| 内置浏览器（本地） | Codex 内置浏览器打开 `http://127.0.0.1:5187/`，确认 Cow Gulch 正式入口、地图/HUD 和速度控件正常；暂停后状态为 Wave 1/8，AX 显示“Battle paused.”，正式档案尚无 L01 结果。浏览器 console 的 error/warn 为空。旧光圈特定回归由 Canvas 断言验证：传入旧`hitFlashMs`字段时不生成金色描边。 |
+| 合并与线上实测 | 待本地验证记录审阅后补记。 |
+
+本轮只删除没有 APK 依据的通用受击装饰，不改变战斗扣血、真实状态特效、敌人生命条和胜负规则。完整首关验收仍为0/60；其他敌型、状态效果和剩余动画继续按首次消费场景对照。

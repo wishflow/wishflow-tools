@@ -371,14 +371,6 @@ function drawEnemy(
       smokeHeight,
     );
   }
-
-  if (enemy.alive && enemy.hitFlashMs > 0) {
-    context.beginPath();
-    context.ellipse(centerX, feetY - height * 0.45, width * 0.38, height * 0.34, 0, 0, Math.PI * 2);
-    context.strokeStyle = enemy.alive ? '#ffe28a' : '#d85b42';
-    context.lineWidth = Math.max(1, 1.5 * tileScale);
-    context.stroke();
-  }
 }
 
 function drawWagonDebrisPart(

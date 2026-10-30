@@ -34,6 +34,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const viewportClipStack: boolean[] = [];
   let currentAlpha = 1;
   let currentFillStyle = '';
+  let ellipseCalls = 0;
   let mapClipActive = false;
   let viewportClipActive = false;
   let pendingRect: number[] | undefined;
@@ -75,7 +76,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     moveTo() { routeCommands.push('moveTo'); },
     lineTo() { routeCommands.push('lineTo'); },
     arc() {},
-    ellipse() {},
+    ellipse() { ellipseCalls += 1; },
     stroke() {},
     fill() {},
     setLineDash() {},
@@ -145,7 +146,6 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       maxHitPoints: 18,
       alive: true,
       deathRemainingMs: 0,
-      hitFlashMs: 0,
       animationFrame: 2,
     }],
     shots: [{
@@ -425,6 +425,14 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(reducedScaleViewport.tileSize / 48 < 1);
   assert.equal(reducedScaleBackground.rect[3], (12 * reducedScaleViewport.tileSize / 48) - 1,
     'the source subtracts one canvas pixel from the backing at a scale below one');
+
+  const ellipseCallsBeforeLegacyHitFlash = ellipseCalls;
+  drawGame(context, {
+    ...view,
+    enemies: [{ ...view.enemies[0]!, hitFlashMs: 120 } as GameView['enemies'][number]],
+  }, images);
+  assert.equal(ellipseCalls, ellipseCallsBeforeLegacyHitFlash,
+    'a legacy hit-flash timer does not add an enemy ellipse absent from the original renderer');
 });
 
 test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {
@@ -754,7 +762,6 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
       maxHitPoints: 200,
       alive: true,
       deathRemainingMs: 0,
-      hitFlashMs: 0,
       animationFrame: 0,
     }],
     shots: [],
