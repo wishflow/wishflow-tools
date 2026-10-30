@@ -1,5 +1,5 @@
 import { accessSync, constants, existsSync, readFileSync } from 'node:fs';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -126,6 +126,40 @@ export function renderProjectCards(projects) {
   }).join('\n');
 }
 
+async function findHtmlFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...await findHtmlFiles(entryPath));
+    else if (entry.isFile() && entry.name.toLowerCase().endsWith('.html')) files.push(entryPath);
+  }
+  return files.sort();
+}
+
+export async function configureSiteShellPages(appRoot, projects) {
+  const projectPayload = JSON.stringify(projects.map(({ slug, title, titleZh }) => ({ slug, title, titleZh })))
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;');
+  const configuredPages = [];
+
+  for (const pagePath of await findHtmlFiles(appRoot)) {
+    const html = await readFile(pagePath, 'utf8');
+    if (!/<wishflow-site-shell\b/i.test(html)) continue;
+    const configured = html.replace(/<wishflow-site-shell\b([^>]*)>/gi, (tag, attributes) => {
+      const cleaned = attributes.replace(/\sdata-projects=(?:"[^"]*"|'[^']*')/gi, '');
+      return `<wishflow-site-shell${cleaned} data-projects="${projectPayload}">`;
+    });
+    if (!configured.includes('data-projects=')) {
+      throw new Error(`Cannot inject project navigation into ${pagePath}.`);
+    }
+    if (configured !== html) await writeFile(pagePath, configured);
+    configuredPages.push(pagePath);
+  }
+
+  return configuredPages;
+}
+
 export async function verifySiteOutput(projects, siteRoot) {
   const indexPath = path.join(siteRoot, 'index.html');
   const indexHtml = await readFile(indexPath, 'utf8').catch(() => null);
@@ -145,5 +179,9 @@ export async function verifySiteOutput(projects, siteRoot) {
     const appIndex = path.join(siteRoot, slug, 'index.html');
     const appIndexStats = await stat(appIndex).catch(() => null);
     if (!appIndexStats?.isFile()) throw new Error('Shared site output is missing _site/' + slug + '/index.html.');
+    const appHtml = await readFile(appIndex, 'utf8');
+    if (!/<wishflow-site-shell\b[^>]*\bdata-projects=/i.test(appHtml)) {
+      throw new Error('Shared site output is missing project navigation in _site/' + slug + '/index.html.');
+    }
   }
 }

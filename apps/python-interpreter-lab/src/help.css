@@ -1,0 +1,47 @@
+:root {
+  color-scheme: light;
+  font-family: "Avenir Next", Avenir, ui-sans-serif, system-ui, sans-serif;
+  color: #17213d;
+  background: #f5f2e8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+html, body { min-width: 320px; margin: 0; }
+body { background: #f5f2e8; }
+a:focus-visible { outline: 3px solid #315d91; outline-offset: 3px; }
+
+.guide-page {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 52px) clamp(16px, 4vw, 48px) 56px;
+}
+
+.guide-heading { margin-bottom: 22px; }
+.guide-eyebrow { margin: 0 0 8px; color: #586584; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+.guide-heading h1 { margin: 0 0 14px; color: #17213d; font-size: clamp(28px, 4vw, 42px); font-weight: 800; letter-spacing: -.05em; line-height: 1.1; }
+.guide-return { display: inline-flex; min-height: 38px; align-items: center; padding: 6px 12px; border: 1px solid #d5d9d2; border-radius: 8px 8px 8px 3px; background: #fffef9; color: #294c76; font-size: 13px; font-weight: 700; text-decoration: none; }
+.guide-return:hover { background: #f0f3eb; }
+
+.guide-content { padding: clamp(18px, 3vw, 32px); border: 1px solid #ddded7; border-radius: 15px 15px 15px 4px; background: #fffef9; box-shadow: 0 8px 24px rgba(33, 40, 57, .045); color: #303b55; font-size: 14px; line-height: 1.7; }
+.guide-content h2 { margin: 30px 0 10px; color: #17213d; font-size: 21px; line-height: 1.3; }
+.guide-content h2:first-child { margin-top: 0; }
+.guide-content h3, .guide-content h4 { margin: 20px 0 8px; color: #17213d; font-size: 16px; line-height: 1.4; }
+.guide-content p { margin: 9px 0; }
+.guide-content ul, .guide-content ol { padding-left: 24px; }
+.guide-content li { margin: 5px 0; padding-left: 2px; }
+.guide-content a { color: #294c76; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.guide-content code { padding: 1px 4px; border-radius: 4px; background: #f0f1eb; color: #294c76; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; overflow-wrap: anywhere; }
+.guide-content pre { max-width: 100%; margin: 13px 0; padding: 14px 16px; overflow: auto; border: 1px solid #e1e2dc; border-radius: 8px 8px 8px 3px; background: #f6f5ef; color: #202943; line-height: 1.6; tab-size: 4; }
+.guide-content pre code { padding: 0; background: transparent; color: inherit; font-size: 12px; white-space: pre; overflow-wrap: normal; }
+.guide-table-scroll { max-width: 100%; margin: 12px 0; overflow-x: auto; border: 1px solid #e4e4dd; border-radius: 7px; }
+.guide-content table { width: 100%; min-width: 540px; border-collapse: collapse; font-size: 12px; line-height: 1.5; }
+.guide-content th, .guide-content td { padding: 8px 10px; border-bottom: 1px solid #e8e9e3; text-align: left; vertical-align: top; }
+.guide-content th { background: #efefe8; color: #56617a; font-size: 11px; font-weight: 750; }
+.guide-content tbody tr:last-child td { border-bottom: 0; }
+
+@media (max-width: 520px) {
+  .guide-content { padding: 18px 14px; font-size: 13px; }
+  .guide-content table { min-width: 480px; }
+}

@@ -2,7 +2,7 @@ import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promi
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readProjectCatalog, renderProjectCards, verifySiteOutput } from './project-catalog.mjs';
+import { configureSiteShellPages, readProjectCatalog, renderProjectCards, verifySiteOutput } from './project-catalog.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const siteRoot = path.join(repoRoot, '_site');
@@ -34,21 +34,6 @@ async function attachUsagiWidget(pagePath, relativePrefix, isPetPage) {
   ].join('\n');
   await writeFile(pagePath, html.replace('</head>', `${widgetTags}\n  </head>`));
   return true;
-}
-
-async function configureSiteShell(pagePath) {
-  const html = await readFile(pagePath, 'utf8');
-  const projectPayload = JSON.stringify(projects.map(({ slug, title, titleZh }) => ({ slug, title, titleZh })))
-    .replaceAll('&', '&amp;')
-    .replaceAll('"', '&quot;');
-  const configured = html.replace(/<wishflow-site-shell\b([^>]*)>/g, (tag, attributes) => {
-    const cleaned = attributes.replace(/\sdata-projects=(?:"[^"]*"|'[^']*')/g, '');
-    return `<wishflow-site-shell${cleaned} data-projects="${projectPayload}">`;
-  });
-  if (configured === html || !configured.includes('data-projects=')) {
-    throw new Error(`No wishflow-site-shell element found in ${pagePath}.`);
-  }
-  await writeFile(pagePath, configured);
 }
 
 for (const project of projects) {
@@ -85,9 +70,14 @@ for (const project of projects) {
     { recursive: true },
   );
 }
-await configureSiteShell(path.join(siteRoot, 'index.html'));
+const configuredPages = await configureSiteShellPages(siteRoot, projects);
+if (!configuredPages.includes(path.join(siteRoot, 'index.html'))) {
+  throw new Error('The shared site index.html must contain a wishflow-site-shell element.');
+}
 for (const project of projects) {
-  await configureSiteShell(path.join(siteRoot, project.slug, 'index.html'));
+  if (!configuredPages.includes(path.join(siteRoot, project.slug, 'index.html'))) {
+    throw new Error(`Project apps/${project.slug} index.html must contain a wishflow-site-shell element.`);
+  }
 }
 const sitePages = [
   { pagePath: path.join(siteRoot, 'index.html'), relativePrefix: './', isPetPage: false },

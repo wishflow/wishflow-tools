@@ -724,6 +724,7 @@ test('matches the P6 common subset with real CPython output and range-step error
 
 test('pauses and resets a long teaching run and invalidates stale mode/source state', async ({ page }) => {
   await chooseTeachingVm(page);
+  await page.getByRole('combobox', { name: 'Automatic run speed' }).selectOption('slow');
   const source = page.getByRole('textbox', { name: 'Python source' });
   // Exercise pause near the instruction budget while keeping the rendered state small.
   await source.fill(Array.from({ length: 999 }, (_, index) => `x = ${index}`).join('\n'));

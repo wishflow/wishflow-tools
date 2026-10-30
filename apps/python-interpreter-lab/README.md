@@ -2,7 +2,7 @@
 
 在浏览器中切换两种独立执行视图：查看固定版本真实 CPython 的编译结果和运行轨迹，或逐步运行一个明确限定语法的教学 VM。教学 VM 已支持列表、字典、对象引用和源码级调试控制；P8 发布记录见 [P8 tasks](docs/tasks/p08-mutable-containers.md)，P9 调试控制的发布状态与线上验收见 [P9 tasks](docs/tasks/p09-teaching-debugger.md)。
 
-使用说明：[中文](docs/guide/usage.zh-CN.md) · [English](docs/guide/usage.en.md)。正文适用于当前版本；应用内点击入口将在 V0 实现，发布状态见[体验实施计划](docs/visual-execution-plan.md)。
+使用说明：[中文](docs/guide/usage.zh-CN.md) · [English](docs/guide/usage.en.md)。正文适用于当前界面；V0 根据两份正文生成静态帮助页，并在实验室内提供新标签入口，发布与线上验收状态见[体验实施计划](docs/visual-execution-plan.md)。
 
 | 执行视图 | 可观察内容 | 执行语义 |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ React + TypeScript + Vite 页面通过共享 `@wishflow/site-shell` 展示。主
 - [协作约束](AGENTS.md)：前端、站点壳、语言、验证和文档规则。
 - [ADR-0001](docs/adr/0001-browser-python-visualizer.md)：引擎路线与架构取舍。
 - [整体实施计划](docs/implementation-plan.md)：阶段依赖、验收与发布状态。
-- [ADR-0002](docs/adr/0002-coherent-execution-experience.md)：已接受的执行现场、默认教学入口、语句讲解、动画和双语帮助决策，应用改造尚未实施。
+- [ADR-0002](docs/adr/0002-coherent-execution-experience.md)：已接受的执行现场、默认教学入口、语句讲解、动画和双语帮助决策；V0 实施双语静态帮助页，V1–V6 按专项计划推进。
 - [体验实施计划](docs/visual-execution-plan.md)：V0–V6 的阶段、依赖、验收、回滚与状态；详细 spec/tasks 在实施前补充。
 - [执行可视化设计说明](docs/design/visual-execution-experience.md)：布局、视觉语法和教学例子的图示。
 - [P9 教学调试控制](docs/specs/p09-teaching-debugger.md) 与 [P9 tasks](docs/tasks/p09-teaching-debugger.md)：断点、源码步进、继续/暂停、速度档及发布验收记录。

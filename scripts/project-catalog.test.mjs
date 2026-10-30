@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyzeChanges, findWorkerConfigChanges, workerBuildInputsChanged } from './workflow-changes.mjs';
-import { readProjectCatalog, renderProjectCards, validateCatalog, verifySiteOutput } from './project-catalog.mjs';
+import { configureSiteShellPages, readProjectCatalog, renderProjectCards, validateCatalog, verifySiteOutput } from './project-catalog.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const projects = readProjectCatalog(repoRoot);
@@ -79,7 +79,7 @@ test('shared output contains exactly one navigation card and app build per catal
     for (const { slug } of projects) {
       const appDir = path.join(siteRoot, slug);
       await mkdir(appDir);
-      await writeFile(path.join(appDir, 'index.html'), '<!doctype html>');
+      await writeFile(path.join(appDir, 'index.html'), '<wishflow-site-shell data-projects="[]"></wishflow-site-shell>');
     }
     await assert.doesNotReject(verifySiteOutput(projects, siteRoot));
 
@@ -87,6 +87,28 @@ test('shared output contains exactly one navigation card and app build per catal
     await assert.rejects(verifySiteOutput(projects, siteRoot), /Navigation cards do not match/);
   } finally {
     await rm(siteRoot, { recursive: true, force: true });
+  }
+});
+
+test('shared navigation is injected into nested shell pages without changing unrelated HTML', async () => {
+  const appRoot = await mkdtemp(path.join(tmpdir(), 'wishflow-shell-pages-'));
+  const nestedDir = path.join(appRoot, 'nested');
+  const unrelatedDir = path.join(appRoot, 'assets');
+  const unrelatedHtml = '<!doctype html><title>standalone</title>';
+  try {
+    await mkdir(nestedDir);
+    await mkdir(unrelatedDir);
+    await writeFile(path.join(appRoot, 'index.html'), '<wishflow-site-shell data-app="demo"></wishflow-site-shell>');
+    await writeFile(path.join(nestedDir, 'help.html'), '<wishflow-site-shell data-app="demo"></wishflow-site-shell>');
+    await writeFile(path.join(unrelatedDir, 'viewer.html'), unrelatedHtml);
+
+    const configuredPages = await configureSiteShellPages(appRoot, [projects[0]]);
+    assert.equal(configuredPages.length, 2);
+    assert.ok(configuredPages.includes(path.join(nestedDir, 'help.html')));
+    assert.match(readFileSync(path.join(nestedDir, 'help.html'), 'utf8'), /data-projects=".*duolingo-avatar/s);
+    assert.equal(readFileSync(path.join(unrelatedDir, 'viewer.html'), 'utf8'), unrelatedHtml);
+  } finally {
+    await rm(appRoot, { recursive: true, force: true });
   }
 });
 

@@ -121,6 +121,11 @@ export default function App() {
               {versionText && <span>{versionText}</span>}
             </div>
           </div>
+          <a className="guide-link" href="./help.html" target="_blank" rel="noopener noreferrer">
+            <span>{t('userGuide')}</span>
+            <span aria-hidden="true">↗</span>
+            <span className="guide-link-hint">{t('opensInNewTab')}</span>
+          </a>
         </div>
       </header>
 

@@ -2,6 +2,8 @@ import { registerMessages, type Language, type LocalizedText, localize } from '@
 
 export const messages = {
   title: { en: 'Python Interpreter Lab', zh: 'Python 解释器实验室' },
+  userGuide: { en: 'User guide', zh: '使用说明' },
+  opensInNewTab: { en: 'opens in a new tab', zh: '在新标签页打开' },
   description: { en: 'Follow your source into the real CPython syntax tree and bytecode.', zh: '从源码一路查看真实 CPython 生成的语法树与字节码。' },
   teachingDescription: { en: 'Inspect how the supported Python subset is parsed, compiled, and executed step by step.', zh: '逐步观察当前支持的 Python 子集如何解析、编译和执行。' },
   privacyNote: { en: 'The app does not upload your source. Python you choose to run can access browser APIs and the network; this worker is not a security sandbox.', zh: '应用不会上传源码。你主动运行的 Python 可以访问浏览器 API 和网络；Worker 不是安全沙箱。' },
