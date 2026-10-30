@@ -4,7 +4,7 @@
 
 ## 实施顺序
 
-- [ ] **T01：派生有界指令过渡**
+- [x] **T01：派生有界指令过渡**
   - 验收：从相邻历史快照和真实教学指令识别 LOAD、运算、STORE_NAME、BUILD_LIST/BUILD_MAP、STORE_SUBSCR；根据稳定帧/变量/对象身份说明动作。
   - 验证：纯函数测试覆盖算术、别名、列表原位修改、新对象、空栈、重复标量、循环引用、断续/截断历史、帧变化、未知指令；每个源码步最多返回 12 个动画过渡并报告省略数。
   - 文件：新增 `src/teaching-vm/animation.ts`；新增 `tests/teaching-animation.test.ts`；按需复用现有 observation 辅助逻辑，不重复实现 VM 状态比较。
@@ -40,8 +40,8 @@
 | 项目 | 状态 | 证据 |
 | --- | --- | --- |
 | Spec 与 tasks | 已完成 | 已确认独立讲解播放、串行 Step Over、Worker 暂停确认、12 条上限与 240ms 固定演示时长 |
-| 实现 | 未开始 | — |
-| 本地验证 | 未开始 | — |
+| 实现 | 进行中 | T01 已新增纯过渡派生函数，基于相邻快照识别 LOAD、运算、STORE_NAME、BUILD_LIST/BUILD_MAP、STORE_SUBSCR；不改写快照或 VM/Worker 协议 |
+| 本地验证 | 进行中 | `pnpm --dir apps/python-interpreter-lab run typecheck` 与 `test:unit` 通过（157/157）；覆盖别名、对象创建/修改、算术、循环引用、连续性与 12 条上限 |
 | CI/CD | 未开始 | — |
 | 线上验收 | 未开始 | — |
 
