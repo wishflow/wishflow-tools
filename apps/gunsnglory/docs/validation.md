@@ -1113,6 +1113,6 @@ REA/JADX 反编译分析显示，`GameObjectManager.getValueByObject()` 使用 `
 | 回归敏感性复核 | 临时将向上排序的同深度比较从非严格条件改为严格条件后，队列测试与模拟步集成测试均按预期失败；恢复原文件后，3 项定向测试通过。 |
 | 完整 CI 模式 | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4387 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、161 项单元测试、Vite 生产构建和53项 Playwright E2E。 |
 | Playwright E2E | 完整 CI 命令在 `CI=1` 下按项目配置使用1个 worker，53项全部通过。未设置 `CI=1` 的诊断运行使用5个 worker时有3项超时；三项串行复跑及2 worker全套复跑均通过，因此未改项目并发配置。 |
-| 本地浏览器与部署 | 待合并发布后记录本轮版本的 Codex 内置浏览器核对、CI/CD 状态与公网烟测结果。 |
+| 公网部署与内置浏览器 | 提交 `10910e1` 已部署；GitHub Actions [run 41036709955](https://github.com/wishflow/wishflow-tools/actions/runs/41036709955) 中 Guns’n’Glory 测试、共享站点 catalog 检查、GitHub Pages 与 Cloudflare Pages 部署均成功，Worker/config 与宠物任务按变更范围跳过。Codex 内置浏览器打开[本轮公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=10910e1)，确认页面标题、Cow Gulch 地图、峡谷/桥、HUD 与倍速滑杆可见；游戏在 4× 下推进至 Wave 4/8 后可暂停，AX 状态为 Lives 44、Enemies 25、Cash `$122`，暂停按钮切换为 Resume battle。正式档案仍为 Cow Gulch 1/1 完成、最高分 `$356`，本次未结算战斗。浏览器 console 的 error/warn 日志为空。公网截图只验证部署、画面与控件；跨模拟步的排序历史由上方定向自动化测试验证。 |
 
 本轮闭合的是第56节提出的“模拟步之间及首次绘制前丢失绘制历史”问题。它只解决 P1-F 的跨类型绘制队列所有权与时序，不代表 Cow Gulch 首关画面和规则已完成全量对照；首关仍为 0/60。
