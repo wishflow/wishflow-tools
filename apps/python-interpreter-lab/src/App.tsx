@@ -16,7 +16,7 @@ type EngineMode = 'cpython' | 'teaching';
 export default function App() {
   const [language, setLanguage] = useState<Language>(getLanguage);
   const [source, setSource] = useState(EXAMPLE);
-  const [mode, setMode] = useState<EngineMode>('cpython');
+  const [mode, setMode] = useState<EngineMode>('teaching');
   const [sourceLink, setSourceLink] = useState<SourceLink | null>(null);
   const analysis = usePyodideAnalysis();
   const teaching = useTeachingVm();
@@ -45,7 +45,7 @@ export default function App() {
     if (nextMode === mode) return;
     setMode(nextMode);
     setSourceLink(null);
-    analysis.clearOutput();
+    if (!(nextMode === 'cpython' && analysis.status === 'failed')) analysis.clearOutput();
     analysis.clearExecution();
     teaching.invalidate();
     if (nextMode === 'teaching' && (analysis.status === 'analyzing' || analysis.status === 'running')) {
@@ -134,7 +134,7 @@ export default function App() {
         <p>{t(mode === 'cpython' ? 'privacyNote' : 'teachingPrivacyNote')}</p>
       </div>
 
-      <div className="workbench">
+      <div className={`workbench${mode === 'teaching' ? ' is-teaching' : ''}`}>
         <SourcePanel
           mode={mode}
           source={source}

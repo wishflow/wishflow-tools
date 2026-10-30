@@ -338,7 +338,7 @@ function TeachingFrameStack({ snapshot, t, onLink, onLocateObject }: {
   if (!snapshot) return null;
   return (
     <section className="teaching-frames-panel" aria-labelledby="teaching-frames-heading">
-      <h4 id="teaching-frames-heading">{t('teachingFrames')}</h4>
+      <h4 id="teaching-frames-heading">{t('teachingCallFrames')}</h4>
       <ol className="teaching-frame-list">
         {snapshot.frames.map((frame) => {
           const isActive = frame.id === activeFrameId;
@@ -381,25 +381,33 @@ function TeachingFrameStack({ snapshot, t, onLink, onLocateObject }: {
                   {frame.returnPc !== null && (
                     <p className="small-meta">{t('teachingReturnAddress').replace('{index}', String(frame.returnPc))}</p>
                   )}
-                  <div className="teaching-frame-grid">
-                    <section>
-                      <h5>{t('teachingStack')}</h5>
-                      {frame.stack.length === 0 ? <p className="empty-state">{t('teachingNoStack')}</p> : (
-                        <ol className="teaching-value-list">
-                          {frame.stack.map((value, valueIndex) => <li key={`${valueIndex}-${value.type}-${value.value}`}><span>{valueIndex}</span><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></li>)}
-                        </ol>
-                      )}
-                    </section>
-                    <section>
-                      <h5>{t('teachingVariables')}</h5>
-                      {frame.variables.length === 0 && frame.unboundLocalNames.length === 0 ? <p className="empty-state">{t('teachingNoVariables')}</p> : (
-                        <dl className="trace-values teaching-variable-list">
-                          {frame.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>)}
-                          {frame.unboundLocalNames.map((name) => <div key={name}><dt>{name}</dt><dd>{t('teachingUnboundLocal')}</dd></div>)}
-                        </dl>
-                      )}
-                    </section>
-                  </div>
+                  {!isActive && (
+                    <div className="teaching-frame-grid">
+                      <section>
+                        <h5>{t('teachingStack')}</h5>
+                        {frame.stack.length === 0 ? <p className="empty-state">{t('teachingNoStack')}</p> : (
+                          <ol className="teaching-value-list">
+                            {frame.stack.map((value, valueIndex) => (
+                              <li className={valueIndex === frame.stack.length - 1 ? 'is-stack-top' : ''} key={`${valueIndex}-${value.type}-${value.value}`}>
+                                <span>{valueIndex}</span>
+                                <TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} />
+                                {valueIndex === frame.stack.length - 1 && <span className="teaching-stack-top">{t('teachingStackTop')}</span>}
+                              </li>
+                            ))}
+                          </ol>
+                        )}
+                      </section>
+                      <section>
+                        <h5>{t('teachingVariables')}</h5>
+                        {frame.variables.length === 0 && frame.unboundLocalNames.length === 0 ? <p className="empty-state">{t('teachingNoVariables')}</p> : (
+                          <dl className="trace-values teaching-variable-list">
+                            {frame.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>)}
+                            {frame.unboundLocalNames.map((name) => <div key={name}><dt>{name}</dt><dd>{t('teachingUnboundLocal')}</dd></div>)}
+                          </dl>
+                        )}
+                      </section>
+                    </div>
+                  )}
                 </div>
               </details>
             </li>
@@ -423,6 +431,44 @@ function statusLabel(status: TeachingStatus, t: (key: MessageKey) => string): st
   return labels[status];
 }
 
+function TeachingActionPanel({ program, snapshot, t, onLink }: {
+  program: TeachingCompileResult;
+  snapshot: TeachingVmSnapshot | null;
+  t: (key: MessageKey) => string;
+  onLink(link: SourceLink): void;
+}) {
+  const faultIndex = snapshot?.faultInstructionIndex ?? null;
+  const nextIndex = snapshot?.nextInstructionIndex ?? null;
+  const lastIndex = snapshot?.lastExecutedInstructionIndex ?? null;
+  const instructionIndex = faultIndex ?? nextIndex ?? lastIndex ?? (program.instructions.length > 0 ? 0 : null);
+  const instruction = instructionIndex === null ? undefined : program.instructions[instructionIndex];
+  const labelKey: MessageKey = faultIndex !== null
+    ? 'teachingFaultInstruction'
+    : nextIndex !== null
+      ? 'teachingNextInstruction'
+      : 'teachingCurrentInstruction';
+  const stateClass = faultIndex !== null ? 'is-fault' : nextIndex !== null ? 'is-next' : 'is-current';
+
+  return (
+    <section className="teaching-current-action" aria-labelledby="teaching-current-action-heading">
+      <h4 id="teaching-current-action-heading">{t('teachingCurrentAction')}</h4>
+      {instruction ? (
+        <div className={`teaching-action-instruction ${stateClass}`}>
+          <div>
+            <span className="teaching-action-label">{t(labelKey)}</span>
+            <button
+              type="button"
+              className="bytecode-locator"
+              onClick={() => onLink({ origin: { kind: 'teaching', index: instruction.index }, range: sourceRange(instruction.span) })}
+            >{positionLabel(instruction.span, t)}</button>
+          </div>
+          <code>{instruction.opcode} {formatInstructionArgument(instruction, program)}</code>
+        </div>
+      ) : <p className="empty-state">{t('teachingNoInstructions')}</p>}
+    </section>
+  );
+}
+
 const TeachingAstPanel = memo(function TeachingAstPanel({
   program,
   sourceLink,
@@ -435,23 +481,25 @@ const TeachingAstPanel = memo(function TeachingAstPanel({
   onLink(link: SourceLink): void;
 }) {
   return (
-    <section className="panel output-panel" aria-labelledby="teaching-ast-heading">
-      <div className="output-panel-heading">
+    <details className="panel teaching-compile-details teaching-ast-disclosure" aria-labelledby="teaching-ast-heading">
+      <summary className="teaching-details-summary">
         <h3 id="teaching-ast-heading">{t('teachingAst')}</h3>
         <span className="small-meta">{program.version}</span>
+      </summary>
+      <div className="teaching-compile-content">
+        {program.ast.statements.length === 0 ? (
+          <p className="empty-state">{t('teachingNoAst')}</p>
+        ) : (
+          <div className="tree-scroll teaching-ast-scroll" role="region" aria-label={t('teachingAst')} tabIndex={0}>
+            <ol className="teaching-ast-list teaching-ast-root">
+              {program.ast.statements.map((statement, index) => (
+                <StatementTree key={`${statement.type}-${index}-${statement.span.start}`} statement={statement} sourceLink={sourceLink} t={t} onLink={onLink} />
+              ))}
+            </ol>
+          </div>
+        )}
       </div>
-      {program.ast.statements.length === 0 ? (
-        <p className="empty-state">{t('teachingNoAst')}</p>
-      ) : (
-        <div className="tree-scroll teaching-ast-scroll" role="region" aria-label={t('teachingAst')} tabIndex={0}>
-          <ol className="teaching-ast-list teaching-ast-root">
-            {program.ast.statements.map((statement, index) => (
-              <StatementTree key={`${statement.type}-${index}-${statement.span.start}`} statement={statement} sourceLink={sourceLink} t={t} onLink={onLink} />
-            ))}
-          </ol>
-        </div>
-      )}
-    </section>
+    </details>
   );
 });
 
@@ -599,105 +647,107 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
     : null;
 
   return (
-    <section className="panel output-panel" aria-labelledby="teaching-bytecode-heading">
-      <div className="output-panel-heading">
+    <details className="panel teaching-compile-details teaching-instruction-disclosure" aria-labelledby="teaching-bytecode-heading">
+      <summary className="teaching-details-summary">
         <h3 id="teaching-bytecode-heading">{t('teachingBytecode')}</h3>
         <span className="small-meta">{program.version}</span>
-      </div>
-      <section className="teaching-breakpoint-panel" role="region" aria-label={t('teachingBreakpoints')} aria-live="polite">
-        <div className="teaching-breakpoint-heading">
-          <h4>{t('teachingBreakpoints')}</h4>
-          <span className="small-meta">{breakpointCount} / {MAX_BREAKPOINT_COUNT}</span>
+      </summary>
+      <div className="teaching-compile-content">
+        <section className="teaching-breakpoint-panel" role="region" aria-label={t('teachingBreakpoints')} aria-live="polite">
+          <div className="teaching-breakpoint-heading">
+            <h4>{t('teachingBreakpoints')}</h4>
+            <span className="small-meta">{breakpointCount} / {MAX_BREAKPOINT_COUNT}</span>
+          </div>
+          {breakpointPauseLabel && <p className="teaching-breakpoint-status" role="status">{breakpointPauseLabel}</p>}
+          {stepPauseLabel && <p className="teaching-step-status" role="status">{stepPauseLabel}</p>}
+          {breakpointCount === 0 ? (
+            <p className="empty-state">{t('teachingNoBreakpoints')}</p>
+          ) : (
+            <ul className="teaching-breakpoint-list">
+              {sourceBreakpoints.map(({ line, instruction }) => (
+                <li key={`source-${line}`}>
+                  <span><strong>{t('teachingSourceBreakpointEntry').replace('{line}', String(line))}</strong><code>{t('teachingInstructionIndex')} {instruction.index}</code></span>
+                  <button
+                    type="button"
+                    className="bytecode-locator"
+                    aria-label={t('teachingLocateSourceBreakpoint').replace('{line}', String(line))}
+                    onClick={() => onLink({ origin: { kind: 'teaching', index: instruction.index }, range: sourceRange(instruction.span) })}
+                  >{positionLabel(instruction.span, t)}</button>
+                  <button type="button" className="text-button" onClick={() => onToggleSourceBreakpoint(line)}>
+                    {t('teachingRemoveSourceBreakpoint').replace('{line}', String(line))}
+                  </button>
+                </li>
+              ))}
+              {instructionBreakpoints.map(({ instructionIndex, instruction }) => (
+                <li key={`instruction-${instructionIndex}`}>
+                  <span><strong>{t('teachingInstructionBreakpointEntry').replace('{index}', String(instructionIndex))}</strong><code>{positionLabel(instruction.span, t)}</code></span>
+                  <button
+                    type="button"
+                    className="bytecode-locator"
+                    aria-label={t('teachingLocateInstructionBreakpoint').replace('{index}', String(instructionIndex))}
+                    onClick={() => onLink({ origin: { kind: 'teaching', index: instructionIndex }, range: sourceRange(instruction.span) })}
+                  >{t('locate')}</button>
+                  <button type="button" className="text-button" onClick={() => onToggleInstructionBreakpoint(instructionIndex)}>
+                    {t('teachingRemoveInstructionBreakpoint').replace('{index}', String(instructionIndex))}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <div className="teaching-instruction-legend" aria-label={t('teachingBytecode')}>
+          <span><i className="teaching-state-swatch swatch-current" aria-hidden="true" />{t('teachingCurrentInstruction')}</span>
+          <span><i className="teaching-state-swatch swatch-next" aria-hidden="true" />{t('teachingNextInstruction')}</span>
+          <span><i className="teaching-state-swatch swatch-fault" aria-hidden="true" />{t('teachingFaultInstruction')}</span>
         </div>
-        {breakpointPauseLabel && <p className="teaching-breakpoint-status" role="status">{breakpointPauseLabel}</p>}
-        {stepPauseLabel && <p className="teaching-step-status" role="status">{stepPauseLabel}</p>}
-        {breakpointCount === 0 ? (
-          <p className="empty-state">{t('teachingNoBreakpoints')}</p>
-        ) : (
-          <ul className="teaching-breakpoint-list">
-            {sourceBreakpoints.map(({ line, instruction }) => (
-              <li key={`source-${line}`}>
-                <span><strong>{t('teachingSourceBreakpointEntry').replace('{line}', String(line))}</strong><code>{t('teachingInstructionIndex')} {instruction.index}</code></span>
-                <button
-                  type="button"
-                  className="bytecode-locator"
-                  aria-label={t('teachingLocateSourceBreakpoint').replace('{line}', String(line))}
-                  onClick={() => onLink({ origin: { kind: 'teaching', index: instruction.index }, range: sourceRange(instruction.span) })}
-                >{positionLabel(instruction.span, t)}</button>
-                <button type="button" className="text-button" onClick={() => onToggleSourceBreakpoint(line)}>
-                  {t('teachingRemoveSourceBreakpoint').replace('{line}', String(line))}
-                </button>
-              </li>
-            ))}
-            {instructionBreakpoints.map(({ instructionIndex, instruction }) => (
-              <li key={`instruction-${instructionIndex}`}>
-                <span><strong>{t('teachingInstructionBreakpointEntry').replace('{index}', String(instructionIndex))}</strong><code>{positionLabel(instruction.span, t)}</code></span>
-                <button
-                  type="button"
-                  className="bytecode-locator"
-                  aria-label={t('teachingLocateInstructionBreakpoint').replace('{index}', String(instructionIndex))}
-                  onClick={() => onLink({ origin: { kind: 'teaching', index: instructionIndex }, range: sourceRange(instruction.span) })}
-                >{t('locate')}</button>
-                <button type="button" className="text-button" onClick={() => onToggleInstructionBreakpoint(instructionIndex)}>
-                  {t('teachingRemoveInstructionBreakpoint').replace('{index}', String(instructionIndex))}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-      <div className="teaching-instruction-legend" aria-label={t('teachingBytecode')}>
-        <span><i className="teaching-state-swatch swatch-current" aria-hidden="true" />{t('teachingCurrentInstruction')}</span>
-        <span><i className="teaching-state-swatch swatch-next" aria-hidden="true" />{t('teachingNextInstruction')}</span>
-        <span><i className="teaching-state-swatch swatch-fault" aria-hidden="true" />{t('teachingFaultInstruction')}</span>
+        <div className="instruction-scroll" role="region" aria-label={t('teachingBytecode')} tabIndex={0}>
+          <table className="instruction-table teaching-instruction-table">
+            <thead>
+              <tr>
+                <th scope="col">{t('teachingInstructionIndex')}</th>
+                <th scope="col">{t('opcode')}</th>
+                <th scope="col">{t('argument')}</th>
+                <th scope="col">{t('line')}</th>
+                <th scope="col">{t('teachingBreakpoints')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {program.instructions.map((instruction) => {
+                const isFault = snapshot?.faultInstructionIndex === instruction.index;
+                const isCurrent = snapshot?.lastExecutedInstructionIndex === instruction.index && !isFault;
+                const isNext = snapshot?.nextInstructionIndex === instruction.index && !isFault && !isCurrent;
+                const firstInstructionForLine = sourceInstructionByLine.get(instruction.span.line) === instruction.index;
+                return (
+                  <TeachingInstructionRow
+                    key={instruction.index}
+                    instruction={instruction}
+                    program={program}
+                    sourceLink={sourceLink}
+                    t={t}
+                    onLink={onLink}
+                    isCurrent={isCurrent}
+                    isNext={isNext}
+                    isFault={isFault}
+                    isBreakpointHit={Boolean(snapshot?.pauseReason === 'breakpoint'
+                      && snapshot.nextInstructionIndex === instruction.index
+                      && (snapshot.hitBreakpointId === `source-line:${instruction.span.line}`
+                        || snapshot.hitBreakpointId === `instruction:${instruction.index}`))}
+                    isSourceBreakpoint={firstInstructionForLine
+                      ? sourceBreakpointLineSet.has(instruction.span.line)
+                      : null}
+                    isInstructionBreakpoint={instructionBreakpointIndexSet.has(instruction.index)}
+                    breakpointCount={breakpointCount}
+                    isBusy={isBusy}
+                    onToggleSourceBreakpoint={onToggleSourceBreakpoint}
+                    onToggleInstructionBreakpoint={onToggleInstructionBreakpoint}
+                  />
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div className="instruction-scroll" role="region" aria-label={t('teachingBytecode')} tabIndex={0}>
-        <table className="instruction-table teaching-instruction-table">
-          <thead>
-            <tr>
-              <th scope="col">{t('teachingInstructionIndex')}</th>
-              <th scope="col">{t('opcode')}</th>
-              <th scope="col">{t('argument')}</th>
-              <th scope="col">{t('line')}</th>
-              <th scope="col">{t('teachingBreakpoints')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {program.instructions.map((instruction) => {
-              const isFault = snapshot?.faultInstructionIndex === instruction.index;
-              const isCurrent = snapshot?.lastExecutedInstructionIndex === instruction.index && !isFault;
-              const isNext = snapshot?.nextInstructionIndex === instruction.index && !isFault && !isCurrent;
-              const firstInstructionForLine = sourceInstructionByLine.get(instruction.span.line) === instruction.index;
-              return (
-                <TeachingInstructionRow
-                  key={instruction.index}
-                  instruction={instruction}
-                  program={program}
-                  sourceLink={sourceLink}
-                  t={t}
-                  onLink={onLink}
-                  isCurrent={isCurrent}
-                  isNext={isNext}
-                  isFault={isFault}
-                  isBreakpointHit={Boolean(snapshot?.pauseReason === 'breakpoint'
-                    && snapshot.nextInstructionIndex === instruction.index
-                    && (snapshot.hitBreakpointId === `source-line:${instruction.span.line}`
-                      || snapshot.hitBreakpointId === `instruction:${instruction.index}`))}
-                  isSourceBreakpoint={firstInstructionForLine
-                    ? sourceBreakpointLineSet.has(instruction.span.line)
-                    : null}
-                  isInstructionBreakpoint={instructionBreakpointIndexSet.has(instruction.index)}
-                  breakpointCount={breakpointCount}
-                  isBusy={isBusy}
-                  onToggleSourceBreakpoint={onToggleSourceBreakpoint}
-                  onToggleInstructionBreakpoint={onToggleInstructionBreakpoint}
-                />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    </section>
+    </details>
   );
 });
 
@@ -708,6 +758,7 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
   const historyStart = history.items[0]?.stepIndex ?? 0;
   const historyEnd = headSnapshot?.stepIndex ?? historyStart;
   const historyValue = snapshot?.stepIndex ?? historyEnd;
+  const activeFrame = snapshot?.frames.at(-1);
 
   return (
     <section className="results-area teaching-results" aria-labelledby="teaching-results-heading" aria-busy={isBusy}>
@@ -726,25 +777,9 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
         <div className="panel empty-output"><p>{t('teachingNoProgram')}</p></div>
       ) : (
         <div className="teaching-content">
-          <div className="teaching-structure-grid">
-            <TeachingAstPanel program={program} sourceLink={sourceLink} t={t} onLink={onLink} />
-            <TeachingInstructionPanel
-              program={program}
-              snapshot={snapshot}
-              sourceLink={sourceLink}
-              sourceBreakpointLines={sourceBreakpointLines}
-              instructionBreakpointIndexes={instructionBreakpointIndexes}
-              isBusy={isBusy}
-              t={t}
-              onLink={onLink}
-              onToggleSourceBreakpoint={onToggleSourceBreakpoint}
-              onToggleInstructionBreakpoint={onToggleInstructionBreakpoint}
-            />
-          </div>
-
           <section className="panel teaching-runtime-panel" aria-labelledby="teaching-runtime-heading">
             <div className="output-panel-heading">
-              <h3 id="teaching-runtime-heading">{t('teachingHistory')}</h3>
+              <h3 id="teaching-runtime-heading">{t('teachingRuntimeScene')}</h3>
               <span className={`execution-status status-text-${status}`}>{statusLabel(status, t)}</span>
             </div>
             <div className="teaching-history-control">
@@ -770,22 +805,42 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
               {!atHead && <button type="button" className="text-button" onClick={onGoToHead}>{t('teachingReturnToHead')}</button>}
               {history.truncated && <span className="limit-notice">{t('teachingHistoryTruncated')}</span>}
             </div>
-            <div className="teaching-state-grid">
+
+            <TeachingActionPanel program={program} snapshot={snapshot} t={t} onLink={onLink} />
+            {snapshot?.controlFlow && (
+              <p className="teaching-control-flow" role="status">
+                <strong>{t('teachingControlFlowDecision')}:</strong>{' '}
+                {snapshot.controlFlow.kind === 'shortCircuit'
+                  ? t(snapshot.controlFlow.outcome === 'short-circuited' ? 'teachingShortCircuited' : 'teachingEvaluatedRight')
+                  : snapshot.controlFlow.kind === 'branch'
+                    ? t(snapshot.controlFlow.outcome === 'branch-taken' ? 'teachingBranchTaken' : 'teachingBranchSkipped')
+                    : t(snapshot.controlFlow.outcome === 'loop-finished' ? 'teachingLoopFinished' : 'teachingLoopContinues')}
+              </p>
+            )}
+
+            <div className="teaching-scene-grid">
+              <section className="teaching-active-frame" aria-labelledby="teaching-active-frame-heading">
+                <div className="teaching-active-frame-heading">
+                  <h4 id="teaching-active-frame-heading">{t('teachingActiveFrameTitle')}</h4>
+                  {activeFrame ? (
+                    <span>
+                      {activeFrame.kind === 'module' ? t('teachingModuleFrame') : activeFrame.functionName}
+                      {' '}<code>#{activeFrame.id}</code>
+                    </span>
+                  ) : <span className="small-meta">{t('teachingNoActiveFrame')}</span>}
+                </div>
+                <div className="teaching-state-grid">
               <section aria-labelledby="teaching-stack-heading">
                 <h4 id="teaching-stack-heading">{t('teachingStack')}</h4>
-                {snapshot?.controlFlow && (
-                  <p className="teaching-control-flow" role="status">
-                    <strong>{t('teachingControlFlowDecision')}:</strong>{' '}
-                    {snapshot.controlFlow.kind === 'shortCircuit'
-                      ? t(snapshot.controlFlow.outcome === 'short-circuited' ? 'teachingShortCircuited' : 'teachingEvaluatedRight')
-                      : snapshot.controlFlow.kind === 'branch'
-                        ? t(snapshot.controlFlow.outcome === 'branch-taken' ? 'teachingBranchTaken' : 'teachingBranchSkipped')
-                        : t(snapshot.controlFlow.outcome === 'loop-finished' ? 'teachingLoopFinished' : 'teachingLoopContinues')}
-                  </p>
-                )}
                 {!snapshot || snapshot.stack.length === 0 ? <p className="empty-state">{t('teachingNoStack')}</p> : (
                   <ol className="teaching-value-list">
-                    {snapshot.stack.map((value, index) => <li key={`${index}-${value.type}-${value.value}`}><span>{index}</span><code>{value.display}</code></li>)}
+                    {snapshot.stack.map((value, index) => (
+                      <li className={index === snapshot.stack.length - 1 ? 'is-stack-top' : ''} key={`${index}-${value.type}-${value.value}`}>
+                        <span>{index}</span>
+                        <TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} />
+                        {index === snapshot.stack.length - 1 && <span className="teaching-stack-top">{t('teachingStackTop')}</span>}
+                      </li>
+                    ))}
                   </ol>
                 )}
               </section>
@@ -797,16 +852,36 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
                   </dl>
                 )}
               </section>
-              <section aria-labelledby="teaching-output-heading">
-                <h4 id="teaching-output-heading">{t('teachingOutput')}</h4>
-                {!snapshot || snapshot.output.length === 0 ? <p className="empty-state">{t('teachingNoOutput')}</p> : (
-                  <pre className="teaching-output">{snapshot.output.join('\n')}</pre>
-                )}
+                </div>
               </section>
+              <div className="teaching-scene-support">
+                <section className="teaching-output-panel" aria-labelledby="teaching-output-heading">
+                  <h4 id="teaching-output-heading">{t('teachingOutput')}</h4>
+                  {!snapshot || snapshot.output.length === 0 ? <p className="empty-state">{t('teachingNoOutput')}</p> : (
+                    <pre className="teaching-output">{snapshot.output.join('\n')}</pre>
+                  )}
+                </section>
+                <TeachingHeapPanel snapshot={snapshot} t={t} focusedObjectId={focusedObjectId} onLocateObject={onLocateObject} />
+              </div>
             </div>
-            <TeachingHeapPanel snapshot={snapshot} t={t} focusedObjectId={focusedObjectId} onLocateObject={onLocateObject} />
             <TeachingFrameStack snapshot={snapshot} t={t} onLink={onLink} onLocateObject={onLocateObject} />
           </section>
+
+          <div className="teaching-structure-grid">
+            <TeachingAstPanel program={program} sourceLink={sourceLink} t={t} onLink={onLink} />
+            <TeachingInstructionPanel
+              program={program}
+              snapshot={snapshot}
+              sourceLink={sourceLink}
+              sourceBreakpointLines={sourceBreakpointLines}
+              instructionBreakpointIndexes={instructionBreakpointIndexes}
+              isBusy={isBusy}
+              t={t}
+              onLink={onLink}
+              onToggleSourceBreakpoint={onToggleSourceBreakpoint}
+              onToggleInstructionBreakpoint={onToggleInstructionBreakpoint}
+            />
+          </div>
         </div>
       )}
     </section>

@@ -64,6 +64,7 @@ button:disabled { cursor: not-allowed; }
 .safety-mark { display: grid; width: 19px; height: 19px; flex: 0 0 auto; place-items: center; border: 1px solid #71927e; border-radius: 50%; font-family: Georgia, serif; font-size: 12px; font-weight: 700; }
 
 .workbench { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(0, 1.55fr); align-items: start; gap: 16px; }
+.workbench.is-teaching { grid-template-columns: minmax(300px, .86fr) minmax(0, 1.55fr); }
 .panel { min-width: 0; border: 1px solid #ddded7; border-radius: 15px 15px 15px 4px; background: var(--card); box-shadow: 0 8px 24px rgba(33, 40, 57, .045); }
 .source-panel { display: flex; min-height: 680px; flex-direction: column; padding: 17px; }
 .panel-heading, .results-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -116,8 +117,35 @@ button:disabled { cursor: not-allowed; }
 .execution-status { color: #42624e; font-size: 11px; font-weight: 700; text-align: right; }
 .teaching-content { display: grid; gap: 14px; }
 .teaching-structure-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 14px; }
-.teaching-structure-grid .output-panel { min-height: 430px; }
+.teaching-compile-details { min-width: 0; padding: 0; overflow: hidden; }
+.teaching-details-summary { display: flex; min-height: 58px; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 15px; cursor: pointer; list-style-position: inside; }
+.teaching-details-summary h3 { display: inline; margin: 0; color: var(--ink); font-size: 15px; }
+.teaching-compile-details[open] > .teaching-details-summary { border-bottom: 1px solid #e3e5dc; background: #fbfbf6; }
+.teaching-compile-content { min-width: 0; padding: 13px 15px 15px; }
+.teaching-compile-content .teaching-breakpoint-panel { margin-top: 0; }
 .teaching-ast-scroll { max-height: 560px; }
+.teaching-runtime-panel > .output-panel-heading { margin-bottom: 8px; }
+.teaching-scene-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 14px; padding-top: 8px; }
+.teaching-active-frame { min-width: 0; padding: 11px 12px; border: 1px solid #d6ded1; border-radius: 9px 9px 9px 3px; background: #fbfcf8; }
+.teaching-active-frame-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 5px 10px; padding-bottom: 8px; border-bottom: 1px solid #e3e8de; }
+.teaching-active-frame-heading h4, .teaching-output-panel h4 { margin: 0; color: #405c4d; font-size: 12px; }
+.teaching-active-frame-heading > span { min-width: 0; color: #33405a; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+.teaching-active-frame-heading code { color: #65728a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.teaching-scene-support { display: grid; gap: 8px; min-width: 0; }
+.teaching-output-panel { min-width: 0; padding: 11px 12px; border: 1px solid #e0e3da; border-radius: 8px; background: #fffef9; }
+.teaching-output-panel > h4 { margin-bottom: 7px; }
+.teaching-output-panel > .empty-state { margin: 0; }
+.teaching-current-action { margin-top: 5px; padding: 10px 12px; border: 1px solid #e2e4d9; border-radius: 8px; background: #f7f7ef; }
+.teaching-current-action > h4 { margin: 0 0 7px; color: #58647c; font-size: 11px; }
+.teaching-action-instruction { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 5px 12px; min-width: 0; padding: 7px 9px; border-left: 3px solid #90a482; border-radius: 4px; background: #e9f1e4; }
+.teaching-action-instruction.is-next { border-left-color: #b0a95d; background: #f4f3dc; }
+.teaching-action-instruction.is-fault { border-left-color: #bd6e60; background: #fff1ec; }
+.teaching-action-instruction > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px 10px; min-width: 0; }
+.teaching-action-label { color: #58647c; font-size: 10px; font-weight: 750; }
+.teaching-action-instruction > code { color: #344052; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; overflow-wrap: anywhere; }
+.teaching-control-flow { margin: 8px 0 0; padding: 7px 9px; border-left: 3px solid #93a474; background: #f5f6e6; color: #4f5d43; font-size: 11px; line-height: 1.45; }
+.teaching-runtime-panel .teaching-state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding-top: 9px; }
+.teaching-runtime-panel .teaching-state-grid h4 { margin-top: 0; }
 .teaching-ast-list { display: grid; gap: 4px; margin: 0; padding: 0 0 0 13px; list-style: none; }
 .teaching-ast-root { padding-left: 0; }
 .teaching-ast-node { min-width: 0; padding-left: 8px; border-left: 1px solid #e3e3db; }
@@ -164,7 +192,9 @@ button:disabled { cursor: not-allowed; }
 .teaching-state-grid section { min-width: 0; }
 .teaching-state-grid h4 { margin: 3px 0 7px; color: #58647c; font-size: 11px; }
 .teaching-value-list { display: grid; gap: 5px; max-height: 250px; overflow: auto; margin: 0; padding: 0; list-style: none; }
-.teaching-value-list li { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 7px; padding: 5px 6px; border-bottom: 1px dotted #e4e4dd; color: #718097; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+.teaching-value-list li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: baseline; gap: 7px; padding: 5px 6px; border-bottom: 1px dotted #e4e4dd; color: #718097; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
+.teaching-value-list li.is-stack-top { color: #294c43; background: #eff4e9; }
+.teaching-value-list .teaching-stack-top { align-self: center; padding: 2px 4px; border-radius: 4px; background: #dce8d4; color: #405c4d; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 8px; font-weight: 800; letter-spacing: .05em; }
 .teaching-value-list code { min-width: 0; color: #39445f; overflow-wrap: anywhere; white-space: pre-wrap; }
 .teaching-variable-list { max-height: 250px; overflow: auto; }
 .teaching-heap-panel { min-width: 0; margin-top: 14px; padding-top: 10px; border-top: 1px solid #e3e5dc; }
@@ -199,6 +229,7 @@ button:disabled { cursor: not-allowed; }
 .teaching-frame-grid section { min-width: 0; }
 .teaching-frame-grid h5 { margin: 4px 0 6px; color: #58647c; font-size: 10px; }
 .teaching-frame-grid .teaching-value-list, .teaching-frame-grid .teaching-variable-list { max-height: 140px; }
+.teaching-frame-grid .teaching-value-list li { grid-template-columns: 20px minmax(0, 1fr) auto; }
 .teaching-output { max-height: 250px; overflow: auto; margin: 0; padding: 9px 10px; border: 1px solid #e2e4dc; border-radius: 7px; background: var(--code); color: #33405a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .trace-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .trace-event-card { display: grid; gap: 5px; min-height: 66px; margin: 8px 0 11px; padding: 10px 12px; border: 1px solid #e2e4d9; border-radius: 8px; background: #f7f7ef; color: #39445f; font-size: 12px; }
@@ -304,9 +335,13 @@ button:disabled { cursor: not-allowed; }
 .lab-footer { display: flex; justify-content: space-between; gap: 14px; margin-top: 17px; padding: 10px 2px 0; border-top: 1px solid #dedfd9; color: #6b7487; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; }
 
 @media (max-width: 1080px) {
-  .workbench { grid-template-columns: minmax(0, 1fr); }
+  .workbench, .workbench.is-teaching { grid-template-columns: minmax(0, 1fr); }
   .source-panel { min-height: 0; }
   .source-editor { min-height: 340px; }
+}
+
+@media (max-width: 820px) {
+  .teaching-scene-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 760px) {
@@ -316,6 +351,7 @@ button:disabled { cursor: not-allowed; }
   .runtime-card { width: 100%; min-width: 0; }
   .output-grid { grid-template-columns: minmax(0, 1fr); }
   .teaching-structure-grid, .teaching-state-grid, .teaching-frame-grid { grid-template-columns: minmax(0, 1fr); }
+  .teaching-runtime-panel .teaching-state-grid { grid-template-columns: minmax(0, 1fr); }
   .output-panel { min-height: 0; }
   .trace-details-grid { grid-template-columns: minmax(0, 1fr); }
   .snapshot-grid { grid-template-columns: minmax(0, 1fr); }

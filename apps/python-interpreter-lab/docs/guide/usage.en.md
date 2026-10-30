@@ -6,10 +6,9 @@ This guide covers the current `mini-vm-v5` teaching instruction set. Use the lan
 
 ## Quick start
 
-1. Select **Teaching VM** under **Execution view**.
-2. Paste the arithmetic example below into **Python source**, then click **Compile teaching program**. Compiling does not run the code.
-3. Click **Step one instruction** and watch the teaching instructions, value stack, and variables.
-4. Click **Run teaching program** to finish. **Teaching output** should show `7`.
+1. The page opens in **Teaching VM** by default. Paste the arithmetic example below into **Python source**, then click **Compile teaching program**. Compiling does not run the code.
+2. Click **Step one instruction** and inspect the execution point, active frame, operand stack, name bindings, and object heap.
+3. Click **Run teaching program** to finish. **Teaching output** should show `7`.
 
 ```python
 x = 1 + 2 * 3
@@ -23,10 +22,13 @@ One source line can produce several teaching instructions. Neither teaching inst
 
 | Area | What it shows |
 | --- | --- |
-| Value stack | Temporary operands and results in the active frame; the highest-numbered entry is the top. This is separate from the variable list |
-| Active frame stack | Module and function calls that have not returned; expand a frame to see its value stack, variables, call site, and return position |
-| Variables | Names bound to values. Lists and dictionaries show object IDs; two names with the same ID share one object |
+| Current execution point | Shows the actual next, most recently executed, or failed instruction and its source location; it does not invent instructions from source |
+| Active frame | The module or function frame currently executing; its operand stack and variables belong to this frame and remain separate |
+| Operand stack | Temporary operands and results in the active frame; the slot marked `TOP` is the next one to pop |
+| Name bindings | Names bound to values. Lists and dictionaries show object IDs; two names with the same ID share one object |
+| Call frames | Module and function calls that have not returned. Expand an inactive frame to inspect its variables and operand stack without changing the active frame or advancing execution |
 | Object heap | Reachable lists and dictionaries at the selected step, with their contents. Click an object ID in the variables to locate it |
+| AST / teaching instructions | Collapsed by default to keep the runtime scene in focus; expand to inspect the full AST, instructions, and breakpoints |
 
 These are teaching VM states. Object IDs are not memory addresses, and this view does not show CPython's complete memory layout.
 An object disappearing from the current heap view does not demonstrate that real memory was freed.
@@ -69,7 +71,7 @@ The complete output is `[9]`, `9`, `[9]`, and `[2]`, on separate lines.
 | Pause teaching program | Pause at a complete instruction boundary |
 | Automatic run speed | Choose Slow, Standard, or Fast for Run / Continue; stepping rules stay the same |
 
-Use the **Line** or **Instruction** buttons in **Teaching instructions** to set breakpoints. Execution pauses before the corresponding instruction.
+Expand **Teaching instructions**, then use its **Line** or **Instruction** buttons to set breakpoints. Execution pauses before the corresponding instruction.
 Source stepping can also stop early at a breakpoint, an error, or a resource limit.
 Try a line breakpoint at `result = change(b)`, then use **Step Into** to inspect the parameter binding.
 Click an instruction's source position to locate the original text. **Next instruction** has not executed yet.
@@ -83,7 +85,7 @@ Click an instruction's source position to locate the original text. **Next instr
 
 ## Check with real CPython
 
-Select **Real CPython** and wait for the runtime to become ready. The initial load needs a network connection.
+Select **Real CPython** under **Execution view** and wait for the runtime to become ready. The initial load needs a network connection.
 
 1. Click **Analyze source** to inspect tokens, the AST, code objects, and real bytecode. This does not execute the program.
 2. Click **Run Python** to execute the source and record output, calls, line events, returns, exceptions, and variable snapshots.
