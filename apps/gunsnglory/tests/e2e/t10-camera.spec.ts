@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 async function mapPoint(
@@ -47,6 +47,7 @@ test('two-finger map zoom follows its focal point and preserves touch hit testin
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   const cdp = await context.newCDPSession(page);
   try {
     await page.goto('/');
@@ -95,6 +96,7 @@ test('converting a one-finger drag to a pinch stops movement and locks the remai
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   const cdp = await context.newCDPSession(page);
   try {
     await page.goto('/');

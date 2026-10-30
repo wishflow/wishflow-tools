@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 test('scales the map by width and clips drawing at map and playfield edges', async ({ page }) => {
@@ -243,6 +243,7 @@ test('starts the preview wave from a mobile touch control', async ({ browser }) 
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/');
   await openSingleWaveSample(page, 'tap');
   const waveStatus = page.getByTestId('wave-status');
@@ -380,6 +381,11 @@ test('does not play real combat sound events while the saved sound setting is mu
   await soundToggle.click();
   await expect(soundToggle).toHaveText('Sound: Off');
   await expect(page.getByTestId('settings-status')).toContainText('saved');
+  // The official campaign's initial Pedro voice is played before this test
+  // mutes the game. Count only playback attempts made while muted below.
+  await page.evaluate(() => {
+    (window as unknown as Window & { __soundPlayCount: number }).__soundPlayCount = 0;
+  });
 
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await speed.focus();

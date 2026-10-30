@@ -769,6 +769,99 @@ body {
   color: #8ee3d9;
 }
 
+.campaign-wave-intro {
+  width: min(42rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid rgba(255, 225, 168, 0.8);
+  border-radius: 0.85rem;
+  color: #ffe8c1;
+  background: linear-gradient(145deg, #3b2a1c, #211b15 76%);
+  box-shadow: 0 0 0 100vmax rgba(10, 8, 6, 0.5), 0 0.8rem 3rem rgba(0, 0, 0, 0.7);
+}
+
+.campaign-wave-intro::backdrop {
+  background: rgba(10, 8, 6, 0.78);
+  backdrop-filter: blur(2px);
+}
+
+.campaign-wave-intro-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(0.85rem, 3vw, 1.4rem);
+  padding: clamp(1rem, 4vw, 1.6rem);
+}
+
+.campaign-wave-intro-card img {
+  display: block;
+  width: 96px;
+  height: 110px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.campaign-wave-intro-copy {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.campaign-wave-intro-copy .eyebrow,
+.campaign-wave-intro-copy h2,
+.campaign-wave-intro-copy p {
+  margin: 0;
+}
+
+.campaign-wave-intro-copy .eyebrow {
+  color: #e0a752;
+}
+
+.campaign-wave-intro-copy h2 {
+  color: #ffe1a8;
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+  font-size: 1.2rem;
+}
+
+.campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
+  color: #f0d5a8;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.campaign-wave-intro-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.campaign-wave-intro-actions button {
+  min-width: 7rem;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(237, 191, 117, 0.8);
+  border-radius: 0.6rem;
+  color: #fff0d3;
+  background: #67482b;
+  font: inherit;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.campaign-wave-intro-actions button:hover {
+  background: #805a32;
+}
+
+.campaign-wave-intro-actions button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 3px;
+}
+
 .recruit-confirmation {
   width: min(28rem, calc(100% - 2rem));
   margin: auto;
@@ -830,6 +923,21 @@ body {
   .game-page {
     gap: 0.75rem;
     padding: 0.75rem;
+  }
+
+  .campaign-wave-intro-card {
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+  }
+
+  .campaign-wave-intro-card img {
+    width: 64px;
+    height: 74px;
+  }
+
+  .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
+    font-size: 0.88rem;
   }
 
   .game-panel {

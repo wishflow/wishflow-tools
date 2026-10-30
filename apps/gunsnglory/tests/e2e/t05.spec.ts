@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise<void> {
@@ -108,6 +108,8 @@ test('reports a real IndexedDB transaction abort and retries the pending settlem
 test('a stale tab sees a settings conflict and can reload the newer saved value', async ({ context }) => {
   const first = await context.newPage();
   const second = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(first);
+  await installAutoContinueCampaignWaveIntro(second);
   await Promise.all([first.goto('/'), second.goto('/')]);
   await expect(first.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
   await expect(second.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 async function mapPoint(
@@ -93,6 +93,7 @@ test('moves and releases a unit through a real mobile touch drag', async ({ brow
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   try {
     await page.goto('/');
     await openSingleWaveSample(page, 'tap');

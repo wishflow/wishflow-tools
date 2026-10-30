@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 
 const officialLevelId = 'campaign-new-mexico-01';
 
@@ -92,6 +92,7 @@ test('opens the official first level by touch and localizes the unavailable next
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/');
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).tap();

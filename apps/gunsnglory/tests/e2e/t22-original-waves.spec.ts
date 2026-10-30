@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './auto-continue-fixtures';
 import { clickCanvasPoint, cowGulchMarkerPoint } from './helpers';
 
 test('completes official Cow Gulch level one and restores only settled campaign progress', async ({ page }) => {

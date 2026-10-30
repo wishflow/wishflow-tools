@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { clickCanvasPoint, cowGulchMarkerPoint, tapCanvasPoint } from './helpers';
 
 test('opens Cow Gulch, selects the gunslinger, clears selection, and survives resize', async ({ page }) => {
@@ -73,6 +73,7 @@ test('selects and clears the unit with mobile touch input', async ({ browser }) 
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/');
   const canvas = page.getByTestId('game-canvas');
   const status = page.getByTestId('selection-status');

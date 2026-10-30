@@ -9,6 +9,7 @@ import {
 import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent, cowGulchP1dCampaignContent } from './content/cow-gulch';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cowGulchLevelOneContent } from './content/official-campaign';
+import { CampaignWaveIntroCursor, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
@@ -183,6 +184,20 @@ app.innerHTML = [
   '        <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
   '      </div>',
   '    </dialog>',
+  '    <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
+  '      <div class="campaign-wave-intro-card">',
+  '        <img data-testid="campaign-wave-intro-portrait" alt="" width="96" height="110">',
+  '        <div class="campaign-wave-intro-copy">',
+  '          <p class="eyebrow" data-testid="campaign-wave-intro-wave"></p>',
+  '          <h2 id="campaign-wave-intro-title"></h2>',
+  '          <p id="campaign-wave-intro-text" data-testid="campaign-wave-intro-text"></p>',
+  '          <div class="campaign-wave-intro-actions">',
+  '            <button type="button" data-action="retry-wave-intro-voice" hidden>Retry Pedro’s voice</button>',
+  '            <button type="button" data-action="continue-wave-intro">Continue</button>',
+  '          </div>',
+  '        </div>',
+  '      </div>',
+  '    </dialog>',
   '    <p class="scene-caption" data-locale="The Cow Gulch battle has eight playable waves and settles after wave eight.">The Cow Gulch battle has eight playable waves and settles after wave eight.</p>',
   '  </section>',
   '</section>',
@@ -250,6 +265,13 @@ const upgradeConfirmationTitleElement = app.querySelector<HTMLElement>('#upgrade
 const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="upgrade-confirmation-details"]');
 const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
 const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
+const campaignWaveIntroDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-wave-intro"]');
+const campaignWaveIntroWaveElement = app.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-wave"]');
+const campaignWaveIntroTitleElement = app.querySelector<HTMLElement>('#campaign-wave-intro-title');
+const campaignWaveIntroTextElement = app.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-text"]');
+const campaignWaveIntroPortraitElement = app.querySelector<HTMLImageElement>('[data-testid="campaign-wave-intro-portrait"]');
+const retryCampaignWaveIntroVoiceButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-wave-intro-voice"]');
+const continueCampaignWaveIntroButtonElement = app.querySelector<HTMLButtonElement>('[data-action="continue-wave-intro"]');
 const startDefeatButton = app.querySelector<HTMLButtonElement>('[data-action="start-defeat-sample"]');
 const settlementPanelElement = app.querySelector<HTMLElement>('[data-testid="settlement"]');
 const settlementTitleElement = app.querySelector<HTMLElement>('#settlement-title');
@@ -287,6 +309,9 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
+  || !campaignWaveIntroDialogElement || !campaignWaveIntroWaveElement || !campaignWaveIntroTitleElement
+  || !campaignWaveIntroTextElement || !campaignWaveIntroPortraitElement || !retryCampaignWaveIntroVoiceButtonElement
+  || !continueCampaignWaveIntroButtonElement
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
   || !retrySettingsButtonElement || !reloadProfileButtonElement
   || !pauseStatusElement || !pauseButtonElement
@@ -364,6 +389,13 @@ const upgradeConfirmationTitle: HTMLElement = upgradeConfirmationTitleElement;
 const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElement;
 const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
 const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
+const campaignWaveIntroDialog: HTMLDialogElement = campaignWaveIntroDialogElement;
+const campaignWaveIntroWave: HTMLElement = campaignWaveIntroWaveElement;
+const campaignWaveIntroTitle: HTMLElement = campaignWaveIntroTitleElement;
+const campaignWaveIntroText: HTMLElement = campaignWaveIntroTextElement;
+const campaignWaveIntroPortrait: HTMLImageElement = campaignWaveIntroPortraitElement;
+const retryCampaignWaveIntroVoiceControl: HTMLButtonElement = retryCampaignWaveIntroVoiceButtonElement;
+const continueCampaignWaveIntroControl: HTMLButtonElement = continueCampaignWaveIntroButtonElement;
 const startDefeatControl: HTMLButtonElement = startDefeatButton;
 const clearSelectionControl: HTMLButtonElement = clearButton;
 const restartControl: HTMLButtonElement = restartButton;
@@ -422,7 +454,9 @@ let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let soundEnabled = true;
 const failedSoundElements = new Map<string, HTMLAudioElement>();
 let selectedDifficulty: GameDifficulty = 'easy';
-let pauseReason: 'manual' | 'background' | undefined;
+let pauseReason: 'manual' | 'background' | 'wave-intro' | undefined;
+let campaignWaveIntroCursor = new CampaignWaveIntroCursor();
+let pendingCampaignWaveIntro: CampaignWaveIntro | undefined;
 let showInspectionOverlay = false;
 let pageLeaving = false;
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | 'conflict' | 'profile-reset' | undefined;
@@ -570,6 +604,7 @@ const languageMessages = {
     retrySettings: 'Retry saving settings',
     soundPlaybackFailed: 'Sound could not be played. You can continue silently or retry playback.',
     retrySoundPlayback: 'Retry sound playback',
+    retryWaveIntroVoice: 'Retry Pedro’s voice',
     soundOn: 'Sound: On',
     soundOff: 'Sound: Off',
     reloadProfile: 'Reload saved profile',
@@ -722,6 +757,7 @@ const languageMessages = {
     retrySettings: '重试保存设置',
     soundPlaybackFailed: '音效无法播放。你可以继续静音游玩，或重试播放。',
     retrySoundPlayback: '重试播放音效',
+    retryWaveIntroVoice: '重试佩德罗语音',
     soundOn: '音效：开',
     soundOff: '音效：关',
     reloadProfile: '重新加载已保存档案',
@@ -1328,6 +1364,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
   renderCampaign();
+  renderCampaignWaveIntro();
   const actionLocked = replaying || replacingSession;
   sceneOpenErrorPanel.hidden = sceneOpenFailure === undefined;
   retrySceneOpenControl.textContent = messages.retrySceneOpen;
@@ -1388,17 +1425,17 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   soundPlaybackStatus.textContent = failedSoundElements.size > 0 ? messages.soundPlaybackFailed : '';
   retrySoundPlaybackButton.hidden = failedSoundElements.size === 0 || !soundEnabled;
   retrySoundPlaybackButton.textContent = messages.retrySoundPlayback;
-  const pauseMessage = view.paused
+  const pauseMessage = view.paused && pauseReason !== 'wave-intro'
     ? pauseReason === 'background' ? messages.battlePausedInBackground : messages.battlePaused
     : '';
   pauseStatus.textContent = pauseMessage;
-  pauseStatus.hidden = !view.paused;
+  pauseStatus.hidden = !view.paused || pauseReason === 'wave-intro';
   pauseControl.textContent = view.paused ? messages.resumeBattle : messages.pauseBattle;
-  pauseControl.disabled = actionLocked || (!view.paused
+  pauseControl.disabled = actionLocked || pauseReason === 'wave-intro' || (!view.paused
     && view.wave?.phase !== 'active'
     && !view.units.some((candidate) => candidate.moving));
   singleStepControl.textContent = messages.singleStep;
-  singleStepControl.disabled = actionLocked || !view.paused || view.wave?.settlement !== undefined;
+  singleStepControl.disabled = actionLocked || pauseReason === 'wave-intro' || !view.paused || view.wave?.settlement !== undefined;
   inspectionOverlayInput.checked = showInspectionOverlay;
   inspectionFrame.textContent = messages.inspectionFrame(view.frame, view.elapsedMs);
   inspectionUnits.textContent = messages.inspectionUnits(view.units.length === 0
@@ -1706,6 +1743,7 @@ const assetNames = new Set([
   'gng_hud_1_top_star',
   'gng_hud_1_top_star_0',
   'hud_font_numbers_scaled',
+  'portrait_pedro',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 
@@ -1816,22 +1854,81 @@ function retryFailedSoundPlayback(): void {
   if (failedSound) playSound(failedSound[0], failedSound[1]);
 }
 
-function playRequestedSounds(events: readonly GameEvent[]): void {
+function playAudioAsset(sound: string): void {
   if (!soundEnabled) return;
-  for (const event of events) {
-    if (event.type !== 'sound-requested') continue;
-    let audio = audioElements.get(event.sound);
-    if (!audio) {
-      const createdAudio = new Audio(new URL(
-        import.meta.env.BASE_URL + 'assets/sounds/' + event.sound + '.ogg',
-        window.location.href,
-      ).toString());
-      audio = createdAudio;
-      audioElements.set(event.sound, createdAudio);
-      createdAudio.addEventListener('error', () => recordSoundPlaybackFailure(event.sound, createdAudio));
-    }
-    playSound(event.sound, audio);
+  let audio = audioElements.get(sound);
+  if (!audio) {
+    const createdAudio = new Audio(new URL(
+      import.meta.env.BASE_URL + 'assets/sounds/' + sound + '.ogg',
+      window.location.href,
+    ).toString());
+    audio = createdAudio;
+    audioElements.set(sound, createdAudio);
+    createdAudio.addEventListener('error', () => recordSoundPlaybackFailure(sound, createdAudio));
   }
+  playSound(sound, audio);
+}
+
+function retryCampaignWaveIntroVoice(): void {
+  const intro = pendingCampaignWaveIntro;
+  if (intro && soundEnabled) playAudioAsset(intro.voiceSound);
+}
+
+function playRequestedSounds(events: readonly GameEvent[]): void {
+  for (const event of events) {
+    if (event.type === 'sound-requested') playAudioAsset(event.sound);
+  }
+}
+
+function renderCampaignWaveIntro(): void {
+  const intro = pendingCampaignWaveIntro;
+  if (!intro) return;
+  const language = getLanguage();
+  const totalWaves = view.wave?.totalWaves ?? 8;
+  campaignWaveIntroWave.textContent = language === 'en'
+    ? `Wave ${intro.waveNumber} of ${totalWaves}`
+    : `第 ${intro.waveNumber} 波 · 共 ${totalWaves} 波`;
+  campaignWaveIntroTitle.textContent = intro.speaker[language];
+  campaignWaveIntroText.textContent = intro.text[language];
+  campaignWaveIntroPortrait.alt = intro.speaker[language];
+  const portraitUrl = new URL(
+    import.meta.env.BASE_URL + 'assets/' + intro.portraitAsset + '.png',
+    window.location.href,
+  ).toString();
+  if (campaignWaveIntroPortrait.src !== portraitUrl) campaignWaveIntroPortrait.src = portraitUrl;
+  retryCampaignWaveIntroVoiceControl.textContent = languageMessages[language].retryWaveIntroVoice;
+  retryCampaignWaveIntroVoiceControl.hidden = !soundEnabled || !failedSoundElements.has(intro.voiceSound);
+  continueCampaignWaveIntroControl.textContent = language === 'en' ? 'Continue' : '继续';
+  campaignWaveIntroDialog.dataset.waveNumber = String(intro.waveNumber);
+}
+
+function showCampaignWaveIntroForCurrentWave(): boolean {
+  if (session.startRecord.mode !== 'formal'
+    || session.startRecord.scenarioId !== cowGulchLevelOneContent.id
+    || !view.wave) return false;
+  const intro = campaignWaveIntroCursor.next(view.wave.number);
+  if (!intro) return false;
+  pendingCampaignWaveIntro = intro;
+  stopGameLoop();
+  pauseReason = 'wave-intro';
+  view = session.pause();
+  renderCampaignWaveIntro();
+  if (!campaignWaveIntroDialog.open) campaignWaveIntroDialog.show();
+  continueCampaignWaveIntroControl.focus({ preventScroll: true });
+  playAudioAsset(intro.voiceSound);
+  return true;
+}
+
+function continueCampaignWaveIntro(): void {
+  if (!pendingCampaignWaveIntro) return;
+  pendingCampaignWaveIntro = undefined;
+  campaignWaveIntroDialog.close();
+  if (pauseReason !== 'wave-intro' || !view.paused || document.hidden) return;
+  pauseReason = undefined;
+  view = session.resume();
+  renderStatus();
+  redraw();
+  startGameLoop();
 }
 
 function activateSession(
@@ -1840,6 +1937,9 @@ function activateSession(
   nextRestartMode?: Exclude<GameMode, 'replay'>,
 ): void {
   stopGameLoop();
+  if (campaignWaveIntroDialog.open) campaignWaveIntroDialog.close();
+  pendingCampaignWaveIntro = undefined;
+  campaignWaveIntroCursor = new CampaignWaveIntroCursor();
   const previousSession = session;
   session = nextSession;
   view = session.observe();
@@ -1862,6 +1962,7 @@ function activateSession(
   settlementPanel.hidden = true;
   replayStatusState = nextReplayStatus;
   restartModeOverride = nextRestartMode;
+  showCampaignWaveIntroForCurrentWave();
   renderStatus();
   redraw();
 }
@@ -2299,13 +2400,21 @@ function startGameLoop(): void {
     previousTimestamp = currentTimestamp;
     const frameEvents: GameEvent[] = [];
     for (const stepMs of simulationTime.advanceElapsed(deltaMs, simulationSpeed)) {
+      const previousWaveNumber = view.wave?.number;
       view = loopSession.advance({ deltaMs: stepMs });
       frameEvents.push(...view.events);
+      if (view.wave?.number !== previousWaveNumber && showCampaignWaveIntroForCurrentWave()) break;
       if (view.wave?.phase !== 'active') break;
     }
     playRequestedSounds(frameEvents);
     renderStatus(frameEvents);
     redraw();
+    if (view.paused) {
+      animationFrame = 0;
+      previousTimestamp = undefined;
+      simulationTime.reset();
+      return;
+    }
     animationFrame = window.requestAnimationFrame(tick);
   };
   animationFrame = window.requestAnimationFrame(tick);
@@ -2410,6 +2519,12 @@ cancelRecruitControl.addEventListener('click', () => {
 });
 recruitConfirmation.addEventListener('cancel', () => {
   pendingRecruitmentType = undefined;
+});
+continueCampaignWaveIntroControl.addEventListener('click', continueCampaignWaveIntro);
+retryCampaignWaveIntroVoiceControl.addEventListener('click', retryCampaignWaveIntroVoice);
+campaignWaveIntroDialog.addEventListener('cancel', (event: Event) => {
+  event.preventDefault();
+  continueCampaignWaveIntro();
 });
 startUpgradeSampleControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen('cow-gulch-upgrade-sample', 'debug'));

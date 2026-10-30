@@ -1181,3 +1181,25 @@ Game 现在在首次命中结算处按 damage style 3/4 发出同一声音事件
 | Codex 内置浏览器公网实测 | 打开[本次公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=c25a78b)，确认页面标题、Cow Gulch 地图、战役面板、4× 控件及暂停操作正常，控制台无 error/warn。游戏自动推进至 Wave 4/8 后立即暂停；正式档案仍为 Cow Gulch 1/1、最高分 `$356`，未结算本次战斗。style 4 单位尚未接入当前可玩关卡，因此线上检查没有声称直接触发 style 4；该事件由上方 Game fixture 验证。 |
 
 本轮只修复已实现规则对 APK 音效触发条件的遗漏，不改变伤害、AOE、随机或单位内容。其它武器音效和音乐仍待首次消费关卡实现时对照，P1-F 首关验收计数保持0/60。
+
+## 61. P1-F Cow Gulch 逐波叙事对白
+
+正式 Cow Gulch 关卡此前缺少 APK 每波开始前的 Pedro 叙事对白。本轮按原版波次顺序加入 8 条对白、Pedro 肖像和语音；对白期间暂停游戏，玩家继续或按 Escape 关闭后才恢复。该变化只接入表现与交互，不修改波次、寻路、战斗规则、随机数、档案结构或回放格式；未完成战役仍在刷新后从 Wave01 重新开始。
+
+### APK 依据与实现
+
+研究分支 `codex/gunsnglory-spec` 的 REA/JADX 反编译资料显示：`GameScreenActivity` 在初始难度选择后调用 `displayDialog(0)`；后续波次也显示对白 ID 0。`InGameGeneralMessageDialog` 显示 `WaveManager.getCurrentText()` 与 `getCurrentImage()`，并在 Pedro 肖像对白中请求 `sound_pedro`。八组 Cow Gulch 文案和 Pedro 头像映射来自 `GameDesignWaves` 与 APK 字符串资源。以上是反编译结果，不是原始 Java 源码。APK 的 `res/drawable-mdpi-v4/portrait_pedro.png` 与 `res/raw/sound_pedro.ogg` 已复制到应用资源目录。
+
+`cow-gulch-wave-intros.ts` 按 Wave01–08 定义英文原版文案、中文翻译、Pedro 肖像和语音资源；顺序游标确保每次战斗每波只显示一次。`main.ts` 仅对正式关卡启用对白：开局时暂停当前 Wave，自动推进发现波次变化时暂停并显示下一条；Continue 和 Escape 都恢复原会话，不提交额外 `start-wave` 输入。语言由 site-shell 管理，静音设置复用既有 IndexedDB 字段。浏览器拒绝无手势自动播放时，对白内显示中英双语的语音重试入口；成功后该入口自动隐藏。资源、文字映射与会话游标测试位于 `tests/cow-gulch-wave-intros.test.ts`，浏览器流程位于 `tests/e2e/t23-campaign-wave-intros.spec.ts`。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 内容与顺序 | 单元测试核对八条文案的波次顺序、原版英文关键文本、双语、Pedro 头像/语音映射；游标拒绝重复、倒序、越界及无效波次。 |
+| 桌面与触屏 | Playwright 确认 Wave01 首条对白与头像载入、对白暂停帧推进；点 Continue 后自动到达 Wave02 对白并再次暂停。手机视口确认对话框和触屏按钮位于屏幕边界内。 |
+| 语言与音频 | 对话框显示时通过 site-shell 切换中英文；测试确认存档静音设置在刷新后阻止语音播放，并模拟自动播放被拒绝后通过对话框内的用户手势重试恢复。 |
+| 旧回归隔离 | 其它 E2E 页面通过共享测试夹具自动继续叙事对白，使既有游戏控制、存储和结算测试仍覆盖其原目标；对白专用测试使用原始 Playwright 页面直接检查行为。夹具观察 `document`，避免应用启动时 `<html>` 尚未创建而触发观察器错误。 |
+| 本地应用 CI | 显式使用 Node 22.23.3 执行 `CI=1 PLAYWRIGHT_PORT=5429 pnpm --dir apps/gunsnglory run test:ci`：TypeScript 检查、166 项单元测试、Vite 生产构建和 57 项 Playwright 测试全部通过。`pnpm run test:catalog` 的15项仓库目录测试通过。 |
+| 首关范围 | 定向新用例仅把虚拟时间推进到 Wave02 对白，不完成整关或更改正式档案。Cow Gulch 首关 P1-F 全量地图、规则和表现对照仍未通过，验收计数保持 0/60。 |
+| 集成、发布与内置浏览器 | 待本轮提交、合并和公开站点核验后补录。 |

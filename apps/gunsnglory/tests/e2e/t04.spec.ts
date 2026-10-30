@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise<void> {
@@ -80,6 +80,7 @@ test('keeps the settlement and restart usable with mobile touch input', async ({
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/');
   await openSingleWaveSample(page, 'tap');
   await setFourTimesSpeed(page);

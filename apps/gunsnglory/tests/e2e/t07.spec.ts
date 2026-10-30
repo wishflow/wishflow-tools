@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 
 test('shows the original price and refuses a Gunslinger hire without charging Cow Gulch cash', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -28,6 +28,7 @@ test('the recruitment control can be operated by touch on a phone-sized viewport
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   try {
     await page.goto('/');
     const recruit = page.getByRole('button', { name: 'Hire Gunslinger · $75' });

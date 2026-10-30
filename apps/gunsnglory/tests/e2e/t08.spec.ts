@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 async function clickMapCenter(page: import('@playwright/test').Page): Promise<void> {
@@ -62,6 +62,7 @@ test('upgrades a selected unit with touch on a phone-sized viewport', async ({ b
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   try {
     await page.goto('/');
     await openSingleWaveSample(page, 'tap');

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 test('single-step advances one frame and inspection overlays leave the paused battle unchanged', async ({ page }) => {
@@ -65,6 +65,7 @@ test('inspection and single-step controls remain usable on a phone-sized touch v
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   try {
     await page.goto('/');
     await openSingleWaveSample(page, 'tap');

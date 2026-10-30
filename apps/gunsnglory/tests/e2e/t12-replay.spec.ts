@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
 test('exports a settled battle and verifies its replay without saving the replay result', async ({ page }) => {

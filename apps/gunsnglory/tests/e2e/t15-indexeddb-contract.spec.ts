@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './auto-continue-fixtures';
 
 test('IndexedDB experiment records use stable pagination and reject a missing result artifact', async ({ page }) => {
   await page.goto('/');

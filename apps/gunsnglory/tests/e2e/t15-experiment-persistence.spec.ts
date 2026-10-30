@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 
 async function readProfileRecord(page: import('@playwright/test').Page): Promise<unknown> {
   return page.evaluate(async () => {
@@ -72,6 +72,7 @@ test('keeps experiment save and reopen controls usable on a narrow touch viewpor
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   const consoleIssues: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error' || message.type() === 'warning') consoleIssues.push(message.text());

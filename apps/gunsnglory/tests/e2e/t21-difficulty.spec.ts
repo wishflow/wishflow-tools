@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 
 test('persists the next-battle difficulty, applies it to a scene, and keeps Hard locked', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -68,6 +68,7 @@ test('difficulty selection and lock feedback fit the mobile campaign panel', asy
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/');
   await expect(page.getByTestId('difficulty-select')).toBeEnabled();
   await expect(page.getByTestId('difficulty-select').locator('option[value="hard"]')).toHaveAttribute('disabled', '');

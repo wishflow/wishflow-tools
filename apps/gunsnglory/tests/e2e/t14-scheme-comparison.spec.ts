@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 
 test('compares immutable numeric schemes on matched runs without changing Progress', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -43,6 +43,7 @@ test('keeps the comparison controls and results usable in a narrow touch viewpor
     isMobile: true,
   });
   const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/');
 
   const compareButton = page.getByTestId('compare-schemes');

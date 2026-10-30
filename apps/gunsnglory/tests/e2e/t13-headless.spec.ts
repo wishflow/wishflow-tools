@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './auto-continue-fixtures';
 
 test('runs a versioned single-scene experiment in the browser through public interfaces', async ({ page }) => {
   await page.goto('/');
