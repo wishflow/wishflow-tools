@@ -502,6 +502,7 @@ interface MutableUnit {
   weaponCooldownMs: number;
   shotsUntilSpecialReload: number;
   shootingAnimationElapsedMs?: number;
+  shootingAnimationFrame?: number;
   shootingDirection?: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
 }
 
@@ -725,19 +726,15 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
 }
 
 function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation'] {
-  const elapsedMs = unit.shootingAnimationElapsedMs;
   const direction = unit.shootingDirection;
-  if (elapsedMs === undefined || !direction) return undefined;
+  if (unit.shootingAnimationElapsedMs === undefined || unit.shootingAnimationFrame === undefined || !direction) return undefined;
 
   const animation = unit.definition.type === 'gunslinger'
-    ? { asset: 'player_gunslinger_shot' as const, frames: [[0, 100], [1, 200], [0, 1000]] as const }
+    ? { asset: 'player_gunslinger_shot' as const }
     : unit.definition.type === 'mexican'
-      ? { asset: 'player_mexican_shot' as const, frames: [[0, 200], [1, 400]] as const }
+      ? { asset: 'player_mexican_shot' as const }
       : undefined;
   if (!animation) return undefined;
-
-  const frame = animation.frames.find(([, endMs]) => elapsedMs <= endMs)?.[0];
-  if (frame === undefined) return undefined;
 
   let row: number;
   if (direction.y < 0 && direction.x === 0) row = 4;
@@ -746,20 +743,40 @@ function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation']
   else if (direction.y > 0) row = 0;
   else row = 1;
 
-  return { asset: animation.asset, frame, row, mirrored: direction.x > 0 };
+  return { asset: animation.asset, frame: unit.shootingAnimationFrame, row, mirrored: direction.x > 0 };
 }
 
-function advanceShootingAnimation(unit: MutableUnit, deltaMs: number): void {
+function advanceShootingAnimation(unit: MutableUnit, deltaMs: number, didMove: boolean): void {
   if (unit.shootingAnimationElapsedMs === undefined) return;
-  if (unit.movementTargetFine) {
+  if (didMove) {
     unit.shootingAnimationElapsedMs = undefined;
+    unit.shootingAnimationFrame = undefined;
     unit.shootingDirection = undefined;
     return;
   }
+
+  const frames = unit.definition.type === 'gunslinger'
+    ? [[0, 100], [1, 200], [0, 1000]] as const
+    : unit.definition.type === 'mexican'
+      ? [[0, 200], [1, 400]] as const
+      : undefined;
+  if (!frames) {
+    unit.shootingAnimationElapsedMs = undefined;
+    unit.shootingAnimationFrame = undefined;
+    unit.shootingDirection = undefined;
+    return;
+  }
+
+  let frameIndex = 0;
+  while (frameIndex < frames.length - 1 && unit.shootingAnimationElapsedMs > frames[frameIndex]![1]) {
+    frameIndex += 1;
+  }
+  unit.shootingAnimationFrame = frames[frameIndex]![0];
   unit.shootingAnimationElapsedMs = Math.trunc(unit.shootingAnimationElapsedMs + deltaMs);
-  const maximumDuration = unit.definition.type === 'gunslinger' ? 1000 : 400;
+  const maximumDuration = frames[frames.length - 1]![1];
   if (unit.shootingAnimationElapsedMs > maximumDuration) {
     unit.shootingAnimationElapsedMs = undefined;
+    unit.shootingAnimationFrame = undefined;
     unit.shootingDirection = undefined;
   }
 }
@@ -2070,8 +2087,10 @@ export function createGame(options: {
           }
 
           for (const unit of units) {
+            const previousPosition = { ...unit.positionFine };
             moveUnit(unit, scenario, deltaMs);
-            advanceShootingAnimation(unit, deltaMs);
+            const didMove = unit.positionFine.x !== previousPosition.x || unit.positionFine.y !== previousPosition.y;
+            advanceShootingAnimation(unit, deltaMs, didMove);
           }
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
@@ -2236,6 +2255,7 @@ export function createGame(options: {
               });
               nextShotNumber += 1;
               unit.shootingAnimationElapsedMs = 0;
+              unit.shootingAnimationFrame = 0;
               unit.shootingDirection = {
                 x: Math.sign(target.positionFine.x - unit.positionFine.x) as -1 | 0 | 1,
                 y: Math.sign(target.positionFine.y - (unit.positionFine.y - FIELD_CENTER_HALF)) as -1 | 0 | 1,

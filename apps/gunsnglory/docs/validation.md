@@ -998,3 +998,21 @@ APK 依据是研究分支 REA/JADX 的 GameObjectEnemy 构造、draw() 和 Enemy
 | 集成与公网实测 | 开发提交 `04347c5` 已合入并推送到 `master`。GitHub Actions [run 41006909631](https://github.com/wishflow/wishflow-tools/actions/runs/41006909631) 成功：Guns’n’Glory CI、共享站点检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker/config 与文档专用作业按变更范围跳过。Codex 内置浏览器打开[公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=04347c5)，页面与游戏资源正常加载，控制台 error/warn 为空。页面自动开始战斗，检查时暂停在第4/8波、生命43、敌人28、现金$118；正式档案仍为1/1、最高分 `$356`，速度仍为4×，未产生新结算。截图中的地图、暂停控件和战斗 HUD 正常。该公网烟测确认部署和暂停交互可用；死亡计时0 ms的末帧由上方确定性 Canvas/Game 测试覆盖。验证记录提交 `8164cb4` 的文档专用工作流 [run 41007827042](https://github.com/wishflow/wishflow-tools/actions/runs/41007827042) 通过，应用测试与部署按变更范围跳过。 |
 
 完整 Cow Gulch 首关仍为0/60。动态对象跨类型的同深度队列、其他动画/状态和音频实测仍待逐项处理。
+
+## 52. P1-F Cow Gulch 枪手与 Mexican 攻击动画帧顺序
+
+网页原先在更新计时后重新推导当前绘制帧，导致计时刚跨过阈值时提前换帧；移动目标一经设置也会清除攻击动画，即使单位尚未发生实际位移。本轮保存每次更新按旧计时值选出的帧，并在位置确实变化时才取消攻击动画。
+
+APK 依据为研究分支 `codex/gunsnglory-spec` 的 JADX 分析产物：`GameDesignOptics.java` 的攻击帧表给出 Gunslinger `(0,100),(1,200),(0,1000)`、Mexican `(0,200),(1,400)`；`GameObjectUnit.shoot()` 将计时器置0并开始动画；`GameObjectUnit.move()` 以更新开始时的计时值选择帧，执行 `(int)(counter + dt)` 后再检查计时是否严格大于最后阈值。该方法仅在 X/Y 实际位移分量获准变化时清除攻击状态。反编译代码是 APK 分析产物，不是原始 Java 源码。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 红灯用例 | 新增公共 `Game` Interface 测试后，旧实现分别在 Gunslinger 阈值跨越步提前显示帧1、以及仅有移动意图且位置不变时提前清除攻击图集；两项用例均按预期失败。 |
+| APK 帧阈值 | Gunslinger 与 Mexican 分别覆盖阈值前、恰等于阈值、跨过后下一更新，以及最后阈值等于/严格大于的状态；按游戏每次最多推进100ms的约束组织固定 `dt` 序列。新逻辑保留更新开始时选出的帧，并在整数化计时超过末阈值时清理图集。 |
+| 位移取消 | 移动意图产生不足一个 fine unit 的步进时保持攻击帧；后续实际移动一个 fine unit 后立即清除。 |
+| 完整本地 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4193 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、158项单元测试、Vite 生产构建及52项 Playwright 测试。 |
+| 合并、部署与公网实测 | 本轮代码提交及站点 Actions、Codex 内置浏览器线上核对完成后补录。 |
+
+本轮闭合 Cow Gulch Gunslinger/Mexican 攻击帧的阈值顺序和实际位移取消行为，不代表其他单位、动画状态或首关整体验收完成；Cow Gulch 首关仍为0/60。

@@ -1099,6 +1099,105 @@ test('the Mexican dynamite hits inside the strict one-tile radius and leaves bou
   assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
 });
 
+test('matches APK pre-increment attack frame thresholds for Gunslinger and Mexican', async () => {
+  const variants = [
+    { type: 'gunslinger' as const, asset: 'player_gunslinger', damageStyle: 0 as const },
+    { type: 'mexican' as const, asset: 'player_mexican', damageStyle: 3 as const },
+  ];
+
+  for (const variant of variants) {
+    const attackScenario: ScenarioContent = {
+      ...combatScenario,
+      id: 'attack-frame-' + variant.type,
+      units: [{
+        ...combatScenario.units[0]!,
+        type: variant.type,
+        asset: variant.asset,
+        weapon: { ...combatScenario.units[0]!.weapon!, reloadTimeMs: 2000, damageStyle: variant.damageStyle },
+      }],
+      previewWave: {
+        ...combatScenario.previewWave!,
+        spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
+        enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 100000 },
+      },
+    };
+    const session = await createGame({ scenarios: { [attackScenario.id]: attackScenario } }).open({
+      scenarioId: attackScenario.id,
+      randomSeed: 42,
+    });
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+    advanceFor(session, 999);
+    const shot = session.advance({ deltaMs: 1 });
+    assert.ok(shot.events.some((event) => event.type === 'unit-fired'));
+    assert.equal(shot.units[0]?.shootingAnimation?.frame, 0);
+
+    const stepDurations = variant.type === 'gunslinger' ? [100, 1, 1] : [100, 100, 1, 1];
+    const animationSteps = stepDurations
+      .map((deltaMs) => session.advance({ deltaMs }));
+    assert.equal(animationSteps[0]?.units[0]?.shootingAnimation?.frame, 0);
+    assert.equal(animationSteps.at(-2)?.units[0]?.shootingAnimation?.frame, 0,
+      variant.type + ' keeps the frame chosen before the counter crosses its threshold');
+    assert.equal(animationSteps.at(-1)?.units[0]?.shootingAnimation?.frame, 1,
+      variant.type + ' advances when the next update starts above the threshold');
+
+    const maximumDuration = variant.type === 'gunslinger' ? 1000 : 400;
+    let elapsedMs = stepDurations.reduce((sum, deltaMs) => sum + deltaMs, 0);
+    let atMaximum = animationSteps.at(-1)!;
+    while (elapsedMs < maximumDuration) {
+      const deltaMs = Math.min(100, maximumDuration - elapsedMs);
+      atMaximum = session.advance({ deltaMs });
+      elapsedMs += deltaMs;
+    }
+    assert.ok(atMaximum.units[0]?.shootingAnimation,
+      variant.type + ' remains active when the post-update counter equals the last threshold');
+    const afterMaximum = session.advance({ deltaMs: 1 });
+    assert.equal(afterMaximum.units[0]?.shootingAnimation, undefined,
+      variant.type + ' ends after the post-update counter becomes strictly greater than the last threshold');
+  }
+});
+
+test('keeps the shooting animation when a move intent produces no actual displacement', async () => {
+  const stationaryStepScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'attack-frame-no-displacement',
+    units: [{
+      ...combatScenario.units[0]!,
+      movementSpeedFinePer100Ms: 1,
+      weapon: { ...combatScenario.units[0]!.weapon!, reloadTimeMs: 500 },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 100000 },
+    },
+  };
+  const session = await createGame({ scenarios: { [stationaryStepScenario.id]: stationaryStepScenario } }).open({
+    scenarioId: stationaryStepScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+  advanceFor(session, 249);
+  const shot = session.advance({ deltaMs: 1 });
+  assert.equal(shot.units[0]?.shootingAnimation?.frame, 0);
+
+  assert.equal(session.submitIntent({ type: 'select-at', x: 8.5, y: 8.5 }), true);
+  session.advance({ deltaMs: 0 });
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 9, targetY: 8 }), true);
+  const view = session.advance({ deltaMs: 1 });
+
+  assert.deepEqual(view.units[0]?.positionFine, shot.units[0]?.positionFine,
+    'the one-millisecond move is below one fine-position unit at this speed');
+  assert.equal(view.units[0]?.shootingAnimation?.frame, 0,
+    'the original only cancels attack animation after actual movement');
+
+  const moved = session.advance({ deltaMs: 100 });
+  assert.notDeepEqual(moved.units[0]?.positionFine, view.units[0]?.positionFine);
+  assert.equal(moved.units[0]?.shootingAnimation, undefined,
+    'actual movement cancels the shooting animation');
+});
+
 test('does not attack at or beyond the strict outer range boundary', async () => {
   const outOfRangeScenario: ScenarioContent = {
     ...combatScenario,
