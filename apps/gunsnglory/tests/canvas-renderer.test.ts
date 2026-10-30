@@ -152,7 +152,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       id: 'dynamite-1',
       shooterId: 'gunslinger-1',
       targetId: 'pioneer-1',
-      positionFine: { x: (9 * 7680) + 1920, y: (9 * 7680) + 1920 },
+      positionFine: { x: (9 * 7680) + 1920, y: (6 * 7680) + 3840 },
       remainingMs: 100,
       damageStyle: 3,
       imageAsset: 'sfx_mexican_dynamite',
@@ -226,9 +226,9 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, enemyImage, images.sfx_mexican_dynamite, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
+    [mapImage, images.sfx_mexican_dynamite, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
       treeImage, unitImage, images.sfx_exploding_parts, bushImage],
-    'a low-depth shot shares the under-road draw pass while other scene objects keep their ground-depth order',
+    'a shot created after its target draws first when both share the same under-road depth',
   );
   const dynamiteDraw = drawCalls.find((args) => args[0] === images.sfx_mexican_dynamite);
   assert.ok(dynamiteDraw);

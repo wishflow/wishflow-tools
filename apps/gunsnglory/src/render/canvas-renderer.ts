@@ -165,12 +165,21 @@ function drawBelowStreetObjects(
   images: GameImages,
   viewport: MapViewport,
 ): void {
-  const drawItems: { depth: number; order: number; draw: () => void }[] = [];
+  const drawItems: {
+    depth: number;
+    order: number;
+    kind: 'enemy' | 'shot';
+    id: string;
+    targetId?: string;
+    draw: () => void;
+  }[] = [];
   let order = 0;
   enemies.forEach((enemy) => {
     drawItems.push({
       depth: enemy.positionFine.y + (enemy.drawingOffsetFine?.y ?? 0),
       order,
+      kind: 'enemy',
+      id: enemy.id,
       draw: () => drawEnemy(context, enemy, images, viewport),
     });
     order += 1;
@@ -180,12 +189,43 @@ function drawBelowStreetObjects(
     drawItems.push({
       depth: shot.positionFine.y,
       order,
+      kind: 'shot',
+      id: shot.id,
+      targetId: shot.targetId,
       draw: () => drawShot(context, shot, images, viewport),
     });
     order += 1;
   });
   drawItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
-  for (const item of drawItems) item.draw();
+
+  const enemiesById = new Map(
+    drawItems.filter((item) => item.kind === 'enemy').map((enemy) => [enemy.id, enemy] as const),
+  );
+  const targetShots = new Map<string, typeof drawItems>();
+  for (const shot of drawItems) {
+    if (shot.kind !== 'shot' || !shot.targetId) continue;
+    const target = enemiesById.get(shot.targetId);
+    if (!target || target.depth !== shot.depth) continue;
+    const shots = targetShots.get(target.id) ?? [];
+    shots.push(shot);
+    targetShots.set(target.id, shots);
+  }
+
+  const targetShotsDrawn = new Set<(typeof drawItems)[number]>();
+  for (const item of drawItems) {
+    if (targetShotsDrawn.has(item)) continue;
+    if (item.kind === 'enemy') {
+      // APK inserts a newly created equal-depth object before existing queue entries.
+      // A projectile and its already-existing target therefore draw projectile first.
+      const shots = targetShots.get(item.id) ?? [];
+      shots.sort((left, right) => right.order - left.order);
+      for (const shot of shots) {
+        shot.draw();
+        targetShotsDrawn.add(shot);
+      }
+    }
+    item.draw();
+  }
 }
 
 function drawSceneObjects(
