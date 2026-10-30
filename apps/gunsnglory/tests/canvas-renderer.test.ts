@@ -167,6 +167,11 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       heightFine: 3840,
       frame: 2,
     }],
+    drawOrder: [
+      'shot:dynamite-1', 'enemy:pioneer-1',
+      'decoration:1', 'decoration:3', 'decoration:5', 'decoration:4', 'decoration:0',
+      'unit:gunslinger-1', 'wagon-debris:wagon-part-1', 'decoration:2',
+    ],
     recruitPool: [],
     events: [],
   };
@@ -492,6 +497,7 @@ test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the uni
     }],
     enemies: [],
     shots: [],
+    drawOrder: ['unit:gunslinger-hire-01'],
     recruitPool: [],
     events: [],
   };
@@ -565,6 +571,7 @@ test('renders the original campaign HUD artwork and numeric atlas over the game 
     units: [],
     enemies: [],
     shots: [],
+    drawOrder: [],
     recruitPool: [],
     events: [],
     wave: {
@@ -699,6 +706,7 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
         explosionRemainingMs: 599, fineZ: 7680, heightFine: 0,
       },
     ],
+    drawOrder: ['shot:flight', 'shot:impact', 'unit:gunslinger-1'],
     recruitPool: [],
     events: [],
   };
@@ -777,6 +785,7 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
       animationFrame: 0,
     }],
     shots: [],
+    drawOrder: ['enemy:wagon'],
     recruitPool: [],
     events: [],
   };

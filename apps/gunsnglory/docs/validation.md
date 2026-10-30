@@ -1081,9 +1081,9 @@ REA/JADX 反编译分析中，`GameObject.addToObjectManager()` 先把对象加�
 
 REA/JADX 反编译分析显示，`GameObjectManager.getValueByObject()` 使用 `fineY + drawingOffsetY + fineZ × 100` 计算深度；`insertDrawOrder()` 只越过严格浅于新对象的条目，故新对象在相等深度时插到已有对象之前。`correctDrawOrder()` 在对象移动后只向移动方向越过严格深浅的邻项；相等时不重排，从而保留历史顺序。`GunsAndGloryThread` 先调用 `EnemyDirector.moveEnemys()`，再调用 `UnitDirector.moveUnits()` 和 `moveShots()`；绘制时队列深度低于 `768000` 的对象在道路前绘制，其余对象在道路之后继续绘制。依据为研究分支 `codex/gunsnglory-spec` 的 REA/JADX 产物 `GameObjectManager.java`、`GunsAndGloryThread.java`、`EnemyDirector.java`、`UnitDirector.java` 及对应 DEX dump；反编译结果不是原始 Java 源码。
 
-Canvas 渲染器现在按原始地图扫描顺序初始化装饰和单位，再将敌人、投射物、残骸加入同一 `DrawOrderQueue`。同一个 Canvas 通过弱映射保留绘制历史；后续绘制按敌人、单位、投射物等更新阶段执行严格深度修正，并在 `768000` 处分成道路前后两次绘制。这样覆盖了静态对象与单位的移动并列、同深度目标投射物，以及不同类别对象跨绘制帧的历史次序。未修改 `GameView`、规则状态、存档或回放格式。
+该历史版本由 Canvas 渲染器按原始地图扫描顺序初始化装饰和单位，再将敌人、投射物、残骸加入同一 `DrawOrderQueue`；同一个 Canvas 通过弱映射保留绘制历史，按对象更新阶段修正深度，并在 `768000` 处分成道路前后两次绘制。当时尚未修改 `GameView`、规则状态、存档或回放格式。
 
-这条队列目前属于渲染器，并根据相邻两次 Canvas 绘制观察到的状态更新。若浏览器在一次绘制前连续推进多个模拟帧，队列不会看到各中间帧的校正；若首次绘制发生在已运行的关卡中途，也只能从当前对象和深度初始化，无法还原先前已形成的相等深度历史。要完全复现 APK 的每次模拟步顺序，后续需让 `GameSession` 暴露每步的队列快照或顺序变更。此缺口保留在 P1-F 门槛中，不能据本轮结果宣称首关对照完成。
+该实现只根据相邻两次 Canvas 绘制观察到的状态更新。若一次绘制前连续推进多个模拟步，或首次绘制发生在关卡中途，队列会丢失未观察到的更新历史。这个缺口已在[验证记录第57节](validation.md#57-p1-f-cow-gulch-模拟步绘制顺序)修正；第56节保留的是修正前的设计与验证历史。
 
 ### 验证
 
@@ -1094,4 +1094,25 @@ Canvas 渲染器现在按原始地图扫描顺序初始化装饰和单位，再�
 | 本地验证 | Node 22.23.3 下 160 项单元测试通过，TypeScript 检查通过，Vite 生产构建通过，Playwright 53 项 E2E 通过。第一次 E2E 启动因沙箱阻止 `127.0.0.1` 绑定而得到 `EPERM`；受限提权后重跑 E2E 成功。 |
 | 合并、部署与内置浏览器 | 代码提交 `0cf3f1f` 已快进合入并推送到 `master`。GitHub Actions [run 41028040067](https://github.com/wishflow/wishflow-tools/actions/runs/41028040067) 成功：Guns’n’Glory 测试、共享检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker/config 与宠物任务按变更范围跳过。Codex 内置浏览器打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=0cf3f1f)，检查页面标题、战役档案、Cow Gulch 全图、峡谷道路/桥、HUD 与 4× 倍速控件均正常。页面按已有 4× 设置启动未完成战局，进入第 3/8 波后暂停；画面和 AX 状态显示生命 50、敌人 6、现金 `$117`。正式档案仍为 1/1 完成、最高分 `$356`，没有新结算；浏览器控制台 error/warn 为空。公网烟测验证部署、主要画面和暂停控件；截图不单独证明同深度排序，具体绘制次序由上方 Canvas 定向断言和队列单元测试验证。 |
 
-本轮把渲染排序从目标投射物特例扩展为全对象队列，但队列状态仍由绘制帧推导；未观察到的模拟帧顺序仍需补齐。Cow Gulch 首关仍为 0/60。
+本轮把渲染排序从目标投射物特例扩展为全对象队列；当时队列状态仍由绘制帧推导。该历史缺口已由第57节闭合。Cow Gulch 首关仍为 0/60。
+
+## 57. P1-F Cow Gulch 模拟步绘制顺序
+
+第56节的 Canvas 弱映射只能在绘制发生时观察对象位置；浏览器可能在一次绘制前推进多个模拟步，或者在页面恢复后首次绘制时已错过队列变化。本轮将队列状态移入 `GameSession`，使其随确定性游戏状态逐步推进。
+
+`GameSession.open()` 按静态地图扫描顺序创建初始队列；每次 `advance()` 完成敌人、单位、投射物、残骸及结算状态更新后、生成该步 `GameView` 前，按 APK 的对象更新阶段同步队列。深度仍使用原版公式：敌人 `fineY + drawingOffsetY`，单位 `fineY + 768000`，投射物 `fineY + fineZ × 100`，车厢残骸 `depthFineY + 768000`，静态装饰使用其地面锚点再加 `768000`。`GameView.drawOrder` 只读暴露稳定对象键；Canvas 根据这些键选择绘制闭包，并继续以 `768000` 将对象分到道路前后两层。绘制器不再自行保存或推进队列。
+
+此改动覆盖跳帧渲染及中途首次绘制的顺序历史，且不更改 IndexedDB 档案、正式规则输入、回放格式或游戏结果。回放仍逐步运行相同规则并从新会话确定性重建该派生队列。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 模拟步回归 | 新增 `tests/game-draw-order.test.ts`：单位越过静态装饰后，在不绘制中间画面的条件下回到相等深度，`GameView` 保留越过后形成的队列历史；夹具同时断言移动确实越过深度并回到同一坐标。 |
+| 队列及 Canvas 回归 | 原有队列严格深度、同深度插入测试通过；Canvas 手工视图改为提供 `drawOrder`，原有道路层、静态装饰、敌人、投射物和残骸的 draw-call 次序断言通过。 |
+| 回归敏感性复核 | 临时将向上排序的同深度比较从非严格条件改为严格条件后，队列测试与模拟步集成测试均按预期失败；恢复原文件后，3 项定向测试通过。 |
+| 完整 CI 模式 | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4387 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、161 项单元测试、Vite 生产构建和53项 Playwright E2E。 |
+| Playwright E2E | 完整 CI 命令在 `CI=1` 下按项目配置使用1个 worker，53项全部通过。未设置 `CI=1` 的诊断运行使用5个 worker时有3项超时；三项串行复跑及2 worker全套复跑均通过，因此未改项目并发配置。 |
+| 本地浏览器与部署 | 待合并发布后记录本轮版本的 Codex 内置浏览器核对、CI/CD 状态与公网烟测结果。 |
+
+本轮闭合的是第56节提出的“模拟步之间及首次绘制前丢失绘制历史”问题。它只解决 P1-F 的跨类型绘制队列所有权与时序，不代表 Cow Gulch 首关画面和规则已完成全量对照；首关仍为 0/60。

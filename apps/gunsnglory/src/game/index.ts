@@ -11,6 +11,12 @@ import {
   replayStateDigest,
   serializeReplay,
 } from './replay';
+import {
+  DrawOrderQueue,
+  GAME_DRAW_ORDER_ROAD_CUTOFF,
+  synchronizeDrawOrder,
+  type DrawOrderEntry,
+} from './draw-order';
 import type {
   GameReplayFrame,
   GameReplayPayload,
@@ -372,6 +378,8 @@ export interface GameView {
   enemies: readonly EnemyView[];
   wagonDebris?: readonly WagonDebrisView[];
   shots: readonly ShotView[];
+  /** Stable object keys in the original shared depth queue order. */
+  drawOrder: readonly string[];
   recruitPool: readonly RecruitPoolEntry[];
   events: readonly GameEvent[];
   wave?: WaveView;
@@ -522,6 +530,48 @@ interface MutableWave {
   dynamicDifficulty?: number;
   difficultyValue?: number;
   difficultyValueCounter?: number;
+}
+
+function drawOrderEntries(
+  scenario: ScenarioContent,
+  units: readonly MutableUnit[],
+  wave: MutableWave | undefined,
+): DrawOrderEntry[] {
+  const decorations = (scenario.map.decorations ?? []).map((decoration, index): DrawOrderEntry => ({
+    id: `decoration:${index}`,
+    kind: 'decoration',
+    cell: decoration.cell,
+    depth: ((decoration.cell.y + 1) * FINE_UNITS_PER_CELL) + GAME_DRAW_ORDER_ROAD_CUTOFF,
+  }));
+  const unitEntries = units.map((unit): DrawOrderEntry => ({
+    id: `unit:${unit.definition.id}`,
+    kind: 'unit',
+    cell: {
+      x: Math.floor(unit.positionFine.x / FINE_UNITS_PER_CELL),
+      y: Math.floor((unit.positionFine.y - FIELD_CENTER_HALF) / FINE_UNITS_PER_CELL),
+    },
+    depth: unit.positionFine.y + GAME_DRAW_ORDER_ROAD_CUTOFF,
+  }));
+  const mapObjects = [...decorations, ...unitEntries].sort((left, right) => (
+    left.cell!.y - right.cell!.y || left.cell!.x - right.cell!.x
+  ));
+  const enemies = (wave?.enemies ?? []).map((enemy): DrawOrderEntry => ({
+    id: `enemy:${enemy.id}`,
+    kind: 'enemy',
+    depth: enemy.positionFine.y + enemy.drawingOffsetFine.y,
+  }));
+  const shots = (wave?.shots ?? []).map((shot): DrawOrderEntry => ({
+    id: `shot:${shot.id}`,
+    kind: 'shot',
+    depth: shot.positionFine.y + (shot.fineZ * 100),
+  }));
+  const wagonDebris = (wave?.wagonDebris ?? []).map((part): DrawOrderEntry => ({
+    id: `wagon-debris:${part.id}`,
+    kind: 'wagon-debris',
+    depth: part.depthFineY + GAME_DRAW_ORDER_ROAD_CUTOFF,
+  }));
+
+  return [...mapObjects, ...enemies, ...shots, ...wagonDebris];
 }
 
 const FINE_UNITS_PER_CELL = 7680;
@@ -1666,6 +1716,10 @@ export function createGame(options: {
           } : {}),
         }
         : undefined;
+      const drawOrderQueue = new DrawOrderQueue();
+      for (const entry of drawOrderEntries(scenario, units, wave)) {
+        drawOrderQueue.insert(entry.id, entry.depth);
+      }
 
       const assertOpen = () => {
         if (closed) throw new Error('Game session is closed');
@@ -1741,6 +1795,7 @@ export function createGame(options: {
             animationFrame: shot.animationFrame,
             ...(shot.explosionRemainingMs > 0 ? { explosionRemainingMs: shot.explosionRemainingMs } : {}),
           })),
+          drawOrder: drawOrderQueue.items(),
           recruitPool: (scenario.recruitableUnits ?? []).map((definition) => ({
             unitType: definition.id,
             name: clone(definition.name),
@@ -2399,6 +2454,7 @@ export function createGame(options: {
               wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
             }
           }
+          synchronizeDrawOrder(drawOrderQueue, drawOrderEntries(scenario, units, wave));
           const nextView = observe();
           recordedFrames.push({
             frame,

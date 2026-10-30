@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DrawOrderQueue } from '../src/render/draw-order';
+import { DrawOrderQueue } from '../src/game/draw-order';
 
 test('new objects insert before existing objects at an equal depth', () => {
   const queue = new DrawOrderQueue();
