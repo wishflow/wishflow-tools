@@ -69,6 +69,20 @@ function stackAnimationClass(
   transition: TeachingAnimationTransition | null,
   stage: 'before' | 'after',
 ): string {
+  if (transition?.kind === 'call-enter') {
+    if (stage === 'before' && snapshot.frames.at(-1)?.id === transition.callerFrameId
+      && transition.callBindings.some(({ stackIndex }) => stackIndex === index)) return 'is-animation-source';
+    if (stage === 'after' && snapshot.frames.at(-1)?.id === transition.calleeFrameId
+      && index === snapshot.stack.length - 1 && snapshot.stack.length > 0) return 'is-animation-result';
+    return '';
+  }
+  if (transition?.kind === 'call-return') {
+    if (stage === 'before' && snapshot.frames.at(-1)?.id === transition.calleeFrameId
+      && transition.returnValue?.type !== 'none' && index === snapshot.stack.length - 1) return 'is-animation-source';
+    if (stage === 'after' && snapshot.frames.at(-1)?.id === transition.callerFrameId
+      && index === snapshot.stack.length - 1) return 'is-animation-result';
+    return '';
+  }
   if (!transition || snapshot.frames.at(-1)?.id !== transition.frameId) return '';
   if (stage === 'after' && ['push', 'operate', 'object-created'].includes(transition.kind)
     && index === snapshot.stack.length - 1) return 'is-animation-result';
@@ -1132,7 +1146,11 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
                     {snapshot.variables.map(({ name, value }) => {
                       const isSource = animationTransition?.kind === 'push' && animationTransition.sourceName === name && animationStage === 'before';
                       const isTarget = animationTransition?.kind === 'bind-name' && animationTransition.bindingName === name && animationStage === 'after';
-                      return <div className={isSource ? 'is-animation-source' : isTarget ? 'is-animation-result' : undefined} key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>;
+                      const isParameter = animationTransition?.kind === 'call-enter'
+                        && animationStage === 'after'
+                        && animationTransition.calleeFrameId === activeFrame?.id
+                        && animationTransition.callBindings.some((binding) => binding.name === name);
+                      return <div className={isSource ? 'is-animation-source' : isTarget || isParameter ? 'is-animation-result' : undefined} key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>;
                     })}
                   </dl>
                 )}

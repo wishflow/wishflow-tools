@@ -26,7 +26,7 @@
 
 - 调用和返回过渡保持历史中的原始顺序。递归中的相同函数名始终由各自帧 ID 区分；参数相等或对象别名不能合并成一个帧。
 - `None` 返回（包括裸 `return` 和自然结束）按实际 `None` 值显示；返回列表/字典时保留原对象 ID。
-- 已有 V3 数据动作继续沿用每个源码步最多 12 条过渡的限制。超限显示省略数和最终快照；不得为展示而扩大 Worker 历史或制造额外中间状态。
+- 已有 V3 数据动作继续沿用每个源码步最多 12 条过渡的限制。超限时优先保留调用、返回和拒绝边界；边界事件不超过 12 条时全部保留，空间不足时保留历史开头与结尾的边界，再按原顺序补入普通数据过渡。显示省略数和最终快照；不得为展示而扩大 Worker 历史或制造额外中间状态。
 - 连续历史中发生调用/返回后仍可继续推导后续动作；错误发生前已验证的过渡可以依序展示。错误指令本身不伪装成成功过渡，最终错误状态使用 Worker 诊断。
 
 ## 4. 讲解呈现
@@ -56,7 +56,7 @@
 
 ### 测试命令
 
-- 聚焦单测：`pnpm --dir apps/python-interpreter-lab exec tsx --test tests/teaching-animation.test.ts`。
+- 聚焦单测：从仓库根目录运行 `pnpm --dir apps/python-interpreter-lab exec node --import tsx --test tests/teaching-animation.test.ts`。
 - 应用全量验证：`pnpm --dir apps/python-interpreter-lab run test:ci`。
 - 仓库入口与站点：`pnpm test:catalog`、`pnpm build:site`。
 - Playwright 必须经应用生产构建/现有测试服务器和真实 Teaching VM Worker 覆盖函数调用、递归帧、返回值、暂停/历史和中英文；不能仅以 mock 或纯函数测试替代。

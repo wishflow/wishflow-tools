@@ -50,6 +50,155 @@ test('plays alias, in-place mutation, and rebinding from recorded snapshots', as
   await expectQuickly(page.getByRole('button', { name: 'Play explanation' })).toBeDisabled();
 });
 
+test('animates parameter binding, preserves an aliased object, and returns a value to the caller', async ({ page }) => {
+  await compileTeachingSource(page, [
+    'def bump(items):',
+    '  return items[0] + 1',
+    'items = [8]',
+    'result = bump(items)',
+  ].join('\n'));
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & {
+      __teachingCallAnimationMessages?: string[];
+      __teachingCallAnimationOverflow?: number;
+    };
+    const messages = windowWithRecorder.__teachingCallAnimationMessages ?? [];
+    windowWithRecorder.__teachingCallAnimationMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) {
+        const text = card.textContent ?? '';
+        messages.push(text);
+        if (text.includes('calls bump') || text.includes('(bump) returns')) {
+          const overflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+          windowWithRecorder.__teachingCallAnimationOverflow = Math.max(windowWithRecorder.__teachingCallAnimationOverflow ?? 0, overflow);
+        }
+      }
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+
+  await page.getByRole('button', { name: 'Play explanation' }).click();
+  await expectQuickly(page.getByText('Teaching program finished').first()).toBeVisible({ timeout: 30_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingCallAnimationMessages?: string[] }).__teachingCallAnimationMessages ?? []);
+  const callAnimationOverflow = await page.evaluate(() => (window as Window & { __teachingCallAnimationOverflow?: number }).__teachingCallAnimationOverflow ?? 0);
+  const callMessages = messages.join('\n');
+  expect(callMessages).toContain('calls bump and creates frame');
+  expect(callMessages).toContain('Argument 1');
+  expect(callMessages).toContain('L4:10');
+  expect(callMessages).toContain('Return address');
+  expect(callMessages).toContain('items');
+  expect(callMessages).toContain('list #1');
+  expect(callMessages).toContain('returns 9 to caller frame');
+  expect(callMessages).toContain('(bump) returns 9');
+  expect(callAnimationOverflow).toBeLessThanOrEqual(0);
+
+  const activeVariables = page.locator('.teaching-active-frame .teaching-variable-list');
+  await expectQuickly(activeVariables).toContainText('items');
+  await expectQuickly(activeVariables).toContainText('list #1');
+  await expectQuickly(activeVariables).toContainText('result');
+  await expectQuickly(activeVariables).toContainText('9');
+});
+
+test('animates recursive frames with distinct IDs and returns in LIFO order', async ({ page }) => {
+  await compileTeachingSource(page, [
+    'def fact(n):',
+    '  if n <= 1:',
+    '    return 1',
+    '  return n * fact(n - 1)',
+    'result = fact(3)',
+  ].join('\n'));
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingRecursiveMessages?: string[] };
+    const messages = windowWithRecorder.__teachingRecursiveMessages ?? [];
+    windowWithRecorder.__teachingRecursiveMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+  await page.getByRole('button', { name: 'Play explanation' }).click();
+  await expectQuickly(page.getByText('Teaching program finished').first()).toBeVisible({ timeout: 30_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingRecursiveMessages?: string[] }).__teachingRecursiveMessages ?? []);
+  const recursiveCalls = [...new Set(messages.join('\n').match(/Frame #(\d+) calls fact and creates frame #(\d+)/g) ?? [])];
+  expect(recursiveCalls).toHaveLength(3);
+  expect(new Set(recursiveCalls.map((call) => call.match(/creates frame #(\d+)/)?.[1])).size).toBe(3);
+  const recursiveReturns = [...new Set(messages.join('\n').match(/Frame #(\d+) \(fact\) returns \d+ to caller frame #\d+\./g) ?? [])];
+  expect(recursiveReturns).toHaveLength(3);
+  expect(recursiveReturns.map((entry) => entry.match(/^Frame #(\d+)/)?.[1])).toEqual(['3', '2', '1']);
+  expect(messages.join('\n')).toContain('returns 6 to caller frame');
+  await expectQuickly(page.locator('.teaching-active-frame .teaching-variable-list')).toContainText('6');
+});
+
+test('animates bare and natural None returns from real Worker snapshots', async ({ page }) => {
+  await compileTeachingSource(page, [
+    'def bare_return():',
+    '  return',
+    'def natural_return():',
+    '  value = 1',
+    'first = bare_return()',
+    'second = natural_return()',
+  ].join('\n'));
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingNoneMessages?: string[] };
+    const messages = windowWithRecorder.__teachingNoneMessages ?? [];
+    windowWithRecorder.__teachingNoneMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+  await page.getByRole('button', { name: 'Play explanation' }).click();
+  await expectQuickly(page.getByText('Teaching program finished').first()).toBeVisible({ timeout: 30_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingNoneMessages?: string[] }).__teachingNoneMessages ?? []);
+  const allMessages = messages.join('\n');
+  expect(allMessages).toContain('(bare_return) returns None');
+  expect(allMessages).toContain('(natural_return) returns None');
+  expect(allMessages).toContain('RETURN_NONE');
+});
+
+test('reports a failed call without a callee frame', async ({ page }) => {
+  await compileTeachingSource(page, 'result = missing(1)');
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingRejectedCallMessages?: string[] };
+    const messages = windowWithRecorder.__teachingRejectedCallMessages ?? [];
+    windowWithRecorder.__teachingRejectedCallMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+  await page.getByRole('button', { name: 'Play explanation' }).click();
+  await expectQuickly(page.getByRole('alert')).toContainText('Name error');
+  await expectQuickly(page.locator('.teaching-animation-panel')).toContainText('no callee frame was created');
+  await expectQuickly(page.locator('.teaching-animation-details')).toContainText('Not created');
+  await expect(page.locator('.teaching-frame-list > li')).toHaveCount(1);
+});
+
+test('localizes call and return explanations in Chinese', async ({ page }) => {
+  await compileTeachingSource(page, 'def identity(value):\n  return value\nresult = identity(7)');
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingChineseMessages?: string[] };
+    const messages = windowWithRecorder.__teachingChineseMessages ?? [];
+    windowWithRecorder.__teachingChineseMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+  await page.getByRole('button', { name: '讲解播放' }).click();
+  await expectQuickly(page.getByText('教学程序已完成').first()).toBeVisible({ timeout: 30_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingChineseMessages?: string[] }).__teachingChineseMessages ?? []);
+  expect(messages.join('\n')).toContain('调用 identity');
+  expect(messages.join('\n')).toContain('返回给调用帧');
+});
+
 test('continues explanation from a selected snapshot at the execution head', async ({ page }) => {
   await compileTeachingSource(page, 'first = 1 + 2\nsecond = first + 4');
   await page.getByRole('button', { name: 'Step one instruction' }).click();

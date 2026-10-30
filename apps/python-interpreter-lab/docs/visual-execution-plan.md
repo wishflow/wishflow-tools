@@ -95,7 +95,7 @@ flowchart LR
 - **验收**：`bump(a)` 中 `xs` 与 `a` 共享同一对象；返回的标量先回到调用者栈，再按后续指令绑定 `n`；`fact(3)` 的同名帧仍有独立局部状态和返回位置。
 - **验证**：Into/Over/Out、递归、暂停在函数内、从历史检查非活动帧、参数与运行错误的失败显示；达到调用帧预算时不播放成功创建动画。
 - **回滚**：调用/返回退化为 V2 静态解释，V3 其他动作不受影响。
-- **状态**：spec/tasks 已创建；实现进行中，细化范围见 [V4 spec](specs/v04-function-call-return-animation.md) 与 [V4 tasks](tasks/v04-function-call-return-animation.md)。
+- **状态**：spec/tasks 与 T01–T04 已完成；应用全量 CI（166 条单测、68 条 Playwright、类型检查、生产构建）、catalog（15 项）、整站构建和 `git diff --check` 均通过。代码审查完成，待提交、合并、推送及线上验收。细化范围与执行记录见 [V4 spec](specs/v04-function-call-return-animation.md) 和 [V4 tasks](tasks/v04-function-call-return-animation.md)。
 
 ### V5：控制流与既有运行错误
 

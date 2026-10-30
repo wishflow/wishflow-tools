@@ -66,7 +66,7 @@ The complete output is `[9]`, `9`, `[9]`, and `[2]`, on separate lines.
 - On return, the function frame exits, and the returned value `9` is then bound to `result`.
 - After `b = [2]`, `b` refers to a new object while `a` still refers to the original one.
 
-Use **Play explanation** to inspect the first three object actions: `b = a` keeps the same object ID, `b[0] = 9` highlights an entry on that object, and `b = [2]` shows a new object before rebinding. Each source step animates at most 12 recognized data actions; additional records are coalesced into the final state with an omitted count. Calls, returns, and control flow remain static snapshots. Reduced motion keeps the same action text and final state.
+Use **Play explanation** to inspect the first three object actions: `b = a` keeps the same object ID, `b[0] = 9` highlights an entry on that object, and `b = [2]` shows a new object before rebinding. Calls also show the caller's arguments moving into a new frame's parameters; returns show the function frame leaving and the actual value reaching the caller's stack before a later `STORE_NAME` binds it. Recursive calls retain distinct frame IDs. Each source step animates at most 12 recognized transitions; when the limit applies, call/return boundaries are kept ahead of ordinary data transitions where possible, and omitted records are reported with the confirmed final state. Control flow remains a static snapshot. Reduced motion keeps the same action text and final state.
 
 ## Control execution
 

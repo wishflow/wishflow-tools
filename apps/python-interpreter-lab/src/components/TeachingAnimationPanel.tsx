@@ -49,7 +49,60 @@ function teachingAnimationMessage(
           key: transition.itemKey?.display ?? '—',
           value: transition.value?.display ?? '—',
         });
+    case 'call-enter':
+      return replaceMessage(t('teachingAnimationCallEnter'), {
+        caller: String(transition.callerFrameId ?? '—'),
+        function: transition.functionName ?? '—',
+        callee: String(transition.calleeFrameId ?? '—'),
+      });
+    case 'call-return':
+      return replaceMessage(t('teachingAnimationCallReturn'), {
+        callee: String(transition.calleeFrameId ?? '—'),
+        function: transition.functionName ?? '—',
+        caller: String(transition.callerFrameId ?? '—'),
+        value: transition.returnValue?.display ?? '—',
+      });
+    case 'call-rejected':
+      return replaceMessage(t('teachingAnimationCallRejected'), {
+        function: transition.functionName ?? '—',
+        code: transition.diagnostic?.code ?? '—',
+      });
   }
+}
+
+function teachingAnimationDetails(
+  transition: TeachingAnimationTransition,
+  t: (key: MessageKey) => string,
+) {
+  if (transition.kind === 'call-enter') {
+    return (
+      <dl className="teaching-animation-details">
+        <div><dt>{t('teachingAnimationCallSite')}</dt><dd>{transition.callSite ? `L${transition.callSite.line}:${transition.callSite.column}` : '—'}</dd></div>
+        <div><dt>{t('teachingAnimationReturnPc')}</dt><dd>{transition.returnPc ?? '—'}</dd></div>
+        {transition.callBindings.map(({ argumentIndex, name, value }) => (
+          <div key={`${argumentIndex}-${name}`}><dt>{t('teachingAnimationArgument').replace('{index}', String(argumentIndex + 1))} → <code>{name}</code></dt><dd>{value.display}</dd></div>
+        ))}
+      </dl>
+    );
+  }
+  if (transition.kind === 'call-return') {
+    return (
+      <dl className="teaching-animation-details">
+        <div><dt>{t('teachingAnimationReturnedValue')}</dt><dd>{transition.returnValue?.display ?? '—'}</dd></div>
+        <div><dt>{t('teachingAnimationCallSite')}</dt><dd>{transition.callSite ? `L${transition.callSite.line}:${transition.callSite.column}` : '—'}</dd></div>
+        <div><dt>{t('teachingAnimationCaller')}</dt><dd>#{transition.callerFrameId ?? '—'} · {t('teachingReturnAddress').replace('{index}', String(transition.returnPc ?? '—'))}</dd></div>
+      </dl>
+    );
+  }
+  if (transition.kind === 'call-rejected' && transition.diagnostic) {
+    return (
+      <dl className="teaching-animation-details is-error">
+        <div><dt>{t('teachingAnimationError')}</dt><dd>{transition.diagnostic.message}</dd></div>
+        <div><dt>{t('teachingAnimationFrameCreated')}</dt><dd>{t('teachingAnimationNoFrameCreated')}</dd></div>
+      </dl>
+    );
+  }
+  return null;
 }
 
 export function TeachingAnimationPanel({
@@ -68,6 +121,7 @@ export function TeachingAnimationPanel({
         <span>{t(presentation.stage === 'before' ? 'teachingAnimationBefore' : 'teachingAnimationAfter')}</span>
       </div>
       <p>{teachingAnimationMessage(transition, presentation.baselineAvailable, presentation.omittedCount, t)}</p>
+      {transition && teachingAnimationDetails(transition, t)}
       {transition && (
         <small><code>{transition.opcode}</code> · #{transition.instructionIndex}</small>
       )}
