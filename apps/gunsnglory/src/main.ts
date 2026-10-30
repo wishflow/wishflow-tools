@@ -1695,6 +1695,7 @@ const assetNames = new Set([
   'player_gunslinger_shot',
   'player_mexican',
   'player_mexican_shot',
+  'cursor',
   'sfx_mexican_dynamite',
   'sfx_explosion',
   'gng_hud_0_top',

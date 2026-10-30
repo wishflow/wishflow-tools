@@ -520,6 +520,104 @@ test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the uni
   assert.equal((effectY as number) + (effectHeight as number), feetY - 32 * viewport.scaleFactor);
 });
 
+test('draws the APK selection range and four animated cursor markers', () => {
+  const drawCalls: unknown[][] = [];
+  const clipRects: number[][] = [];
+  const filledCircles: Array<{ arc: number[]; fillStyle: string }> = [];
+  let pendingRect: number[] | undefined;
+  let pendingArc: number[] | undefined;
+  let fillStyle = '';
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    get fillStyle() { return fillStyle; },
+    set fillStyle(value: string) { fillStyle = value; },
+    beginPath() {},
+    rect(...args: number[]) { pendingRect = args; },
+    clip() {
+      if (pendingRect) clipRects.push(pendingRect);
+    },
+    arc(...args: number[]) { pendingArc = args; },
+    fill() {
+      if (pendingArc) filledCircles.push({ arc: pendingArc, fillStyle });
+      pendingArc = undefined;
+    },
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+  } as unknown as CanvasRenderingContext2D;
+  const ground = {} as HTMLImageElement;
+  const gunslinger = {} as HTMLImageElement;
+  const cursor = { naturalWidth: 64, naturalHeight: 16 } as HTMLImageElement;
+  const view: GameView = {
+    frame: 18,
+    elapsedMs: 288,
+    paused: false,
+    scenarioId: 'cow-gulch',
+    map: {
+      width: 17,
+      height: 17,
+      tileSize: 32,
+      background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 17, height: 17 }],
+      streets: [],
+    },
+    units: [{
+      id: 'gunslinger-1',
+      type: 'gunslinger',
+      cell: { x: 8, y: 8 },
+      movementSpeedFinePer100Ms: 1500,
+      asset: 'player_gunslinger',
+      frame: { x: 0, y: 0, width: 32, height: 44 },
+      render: { x: 8, y: 7.625, width: 1, height: 1.375 },
+      hitArea: { x: 8, y: 7.625, width: 1, height: 1.375 },
+      selected: true,
+      moving: false,
+      positionFine: { x: (8 * 7680) + 3840, y: (8 * 7680) + 5760 },
+      attackRange: {
+        centerTenthTiles: { x: 85, y: 82 },
+        maximumTenthTiles: 45,
+        boundary: 'exclusive',
+      },
+      upgradeLevel: 0,
+    }],
+    enemies: [],
+    shots: [],
+    drawOrder: ['unit:gunslinger-1'],
+    recruitPool: [],
+    events: [],
+  };
+  const images = { ground, player_gunslinger: gunslinger, cursor };
+
+  drawGame(context, view, images);
+
+  const viewport = getMapViewport(view);
+  const selected = view.units[0]!;
+  const frameHeight = Math.trunc(selected.frame.height * viewport.scaleFactor);
+  const centerX = Math.trunc(viewport.origin.x + (selected.positionFine.x / 7680) * viewport.tileSize);
+  const centerY = Math.trunc(viewport.origin.y + (selected.positionFine.y / 7680) * viewport.tileSize)
+    - Math.trunc(frameHeight / 2);
+  assert.deepEqual(filledCircles, [{
+    arc: [centerX, centerY, 4 * viewport.tileSize, 0, Math.PI * 2],
+    fillStyle: 'rgba(255, 255, 255, 0.1568627450980392)',
+  }], 'the range circle uses the original integer-cell radius and translucent white paint');
+  assert.ok(clipRects.some((rect) => rect[0] === viewport.origin.x && rect[1] === viewport.origin.y
+    && rect[2] === viewport.mapWidth && rect[3] === viewport.mapHeight),
+  'the selection feedback is clipped to the map bounds');
+
+  const cursorDraws = drawCalls.filter(([image]) => image === cursor);
+  assert.deepEqual(cursorDraws.map((call) => call.slice(1, 5)), [
+    [0, 0, 16, 16], [16, 0, 16, 16], [32, 0, 16, 16], [48, 0, 16, 16],
+  ], 'the cursor atlas draws one original directional marker in each corner');
+  assert.deepEqual(cursorDraws.map((call) => call.slice(5)), [
+    [centerX - 15 - 30, centerY - 30, 30, 30],
+    [centerX - 15 + 30, centerY - 30, 30, 30],
+    [centerX - 15 - 30, centerY + 30, 30, 30],
+    [centerX - 15 + 30, centerY + 30, 30, 30],
+  ], 'the marker spacing follows the original breathing phase at frame 18');
+  assert.ok(drawCalls.findIndex(([image]) => image === gunslinger) < drawCalls.findIndex(([image]) => image === cursor),
+    'selection range and markers overlay the world objects');
+});
+
 test('renders the original campaign HUD artwork and numeric atlas over the game map', () => {
   const ground = {} as HTMLImageElement;
   const hudImages = {

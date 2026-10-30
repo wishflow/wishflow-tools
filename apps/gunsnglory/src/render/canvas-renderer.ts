@@ -8,6 +8,8 @@ const FINE_UNITS_PER_CELL = 7680;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
 const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
 const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
+const SELECTION_RANGE_CIRCLE_COLOR = 'rgba(255, 255, 255, 0.1568627450980392)';
+const SELECTION_CURSOR_FRAMES = 4;
 
 export type GameImages = Readonly<Record<string, HTMLImageElement>>;
 
@@ -101,13 +103,6 @@ function drawUnit(
   const width = unit.render.width * viewport.tileSize;
   const height = unit.render.height * viewport.tileSize;
 
-  if (unit.selected) {
-    context.beginPath();
-    context.ellipse(left + width / 2, top + height - 1, width * 0.6, viewport.tileSize * 0.2, 0, 0, Math.PI * 2);
-    context.fillStyle = 'rgba(255, 196, 70, 0.8)';
-    context.fill();
-  }
-
   const firing = unit.shootingAnimation;
   const walking = unit.walkingAnimation;
   const asset = firing?.asset ?? unit.asset;
@@ -152,19 +147,66 @@ function drawUnit(
       effectHeight,
     );
   }
+}
 
-  if (unit.selected) {
-    context.strokeStyle = '#ffe28a';
-    context.lineWidth = 2;
-    context.setLineDash([5, 3]);
-    context.strokeRect(
-      viewport.origin.x + unit.hitArea.x * viewport.tileSize,
-      viewport.origin.y + unit.hitArea.y * viewport.tileSize,
-      unit.hitArea.width * viewport.tileSize,
-      unit.hitArea.height * viewport.tileSize,
-    );
-    context.setLineDash([]);
+function drawSelectedUnitFeedback(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const unit = view.units.find((candidate) => candidate.selected);
+  if (!unit) return;
+
+  const cursor = images.cursor;
+  if (!cursor) throw new Error('Missing game image: cursor');
+
+  const tileScale = viewport.scaleFactor;
+  const frameHeight = Math.trunc(unit.frame.height * tileScale);
+  const centerX = Math.trunc(viewport.origin.x + (unit.positionFine.x / FINE_UNITS_PER_CELL) * viewport.tileSize);
+  const centerY = Math.trunc(viewport.origin.y + (unit.positionFine.y / FINE_UNITS_PER_CELL) * viewport.tileSize)
+    - Math.trunc(frameHeight / 2);
+  const rangeRadiusCells = Math.trunc((unit.attackRange?.maximumTenthTiles ?? 0) / 10);
+
+  context.save();
+  context.beginPath();
+  context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
+  context.clip();
+
+  if (rangeRadiusCells > 0) {
+    context.beginPath();
+    context.arc(centerX, centerY, rangeRadiusCells * viewport.tileSize, 0, Math.PI * 2);
+    context.fillStyle = SELECTION_RANGE_CIRCLE_COLOR;
+    context.fill();
   }
+
+  const markerWidth = Math.trunc((cursor.naturalWidth * tileScale) / SELECTION_CURSOR_FRAMES);
+  const markerHeight = Math.trunc(cursor.naturalHeight * tileScale);
+  const unitMarkerOriginX = Math.trunc(centerX - (unit.frame.width * tileScale / 4));
+  const markerBaseX = Math.trunc(markerWidth / 2);
+  const markerBaseY = Math.trunc(markerHeight / 2);
+  const breathing = Math.abs(Math.sin(((view.frame * 5) % 360) * Math.PI / 180));
+  const markerOffsetX = Math.trunc(markerBaseX + (markerWidth / 2) * breathing);
+  const markerOffsetY = Math.trunc(markerBaseY + (markerHeight / 2) * breathing);
+  const frameWidth = cursor.naturalWidth / SELECTION_CURSOR_FRAMES;
+
+  for (let frame = 0; frame < SELECTION_CURSOR_FRAMES; frame += 1) {
+    const left = frame % 2 === 0;
+    const top = frame < 2;
+    context.drawImage(
+      cursor,
+      frame * frameWidth,
+      0,
+      frameWidth,
+      cursor.naturalHeight,
+      unitMarkerOriginX + (left ? -markerOffsetX : markerOffsetX),
+      centerY + (top ? -markerOffsetY : markerOffsetY),
+      markerWidth,
+      markerHeight,
+    );
+  }
+
+  context.restore();
 }
 
 type DrawObjectKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris';
@@ -794,6 +836,7 @@ export function drawGame(
   drawTiles(context, view.map.streets, images, viewport);
   context.restore();
   drawWorldObjects(orderedDrawObjects, drawObjects, false);
+  drawSelectedUnitFeedback(context, view, images, viewport);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 

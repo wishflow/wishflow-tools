@@ -1141,3 +1141,23 @@ Gunslinger 和 Mexican 实际移动时，网页此前保持静态图集首帧。
 | 公网发布与实测 | 提交 `719872f` 已部署；GitHub Actions [run 41047277405](https://github.com/wishflow/wishflow-tools/actions/runs/41047277405) 的 Guns’n’Glory CI、共享 catalog 检查、GitHub Pages 与 Cloudflare Pages 均成功；Worker/config 和宠物任务按变更范围跳过。Codex 内置浏览器打开[本次公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=719872f)，检查地图、桥、HUD、4×速度控件和单位画面；鼠标选中并拖动 Gunslinger 后，状态从 Cell `(9, 9)` 变为 `(8, 8)`，检查面板坐标从 `(8.50, 8.75)` 变为 `(7.74, 8.40)`。暂停于 Wave 4/8、Lives 42，未结算本次战斗；原有正式档案仍为 Cow Gulch 1/1、Best `$356`。调试覆盖已关闭，控制台无 error/warn。 |
 
 本轮只补齐 Cow Gulch 玩家步行图集状态；不改变移动距离、碰撞、路线或速度。其它玩家类型、命中/睡眠等角色状态及完整 P1-F 首关对照仍待完成，首关验收计数保持0/60。
+
+## 59. P1-F Cow Gulch 单位选中反馈
+
+网页先前在选中单位时画黄色椭圆和虚线矩形，属于自定义调试样式。APK 的 `GameCursor.draw()` 则在单位上方画四向呼吸箭头，并由 `GameObjectUnit.drawRangeCircle()` 绘制射程圈。本轮将调试样式替换为 APK 的反馈表现，不改变选择、战斗、射程判定、路线或存档规则。
+
+APK 静态依据来自研究分支 `codex/gunsnglory-spec` 的 JADX 产物：`GameCursor.java` 以 `cursor.png` 宽度四等分，依次绘制左上、右上、左下、右下方向帧；箭头间距按 `abs(sin(angle))` 呼吸，动画角每帧加5度；选中单位时调用 `drawRangeCircle()` 并将其裁切到地图矩形。`GameObjectUnit.java` 将普通单位射程圈半径换算为整格，绘制中心为单位 fine 坐标并向上减半个当前帧高。Gunslinger 与 Mexican 使用的 `getSelectorHeightAdd()` 为0。此处描述的是反编译结果，不是原始 Java 源码。
+
+网页直接使用 APK 的 `cursor.png`（64×16，四个16×16方向帧），按当前地图视口缩放；射程半径沿用单位的最大射程十分格数并向下取整，使用 APK 的白色40/255透明度，箭头按5度/帧的相位呼吸。地图、单位与反馈共用同一视口变换，射程圈及箭头都裁切在地图边界内。资源经 `assetNames` 纳入运行时加载；缺失时按现有必需资源策略阻止进入游戏。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向 Canvas 测试 | 新增测试先于实现失败：旧调试椭圆调用了选择绘制 mock 未实现的 `ellipse()`。实现后断言地图裁切范围、半透明白色圆形半径、四个原始图集源帧、呼吸相位下的箭头落点，以及反馈绘制在世界对象之后。 |
+| 变异敏感性复核 | 临时反转“未选中单位则跳过”条件后，定向射程圈断言失败，其他选择画布用例也因被错误要求加载光标资源而失败；恢复条件后6项 Canvas 测试全部通过。 |
+| 本地应用 CI | Node 22.23.3 下 TypeScript 检查、163项单元测试、Vite 生产构建均通过；53项 Playwright E2E 全部通过。首次完整命令因 sandbox 禁止本地监听而在 E2E 启动时报 `listen EPERM 127.0.0.1:4173`；在授权环境单独重跑 `PLAYWRIGHT_PORT=5195 CI=1 pnpm --dir apps/gunsnglory run test:e2e` 后53项通过。仓库 `pnpm run test:catalog` 15项通过。 |
+| Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5176/` 打开 Cow Gulch 首关，点击地图中央后页面显示 `Gunslinger selected · Cell (9, 9)`；截图可见单位周围四向白色箭头、半透明射程圈及地图裁切。暂停于 Wave 2/8，未完成正式关卡；正式档案仍为1/1、最高分 `$360`。控制台 error/warn 为空。单波样本测试期间曾自然结算并记录 `$50` 样本高分；该记录属于独立样本，不更改正式战役档案。 |
+| 仓库工作树 | 以上实现、测试与文档记录均在 `gunsnglory` 集成分支的临时发布工作树验证；尚未合并、推送或执行公网核验。 |
+
+本轮闭合的是单位选择反馈与 APK 静态实现之间的表现差异；不等同于射程命中、其他单位类型或整关画面完成对照。P1-F 仍未完成，Cow Gulch 首关验收计数保持0/60。
