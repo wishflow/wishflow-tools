@@ -5,7 +5,21 @@ test('completes official Cow Gulch level one and restores only settled campaign 
   test.setTimeout(120_000);
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await page.setViewportSize({ width: 1280, height: 720 });
+  await page.addInitScript(() => {
+    Object.assign(window, { __musicTracks: [] as string[] });
+    HTMLMediaElement.prototype.play = function () {
+      const path = new URL((this as HTMLAudioElement).src).pathname;
+      if (path.includes('/assets/music/')) {
+        (window as unknown as Window & { __musicTracks: string[] }).__musicTracks.push(path.split('/').pop() ?? '');
+      }
+      return Promise.resolve();
+    };
+  });
   await page.goto('/');
+
+  const playedMusic = () => page.evaluate(() =>
+    (window as unknown as Window & { __musicTracks: string[] }).__musicTracks);
+  await expect.poll(playedMusic).toContain('music_loop1.ogg');
 
   await expect(page.locator('.scene-caption')).toHaveText('The Cow Gulch battle has eight playable waves and settles after wave eight.');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -48,6 +62,12 @@ test('completes official Cow Gulch level one and restores only settled campaign 
   await expect(waveStatus).toContainText('Wave 8/8 complete');
   await expect(page.getByTestId('settlement')).toBeVisible();
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
+  await expect.poll(playedMusic).toContain('music_level_won.ogg');
+  const playedTracks = await playedMusic();
+  expect(playedTracks.find((track) => /^music_loop[234]\.ogg$/.test(track))).toBe('music_loop2.ogg');
+  expect(playedTracks).toContain('music_loop2.ogg');
+  expect(playedTracks).toContain('music_loop3.ogg');
+  expect(playedTracks).toContain('music_loop4.ogg');
   await expect(page.getByTestId('settlement-summary')).toContainText('Wave 8');
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
   await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');

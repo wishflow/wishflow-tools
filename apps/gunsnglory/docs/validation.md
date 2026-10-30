@@ -1203,3 +1203,22 @@ Game 现在在首次命中结算处按 damage style 3/4 发出同一声音事件
 | 本地应用 CI | 显式使用 Node 22.23.3 执行 `CI=1 PLAYWRIGHT_PORT=5429 pnpm --dir apps/gunsnglory run test:ci`：TypeScript 检查、166 项单元测试、Vite 生产构建和 57 项 Playwright 测试全部通过。`pnpm run test:catalog` 的15项仓库目录测试通过。 |
 | 首关范围 | 定向新用例仅把虚拟时间推进到 Wave02 对白，不完成整关或更改正式档案。Cow Gulch 首关 P1-F 全量地图、规则和表现对照仍未通过，验收计数保持 0/60。 |
 | 集成、发布与内置浏览器 | 功能提交 `179c4b5` 已并入并发布到 `master`（部署提交 `f5be4ef`）。GitHub Actions [run 41080228296](https://github.com/wishflow/wishflow-tools/actions/runs/41080228296) 中 Guns’n’Glory CI、共享 catalog 检查、Cloudflare Pages 与 GitHub Pages 全部成功；Worker/config 与宠物任务按变更范围跳过。Codex 内置浏览器打开[公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=f5be4ef)，核对首波 Pedro 肖像与原版英文对白、站点语言切换后的中文对白；继续后进入 Wave 1 战斗，再暂停时页面显示 `Wave 1/8`、Lives 50、Enemies 10、Cash `$71`。正式档案仍为 Cow Gulch 1/1、最高分 `$356`；静音设置为关闭，控制台 error/warn 为空。 |
+
+## 62. P1-F Cow Gulch 背景音乐
+
+Cow Gulch 正式关卡此前缺少原版环境曲、波次战斗循环和胜利曲。本轮依 APK 的音乐调用链补齐 Cow Gulch 配乐，不扩展到其它区域，也不把该局部表现提升为 P1-F 完成。原版音轨来自 APK 研究资料的已导出 OGG；按 `NewMexico.java`，环境曲为 `music_loop1`，战斗循环为 `music_loop2/3/4`；`UnitDirector.java` 在每波第一名单位实际开火时请求切换，`GunsAndGloryThread.wave` 从0开始，Wave01–08 依次选择 loop2、loop3、loop4 并循环。新波次及败北返回环境曲，胜利切换到 `music_level_won`。播放器静音及前后台行为由 `Sound.java` 控制。这些是 REA/JADX 反编译产物，不是原始 Java 源码；结论来自研究分支 `codex/gunsnglory-spec` 的上述文件和 `data/audio-use-index.json`。
+
+应用仅为正式 Cow Gulch L01 创建循环背景播放器，并在原 `GameEvent` 发生后由浏览器适配器选择曲目。`GameView` 使用从1开始的显示波次，适配层转换成 APK 的零基 wave index。背景曲复用既有 `soundEnabled` 设置和播放失败提示；静音时暂停并从当前曲开头恢复，标签页隐藏时暂停且保留播放位置，重新显示后继续。自动播放被拒时，Continue 或通用音频重试按钮以用户手势恢复；重试按钮会一次重试当前全部失败媒体，避免 BGM 与音效同时失败时只清除一项。其它场景继续不播放本轮新增的 Cow Gulch BGM。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 资源与波次索引 | 单元测试核对 ambient、三首战斗循环及胜利曲标识和零基波次取模；定向 Playwright 确认五个 OGG URL 均返回 HTTP 200。正式八波浏览器测试断言先请求 Wave01 对应的 `music_loop2`，并在胜利时请求 `music_level_won`，战役过程中三首 battle loop 均出现。 |
+| 播放控制 | 定向 Playwright 模拟浏览器自动播放拒绝，Continue 手势恢复后错误提示清除；声音开关暂停/恢复循环曲；将页面切到后台再切回，检查当前曲分别收到暂停与续播调用。 |
+| 音效兼容回归 | `t02` 覆盖多条媒体同时播放失败后的统一重试，以及音效媒体的解码错误恢复；`t23` 将 Pedro 语音计数限定为 `/assets/sounds/`，不把新加入的 BGM 计入语音断言。 |
+| 本地应用 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4394 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、168 项单元测试、Vite 生产构建和58项 Playwright 测试全部通过。仓库 `pnpm run test:catalog` 15项通过；`git diff --check` 通过。Node 使用 nvm 显式指定22.23.3，未改变默认版本。 |
+| 内置浏览器（本地） | Codex 内置浏览器打开 `http://127.0.0.1:5193/`。Cow Gulch 正式关卡及 Wave01 对白、地图和 HUD 正常显示；继续后进入 `Wave 1/8`，浏览器自动播放拦截提示出现，通过“重试播放音效”后提示清除，随后手动暂停确认状态为 `Battle paused.`。控制台 error/warn 为空。该检查确认浏览器播放请求的恢复路径和页面行为；未对实际扬声器输出做声学测量。 |
+| 完整首关门槛 | 本轮只增加音乐表现；未完成 P1-F 全部对象、地图、动画、战斗和设备对照。Cow Gulch 首关仍不计为已验收，整体关卡计数保持0/60。 |
+
+合并、CI 发布和公网内置浏览器检查完成后，在本节追加该发布提交、workflow 结果与公网实测证据。

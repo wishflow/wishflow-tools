@@ -71,6 +71,7 @@ test('respects the saved mute setting when the campaign intro is reopened', asyn
   await page.addInitScript(() => {
     Object.assign(window, { __soundPlayCount: 0 });
     HTMLMediaElement.prototype.play = function () {
+      if (!new URL((this as HTMLAudioElement).src).pathname.includes('/assets/sounds/')) return Promise.resolve();
       const state = window as unknown as Window & { __soundPlayCount: number };
       state.__soundPlayCount += 1;
       return Promise.resolve();
@@ -100,6 +101,7 @@ test('offers an in-dialog retry when the browser blocks Pedro’s voice autoplay
     state.__allowSoundPlayback = false;
     state.__soundPlayCount = 0;
     HTMLMediaElement.prototype.play = function () {
+      if (!new URL((this as HTMLAudioElement).src).pathname.includes('/assets/sounds/')) return Promise.resolve();
       state.__soundPlayCount += 1;
       return state.__allowSoundPlayback
         ? Promise.resolve()

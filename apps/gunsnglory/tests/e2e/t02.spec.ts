@@ -359,7 +359,8 @@ test('reports blocked audio and retries from an accessible bilingual recovery ac
 
   await page.evaluate(() => {
     const state = window as Window & { __soundElements?: HTMLAudioElement[] };
-    state.__soundElements?.[0]?.dispatchEvent(new Event('error'));
+    state.__soundElements?.find((audio) => new URL(audio.src).pathname.includes('/assets/sounds/'))
+      ?.dispatchEvent(new Event('error'));
   });
   await expect(playbackStatus).toHaveText('音效无法播放。你可以继续静音游玩，或重试播放。');
   await retrySound.click();

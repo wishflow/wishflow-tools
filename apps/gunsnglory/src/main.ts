@@ -10,6 +10,12 @@ import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent, cowGulchP1dCampai
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cowGulchLevelOneContent } from './content/official-campaign';
 import { CampaignWaveIntroCursor, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
+import {
+  cowGulchAmbientMusic,
+  cowGulchBattleMusicForWave,
+  cowGulchVictoryMusic,
+  type CowGulchMusicTrack,
+} from './content/cow-gulch-music';
 import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
@@ -1829,6 +1835,14 @@ function stopGameLoop(): void {
 }
 
 const audioElements = new Map<string, HTMLAudioElement>();
+let backgroundMusic: HTMLAudioElement | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | undefined;
+let battleMusicWaveNumber: number | undefined;
+
+function isOfficialCowGulchSession(): boolean {
+  return session.startRecord.mode === 'formal'
+    && session.startRecord.scenarioId === cowGulchLevelOneContent.id;
+}
 
 function recordSoundPlaybackFailure(sound: string, audio: HTMLAudioElement): void {
   if (failedSoundElements.get(sound) === audio) return;
@@ -1836,9 +1850,9 @@ function recordSoundPlaybackFailure(sound: string, audio: HTMLAudioElement): voi
   renderStatus();
 }
 
-function playSound(sound: string, audio: HTMLAudioElement): void {
+function playSound(sound: string, audio: HTMLAudioElement, resetPosition = true): void {
   try {
-    audio.currentTime = 0;
+    if (resetPosition) audio.currentTime = 0;
     void audio.play().then(() => {
       if (failedSoundElements.get(sound) !== audio) return;
       failedSoundElements.delete(sound);
@@ -1850,8 +1864,9 @@ function playSound(sound: string, audio: HTMLAudioElement): void {
 }
 
 function retryFailedSoundPlayback(): void {
-  const failedSound = [...failedSoundElements.entries()].pop();
-  if (failedSound) playSound(failedSound[0], failedSound[1]);
+  for (const [sound, audio] of failedSoundElements) {
+    playSound(sound, audio, audio !== backgroundMusic);
+  }
 }
 
 function playAudioAsset(sound: string): void {
@@ -1869,14 +1884,71 @@ function playAudioAsset(sound: string): void {
   playSound(sound, audio);
 }
 
+function playBackgroundMusic(): void {
+  if (!soundEnabled || document.hidden || !backgroundMusic || !backgroundMusicTrack) return;
+  playSound(`music:${backgroundMusicTrack}`, backgroundMusic, false);
+}
+
+function pauseBackgroundMusic(resetPosition = false): void {
+  if (!backgroundMusic) return;
+  backgroundMusic.pause();
+  if (resetPosition) backgroundMusic.currentTime = 0;
+}
+
+function setCowGulchBackgroundMusic(track: CowGulchMusicTrack): void {
+  if (!isOfficialCowGulchSession()) return;
+  if (backgroundMusicTrack === track && backgroundMusic) {
+    playBackgroundMusic();
+    return;
+  }
+
+  if (backgroundMusicTrack) failedSoundElements.delete(`music:${backgroundMusicTrack}`);
+  pauseBackgroundMusic(true);
+  backgroundMusicTrack = track;
+  if (!backgroundMusic) {
+    const audio = new Audio();
+    audio.loop = true;
+    audio.addEventListener('error', () => {
+      const activeTrack = backgroundMusicTrack;
+      if (activeTrack) recordSoundPlaybackFailure(`music:${activeTrack}`, audio);
+    });
+    backgroundMusic = audio;
+  }
+  backgroundMusic.src = new URL(
+    import.meta.env.BASE_URL + 'assets/music/' + track + '.ogg',
+    window.location.href,
+  ).toString();
+  backgroundMusic.load();
+  playBackgroundMusic();
+  renderStatus();
+}
+
+function stopCowGulchBackgroundMusic(): void {
+  pauseBackgroundMusic(true);
+  if (backgroundMusicTrack) failedSoundElements.delete(`music:${backgroundMusicTrack}`);
+  backgroundMusicTrack = undefined;
+  battleMusicWaveNumber = undefined;
+}
+
 function retryCampaignWaveIntroVoice(): void {
   const intro = pendingCampaignWaveIntro;
   if (intro && soundEnabled) playAudioAsset(intro.voiceSound);
 }
 
-function playRequestedSounds(events: readonly GameEvent[]): void {
+function playRequestedSounds(events: readonly GameEvent[], eventWaveNumber = view.wave?.number): void {
   for (const event of events) {
     if (event.type === 'sound-requested') playAudioAsset(event.sound);
+    if (!isOfficialCowGulchSession()) continue;
+    if (event.type === 'unit-fired' && eventWaveNumber !== undefined && battleMusicWaveNumber !== eventWaveNumber) {
+      battleMusicWaveNumber = eventWaveNumber;
+      // GameView numbers waves from 1; the APK's GunsAndGloryThread.wave counter starts at 0.
+      setCowGulchBackgroundMusic(cowGulchBattleMusicForWave(eventWaveNumber - 1));
+    }
+    if (event.type === 'wave-settled') {
+      setCowGulchBackgroundMusic(event.settlement.outcome === 'victory'
+        ? cowGulchVictoryMusic
+        : cowGulchAmbientMusic);
+    }
   }
 }
 
@@ -1908,6 +1980,8 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
     || !view.wave) return false;
   const intro = campaignWaveIntroCursor.next(view.wave.number);
   if (!intro) return false;
+  battleMusicWaveNumber = undefined;
+  setCowGulchBackgroundMusic(cowGulchAmbientMusic);
   pendingCampaignWaveIntro = intro;
   stopGameLoop();
   pauseReason = 'wave-intro';
@@ -1923,6 +1997,7 @@ function continueCampaignWaveIntro(): void {
   if (!pendingCampaignWaveIntro) return;
   pendingCampaignWaveIntro = undefined;
   campaignWaveIntroDialog.close();
+  playBackgroundMusic();
   if (pauseReason !== 'wave-intro' || !view.paused || document.hidden) return;
   pauseReason = undefined;
   view = session.resume();
@@ -1942,6 +2017,7 @@ function activateSession(
   campaignWaveIntroCursor = new CampaignWaveIntroCursor();
   const previousSession = session;
   session = nextSession;
+  if (!isOfficialCowGulchSession()) stopCowGulchBackgroundMusic();
   view = session.observe();
   pauseReason = undefined;
   mapCamera = createMapCamera();
@@ -2155,6 +2231,9 @@ soundToggleButton.addEventListener('click', () => {
       audio.pause();
       audio.currentTime = 0;
     }
+    pauseBackgroundMusic(true);
+  } else {
+    playBackgroundMusic();
   }
   saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
 });
@@ -2333,6 +2412,7 @@ function cancelPointerGesture(): void {
 function pauseForBackground(): void {
   previousTimestamp = undefined;
   simulationTime.reset();
+  pauseBackgroundMusic();
   if (view.paused) {
     stopGameLoop();
     return;
@@ -2353,6 +2433,8 @@ function handleVisibilityChange(): void {
     pauseForBackground();
     return;
   }
+
+  playBackgroundMusic();
 
   if (pauseReason === 'background' && view.paused) {
     pauseReason = undefined;
@@ -2403,10 +2485,10 @@ function startGameLoop(): void {
       const previousWaveNumber = view.wave?.number;
       view = loopSession.advance({ deltaMs: stepMs });
       frameEvents.push(...view.events);
+      playRequestedSounds(view.events, previousWaveNumber);
       if (view.wave?.number !== previousWaveNumber && showCampaignWaveIntroForCurrentWave()) break;
       if (view.wave?.phase !== 'active') break;
     }
-    playRequestedSounds(frameEvents);
     renderStatus(frameEvents);
     redraw();
     if (view.paused) {
@@ -2423,8 +2505,9 @@ function startGameLoop(): void {
 function dispatch(intent: GameIntent): void {
   if (replaying || replacingSession) return;
   if (!session.submitIntent(intent)) return;
+  const eventWaveNumber = view.wave?.number;
   view = session.advance();
-  playRequestedSounds(view.events);
+  playRequestedSounds(view.events, eventWaveNumber);
   renderStatus();
   redraw();
   if (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)) startGameLoop();
@@ -2453,8 +2536,9 @@ pauseControl.addEventListener('click', () => {
 
 singleStepControl.addEventListener('click', () => {
   if (!view.paused || singleStepControl.disabled) return;
+  const eventWaveNumber = view.wave?.number;
   view = session.singleStep({ deltaMs: 16 });
-  playRequestedSounds(view.events);
+  playRequestedSounds(view.events, eventWaveNumber);
   renderStatus();
   redraw();
 });
