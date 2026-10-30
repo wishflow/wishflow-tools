@@ -14,12 +14,12 @@
   - 验证：纯函数单测分别覆盖相同标量、别名、新对象、原位修改、递归帧和缺少前态；变更摘要最多 6 条并报告剩余数量。
   - 文件：`src/teaching-vm/observation.ts`、`tests/teaching-observation.test.ts`、按需要的类型定义。
 
-- [ ] **T03：将 UI 观察导航改为源码步进组**
+- [x] **T03：将 UI 观察导航改为源码步进组**
   - 验收：步进历史滑块按组定位；各运行现场面板共享组/指令所选快照；可展开某组查看已记录指令并通过键盘选择指令快照；显示本步一句话、净变化和真实停止原因；历史中运行先回执行头。
   - 验证：Playwright 覆盖绑定/别名/对象修改、breakpoint、Step Into/Over、历史切换、指令展开、Return to head、Reset/编辑后的状态清理及响应式。
   - 文件：`src/components/TeachingVmPanel.tsx`、必要的 `src/App.tsx` 传参、`src/locales.ts`、`src/styles.css`、相关 `e2e/*.spec.ts`。
 
-- [ ] **T04：同步双语使用说明与路线状态**
+- [x] **T04：同步双语使用说明与路线状态**
   - 验收：帮助页准确说明按源码步进浏览、展开单步、净变化、历史截断与回到执行头；不把 V3–V6 写成现有能力；路线和本 tasks 记录实际验证。
   - 验证：中英文术语一致、相对链接有效、`git diff --check`。
   - 文件：`docs/guide/usage.zh-CN.md`、`docs/guide/usage.en.md`、`docs/visual-execution-plan.md`、本 tasks。
@@ -39,8 +39,8 @@
 | 项目 | 状态 | 证据 |
 | --- | --- | --- |
 | Spec 与 tasks | 已完成 | 已依据 V2 计划细化分组边界、结构差异、无前态及历史控制；实现边界不含 Worker/VM 协议变更 |
-| 实现 | 进行中 | T01/T02 已完成；观察分组、截断/断点/失败分类及绑定、对象、帧、输出差异均从有界历史派生；未改 VM/Worker 协议 |
-| 本地验证 | 进行中 | `pnpm typecheck` 通过；`pnpm test:unit` 152/152 通过；新增观察 helper 单测 17/17 通过 |
+| 实现 | 已完成 | T01–T03 已完成，T04 双语说明已同步；观察分组与变化均从有界历史派生，UI 由单一快照驱动；未改 VM/Worker 协议 |
+| 本地验证 | 已完成 | `env PLAYWRIGHT_PORT=4200 pnpm test:ci` 通过：typecheck、153/153 单测、生产构建、53/53 Playwright；覆盖中间指令快照、别名与容器更新、断点、历史回到执行头、双语及现有 CPython/VM 回归 |
 | CI/CD | 待推送触发 | — |
 | 线上验收 | 待 CI/CD 成功 | — |
 

@@ -202,7 +202,7 @@ export function compareTeachingObservationChanges(
   observed: TeachingVmSnapshot = group.after,
 ): TeachingObservationDiff {
   const before = group.before;
-  if (!before) {
+  if (!before || group.coverage === 'discontinuous') {
     return Object.freeze({
       baseline: false,
       hasChanges: false,

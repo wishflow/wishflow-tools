@@ -171,6 +171,21 @@ test('does not merge across a missing history index', () => {
   assert.equal(discontinuity.before, null);
 });
 
+test('does not compare a discontinuous execution-count transition', () => {
+  const { program, history } = runProgram('value = 1');
+  const items = history.items.map((snapshot, index) => index === 1
+    ? { ...snapshot, executedInstructionCount: (history.items[0]?.executedInstructionCount ?? 0) + 2 }
+    : snapshot);
+  const discontinuity = deriveTeachingObservationGroups(program, { items, truncated: false })
+    .find(({ coverage }) => coverage === 'discontinuous');
+  assert.ok(discontinuity);
+
+  const diff = compareTeachingObservationChanges(discontinuity);
+  assert.equal(diff.baseline, false);
+  assert.equal(diff.hasChanges, false);
+  assert.deepEqual(diff.changes, []);
+});
+
 test('reports a new alias without marking the existing binding as changed', () => {
   const { program, history } = runProgram('items = [1]\nalias = items');
   const group = deriveTeachingObservationGroups(program, history).find(({ sourceLine, points }) => (
