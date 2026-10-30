@@ -30,7 +30,10 @@ test('saves a comparison to IndexedDB and reopens the same report after reload w
   await page.setViewportSize({ width: 1280, height: 900 });
   const consoleIssues: string[] = [];
   page.on('console', (message) => {
-    if (message.type() === 'error' || message.type() === 'warning') consoleIssues.push(message.text());
+    if (message.type() === 'error' || message.type() === 'warning') {
+      const location = message.location();
+      consoleIssues.push(`${message.text()} (${location.url || 'unknown source'}:${location.lineNumber}:${location.columnNumber})`);
+    }
   });
   page.on('response', (response) => {
     if (response.status() >= 400) consoleIssues.push(`HTTP ${response.status()}: ${response.url()}`);
@@ -78,7 +81,10 @@ test('keeps experiment save and reopen controls usable on a narrow touch viewpor
   await installAutoContinueCampaignWaveIntro(page);
   const consoleIssues: string[] = [];
   page.on('console', (message) => {
-    if (message.type() === 'error' || message.type() === 'warning') consoleIssues.push(message.text());
+    if (message.type() === 'error' || message.type() === 'warning') {
+      const location = message.location();
+      consoleIssues.push(`${message.text()} (${location.url || 'unknown source'}:${location.lineNumber}:${location.columnNumber})`);
+    }
   });
   page.on('response', (response) => {
     if (response.status() >= 400) consoleIssues.push(`HTTP ${response.status()}: ${response.url()}`);
