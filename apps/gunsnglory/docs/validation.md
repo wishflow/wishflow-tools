@@ -950,6 +950,8 @@ Cow Gulch 的静态装饰深度为 `(cell.y + 1) × 7680` fine units，同一行
 | --- | --- |
 | TDD 帧阈值 | 新增 `tests/enemy-animation.test.ts`，通过 Cow Gulch 第三波运输队真实生成 type8/type4 敌组，固定速度为每100ms移动768 fine units，并关闭路线转弯以隔离动画状态。type8 在768阈值仍为帧0、跨过后为帧1、跨过1,536后为帧2；type4 覆盖0、1、0、2序列和3,072回绕。修改前 type8 在恰好768处变为帧1，type4 在2,304处显示帧2；修改后断言通过。 |
 | 本地检查 | Node 22.23.3 下 TypeScript 检查、全部156项单元测试和 Vite 生产构建通过。Playwright 因沙箱拒绝本地服务器 `listen`（`EPERM`）未能在同一 `test:ci` 进程内启动；启用本地网络后单独重跑 E2E，52项全部通过。 |
-| 内置浏览器 | 在 `http://127.0.0.1:5178/` 打开本地页面，Cow Gulch 地图画布与设置控件正常加载，浏览器控制台 error/warn 为空。当前入口处于静止的首个战斗样本，画面没有播放 type4/type8 行走；本轮两种车辆敌型的帧状态由上方确定性关卡测试核验，不把静止截图当作动画实测。 |
+| 内置浏览器（本地） | 在 `http://127.0.0.1:5287/` 打开本地页面，官方战役界面、Cow Gulch 地图和 HUD 正常加载，浏览器控制台 error/warn 为空。页面在暂停前有敌人移动，但截图没有可靠地展示 type4/type8 的逐帧变化；这两种车辆敌型的帧状态由上方确定性关卡测试核验，不把静态画面当作动画实测。 |
+| 发布流水线 | 开发提交 `c05c277` 已合并到 `master` 提交 `b9a315e` 并推送。Actions run [40995213533](https://github.com/wishflow/wishflow-tools/actions/runs/40995213533) 中共享测试、Guns’n’Glory CI、Cloudflare Pages 和 GitHub Pages 检查通过；静态应用改动未触发 Worker/config 发布。 |
+| 公网内置浏览器 | 在 [公网 Guns’n’Glory 页面](https://wishflow-tools.pages.dev/gunsnglory/?release=b9a315e) 加载发布版本，标题、Cow Gulch 战役界面、地图和 HUD 正常，浏览器控制台 error/warn 为空。既有浏览器档案显示1/1完成与最高分 `$356`；页面以4×运行后暂停，未产生新的结算。此检查确认发布页可加载和交互，不替代逐帧动画对照。 |
 
 本轮只闭合已实现敌型 type1/2/4/8 的行走帧距离映射。敌人攻击、受击、睡眠、死亡等动画，以及其它关卡、完整像素裁切和动画节奏观察仍待后续 P1-F 对照；Cow Gulch 首关验收仍为0/60。
