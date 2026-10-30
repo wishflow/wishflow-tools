@@ -271,6 +271,39 @@ function spriteRow(direction: Direction): number {
   return 0;
 }
 
+function drawEnemyHealthBar(
+  context: CanvasRenderingContext2D,
+  enemy: EnemyView,
+  centerX: number,
+  feetY: number,
+  viewport: MapViewport,
+): void {
+  if (enemy.type <= 2 || !enemy.alive || enemy.hitPoints <= 0
+    || enemy.maxHitPoints <= 0 || enemy.hitPoints >= Math.trunc((enemy.maxHitPoints * 95) / 100)) return;
+
+  // The APK uses scale=6 and 48 native pixels per tile; game assets here use 32.
+  const nativeScale = viewport.tileSize / 48;
+  const barWidth = 36 * nativeScale;
+  const barHeight = (12 * nativeScale) - (nativeScale < 1 ? 1 : 0);
+  const nativeTileHalf = Math.trunc(viewport.tileSize / 2) * 3;
+  const barTop = feetY - (6 * nativeScale) - nativeTileHalf;
+
+  context.fillStyle = '#3f0000';
+  context.fillRect(centerX - (barWidth / 2), barTop, barWidth, barHeight);
+
+  const sourceWidth = Math.trunc(
+    Math.trunc(Math.fround((enemy.hitPoints * 10 * 6) * nativeScale)) / (enemy.maxHitPoints * 2),
+  );
+  const fillTop = feetY - (3 * nativeScale) - nativeTileHalf;
+  const fillHeight = 6 * nativeScale;
+  const red = Math.trunc(Math.fround(
+    Math.fround((enemy.maxHitPoints - enemy.hitPoints) * 255) / enemy.maxHitPoints,
+  ));
+  const green = Math.trunc(Math.fround(Math.fround(enemy.hitPoints * 255) / enemy.maxHitPoints));
+  context.fillStyle = `rgb(${red}, ${green}, 0)`;
+  context.fillRect(centerX - (15 * nativeScale), fillTop, sourceWidth, fillHeight);
+}
+
 function drawEnemy(
   context: CanvasRenderingContext2D,
   enemy: EnemyView,
@@ -308,6 +341,8 @@ function drawEnemy(
     context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, width, height);
   }
   context.restore();
+
+  drawEnemyHealthBar(context, enemy, centerX, feetY, viewport);
 
   if (!enemy.alive && vehicle && enemy.deathRemainingMs > 0) {
     const smoke = images.sfx_smoke_explosion;
