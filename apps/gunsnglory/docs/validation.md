@@ -1158,6 +1158,8 @@ APK 静态依据来自研究分支 `codex/gunsnglory-spec` 的 JADX 产物：`Ga
 | 变异敏感性复核 | 临时反转“未选中单位则跳过”条件后，定向射程圈断言失败，其他选择画布用例也因被错误要求加载光标资源而失败；恢复条件后6项 Canvas 测试全部通过。 |
 | 本地应用 CI | Node 22.23.3 下 TypeScript 检查、163项单元测试、Vite 生产构建均通过；53项 Playwright E2E 全部通过。首次完整命令因 sandbox 禁止本地监听而在 E2E 启动时报 `listen EPERM 127.0.0.1:4173`；在授权环境单独重跑 `PLAYWRIGHT_PORT=5195 CI=1 pnpm --dir apps/gunsnglory run test:e2e` 后53项通过。仓库 `pnpm run test:catalog` 15项通过。 |
 | Codex 内置浏览器本地实测 | 在 `http://127.0.0.1:5176/` 打开 Cow Gulch 首关，点击地图中央后页面显示 `Gunslinger selected · Cell (9, 9)`；截图可见单位周围四向白色箭头、半透明射程圈及地图裁切。暂停于 Wave 2/8，未完成正式关卡；正式档案仍为1/1、最高分 `$360`。控制台 error/warn 为空。单波样本测试期间曾自然结算并记录 `$50` 样本高分；该记录属于独立样本，不更改正式战役档案。 |
-| 仓库工作树 | 以上实现、测试与文档记录均在 `gunsnglory` 集成分支的临时发布工作树验证；尚未合并、推送或执行公网核验。 |
+| GitHub Actions 与 Pages 部署 | `master` 推送提交 `ca3db61` 后，[workflow 41055292521](https://github.com/wishflow/wishflow-tools/actions/runs/41055292521) 成功；Guns’n’Glory 与共享 catalog 测试通过，Cloudflare Pages 和 GitHub Pages 部署通过。Worker/config 与宠物任务按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[本次公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=ca3db61)，截图显示 Cow Gulch 地图、`Gunslinger selected · Cell (9, 9)`、四向白色箭头和半透明射程圈；状态读取显示官方档案仍为1/1、最佳 `$356`，速度设置恢复为原先的4×。测试单波隔离样例时它自然结算，独立样例记录保存为 `$50`，不影响官方档案。首次使用过期的无障碍控件索引，意外打开了已完成的正式战役；发现后在 Wave 3/8 立即暂停，未结算，再从刷新后的无障碍树进入隔离样例。 |
+| 集成分支与提交 | 功能提交 `67fa5c9` 在 `gunsnglory` 验证后合并进 `master`；合并时纳入远端 Python 教学应用更新，无冲突。合并提交 `ca3db61` 已推送并完成上表工作流与线上实测。 |
 
-本轮闭合的是单位选择反馈与 APK 静态实现之间的表现差异；不等同于射程命中、其他单位类型或整关画面完成对照。P1-F 仍未完成，Cow Gulch 首关验收计数保持0/60。
+本轮闭合的是单位选择反馈与 APK 静态实现之间的表现差异；不等同于射程命中、其他单位类型或整关画面完成对照。P1-F 仍未完成，Cow Gulch 首关验收计数保持0/60。首轮公网操作曾使用失效索引，后续 GUI 检查先刷新可访问性树再按最新控件操作；隔离样例会自动保存独立高分，今后验证这类样例时应将此副作用纳入记录。
