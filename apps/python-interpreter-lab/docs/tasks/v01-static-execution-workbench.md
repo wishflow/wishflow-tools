@@ -24,9 +24,9 @@
   - 验证：检查中英文一致、相对链接有效、未把 V2 能力写成已交付；运行 `git diff --check`。
   - 文件：`docs/guide/usage.zh-CN.md`、`docs/guide/usage.en.md`、`docs/visual-execution-plan.md`、本 tasks。
 
-- [ ] **T05：完整本地站点、浏览器与线上验收**
+- [x] **T05：完整本地站点、浏览器与线上验收**
   - 验收：320/768/1024/1440px 无整页横向溢出；键盘、中英切换、减少动态效果与真实 CPython 切换正常；应用及站点构建通过。
-  - 验证：应用 typecheck、单测、build、Playwright；`pnpm test:catalog`、`pnpm build:site`；提交后等待 CI/CD 成功，再用 Codex 内置浏览器检查生产站点教学默认入口及 CPython 路径。
+  - 验证：应用 typecheck、135 条单测、build、50 条 Playwright；`pnpm test:catalog` 15/15、`pnpm build:site`；CI/CD 成功后，用 Codex 内置浏览器实测生产站点教学默认入口和 CPython 路径。
   - 文件：`e2e/teaching-vm.spec.ts`、按验证发现的必要修复文件。
 
 ## 检查点
@@ -40,8 +40,8 @@
 | --- | --- | --- |
 | 实现完成 | 已完成 | 默认入口、静态执行现场、按需编译详情及双语指南已实现 |
 | 本地验证 | 已完成 | typecheck、135 条单测、应用 build、50 条 Playwright、15 条 catalog 测试、`pnpm build:site` 均通过；减少动态效果断言通过。临时移除移动端列断点时，320px 回归用例按预期失败（页面宽 614px）；恢复后该用例通过 |
-| CI/CD | 待推送触发 | — |
-| 线上验收 | 待 CI/CD 成功 | — |
+| CI/CD | 已完成 | V1 功能提交 `0260438` 已合入主分支；GitHub Actions [41049187550](https://github.com/wishflow/wishflow-tools/actions/runs/41049187550) 的 Python 应用测试、共享检查、Cloudflare Pages 与 GitHub Pages 部署均通过；Worker 部署按变更分类跳过 |
+| 线上验收 | 已完成 | 在正式路径 `/python-interpreter-lab/` 验证默认进入 Teaching VM；编译示例、单步后运行到结束，输出 `3`；切换 CPython 后分析得到 2 个代码对象和 17 条字节码指令，运行轨迹完成且最终输出 `3`。未发现需并入下一轮的线上问题 |
 
 ## 回滚
 
