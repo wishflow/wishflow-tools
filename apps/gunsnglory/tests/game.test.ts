@@ -2071,7 +2071,7 @@ test('prepares a complete immutable numeric setup without allocating a session o
 
   assert.equal(prepared.scenarioId, cowGulchContent.id);
   assert.equal(prepared.contentVersion, cowGulchContent.contentVersion);
-  assert.equal(prepared.rulesVersion, 'gng-rules-3');
+  assert.equal(prepared.rulesVersion, 'gng-rules-4');
   assert.ok(prepared.parameters.some(({ path, value }) =>
     path === 'units/gunslinger-1/weapon/damage' && value === 140));
   assert.ok(prepared.parameters.some(({ path, value }) => path === 'maxUpgrades' && value === 0));

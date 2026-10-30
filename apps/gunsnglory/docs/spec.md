@@ -99,7 +99,9 @@ flowchart LR
 
 迁入的每个原版参数须明确：值、单位、适用对象/等级、消费公式、整数截断位置、难度/波次/状态修正和验收场景。来源定位保留在研发文档；运行时只保留游戏所需 ID、版本与数据。实验调整使用独立版本，不能覆盖这些基线值。
 
-波次配置须按归档 `GameDesignWaves` 的真实调用顺序与逐波索引解释。`newWaves`、`addToWave` 和 `rawCalls` 是按类别整理的数据；前两个数组不能按下标配对，同一波可包含多个生成调用。Wave 的原始请求池下标对应 pool type 2–11；WaveManager 再把 pool type 映射为 EnemyDirector 的生成请求类型，二者不能混为一谈。Cow Gulch Wave03 的原始向量为 `[0,0,0,0,0,3,0,0,0,0]`：第6项 pool type 7 进入生成请求 type 4，每个成功请求生成 type8牵引与 type4车厢，而不是生成 type7敌人。正常波次传入 speed multiplier 100%；`90 + random(20)` 只用于车毁后派生的步行乘员。
+波次配置须按归档 `GameDesignWaves` 的真实调用顺序与逐波索引解释。`newWaves`、`addToWave` 和 `rawCalls` 是按类别整理的数据；前两个数组不能按下标配对，同一波可包含多个生成调用。Wave 的原始请求池下标对应 pool type 2–11；WaveManager 再把 pool type 映射为 EnemyDirector 的生成请求类型，二者不能混为一谈。Cow Gulch Wave03 的原始向量为 `[0,0,0,0,0,3,0,0,0,0]`：第6项 pool type 7 进入生成请求 type 4，每个成功请求生成 type8牵引与 type4车厢，而不是生成 type7敌人。
+
+Cow Gulch pool type 2–5 会映射成生成请求 type 1、成员数1–4的步兵组。每次请求在挑选成员位置前抽取一次 `90 + random(20)` 速度比例，同组成员共用该比例；每名成员用 `random(4)` 无放回选取四个固定绘制偏移之一，再抽取男女类型，敌人构造器随后抽取颜色。每名步兵独立获得递增的 `unitGroup`。普通战役的基础速度仍使用该波 `speedMultiplierPercent`；车毁后派生乘员另有其自己的速度随机抽样。
 
 枪手来源为 `R/data/level-config.json → tables.unitsByField.unitDataDesperado`：
 

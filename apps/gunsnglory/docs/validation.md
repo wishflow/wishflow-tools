@@ -1289,3 +1289,25 @@ REA/JADX 对 APK 1.8.6 的反编译资料显示，`GunsAndGloryThread` 主循环
 | 验收边界 | 本轮只对齐波次生成的当前帧/下一帧时序。其余首关地图、对象、规则和表现的完整对照仍未完成，P1-F 及完整关卡验收计数保持0/60。 |
 
 本轮完成波次生成顺序的一个可追溯差异修复，不代表 Cow Gulch 首关对照通过或完整游戏完成。
+
+## 66. P1-F Cow Gulch 步兵速度与阵型随机
+
+正式 Cow Gulch 的步兵生成此前省略了 APK 的请求级速度比例和成员出生槽随机：同一请求始终使用基准速度，并按偏移表顺序放置成员。由于速度与出生槽抽样属于共享 Java Random 序列，这还会让后续敌人性别、颜色及战斗随机结果偏离原版。
+
+### APK 依据与实现
+
+研究分支 `codex/gunsnglory-spec` 中的 `apps/gunsnglory/docs/research/recovered-source/java/com/hg/gunsandglory/gamelogic/WaveManager.java` 将 Cow Gulch Wave01/02 的 pool type 2–5 映射到 `EnemyDirector.addEnemyAtSpawnPoint(..., type=1, count=1..4, ...)`。同一分支的 `recovered-source/java-fallback/.../EnemyDirector.java` 指令恢复体在该方法的 type1 分支先取一次 `Util.random(20) + 90`，然后循环以 `Util.random(4)` 选未使用的出生槽；每个成员再随机选择 type1/2，构造器抽取颜色，并用 `addEnemy(..., true)` 递增 `unitGroupCounter`。这是依据 DEX/Smali 的反编译分析产物，不是原始 Java 源码。车毁派生乘员走另一条分支，不因本次修正而改变。
+
+网页 [`spawnSettlerGroup()`](../src/game/index.ts) 现按同一顺序消费随机数：每个请求抽一次90%–109%的速度比例并共享给全组，成员以四个原版偏移无放回随机选槽，每名步兵得到独立组号。波次数量、波次倍率和 HP 公式不变。因为新增抽样会改变后续随机序列，[`GAME_RULES_VERSION`](../src/game/replay.ts) 升为 `gng-rules-4`；旧规则回放会按既有版本检查拒绝重放，IndexedDB 档案结构不变。
+
+[`p1b-settler-spawn.test.ts`](../tests/p1b-settler-spawn.test.ts) 通过 Game 公共入口打开真实 Cow Gulch 内容，覆盖1–4人的步兵请求，seed 固定为1。测试独立按 `java.util.Random` 的48位 LCG 计算类型、共享速度和绘制偏移，并核对成员槽位不重复、组号各自独立。两人请求的预期速度均为485，偏移表索引为1和2。测试在旧实现上失败，修改后通过。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向行为测试 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 node --import tsx --test tests/p1b-settler-spawn.test.ts` 通过；修改前以固定seed重现了速度与槽位差异。 |
+| 本地应用 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4201 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、171项单元测试、Vite 生产构建及60项 Playwright E2E 全部通过。 |
+| 共享站点目录检查 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试全部通过。完整共享站构建尚未在本地重跑，部署工作流负责其构建检查。 |
+| 集成、发布与线上浏览器 | 待提交、合并、推送及部署后记录。 |
+| 完整首关门槛 | 本轮只修复 Wave01/02 步兵请求的随机速度与阵型槽位；P1-F 的地图、对象、剩余战斗表现和鼠标/触屏完整对照仍未通过。Cow Gulch 与整体关卡验收计数保持0/60。 |

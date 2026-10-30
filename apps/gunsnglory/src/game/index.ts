@@ -1230,7 +1230,7 @@ function spawnSettlerGroup(
   spawn: WaveSpawn,
   spawnPositionFine: { x: number; y: number },
   requestType: number,
-  groupId: string,
+  nextGroupId: () => string,
   dynamicDifficulty: number,
   waveDefinition: CampaignWaveDefinition,
   difficulty: GameDifficulty,
@@ -1239,10 +1239,15 @@ function spawnSettlerGroup(
 ): MutableEnemy[] | undefined {
   const groupSize = requestType - 1;
   if (groupSize < 1 || groupSize > SETTLER_SPAWN_OFFSETS.length) return undefined;
-  const speed = campaignEnemySpeed(scenario, waveDefinition);
+  const speedPercent = 90 + random.nextInt(20);
+  const speed = campaignEnemySpeed(scenario, waveDefinition, speedPercent);
   const enemies: MutableEnemy[] = [];
+  const usedSpawnOffsets = new Set<number>();
 
-  for (let slot = 0; slot < groupSize; slot += 1) {
+  while (enemies.length < groupSize) {
+    const slot = random.nextInt(SETTLER_SPAWN_OFFSETS.length);
+    if (usedSpawnOffsets.has(slot)) continue;
+    usedSpawnOffsets.add(slot);
     const type = (random.nextInt(2) + 1) as 1 | 2;
     const colorVariant = random.nextInt(2);
     const enemyDefinition = campaignEnemyDefinition(scenario, type);
@@ -1255,7 +1260,7 @@ function spawnSettlerGroup(
       speed,
       campaignEnemyHitPoints(scenario, waveDefinition, dynamicDifficulty, difficulty, type),
       enemyDefinition,
-      groupId,
+      nextGroupId(),
       colorVariant,
     ));
   }
@@ -2434,16 +2439,16 @@ export function createGame(options: {
                 }
 
                 const requestType = poolType === 7 ? 4 : poolType;
-                const groupId = `campaign-${wave.number}-group-${nextCampaignGroupNumber++}`;
+                const nextGroupId = () => `campaign-${wave!.number}-group-${nextCampaignGroupNumber++}`;
                 const nextEnemyId = () => `campaign-${wave!.number}-enemy-${nextCampaignEnemyNumber++}`;
                 const spawned = poolType === 7
                   ? spawnCoveredWagonPair(
-                    scenario, spawn, candidatePosition, groupId, wave.dynamicDifficulty,
+                    scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
                     campaignDefinition, difficulty, random, nextEnemyId,
                   )
                   : poolType >= 2 && poolType <= 5
                     ? spawnSettlerGroup(
-                      scenario, spawn, candidatePosition, requestType, groupId, wave.dynamicDifficulty,
+                      scenario, spawn, candidatePosition, requestType, nextGroupId, wave.dynamicDifficulty,
                       campaignDefinition, difficulty, random, nextEnemyId,
                     )
                     : undefined;
