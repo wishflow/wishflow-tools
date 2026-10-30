@@ -1307,7 +1307,8 @@ REA/JADX 对 APK 1.8.6 的反编译资料显示，`GunsAndGloryThread` 主循环
 | 验收面 | 结果 |
 | --- | --- |
 | 定向行为测试 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 node --import tsx --test tests/p1b-settler-spawn.test.ts` 通过；修改前以固定seed重现了速度与槽位差异。 |
-| 本地应用 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4201 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、171项单元测试、Vite 生产构建及60项 Playwright E2E 全部通过。 |
-| 共享站点目录检查 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试全部通过。完整共享站构建尚未在本地重跑，部署工作流负责其构建检查。 |
-| 集成、发布与线上浏览器 | 待提交、合并、推送及部署后记录。 |
+| 本地应用 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4201 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、171项单元测试、Vite 生产构建及60项 Playwright E2E 全部通过。临时 worktree 的 frozen lockfile 安装因 DNS 不可用未完成；本地测试复用了现有应用依赖的临时 overlay。 |
+| 共享站点目录检查 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试全部通过。完整共享站构建由发布工作流验证。 |
+| GitHub Actions 与部署 | master 提交 `8279a79` 对应 [Actions run 41133123887](https://github.com/wishflow/wishflow-tools/actions/runs/41133123887) 成功；Guns’n’Glory 测试、共享 catalog、Cloudflare Pages 与 GitHub Pages 部署通过。Cloudflare Worker/config 任务按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开 [`?release=8279a79`](https://wishflow-tools.pages.dev/gunsnglory/?release=8279a79)，确认正式战役及 Cow Gulch 地图加载，Wave01 HUD 显示生命50、敌人数11；全地图画面可见，浏览器 error/warn 日志为空。观察时临时将模拟速度从已保存的4×改为0.25×，随后暂停并恢复4×；结束时未完成关卡仍可重新开始，战役档案仍为已完成1/1、最高分 `$356`，没有新增结算。 |
 | 完整首关门槛 | 本轮只修复 Wave01/02 步兵请求的随机速度与阵型槽位；P1-F 的地图、对象、剩余战斗表现和鼠标/触屏完整对照仍未通过。Cow Gulch 与整体关卡验收计数保持0/60。 |
