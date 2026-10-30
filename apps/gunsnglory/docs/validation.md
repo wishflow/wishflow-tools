@@ -1263,5 +1263,7 @@ Game 测试 [`game.test.ts`](../tests/game.test.ts) 直接打开 [`campaign-new-
 | 完整应用 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=5446 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、169项单元测试、Vite 生产构建和60项 Playwright 测试全部通过。 |
 | 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 15项全部通过。Node 使用 nvm 显式指定22.23.3，未改变默认版本。 |
 | 验收边界 | 本轮不完整通关；浏览器路径在整关结算前结束，Game 测试确认正式会话没有 settlement。P1-F 的全地图/对象/动画/音画/鼠标与触屏对照仍未通过，Cow Gulch 首关与关卡验收计数保持0/60。 |
+| 集成与公开发布 | `e49383b` 已并入并推送到 `master`。GitHub Actions [run 41118308536](https://github.com/wishflow/wishflow-tools/actions/runs/41118308536) 成功：Guns’n’Glory 测试、共享 catalog 检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker/config 按变更范围跳过。 |
+| Codex 内置浏览器公网复核 | 打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=e49383b)，确认战役面板、Cow Gulch 地图、HUD 与4×速度控件显示正常。继续后观察到 Wave01 实际推进（生命50、现金 `$79`、敌人2），随后自然进入 Wave02 对白；刷新后未完成战役从 Wave01 重新开始，已存档的1/1完成记录和最高分 `$356` 保持不变。测试没有结算战役；控制台 error/warn 为空。 |
 
 本轮关闭的是正式 L01 内 Mexican 招募及 Wave02 群体命中的行为证据缺口；独立 fixture 仍用于价格和 AOE 边界回归。它不代表 P1-B 全部内容完成，也不改变 P1-F 首关验收状态。
