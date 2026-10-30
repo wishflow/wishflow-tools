@@ -1013,6 +1013,6 @@ APK 依据为研究分支 `codex/gunsnglory-spec` 的 JADX 分析产物：`GameD
 | APK 帧阈值 | Gunslinger 与 Mexican 分别覆盖阈值前、恰等于阈值、跨过后下一更新，以及最后阈值等于/严格大于的状态；按游戏每次最多推进100ms的约束组织固定 `dt` 序列。新逻辑保留更新开始时选出的帧，并在整数化计时超过末阈值时清理图集。 |
 | 位移取消 | 移动意图产生不足一个 fine unit 的步进时保持攻击帧；后续实际移动一个 fine unit 后立即清除。 |
 | 完整本地 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4193 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、158项单元测试、Vite 生产构建及52项 Playwright 测试。 |
-| 合并、部署与公网实测 | 本轮代码提交及站点 Actions、Codex 内置浏览器线上核对完成后补录。 |
+| 合并、部署与公网实测 | 开发提交 `580d5cf` 已合入并推送到 `master`。GitHub Actions [run 41011178936](https://github.com/wishflow/wishflow-tools/actions/runs/41011178936) 成功：Guns’n’Glory CI、共享检查、Cloudflare Pages 和 GitHub Pages 通过；Worker/config 与文档专用作业按变更范围跳过。Codex 内置浏览器打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=580d5cf)，标题、战役档案、Cow Gulch 地图、桥和 HUD 正常；页面自动进入第1/8波后暂停，显示生命50、敌人7、现金$74。正式档案仍为1/1、最高分 `$356`；模拟速度仍为4×，没有产生新结算。浏览器控制台 error/warn 为空。公网烟测核对部署、画面、暂停交互和存档展示；逐帧阈值由上述固定 `Game` Interface 测试验证。 |
 
 本轮闭合 Cow Gulch Gunslinger/Mexican 攻击帧的阈值顺序和实际位移取消行为，不代表其他单位、动画状态或首关整体验收完成；Cow Gulch 首关仍为0/60。
