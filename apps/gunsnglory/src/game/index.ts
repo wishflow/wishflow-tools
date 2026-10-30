@@ -2444,6 +2444,9 @@ export function createGame(options: {
                   }
                 }
               }
+              if (shot.damageStyle === 3 || shot.damageStyle === 4) {
+                wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite' });
+              }
               if (shot.damageStyle === 3 || shot.areaDamageFine > 0) {
                 shot.impactResolved = true;
                 shot.explosionRemainingMs = 799;
@@ -2456,7 +2459,6 @@ export function createGame(options: {
                   targetId: target.id,
                   affectedEnemyIds,
                 });
-                if (shot.damageStyle === 3) wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite' });
               } else {
                 wave.shots = wave.shots.filter((candidate) => candidate !== shot);
               }

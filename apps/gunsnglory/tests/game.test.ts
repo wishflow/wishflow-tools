@@ -1099,6 +1099,44 @@ test('the Mexican dynamite hits inside the strict one-tile radius and leaves bou
   assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
 });
 
+test('requests the dynamite impact sound for damage style 4', async () => {
+  const styleFourScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'style-four-impact-sound-fixture',
+    units: [{
+      ...combatScenario.units[0]!,
+      weapon: {
+        ...combatScenario.units[0]!.weapon!,
+        damage: 500,
+        damageType: 'heavy',
+        reloadTimeMs: 500,
+        projectileSpeed: 1500,
+        damageStyle: 4,
+        areaDamageFine: 0,
+      },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
+      enemy: {
+        ...combatScenario.previewWave!.enemy!,
+        hitPoints: 100,
+        penetration: { ...combatScenario.previewWave!.enemy!.penetration, heavy: 100 },
+      },
+    },
+  };
+  const session = await createGame({ scenarios: { [styleFourScenario.id]: styleFourScenario } }).open({
+    scenarioId: styleFourScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+  advanceFor(session, 300);
+  const view = session.advance({ deltaMs: 100 });
+
+  assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
+});
+
 test('matches APK pre-increment attack frame thresholds for Gunslinger and Mexican', async () => {
   const variants = [
     { type: 'gunslinger' as const, asset: 'player_gunslinger', damageStyle: 0 as const },
