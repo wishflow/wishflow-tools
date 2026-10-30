@@ -920,5 +920,6 @@ Cow Gulch 的静态装饰深度为 `(cell.y + 1) × 7680` fine units，同一行
 | 完整本地 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4287 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript、154项单元测试、Vite构建及52项Playwright测试。首次使用端口4187时被既有服务占用，完整复跑改用4287后通过。 |
 | 站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 通过，14项测试。 |
 | Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5176/` 打开当前开发分支预览；画面中的 Cow Gulch 地图、装饰、桥、单位、战斗 HUD 和视口裁切正常。由于本地预览已有进行中的正式战局，检查时暂停于 Wave01/8；正式档案仍显示1/1、最高分 `$360`，未完成结算。内置浏览器控制台 error/warn 为空。该目视检查是回归烟测，不声称静态装饰同深度排列在实际 Cow Gulch 截图中可见；精确顺序由 Canvas fixture 断言。 |
+| 合并、部署与线上实测 | 开发提交 `7c6a21b` 合入 `master`，发布提交 `21294f33bed2f8ed977a7d8cc8e23fdfcd9259a0` 已推送。GitHub Actions [run 40991762223](https://github.com/wishflow/wishflow-tools/actions/runs/40991762223) 的 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 与 GitHub Pages 均成功；Worker/config 检查按本次静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=21294f3)，确认战役首页、Cow Gulch 地图、桥、静态装饰和 HUD 正常；暂停时为 Wave01/8、生命50、敌人5、现金$76，速度4×。正式档案仍为1/1、最高分 `$356`，未提交结算；控制台 error/warn 为空。此目视核对不代替 Canvas 同深度 drawCall 顺序断言。 |
 
 本轮只对 Cow Gulch 静态装饰之间的同深度地图扫描次序给出确定性保证。单位移动后的历史队列顺序、静态装饰与动态对象之间以及敌人/投射物之间的逐对象同深度次序仍待 P1-F 对照；Cow Gulch 首关仍为0/60。
