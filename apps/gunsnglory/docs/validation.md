@@ -1312,3 +1312,21 @@ REA/JADX 对 APK 1.8.6 的反编译资料显示，`GunsAndGloryThread` 主循环
 | GitHub Actions 与部署 | master 提交 `8279a79` 对应 [Actions run 41133123887](https://github.com/wishflow/wishflow-tools/actions/runs/41133123887) 成功；Guns’n’Glory 测试、共享 catalog、Cloudflare Pages 与 GitHub Pages 部署通过。Cloudflare Worker/config 任务按变更范围跳过。 |
 | Codex 内置浏览器公网实测 | 打开 [`?release=8279a79`](https://wishflow-tools.pages.dev/gunsnglory/?release=8279a79)，确认正式战役及 Cow Gulch 地图加载，Wave01 HUD 显示生命50、敌人数11；全地图画面可见，浏览器 error/warn 日志为空。观察时临时将模拟速度从已保存的4×改为0.25×，随后暂停并恢复4×；结束时未完成关卡仍可重新开始，战役档案仍为已完成1/1、最高分 `$356`，没有新增结算。 |
 | 完整首关门槛 | 本轮只修复 Wave01/02 步兵请求的随机速度与阵型槽位；P1-F 的地图、对象、剩余战斗表现和鼠标/触屏完整对照仍未通过。Cow Gulch 与整体关卡验收计数保持0/60。 |
+
+## 67. P1-F Cow Gulch 桥面与生成边界路线复核
+
+针对“峡谷里的敌人为什么会走到桥上”复核了 APK map01 控制字段、路线图、桥面覆盖范围及敌人碰撞配置。结论是：**经过 Cow Gulch 东侧桥面属于原版路线；不能为阻止这一段路径给敌人添加通用地形碰撞。**
+
+APK map01 的敌人路线从 spawn `(0,10)` 依次经过 redirect `(4,10) → (4,13) → (12,13) → (12,6) → (9,6) → (9,2) → (12,2) → (12,3) → (15,3)`，最后从 exit `(16,3)` 离场。`(12,13) → (12,6)` 的直线路段经过 `(12,9)`；原始地图的水平桥面绘制范围为 `x=11.75..13.25, y=9`，覆盖该路线中心。因此敌人经过这里是路线字段与贴图桥面的对应结果。依据为研究资料 `R/data/map-inventory.json`、`R/data/static-route-graph.json` 和 `R/route-and-wave-model.md`，并与网页 `cow-gulch-preview-wave.ts`、`cow-gulch.json` 对照。
+
+同一来源还确认生成池成功生成时，会把共享 spawn 字段沿反方向移动两格；Cow Gulch spawn `(0,10)` 朝东，所以首批生成位置可落在地图左边界之外。APK 的敌人碰撞管理器关闭背景地形碰撞，路线由 action 1/2/3 字段驱动。该证据解释边界外初始位置与桥面路线为何可能出现，但**不能单独证明原版渲染时的裁切/可见效果**；本轮没有据此修改路线或地图碰撞。若后续发现敌人离开上述路线、在其他桥面出现或进入地图外区域后没有按原版离场计数消失，应单独用坐标、波次和敌人类型复现，再对照对应 APK 分支。
+
+### 验证边界
+
+| 验收面 | 结果 |
+| --- | --- |
+| APK 路线字段与静态图 | map01 的 spawn、redirect、exit 顺序在 `R/data/map-inventory.json` 与 `R/data/static-route-graph.json` 中一致；静态路线图只描述字段连接，不等价于随机战局轨迹。 |
+| 桥面重叠 | Cow Gulch 水平桥面 bounds 与路线 cell `(12,9)` 相交，路径属于原版线路。 |
+| 背景碰撞 | `R/route-and-wave-model.md` 依据 `GunsAndGloryThread.onLoadGame` 和 `CollisionManager` 证据记录 `backgroundMapCollisions=false`；网页不得加入与 APK 相反的全图地形阻挡。 |
+| 线上运行观察 | 本轮公开实测只覆盖 Wave01 的整体推进与地图显示，没有逐帧记录 `(12,9)` 通过事件；此条结论来自可复算静态资料，不计为动态坐标观察。 |
+| P1-F 总门槛 | 该路线复核不代表完整移动、碰撞、离场、桥面遮挡或全关卡验收通过；Cow Gulch 与完整关卡计数仍为0/60。 |
