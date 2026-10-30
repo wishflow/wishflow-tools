@@ -1202,4 +1202,4 @@ Game 现在在首次命中结算处按 damage style 3/4 发出同一声音事件
 | 旧回归隔离 | 其它 E2E 页面通过共享测试夹具自动继续叙事对白，使既有游戏控制、存储和结算测试仍覆盖其原目标；对白专用测试使用原始 Playwright 页面直接检查行为。夹具观察 `document`，避免应用启动时 `<html>` 尚未创建而触发观察器错误。 |
 | 本地应用 CI | 显式使用 Node 22.23.3 执行 `CI=1 PLAYWRIGHT_PORT=5429 pnpm --dir apps/gunsnglory run test:ci`：TypeScript 检查、166 项单元测试、Vite 生产构建和 57 项 Playwright 测试全部通过。`pnpm run test:catalog` 的15项仓库目录测试通过。 |
 | 首关范围 | 定向新用例仅把虚拟时间推进到 Wave02 对白，不完成整关或更改正式档案。Cow Gulch 首关 P1-F 全量地图、规则和表现对照仍未通过，验收计数保持 0/60。 |
-| 集成、发布与内置浏览器 | 待本轮提交、合并和公开站点核验后补录。 |
+| 集成、发布与内置浏览器 | 功能提交 `179c4b5` 已并入并发布到 `master`（部署提交 `f5be4ef`）。GitHub Actions [run 41080228296](https://github.com/wishflow/wishflow-tools/actions/runs/41080228296) 中 Guns’n’Glory CI、共享 catalog 检查、Cloudflare Pages 与 GitHub Pages 全部成功；Worker/config 与宠物任务按变更范围跳过。Codex 内置浏览器打开[公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=f5be4ef)，核对首波 Pedro 肖像与原版英文对白、站点语言切换后的中文对白；继续后进入 Wave 1 战斗，再暂停时页面显示 `Wave 1/8`、Lives 50、Enemies 10、Cash `$71`。正式档案仍为 Cow Gulch 1/1、最高分 `$356`；静音设置为关闭，控制台 error/warn 为空。 |
