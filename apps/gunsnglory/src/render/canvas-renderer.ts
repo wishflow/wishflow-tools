@@ -314,7 +314,10 @@ function drawEnemy(
 ): void {
   const vehicle = enemy.type === 4 || enemy.type === 8;
   const turn = enemy.turningAnimation;
-  const asset = turn?.asset ?? enemy.asset;
+  const deathFrame = !enemy.alive && (enemy.type === 1 || enemy.type === 2)
+    ? Math.max(0, Math.min(5, 5 - Math.floor(enemy.deathRemainingMs / 100)))
+    : undefined;
+  const asset = deathFrame === undefined ? turn?.asset ?? enemy.asset : 'sfx_death_pioneers';
   const image = images[asset];
   if (!image) throw new Error('Missing game image: ' + asset);
 
@@ -329,12 +332,16 @@ function drawEnemy(
   const left = centerX - width / 2;
   const top = feetY - height;
   const frameCount = enemy.type === 8 ? 4 : 3;
-  const sourceX = turn ? turn.frame * sourceWidth : (enemy.animationFrame % frameCount) * sourceWidth;
-  const sourceY = turn ? 0 : spriteRow(enemy.direction) * sourceHeight;
+  const sourceX = deathFrame !== undefined
+    ? deathFrame * sourceWidth
+    : turn ? turn.frame * sourceWidth : (enemy.animationFrame % frameCount) * sourceWidth;
+  const sourceY = deathFrame !== undefined || turn ? 0 : spriteRow(enemy.direction) * sourceHeight;
 
   context.save();
-  if (!vehicle && !enemy.alive) context.globalAlpha = Math.max(0.15, enemy.deathRemainingMs / 799);
-  const mirrored = turn ? turn.mirrored : enemy.direction === 'west';
+  if (!vehicle && !enemy.alive && deathFrame === undefined) {
+    context.globalAlpha = Math.max(0.15, enemy.deathRemainingMs / 799);
+  }
+  const mirrored = turn && deathFrame === undefined ? turn.mirrored : enemy.direction === 'west';
   if (mirrored) {
     context.translate((left * 2) + width, 0);
     context.scale(-1, 1);
@@ -365,7 +372,7 @@ function drawEnemy(
     );
   }
 
-  if (enemy.hitFlashMs > 0 || !enemy.alive) {
+  if (enemy.alive && enemy.hitFlashMs > 0) {
     context.beginPath();
     context.ellipse(centerX, feetY - height * 0.45, width * 0.38, height * 0.34, 0, 0, Math.PI * 2);
     context.strokeStyle = enemy.alive ? '#ffe28a' : '#d85b42';

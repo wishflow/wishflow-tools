@@ -183,6 +183,8 @@ flowchart LR
 - 枪手攻击序列为 `(帧,累计阈值)=(0,100),(1,200),(0,1000)`；Mexican 为 `(0,200),(1,400)`。`shoot()` 将攻击计时器置0并开始序列；每次更新先按当前累计值选择帧（仅当计时值大于阈值才进入下一段），再加本帧 `dt`；新计时值严格大于最后阈值时结束并回到帧0。因此枪手帧区间为 `0: 0–100 ms`、`1: 101–200 ms`、`0: 201–1000 ms`，Mexican 为 `0: 0–200 ms`、`1: 201–400 ms`；边界帧需按“先选帧、后累计”核对。任一方向发生实际位移会清除攻击动画；不能仅按素材存在或等间隔播放验收。
 - 验收以固定距离、朝向和攻击进度核对预期帧，并检查连续移动、停下、开火的衔接。图片存在、裁切未越界均不足以证明行为正确。
 
+Cow Gulch 普通步兵 type1/2 死亡时使用 `sfx_death_pioneers` 六帧横向图集，单帧为16×24；死亡计时初值599 ms，帧号按 `5 - floor(remainingMs / 100)` 选择，期间保持原图不透明度。该行为由 APK 反编译分析与图集资源核实，详见[验证记录第50节](validation.md#50-p1-f-cow-gulch-普通步兵死亡动画)。
+
 敌方生命条按 `GunsAndGloryThread.drawEnemies()` 显示：仅当敌人类型大于2且不为9、仍存活、当前 HP 大于0，并且 `HP < (maxHP × 95) / 100` 的整数除法结果时绘制。背景色为 `RGB(63,0,0)`。按原版 `scale=6` 和 `mScalingFactor`，背景左上角为 `(centerX - 18×mScalingFactor, feetY - 6×mScalingFactor - 3×floor(realTilesize/2))`，宽度为 `36×mScalingFactor`，高度为 `12×mScalingFactor`；当 `mScalingFactor < 1` 时，原版分支再将背景底边减1个画布像素。HP 填充从 `(centerX - 15×mScalingFactor, feetY - 3×mScalingFactor - 3×floor(realTilesize/2))` 开始，高度为 `6×mScalingFactor`，即背景高度的一半。填充宽度为 `trunc(float32(HP × 10 × scale × mScalingFactor))` 再除以 `(2 × maxHP)` 的整数商；颜色通道先按 Java float32 计算 `((maxHP-HP)×255.0f)/maxHP` 和 `(HP×255.0f)/maxHP`，再向零截断为整数。复刻需保留浮点精度和整数除法顺序。网页的48像素原版格换算为32逻辑像素格，`mScalingFactor` 对应 `viewport.tileSize / 48`；数据依据为研究分支 `codex/gunsnglory-spec` 的 REA/JADX 反编译 `GunsAndGloryThread.java`，反编译结果不是原始源码。
 
 运输车辆还须显示牵引/车体关系、残车和乘员出现时机；投射物/效果须随实际方向、寿命和绘制顺序呈现；音频须在真实事件及循环、暂停、静音、恢复流程中检查。原版部分表现消费共享随机数，相关顺序仍由同一模拟过程维护；无画面运行省去绘制，不能跳过会改变结果的随机调用。完整时间和环境契约只在[模拟与自动化契约](simulation-and-automation.md)维护。

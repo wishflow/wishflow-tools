@@ -807,7 +807,7 @@ P1-E 已完成并发布，但不代表 P1-F 对原版首关的地图/对象、�
 
 ### APK 静态依据
 
-REA/JADX 归档中的 `GunsAndGloryThread` 绘制路径按背景、敌人、网格框、道路层、`drawObjects` 的顺序执行（DEX `0x3ff632–0x3ff66a`）。`GameObjectManager.getValueByObject` 的对象排序值为 `fineY + drawingOffsetY + fineZ × 100`（DEX `0x407a30–0x407a44`）；`insertDrawOrder` 按此值升序插入，值相同时新对象插在已有对象之前（DEX `0x408674–0x4086e8`）。Cow Gulch 地图对象由 `createGameObjectsFromBasicMap` 按行列扫描，装饰对象以格中心坐标和 `fineZ=7680` 创建（DEX `0x407d2c–0x407d38`、`0x407dfa–0x407e1a`）。
+REA/JADX 归档中的 `GunsAndGloryThread` 先绘制背景，再由 `drawEnemies()` 遍历 `gameObjectsDraworder`，处理排序值小于 `768000` 的队列前段；该遍历包含 `GameObjectShot` 与 `GameObjectEnemy`（DEX 方法入口 `0x3fbe5c`）。随后绘制网格框和道路层，`drawObjects()` 从 `currentElement` 继续绘制剩余的非敌人对象（方法入口 `0x3fc270`；主绘制调用点 `0x3ff632`）。`GameObjectManager.getValueByObject` 的排序值为 `fineY + drawingOffsetY + fineZ × 100`（DEX `0x407a30–0x407a44`）；因此在 Cow Gulch 的坐标范围内，`fineZ=0` 对象位于道路前，`fineZ=7680` 对象位于道路后。`insertDrawOrder` 按此值升序插入，值相同时新对象插在已有对象之前（DEX `0x408674–0x4086e8`）。Cow Gulch 地图对象由 `createGameObjectsFromBasicMap` 按行列扫描，装饰对象以格中心坐标和 `fineZ=7680` 创建（DEX `0x407d2c–0x407d38`、`0x407dfa–0x407e1a`）。
 
 在本轮比较的 Cow Gulch 静态装饰和玩家单位中，深度随地面锚点的 `fineY` 增长，二者 `fineZ` 相同；装饰地面锚点为其地图格底边，单位使用当前 `positionFine.y`。网页据此按 `(decoration.cell.y + 1) × 7680` 和 `unit.positionFine.y` 排序。REA/JADX 反编译文本是分析产物，不是原始 Java 源码。相同深度时网页使用确定性的集合顺序；动态新建对象与原版插入序列的逐项一致性尚未纳入此切片。
 
@@ -826,7 +826,7 @@ REA/JADX 归档中的 `GunsAndGloryThread` 绘制路径按背景、敌人、网�
 
 ## 45. P1-F Cow Gulch 投射物与残骸深度排序
 
-本轮将投射物和车厢碎片并入玩家单位、静态装饰共用的地面深度队列。地图背景、敌人和道路仍按既有固定图层绘制；对象队列使用细坐标 Y 排序。车厢碎片单独运动，但排序沿用原版 `GameObjectWagonParts.fineY` 父锚点，不随碎片的空中轨迹改变。
+本轮将投射物和车厢碎片并入玩家单位、静态装饰共用的地面深度队列。原版低 Z 敌人与投射物在道路前按同一排序值绘制；网页将其对应为道路前的敌人与低 Z 投射物深度队列。玩家单位、装饰、车厢碎片和高 Z 投射物在道路后排序。车厢碎片单独运动，但排序沿用原版 `GameObjectWagonParts.fineY` 父锚点，不随碎片的空中轨迹改变。
 
 ### APK 静态依据与边界
 
@@ -845,7 +845,7 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 | 浏览器控制台 | 本地内置浏览器错误及警告日志为空。 |
 | 发布与公网实测 | `master` 提交 `816f98fa74b885b6a526b04205d3ac8ac6b04acd` 已推送。GitHub Actions [run 40922924699](https://github.com/wishflow/wishflow-tools/actions/runs/40922924699) 的 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 与 GitHub Pages 均通过；Worker/config 检查按静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=816f98f)，截图核对 Cow Gulch 峡谷道路、桥、静态装饰、枪手、敌人和车厢；暂停时为 Wave01/8、生命50、敌人13、现金$68。已保存战役档案前后均为1/1、最高分$356；速度仍为4×，没有提交结算或改动设置。浏览器控制台错误与警告为空。战斗 HUD 的短时数值仅记录当次观察，不作规则预期。 |
 
-本轮验证的是共享地面深度队列和车厢碎片锚点；特殊投射物的动态 `fineZ` 在当时尚未实现，现由第 46 节补齐。敌人/投射物/装饰的完整跨图层对照、动态同深度插入次序及其它地图仍待处理；静态装饰的同深度顺序见第48节。Cow Gulch 首关仍为0/60。
+本轮验证的是道路后的共享地面深度队列和车厢碎片锚点；特殊投射物的动态 `fineZ` 在当时尚未实现，现由第 46 节补齐。敌人不是固定图层；敌人、投射物、单位和装饰跨类型的动态同深度队列顺序仍待核验，静态装饰之间的同深度顺序见第48节。Cow Gulch 首关仍为0/60。
 
 ## 46. P1-F Cow Gulch 特殊投射物弹道与道路图层
 
@@ -954,4 +954,26 @@ Cow Gulch 的静态装饰深度为 `(cell.y + 1) × 7680` fine units，同一行
 | 发布流水线 | 开发提交 `c05c277` 已合并到 `master` 提交 `b9a315e` 并推送。Actions run [40995213533](https://github.com/wishflow/wishflow-tools/actions/runs/40995213533) 中共享测试、Guns’n’Glory CI、Cloudflare Pages 和 GitHub Pages 检查通过；静态应用改动未触发 Worker/config 发布。 |
 | 公网内置浏览器 | 在 [公网 Guns’n’Glory 页面](https://wishflow-tools.pages.dev/gunsnglory/?release=b9a315e) 加载发布版本，标题、Cow Gulch 战役界面、地图和 HUD 正常，浏览器控制台 error/warn 为空。既有浏览器档案显示1/1完成与最高分 `$356`；页面以4×运行后暂停，未产生新的结算。此检查确认发布页可加载和交互，不替代逐帧动画对照。 |
 
-本轮只闭合已实现敌型 type1/2/4/8 的行走帧距离映射。敌人攻击、受击、睡眠、死亡等动画，以及其它关卡、完整像素裁切和动画节奏观察仍待后续 P1-F 对照；Cow Gulch 首关验收仍为0/60。
+本轮只闭合已实现敌型 type1/2/4/8 的行走帧距离映射。敌人攻击、受击、状态效果、车辆死亡等动画，以及其它关卡、完整像素裁切和动画节奏观察仍待后续 P1-F 对照；普通步兵 type1/2 的死亡帧另见第50节。Cow Gulch 首关验收仍为0/60。
+
+## 50. P1-F Cow Gulch 普通步兵死亡动画
+
+网页此前对死亡中的 type1/2 步兵使用透明度淡出和红色轮廓。APK 为这两类敌人切换到独立死亡图集，并按剩余死亡计时选择六帧；本轮补入原图并按原版帧阈值绘制，移除死亡状态的额外轮廓。
+
+### APK 静态依据
+
+本地研究分支 `codex/gunsnglory-spec` 中，JADX 对 APK 的分析产物 `apps/gunsnglory/docs/research/recovered-source/java/com/hg/gunsandglory/gamelogic/GameObjectEnemy.java` 显示，unit type 1/2 的 `deathAnimationStyle` 为 1、初始死亡计时为 599 ms；`updateDeathAnimation()` 选择 `sfx_death_pioneers`，帧号为 `5 - floor(deathAnimationCounter / 100)`。`draw()` 把图集横向分成六帧，步兵原帧宽高沿用 16×24，并在死亡期间不对该图层应用淡出。对应 DEX 分析材料位于同分支 `apps/gunsnglory/docs/research/evidence/dex/GameObjectEnemy.dexdump.txt`，可按方法名复核。这些是反编译分析产物，不是原始 Java 源码，也不随本应用发布包提供。
+
+素材从用户提供 APK 的 `res/drawable-mdpi-v4/sfx_death_pioneers.png` 提取，尺寸为 96×24（6 帧，每帧16×24），纳入游戏自身资源目录 [`sfx_death_pioneers.png`](../public/assets/sfx_death_pioneers.png)。当前网页敌型只包含 type1/2/4/8，因此 type9 虽在 APK 构造逻辑中使用相同死亡样式，仍不属于本轮范围。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| TDD 帧阈值 | Canvas 行为测试先在旧实现上失败：死亡敌人599 ms 时没有调用死亡图集。修复后核对 599/500/499/100/99 ms 分别选中第 0/0/1/4/5 帧，并断言图集源矩形和全不透明状态。 |
+| APK 资源 | 从 APK 提取的 mdpi 图集为 96×24；应用构建清单加载 `sfx_death_pioneers`，不依赖研究目录或 APK 运行时访问。 |
+| 本地完整验证 | `CI=1 PLAYWRIGHT_PORT=4180 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、156项单元测试、Vite 生产构建和52项 Playwright 测试。 |
+| Codex 内置浏览器本地检查 | 在 `http://localhost:5186/` 用内置浏览器启动单个 Pioneer 样例并确认胜利结算、击败数、现金和样例档案保存；速度设置曾调至0.25×后恢复1×。控制台 error/warn 为空。该浏览器观察确认页面交互和存档可用，但没有把截图作为死亡动画逐帧证据；帧裁切与计时边界由上方 Canvas 行为测试验证。 |
+| 发布与公网验证 | 待合并发布并检查公开版本后填写。 |
+
+本轮仅闭合 Cow Gulch 已实现 type1/2 步兵的死亡图集帧选择。车辆死亡烟雾、其他敌型、受击/状态效果的完整逐帧视觉对照，以及 Cow Gulch 首关整体验收仍未完成；关卡计数保持0/60。

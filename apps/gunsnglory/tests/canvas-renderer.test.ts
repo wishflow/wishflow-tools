@@ -8,6 +8,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const mapImage = {} as HTMLImageElement;
   const bridgeImage = {} as HTMLImageElement;
   const enemyImage = {} as HTMLImageElement;
+  const pioneerDeathImage = { naturalWidth: 96, naturalHeight: 24 } as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
   const shotImage = {} as HTMLImageElement;
   const wagonPartsImage = {} as HTMLImageElement;
@@ -24,6 +25,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const overlayText: string[] = [];
   const routeCommands: string[] = [];
   const enemyDrawAlphas: number[] = [];
+  const pioneerDeathDraws: Array<{ args: unknown[]; alpha: number }> = [];
   const alphaStack: number[] = [];
   const mapClipStack: boolean[] = [];
   const viewportClipStack: boolean[] = [];
@@ -61,6 +63,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     drawImage(...args: unknown[]) {
       drawCalls.push(args);
       if (args[0] === enemyImage) enemyDrawAlphas.push(currentAlpha);
+      if (args[0] === pioneerDeathImage) pioneerDeathDraws.push({ args, alpha: currentAlpha });
       if (args[0] === cactusImage || args[0] === treeImage || args[0] === bushImage) {
         decorationClipStates.push(mapClipActive);
         decorationViewportClipStates.push(viewportClipActive);
@@ -169,6 +172,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     ground: mapImage,
     bridge: bridgeImage,
     pioneer_male: enemyImage,
+    sfx_death_pioneers: pioneerDeathImage,
     unit: unitImage,
     cactus: cactusImage,
     tree: treeImage,
@@ -293,11 +297,17 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
-  drawGame(context, {
-    ...view,
-    enemies: [{ ...view.enemies[0]!, alive: false, deathRemainingMs: 399 }],
-  }, images);
-  assert.equal(enemyDrawAlphas.at(-1), Math.max(0.15, 399 / 799), 'ordinary enemy death keeps the existing fade');
+  for (const [deathRemainingMs, frame] of [[599, 0], [500, 0], [499, 1], [100, 4], [99, 5]] as const) {
+    pioneerDeathDraws.length = 0;
+    drawGame(context, {
+      ...view,
+      enemies: [{ ...view.enemies[0]!, alive: false, deathRemainingMs }],
+    }, images);
+    const deathDraw = pioneerDeathDraws.at(-1);
+    assert.ok(deathDraw, `ordinary enemy death uses its sprite sheet at ${deathRemainingMs}ms remaining`);
+    assert.deepEqual(deathDraw.args.slice(1, 5), [frame * 16, 0, 16, 24]);
+    assert.equal(deathDraw.alpha, 1, 'the original death animation stays fully opaque');
+  }
 
   const damagedWagon = {
     ...view.enemies[0]!,
