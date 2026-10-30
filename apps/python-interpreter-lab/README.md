@@ -39,5 +39,6 @@ React + TypeScript + Vite 页面通过共享 `@wishflow/site-shell` 展示。主
 - [协作约束](AGENTS.md)：前端、站点壳、语言、验证和文档规则。
 - [ADR-0001](docs/adr/0001-browser-python-visualizer.md)：引擎路线与架构取舍。
 - [整体实施计划](docs/implementation-plan.md)：阶段依赖、验收与发布状态。
+- [执行可视化体验讨论稿](docs/design/visual-execution-experience.md)：语句讲解、栈与堆、动画及跨视图联动的候选方案，尚未批准实施。
 - [P9 教学调试控制](docs/specs/p09-teaching-debugger.md) 与 [P9 tasks](docs/tasks/p09-teaching-debugger.md)：断点、源码步进、继续/暂停、速度档及发布验收记录。
 - [站点外壳契约](../../packages/site-shell/README.md)：公共页面与语言接口。
