@@ -44,10 +44,10 @@ test('compiles teaching instructions, steps the value stack, prints, and browses
   await page.getByRole('button', { name: 'Step one instruction' }).click();
   await expect(valueStack.locator('.teaching-value-list li code')).toHaveText(['1', '6']);
 
-  const history = page.getByRole('slider', { name: 'Instruction history' });
+  const history = page.getByRole('slider', { name: 'Source-step history' });
   await history.focus();
   await history.press('Home');
-  await expect(page.getByRole('status')).toContainText('Viewing history. Return to the head before continuing.');
+  await expect(page.locator('.teaching-history-state')).toContainText('Viewing history. Return to the head before continuing.');
   await expect(page.getByRole('button', { name: 'Step one instruction' })).toBeDisabled();
   const continueButton = page.getByRole('button', { name: 'Continue teaching program' });
   await expect(continueButton).toBeEnabled();
@@ -484,10 +484,10 @@ test('browses object references and immutable container contents across teaching
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
 
   const heap = page.getByRole('region', { name: 'Object heap' });
-  const history = page.getByRole('slider', { name: 'Instruction history' });
+  const history = page.getByRole('slider', { name: 'Source-step history' });
   await history.focus();
   await history.press('Home');
-  for (let step = 0; step < 3; step += 1) await history.press('ArrowRight');
+  await history.press('ArrowRight');
   const list = heap.locator('#teaching-heap-object-1');
   await expect(list).toContainText('[0]');
   await expect(list).toContainText('1');
@@ -495,7 +495,7 @@ test('browses object references and immutable container contents across teaching
   await page.keyboard.press('Enter');
   await expect(list).toBeFocused();
 
-  for (let step = 0; step < 4; step += 1) await history.press('ArrowRight');
+  await history.press('ArrowRight');
   await expect(list).toContainText('2');
   await expect(page.getByRole('button', { name: 'Locate list object #1' }).first()).toBeVisible();
 
@@ -515,8 +515,9 @@ test('keeps the browser history within the container-record budget', async ({ pa
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
 
-  const history = page.getByRole('slider', { name: 'Instruction history' });
-  await expect.poll(async () => Number(await history.getAttribute('min'))).toBeGreaterThan(0);
+  const history = page.getByRole('slider', { name: 'Source-step history' });
+  await expect(history).toHaveAttribute('min', '0');
+  await expect.poll(async () => Number(await history.getAttribute('max'))).toBeGreaterThan(0);
   await expect(page.locator('.teaching-history-state')).toContainText('50,000-container-record limits');
   await expect(page.locator('#teaching-heap-object-1 .teaching-heap-entries > div')).toHaveCount(256);
 });
@@ -684,7 +685,9 @@ test('restarts container identities and clears heap history when the teaching VM
   await page.getByRole('button', { name: 'Reset teaching VM' }).click();
   await expect(page.getByText('Ready to compile teaching program').first()).toBeVisible();
   await expect(page.getByRole('region', { name: 'Object heap' })).toContainText('No reachable container objects');
-  await expect(page.locator('.teaching-history-control')).toContainText('Step 0 of 0');
+  await expect(page.locator('.teaching-history-control')).toContainText('Group 1 of 1');
+  await expect(page.locator('.teaching-observation-status')).toContainText('Initial state');
+  await expect(page.locator('.teaching-observation-summary')).toContainText('initial VM state');
 
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
@@ -767,11 +770,14 @@ test('pauses and resets a long teaching run and invalidates stale mode/source st
   await expect(page.locator('.teaching-instruction-count')).toHaveText(pausedCount ?? '');
 
   await page.getByRole('button', { name: 'Reset teaching VM' }).click();
-  await expect(page.getByText('Step 0 of 0')).toBeVisible();
+  await expect(page.getByText('Group 1 of 1')).toBeVisible();
+  await expect(page.locator('.teaching-observation-status')).toContainText('Initial state');
+  await expect(page.locator('.teaching-observation-summary')).toContainText('initial VM state');
   await expect(page.locator('.teaching-value-list li')).toHaveCount(0);
 
   await source.fill('x = 42');
   await expect(page.getByText('Compile source to create a teaching program.')).toBeVisible();
+  await expect(page.locator('.teaching-observation-panel')).toHaveCount(0);
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
   await expandTeachingDetails(page, 'instructions');
   await expect(page.locator('.teaching-instruction-table')).toContainText('STORE_NAME');
@@ -789,10 +795,17 @@ test('streams long-run history incrementally and retains the complete bounded wi
   await page.getByRole('button', { name: 'Run teaching program' }).click();
 
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
-  const history = page.getByRole('slider', { name: 'Instruction history' });
-  await expect(history).toHaveAttribute('min', '504');
-  await expect(history).toHaveAttribute('max', '1003');
+  const history = page.getByRole('slider', { name: 'Source-step history' });
+  await expect(history).toHaveAttribute('min', '0');
+  await expect.poll(async () => Number(await history.getAttribute('max'))).toBeGreaterThan(1);
+  await expect.poll(async () => Number(await history.getAttribute('max'))).toBeLessThan(500);
   await expect(page.getByText('Older snapshots were dropped to stay within the 500-snapshot and 50,000-container-record limits.')).toBeVisible();
+  await history.focus();
+  await history.press('Home');
+  await expect(page.locator('.teaching-observation-status')).toContainText('History state unavailable');
+  await expect(page.locator('.teaching-observation-summary')).toContainText('Earlier snapshots were dropped');
+  await expect(page.locator('.teaching-observation-diff')).toContainText('No earlier snapshot is available');
+  await page.getByRole('button', { name: 'Return to execution head' }).click();
   await expect.poll(async () => (await page.locator('.teaching-output').textContent() ?? '').split('\n').length).toBe(500);
   await expect(page.locator('.teaching-output')).toContainText(payload);
 });

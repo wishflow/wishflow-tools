@@ -56,7 +56,7 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingRunS
       }
       return;
     }
-    editor.focus();
+    if (sourceLink.focus !== false) editor.focus();
     editor.setSelectionRange(sourceLink.range.start, sourceLink.range.end);
   }, [sourceLink]);
 
