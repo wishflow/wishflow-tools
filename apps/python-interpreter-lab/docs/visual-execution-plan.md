@@ -11,7 +11,7 @@
 | V0 帮助入口与静态帮助页 | 实现、本地验证、CI/CD 与线上验收完成 |
 | V1 静态执行现场与默认教学入口 | 已实现、验证、发布并完成线上验收 |
 | V2 统一观察位置、源码步进分组与变化说明 | 已实现、验证、合并发布并完成线上验收 |
-| V3 操作数栈与对象引用动画 | spec/tasks 已创建，独立讲解播放入口已确认；实现进行中 |
+| V3 操作数栈与对象引用动画 | 已实现、本地验证、双站部署并完成线上验收 |
 | V1–V6 spec/tasks | V1–V3 已创建；V4–V6 在对应阶段开始前创建 |
 
 依托 P1–P9 已有能力开展，保留[整体计划](implementation-plan.md)的 P10 异常语法和 O1 可选真实 opcode 编号。本体验路线使用 V0–V6，优先处理已确认的可视化问题；不以尚未实施的 P10/O1 为前置，也不顺带扩大 Python 子集。
@@ -85,7 +85,7 @@ flowchart LR
 - **验收**：`b = a` 不复制对象；`b[0] = 9` 修改同一对象；`b = [2]` 才增加对象并改绑定。过渡结束与直接后态完全一致；减少动态效果具有相同信息。
 - **验证**：已知前后态与动作语义、暂停/取消/复位、快速连续点击、快慢切换、空栈/重复值/循环引用和历史跳转；同步帮助说明的演示与执行区别。
 - **回滚**：关闭动画和新增讲解调度，保留 V2 的静态差异与原 VM 控制。
-- **状态**：spec/tasks 与 T01–T04 已完成；独立“讲解播放”控件按串行 Step Over 等待 Worker 响应和本步展示。应用本地 CI、catalog 与整站构建通过；仍待本轮合并、推送、CI/CD 和线上验收。详细结果见 [V3 tasks](tasks/v03-operand-stack-and-reference-animation.md)。
+- **状态**：spec/tasks 与 T01–T05 已完成；独立“讲解播放”控件按串行 Step Over 等待 Worker 响应和本步展示。应用本地 CI（159 条单测、63 条 Playwright、类型检查和生产构建）、catalog（15 项）与整站构建均通过；已合并推送，GitHub Actions [41092079704](https://github.com/wishflow/wishflow-tools/actions/runs/41092079704) 及 GitHub Pages、Cloudflare Pages 部署成功。线上已验证讲解播放中的别名/原位修改/重绑定，以及真实 CPython AST、字节码与执行输出。详细结果见 [V3 tasks](tasks/v03-operand-stack-and-reference-animation.md)。
 
 ### V4：函数调用、参数与返回的连续解释
 

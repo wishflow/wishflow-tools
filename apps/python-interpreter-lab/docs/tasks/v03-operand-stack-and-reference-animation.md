@@ -24,10 +24,10 @@
   - 验证：两种语言术语一致、相对链接有效、`git diff --check`。
   - 文件：`docs/guide/usage.zh-CN.md`、`docs/guide/usage.en.md`、`docs/visual-execution-plan.md`、本 tasks。
 
-- [ ] **T05：整体验证、提交、发布与线上实测**
+- [x] **T05：整体验证、提交、发布与线上实测**
   - 验收：规格所列单测、类型检查、构建、浏览器测试、catalog 和整站构建均通过；部署成功后线上核对讲解播放与双引擎。
   - 验证：应用 `typecheck`、`test:unit`、`build`、`test:e2e`；`pnpm test:catalog`、`pnpm build:site`；通过后提交，合并到 `master`、推送并等待相关 Actions，通过 Codex 内置浏览器在线验收。
-  - 文件：依测试结果所需的教学 UI/测试/说明文件。
+  - 交付：`77bd282` 已合并并推送到 `master`；Actions、双站部署和线上实测全部通过。
 
 ## 检查点
 
@@ -42,8 +42,9 @@
 | Spec 与 tasks | 已完成 | 已确认独立讲解播放、串行 Step Over、Worker 暂停确认、12 条上限与 240ms 固定演示时长 |
 | 实现 | 已完成 | T01–T04 完成；过渡由相邻快照和实际教学指令纯派生，前端串行 Step Over 并等待 Worker 响应；未改写快照、VM 或 Worker 协议 |
 | 本地验证 | 已完成 | 应用 `test:ci`（159 条单测、63 条 Playwright、类型检查、生产构建）通过；`pnpm test:catalog`（15 项）和 `pnpm build:site` 通过。10 条 V3 浏览器专项覆盖别名/原位修改/重绑定、执行头历史、断点、运行错误、Worker 暂停、展示中暂停、Reset、编辑/引擎切换取消、键盘、减少动态效果和四种视口 |
-| CI/CD | 未开始 | — |
-| 线上验收 | 未开始 | — |
+| 提交与合并 | 已完成 | `77bd282` `feat: play recorded teaching VM transitions` 已合并并推送到 `master` |
+| CI/CD | 已完成 | [GitHub Actions 41092079704](https://github.com/wishflow/wishflow-tools/actions/runs/41092079704) 成功；Python 应用测试、GitHub Pages 与 Cloudflare Pages 部署均通过 |
+| 线上验收 | 已完成 | Cloudflare Pages 公开应用：讲解播放跑完别名/原位修改/重绑定用例，输出 `9`、`2`；变量 `alias` 指向列表 #1 `[9]`，`items` 指向新列表 #2 `[2]`。真实 CPython 3.14.2 分析得到 AST 和 8 条字节码指令；运行 `print(1 + 2)` 后轨迹完成且标准输出为 `3`。 |
 
 ## 回滚
 
