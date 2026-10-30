@@ -1219,6 +1219,8 @@ Cow Gulch 正式关卡此前缺少原版环境曲、波次战斗循环和胜利�
 | 音效兼容回归 | `t02` 覆盖多条媒体同时播放失败后的统一重试，以及音效媒体的解码错误恢复；`t23` 将 Pedro 语音计数限定为 `/assets/sounds/`，不把新加入的 BGM 计入语音断言。 |
 | 本地应用 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4394 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、168 项单元测试、Vite 生产构建和58项 Playwright 测试全部通过。仓库 `pnpm run test:catalog` 15项通过；`git diff --check` 通过。Node 使用 nvm 显式指定22.23.3，未改变默认版本。 |
 | 内置浏览器（本地） | Codex 内置浏览器打开 `http://127.0.0.1:5193/`。Cow Gulch 正式关卡及 Wave01 对白、地图和 HUD 正常显示；继续后进入 `Wave 1/8`，浏览器自动播放拦截提示出现，通过“重试播放音效”后提示清除，随后手动暂停确认状态为 `Battle paused.`。控制台 error/warn 为空。该检查确认浏览器播放请求的恢复路径和页面行为；未对实际扬声器输出做声学测量。 |
+| 首次 CI 失败与诊断 | 首次推送的 [run 41090342971](https://github.com/wishflow/wishflow-tools/actions/runs/41090342971) 有两项 T15 存档 E2E 记录到未包含 URL 的 HTTP 404，因此部署 job 被跳过。为让后续故障包含完整请求地址，诊断提交 `d552635` 在 T15 记录所有 HTTP 4xx/5xx 响应 URL；之后的完整 CI 通过，该错误未重现，所以首次 404 来源仍未确定。 |
+| 合并、公开部署与内置浏览器 | BGM 实现提交 `a49d0c5` 和 4xx 诊断提交 `d552635` 已合入并推送到 `master`。GitHub Actions [run 41092577884](https://github.com/wishflow/wishflow-tools/actions/runs/41092577884) 成功：168 项单元测试、Vite 构建、58 项 Playwright 测试、共享 catalog 检查、Cloudflare Pages 和 GitHub Pages 部署均通过；Worker 检查/部署按变更范围跳过。Codex 内置浏览器访问[公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=d552635)，核对 Cow Gulch L01、Wave 1/8 对话与音乐开启控件；音乐开启 2 秒内未显示播放失败或重试控件，控制台 error/warn 为空。之后将音效设置恢复为关；当前战役档案仍为 1/1 关卡已完成、最高分 `$356`，本次没有继续战斗或生成新结算。浏览器仅验证部署、UI 播放失败结果与操作回复；未对实际扬声器输出做声学测量。 |
 | 完整首关门槛 | 本轮只增加音乐表现；未完成 P1-F 全部对象、地图、动画、战斗和设备对照。Cow Gulch 首关仍不计为已验收，整体关卡计数保持0/60。 |
 
-合并、CI 发布和公网内置浏览器检查完成后，在本节追加该发布提交、workflow 结果与公网实测证据。
+Cloudflare Pages 和 GitHub Pages 均已部署这个发布提交；本次仅补入 Cow Gulch BGM，P1-F 与0/60关卡门槛状态不变。
