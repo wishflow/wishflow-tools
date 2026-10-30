@@ -4,6 +4,8 @@
 
 目标是在纯前端应用中交互观察 Python 从源码、编译产物到执行状态的全过程。已确认顺序为：**Pyodide 真实编译视图 → 真实执行轨迹与回放 → 教学 Mini VM 的逐指令交互**。架构理由和能力边界见 [ADR-0001](adr/0001-browser-python-visualizer.md)。
 
+2026-10-30 已确认下一轮体验演进：默认教学入口与语句讲解、统一执行现场、栈/堆动画、中英文使用说明，以及仅作概念说明的机器码层级。正式决定见 [ADR-0002](adr/0002-coherent-execution-experience.md)，V0–V6 的依赖、状态、验收和回滚由[体验实施计划](visual-execution-plan.md)单独维护。这是 P1–P9 已有能力上的体验演进，优先于未启动的 P10/O1；原编号和能力边界保留，不将体验决策当作已发布功能。
+
 P0 文档基线及 P1–P7 双引擎路线均已完成并发布到 `master`。P1–P5 的 GitHub Pages、Cloudflare Pages 和线上验收通过；P1、P2 证据分别见 [P1 spec](specs/p01-real-cpython-compile-view.md)、[P1 tasks](tasks/p01-real-cpython-compile-view.md) 与 [P2 spec](specs/p02-token-source-linkage.md)、[P2 tasks](tasks/p02-token-source-linkage.md)，P3 证据见 [P3 spec](specs/p03-real-execution-trace.md) 与 [P3 tasks](tasks/p03-real-execution-trace.md)，P4 证据见 [P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md)，P5 证据见 [P5 spec](specs/p05-minimal-teaching-vm.md) 与 [P5 tasks](tasks/p05-minimal-teaching-vm.md)，P6 验收、发布及线上证据见 [P6 spec](specs/p06-control-flow.md) 与 [P6 tasks](tasks/p06-control-flow.md)。P7 函数、作用域与帧栈已于 2026-10-29 合并并发布，线上验证与尚未完成的 `pi` 检查见 [P7 tasks](tasks/p07-functions-and-frames.md)。
 
 P0 建立了以下文档：
@@ -14,6 +16,8 @@ P0 建立了以下文档：
 | [CLAUDE.md](../CLAUDE.md) | 仅导入同目录 AGENTS |
 | [ADR-0001](adr/0001-browser-python-visualizer.md) | 总体路线、备选方案、执行边界及取舍 |
 | 本文 | 阶段、依赖、启动条件、验收与回滚 |
+
+后续体验文档由 [ADR-0002](adr/0002-coherent-execution-experience.md)、[体验实施计划](visual-execution-plan.md)和[设计图示](design/visual-execution-experience.md)分别维护决策、阶段与示例；[中文](guide/usage.zh-CN.md)和[英文](guide/usage.en.md)使用说明面向用户。
 
 详细 spec 和 tasks 在对应阶段开始实施前创建，不预建空文件，也不把整体路线视为已批准所有依赖和接口细节。P1–P6 的规格记录各自已发布范围；P7 的参数、返回、作用域和递归边界已在 [P7 规格](specs/p07-functions-and-frames.md)中确认，按 [P7 tasks](tasks/p07-functions-and-frames.md)实施。
 
@@ -53,6 +57,7 @@ P0 建立了以下文档：
 | M2 真实执行观察 | P3–P4 | 运行代码，查看行与函数轨迹、变量变化、输出和异常，浏览历史 |
 | M3 教学执行 | P5–P7 | 从表达式到控制流和函数，真正逐条执行教学字节码并观察值栈和帧栈 |
 | M4 深入交互 | P8–P10 | 对象引用、调试控制和异常传播教学；继续使用已有真实视图对照 |
+| V 连贯执行体验 | V0–V6，独立体验阶段 | 双语说明、语句讲解、执行现场、栈/引用/调用动画及真实视图对照；详见专项计划 |
 
 ```mermaid
 flowchart LR
@@ -189,6 +194,8 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 | CPython 精确 opcode 事件 | O1 | 可选，非实时值栈调试 |
 
 不在本计划中隐含承诺：Mini VM 完整 Python 兼容、真实解释器状态恢复、第三方包管理、账号/云端持久化、共享代码自动执行和后端服务。需要时先补充目标及 ADR，不塞进现有阶段。
+
+双语使用说明入口、默认教学视图、语句记录分组和解释动画归属 V0–V6，不覆盖或重写上述 P 阶段语义；机器码仅作概念说明，不包含底层指令追踪。
 
 ## 6. 关键风险与实施前待决事项
 
