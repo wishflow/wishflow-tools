@@ -1036,3 +1036,21 @@ REA-005（`GameObjectEnemy` 类清单）未列出通用命中闪光字段；REA-
 | 合并、部署与公网内置浏览器 | `c268df0` 已快进合并并推送至 `master`。GitHub Actions [run 41015038053](https://github.com/wishflow/wishflow-tools/actions/runs/41015038053) 成功：Guns’n’Glory CI、共享检查、Cloudflare Pages 与 GitHub Pages 均通过；Worker/config 与文档专用作业按变更范围跳过。Codex 内置浏览器打开[本次公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=c268df0)，确认战役进度、Cow Gulch 地图、桥、HUD 与4×速度控件加载正常；自动进入Wave 1/8后暂停，页面显示生命50、敌人9、现金$72。档案仍显示1/1完成和最高分 `$356`，未产生新结算；浏览器console error/warn为空。公网烟测核对部署、画面与暂停交互；不把无命中画面当作受击反馈证据，后者由Canvas回归断言验证。 |
 
 本轮只删除没有 APK 依据的通用受击装饰，不改变战斗扣血、真实状态特效、敌人生命条和胜负规则。完整首关验收仍为0/60；其他敌型、状态效果和剩余动画继续按首次消费场景对照。
+
+## 54. P1-F 音效播放失败提示与恢复入口
+
+网页此前吞掉了 `HTMLAudioElement.play()` 的拒绝结果，用户无法分辨浏览器阻止自动播放、资源解码/加载失败，还是场景没有声音。本轮保留静音继续游玩的规则；播放 Promise 拒绝或媒体 `error` 事件会显示双语状态和重试按钮。按钮在声音启用时调用最近一次失败的音频，播放成功后清除对应失败；静音设置仍会阻止新的播放请求。文案通过现有语言状态更新，不新增语言存储或切换控件。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 红灯用例 | 新浏览器用例在旧实现下因缺少 `sound-playback-status` 元素失败，证明静默吞错路径未提供恢复反馈。 |
+| 播放拒绝与恢复 | Playwright 模拟 `NotAllowedError`，确认状态和重试按钮出现；用户手势重试成功后提示消失，播放调用次数增加。 |
+| 解码/加载错误入口 | Playwright 对创建的音频元素派发 `error` 事件，确认同一提示与重试入口出现；随后成功重试并清除。 |
+| 中英文 | 使用 site-shell 语言切换，英文错误状态更新为“音效无法播放。你可以继续静音游玩，或重试播放。”，按钮为“重试播放音效”。 |
+| 完整本地 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4390 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、158 项单元测试、Vite 生产构建及 53 项 Playwright 测试。 |
+| 内置浏览器（本地） | Codex 内置浏览器打开 `http://127.0.0.1:5191/`。浏览器实际拒绝未由用户手势启动的音频后，页面显示英文失败状态与重试按钮；切换 site-shell 语言后显示中文提示。窄屏截图确认提示可换行且按钮可见；播放/错误恢复按钮的成功清除由上方 Playwright 用例验证。 |
+| 合并、部署与公网内置浏览器 | `ed4bb49` 已快进合入并推送到 `master`。GitHub Actions [run 41018773697](https://github.com/wishflow/wishflow-tools/actions/runs/41018773697) 全部成功：Guns’n’Glory CI、共享站点检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker/config 与宠物专用作业按变更范围跳过。Codex 内置浏览器打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=ed4bb49)，实际显示中文音效失败提示与重试按钮；点击重试后提示消失。随后将声音设置恢复为原来的“关”，并暂停页面；档案仍为1/1、最高分 `$356`，未产生新结算，暂停时战局为第5/8波、生命42、敌人18、现金$153。 |
+
+本轮只补齐音频失败可见性与恢复入口，不代表所有音效、循环、暂停/恢复及 60 关声音表现验收完成；Cow Gulch 首关仍为 0/60。
