@@ -1224,3 +1224,21 @@ Cow Gulch 正式关卡此前缺少原版环境曲、波次战斗循环和胜利�
 | 完整首关门槛 | 本轮只增加音乐表现；未完成 P1-F 全部对象、地图、动画、战斗和设备对照。Cow Gulch 首关仍不计为已验收，整体关卡计数保持0/60。 |
 
 Cloudflare Pages 和 GitHub Pages 均已部署这个发布提交；本次仅补入 Cow Gulch BGM，P1-F 与0/60关卡门槛状态不变。
+
+## 63. Cow Gulch 正式战役触屏交互回归
+
+补充正式关卡中的手机触屏回归：在 390×844 视口打开 Cow Gulch L01，将速度调至4×并推进到可支付 `$75`，用真实触屏 Pointer Events 拖动初始 Gunslinger，再招募地图上的睡眠 Gunslinger 并验证扣款与选中。触屏按住期间推进游戏时钟，抬手后停止移动；状态格号按单位脚底锚点和一基显示核对。该路径未发现产品交互缺陷，无需改动游戏规则或浏览器输入实现。
+
+测试位于[`t25-official-campaign-touch.spec.ts`](../tests/e2e/t25-official-campaign-touch.spec.ts)。它复用正式八波战役、真实地图内容和原有 IndexedDB 档案路径；本测试不推进至关卡结算，也不更改正式关卡完成记录。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 触屏战役流程 | Playwright 手机上下文通过 CDP `Input.dispatchTouchEvent` 发出 touch start/move/end；真实战役到 Wave 2–8 范围且现金不少于 `$75` 后，拖动初始枪手至目标格、招募地图枪手并扣除 `$75`、再次选择已招募枪手，定向测试通过。 |
+| 应用完整 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=5438 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、168 项单元测试、Vite 生产构建和59项 Playwright E2E 全部通过。 |
+| 共享站点回归 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 15项全部通过。 |
+| Codex 内置浏览器本地检查 | 生产预览在桌面1440×900和手机390×844视口打开；确认 Cow Gulch 地图、Pedro 对白和 HUD 正常。手机画布为341.20×191.05，比例1.786，接近16:9，页面 `scrollWidth` 与 `clientWidth` 均为390，没有横向溢出。Playwright 定向触屏测试另行验证真实移动和招募操作。 |
+| 发布与公网实测 | 待本轮集成和部署后补录。 |
+
+本轮仅增加正式战役触屏路径的行为覆盖，不代表 Cow Gulch 首关地图、规则或全套交互的 P1-F 对照已完成；关卡完成验收仍为0/60。
