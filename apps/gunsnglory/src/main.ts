@@ -81,6 +81,8 @@ app.innerHTML = [
   '        <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
   '      </label>',
   '      <button type="button" class="sound-toggle" data-testid="sound-toggle" data-action="toggle-sound" aria-pressed="true">Sound: On</button>',
+  '      <p data-testid="sound-playback-status" role="status" aria-live="polite" hidden></p>',
+  '      <button type="button" data-testid="retry-sound-playback" data-action="retry-sound-playback" hidden>Retry sound playback</button>',
   '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="retry-settings-save" hidden>Retry saving settings</button>',
   '      <button type="button" data-action="reload-saved-profile" hidden>Reload saved profile</button>',
@@ -231,6 +233,8 @@ const inspectionRouteElement = app.querySelector<HTMLElement>('[data-testid="ins
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
 const soundToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="sound-toggle"]');
+const soundPlaybackStatusElement = app.querySelector<HTMLElement>('[data-testid="sound-playback-status"]');
+const retrySoundPlaybackButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-sound-playback"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
 const startWaveButton = app.querySelector<HTMLButtonElement>('[data-action="start-wave"]');
 const recruitButton = app.querySelector<HTMLButtonElement>('[data-action="recruit-unit"]');
@@ -289,6 +293,7 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !soundToggleButtonElement
+  || !soundPlaybackStatusElement || !retrySoundPlaybackButtonElement
   || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
@@ -343,6 +348,8 @@ const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
 const soundToggleButton: HTMLButtonElement = soundToggleButtonElement;
+const soundPlaybackStatus: HTMLElement = soundPlaybackStatusElement;
+const retrySoundPlaybackButton: HTMLButtonElement = retrySoundPlaybackButtonElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
 const recruitControl: HTMLButtonElement = recruitButton;
 const upgradeControl: HTMLButtonElement = upgradeButton;
@@ -413,6 +420,7 @@ let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let soundEnabled = true;
+const failedSoundElements = new Map<string, HTMLAudioElement>();
 let selectedDifficulty: GameDifficulty = 'easy';
 let pauseReason: 'manual' | 'background' | undefined;
 let showInspectionOverlay = false;
@@ -560,6 +568,8 @@ const languageMessages = {
     conflict: 'A newer profile exists. Reload it before saving another setting.',
     'profile-reset': 'A new empty profile is ready.',
     retrySettings: 'Retry saving settings',
+    soundPlaybackFailed: 'Sound could not be played. You can continue silently or retry playback.',
+    retrySoundPlayback: 'Retry sound playback',
     soundOn: 'Sound: On',
     soundOff: 'Sound: Off',
     reloadProfile: 'Reload saved profile',
@@ -710,6 +720,8 @@ const languageMessages = {
     conflict: '档案已有更新。请先重新加载，再保存其他设置。',
     'profile-reset': '新的空档案已就绪。',
     retrySettings: '重试保存设置',
+    soundPlaybackFailed: '音效无法播放。你可以继续静音游玩，或重试播放。',
+    retrySoundPlayback: '重试播放音效',
     soundOn: '音效：开',
     soundOff: '音效：关',
     reloadProfile: '重新加载已保存档案',
@@ -1372,6 +1384,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   simulationSpeedValue.textContent = simulationSpeed + '×';
   soundToggleButton.textContent = soundEnabled ? messages.soundOn : messages.soundOff;
   soundToggleButton.setAttribute('aria-pressed', String(soundEnabled));
+  soundPlaybackStatus.hidden = failedSoundElements.size === 0;
+  soundPlaybackStatus.textContent = failedSoundElements.size > 0 ? messages.soundPlaybackFailed : '';
+  retrySoundPlaybackButton.hidden = failedSoundElements.size === 0 || !soundEnabled;
+  retrySoundPlaybackButton.textContent = messages.retrySoundPlayback;
   const pauseMessage = view.paused
     ? pauseReason === 'background' ? messages.battlePausedInBackground : messages.battlePaused
     : '';
@@ -1775,20 +1791,45 @@ function stopGameLoop(): void {
 
 const audioElements = new Map<string, HTMLAudioElement>();
 
+function recordSoundPlaybackFailure(sound: string, audio: HTMLAudioElement): void {
+  if (failedSoundElements.get(sound) === audio) return;
+  failedSoundElements.set(sound, audio);
+  renderStatus();
+}
+
+function playSound(sound: string, audio: HTMLAudioElement): void {
+  try {
+    audio.currentTime = 0;
+    void audio.play().then(() => {
+      if (failedSoundElements.get(sound) !== audio) return;
+      failedSoundElements.delete(sound);
+      renderStatus();
+    }).catch(() => recordSoundPlaybackFailure(sound, audio));
+  } catch {
+    recordSoundPlaybackFailure(sound, audio);
+  }
+}
+
+function retryFailedSoundPlayback(): void {
+  const failedSound = [...failedSoundElements.entries()].pop();
+  if (failedSound) playSound(failedSound[0], failedSound[1]);
+}
+
 function playRequestedSounds(events: readonly GameEvent[]): void {
   if (!soundEnabled) return;
   for (const event of events) {
     if (event.type !== 'sound-requested') continue;
     let audio = audioElements.get(event.sound);
     if (!audio) {
-      audio = new Audio(new URL(
+      const createdAudio = new Audio(new URL(
         import.meta.env.BASE_URL + 'assets/sounds/' + event.sound + '.ogg',
         window.location.href,
       ).toString());
-      audioElements.set(event.sound, audio);
+      audio = createdAudio;
+      audioElements.set(event.sound, createdAudio);
+      createdAudio.addEventListener('error', () => recordSoundPlaybackFailure(event.sound, createdAudio));
     }
-    audio.currentTime = 0;
-    void audio.play().catch(() => undefined);
+    playSound(event.sound, audio);
   }
 }
 
@@ -2002,6 +2043,8 @@ simulationSpeedInput.addEventListener('change', () => {
   simulationSpeed = requestedSpeed;
   saveSettings({ simulationSpeed: requestedSpeed, difficulty: selectedDifficulty, soundEnabled });
 });
+
+retrySoundPlaybackButton.addEventListener('click', retryFailedSoundPlayback);
 
 soundToggleButton.addEventListener('click', () => {
   soundEnabled = !soundEnabled;

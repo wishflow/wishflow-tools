@@ -408,6 +408,18 @@ body {
   font-weight: 650;
 }
 
+.game-controls p[data-testid="sound-playback-status"] {
+  grid-column: 1 / -1;
+  color: #ffe0a3;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.game-controls button[data-testid="retry-sound-playback"] {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
 .game-controls p[data-testid="settings-status"] {
   grid-column: 1 / -1;
   color: #c6b89f;

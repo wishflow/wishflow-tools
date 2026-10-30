@@ -304,6 +304,67 @@ test('the Cow Gulch gunslinger kills the pioneer and updates the cash display', 
   expect(soundPlayCount).toBeGreaterThan(0);
 });
 
+test('reports blocked audio and retries from an accessible bilingual recovery action', async ({ page }) => {
+  await page.addInitScript(() => {
+    const testWindow = window as Window & {
+      __allowSoundPlayback?: boolean;
+      __soundPlayAttempts?: number;
+      __soundElements?: HTMLAudioElement[];
+    };
+    testWindow.__allowSoundPlayback = false;
+    testWindow.__soundPlayAttempts = 0;
+    testWindow.__soundElements = [];
+    const NativeAudio = window.Audio;
+    window.Audio = class extends NativeAudio {
+      constructor(source?: string) {
+        super(source);
+        testWindow.__soundElements?.push(this);
+      }
+    };
+    HTMLMediaElement.prototype.play = function () {
+      testWindow.__soundPlayAttempts = (testWindow.__soundPlayAttempts ?? 0) + 1;
+      return testWindow.__allowSoundPlayback
+        ? Promise.resolve()
+        : Promise.reject(new DOMException('Playback requires a user gesture', 'NotAllowedError'));
+    };
+  });
+  await page.goto('/');
+  await openSingleWaveSample(page);
+  const speed = page.getByRole('slider', { name: 'Simulation speed' });
+  await speed.focus();
+  await speed.press('End');
+  await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
+
+  const playbackStatus = page.getByTestId('sound-playback-status');
+  await expect(playbackStatus).toHaveText('Sound could not be played. You can continue silently or retry playback.');
+  const retrySound = page.getByTestId('retry-sound-playback');
+  await expect(retrySound).toBeVisible();
+  const attemptsBeforeRetry = await page.evaluate(() =>
+    (window as Window & { __soundPlayAttempts?: number }).__soundPlayAttempts ?? 0);
+  expect(attemptsBeforeRetry).toBeGreaterThan(0);
+
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(playbackStatus).toHaveText('音效无法播放。你可以继续静音游玩，或重试播放。');
+  await expect(retrySound).toHaveText('重试播放音效');
+
+  await page.evaluate(() => {
+    (window as Window & { __allowSoundPlayback?: boolean }).__allowSoundPlayback = true;
+  });
+  await retrySound.click();
+  await expect(playbackStatus).toBeHidden();
+  const attemptsAfterRetry = await page.evaluate(() =>
+    (window as Window & { __soundPlayAttempts?: number }).__soundPlayAttempts ?? 0);
+  expect(attemptsAfterRetry).toBeGreaterThan(attemptsBeforeRetry);
+
+  await page.evaluate(() => {
+    const state = window as Window & { __soundElements?: HTMLAudioElement[] };
+    state.__soundElements?.[0]?.dispatchEvent(new Event('error'));
+  });
+  await expect(playbackStatus).toHaveText('音效无法播放。你可以继续静音游玩，或重试播放。');
+  await retrySound.click();
+  await expect(playbackStatus).toBeHidden();
+});
+
 test('does not play real combat sound events while the saved sound setting is muted', async ({ page }) => {
   await page.addInitScript(() => {
     Object.assign(window, { __soundPlayCount: 0 });
