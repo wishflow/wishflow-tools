@@ -1163,3 +1163,21 @@ APK 静态依据来自研究分支 `codex/gunsnglory-spec` 的 JADX 产物：`Ga
 | 集成分支与提交 | 功能提交 `67fa5c9` 在 `gunsnglory` 验证后合并进 `master`；合并时纳入远端 Python 教学应用更新，无冲突。合并提交 `ca3db61` 已推送并完成上表工作流与线上实测。 |
 
 本轮闭合的是单位选择反馈与 APK 静态实现之间的表现差异；不等同于射程命中、其他单位类型或整关画面完成对照。P1-F 仍未完成，Cow Gulch 首关验收计数保持0/60。首轮公网操作曾使用失效索引，后续 GUI 检查先刷新可访问性树再按最新控件操作；隔离样例会自动保存独立高分，今后验证这类样例时应将此副作用纳入记录。
+
+## 60. 投射物 damageStyle 4 命中音效
+
+网页原先只在爆炸表现分支发出 `sound_dynamite`，且只识别 `damageStyle=3`。APK 的 `UnitDirector.moveShots()` 在投射物首次结算时，对 `damageStyle=3` 与 `4` 都调用 `requestSfx(10, ...)`；研究资料将声音 ID 10 映射为 `sound_dynamite`。这是 REA/JADX 反编译结果，不是原始 Java 源码，来源位于研究分支 `codex/gunsnglory-spec` 的 `UnitDirector.java` 和 `resources-and-audio.md`。
+
+Game 现在在首次命中结算处按 damage style 3/4 发出同一声音事件；该事件与爆炸/范围伤害表现分开。浏览器适配器已通过 [`playRequestedSounds()`](../src/main.ts) 将 `sound-requested` 事件映射到 `assets/sounds/<name>.ogg`；规则改动在 [Game](../src/game/index.ts)，定向测试在 [game.test.ts](../tests/game.test.ts)。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 红灯测试 | 新增 `damageStyle=4`、`areaDamageFine=0` 的真实 Game 会话 fixture；旧代码在投射物命中后没有发出 `sound_dynamite` 事件，测试按预期失败。 |
+| 修复后行为 | 新增事件在爆炸分支之外发送，因此 style 4 命中音效不依赖 AOE；原有 style 3 Mexican 炸药用例仍断言该音效事件。Game 测试文件62项全部通过。 |
+| 应用本地验证 | Node 22.23.3 下 TypeScript 检查、164项单元测试、Vite 生产构建通过。完整 `test:ci` 首次在 sandbox 内因 Playwright 无法绑定 `127.0.0.1:5371` 报 `EPERM`；授权环境重跑相同端口的 E2E 后53项通过。`pnpm run test:catalog` 15项通过。 |
+| GitHub Actions 与部署 | 提交 `c25a78b` 推送 `master` 后，[workflow 41061331545](https://github.com/wishflow/wishflow-tools/actions/runs/41061331545) 成功；Guns’n’Glory 测试、共享 catalog 检查、Cloudflare Pages 与 GitHub Pages 部署通过，Worker/config 和宠物专用任务按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[本次公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=c25a78b)，确认页面标题、Cow Gulch 地图、战役面板、4× 控件及暂停操作正常，控制台无 error/warn。游戏自动推进至 Wave 4/8 后立即暂停；正式档案仍为 Cow Gulch 1/1、最高分 `$356`，未结算本次战斗。style 4 单位尚未接入当前可玩关卡，因此线上检查没有声称直接触发 style 4；该事件由上方 Game fixture 验证。 |
+
+本轮只修复已实现规则对 APK 音效触发条件的遗漏，不改变伤害、AOE、随机或单位内容。其它武器音效和音乐仍待首次消费关卡实现时对照，P1-F 首关验收计数保持0/60。
