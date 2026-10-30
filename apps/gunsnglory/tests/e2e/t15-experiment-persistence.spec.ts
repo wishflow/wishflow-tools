@@ -32,6 +32,9 @@ test('saves a comparison to IndexedDB and reopens the same report after reload w
   page.on('console', (message) => {
     if (message.type() === 'error' || message.type() === 'warning') consoleIssues.push(message.text());
   });
+  page.on('response', (response) => {
+    if (response.status() >= 400) consoleIssues.push(`HTTP ${response.status()}: ${response.url()}`);
+  });
   page.on('pageerror', (error) => consoleIssues.push(error.message));
   await page.goto('/');
   await expect(page.getByTestId('profile-status')).not.toBeEmpty();
@@ -76,6 +79,9 @@ test('keeps experiment save and reopen controls usable on a narrow touch viewpor
   const consoleIssues: string[] = [];
   page.on('console', (message) => {
     if (message.type() === 'error' || message.type() === 'warning') consoleIssues.push(message.text());
+  });
+  page.on('response', (response) => {
+    if (response.status() >= 400) consoleIssues.push(`HTTP ${response.status()}: ${response.url()}`);
   });
   page.on('pageerror', (error) => consoleIssues.push(error.message));
   await page.goto('/');
