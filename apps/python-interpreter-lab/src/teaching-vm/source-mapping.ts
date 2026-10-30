@@ -6,14 +6,19 @@ import type {
   TeachingSourceLineMapping,
 } from './types';
 
-/** Maps each executable source line to its first teaching instruction. */
+/** Maps each executable source line to its first teaching instruction, except loop headers use FOR_ITER so they recur. */
 export function mapTeachingSourceLines(
   program: TeachingCompileResult,
 ): readonly TeachingSourceLineMapping[] {
   const firstInstructionByLine = new Map<number, number>();
 
   for (const instruction of program.instructions) {
-    if (instruction.opcode === 'HALT' || firstInstructionByLine.has(instruction.span.line)) continue;
+    if (instruction.opcode === 'HALT') continue;
+    if (instruction.opcode === 'FOR_ITER') {
+      firstInstructionByLine.set(instruction.span.line, instruction.index);
+      continue;
+    }
+    if (firstInstructionByLine.has(instruction.span.line)) continue;
     firstInstructionByLine.set(instruction.span.line, instruction.index);
   }
 

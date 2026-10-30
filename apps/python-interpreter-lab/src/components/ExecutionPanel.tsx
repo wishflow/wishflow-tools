@@ -333,6 +333,12 @@ export function ExecutionPanel({ execution, sourcePositionIndex, t, onLink }: Ex
           <h4>{t('standardOutput')}</h4>
           <pre id="execution-output">{stdout}</pre>
           {stderr && <><h4>{t('standardError')}</h4><pre id="execution-stderr">{stderr}</pre></>}
+          {execution.outcome !== 'running' && (
+            <div className="trace-final-output">
+              <h4>{t('finalProgramOutput')}</h4>
+              <pre id="execution-final-output">{execution.stdout}</pre>
+            </div>
+          )}
           {execution.exception && (
             <div id="execution-exception" className="diagnostic">
               <strong>{t('finalException')}: {execution.exception.type}</strong>

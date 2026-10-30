@@ -63,6 +63,17 @@ test('reports lexical failures with exact UTF-16 ranges', () => {
   }
 });
 
+test('treats object-prototype property names as ordinary Python identifiers', () => {
+  const tokens = tokenizeTeachingSource('constructor = 1\ntoString = 2\nhasOwnProperty = 3');
+  assert.deepEqual(tokens
+    .filter(({ lexeme }) => ['constructor', 'toString', 'hasOwnProperty'].includes(lexeme))
+    .map(({ type, lexeme }) => [type, lexeme]), [
+      ['NAME', 'constructor'],
+      ['NAME', 'toString'],
+      ['NAME', 'hasOwnProperty'],
+    ]);
+});
+
 test('enforces source, token, and decoded string budgets', () => {
   assert.throws(
     () => tokenizeTeachingSource(`x = ${' '.repeat(20_000)}`),

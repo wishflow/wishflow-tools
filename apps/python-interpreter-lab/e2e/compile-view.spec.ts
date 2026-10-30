@@ -35,6 +35,17 @@ test('compiles source with real CPython and displays nested code object bytecode
   await expect(page.getByRole('textbox', { name: 'Python source' })).toBeVisible();
 });
 
+test('assigns a unique identity to every CPython AST node', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  await page.getByRole('textbox', { name: 'Python source' }).fill('answer = 1 + (2 * 3)');
+  await page.getByRole('button', { name: 'Analyze source' }).click();
+
+  const assignment = page.locator('.ast-tree .ast-node > summary').filter({ hasText: 'Assign' });
+  await assignment.click();
+  await expect(page.locator('.ast-node.is-source-origin')).toHaveCount(1);
+});
+
 test('shows real tokens and links Unicode source, AST, and bytecode ranges', async ({ page }) => {
   await page.goto(appPath);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();

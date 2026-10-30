@@ -2,13 +2,12 @@ import {
   createTeachingBreakpoints,
   createTeachingInstructionBreakpoints,
 } from './source-mapping';
+import { appendTeachingHistorySnapshot, countSnapshotContainerRecords } from './history';
 import {
   MAX_BREAKPOINT_COUNT,
-  MAX_HISTORY_SNAPSHOTS,
   MAX_ACTIVE_FRAME_COUNT,
   MAX_CONTAINER_ENTRIES,
   MAX_DYNAMIC_INSTRUCTION_COUNT,
-  MAX_HISTORY_CONTAINER_RECORDS,
   MAX_HEAP_ENTRIES,
   MAX_HEAP_OBJECTS,
   MAX_INTEGER_BITS,
@@ -296,6 +295,11 @@ export class TeachingMachine {
           this.runtimeError('function-value-unsupported', 'Functions can only be used as direct call targets.', instruction.span);
         }
         this.#stack.push(value);
+        return null;
+      }
+      case 'CHECK_CALL_TARGET': {
+        const name = requireStringArgument(instruction);
+        this.resolveName(name, frame, instruction);
         return null;
       }
       case 'STORE_NAME': {
@@ -976,16 +980,14 @@ export class TeachingMachine {
   private recordStep(): TeachingVmSnapshot {
     this.#stepIndex += 1;
     this.#current = this.createSnapshot();
-    this.#history.push(this.#current);
-    this.#historyContainerRecordCount += countSnapshotContainerRecords(this.#current);
-    while (this.#history.length > 1 && (
-      this.#history.length > MAX_HISTORY_SNAPSHOTS
-      || this.#historyContainerRecordCount > MAX_HISTORY_CONTAINER_RECORDS
-    )) {
-      const removed = this.#history.shift();
-      if (removed) this.#historyContainerRecordCount -= countSnapshotContainerRecords(removed);
-      this.#historyTruncated = true;
-    }
+    const retention = appendTeachingHistorySnapshot(
+      this.#history,
+      this.#current,
+      this.#historyContainerRecordCount,
+      this.#historyTruncated,
+    );
+    this.#historyContainerRecordCount = retention.containerRecordCount;
+    this.#historyTruncated = retention.truncated;
     return this.#current;
   }
 
@@ -1122,12 +1124,6 @@ function snapshotValue(value: RuntimeValue): TeachingValueSnapshot {
     value: text,
     display: value.type === 'str' ? JSON.stringify(value.value) : text,
   });
-}
-
-function countSnapshotContainerRecords(snapshot: TeachingVmSnapshot): number {
-  return snapshot.heap.reduce((total, object) => total + 1 + (
-    object.type === 'list' ? object.items.length : object.entries.length
-  ), 0);
 }
 
 function snapshotDiagnostic(diagnostic: TeachingDiagnostic): TeachingDiagnosticSnapshot {

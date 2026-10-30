@@ -270,6 +270,7 @@ export interface TeachingConstant {
 export type TeachingOpcode =
   | 'LOAD_CONST'
   | 'LOAD_NAME'
+  | 'CHECK_CALL_TARGET'
   | 'STORE_NAME'
   | 'UNARY_NEGATIVE'
   | 'UNARY_NOT'
@@ -332,7 +333,7 @@ export interface TeachingFunction {
 }
 
 export interface TeachingCompileResult {
-  version: 'mini-vm-v4';
+  version: 'mini-vm-v5';
   ast: TeachingProgram;
   constants: TeachingConstant[];
   instructions: TeachingInstruction[];

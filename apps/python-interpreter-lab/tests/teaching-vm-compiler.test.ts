@@ -6,7 +6,7 @@ import { TeachingDiagnostic } from '../src/teaching-vm/types';
 test('compiles arithmetic precedence and print into versioned teaching instructions', () => {
   const result = compileTeachingSource('x = 1 + 2 * 3\nprint(x)');
 
-  assert.equal(result.version, 'mini-vm-v4');
+  assert.equal(result.version, 'mini-vm-v5');
   assert.deepEqual(result.constants, [
     { type: 'int', value: '1' },
     { type: 'int', value: '2' },
@@ -29,7 +29,7 @@ test('compiles arithmetic precedence and print into versioned teaching instructi
 test('compiles nested list literals in left-to-right order', () => {
   const result = compileTeachingSource('values = [1, [2,],]');
 
-  assert.equal(result.version, 'mini-vm-v4');
+  assert.equal(result.version, 'mini-vm-v5');
   assert.deepEqual(result.instructions.map(({ opcode, argument }) => [opcode, argument]), [
     ['LOAD_CONST', 0],
     ['LOAD_CONST', 1],
@@ -94,6 +94,7 @@ test('keeps function bodies after module HALT and compiles a zero-argument call 
   const result = compileTeachingSource('def answer():\n  return 42\nresult = answer()\nprint(result)');
   assert.deepEqual(result.instructions.map(({ opcode, argument, argumentCount }) => [opcode, argument, argumentCount ?? null]), [
     ['DEFINE_FUNCTION', 0, null],
+    ['CHECK_CALL_TARGET', 'answer', null],
     ['CALL_FUNCTION', 'answer', 0],
     ['STORE_NAME', 'result', null],
     ['LOAD_NAME', 'result', null],
@@ -105,7 +106,7 @@ test('keeps function bodies after module HALT and compiles a zero-argument call 
   ]);
   assert.deepEqual(result.functions.map(({ id, name, parameters, localNames, entryIndex, endIndex }) => ({
     id, name, parameters, localNames, entryIndex, endIndex,
-  })), [{ id: 0, name: 'answer', parameters: [], localNames: [], entryIndex: 6, endIndex: 9 }]);
+  })), [{ id: 0, name: 'answer', parameters: [], localNames: [], entryIndex: 7, endIndex: 10 }]);
 });
 
 test('includes parameters in local slots and emits ordered positional call arguments', () => {
@@ -115,6 +116,7 @@ test('includes parameters in local slots and emits ordered positional call argum
   assert.deepEqual(fn?.localNames, ['left', 'right']);
   assert.deepEqual(result.instructions.map(({ opcode, argument, argumentCount }) => [opcode, argument, argumentCount ?? null]), [
     ['DEFINE_FUNCTION', 0, null],
+    ['CHECK_CALL_TARGET', 'add', null],
     ['LOAD_CONST', 0, null],
     ['LOAD_CONST', 1, null],
     ['CALL_FUNCTION', 'add', 2],

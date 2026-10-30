@@ -9,6 +9,24 @@ const unsupportedKeywords = new Set([
   'with', 'yield',
 ]);
 
+const keywordTypes = new Map<string, TokenType>([
+  ['False', 'FALSE'],
+  ['None', 'NONE'],
+  ['True', 'TRUE'],
+  ['and', 'AND'],
+  ['def', 'DEF'],
+  ['elif', 'ELIF'],
+  ['else', 'ELSE'],
+  ['for', 'FOR'],
+  ['if', 'IF'],
+  ['in', 'IN'],
+  ['not', 'NOT'],
+  ['or', 'OR'],
+  ['print', 'PRINT'],
+  ['return', 'RETURN'],
+  ['while', 'WHILE'],
+]);
+
 interface Cursor {
   offset: number;
   line: number;
@@ -133,24 +151,7 @@ class Tokenizer {
     this.advance();
     while (isAsciiIdentifierPart(this.peek())) this.advance();
     const lexeme = this.source.slice(start.offset, this.offset);
-    const keywordTypes: Record<string, TokenType> = {
-      False: 'FALSE',
-      None: 'NONE',
-      True: 'TRUE',
-      and: 'AND',
-      def: 'DEF',
-      elif: 'ELIF',
-      else: 'ELSE',
-      for: 'FOR',
-      if: 'IF',
-      in: 'IN',
-      not: 'NOT',
-      or: 'OR',
-      print: 'PRINT',
-      return: 'RETURN',
-      while: 'WHILE',
-    };
-    const type: TokenType = keywordTypes[lexeme]
+    const type: TokenType = keywordTypes.get(lexeme)
       ?? (unsupportedKeywords.has(lexeme) ? 'UNSUPPORTED_KEYWORD' : 'NAME');
     this.addToken(type, start, null);
   }

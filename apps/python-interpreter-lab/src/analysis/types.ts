@@ -88,6 +88,7 @@ export interface TraceValueSummary {
 
 export interface SnapshotValue {
   name: string;
+  variableId?: number;
   type: string;
   kind: 'scalar' | 'container' | 'object' | 'reference';
   summary: string;

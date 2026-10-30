@@ -7,6 +7,7 @@ export interface SnapshotChange {
   frameId: number | null;
   frameName: string | null;
   name: string;
+  variableId?: number;
   status: SnapshotChangeStatus;
   before: SnapshotValue | null;
   after: SnapshotValue | null;
@@ -20,36 +21,92 @@ export interface SnapshotDiff {
 
 const MAX_DIFF_ITEMS = 200;
 
-function visibleValueEqual(left: SnapshotValue, right: SnapshotValue): boolean {
+type ReferenceTargets = Map<number, SnapshotValue>;
+
+function referenceTargets(snapshot: TraceEvent['snapshot']): ReferenceTargets {
+  const targets: ReferenceTargets = new Map();
+  const visit = (value: SnapshotValue) => {
+    if (value.kind === 'container' && value.referenceId !== undefined) {
+      targets.set(value.referenceId, value);
+    }
+    value.children?.forEach(visit);
+  };
+  snapshot.globals.forEach(visit);
+  snapshot.frames.forEach((frame) => frame.locals.forEach(visit));
+  return targets;
+}
+
+function resolveReference(value: SnapshotValue, targets: ReferenceTargets): SnapshotValue | null {
+  if (value.kind !== 'reference') return value;
+  return value.referenceId === undefined ? null : targets.get(value.referenceId) ?? null;
+}
+
+function visibleValueEqual(
+  left: SnapshotValue,
+  right: SnapshotValue,
+  leftTargets: ReferenceTargets,
+  rightTargets: ReferenceTargets,
+  seenPairs = new Set<string>(),
+): boolean {
+  if (left.name !== right.name) return false;
+  const resolvedLeft = resolveReference(left, leftTargets);
+  const resolvedRight = resolveReference(right, rightTargets);
+  if (!resolvedLeft || !resolvedRight) return false;
+
+  const leftId = resolvedLeft.kind === 'container' ? resolvedLeft.referenceId : undefined;
+  const rightId = resolvedRight.kind === 'container' ? resolvedRight.referenceId : undefined;
+  if (leftId !== undefined && rightId !== undefined) {
+    const pair = `${leftId}:${rightId}`;
+    if (seenPairs.has(pair)) return true;
+    seenPairs.add(pair);
+  }
+
   if (
-    left.name !== right.name
-    || left.type !== right.type
-    || left.kind !== right.kind
-    || left.summary !== right.summary
-    || left.valueText !== right.valueText
-    || left.itemCount !== right.itemCount
+    resolvedLeft.type !== resolvedRight.type
+    || resolvedLeft.kind !== resolvedRight.kind
+    || resolvedLeft.summary !== resolvedRight.summary
+    || resolvedLeft.valueText !== resolvedRight.valueText
+    || resolvedLeft.itemCount !== resolvedRight.itemCount
+    || resolvedLeft.truncated !== resolvedRight.truncated
   ) return false;
 
-  const leftChildren = left.children ?? [];
-  const rightChildren = right.children ?? [];
+  const leftChildren = resolvedLeft.children ?? [];
+  const rightChildren = resolvedRight.children ?? [];
   return leftChildren.length === rightChildren.length
-    && leftChildren.every((child, index) => visibleValueEqual(child, rightChildren[index]));
+    && leftChildren.every((child, index) => {
+      const rightChild = rightChildren[index];
+      return rightChild !== undefined
+        && visibleValueEqual(child, rightChild, leftTargets, rightTargets, seenPairs);
+    });
 }
 
-function hasUnknownDetails(value: SnapshotValue): boolean {
-  return value.kind === 'object'
-    || value.kind === 'reference'
-    || value.truncated === true
-    || (value.children?.some(hasUnknownDetails) ?? false);
+function hasUnknownDetails(value: SnapshotValue, targets: ReferenceTargets, seenIds = new Set<number>()): boolean {
+  const resolved = resolveReference(value, targets);
+  if (!resolved) return true;
+  if (resolved.kind === 'object' || resolved.truncated === true) return true;
+  if (resolved.kind === 'container' && resolved.referenceId !== undefined) {
+    if (seenIds.has(resolved.referenceId)) return false;
+    seenIds.add(resolved.referenceId);
+  }
+  return resolved.children?.some((child) => hasUnknownDetails(child, targets, seenIds)) ?? false;
 }
 
-function comparePresentValues(before: SnapshotValue, after: SnapshotValue): SnapshotChangeStatus {
-  if (!visibleValueEqual(before, after)) return 'changed';
-  return hasUnknownDetails(before) || hasUnknownDetails(after) ? 'unknown' : 'unchanged';
+function comparePresentValues(
+  before: SnapshotValue,
+  after: SnapshotValue,
+  beforeTargets: ReferenceTargets,
+  afterTargets: ReferenceTargets,
+): SnapshotChangeStatus {
+  if (!visibleValueEqual(before, after, beforeTargets, afterTargets)) return 'changed';
+  return hasUnknownDetails(before, beforeTargets) || hasUnknownDetails(after, afterTargets) ? 'unknown' : 'unchanged';
 }
 
-function valuesByName(values: SnapshotValue[]): Map<string, SnapshotValue> {
-  return new Map(values.map((value) => [value.name, value]));
+function valueIdentity(value: SnapshotValue): string {
+  return value.variableId === undefined ? `name:${value.name}` : `variable:${value.variableId}`;
+}
+
+function valuesByIdentity(values: SnapshotValue[]): Map<string, SnapshotValue> {
+  return new Map(values.map((value) => [valueIdentity(value), value]));
 }
 
 function appendRangeChanges(
@@ -61,19 +118,37 @@ function appendRangeChanges(
   afterValues: SnapshotValue[],
   beforeComplete: boolean,
   afterComplete: boolean,
+  beforeTargets: ReferenceTargets,
+  afterTargets: ReferenceTargets,
 ): void {
-  const before = valuesByName(beforeValues);
-  const after = valuesByName(afterValues);
-  const names = [...new Set([...before.keys(), ...after.keys()])].sort();
+  const before = valuesByIdentity(beforeValues);
+  const after = valuesByIdentity(afterValues);
+  const identities = [...new Set([...before.keys(), ...after.keys()])]
+    .sort((left, right) => {
+      const leftName = after.get(left)?.name ?? before.get(left)?.name ?? '';
+      const rightName = after.get(right)?.name ?? before.get(right)?.name ?? '';
+      return leftName.localeCompare(rightName) || left.localeCompare(right);
+    });
 
-  for (const name of names) {
-    const previous = before.get(name) ?? null;
-    const current = after.get(name) ?? null;
+  for (const identity of identities) {
+    const previous = before.get(identity) ?? null;
+    const current = after.get(identity) ?? null;
     let status: SnapshotChangeStatus;
-    if (previous && current) status = comparePresentValues(previous, current);
+    if (previous && current) status = comparePresentValues(previous, current, beforeTargets, afterTargets);
     else if (previous) status = afterComplete ? 'removed' : 'unknown';
     else status = beforeComplete ? 'added' : 'unknown';
-    changes.push({ scope, frameId, frameName, name, status, before: previous, after: current });
+    const value = current ?? previous;
+    if (!value) continue;
+    changes.push({
+      scope,
+      frameId,
+      frameName,
+      name: value.name,
+      ...(value.variableId === undefined ? {} : { variableId: value.variableId }),
+      status,
+      before: previous,
+      after: current,
+    });
   }
 }
 
@@ -85,6 +160,8 @@ export function compareTraceSnapshots(previous: TraceEvent | null, current: Trac
   if (!previous) return { changes: [], truncated: false, baseline: true };
 
   const changes: SnapshotChange[] = [];
+  const previousTargets = referenceTargets(previous.snapshot);
+  const currentTargets = referenceTargets(current.snapshot);
   appendRangeChanges(
     changes,
     'globals',
@@ -94,6 +171,8 @@ export function compareTraceSnapshots(previous: TraceEvent | null, current: Trac
     current.snapshot.globals,
     !previous.snapshot.globalsTruncated,
     !current.snapshot.globalsTruncated,
+    previousTargets,
+    currentTargets,
   );
 
   const previousFrames = frameMap(previous.snapshot);
@@ -111,6 +190,8 @@ export function compareTraceSnapshots(previous: TraceEvent | null, current: Trac
       currentFrame?.locals ?? [],
       previousFrame ? !previousFrame.localsTruncated : !previous.callStackTruncated,
       currentFrame ? !currentFrame.localsTruncated : !current.callStackTruncated,
+      previousTargets,
+      currentTargets,
     );
   }
 

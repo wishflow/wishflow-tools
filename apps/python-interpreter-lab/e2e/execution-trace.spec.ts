@@ -115,11 +115,12 @@ test('enforces execution time, trace event, and output limits', async ({ page })
   await page.getByRole('button', { name: 'Retry runtime' }).click();
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
 
-  await source.fill('for i in range(3000):\n    value = i\nfor i in range(3000):\n    value = i');
+  await source.fill('for i in range(3000):\n    value = i\nfor i in range(3000):\n    value = i\nprint("DONE")');
   await page.getByRole('button', { name: 'Run Python' }).click();
   await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
   await expect(page.locator('#trace-event-count')).toContainText('5,000');
   await expect(page.locator('.execution-panel .limit-notice')).toContainText('5,000-event limit');
+  await expect(page.locator('#execution-final-output')).toHaveText('DONE\n');
 
   await source.fill('print("x" * 40000)');
   await page.getByRole('button', { name: 'Run Python' }).click();
@@ -132,6 +133,25 @@ test('enforces execution time, trace event, and output limits', async ({ page })
     const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(pageWidth, `page should not scroll horizontally at ${width}px`).toBeLessThanOrEqual(width);
   }
+});
+
+test('does not execute a metaclass __name__ property while snapshotting a value', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  await page.getByRole('textbox', { name: 'Python source' }).fill([
+    'class Trap(type):',
+    '    @property',
+    '    def __name__(cls):',
+    '        raise RuntimeError("type name descriptor executed")',
+    'class Custom(metaclass=Trap):',
+    '    pass',
+    'value = Custom()',
+    'print("safe")',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Run Python' }).click();
+
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  await expect(page.locator('#execution-output')).toHaveText('safe\n');
 });
 
 test('summarizes large values without calling user repr methods or breaking trace capture', async ({ page }) => {
@@ -366,6 +386,51 @@ test('shows adjacent changes with event timing and variables removed from return
   const removedLocal = page.locator('.snapshot-diff-list li[data-change-status="removed"]');
   await expect(removedLocal).toContainText('local');
   await expect(removedLocal).toContainText('update');
+});
+
+test('keeps aliases unchanged and distinguishes long variable names with the same display label', async ({ page }) => {
+  await page.goto(appPath);
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const namePrefix = `value_${'x'.repeat(100)}`;
+  const changedName = `${namePrefix}a`;
+  const unchangedName = `${namePrefix}b`;
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'items = [1]',
+    'alias = items',
+    `${changedName} = 1`,
+    `${unchangedName} = 1`,
+    `${changedName} = 2`,
+    'print("done")',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+
+  const position = page.getByRole('slider', { name: 'Event position' });
+  const eventCard = page.locator('.trace-event-card');
+  const maxEvent = Number(await position.getAttribute('max'));
+  async function selectLine(line: number) {
+    await position.focus();
+    await page.keyboard.press('Home');
+    for (let index = 0; index <= maxEvent; index += 1) {
+      if (await eventCard.getAttribute('data-event') === 'line' && await eventCard.getAttribute('data-line') === String(line)) return;
+      await page.keyboard.press('ArrowRight');
+    }
+    throw new Error(`No line event found for line ${line}`);
+  }
+
+  await selectLine(3);
+  const adjacentChanges = page.getByRole('button', { name: 'Adjacent changes' });
+  await adjacentChanges.focus();
+  await page.keyboard.press('Enter');
+  await expect(adjacentChanges).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.snapshot-diff-list li[data-change-status="added"]')).toContainText('alias', { timeout: 5_000 });
+  await expect(page.locator('.snapshot-diff-list li[data-change-status="changed"]')).toHaveCount(0);
+
+  await selectLine(6);
+  const changed = page.locator('.snapshot-diff-list li[data-change-status="changed"]');
+  await expect(changed).toHaveCount(1, { timeout: 5_000 });
+  await expect(changed).toContainText('value_');
 });
 
 test('keeps snapshots within per-event and per-run node budgets while recording trace events', async ({ page }) => {

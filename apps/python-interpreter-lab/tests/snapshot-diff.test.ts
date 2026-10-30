@@ -75,6 +75,48 @@ test('classifies complete global and local ranges without comparing event-local 
   assert.equal(result.truncated, false);
 });
 
+test('does not report an unchanged container as changed when a new alias becomes its snapshot owner', () => {
+  const previous = event({
+    globals: [container('items', 1, [scalar('[0]', '1')])],
+    frames: [],
+  });
+  const current = event({
+    globals: [
+      container('alias', 1, [scalar('[0]', '1')]),
+      { name: 'items', type: 'list', kind: 'reference', summary: 'reference', referenceId: 1 },
+    ],
+    frames: [],
+  });
+  const byName = statuses(previous, current);
+
+  assert.equal(byName.get('global::alias'), 'added');
+  assert.equal(byName.get('global::items'), 'unchanged');
+});
+
+test('keeps distinct long variable identities when their display labels collide', () => {
+  const displayName = `${'x'.repeat(98)}…`;
+  const previous = event({
+    globals: [
+      { ...scalar(displayName, '1'), variableId: 1 },
+      { ...scalar(displayName, '1'), variableId: 2 },
+    ],
+    frames: [],
+  });
+  const current = event({
+    globals: [
+      { ...scalar(displayName, '2'), variableId: 1 },
+      { ...scalar(displayName, '1'), variableId: 2 },
+    ],
+    frames: [],
+  });
+  const changes = compareTraceSnapshots(previous, current).changes;
+
+  assert.deepEqual(changes.map(({ variableId, status }) => [variableId, status]), [
+    [1, 'changed'],
+    [2, 'unchanged'],
+  ]);
+});
+
 test('does not claim missing names when either adjacent range is incomplete', () => {
   const previous = event({
     globals: [scalar('gone', '1')],

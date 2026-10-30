@@ -47,4 +47,4 @@ T02 ──┘
 | T03 面板和联动 | 已完成 | `test:ci` 中 8/8 Playwright 用例通过，覆盖源码/Token/AST/字节码双向定位、中文与 emoji、嵌套代码对象切换、注释无映射、无范围项焦点、语法错误，以及 320/768/1024/1440px 布局。 |
 | T04 CI、部署与线上实测 | 已完成 | 根 `test:catalog` 14/14、`build:site` 通过；workflow [40765644524](https://github.com/wishflow/wishflow-tools/actions/runs/40765644524) 的共享检查、Python 应用测试及 GitHub Pages / Cloudflare Pages 部署成功。线上实测 CPython 3.14.2、19 个 Token；选择字符串定位到 `"🐍"`，选择 `BINARY_OP` 定位到 `left + right`，并联动高亮 3 个 Token 和 AST 节点。 |
 
-发布地址：<https://wishflow-tools.pages.dev/python-interpreter-lab/>。线上 Chromium 的 textarea 会将 CRLF 输入规范化为 LF；原始 CRLF 的行列转换仍由位置工具单测直接覆盖，详见 [P2 spec](../specs/p02-token-source-linkage.md) §2。
+发布地址：`/python-interpreter-lab/`。线上 Chromium 的 textarea 会将 CRLF 输入规范化为 LF；原始 CRLF 的行列转换仍由位置工具单测直接覆盖，详见 [P2 spec](../specs/p02-token-source-linkage.md) §2。

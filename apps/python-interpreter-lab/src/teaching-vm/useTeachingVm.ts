@@ -3,9 +3,9 @@ import type {
   TeachingCompileResult,
   TeachingDiagnosticSnapshot,
   TeachingVmHistory,
-  TeachingVmSnapshot,
 } from './types';
-import { DEFAULT_TEACHING_RUN_SPEED, MAX_BREAKPOINT_COUNT, MAX_HISTORY_CONTAINER_RECORDS, MAX_HISTORY_SNAPSHOTS, type TeachingRunSpeed } from './resource-limits';
+import { boundTeachingHistory } from './history';
+import { DEFAULT_TEACHING_RUN_SPEED, MAX_BREAKPOINT_COUNT, type TeachingRunSpeed } from './resource-limits';
 import type { TeachingHistoryUpdate, TeachingWorkerIdentity, TeachingWorkerRequest, TeachingWorkerResponse } from './worker-protocol';
 import type { TeachingSourceStepMode } from './source-step';
 
@@ -19,9 +19,11 @@ export function useTeachingVm() {
   const sessionIdRef = useRef(0);
   const sourceRevisionRef = useRef(0);
   const workerReadyRef = useRef(false);
+  const workerRecoveryAttemptsRef = useRef(0);
   const historyRef = useRef(EMPTY_HISTORY);
   const breakpointsRef = useRef({ sourceLines: [] as number[], instructionIndexes: [] as number[] });
   const [status, setStatus] = useState<TeachingStatus>('loading');
+  const [workerGeneration, setWorkerGeneration] = useState(0);
   const [runSpeed, setRunSpeedState] = useState<TeachingRunSpeed>(DEFAULT_TEACHING_RUN_SPEED);
   const [program, setProgram] = useState<TeachingCompileResult | null>(null);
   const [history, setHistory] = useState<TeachingVmHistory>(EMPTY_HISTORY);
@@ -60,8 +62,46 @@ export function useTeachingVm() {
     sourceRevisionRef.current = 0;
     workerReadyRef.current = false;
 
-    const worker = new Worker(new URL('../worker/teaching-vm.worker.ts', import.meta.url), { type: 'module' });
+    let worker: Worker;
+    try {
+      worker = new Worker(new URL('../worker/teaching-vm.worker.ts', import.meta.url), { type: 'module' });
+    } catch (error) {
+      setDiagnostic({
+        stage: 'runtime',
+        code: 'worker-error',
+        message: error instanceof Error ? error.message : 'Teaching VM worker could not be created.',
+        span: { start: 0, end: 0, line: 1, column: 1, endLine: 1, endColumn: 1 },
+      });
+      setStatus('error');
+      return undefined;
+    }
     workerRef.current = worker;
+
+    const failWorker = (message: string) => {
+      if (workerRef.current !== worker || sessionIdRef.current !== sessionId) return;
+      worker.terminate();
+      workerRef.current = null;
+      workerReadyRef.current = false;
+      setProgram(null);
+      historyRef.current = EMPTY_HISTORY;
+      setHistory(EMPTY_HISTORY);
+      setHistoryCursor(null);
+      replaceBreakpoints([], []);
+      setDiagnostic({
+        stage: 'runtime',
+        code: 'worker-error',
+        message,
+        span: { start: 0, end: 0, line: 1, column: 1, endLine: 1, endColumn: 1 },
+      });
+
+      if (workerRecoveryAttemptsRef.current === 0) {
+        workerRecoveryAttemptsRef.current = 1;
+        setStatus('loading');
+        setWorkerGeneration((generation) => generation + 1);
+      } else {
+        setStatus('error');
+      }
+    };
 
     worker.addEventListener('message', (event: MessageEvent<TeachingWorkerResponse>) => {
       if (workerRef.current !== worker) return;
@@ -70,6 +110,8 @@ export function useTeachingVm() {
 
       if (message.type === 'ready') {
         workerReadyRef.current = true;
+        workerRecoveryAttemptsRef.current = 0;
+        setDiagnostic(null);
         setStatus('ready');
         return;
       }
@@ -102,13 +144,7 @@ export function useTeachingVm() {
         return;
       }
       if (message.type === 'worker-error') {
-        setDiagnostic({
-          stage: 'runtime',
-          code: 'worker-error',
-          message: message.message,
-          span: { start: 0, end: 0, line: 1, column: 1, endLine: 1, endColumn: 1 },
-        });
-        setStatus('error');
+        failWorker(message.message);
         return;
       }
 
@@ -120,17 +156,7 @@ export function useTeachingVm() {
     });
 
     worker.addEventListener('error', (event: ErrorEvent) => {
-      if (workerRef.current !== worker || sessionIdRef.current !== sessionId) return;
-      setDiagnostic({
-        stage: 'runtime',
-        code: 'worker-error',
-        message: event.message || 'Teaching VM worker stopped unexpectedly.',
-        span: { start: 0, end: 0, line: 1, column: 1, endLine: 1, endColumn: 1 },
-      });
-      setStatus('error');
-      worker.terminate();
-      workerRef.current = null;
-      workerReadyRef.current = false;
+      failWorker(event.message || 'Teaching VM worker stopped unexpectedly.');
     });
 
     worker.postMessage({ type: 'init', sessionId, sourceRevision: 0 } satisfies TeachingWorkerRequest);
@@ -139,7 +165,7 @@ export function useTeachingVm() {
       if (workerRef.current === worker) workerRef.current = null;
       workerReadyRef.current = false;
     };
-  }, [receiveHistoryUpdate, replaceBreakpoints]);
+  }, [receiveHistoryUpdate, replaceBreakpoints, workerGeneration]);
 
   const invalidate = useCallback(() => {
     const identity = { ...sessionIdentity(), sourceRevision: sourceRevisionRef.current + 1 };
@@ -238,6 +264,21 @@ export function useTeachingVm() {
     workerRef.current?.postMessage({ type: 'reset', ...sessionIdentity() } satisfies TeachingWorkerRequest);
   }, [program, sessionIdentity]);
 
+  const retryWorker = useCallback(() => {
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    workerReadyRef.current = false;
+    workerRecoveryAttemptsRef.current = 0;
+    setProgram(null);
+    historyRef.current = EMPTY_HISTORY;
+    setHistory(EMPTY_HISTORY);
+    setHistoryCursor(null);
+    setDiagnostic(null);
+    replaceBreakpoints([], []);
+    setStatus('loading');
+    setWorkerGeneration((generation) => generation + 1);
+  }, [replaceBreakpoints]);
+
   const headSnapshot = history.items.at(-1) ?? null;
   const snapshot = historyCursor === null
     ? headSnapshot
@@ -269,6 +310,7 @@ export function useTeachingVm() {
     setRunSpeed,
     pause,
     reset,
+    retryWorker,
     invalidate,
     selectHistory,
     goToHead,
@@ -294,24 +336,5 @@ function applyHistoryUpdate(current: TeachingVmHistory, update: TeachingHistoryU
     items.push(update.snapshot);
   }
 
-  let retainedContainerRecords = items.reduce((total, snapshot) => total + countSnapshotContainerRecords(snapshot), 0);
-  let exceededLimit = false;
-  while (items.length > 1 && (
-    items.length > MAX_HISTORY_SNAPSHOTS
-    || retainedContainerRecords > MAX_HISTORY_CONTAINER_RECORDS
-  )) {
-    const removed = items.shift();
-    if (removed) retainedContainerRecords -= countSnapshotContainerRecords(removed);
-    exceededLimit = true;
-  }
-  return Object.freeze({
-    items: Object.freeze(items),
-    truncated: current.truncated || update.truncated || exceededLimit,
-  });
-}
-
-function countSnapshotContainerRecords(snapshot: TeachingVmSnapshot): number {
-  return snapshot.heap.reduce((total, object) => total + 1 + (
-    object.type === 'list' ? object.items.length : object.entries.length
-  ), 0);
+  return boundTeachingHistory(items, current.truncated || update.truncated);
 }

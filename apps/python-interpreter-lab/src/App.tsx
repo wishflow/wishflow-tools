@@ -191,6 +191,7 @@ export default function App() {
             onLink={setSourceLink}
             onToggleSourceBreakpoint={teaching.toggleSourceBreakpoint}
             onToggleInstructionBreakpoint={teaching.toggleInstructionBreakpoint}
+            onRetryWorker={teaching.retryWorker}
           />
         )}
       </div>

@@ -87,7 +87,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **集成**：已建立独立 React + TypeScript + Vite 应用、pnpm lockfile、可执行安装脚本、独立 `build`/`test:ci` 和 `dist/`；`build` 先做类型检查再构建。Vite 使用 `base: './'`，在 `/python-interpreter-lab/` 子路径下验证了入口、样式和 module Worker，并经 Pyodide CDN 初始化后登记 catalog。catalog 含中英文标题和简介。HTML 通过 `@wishflow/site-shell` content 插槽接入共享壳，设置 slug、双语标题和 `../` 站点链接；React 入口导入共享壳。单页未启用空侧栏。
 - **验收**：`x = 1 + 2` 展示实际常量折叠结果；含 `def` 的源码能区分模块与函数代码对象；缩进错误、AST 成功但编译失败、资源加载失败和分析取消都有正确反馈；后续再次分析可成功。
 - **路径验收**：检查以 `/python-interpreter-lab/` 为 base 的生产产物资源路径，而非只通过 Vite 根路径 dev server。
-- **当前结果**：应用类型检查、6 条单测与 5 条浏览器用例通过；根 `pnpm run test:catalog` 的 14 条检查通过；`pnpm run build:site` 生成 `_site/python-interpreter-lab/`。首次推送后的 workflow `40748933722` 因 pnpm 12 未批准 `esbuild` 安装脚本而失败并跳过部署；新增应用本地 `allowBuilds.esbuild` 后，pnpm 12.15.0 冻结安装与完整应用 `test:ci` 通过。修复后的 workflow `40750421138` 中共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。Codex 内置浏览器在 `https://wishflow-tools.pages.dev/python-interpreter-lab/` 实测得到 Pyodide 314.0.7 / CPython 3.14.2、模块 `LOAD_SMALL_INT 3`、嵌套 `add` 函数 `BINARY_OP`，并确认共享语言切换到英文后恢复中文正常。发布门通过。
+- **当前结果**：应用类型检查、6 条单测与 5 条浏览器用例通过；根 `pnpm run test:catalog` 的 14 条检查通过；`pnpm run build:site` 生成 `_site/python-interpreter-lab/`。首次推送后的 workflow `40748933722` 因 pnpm 12 未批准 `esbuild` 安装脚本而失败并跳过部署；新增应用本地 `allowBuilds.esbuild` 后，pnpm 12.15.0 冻结安装与完整应用 `test:ci` 通过。修复后的 workflow `40750421138` 中共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。Codex 内置浏览器在正式应用子路径 `/python-interpreter-lab/` 实测得到 Pyodide 314.0.7 / CPython 3.14.2、模块 `LOAD_SMALL_INT 3`、嵌套 `add` 函数 `BINARY_OP`，并确认共享语言切换到英文后恢复中文正常。发布门通过。
 - **回滚**：回退应用登记及首版提交，恢复此前静态站点。只回退应用自身文件及本阶段必需的共享登记，不改变其他应用。
 
 ### P2：词法观察与源码联动（已完成并发布）
@@ -95,7 +95,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **前置**：P1 已发布；P2 spec 已确认 Python tokenizer/AST/bytecode/textarea 的位置单位和转换边界。
 - **交付**：真实 Token 面板、AST 节点与字节码到源码的定位；源码选择可观察相关 Token/节点/指令，选择 Token、节点或指令可定位其源码范围。允许无对应项及多个相关项。
 - **验收**：赋值、多行表达式、中文标识符、emoji 字符串和 Tab 位置准确；常量折叠不会产生虚构指令；结构 Token、空白和注释不伪造映射；源码更改后旧映射失效；具体场景见 [P2 spec](specs/p02-token-source-linkage.md)。
-- **当前结果**：应用 `pnpm run test:ci` 通过（11 条单测、8 条 Playwright）；根 `pnpm run test:catalog` 14 条检查通过，`pnpm run build:site` 成功。推送 `a062421` 后 workflow [40765644524](https://github.com/wishflow/wishflow-tools/actions/runs/40765644524) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。线上 `https://wishflow-tools.pages.dev/python-interpreter-lab/` 实测 CPython 3.14.2 返回 19 个 Token，运算符显示 `OP · PLUS`；定位 emoji 字符串精确选择 `"🐍"`，点击 `BINARY_OP` 选择 `left + right`，并联动高亮 3 个 Token 与 AST 节点。P2 已独立发布，后续按 P3 的启动规则继续。
+- **当前结果**：应用 `pnpm run test:ci` 通过（11 条单测、8 条 Playwright）；根 `pnpm run test:catalog` 14 条检查通过，`pnpm run build:site` 成功。推送 `a062421` 后 workflow [40765644524](https://github.com/wishflow/wishflow-tools/actions/runs/40765644524) 的共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 均成功。线上正式页面（路径 `/python-interpreter-lab/`）实测 CPython 3.14.2 返回 19 个 Token，运算符显示 `OP · PLUS`；定位 emoji 字符串精确选择 `"🐍"`，点击 `BINARY_OP` 选择 `left + right`，并联动高亮 3 个 Token 与 AST 节点。P2 已独立发布，后续按 P3 的启动规则继续。
 - **回滚**：移除新增观察与联动能力，P1 独立分析仍可用。
 
 ### P3：真实运行、轨迹与回放（已完成并发布）
@@ -112,7 +112,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **前置**：P3 已发布；[P4 spec](specs/p04-structured-variable-history.md) 与 [P4 tasks](tasks/p04-structured-variable-history.md) 已确认。
 - **交付**：按事件查看各帧局部/全局变量、基础容器、有限深度展开和相邻事件变化；历史快照保持事件发生时的值。P3 的基础值摘要继续可用。
 - **验收**：局部/全局作用域与帧切换正确；列表先后修改不会污染旧事件；大整数不失真；循环引用、长字符串和深容器可控展示；自定义 `repr`、属性或迭代器不会因查看变量被执行；截断范围不误报变量增删；异常与连续运行后代理和采集资源正确释放。详见 P4 spec §6。
-- **验证与发布**：应用 `pnpm run test:ci` 通过（19 条单测、20 条 Playwright）；根 `pnpm run test:catalog` 14/14 通过，`pnpm run build:site` 成功。提交 `85719da` 合入 `master` 后推送提交 `ec062c7`；workflow [40819932964](https://github.com/wishflow/wishflow-tools/actions/runs/40819932964) 中共享检查、Python 应用测试、Cloudflare Pages 和 GitHub Pages 均成功，Worker 部署按变更分类跳过。线上 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/) 实测 Pyodide 314.0.7 / CPython 3.14.2：嵌套 `outer`/`inner` 帧分别显示 `parent`、`child` 局部变量；相邻事件差异显示列表从 `[1]` 变为 `[1, 2]`；移动观察位置和切换视图未重新运行代码或增加事件。
+- **验证与发布**：应用 `pnpm run test:ci` 通过（19 条单测、20 条 Playwright）；根 `pnpm run test:catalog` 14/14 通过，`pnpm run build:site` 成功。提交 `85719da` 合入 `master` 后推送提交 `ec062c7`；workflow [40819932964](https://github.com/wishflow/wishflow-tools/actions/runs/40819932964) 中共享检查、Python 应用测试、Cloudflare Pages 和 GitHub Pages 均成功，Worker 部署按变更分类跳过。线上正式页面（路径 `/python-interpreter-lab/`）实测 Pyodide 314.0.7 / CPython 3.14.2：嵌套 `outer`/`inner` 帧分别显示 `parent`、`child` 局部变量；相邻事件差异显示列表从 `[1]` 变为 `[1, 2]`；移动观察位置和切换视图未重新运行代码或增加事件。
 - **回滚**：恢复 P3 的基础摘要；本阶段不引入跨版本历史持久化，不需要存档迁移。
 
 ### P5：最小教学 VM，打通真正逐指令执行（已完成并发布）
@@ -121,7 +121,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **交付**：引入教学模式；表达式、名字赋值和最小 `print` 调用经 Lexer → Parser → AST → Compiler → VM 执行；提供单条指令、运行、暂停、重置，以及指令、值栈、变量、输出和有界历史快照。首个可见 VM 切片包含完整输入到结果链路。
 - **验收**：先赋值 `x = 1 + 2 * 3`、下一行 `print(x)` 的逐步栈变化及结果可核对；非法或未支持语法在执行前诊断，运行期才能确定的不支持操作明确报错、不降级语义；教学指令不标作 CPython offset；与真实模式切换从新会话开始，已有 CPython 能力不回归。
 - **详细文档**：[P5 规格](specs/p05-minimal-teaching-vm.md) 与 [P5 任务拆分](tasks/p05-minimal-teaching-vm.md)。范围变更按 spec §10 更新文档并确认影响；阶段进度以 tasks 执行记录为准。
-- **当前结果**：P5 v1 已实现并发布。应用 `PLAYWRIGHT_PORT=4187 pnpm run test:ci` 通过（39 项单测、24 项 Playwright），根 `pnpm run test:catalog` 通过（14 项检查），`pnpm run build:site` 成功。合并提交 `88a0fad` 推送后，workflow [40838287683](https://github.com/wishflow/wishflow-tools/actions/runs/40838287683) 的共享检查、Python 应用测试、GitHub Pages 与 Cloudflare Pages 均成功，Worker 部署按变更分类跳过。2026-10-29 在 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/) 实测教学 VM：`x = 1 + 2 * 3` / `print(x)` 生成 9 条 `mini-vm-v1` 指令并运行输出 `7`；切回真实 CPython 后，Pyodide 314.0.7 / CPython 3.14.2 正常生成 AST 与真实字节码。逐项证据见 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。
+- **当前结果**：P5 v1 已实现并发布。应用 `PLAYWRIGHT_PORT=4187 pnpm run test:ci` 通过（39 项单测、24 项 Playwright），根 `pnpm run test:catalog` 通过（14 项检查），`pnpm run build:site` 成功。合并提交 `88a0fad` 推送后，workflow [40838287683](https://github.com/wishflow/wishflow-tools/actions/runs/40838287683) 的共享检查、Python 应用测试、GitHub Pages 与 Cloudflare Pages 均成功，Worker 部署按变更分类跳过。2026-10-29 在正式应用子路径 `/python-interpreter-lab/` 实测教学 VM：`x = 1 + 2 * 3` / `print(x)` 生成 9 条 `mini-vm-v1` 指令并运行输出 `7`；切回真实 CPython 后，Pyodide 314.0.7 / CPython 3.14.2 正常生成 AST 与真实字节码。逐项证据见 [P5 tasks](tasks/p05-minimal-teaching-vm.md)。
 - **回滚**：回退教学模式入口和该引擎，真实模式仍可独立构建运行。不得用替换真实引擎来简化首个教学实现。
 
 ### P6：控制流、短路与循环
@@ -154,7 +154,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **前置**：P7/P8；产品语义已于 2026-10-30 确认。Step Line 与 Step Over 合并；源码断点绑定首条可执行指令；Continue 仅跳过当前命中一次；Reset 保留断点，编辑/重新编译清除；速度档为慢 1 条/250ms、标准 8 条/16ms、快 32 条/16ms。
 - **交付**：源码行和教学指令断点、单指令 Step、Step Into/Over/Out、Continue、Pause、Reset 及执行速度控制。时间轴浏览旧快照时，继续执行先返回执行头；不实现历史分叉。
 - **验收**：同一行多条指令、同一行循环、递归、调用后返回、断点后继续都停在规定位置；Continue 不在同一暂停点立即重复命中；根帧 Step Out 和结束后的操作有明确反馈。
-- **进度**：P9 已完成并发布。应用完整 CI（125 项单测、41 项 Playwright）、catalog（14/14）、共享站点构建、GitHub Actions 及 GitHub Pages/Cloudflare Pages 部署均通过；正式页面已验证真实 CPython 编译与运行，以及教学 VM 循环断点、函数帧步进和快速运行。应用 `pi` 契约实际加载因当前未配置 provider credentials 未验证；详情和发布证据见 [P9 tasks](tasks/p09-teaching-debugger.md)。
+- **进度**：P9 原始阶段已完成并发布。代码审查后补充 T07 修正：恢复教学 Worker、修正调用顺序/循环断点/快照差异等边界问题，教学 ISA 升为 `mini-vm-v5`；回归、发布与线上验收进度见 [P9 tasks](tasks/p09-teaching-debugger.md)。应用 `pi` 契约实际加载因当前未配置 provider credentials 未验证。
 - **详细文档**：[P9 规格](specs/p09-teaching-debugger.md) 与 [P9 tasks](tasks/p09-teaching-debugger.md)。
 - **回滚**：撤回高级调试入口，P5 的逐指令单步及各阶段语言能力仍工作。
 
@@ -275,7 +275,7 @@ P0 交付只有文档，因此当时没有应用构建、解释器测试、浏�
 
 ### 8.4 P7 发布与线上实测
 
-P7 在 `451f4b6` 合并到 `master` 并推送；GitHub Actions workflow [40867914499](https://github.com/wishflow/wishflow-tools/actions/runs/40867914499) 中共享检查、Python 应用测试、GitHub Pages 与 Cloudflare Pages 部署均成功，Worker 发布按静态站变更分类跳过。正式页面为 [Cloudflare Pages](https://wishflow-tools.pages.dev/python-interpreter-lab/?p7-verification=451f4b6)。
+P7 在 `451f4b6` 合并到 `master` 并推送；GitHub Actions workflow [40867914499](https://github.com/wishflow/wishflow-tools/actions/runs/40867914499) 中共享检查、Python 应用测试、GitHub Pages 与 Cloudflare Pages 部署均成功，Worker 发布按静态站变更分类跳过。正式应用子路径为 `/python-interpreter-lab/`。
 
 | 验证 | 操作或命令 | 结果 |
 | --- | --- | --- |

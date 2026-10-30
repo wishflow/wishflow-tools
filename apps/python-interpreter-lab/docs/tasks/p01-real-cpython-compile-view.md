@@ -50,4 +50,4 @@
 | T05 catalog、CI 与整站产物 | 通过 | 应用 6 条单测 + 5 条 E2E；根 catalog 14 条检查；`build:site` 生成完整应用目录 |
 | pnpm 12 安装策略复验 | 通过 | `npx --yes pnpm@12.15.0 install --frozen-lockfile`；`allowBuilds.esbuild` 通过供应链检查与冻结安装 |
 | 正式 CI 与部署 | 通过 | workflow [`40750421138`](https://github.com/wishflow/wishflow-tools/actions/runs/40750421138)：共享检查、Python 应用测试、GitHub Pages 和 Cloudflare Pages 全部成功；首轮 `40748933722` 的安装失败已由本地 pnpm 配置修复 |
-| 线上实测 | 通过 | `https://wishflow-tools.pages.dev/python-interpreter-lab/`：Pyodide 314.0.7 / CPython 3.14.2；默认示例 AST 含 2 个代码对象，模块显示 `LOAD_SMALL_INT 3`，`add` 函数显示 `BINARY_OP`；共享语言切换到英文并恢复中文成功 |
+| 线上实测 | 通过 | 正式页面（路径 `/python-interpreter-lab/`）：Pyodide 314.0.7 / CPython 3.14.2；默认示例 AST 含 2 个代码对象，模块显示 `LOAD_SMALL_INT 3`，`add` 函数显示 `BINARY_OP`；共享语言切换到英文并恢复中文成功 |

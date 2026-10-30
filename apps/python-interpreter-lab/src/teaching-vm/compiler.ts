@@ -53,7 +53,7 @@ class Compiler {
       };
     });
     return {
-      version: 'mini-vm-v4',
+      version: 'mini-vm-v5',
       ast: this.ast,
       constants: this.constants,
       instructions: this.instructions,
@@ -157,6 +157,7 @@ class Compiler {
         this.emit('LOAD_NAME', expression.name, expression.span);
         return;
       case 'Call':
+        this.emit('CHECK_CALL_TARGET', expression.name, expression.span);
         for (const argument of expression.arguments) this.compileExpression(argument);
         this.emit('CALL_FUNCTION', expression.name, expression.span, expression.arguments.length);
         return;

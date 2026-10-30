@@ -33,6 +33,7 @@ interface TeachingVmPanelProps {
   onLink(link: SourceLink): void;
   onToggleSourceBreakpoint(line: number): void;
   onToggleInstructionBreakpoint(instructionIndex: number): void;
+  onRetryWorker(): void;
 }
 
 function sourceRange(span: SourceSpan) {
@@ -202,6 +203,8 @@ function StatementTree({
     && sourceLink.range?.end === range?.end;
   const expressions = statement.type === 'Assign'
     ? [statement.value]
+    : statement.type === 'SubscriptAssign'
+      ? [statement.target.value, statement.target.index, statement.value]
     : statement.type === 'Print'
       ? statement.arguments
       : statement.type === 'While'
@@ -213,6 +216,8 @@ function StatementTree({
             : [];
   const statementLabel = statement.type === 'Assign'
     ? statement.name
+    : statement.type === 'SubscriptAssign'
+      ? 'subscript assignment'
     : statement.type === 'Print'
       ? 'print(...)'
       : statement.type === 'If'
@@ -697,7 +702,7 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
 });
 
 export function TeachingVmPanel(props: TeachingVmPanelProps) {
-  const { program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, sourceBreakpointLines, instructionBreakpointIndexes, t, onSelectHistory, onGoToHead, onLink, onToggleSourceBreakpoint, onToggleInstructionBreakpoint } = props;
+  const { program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, sourceBreakpointLines, instructionBreakpointIndexes, t, onSelectHistory, onGoToHead, onLink, onToggleSourceBreakpoint, onToggleInstructionBreakpoint, onRetryWorker } = props;
   const { focusedObjectId, onLocateObject } = useTeachingHeapNavigation(snapshot);
   const shownDiagnostic = diagnostic ?? snapshot?.diagnostic ?? null;
   const historyStart = history.items[0]?.stepIndex ?? 0;
@@ -714,6 +719,9 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
         {program && <span className="result-count">{program.instructions.length} {t('instructions')}</span>}
       </div>
       {shownDiagnostic && <DiagnosticPanel diagnostic={shownDiagnostic} t={t} />}
+      {status === 'error' && shownDiagnostic?.code === 'worker-error' && (
+        <button type="button" className="button button-secondary" onClick={onRetryWorker}>{t('teachingRetryWorker')}</button>
+      )}
       {!program ? (
         <div className="panel empty-output"><p>{t('teachingNoProgram')}</p></div>
       ) : (

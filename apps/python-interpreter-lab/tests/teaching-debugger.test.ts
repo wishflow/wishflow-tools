@@ -44,7 +44,7 @@ test('maps executable source lines to their first instruction across module and 
   assert.equal(mappings.find(({ line }) => line === 3)?.instructionIndex, 0);
   assert.equal(mappings.find(({ line }) => line === 4)?.instructionIndex, program.functions[0]?.entryIndex);
   assert.equal(mappings.find(({ line }) => line === 6)?.instructionIndex, 1);
-  assert.equal(mappings.find(({ line }) => line === 7)?.instructionIndex, 4);
+  assert.equal(mappings.find(({ line }) => line === 7)?.instructionIndex, 5);
   assert.equal(mappings.some(({ line }) => line === 1 || line === 2 || line === 5), false);
 });
 
@@ -149,6 +149,31 @@ test('skips the current breakpoint once and pauses again when a loop returns to 
   assert.ok(snapshot.executedInstructionCount > firstHitCount + 1);
 });
 
+test('binds a for-header source breakpoint to FOR_ITER and pauses on each loop check', () => {
+  const program = compileTeachingSource([
+    'for i in range(3):',
+    '  print(i)',
+  ].join('\n'));
+  const sourceMapping = mapTeachingSourceLines(program).find(({ line }) => line === 1);
+  assert.ok(sourceMapping);
+  assert.equal(program.instructions[sourceMapping.instructionIndex]?.opcode, 'FOR_ITER');
+
+  const machine = createTeachingMachine(program);
+  machine.setBreakpoints([1]);
+  let snapshot = machine.current;
+  let hits = 0;
+  for (let index = 0; index < 40 && snapshot.status !== 'finished'; index += 1) {
+    snapshot = stepTeachingMachine(machine, 'running');
+    if (snapshot.pauseReason === 'breakpoint') {
+      hits += 1;
+      snapshot = stepTeachingMachine(machine, 'running');
+    }
+  }
+
+  assert.equal(hits, 4);
+  assert.equal(snapshot.status, 'finished');
+});
+
 test('keeps the one-time breakpoint skip when breakpoint configuration changes while paused', () => {
   const machine = createTeachingMachine(compileTeachingSource([
     'i = 0',
@@ -195,7 +220,7 @@ test('Step Into stops at the first instruction in the called function', () => {
   assert.equal(activeFrame?.functionName, 'twice');
   assert.equal(activeFrame?.pc, program.functions[0]?.entryIndex);
   assert.equal(program.instructions[paused.nextInstructionIndex ?? -1]?.span.line, 2);
-  assert.equal(paused.executedInstructionCount, 3);
+  assert.equal(paused.executedInstructionCount, 4);
 });
 
 test('Step Over runs a multi-instruction caller line and its function call to the next line', () => {

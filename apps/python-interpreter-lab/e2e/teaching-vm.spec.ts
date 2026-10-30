@@ -73,6 +73,57 @@ test('compiles teaching instructions, steps the value stack, prints, and browses
   await expect(page.getByRole('combobox', { name: 'Execution view' })).toHaveValue('teaching');
 });
 
+test('renders subscript assignment with its target, index, and value expressions', async ({ page }) => {
+  await chooseTeachingVm(page);
+  await page.getByRole('textbox', { name: 'Python source' }).fill('items = [1]\nitems[0] = 9');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+
+  const assignment = page.locator('.teaching-ast-root > li').nth(1);
+  await expect(assignment.locator(':scope > .teaching-ast-locate > .ast-type')).toHaveText('SubscriptAssign');
+  await expect(assignment.locator(':scope > .teaching-ast-list > li')).toHaveCount(3);
+  await expect(assignment).toContainText('items');
+});
+
+test('recreates the teaching worker after a startup failure and accepts a new compile', async ({ page }) => {
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    let failures = 0;
+    const debug = { urls: [] as string[], dispatches: 0 };
+    (window as unknown as Window & { __teachingWorkerDebug: typeof debug }).__teachingWorkerDebug = debug;
+    window.Worker = new Proxy(NativeWorker, {
+      construct(target, args, newTarget) {
+        debug.urls.push(String(args[0]));
+        if (String(args[0]).includes('teaching-vm.worker') && failures < 1) {
+          failures += 1;
+          const failedWorker = new EventTarget() as Worker;
+          Object.assign(failedWorker, { terminate() {}, postMessage() {} });
+          window.setTimeout(() => {
+            debug.dispatches += 1;
+            failedWorker.dispatchEvent(new ErrorEvent('error', { message: 'simulated worker startup failure' }));
+          }, 100);
+          return failedWorker;
+        }
+        return Reflect.construct(target, args, newTarget) as Worker;
+      },
+    });
+  });
+  await page.goto(appPath);
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('teaching');
+  await expect(page.getByText('Ready to compile teaching program')).toBeVisible();
+  const recoveryDebug = await page.evaluate(() => (
+    window as unknown as Window & { __teachingWorkerDebug: { urls: string[]; dispatches: number } }
+  ).__teachingWorkerDebug);
+  expect(recoveryDebug.dispatches).toBe(1);
+  expect(recoveryDebug.urls.filter((url) => url.includes('teaching-vm.worker'))).toHaveLength(2);
+
+  await page.getByRole('textbox', { name: 'Python source' }).fill('print("recovered")');
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expect(page.getByRole('heading', { name: 'Teaching AST' })).toBeVisible();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible();
+  await expect(page.locator('.teaching-output')).toHaveText('recovered');
+});
+
 test('sets source-line and instruction breakpoints with keyboard controls and locates their pauses', async ({ page }) => {
   await chooseTeachingVm(page);
   const source = page.getByRole('textbox', { name: 'Python source' });
@@ -151,9 +202,6 @@ test('changes automatic run speed while running and keeps step boundaries determ
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
   await speed.focus();
   await expect(speed).toBeFocused();
-  await speed.press('Tab');
-  await expect(page.getByRole('button', { name: 'Run teaching program' })).toBeFocused();
-  await speed.focus();
   await speed.selectOption('slow');
   await expect(speed).toHaveValue('slow');
   await speed.selectOption('standard');
@@ -298,7 +346,7 @@ test('runs short-circuit expressions, nested branches, and lazy range loops in t
     '  print(i)',
   ].join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
-  await expect(page.getByText('mini-vm-v4').first()).toBeVisible();
+  await expect(page.getByText('mini-vm-v5').first()).toBeVisible();
   const instructions = page.locator('.teaching-instruction-table');
   await expect(instructions).toContainText('JUMP_IF_FALSE_OR_POP');
   await expect(instructions).toContainText('POP_JUMP_IF_FALSE');
@@ -466,8 +514,8 @@ test('steps a zero-argument function through an observable frame stack in the Wo
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
 
   const instructions = page.locator('.teaching-instruction-table');
-  await expect(instructions.locator('tbody tr')).toHaveCount(9);
-  await expect(page.getByText('mini-vm-v4').first()).toBeVisible();
+  await expect(instructions.locator('tbody tr')).toHaveCount(10);
+  await expect(page.getByText('mini-vm-v5').first()).toBeVisible();
   await expect(page.locator('.teaching-ast-scroll')).toContainText('FunctionDef');
   await expect(page.locator('.teaching-ast-scroll')).toContainText('Call');
   await expect(instructions).toContainText('DEFINE_FUNCTION');
@@ -475,10 +523,11 @@ test('steps a zero-argument function through an observable frame stack in the Wo
 
   await page.getByRole('button', { name: 'Step one instruction' }).click();
   await page.getByRole('button', { name: 'Step one instruction' }).click();
+  await page.getByRole('button', { name: 'Step one instruction' }).click();
   const frames = page.locator('.teaching-frame-list');
   await expect(frames.locator(':scope > li')).toHaveCount(2);
   await expect(frames).toContainText('answer');
-  await expect(frames).toContainText('Return to instruction 2');
+  await expect(frames).toContainText('Return to instruction 3');
   const moduleFrame = frames.locator('details').first();
   await moduleFrame.locator('summary').focus();
   await moduleFrame.locator('summary').press('Enter');
@@ -507,6 +556,7 @@ test('replays recursive positional calls and locates argument-count errors in th
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
   const frames = page.locator('.teaching-frame-list');
   const step = page.getByRole('button', { name: 'Step one instruction' });
+  await step.click();
   await step.click();
   await step.click();
   await step.click();

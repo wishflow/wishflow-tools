@@ -1,12 +1,12 @@
 # P9 规格：教学调试控制
 
-对应整体计划：[P9 教学调试控制](../implementation-plan.md)，任务拆分见 [P9 tasks](../tasks/p09-teaching-debugger.md)。产品语义已于 2026-10-30 确认。本阶段只控制 `mini-vm-v4` 教学 VM，不改变真实 Pyodide/CPython 视图。
+对应整体计划：[P9 教学调试控制](../implementation-plan.md)，任务拆分见 [P9 tasks](../tasks/p09-teaching-debugger.md)。产品语义已于 2026-10-30 确认。本阶段只控制教学 VM，不改变真实 Pyodide/CPython 视图。P9 原始发布基线为 `mini-vm-v4`；本次代码审查修正增加一次函数名预解析指令，当前版本为 `mini-vm-v5`，详见 tasks 的 T07。
 
 ## 1. 目标与边界
 
 在现有教学 VM 的逐指令执行、暂停、复位和历史快照上增加可预测的源码级调试能力：源码行断点、教学指令断点、行步进、Step Into/Over/Out、Continue 和运行速度选择。用户能从 AST、教学指令和运行快照间定位位置，并能解释程序为什么在某个位置暂停。
 
-沿用 React、TypeScript、Vite、共享站点壳、原生 `textarea` 和既有 Teaching VM Worker。预期扩展现有消息协议以传递调试命令和运行选项；不新增 Worker、第三方编辑器、状态库、服务或依赖。教学字节码和语言语义不变，版本继续标为 `mini-vm-v4`；P5–P8 的指令执行、对象身份、函数作用域和 5,000 条动态指令上限继续有效。
+沿用 React、TypeScript、Vite、共享站点壳、原生 `textarea` 和既有 Teaching VM Worker。预期扩展现有消息协议以传递调试命令和运行选项；不新增 Worker、第三方编辑器、状态库、服务或依赖。P9 调试控制本身不改变教学语言；审查修正补入 `CHECK_CALL_TARGET`，在实参副作用执行前解析函数名，当前 ISA 标记为 `mini-vm-v5`。P5–P8 的指令执行、对象身份、函数作用域和 5,000 条动态指令上限继续有效。
 
 ## 2. 现有代码基线
 
@@ -88,4 +88,4 @@
 - Worker 测试覆盖新旧 session/sourceRevision 隔离、运行批次、断点/暂停竞争、速度档切换、历史回看后 Continue 和 Reset。
 - Playwright 通过生产构建和真实 Worker 验证源码行/教学指令断点、键盘操作、递归 Into/Over/Out、历史执行头恢复、终止态、双语和响应式。
 - 运行应用 `pnpm run test:ci`、根 `pnpm run test:catalog`、`pnpm run build:site` 和 `git diff --check`；发布 workflow 成功后，用 Codex 内置浏览器验收正式子路径。
-- P9 不改变语法、指令集和数据持久化。回滚可移除高级调试控件与 Worker 调试命令，保留 P5–P8 的单指令 Step、Continue/旧有 Run/Pause/Reset 和全部语言能力。
+- P9 原始调试范围不改变语法或数据持久化；T07 的审查修正只为已支持的函数调用增加名称预解析指令。回滚高级调试控件与 Worker 调试命令时，应保留 `CHECK_CALL_TARGET` 及 `mini-vm-v5` 版本，因为它修正的是 P7 调用语义。

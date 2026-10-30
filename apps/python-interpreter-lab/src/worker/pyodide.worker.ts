@@ -80,6 +80,7 @@ def serialize_ast_node(node, depth=0):
         AST_TRUNCATED = True
         return {'kind': 'truncated'}
     AST_NODE_COUNT += 1
+    node_id = AST_NODE_COUNT
     fields = {}
     for name, value in ast.iter_fields(node):
         fields[name] = serialize_ast_value(
@@ -92,7 +93,7 @@ def serialize_ast_node(node, depth=0):
         if hasattr(node, name):
             location[name] = getattr(node, name)
     return {
-        'id': 'ast-' + str(AST_NODE_COUNT),
+        'id': 'ast-' + str(node_id),
         'type': type(node).__name__,
         'fields': fields,
         'location': location,
@@ -268,7 +269,7 @@ BATCH_OUTPUT_CHARACTERS = 1024
 SOURCE_FILENAME = '<input>'
 
 _SAFE_TYPE = type
-_SAFE_TYPE_GETATTRIBUTE = type.__getattribute__
+_SAFE_TYPE_NAME_GET = type.__dict__['__name__'].__get__
 _SAFE_LEN = len
 _SAFE_STR = str
 _SAFE_REPR = repr
@@ -294,6 +295,8 @@ _SAFE_SET_TYPE = set
 
 started_at = time.perf_counter()
 source = __lab_source
+variable_ids = {}
+next_variable_id = 1
 
 def bounded_name(value):
     if _SAFE_LEN(value) > MAX_NAME_LENGTH:
@@ -301,7 +304,8 @@ def bounded_name(value):
     return value
 
 def type_name(value):
-    name = _SAFE_TYPE_GETATTRIBUTE(_SAFE_TYPE(value), '__name__')
+    value_type = _SAFE_TYPE(value)
+    name = _SAFE_TYPE_NAME_GET(value_type, _SAFE_TYPE(value_type))
     if _SAFE_TYPE(name) is not _SAFE_STR_TYPE:
         return 'object'
     return bounded_name(name)
@@ -598,6 +602,7 @@ def snapshot_node(name, value, depth, state):
     return node
 
 def snapshot_scope(mapping, state):
+    global next_variable_id
     if state['nodes'] >= MAX_SNAPSHOT_NODES_PER_EVENT or snapshot_node_count >= MAX_SNAPSHOT_NODES_PER_RUN:
         state['truncated'] = True
         if snapshot_node_count >= MAX_SNAPSHOT_NODES_PER_RUN:
@@ -610,6 +615,12 @@ def snapshot_scope(mapping, state):
         if node is None:
             truncated = True
             break
+        variable_id = variable_ids.get(name)
+        if variable_id is None:
+            variable_id = next_variable_id
+            next_variable_id += 1
+            variable_ids[name] = variable_id
+        node['variableId'] = variable_id
         values.append(node)
         if node.get('truncated'):
             truncated = True

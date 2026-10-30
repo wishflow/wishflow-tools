@@ -247,6 +247,7 @@ button:disabled { cursor: not-allowed; }
 .snapshot-diff-values p { display: flex; flex-wrap: wrap; gap: 5px; margin: 0; color: #66728b; font-size: 9px; }
 .snapshot-diff-values code { min-width: 0; color: #39445f; }
 .trace-output pre { max-height: 180px; overflow: auto; margin: 0 0 10px; padding: 9px 10px; border: 1px solid #e2e4dc; border-radius: 7px; background: var(--code); color: #33405a; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.trace-final-output { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e3e5de; }
 .output-panel-heading { display: flex; min-height: 30px; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
 .output-panel-heading h3 { margin: 0; color: var(--ink); font-size: 15px; letter-spacing: -.02em; }
 .small-warning { max-width: 190px; color: #825b1c; font-size: 10px; line-height: 1.35; text-align: right; }

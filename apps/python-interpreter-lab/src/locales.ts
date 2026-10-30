@@ -13,7 +13,8 @@ export const messages = {
   cpythonSourceHint: { en: 'Analyze compiles without running. Run executes your code in this browser.', zh: '分析只编译、不执行；运行会在当前浏览器执行代码。' },
   teachingSourceHint: { en: 'Compile the supported subset, then inspect and control each teaching VM instruction.', zh: '编译当前支持的语法子集，然后查看并控制教学 VM 的逐条指令执行。' },
   teachingPrivacyNote: { en: 'Teaching VM runs a bounded TypeScript subset. It does not execute Python or access browser APIs.', zh: '教学 VM 只运行有明确边界的 TypeScript 子集，不会执行 Python 或访问浏览器 API。' },
-  teachingVersion: { en: 'Teaching instruction set mini-vm-v4', zh: '教学指令集 mini-vm-v4' },
+  teachingVersion: { en: 'Teaching instruction set mini-vm-v5', zh: '教学指令集 mini-vm-v5' },
+  teachingRetryWorker: { en: 'Retry teaching VM', zh: '重试教学 VM' },
   teachingLoading: { en: 'Preparing teaching VM…', zh: '正在准备教学 VM…' },
   teachingReady: { en: 'Ready to compile teaching program', zh: '可以编译教学程序' },
   teachingCompiling: { en: 'Compiling teaching program…', zh: '正在编译教学程序…' },
@@ -235,6 +236,7 @@ export const messages = {
   globalsTruncated: { en: 'The global variable scope is partial.', zh: '全局变量范围不完整。' },
   standardOutput: { en: 'Standard output at this event', zh: '此事件时的标准输出' },
   standardError: { en: 'Standard error at this event', zh: '此事件时的标准错误' },
+  finalProgramOutput: { en: 'Final program output', zh: '程序最终输出' },
   finalException: { en: 'Final exception', zh: '最终异常' },
   traceTruncated: { en: 'Trace reached the 5,000-event limit; later events were not recorded.', zh: '轨迹达到 5,000 个事件上限，后续事件未记录。' },
   outputTruncated: { en: 'Output reached the 32,768-code-point limit and was truncated.', zh: '输出达到 32,768 个 Unicode 码点上限，已截断。' },
@@ -245,7 +247,7 @@ export const messages = {
   valueType: { en: 'Type', zh: '类型' },
   valueSummary: { en: 'Value summary', zh: '值摘要' },
   footerLeft: { en: 'CPython compilation view', zh: 'CPython 编译观察' },
-  footerTeaching: { en: 'Teaching VM · mini-vm-v4', zh: '教学 VM · mini-vm-v4' },
+  footerTeaching: { en: 'Teaching VM · mini-vm-v5', zh: '教学 VM · mini-vm-v5' },
   footerRight: { en: 'AST → Code objects → Bytecode', zh: 'AST → 代码对象 → 字节码' },
 } satisfies Record<string, LocalizedText>;
 

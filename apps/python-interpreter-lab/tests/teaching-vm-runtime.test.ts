@@ -430,9 +430,13 @@ test('enters a distinct function frame and returns the value to its paused calle
   assert.equal(defined.variables[0]?.name, 'answer');
   assert.equal(defined.variables[0]?.value.type, 'function');
 
+  const targetResolved = stepTeachingMachine(machine);
+  assert.equal(targetResolved.frames.length, 1);
+  assert.equal(targetResolved.nextInstructionIndex, 2);
+
   const entered = stepTeachingMachine(machine);
   assert.equal(entered.frames.length, 2);
-  assert.equal(entered.frames[0]?.pc, 2);
+  assert.equal(entered.frames[0]?.pc, 3);
   assert.equal(entered.frames[1]?.functionName, 'answer');
   assert.notEqual(entered.frames[0]?.id, entered.frames[1]?.id);
   assert.deepEqual(entered.stack, []);
@@ -442,7 +446,7 @@ test('enters a distinct function frame and returns the value to its paused calle
   const returned = stepTeachingMachine(machine);
   assert.equal(returned.frames.length, 1);
   assert.deepEqual(returned.stack.map(({ value }) => value), ['42']);
-  assert.equal(returned.nextInstructionIndex, 2);
+  assert.equal(returned.nextInstructionIndex, 3);
 
   while (machine.current.status !== 'finished' && machine.current.status !== 'error') stepTeachingMachine(machine);
   assert.equal(machine.current.status, 'finished');
@@ -845,6 +849,23 @@ test('preserves the pre-error stack for NameError and TypeError', () => {
   assert.equal(typeError.status, 'error');
   assert.equal(typeError.diagnostic?.code, 'type-error');
   assert.deepEqual(typeError.stack, beforeBinary.stack);
+});
+
+test('resolves a missing call target before evaluating its arguments', () => {
+  const machine = createTeachingMachine(compileTeachingSource([
+    'def tick():',
+    '  print("side effect")',
+    '  return 1',
+    'print(missing(tick()))',
+  ].join('\n')));
+
+  for (let index = 0; index < 30 && machine.current.status !== 'error'; index += 1) {
+    stepTeachingMachine(machine, 'running');
+  }
+
+  assert.equal(machine.current.status, 'error');
+  assert.equal(machine.current.diagnostic?.code, 'name-error');
+  assert.deepEqual(machine.current.output, []);
 });
 
 test('enforces integer and string result budgets atomically', () => {

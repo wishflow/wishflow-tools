@@ -15,7 +15,7 @@
 
 ## 产品与前端边界
 
-- 本应用包含浏览器内真实 CPython 的编译观察和运行轨迹回放，以及教学 Mini VM `mini-vm-v4`。P8 增加列表/字典、可变对象引用、历史对象图、循环安全打印和结构相等；P9 增加源码行/教学指令断点、单指令和源码步进、Continue/Pause/Reset 与自动运行速度选择。教学 VM 支持范围见 [P5 规格](docs/specs/p05-minimal-teaching-vm.md)、[P6 规格](docs/specs/p06-control-flow.md)、[P7 规格](docs/specs/p07-functions-and-frames.md)、[P8 规格](docs/specs/p08-mutable-containers.md) 和 [P9 规格](docs/specs/p09-teaching-debugger.md)。教学 VM 不是完整 Python，也不呈现 CPython 内部状态；正式页面版本和发布证据以 README 与整体计划为准。
+- 本应用包含浏览器内真实 CPython 的编译观察和运行轨迹回放，以及教学 Mini VM `mini-vm-v5`。P8 增加列表/字典、可变对象引用、历史对象图、循环安全打印和结构相等；P9 增加源码行/教学指令断点、单指令和源码步进、Continue/Pause/Reset 与自动运行速度选择。教学 VM 支持范围见 [P5 规格](docs/specs/p05-minimal-teaching-vm.md)、[P6 规格](docs/specs/p06-control-flow.md)、[P7 规格](docs/specs/p07-functions-and-frames.md)、[P8 规格](docs/specs/p08-mutable-containers.md) 和 [P9 规格](docs/specs/p09-teaching-debugger.md)。教学 VM 不是完整 Python，也不呈现 CPython 内部状态；正式页面版本和发布证据以 README 与整体计划为准。
 - 本应用是 `apps/catalog.json` 登记的静态前端应用。slug、导航卡片和发布路径以该文件为准；不在应用页面或构建代码中复制全站应用目录。依赖、构建和测试遵循根规则及本应用 `package.json`。
 - 页面沿用仓库已有 React、TypeScript、Vite 模式，使用 `base: './'` 构建到 `dist/`，并通过仓库本地 `@wishflow/site-shell` 包挂载在 `content` 插槽内。HTML 属性、入口接法及导航行为以[站点外壳契约](../../packages/site-shell/README.md)为准。公共页眉、项目导航、页脚、语言选择和语言持久化由共享外壳提供。当前为单页工作区，不启用空的应用内侧栏；只有出现真实的多页面路由时才按共享契约接入本地导航。
 - 页面文案使用共享外壳的语言状态，应用只维护自己的中英文词条。不得另建语言按钮、语言存储键、语言检测或持久化逻辑。
