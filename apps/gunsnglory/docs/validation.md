@@ -822,7 +822,7 @@ REA/JADX 归档中的 `GunsAndGloryThread` 绘制路径按背景、敌人、网�
 | Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5176/gunsnglory/` 检查 Cow Gulch 静态装饰、单位、敌人、桥和 HUD；地图检查叠层可显示路线、单位锚点和射程，关闭叠层后原画正常。暂停在 Wave02/8，状态显示50条命且正式档案无结果；未完成关卡结算。浏览器实测用于确认发布前页面绘制正常，单位与装饰的深度顺序由上述 Canvas 回归测试作精确断言。 |
 | 发布与公网实测 | `master` 合并提交 `1ff50d3` 已推送。GitHub Actions [run 40911621390](https://github.com/wishflow/wishflow-tools/actions/runs/40911621390) 中 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 和 GitHub Pages 均成功；Worker/config 检查因静态应用变更而跳过。Codex 内置浏览器访问 [公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=1ff50d3)，确认 Cow Gulch 地图、道路/桥、静态装饰、单位和战斗 HUD 正常；暂停在 Wave01/8，50条生命，未结算。测试前后原有正式档案均为1/1、最高分 $356；没有修改速度或档案。随后 master 上的 P8 文档提交 `86aba9e` 触发 [run 40911778860](https://github.com/wishflow/wishflow-tools/actions/runs/40911778860)，文档检查通过，应用测试和部署按 docs-only 变更规则跳过。 |
 
-同深度插入顺序、动态对象、敌人与装饰的遮挡对照及其它关卡仍属于 P1-F 后续对照范围；本轮不据此调整路线、地形或战斗逻辑，也不将 Cow Gulch 计为已验收关卡。
+静态装饰之间的同深度地图扫描插入顺序现由第48节补齐；动态对象、单位与装饰之间的逐实例同深度队列、敌人与装饰的完整遮挡对照及其它关卡仍属于 P1-F 后续对照范围。本轮不据此调整路线、地形或战斗逻辑，也不将 Cow Gulch 计为已验收关卡。
 
 ## 45. P1-F Cow Gulch 投射物与残骸深度排序
 
@@ -845,7 +845,7 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 | 浏览器控制台 | 本地内置浏览器错误及警告日志为空。 |
 | 发布与公网实测 | `master` 提交 `816f98fa74b885b6a526b04205d3ac8ac6b04acd` 已推送。GitHub Actions [run 40922924699](https://github.com/wishflow/wishflow-tools/actions/runs/40922924699) 的 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 与 GitHub Pages 均通过；Worker/config 检查按静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=816f98f)，截图核对 Cow Gulch 峡谷道路、桥、静态装饰、枪手、敌人和车厢；暂停时为 Wave01/8、生命50、敌人13、现金$68。已保存战役档案前后均为1/1、最高分$356；速度仍为4×，没有提交结算或改动设置。浏览器控制台错误与警告为空。战斗 HUD 的短时数值仅记录当次观察，不作规则预期。 |
 
-本轮验证的是共享地面深度队列和车厢碎片锚点；特殊投射物的动态 `fineZ` 在当时尚未实现，现由第 46 节补齐。敌人/投射物/装饰的完整跨图层对照、同深度插入次序及其它地图仍待处理；Cow Gulch 首关仍为0/60。
+本轮验证的是共享地面深度队列和车厢碎片锚点；特殊投射物的动态 `fineZ` 在当时尚未实现，现由第 46 节补齐。敌人/投射物/装饰的完整跨图层对照、动态同深度插入次序及其它地图仍待处理；静态装饰的同深度顺序见第48节。Cow Gulch 首关仍为0/60。
 
 ## 46. P1-F Cow Gulch 特殊投射物弹道与道路图层
 
@@ -900,3 +900,25 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 master 首轮 `test:ci` 的 `tests/e2e/t05.spec.ts` 在 `settlement-save-status` 等待“Result saved to this browser.”时超时；错误现场显示仍处于 Wave01/8、敌人10、现金$71。相同测试单独复跑通过，整套 E2E 随后52/52通过，当前没有证据能复现为产品缺陷。若再次出现，先核实 `openSingleWaveSample()` 的场景切换结果和结算状态，再决定是否改动规则或延长超时；不要仅凭一次状态超时修改存档实现。
 
 本节只覆盖受损敌方生命条的绘制规则，不代表 Cow Gulch 或 P1-F 首关验收完成；关卡完成计数仍为0/60。
+
+## 48. P1-F Cow Gulch 静态装饰同深度插入顺序
+
+网页原先在同一绘制深度上按地图行、列升序绘制静态装饰。原版在相同深度插入新对象时，将其放在已有对象之前；按绘制队列从前向后绘制后，先创建的旧对象最后落笔，在绘制范围重叠时覆盖较新的对象。本轮把静态装饰行内次序改为列降序，使同一地图行的并列对象按原版覆盖关系绘制。
+
+### APK 静态依据
+
+REA/JADX 证据 `REA-427 · GameObjectManager.createGameObjectsFromBasicMap` 的反编译输出以 `y` 外循环、`x` 内循环扫描地图；Cow Gulch 对应装饰 tile 在扫描时调用 `addNewGameObject()`。该方法的 object-tile switch 有已记录的 JADX 控制流警告，本结论只使用扫描次序及装饰创建调用。独立 DEX 复核的 `getValueByObject()` 按 `fineY + drawingOffsetY + fineZ × 100` 计算（`0x407a30–0x407a44`）；`insertDrawOrder()` 只在旧值严格小于新值时越过旧对象，所以相等值会把新对象插到旧对象之前（`0x408674–0x4086e8`）。绘制调用顺序见[第44节](validation.md#44-p1-f-cow-gulch-装饰与单位深度排序)。`GameObjectDecoration` 的反编译构造代码把 `fineY` 设为地图单元底边、并接收 `fineZ=7680`（`GameObjectDecoration.java` 反编译行注释 158–164）。这些是研究分支 `codex/gunsnglory-spec` 中 REA/JADX 的分析产物，不是原始 Java 源码。
+
+Cow Gulch 的静态装饰深度为 `(cell.y + 1) × 7680` fine units，同一行的静态装饰因此有相同深度。网页从原始 TDM 网格按行、列升序生成装饰；渲染端只在同深度的静态装饰之间按列降序排序，恢复原版“较新先绘制、较旧后覆盖”的次序。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| TDD 回归 | 使用 Cow Gulch 原图同一行的树、仙人掌、岩石和宽棚屋构成 Canvas fixture，断言四种静态装饰的 drawCall 坐标按原版倒序；旧实现按列升序得到相反次序并失败，倒序实现通过。fixture 验证绘制顺序，不宣称这些精简素材发生像素重叠。原有地面深度、路线锚点、画布裁切及跨行对象顺序断言通过。 |
+| 专项测试 | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4187 nvm exec 22.23.3 pnpm --dir apps/gunsnglory exec node --import tsx --test tests/canvas-renderer.test.ts` 通过，5项测试。 |
+| 完整本地 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4287 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript、154项单元测试、Vite构建及52项Playwright测试。首次使用端口4187时被既有服务占用，完整复跑改用4287后通过。 |
+| 站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 通过，14项测试。 |
+| Codex 内置浏览器本地检查 | 在 `http://127.0.0.1:5176/` 打开当前开发分支预览；画面中的 Cow Gulch 地图、装饰、桥、单位、战斗 HUD 和视口裁切正常。由于本地预览已有进行中的正式战局，检查时暂停于 Wave01/8；正式档案仍显示1/1、最高分 `$360`，未完成结算。内置浏览器控制台 error/warn 为空。该目视检查是回归烟测，不声称静态装饰同深度排列在实际 Cow Gulch 截图中可见；精确顺序由 Canvas fixture 断言。 |
+
+本轮只对 Cow Gulch 静态装饰之间的同深度地图扫描次序给出确定性保证。单位移动后的历史队列顺序、静态装饰与动态对象之间以及敌人/投射物之间的逐对象同深度次序仍待 P1-F 对照；Cow Gulch 首关仍为0/60。
