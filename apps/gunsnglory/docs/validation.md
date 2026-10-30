@@ -1138,5 +1138,6 @@ Gunslinger 和 Mexican 实际移动时，网页此前保持静态图集首帧。
 | 边界敏感性复核 | 临时把帧切换比较从`>`改为`>=`，定向测试在1536处失败（错误地提前到frame 1）；恢复实现后重新通过。 |
 | 本地验证 | 显式使用 Node 22.23.3，应用 `pnpm run test:ci` 全部通过：TypeScript 检查、162项单元测试、Vite 生产构建及53项 Playwright 测试；仓库 `pnpm run test:catalog` 15项全部通过。 |
 | 内置浏览器实测 | 本地生产预览 `http://127.0.0.1:4398/`：桌面视口 1440×900 下画布约1022×574，手机视口390×844下画布约326×183，页面横向滚动宽度仍为375px；两种视口均保持约16:9画布。用鼠标选中并拖动 Gunslinger，检查面板从初始 `(8.5, 8.75)` 更新到 `(7.77, 8.32)`，界面显示 Cell `(8, 8)`；随后暂停在 Wave 3/8，没有完成关卡或产生通关档案。浏览器控制台无 error/warn。 |
+| 公网发布与实测 | 提交 `719872f` 已部署；GitHub Actions [run 41047277405](https://github.com/wishflow/wishflow-tools/actions/runs/41047277405) 的 Guns’n’Glory CI、共享 catalog 检查、GitHub Pages 与 Cloudflare Pages 均成功；Worker/config 和宠物任务按变更范围跳过。Codex 内置浏览器打开[本次公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=719872f)，检查地图、桥、HUD、4×速度控件和单位画面；鼠标选中并拖动 Gunslinger 后，状态从 Cell `(9, 9)` 变为 `(8, 8)`，检查面板坐标从 `(8.50, 8.75)` 变为 `(7.74, 8.40)`。暂停于 Wave 4/8、Lives 42，未结算本次战斗；原有正式档案仍为 Cow Gulch 1/1、Best `$356`。调试覆盖已关闭，控制台无 error/warn。 |
 
 本轮只补齐 Cow Gulch 玩家步行图集状态；不改变移动距离、碰撞、路线或速度。其它玩家类型、命中/睡眠等角色状态及完整 P1-F 首关对照仍待完成，首关验收计数保持0/60。
