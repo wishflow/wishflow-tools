@@ -3,6 +3,7 @@ import test from 'node:test';
 import { cowGulchContent, cowGulchP1aSampleContent } from '../src/content/cow-gulch';
 import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
+import { cowGulchLevelOneContent } from '../src/content/official-campaign';
 import { createGame, type GameSession, type ScenarioContent, type UnitView } from '../src/game';
 import { captureReplayState, serializeReplay, type GameReplayPayload } from '../src/game/replay';
 
@@ -421,6 +422,75 @@ test('the original Mexican hire slot wakes in place but remains immobile at its 
   assert.equal(hired.units[0]?.movementSpeedFinePer100Ms, 0);
   assert.equal(hired.units[0]?.asset, 'player_mexican');
   assert.equal(session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 8 }), false);
+});
+
+test('official Cow Gulch earns the real Mexican hire and uses its dynamite against a Wave 2 group', async () => {
+  const session = await createGame({ scenarios: { [cowGulchLevelOneContent.id]: cowGulchLevelOneContent } }).open({
+    scenarioId: cowGulchLevelOneContent.id,
+    mode: 'formal',
+    randomSeed: 42,
+  });
+  let view = session.observe();
+
+  assert.equal(view.wave?.cash, 65, 'the official level starts with the original cash amount');
+  assert.equal(view.wave?.lives, 50);
+  assert.equal(view.wave?.number, 1);
+  assert.equal(session.startRecord.scenarioId, 'campaign-new-mexico-01');
+  assert.equal(session.submitIntent({ type: 'start-wave' }), false, 'formal Cow Gulch starts Wave 1 automatically');
+
+  const mexicanId = 'mexican-hire-06';
+  const sleepingMexican = view.units.find((unit) => unit.id === mexicanId);
+  assert.ok(sleepingMexican);
+  assert.deepEqual(sleepingMexican.cell, { x: 4, y: 15 }, 'the slot is the original tile-97 map object');
+  assert.equal(sleepingMexican.activity, 4);
+  assert.equal(sleepingMexican.hirePrice, 100);
+
+  for (let frame = 0; frame < 3000 && (view.wave?.cash ?? 0) < 100; frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  assert.equal(view.wave?.number, 2, 'the required cash is earned through the real Wave 1 and Wave 2 flow');
+  assert.equal(view.wave?.cash, 100, 'no cash is injected into the official campaign');
+
+  const hitArea = sleepingMexican.hitArea;
+  assert.ok(hitArea);
+  assert.equal(session.submitIntent({
+    type: 'select-at',
+    x: hitArea.x + (hitArea.width / 2),
+    y: hitArea.y + (hitArea.height / 2),
+  }), true);
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.units.find((unit) => unit.id === mexicanId)?.selected, true);
+  assert.equal(session.submitIntent({ type: 'hire-map-unit', unitId: mexicanId, commandId: 'official-wave-two-mexican' }), true);
+  view = session.advance({ deltaMs: 0 });
+
+  const hiredMexican = view.units.find((unit) => unit.id === mexicanId);
+  assert.equal(view.wave?.cash, 0);
+  assert.equal(hiredMexican?.activity, 5);
+  assert.equal(hiredMexican?.asset, 'player_mexican');
+  assert.equal(hiredMexican?.movementSpeedFinePer100Ms, 0);
+  assert.equal(hiredMexican?.weapon?.damageStyle, 3);
+  assert.equal(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_mexican_arriba'), true);
+  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 8 }), false);
+
+  const mexicanShotIds = new Set<string>();
+  let groupImpact: Extract<(typeof view.events)[number], { type: 'shot-exploded' }> | undefined;
+  for (let frame = 0; frame < 1000 && !groupImpact; frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+    for (const shot of view.shots) {
+      if (shot.shooterId === mexicanId) mexicanShotIds.add(shot.id);
+    }
+    for (const event of view.events) {
+      if (event.type === 'shot-exploded' && mexicanShotIds.has(event.shotId)) {
+        groupImpact = event;
+        break;
+      }
+    }
+  }
+
+  assert.ok(groupImpact, 'the hired Mexican fires in the real campaign and resolves its projectile');
+  assert.ok(groupImpact.affectedEnemyIds.length > 1, 'the official Wave 2 shot damages a grouped target, not only the fixture primary');
+  assert.ok(groupImpact.affectedEnemyIds.includes(groupImpact.targetId));
+  assert.equal(view.wave?.settlement, undefined, 'the focused integration path stops before campaign settlement');
 });
 
 test('applies the Gunslinger special reload after the sixth actual shot', async () => {

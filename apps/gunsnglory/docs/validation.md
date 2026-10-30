@@ -1242,3 +1242,26 @@ Cloudflare Pages 和 GitHub Pages 均已部署这个发布提交；本次仅补�
 | 发布与公网实测 | 触屏变更提交 `4b4262e` 已合入 `master`。GitHub Actions [run 41102853277](https://github.com/wishflow/wishflow-tools/actions/runs/41102853277) 最终成功：Guns’n’Glory 59项 E2E、共享站点检查及 Cloudflare Pages、GitHub Pages 部署均通过；Worker/config 检查按静态应用变更范围跳过。首次执行中两项 T15 存档 E2E 出现未带 URL 的 404，失败任务重跑后通过；错误未在重跑中复现。随后包含该应用版本的 master SHA `42c5789` 对应 [run 41104135193](https://github.com/wishflow/wishflow-tools/actions/runs/41104135193) 成功，两个 Pages 部署再次完成。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=42c5789)，确认牛溪谷正式战役、地图、Pedro 对话和 HUD 显示正常；继续后进入第1波，再暂停确认“战斗已暂停”。公开页控制台 error/warn 为空。浏览器档案始终为已完成1/1、最高分 `$356`；没有结算本次战斗。手机390×844下画布341.20×191.05（比例1.786），页面无横向溢出；桌面1440×900也已检查。 |
 
 本轮仅增加正式战役触屏路径的行为覆盖，不代表 Cow Gulch 首关地图、规则或全套交互的 P1-F 对照已完成；关卡完成验收仍为0/60。
+
+## 64. P1-B 正式关卡 Mexican 招募与 Wave02 范围攻击
+
+将 Mexican 从独立行为样例接入正式 Cow Gulch L01 路径验证：使用固定种子42打开真实战役，保留初始现金 `$65`，不注资；让 Wave01/02 自然运行到现金 `$100`，选择原图 tile97（零基格 `(4,15)`）并支付 `$100`。唤醒后的 Mexican 保持原版速度0，不能移动，但会在真实 Wave02 对敌群发射重型炸药。该增量不改变单位、经济、波次或战役代码，只增加正式场景的行为与浏览器交互覆盖。
+
+Game 测试 [`game.test.ts`](../tests/game.test.ts) 直接打开 [`campaign-new-mexico-01`](../src/content/official-campaign.ts) 正式身份，确认初始现金65、生命50、Wave01 自动开始和 tile97 原始坐标；之后以100ms步长推进真实战斗，确认现金自然到达100、成功扣款、同一对象从 activity4 唤醒为 `player_mexican`、发出原版唤醒音效请求且拒绝移动。测试继续推进同一 Wave02，确认 Mexican 的实际投射物在群体中影响至少两个敌人。所有权威输入来自游戏的公开行为接口，没有读取或写入内部会话状态。
+
+浏览器测试 [`t26-official-mexican.spec.ts`](../tests/e2e/t26-official-mexican.spec.ts) 在390×844移动触屏上下文中验证真实 UI 路径：速度设为4×、正式战役自然赚钱、发送双指触控事件平移/放大地图、触摸选中 Mexican、点招募按钮并检查扣款及选中状态；测试在整关结算前结束，不写入完成进度。独立 Game 测试覆盖后续实际开火和 AOE 命中，避免浏览器测试为了检查这个武器而完成战役。
+
+第一次 E2E 草稿直接点击地图零基 `(4,15)` 的默认镜头位置，浏览器返回“未选中”。检查实际视口后确认该点在屏幕下缘之外：地图经原版宽度规则放大后高于 16:9 逻辑画布，默认镜头只显示中段。问题来自测试把地图坐标当作画布坐标，并非单位位置错位；本轮未改游戏输入/镜头规则。后续测试先通过实际触屏双指手势把下缘带入视口，再按变换后的画布位置点选。P1-F 仍须独立核对桌面鼠标和其他镜头状态。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 正式开局与经济 | 固定随机种子42；`campaign-new-mexico-01` 初始现金 `$65`、生命50、Wave01自动开始。Game 测试不提交逐波 `start-wave`，不注入现金；实际推进到 Wave02 现金 `$100` 后招募 tile97 Mexican，支付后余额 `$0`。 |
+| Mexican 正式战斗行为 | 唤醒同一 tile97 对象，activity4→5、资源切换到 `player_mexican`、移动速度0、播放 `sound_mexican_arriba`；选中后移动意图被拒绝。真实 Wave02 投射物爆炸事件的 `affectedEnemyIds` 大于1且包含主目标。 |
+| 触屏 UI | Playwright/CDP 在390×844上下文通过两指 touch start/move/end 平移地图，再触摸 `(4,15)` Mexican；招募按钮文本、可用状态、扣款、选中反馈和未结算状态均通过。测试文件：[`t26-official-mexican.spec.ts`](../tests/e2e/t26-official-mexican.spec.ts)。 |
+| 完整应用 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=5446 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、169项单元测试、Vite 生产构建和60项 Playwright 测试全部通过。 |
+| 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 15项全部通过。Node 使用 nvm 显式指定22.23.3，未改变默认版本。 |
+| 验收边界 | 本轮不完整通关；浏览器路径在整关结算前结束，Game 测试确认正式会话没有 settlement。P1-F 的全地图/对象/动画/音画/鼠标与触屏对照仍未通过，Cow Gulch 首关与关卡验收计数保持0/60。 |
+
+本轮关闭的是正式 L01 内 Mexican 招募及 Wave02 群体命中的行为证据缺口；独立 fixture 仍用于价格和 AOE 边界回归。它不代表 P1-B 全部内容完成，也不改变 P1-F 首关验收状态。
