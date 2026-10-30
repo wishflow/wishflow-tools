@@ -1054,3 +1054,23 @@ REA-005（`GameObjectEnemy` 类清单）未列出通用命中闪光字段；REA-
 | 合并、部署与公网内置浏览器 | `ed4bb49` 已快进合入并推送到 `master`。GitHub Actions [run 41018773697](https://github.com/wishflow/wishflow-tools/actions/runs/41018773697) 全部成功：Guns’n’Glory CI、共享站点检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker/config 与宠物专用作业按变更范围跳过。Codex 内置浏览器打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=ed4bb49)，实际显示中文音效失败提示与重试按钮；点击重试后提示消失。随后将声音设置恢复为原来的“关”，并暂停页面；档案仍为1/1、最高分 `$356`，未产生新结算，暂停时战局为第5/8波、生命42、敌人18、现金$153。 |
 
 本轮只补齐音频失败可见性与恢复入口，不代表所有音效、循环、暂停/恢复及 60 关声音表现验收完成；Cow Gulch 首关仍为 0/60。
+
+## 55. P1-F Cow Gulch 同深度目标投射物遮挡
+
+网页此前按“敌人数组在前、投射物数组在后”稳定排序；当低层投射物与其目标敌人具有相同地面深度时，投射物会覆盖在敌人身上。APK 将所有对象放入同一个深度队列，且新对象在相同深度时插到已有对象之前；队列正向绘制，因此后创建的投射物先画，较早创建的目标敌人随后覆盖。
+
+REA/JADX 反编译分析中，`GameObject.addToObjectManager()` 先把对象加入全局对象表，再调用 `GameObjectManager.insertDrawOrder()`；后者按 `fineY + drawingOffsetY + fineZ × 100` 升序插入，只在旧深度严格小于新对象时越过旧条目，故相等值由新对象插在前方。`GameObjectShot.addToObjectManager()` 先调用父类插入，再记录到投射物列表；`GameObjectShot` 构造时绑定其目标敌人。依据为研究分支 `codex/gunsnglory-spec` 中反编译分析产物 `GameObject.java`、`GameObjectManager.java` 与 `GameObjectShot.java`；JADX/REA 输出不是原始 Java 源码。
+
+低层渲染队列现在只在投射物与其目标敌人同深度时，将该投射物排到目标前方；同一目标的多枚投射物按较新者先画。其它对象之间仍按现有稳定次序处理。本轮不引入跨帧历史队列，也不声称已闭合移动越过后保留的相对顺序。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 红灯用例 | 将现有低层投射物 fixture 的 `positionFine.y` 对齐目标敌人地面深度；旧实现 draw-call 次序为“敌人、投射物”，与 APK 插入/绘制规则相反，定向 Canvas 测试按预期失败。 |
+| 修复后 Canvas 行为 | 目标配对且同深度时 draw-call 次序为“投射物、敌人”；不等深度和不同目标对象沿用已有深度/稳定顺序逻辑。Canvas 测试文件 5 项全部通过。 |
+| 本地完整 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4393 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、158 项单元测试、Vite 生产构建及 53 项 Playwright 测试。 |
+| Codex 内置浏览器本地检查 | 打开 `http://localhost:5191/`，确认正式 Cow Gulch 入口、地图、战斗 HUD 和暂停/恢复控件显示正常；在第 1 波暂停，档案未结算。控制台 error/warn 为空。由于不推进整关，本轮浏览器截图作为页面烟测，不声称其中单帧呈现目标敌人与投射物精确同深度；该遮挡由上方 Canvas draw-call 断言验证。 |
+| 合并、部署与公网实测 | `b4d1176` 已快进合入并推送至 `master`。GitHub Actions [run 41022653505](https://github.com/wishflow/wishflow-tools/actions/runs/41022653505) 成功：Guns’n’Glory CI、共享检查、Cloudflare Pages 和 GitHub Pages 部署通过；Worker、Cloudflare 配置与宠物专用作业按变更范围跳过。Codex 内置浏览器打开[本次公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=b4d1176)，确认 Cow Gulch 地图、HUD、语言切换和 4× 速度控件加载；正式档案仍为 1/1、最高分 `$356`，音效仍为关。页面自动开始后立即暂停于 Wave 1/8、生命 50、敌人 11、现金 `$70`；未产生新结算，暂停状态可见，浏览器控制台 error/warn 为空。公网截图核对部署与主要画面，不声称截图中的动态帧能单独证明同深度遮挡；对应 draw-call 次序由 Canvas 行为断言验证。 |
+
+本轮闭合的是 Cow Gulch 低层渲染中“后创建目标投射物与其既存目标敌人恰好同深度”的遮挡关系。其它跨类型同深度组合、对象深度变化后的历史队列、完整首关 P1-F 验收仍未完成；Cow Gulch 首关保持 0/60。
