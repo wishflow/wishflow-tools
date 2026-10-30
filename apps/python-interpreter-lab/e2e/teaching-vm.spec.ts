@@ -8,6 +8,17 @@ async function chooseTeachingVm(page: import('@playwright/test').Page) {
   await expect(page.getByText('Ready to compile teaching program')).toBeVisible();
 }
 
+async function expandTeachingDetails(page: import('@playwright/test').Page, details: 'ast' | 'instructions' | 'both' = 'both') {
+  const selectors = details === 'both'
+    ? ['.teaching-ast-disclosure', '.teaching-instruction-disclosure']
+    : [details === 'ast' ? '.teaching-ast-disclosure' : '.teaching-instruction-disclosure'];
+  for (const selector of selectors) {
+    const disclosure = page.locator(selector);
+    await expect(disclosure).toBeVisible();
+    if (await disclosure.getAttribute('open') === null) await disclosure.locator('summary').click();
+  }
+}
+
 test('compiles teaching instructions, steps the value stack, prints, and browses history', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -16,6 +27,7 @@ test('compiles teaching instructions, steps the value stack, prints, and browses
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('x = 1 + 2 * 3\nprint(x)');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page);
   const instructions = page.locator('.teaching-instruction-table');
   await expect(instructions.locator('tbody tr')).toHaveCount(9);
   await expect(instructions).toContainText('BINARY_MULTIPLY');
@@ -77,6 +89,7 @@ test('renders subscript assignment with its target, index, and value expressions
   await chooseTeachingVm(page);
   await page.getByRole('textbox', { name: 'Python source' }).fill('items = [1]\nitems[0] = 9');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'ast');
 
   const assignment = page.locator('.teaching-ast-root > li').nth(1);
   await expect(assignment.locator(':scope > .teaching-ast-locate > .ast-type')).toHaveText('SubscriptAssign');
@@ -129,6 +142,7 @@ test('sets source-line and instruction breakpoints with keyboard controls and lo
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('# ignored comment\n\nx = 1\nprint(x)');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   const speed = page.getByRole('combobox', { name: 'Automatic run speed' });
   await speed.selectOption('slow');
 
@@ -182,6 +196,7 @@ test('sets source-line and instruction breakpoints with keyboard controls and lo
   await instructions.getByRole('button', { name: 'Set source breakpoint at line 4' }).click();
   await source.fill('# ignored comment\n\nx = 1\nprint(x)\n');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   const refreshedBreakpointList = page.getByRole('region', { name: 'Teaching breakpoints' });
   await expect(refreshedBreakpointList).toContainText('No breakpoints are set.');
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
@@ -318,6 +333,7 @@ test('shows localized teaching syntax and runtime errors with source locations',
 
   await source.fill('print(missing)');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('Name error');
   await expect(page.getByRole('alert')).toContainText('line 1, column 7');
@@ -325,6 +341,7 @@ test('shows localized teaching syntax and runtime errors with source locations',
 
   await source.fill('print("x" - 1)');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('Type error');
   await expect(page.locator('.teaching-instruction-table tr.is-vm-fault')).toContainText('BINARY_SUBTRACT');
@@ -346,6 +363,7 @@ test('runs short-circuit expressions, nested branches, and lazy range loops in t
     '  print(i)',
   ].join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   await expect(page.getByText('mini-vm-v5').first()).toBeVisible();
   const instructions = page.locator('.teaching-instruction-table');
   await expect(instructions).toContainText('JUMP_IF_FALSE_OR_POP');
@@ -368,6 +386,7 @@ test('transfers list references through the teaching Worker snapshot DTO', async
     'separate = [1, [2,]]',
   ].join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page);
   await expect(page.locator('.teaching-instruction-table')).toContainText('BUILD_LIST');
   await expect(page.locator('.teaching-ast-scroll')).toContainText('ListLiteral');
   await expect(page.locator('.teaching-ast-scroll')).toContainText('IntegerLiteral');
@@ -401,6 +420,7 @@ test('reads and mutates a list through aliases in the teaching Worker', async ({
     'print(a[0], b[-1])',
   ].join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page);
   await expect(page.locator('.teaching-instruction-table')).toContainText('STORE_SUBSCR');
   await expect(page.locator('.teaching-ast-scroll')).toContainText('Subscript');
   await page.getByRole('button', { name: 'Run teaching program' }).click();
@@ -433,6 +453,7 @@ test('compiles and runs dictionary literals and subscript updates in the teachin
     'print(mapping[True], mapping["nested"]["value"], mapping[None])',
   ].join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page);
   await expect(page.locator('.teaching-instruction-table')).toContainText('BUILD_MAP');
   await expect(page.locator('.teaching-ast-scroll')).toContainText('DictLiteral');
   await page.getByRole('button', { name: 'Run teaching program' }).click();
@@ -512,6 +533,7 @@ test('steps a zero-argument function through an observable frame stack in the Wo
     'print(result)',
   ].join('\n'));
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page);
 
   const instructions = page.locator('.teaching-instruction-table');
   await expect(instructions.locator('tbody tr')).toHaveCount(10);
@@ -536,7 +558,7 @@ test('steps a zero-argument function through an observable frame stack in the Wo
   await page.getByRole('button', { name: 'Step one instruction' }).click();
   await page.getByRole('button', { name: 'Step one instruction' }).click();
   await expect(frames.locator(':scope > li')).toHaveCount(1);
-  await expect(frames).toContainText('42');
+  await expect(page.locator('.teaching-active-frame .teaching-value-list')).toContainText('42');
   await page.getByRole('button', { name: 'Continue teaching program' }).click();
   await expect(page.getByText('Teaching program finished').first()).toBeVisible();
   await expect(page.locator('.teaching-output')).toHaveText('42');
@@ -578,6 +600,7 @@ test('replays recursive positional calls and locates argument-count errors in th
 
   await source.fill('def one(value):\n  return value\nprint(one())');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('Function argument count');
   await expect(frames.locator(':scope > li')).toHaveCount(1);
@@ -586,6 +609,7 @@ test('replays recursive positional calls and locates argument-count errors in th
 
 test('compares the function subset with Pyodide CPython output and error categories', async ({ page }) => {
   await page.goto(appPath);
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('cpython');
   const source = page.getByRole('textbox', { name: 'Python source' });
   const sample = [
     'def add(left, right):',
@@ -622,6 +646,7 @@ test('compares the function subset with Pyodide CPython output and error categor
 
 test('matches CPython repr and structural equality for supported cyclic containers', async ({ page }) => {
   await page.goto(appPath);
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('cpython');
   const source = page.getByRole('textbox', { name: 'Python source' });
   const nonPrintable = String.fromCodePoint(0x85, 0x2028, 0x200b, 0xa0);
   await source.fill([
@@ -671,6 +696,7 @@ test('renders operands for comparison and logical expressions in the teaching AS
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('if 1 < 2 and not False:\n  print("selected")');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'ast');
 
   const ast = page.locator('.teaching-ast-scroll');
   await expect(ast).toContainText('Compare');
@@ -688,6 +714,7 @@ test('shows the dynamic instruction budget in the browser for an infinite while 
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('while True:\n  x = 1');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   await page.getByRole('combobox', { name: 'Automatic run speed' }).selectOption('fast');
   await page.getByRole('button', { name: 'Run teaching program' }).click();
   await expect(page.getByRole('alert')).toContainText('5,000-instruction execution limit', { timeout: 30_000 });
@@ -697,6 +724,7 @@ test('shows the dynamic instruction budget in the browser for an infinite while 
 
 test('matches the P6 common subset with real CPython output and range-step error category', async ({ page }) => {
   await page.goto(appPath);
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('cpython');
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill([
@@ -745,6 +773,7 @@ test('pauses and resets a long teaching run and invalidates stale mode/source st
   await source.fill('x = 42');
   await expect(page.getByText('Compile source to create a teaching program.')).toBeVisible();
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await expandTeachingDetails(page, 'instructions');
   await expect(page.locator('.teaching-instruction-table')).toContainText('STORE_NAME');
   await page.getByRole('combobox', { name: 'Execution view' }).selectOption('cpython');
   await page.getByRole('combobox', { name: 'Execution view' }).selectOption('teaching');

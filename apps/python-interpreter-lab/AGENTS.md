@@ -11,6 +11,7 @@
 | 判断阶段范围、启动条件、验收与发布状态 | [整体实施计划](docs/implementation-plan.md) |
 | 修改教学列表/字典语义、对象图或容器资源预算 | [P8 规格](docs/specs/p08-mutable-containers.md) 和 [P8 tasks](docs/tasks/p08-mutable-containers.md) |
 | 修改教学 VM 断点、步进、暂停/继续或运行速度 | [P9 规格](docs/specs/p09-teaching-debugger.md) 和 [P9 tasks](docs/tasks/p09-teaching-debugger.md) |
+| 修改默认执行视图、教学运行现场或编译材料展示 | [V1 规格](docs/specs/v01-static-execution-workbench.md) 和 [V1 tasks](docs/tasks/v01-static-execution-workbench.md) |
 | 实现一个阶段 | 先核对计划，再完成该阶段的 spec 和 tasks；实现仅按已确认的规格进行 |
 
 ## 产品与前端边界

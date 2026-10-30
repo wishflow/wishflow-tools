@@ -2,8 +2,13 @@ import { expect, test } from '@playwright/test';
 
 const appPath = '/python-interpreter-lab/';
 
-test('runs source in CPython and records real call, line, and return events', async ({ page }) => {
+async function chooseCpython(page: import('@playwright/test').Page) {
   await page.goto(appPath);
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('cpython');
+}
+
+test('runs source in CPython and records real call, line, and return events', async ({ page }) => {
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
 
   const source = page.getByRole('textbox', { name: 'Python source' });
@@ -48,7 +53,7 @@ test('runs source in CPython and records real call, line, and return events', as
 });
 
 test('keeps caught exceptions in the trace and reports uncaught exceptions with prior output', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   const runButton = page.getByRole('button', { name: 'Run Python' });
@@ -82,7 +87,7 @@ test('keeps caught exceptions in the trace and reports uncaught exceptions with 
 });
 
 test('stops a running loop, keeps partial events, and runs fresh source after retry', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('i = 0\nwhile True:\n    i += 1');
@@ -104,7 +109,7 @@ test('stops a running loop, keeps partial events, and runs fresh source after re
 });
 
 test('enforces execution time, trace event, and output limits', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   const runButton = page.getByRole('button', { name: 'Run Python' });
@@ -136,7 +141,7 @@ test('enforces execution time, trace event, and output limits', async ({ page })
 });
 
 test('does not execute a metaclass __name__ property while snapshotting a value', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   await page.getByRole('textbox', { name: 'Python source' }).fill([
     'class Trap(type):',
@@ -155,7 +160,7 @@ test('does not execute a metaclass __name__ property while snapshotting a value'
 });
 
 test('summarizes large values without calling user repr methods or breaking trace capture', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   const longTypeName = `LongType${'T'.repeat(120)}`;
@@ -203,7 +208,7 @@ test('summarizes large values without calling user repr methods or breaking trac
 });
 
 test('records immutable structured global and frame snapshots for each CPython event', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill([
@@ -252,7 +257,7 @@ test('records immutable structured global and frame snapshots for each CPython e
 });
 
 test('keeps recursive CPython frames distinct while their trace segments are active', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill([
@@ -297,7 +302,7 @@ test('keeps recursive CPython frames distinct while their trace segments are act
 });
 
 test('bounds scalar snapshots and avoids user object methods while representing cycles', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill([
@@ -345,7 +350,7 @@ test('bounds scalar snapshots and avoids user object methods while representing 
 });
 
 test('shows adjacent changes with event timing and variables removed from returned frames', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill([
@@ -389,7 +394,7 @@ test('shows adjacent changes with event timing and variables removed from return
 });
 
 test('keeps aliases unchanged and distinguishes long variable names with the same display label', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const namePrefix = `value_${'x'.repeat(100)}`;
   const changedName = `${namePrefix}a`;
@@ -434,7 +439,7 @@ test('keeps aliases unchanged and distinguishes long variable names with the sam
 });
 
 test('keeps snapshots within per-event and per-run node budgets while recording trace events', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   const row = '[0, 1, 2, 3, 4, 5, 6, 7]';
@@ -467,7 +472,7 @@ test('keeps snapshots within per-event and per-run node budgets while recording 
 });
 
 test('records repeated CPython line events for a loop without rerunning output during playback', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('for i in range(3):\n    print(i)');
@@ -491,7 +496,7 @@ test('records repeated CPython line events for a loop without rerunning output d
 });
 
 test('editing source during execution removes old events before the new run', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('i = 0\nwhile True:\n    i += 1');

@@ -2,11 +2,16 @@ import { expect, test } from '@playwright/test';
 
 const appPath = '/python-interpreter-lab/';
 
+async function chooseCpython(page: import('@playwright/test').Page) {
+  await page.goto(appPath);
+  await page.getByRole('combobox', { name: 'Execution view' }).selectOption('cpython');
+}
+
 test('compiles source with real CPython and displays nested code object bytecode', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByRole('heading', { name: 'Python Interpreter Lab' })).toBeVisible();
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
 
@@ -36,7 +41,7 @@ test('compiles source with real CPython and displays nested code object bytecode
 });
 
 test('assigns a unique identity to every CPython AST node', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   await page.getByRole('textbox', { name: 'Python source' }).fill('answer = 1 + (2 * 3)');
   await page.getByRole('button', { name: 'Analyze source' }).click();
@@ -47,7 +52,7 @@ test('assigns a unique identity to every CPython AST node', async ({ page }) => 
 });
 
 test('shows real tokens and links Unicode source, AST, and bytecode ranges', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('变量 = "🐍"\nleft = 1\nright = 2\nanswer = left + right\n# note\ndef add(a, b):\n    return a + b\n');
@@ -129,7 +134,7 @@ test('shows real tokens and links Unicode source, AST, and bytecode ranges', asy
 });
 
 test('maps tokenizer ranges after the textarea normalizes CRLF line endings', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
   await source.fill('first = 1\r\n值 = first + 2');
@@ -153,7 +158,7 @@ test('maps tokenizer ranges after the textarea normalizes CRLF line endings', as
 });
 
 test('caps token text and token count while keeping analysis available', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
 
@@ -170,7 +175,7 @@ test('caps token text and token count while keeping analysis available', async (
 });
 
 test('clears stale results after a syntax error and accepts corrected source', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
 
@@ -206,7 +211,7 @@ test('clears stale results after a syntax error and accepts corrected source', a
 });
 
 test('cancels runtime loading and can start a fresh worker', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await page.getByRole('button', { name: 'Cancel' }).click();
   await expect(page.getByText('Runtime stopped')).toBeVisible();
   await page.getByRole('button', { name: 'Retry runtime' }).click();
@@ -214,7 +219,7 @@ test('cancels runtime loading and can start a fresh worker', async ({ page }) =>
 });
 
 test('marks AST and code-object output that reaches its safety limit', async ({ page }) => {
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
   const source = page.getByRole('textbox', { name: 'Python source' });
 
@@ -229,7 +234,7 @@ test('marks AST and code-object output that reaches its safety limit', async ({ 
 
 test('reports a runtime download failure and succeeds after retry', async ({ page }) => {
   await page.route('https://cdn.jsdelivr.net/pyodide/**', (route) => route.abort());
-  await page.goto(appPath);
+  await chooseCpython(page);
   await expect(page.getByText('Runtime unavailable')).toBeVisible();
   await expect(page.getByRole('alert')).toContainText('Python runtime error');
 
