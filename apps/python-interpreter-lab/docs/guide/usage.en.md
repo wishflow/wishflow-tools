@@ -66,7 +66,33 @@ The complete output is `[9]`, `9`, `[9]`, and `[2]`, on separate lines.
 - On return, the function frame exits, and the returned value `9` is then bound to `result`.
 - After `b = [2]`, `b` refers to a new object while `a` still refers to the original one.
 
-Use **Play explanation** to inspect the first three object actions: `b = a` keeps the same object ID, `b[0] = 9` highlights an entry on that object, and `b = [2]` shows a new object before rebinding. Calls also show the caller's arguments moving into a new frame's parameters; returns show the function frame leaving and the actual value reaching the caller's stack before a later `STORE_NAME` binds it. Recursive calls retain distinct frame IDs. Each source step animates at most 12 recognized transitions; when the limit applies, call/return boundaries are kept ahead of ordinary data transitions where possible, and omitted records are reported with the confirmed final state. Control flow remains a static snapshot. Reduced motion keeps the same action text and final state.
+Use **Play explanation** to inspect the first three object actions: `b = a` keeps the same object ID, `b[0] = 9` highlights an entry on that object, and `b = [2]` shows a new object before rebinding. Calls also show the caller's arguments moving into a new frame's parameters; returns show the function frame leaving and the actual value reaching the caller's stack before a later `STORE_NAME` binds it. Recursive calls retain distinct frame IDs. Control-flow and failure transitions also come from adjacent recorded snapshots. Each source step animates at most 12 recognized transitions; when the limit applies, call/return, branch/jump, short-circuit, iteration, and failure boundaries are kept ahead of ordinary data transitions, with omitted records reported alongside the confirmed final state. Reduced motion keeps the same action text and final state.
+
+### Branches, loops, short-circuiting, and runtime errors
+
+Compile the example below in the Teaching VM and choose **Play explanation** to inspect condition results, loop back-edges, short-circuiting, and `range` iteration. Branch messages show Python truthiness and the actual next instruction. Every `while` condition check appears again, and each `for` event shows the value actually yielded; the loop variable is bound by a later instruction.
+
+```python
+value = 0
+if value:
+    value = 1
+else:
+    value = 2
+
+while value < 3:
+    value = value + 1
+
+logical_and = 0 and missing
+logical_right = 1 and 5
+logical_or = value or missing
+
+for item in range(1):
+    value = item
+```
+
+The first two lines show `and` short-circuiting the right side and continuing into it. The third shows `or` keeping its left operand and skipping `missing`. Change it to `logical_or = 0 or 5` to see `or` continue into the right side. A source breakpoint on the `for` header is hit again at the next loop check after the body.
+
+When an instruction fails, the explanation shows the Worker diagnostic and the operands from before the failure. It says no state was committed only when adjacent snapshots confirm that the failed instruction changed no variables, objects, or output. For example, after `items = [1]`, `items[2] = 9` stops at the failed subscript write without showing a successful mutation. If the 5,000-instruction budget is exhausted, the explanation says that the next instruction was not executed. After an error, reset the Teaching VM before running again.
 
 ## Control execution
 

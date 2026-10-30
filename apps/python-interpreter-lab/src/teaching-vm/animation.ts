@@ -7,9 +7,27 @@ import type {
   TeachingValueSnapshot,
   TeachingVmSnapshot,
 } from './types';
+import { MAX_DYNAMIC_INSTRUCTION_COUNT } from './resource-limits';
 import { sameSnapshotValue } from './observation';
 
 export const MAX_TEACHING_ANIMATION_TRANSITIONS = 12;
+
+const EXPLAINABLE_RUNTIME_ERROR_CODES = new Set([
+  'name-error',
+  'unbound-local-error',
+  'function-value-unsupported',
+  'type-error',
+  'index-out-of-range',
+  'key-not-found',
+  'zero-range-step',
+  'integer-too-large',
+  'string-too-long',
+  'container-size-limit-exceeded',
+  'heap-entry-limit-exceeded',
+  'heap-object-limit-exceeded',
+  'output-too-long',
+  'too-many-names',
+]);
 
 export type TeachingAnimationKind =
   | 'push'
@@ -17,9 +35,24 @@ export type TeachingAnimationKind =
   | 'bind-name'
   | 'object-created'
   | 'mutate-object'
+  | 'branch'
+  | 'jump'
+  | 'short-circuit'
+  | 'iteration'
+  | 'runtime-error'
+  | 'budget-exhausted'
   | 'call-enter'
   | 'call-return'
   | 'call-rejected';
+
+export type TeachingAnimationControlFlowOutcome =
+  | 'branch-skipped'
+  | 'branch-taken'
+  | 'jumped'
+  | 'short-circuited'
+  | 'evaluated-right'
+  | 'loop-finished'
+  | 'next-value';
 
 export interface TeachingAnimationCallBinding {
   name: string;
@@ -44,6 +77,9 @@ export interface TeachingAnimationTransition {
   objectType: 'list' | 'dict' | null;
   itemIndex: number | null;
   itemKey: TeachingValueSnapshot | null;
+  controlFlowOutcome: TeachingAnimationControlFlowOutcome | null;
+  nextInstructionIndex: number | null;
+  nextInstructionSpan: SourceSpan | null;
   callerFrameId: number | null;
   calleeFrameId: number | null;
   functionName: string | null;
@@ -75,6 +111,19 @@ export function deriveTeachingAnimationTransitions(
     }
 
     const executedDelta = after.executedInstructionCount - previous.executedInstructionCount;
+    if (executedDelta === 0 && after.status === 'error' && after.diagnostic?.code === 'instruction-budget-exceeded') {
+      const instruction = after.faultInstructionIndex === null ? undefined : program.instructions[after.faultInstructionIndex];
+      if (!instruction) {
+        return Object.freeze({ baselineAvailable: false, transitions: Object.freeze([]), omittedCount: 0 });
+      }
+      const transition = deriveBudgetExhaustion(program, instruction, previous, after);
+      if (transition === undefined) {
+        return Object.freeze({ baselineAvailable: false, transitions: Object.freeze([]), omittedCount: 0 });
+      }
+      if (transition) transitions.push(transition);
+      previous = after;
+      break;
+    }
     if (executedDelta === 0 && (after.status === 'error' || after.pauseReason === 'breakpoint')) {
       previous = after;
       break;
@@ -114,14 +163,16 @@ function limitTeachingAnimationTransitions(
 ): TeachingAnimationTransition[] {
   if (transitions.length <= MAX_TEACHING_ANIMATION_TRANSITIONS) return [...transitions];
 
-  const frameTransitions = transitions.filter(({ kind }) => kind.startsWith('call-'));
-  const selectedFrameTransitions = frameTransitions.length <= MAX_TEACHING_ANIMATION_TRANSITIONS
-    ? frameTransitions
+  const boundaryTransitions = transitions.filter(({ kind }) => kind.startsWith('call-')
+    || kind === 'branch' || kind === 'jump' || kind === 'short-circuit' || kind === 'iteration'
+    || kind === 'runtime-error' || kind === 'budget-exhausted');
+  const selectedBoundaries = boundaryTransitions.length <= MAX_TEACHING_ANIMATION_TRANSITIONS
+    ? boundaryTransitions
     : [
-      ...frameTransitions.slice(0, Math.ceil(MAX_TEACHING_ANIMATION_TRANSITIONS / 2)),
-      ...frameTransitions.slice(-Math.floor(MAX_TEACHING_ANIMATION_TRANSITIONS / 2)),
+      ...boundaryTransitions.slice(0, Math.ceil(MAX_TEACHING_ANIMATION_TRANSITIONS / 2)),
+      ...boundaryTransitions.slice(-Math.floor(MAX_TEACHING_ANIMATION_TRANSITIONS / 2)),
     ];
-  const selected = new Set(selectedFrameTransitions);
+  const selected = new Set(selectedBoundaries);
   for (const transition of transitions) {
     if (selected.size >= MAX_TEACHING_ANIMATION_TRANSITIONS) break;
     selected.add(transition);
@@ -151,6 +202,14 @@ function deriveTransition(
       : deriveCallReturn(instruction, before, after);
   }
 
+  if (instruction.opcode === 'POP_JUMP_IF_FALSE') return deriveBranch(program, instruction, before, after);
+  if (instruction.opcode === 'JUMP') return deriveJump(program, instruction, before, after);
+  if (instruction.opcode === 'JUMP_IF_FALSE_OR_POP' || instruction.opcode === 'JUMP_IF_TRUE_OR_POP') {
+    return deriveShortCircuit(program, instruction, before, after);
+  }
+  if (instruction.opcode === 'FOR_ITER') return deriveIteration(program, instruction, before, after);
+  if (after.status === 'error') return deriveRuntimeFailure(instruction, before, after);
+
   const beforeFrame = before.frames.at(-1);
   const afterFrame = after.frames.at(-1);
   if (!beforeFrame || !afterFrame) return undefined;
@@ -170,6 +229,9 @@ function deriveTransition(
     objectType: null,
     itemIndex: null,
     itemKey: null,
+    controlFlowOutcome: null,
+    nextInstructionIndex: null,
+    nextInstructionSpan: null,
     callerFrameId: null,
     calleeFrameId: null,
     functionName: null,
@@ -252,6 +314,453 @@ function deriveTransition(
   }
 
   return null;
+}
+
+function deriveBranch(
+  program: TeachingCompileResult,
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+): TeachingAnimationTransition | undefined | null {
+  if (after.status === 'error') return null;
+  const beforeFrame = before.frames.at(-1);
+  const condition = beforeFrame?.stack.at(-1);
+  const outcome = after.controlFlow?.kind === 'branch' ? after.controlFlow.outcome : null;
+  if (!beforeFrame || !condition || (outcome !== 'branch-skipped' && outcome !== 'branch-taken')) return undefined;
+
+  const target = outcome === 'branch-skipped'
+    ? getInstructionTarget(program, instruction.argument)
+    : instruction.index + 1;
+  const next = getControlFlowNextIndex(program, instruction, before, after, 'branch', target);
+  if (next === undefined || !sameSnapshotValues(
+    beforeFrame.stack.slice(0, -1),
+    after.frames.at(-1)?.stack ?? [],
+  ) || !hasStableControlFlowState(before, after)) return undefined;
+
+  return createControlFlowTransition(instruction, before, after, beforeFrame.id, {
+    kind: 'branch',
+    outcome,
+    nextInstructionIndex: next,
+    operands: [condition],
+    value: condition,
+  }, program);
+}
+
+function deriveJump(
+  program: TeachingCompileResult,
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+): TeachingAnimationTransition | undefined | null {
+  if (after.status === 'error') return null;
+  const beforeFrame = before.frames.at(-1);
+  const target = getInstructionTarget(program, instruction.argument);
+  const next = getControlFlowNextIndex(program, instruction, before, after, null, target);
+  if (!beforeFrame || next === undefined
+    || !sameSnapshotValues(beforeFrame.stack, after.frames.at(-1)?.stack ?? [])
+    || !hasStableControlFlowState(before, after)) return undefined;
+
+  return createControlFlowTransition(instruction, before, after, beforeFrame.id, {
+    kind: 'jump',
+    outcome: 'jumped',
+    nextInstructionIndex: next,
+    operands: [],
+    value: null,
+  }, program);
+}
+
+function deriveShortCircuit(
+  program: TeachingCompileResult,
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+): TeachingAnimationTransition | undefined | null {
+  if (after.status === 'error') return null;
+  const beforeFrame = before.frames.at(-1);
+  const beforeStack = beforeFrame?.stack;
+  const left = beforeStack?.at(-1);
+  const outcome = after.controlFlow?.kind === 'shortCircuit' ? after.controlFlow.outcome : null;
+  if (!beforeFrame || !beforeStack || !left || (outcome !== 'short-circuited' && outcome !== 'evaluated-right')) return undefined;
+
+  const target = outcome === 'short-circuited'
+    ? getInstructionTarget(program, instruction.argument)
+    : instruction.index + 1;
+  const next = getControlFlowNextIndex(program, instruction, before, after, 'shortCircuit', target);
+  const expectedStack = outcome === 'short-circuited' ? beforeStack : beforeStack.slice(0, -1);
+  if (next === undefined || !sameSnapshotValues(expectedStack, after.frames.at(-1)?.stack ?? [])
+    || !hasStableControlFlowState(before, after)) return undefined;
+
+  return createControlFlowTransition(instruction, before, after, beforeFrame.id, {
+    kind: 'short-circuit',
+    outcome,
+    nextInstructionIndex: next,
+    operands: [left],
+    value: outcome === 'short-circuited' ? left : null,
+  }, program);
+}
+
+function deriveIteration(
+  program: TeachingCompileResult,
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+): TeachingAnimationTransition | undefined | null {
+  if (after.status === 'error') return null;
+  const beforeFrame = before.frames.at(-1);
+  const beforeStack = beforeFrame?.stack;
+  const iterator = beforeStack?.at(-1);
+  const outcome = after.controlFlow?.kind === 'iteration' ? after.controlFlow.outcome : null;
+  if (!beforeFrame || !beforeStack || iterator?.type !== 'iterator'
+    || (outcome !== 'loop-finished' && outcome !== 'next-value')) return undefined;
+
+  const target = outcome === 'loop-finished'
+    ? getInstructionTarget(program, instruction.argument)
+    : instruction.index + 1;
+  const next = getControlFlowNextIndex(program, instruction, before, after, 'iteration', target);
+  const afterStack = after.frames.at(-1)?.stack ?? [];
+  const iterationValue = outcome === 'next-value' ? afterStack.at(-1) : undefined;
+  const iteratorState = parseIteratorSnapshot(iterator);
+  const stackMatches = outcome === 'loop-finished'
+    ? sameSnapshotValues(beforeStack.slice(0, -1), afterStack)
+      && iteratorState !== null
+      && (iteratorState.exhausted || !rangeContains(iteratorState.range, iteratorState.current))
+    : afterStack.length === beforeStack.length + 1
+      && sameSnapshotValues(beforeStack.slice(0, -1), afterStack.slice(0, -2))
+      && iteratorState !== null
+      && !iteratorState.exhausted
+      && rangeContains(iteratorState.range, iteratorState.current)
+      && isExpectedIterationValue(iterationValue, iteratorState.current)
+      && hasExpectedNextIterator(iteratorState, afterStack.at(-2));
+  if (next === undefined || !stackMatches || !hasStableControlFlowState(before, after)) return undefined;
+
+  return createControlFlowTransition(instruction, before, after, beforeFrame.id, {
+    kind: 'iteration',
+    outcome,
+    nextInstructionIndex: next,
+    operands: [iterator],
+    value: iterationValue ?? null,
+  }, program);
+}
+
+interface IteratorRangeSnapshot {
+  start: bigint;
+  stop: bigint;
+  step: bigint;
+  argumentCount: number;
+}
+
+interface IteratorSnapshot {
+  range: IteratorRangeSnapshot;
+  current: bigint;
+  exhausted: false;
+}
+
+interface ExhaustedIteratorSnapshot {
+  range: IteratorRangeSnapshot;
+  current: null;
+  exhausted: true;
+}
+
+function parseIteratorSnapshot(value: TeachingValueSnapshot): IteratorSnapshot | ExhaustedIteratorSnapshot | null {
+  if (value.type !== 'iterator' || value.value !== value.display) return null;
+  const match = /^iterator\(range\((-?\d+(?:, -?\d+){0,2})\), (?:next=(-?\d+)|(exhausted))\)$/.exec(value.value);
+  const rangeText = match?.[1];
+  if (!match || !rangeText) return null;
+  const argumentsText = rangeText.split(', ');
+  const numbers = argumentsText.map(BigInt);
+  if (argumentsText.length < 1 || argumentsText.length > 3
+    || numbers.some((number, index) => number.toString() !== argumentsText[index])) return null;
+  const [start, stop, step] = argumentsText.length === 1
+    ? [0n, numbers[0]!, 1n]
+    : argumentsText.length === 2
+      ? [numbers[0]!, numbers[1]!, 1n]
+      : [numbers[0]!, numbers[1]!, numbers[2]!];
+  if (step === 0n) return null;
+
+  const range = Object.freeze({ start, stop, step, argumentCount: argumentsText.length });
+  if (match[2] !== undefined) {
+    const current = BigInt(match[2]);
+    if (current.toString() !== match[2]) return null;
+    return Object.freeze({ range, current, exhausted: false });
+  }
+  return match[3] === 'exhausted' ? Object.freeze({ range, current: null, exhausted: true }) : null;
+}
+
+function rangeContains(range: IteratorRangeSnapshot, value: bigint): boolean {
+  return range.step > 0n ? value < range.stop : value > range.stop;
+}
+
+function isExpectedIterationValue(value: TeachingValueSnapshot | undefined, expected: bigint): boolean {
+  if (value?.type !== 'int' || value.value !== value.display) return false;
+  try {
+    return BigInt(value.value).toString() === value.value && BigInt(value.value) === expected;
+  } catch {
+    return false;
+  }
+}
+
+function hasExpectedNextIterator(
+  before: IteratorSnapshot,
+  afterValue: TeachingValueSnapshot | undefined,
+): boolean {
+  const after = afterValue ? parseIteratorSnapshot(afterValue) : null;
+  if (!after || after.range.start !== before.range.start || after.range.stop !== before.range.stop
+    || after.range.step !== before.range.step || after.range.argumentCount !== before.range.argumentCount) return false;
+
+  const next = before.current + before.range.step;
+  const expectedExhausted = !rangeContains(before.range, next);
+  return after.exhausted === expectedExhausted
+    && (expectedExhausted || after.current === next);
+}
+
+function createControlFlowTransition(
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+  frameId: number,
+  fields: {
+    kind: 'branch' | 'jump' | 'short-circuit' | 'iteration';
+    outcome: TeachingAnimationControlFlowOutcome;
+    nextInstructionIndex: number;
+    operands: readonly TeachingValueSnapshot[];
+    value: TeachingValueSnapshot | null;
+  },
+  program: TeachingCompileResult,
+): TeachingAnimationTransition {
+  return Object.freeze({
+    ...animationTransitionBase(instruction, before, after, frameId),
+    kind: fields.kind,
+    operands: Object.freeze([...fields.operands]),
+    value: fields.value,
+    sourceName: null,
+    bindingName: null,
+    objectId: null,
+    objectType: null,
+    itemIndex: null,
+    itemKey: null,
+    controlFlowOutcome: fields.outcome,
+    nextInstructionIndex: fields.nextInstructionIndex,
+    nextInstructionSpan: instructionSpanAt(program, fields.nextInstructionIndex),
+    callerFrameId: null,
+    calleeFrameId: null,
+    functionName: null,
+    callSite: null,
+    returnPc: null,
+    callBindings: Object.freeze([]),
+    returnValue: null,
+    diagnostic: null,
+  });
+}
+
+function deriveRuntimeFailure(
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+): TeachingAnimationTransition | null {
+  const diagnostic = after.diagnostic;
+  const beforeFrame = before.frames.at(-1);
+  const afterFrame = after.frames.at(-1);
+  if (after.status !== 'error' || !diagnostic || diagnostic.stage !== 'runtime'
+    || !EXPLAINABLE_RUNTIME_ERROR_CODES.has(diagnostic.code)
+    || !beforeFrame || !afterFrame
+    || after.faultInstructionIndex !== instruction.index
+    || after.executedInstructionCount !== before.executedInstructionCount + 1
+    || before.pc !== instruction.index || before.nextInstructionIndex !== instruction.index
+    || beforeFrame.pc !== instruction.index
+    || after.pc !== instruction.index || after.nextInstructionIndex !== instruction.index
+    || afterFrame.pc !== instruction.index
+    || !sameSourceSpan(diagnostic.span, instruction.span)
+    || !sameFrameIds(before.frames, after.frames)
+    || !sameSnapshotValues(beforeFrame.stack, afterFrame.stack)
+    || !hasStableControlFlowState(before, after)) return null;
+
+  const operandCount = getFailureOperandCount(instruction);
+  if (operandCount === null || operandCount > beforeFrame.stack.length) return null;
+  return createFailureTransition(instruction, before, after, beforeFrame.id, 'runtime-error',
+    beforeFrame.stack.slice(beforeFrame.stack.length - operandCount));
+}
+
+function deriveBudgetExhaustion(
+  program: TeachingCompileResult,
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+): TeachingAnimationTransition | undefined | null {
+  const diagnostic = after.diagnostic;
+  const beforeFrame = before.frames.at(-1);
+  const afterFrame = after.frames.at(-1);
+  if (after.status !== 'error' || !diagnostic || diagnostic.stage !== 'runtime'
+    || diagnostic.code !== 'instruction-budget-exceeded'
+    || after.faultInstructionIndex !== instruction.index
+    || before.executedInstructionCount !== MAX_DYNAMIC_INSTRUCTION_COUNT
+    || after.executedInstructionCount !== before.executedInstructionCount
+    || before.nextInstructionIndex !== instruction.index
+    || before.pc !== instruction.index
+    || !beforeFrame || !afterFrame || beforeFrame.pc !== instruction.index
+    || afterFrame.pc !== instruction.index || after.pc !== instruction.index
+    || after.nextInstructionIndex !== instruction.index
+    || !sameSourceSpan(diagnostic.span, instruction.span)
+    || !sameFrameIds(before.frames, after.frames)
+    || !sameSnapshotValues(beforeFrame.stack, afterFrame.stack)
+    || !hasStableControlFlowState(before, after)) return undefined;
+
+  return createFailureTransition(instruction, before, after, beforeFrame.id, 'budget-exhausted', [], instruction.index,
+    instructionSpanAt(program, instruction.index));
+}
+
+function getFailureOperandCount(instruction: TeachingInstruction): number | null {
+  if (instruction.opcode === 'LOAD_NAME') return 0;
+  if (instruction.opcode === 'STORE_NAME' || instruction.opcode === 'UNARY_NEGATIVE' || instruction.opcode === 'UNARY_NOT'
+    || instruction.opcode === 'GET_ITER') return 1;
+  if (instruction.opcode === 'BINARY_ADD' || instruction.opcode === 'BINARY_SUBTRACT'
+    || instruction.opcode === 'BINARY_MULTIPLY' || instruction.opcode === 'COMPARE_OP'
+    || instruction.opcode === 'BINARY_SUBSCR') return 2;
+  if (instruction.opcode === 'STORE_SUBSCR') return 3;
+  if (instruction.opcode === 'BUILD_LIST' || instruction.opcode === 'BUILD_MAP'
+    || instruction.opcode === 'BUILD_RANGE' || instruction.opcode === 'PRINT') {
+    if (typeof instruction.argument !== 'number' || !Number.isInteger(instruction.argument) || instruction.argument < 0) return null;
+    return instruction.opcode === 'BUILD_MAP' ? instruction.argument * 2 : instruction.argument;
+  }
+  return null;
+}
+
+function createFailureTransition(
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+  frameId: number,
+  kind: 'runtime-error' | 'budget-exhausted',
+  operands: readonly TeachingValueSnapshot[],
+  nextInstructionIndex: number | null = null,
+  nextInstructionSpan: SourceSpan | null = null,
+): TeachingAnimationTransition {
+  return Object.freeze({
+    ...animationTransitionBase(instruction, before, after, frameId),
+    kind,
+    operands: Object.freeze([...operands]),
+    value: null,
+    sourceName: null,
+    bindingName: null,
+    objectId: null,
+    objectType: null,
+    itemIndex: null,
+    itemKey: null,
+    controlFlowOutcome: null,
+    nextInstructionIndex,
+    nextInstructionSpan,
+    callerFrameId: null,
+    calleeFrameId: null,
+    functionName: null,
+    callSite: null,
+    returnPc: null,
+    callBindings: Object.freeze([]),
+    returnValue: null,
+    diagnostic: after.diagnostic,
+  });
+}
+
+function getControlFlowNextIndex(
+  program: TeachingCompileResult,
+  instruction: TeachingInstruction,
+  before: TeachingVmSnapshot,
+  after: TeachingVmSnapshot,
+  expectedKind: 'branch' | 'shortCircuit' | 'iteration' | null,
+  expectedTarget: number | undefined,
+): number | undefined {
+  const beforeFrame = before.frames.at(-1);
+  const afterFrame = after.frames.at(-1);
+  if (!beforeFrame || !afterFrame || expectedTarget === undefined
+    || expectedTarget < 0 || expectedTarget >= program.instructions.length
+    || before.pc !== instruction.index
+    || before.nextInstructionIndex !== instruction.index
+    || beforeFrame.pc !== instruction.index
+    || !sameFrameIds(before.frames, after.frames)
+    || afterFrame.id !== beforeFrame.id
+    || !sameSnapshotValues(before.stack, beforeFrame.stack)
+    || !sameSnapshotVariables(before.variables, beforeFrame.variables)
+    || !sameSnapshotValues(after.stack, afterFrame.stack)
+    || !sameSnapshotVariables(after.variables, afterFrame.variables)
+    || afterFrame.pc !== expectedTarget
+    || after.pc !== expectedTarget
+    || after.nextInstructionIndex !== expectedTarget
+    || (expectedKind !== null && after.controlFlow?.kind !== expectedKind)
+    || (expectedKind !== null && after.controlFlow?.nextInstructionIndex !== expectedTarget)) return undefined;
+  return expectedTarget;
+}
+
+function getInstructionTarget(program: TeachingCompileResult, argument: number | string | null): number | undefined {
+  return typeof argument === 'number' && Number.isInteger(argument)
+    && argument >= 0 && argument < program.instructions.length
+    ? argument
+    : undefined;
+}
+
+function instructionSpanAt(program: TeachingCompileResult, index: number): SourceSpan | null {
+  const instruction = program.instructions[index];
+  return !instruction || instruction.opcode === 'HALT' ? null : Object.freeze({ ...instruction.span });
+}
+
+function hasStableControlFlowState(before: TeachingVmSnapshot, after: TeachingVmSnapshot): boolean {
+  const beforeActive = before.frames.at(-1);
+  const afterActive = after.frames.at(-1);
+  if (!beforeActive || !afterActive || !sameSnapshotVariables(before.variables, after.variables)
+    || !sameSnapshotVariables(beforeActive.variables, afterActive.variables)
+    || !sameSnapshotNames(beforeActive.unboundLocalNames, afterActive.unboundLocalNames)
+    || !sameFrameMetadata(beforeActive, afterActive)
+    || !sameHeap(before.heap, after.heap)
+    || !sameSnapshotNames(before.output, after.output)) return false;
+
+  return before.frames.slice(0, -1).every((frame, index) => {
+    const afterFrame = after.frames[index];
+    return afterFrame !== undefined
+      && sameFrameMetadata(frame, afterFrame)
+      && afterFrame.pc === frame.pc
+      && sameSnapshotValues(afterFrame.stack, frame.stack)
+      && sameSnapshotVariables(afterFrame.variables, frame.variables)
+      && sameSnapshotNames(afterFrame.unboundLocalNames, frame.unboundLocalNames);
+  });
+}
+
+function sameFrameMetadata(left: TeachingVmSnapshot['frames'][number], right: TeachingVmSnapshot['frames'][number]): boolean {
+  return left.id === right.id
+    && left.kind === right.kind
+    && left.functionName === right.functionName
+    && left.returnPc === right.returnPc
+    && ((left.callSite === null && right.callSite === null)
+      || (left.callSite !== null && right.callSite !== null && sameSourceSpan(left.callSite, right.callSite)));
+}
+
+function sameSnapshotVariables(
+  left: TeachingVmSnapshot['variables'],
+  right: TeachingVmSnapshot['variables'],
+): boolean {
+  return left.length === right.length && left.every((variable, index) => {
+    const other = right[index];
+    return other !== undefined && variable.name === other.name && sameSnapshotValue(variable.value, other.value);
+  });
+}
+
+function sameSnapshotNames(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((name, index) => name === right[index]);
+}
+
+function sameHeap(
+  left: readonly TeachingHeapObjectSnapshot[],
+  right: readonly TeachingHeapObjectSnapshot[],
+): boolean {
+  return left.length === right.length && left.every((object, index) => {
+    const other = right[index];
+    if (!other || object.id !== other.id || object.type !== other.type) return false;
+    if (object.type === 'list' && other.type === 'list') return sameSnapshotValues(object.items, other.items);
+    return object.type === 'dict' && other.type === 'dict'
+      && object.entries.length === other.entries.length
+      && object.entries.every((entry, entryIndex) => {
+        const otherEntry = other.entries[entryIndex];
+        return otherEntry !== undefined
+          && sameSnapshotValue(entry.key, otherEntry.key)
+          && sameSnapshotValue(entry.value, otherEntry.value);
+      });
+  });
 }
 
 function deriveCallEntry(
@@ -438,6 +947,9 @@ function animationTransitionBase(
     frameId,
     before,
     after,
+    controlFlowOutcome: null,
+    nextInstructionIndex: null,
+    nextInstructionSpan: null,
   } as const;
 }
 

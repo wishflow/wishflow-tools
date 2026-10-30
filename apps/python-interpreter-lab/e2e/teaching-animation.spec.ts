@@ -336,3 +336,180 @@ test('plays and pauses from the keyboard without horizontal overflow at supporte
     expect(pageWidth, `page overflow at ${width}px`).toBeLessThanOrEqual(viewportWidth);
   }
 });
+
+test('explains branch, loop, short-circuit, and range decisions from real Worker snapshots', async ({ page }) => {
+  await compileTeachingSource(page, [
+    'value = 0',
+    'if value:',
+    '  value = 1',
+    'else:',
+    '  value = 2',
+    'if value == 2:',
+    '  marker = 1',
+    'else:',
+    '  marker = 2',
+    'while value < 3:',
+    '  value = value + 1',
+    'logical_false = 0 and missing',
+    'logical_right = 1 and 5',
+    'logical = value or missing',
+    'for item in range(1):',
+    '  value = item',
+  ].join('\n'));
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingControlFlowMessages?: string[] };
+    const messages = windowWithRecorder.__teachingControlFlowMessages ?? [];
+    windowWithRecorder.__teachingControlFlowMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+
+  await page.getByRole('button', { name: 'Play explanation' }).click();
+  await expectQuickly(page.getByText('Teaching program finished').first()).toBeVisible({ timeout: 30_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingControlFlowMessages?: string[] }).__teachingControlFlowMessages ?? []);
+  const text = messages.join('\n');
+  expect(text).toContain('The Python truth value of 0 is false, so this branch is skipped.');
+  expect(text).toContain('Execution skips ahead to a later instruction.');
+  expect(text).toContain('Execution returns to an earlier loop position.');
+  expect(text).toContain('The left operand 3 determines the expression result; the right side is skipped.');
+  expect(text).toContain('The left operand 0 determines the expression result; the right side is skipped.');
+  expect(text).toContain('The left operand 1 does not short-circuit; execution continues into the right side.');
+  expect(text).toContain('The iterator yields 0; the loop variable is bound by the next instruction.');
+  expect(text).toContain('The iterator is exhausted; execution leaves the loop.');
+  expect(text).toContain('Next instruction');
+  expect(text).toContain('L5:');
+  await expect(page.locator('.teaching-active-frame .teaching-variable-list')).toContainText('logical');
+});
+
+test('localizes branch and next-instruction explanations in Chinese', async ({ page }) => {
+  await compileTeachingSource(page, [
+    'count = 0',
+    'if True:',
+    '  selected = 7',
+    'else:',
+    '  selected = 0',
+    'while count < 1:',
+    '  count = count + 1',
+  ].join('\n'));
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingChineseBranchMessages?: string[] };
+    const messages = windowWithRecorder.__teachingChineseBranchMessages ?? [];
+    windowWithRecorder.__teachingChineseBranchMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+
+  await page.getByRole('button', { name: '讲解播放' }).click();
+  await expectQuickly(page.getByText('教学程序已完成').first()).toBeVisible({ timeout: 30_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingChineseBranchMessages?: string[] }).__teachingChineseBranchMessages ?? []);
+  const text = messages.join('\n');
+  expect(text).toContain('的 Python 真值为真');
+  expect(text).toContain('执行跳至后续指令。');
+  expect(text).toContain('执行回到较早的循环位置。');
+  expect(text).toContain('下一条指令');
+});
+
+test('explains a failed subscript write without presenting a successful mutation', async ({ page }) => {
+  await compileTeachingSource(page, 'items = [1]\nitems[2] = 9');
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingRuntimeErrorMessages?: string[] };
+    const messages = windowWithRecorder.__teachingRuntimeErrorMessages ?? [];
+    windowWithRecorder.__teachingRuntimeErrorMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+
+  await page.getByRole('button', { name: 'Play explanation' }).click();
+  await expectQuickly(page.getByRole('alert')).toContainText('Index out of range');
+  await page.waitForFunction(() => (window as Window & { __teachingRuntimeErrorMessages?: string[] })
+    .__teachingRuntimeErrorMessages?.some((message) => message.includes('Instruction STORE_SUBSCR failed (index-out-of-range)')) ?? false,
+  undefined, { timeout: 10_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingRuntimeErrorMessages?: string[] }).__teachingRuntimeErrorMessages ?? []);
+  const text = messages.join('\n');
+  expect(text).toContain('Instruction STORE_SUBSCR failed (index-out-of-range)');
+  expect(text).toContain('Operands before failure');
+  expect(text).toContain('9, list #1, 2');
+  expect(text).toContain('This failed instruction did not change variables, objects, or output.');
+  expect(text).not.toContain('Update list object #1 at index [2] with 9');
+  await expect(page.locator('#teaching-heap-object-1')).toContainText('1');
+  await expect(page.locator('#teaching-heap-object-1')).not.toContainText('9');
+});
+
+test('localizes runtime failure explanations in Chinese', async ({ page }) => {
+  await compileTeachingSource(page, 'items = [1]\nitems[2] = 9');
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+    const windowWithRecorder = window as Window & { __teachingChineseRuntimeErrorMessages?: string[] };
+    const messages = windowWithRecorder.__teachingChineseRuntimeErrorMessages ?? [];
+    windowWithRecorder.__teachingChineseRuntimeErrorMessages = messages;
+    const capture = () => {
+      const card = panel.querySelector('.teaching-animation-panel');
+      if (card) messages.push(card.textContent ?? '');
+    };
+    new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+  });
+
+  await page.getByRole('button', { name: '讲解播放' }).click();
+  await expectQuickly(page.getByRole('alert')).toContainText('索引超出范围');
+  await page.waitForFunction(() => (window as Window & { __teachingChineseRuntimeErrorMessages?: string[] })
+    .__teachingChineseRuntimeErrorMessages?.some((message) => message.includes('指令 STORE_SUBSCR 执行失败')) ?? false,
+  undefined, { timeout: 10_000 });
+  const messages = await page.evaluate(() => (window as Window & { __teachingChineseRuntimeErrorMessages?: string[] }).__teachingChineseRuntimeErrorMessages ?? []);
+  const text = messages.join('\n');
+  expect(text).toContain('失败前的操作数');
+  expect(text).toContain('这条失败指令没有改变变量、对象或输出');
+});
+
+test('keeps failure details within supported viewport widths', async ({ page }) => {
+  for (const width of [320, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await compileTeachingSource(page, 'items = [1]\nitems[2] = 9');
+    await page.locator('.teaching-runtime-panel').evaluate((panel) => {
+      const windowWithRecorder = window as Window & { __teachingFailureDetailOverflow?: number; __teachingFailureDetailSeen?: boolean };
+      windowWithRecorder.__teachingFailureDetailOverflow = 0;
+      windowWithRecorder.__teachingFailureDetailSeen = false;
+      const capture = () => {
+        const card = panel.querySelector('.teaching-animation-panel');
+        if (!card) return;
+        if (card.textContent?.includes('Instruction STORE_SUBSCR failed (index-out-of-range)')) {
+          windowWithRecorder.__teachingFailureDetailSeen = true;
+        }
+        const pageOverflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
+        const cardOverflow = card.scrollWidth - card.clientWidth;
+        const overflow = Math.max(0, pageOverflow, cardOverflow);
+        windowWithRecorder.__teachingFailureDetailOverflow = Math.max(
+          windowWithRecorder.__teachingFailureDetailOverflow ?? 0,
+          overflow,
+        );
+      };
+      new MutationObserver(capture).observe(panel, { childList: true, characterData: true, subtree: true });
+    });
+
+    await page.getByRole('button', { name: 'Play explanation' }).click();
+    await page.waitForFunction(() => (window as Window & { __teachingFailureDetailSeen?: boolean }).__teachingFailureDetailSeen ?? false,
+    undefined, { timeout: 10_000 });
+    const overflow = await page.evaluate(() => (window as Window & { __teachingFailureDetailOverflow?: number }).__teachingFailureDetailOverflow ?? 0);
+    expect(overflow, `failure details overflow at ${width}px`).toBeLessThanOrEqual(0);
+  }
+});
+
+test('keeps the branch reason and target visible with reduced motion', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await compileTeachingSource(page, 'if False:\n  selected = 1\nelse:\n  selected = 2');
+  await page.getByRole('button', { name: 'Play explanation' }).click();
+  const panel = page.locator('.teaching-animation-panel');
+  await expectQuickly(panel).toContainText('The Python truth value of False is false');
+  await expectQuickly(panel.locator('.teaching-animation-details')).toContainText('Next instruction');
+  const reducedMotionDuration = await panel.evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration));
+  expect(reducedMotionDuration).toBeLessThanOrEqual(0.01);
+});

@@ -753,6 +753,43 @@ test('matches the P6 common subset with real CPython output and range-step error
   await expect(page.getByRole('alert')).toContainText('range() step cannot be zero');
 });
 
+test('matches the V5 branch, loop, and short-circuit subset with real CPython output', async ({ page }) => {
+  await page.goto(appPath);
+  const engine = page.getByRole('combobox', { name: 'Execution view' });
+  await engine.selectOption('cpython');
+  await expect(page.getByText(/Pyodide 314\.0\.7.*CPython/)).toBeVisible();
+  const source = page.getByRole('textbox', { name: 'Python source' });
+  await source.fill([
+    'value = 0',
+    'if value:',
+    '  value = 1',
+    'else:',
+    '  value = 2',
+    'while value < 3:',
+    '  value = value + 1',
+    'and_short = 0 and missing',
+    'and_right = 1 and 5',
+    'or_short = value or missing',
+    'or_right = 0 or 7',
+    'total = 0',
+    'for item in range(2):',
+    '  total = total + item',
+    'print(and_short, and_right, or_short, or_right, total)',
+  ].join('\n'));
+
+  await page.getByRole('button', { name: 'Run Python' }).click();
+  await expect(page.locator('#execution-status')).toContainText('completed', { timeout: 20_000 });
+  const expected = '0 5 3 7 1\n';
+  await expect(page.locator('#execution-output')).toHaveText(expected);
+
+  await engine.selectOption('teaching');
+  await expect(page.getByText('Ready to compile teaching program')).toBeVisible();
+  await page.getByRole('button', { name: 'Compile teaching program' }).click();
+  await page.getByRole('button', { name: 'Run teaching program' }).click();
+  await expect(page.getByText('Teaching program finished').first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('.teaching-output')).toHaveText(expected.trimEnd());
+});
+
 test('pauses and resets a long teaching run and invalidates stale mode/source state', async ({ page }) => {
   await chooseTeachingVm(page);
   await page.getByRole('combobox', { name: 'Automatic run speed' }).selectOption('slow');

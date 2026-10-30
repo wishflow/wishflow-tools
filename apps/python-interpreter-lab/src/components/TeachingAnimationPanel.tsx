@@ -49,6 +49,33 @@ function teachingAnimationMessage(
           key: transition.itemKey?.display ?? '—',
           value: transition.value?.display ?? '—',
         });
+    case 'branch':
+      return replaceMessage(t(transition.controlFlowOutcome === 'branch-skipped'
+        ? 'teachingAnimationBranchSkipped'
+        : 'teachingAnimationBranchTaken'), {
+        condition: transition.operands[0]?.display ?? '—',
+      });
+    case 'jump':
+      return t(transition.nextInstructionIndex !== null && transition.nextInstructionIndex < transition.instructionIndex
+        ? 'teachingAnimationLoopBackJump'
+        : 'teachingAnimationForwardJump');
+    case 'short-circuit':
+      return replaceMessage(t(transition.controlFlowOutcome === 'short-circuited'
+        ? 'teachingAnimationShortCircuit'
+        : 'teachingAnimationEvaluateRight'), {
+        value: transition.operands[0]?.display ?? '—',
+      });
+    case 'iteration':
+      return transition.controlFlowOutcome === 'next-value'
+        ? replaceMessage(t('teachingAnimationIterationValue'), { value: transition.value?.display ?? '—' })
+        : t('teachingAnimationIterationEnd');
+    case 'runtime-error':
+      return replaceMessage(t('teachingAnimationRuntimeError'), {
+        opcode: transition.opcode,
+        code: transition.diagnostic?.code ?? '—',
+      });
+    case 'budget-exhausted':
+      return replaceMessage(t('teachingAnimationBudgetExhausted'), { index: String(transition.instructionIndex) });
     case 'call-enter':
       return replaceMessage(t('teachingAnimationCallEnter'), {
         caller: String(transition.callerFrameId ?? '—'),
@@ -99,6 +126,50 @@ function teachingAnimationDetails(
       <dl className="teaching-animation-details is-error">
         <div><dt>{t('teachingAnimationError')}</dt><dd>{transition.diagnostic.message}</dd></div>
         <div><dt>{t('teachingAnimationFrameCreated')}</dt><dd>{t('teachingAnimationNoFrameCreated')}</dd></div>
+      </dl>
+    );
+  }
+  if (transition.kind === 'runtime-error' && transition.diagnostic) {
+    return (
+      <dl className="teaching-animation-details is-error">
+        <div><dt>{t('teachingAnimationError')}</dt><dd>{transition.diagnostic.message}</dd></div>
+        {transition.operands.length > 0 && (
+          <div><dt>{t('teachingAnimationFailedOperands')}</dt><dd>{transition.operands.map(({ display }) => display).join(', ')}</dd></div>
+        )}
+        <div><dt>{t('teachingAnimationStateChange')}</dt><dd>{t('teachingAnimationRuntimeStatePreserved')}</dd></div>
+      </dl>
+    );
+  }
+  if (transition.kind === 'budget-exhausted') {
+    const source = transition.nextInstructionSpan;
+    return (
+      <dl className="teaching-animation-details is-error">
+        <div>
+          <dt>{t('teachingAnimationNextInstruction')}</dt>
+          <dd>#{transition.nextInstructionIndex ?? '—'}{source ? ` · L${source.line}:${source.column}` : ` · ${t('teachingAnimationNoSourceLocation')}`}</dd>
+        </div>
+        {transition.diagnostic && <div><dt>{t('teachingAnimationError')}</dt><dd>{transition.diagnostic.message}</dd></div>}
+        <div><dt>{t('teachingAnimationStateChange')}</dt><dd>{t('teachingAnimationRuntimeStatePreserved')}</dd></div>
+      </dl>
+    );
+  }
+  if (transition.kind === 'branch' || transition.kind === 'jump'
+    || transition.kind === 'short-circuit' || transition.kind === 'iteration') {
+    const focus = transition.kind === 'branch'
+      ? { label: t('teachingAnimationCondition'), value: transition.operands[0]?.display }
+      : transition.kind === 'short-circuit'
+        ? { label: t('teachingAnimationLeftOperand'), value: transition.operands[0]?.display }
+        : transition.kind === 'iteration' && transition.controlFlowOutcome === 'next-value'
+          ? { label: t('teachingAnimationYieldedValue'), value: transition.value?.display }
+          : null;
+    const source = transition.nextInstructionSpan;
+    return (
+      <dl className="teaching-animation-details">
+        {focus && <div><dt>{focus.label}</dt><dd>{focus.value ?? '—'}</dd></div>}
+        <div>
+          <dt>{t('teachingAnimationNextInstruction')}</dt>
+          <dd>#{transition.nextInstructionIndex ?? '—'}{source ? ` · L${source.line}:${source.column}` : ` · ${t('teachingAnimationNoSourceLocation')}`}</dd>
+        </div>
       </dl>
     );
   }

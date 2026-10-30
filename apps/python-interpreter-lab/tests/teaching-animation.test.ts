@@ -3,6 +3,7 @@ import test from 'node:test';
 import { compileTeachingSource } from '../src/teaching-vm/compiler';
 import { deriveTeachingAnimationTransitions } from '../src/teaching-vm/animation';
 import { createTeachingMachine, getTeachingHistory, stepTeachingMachine } from '../src/teaching-vm/vm';
+import type { TeachingFrameSnapshot, TeachingVmSnapshot } from '../src/teaching-vm/types';
 
 function runProgram(source: string) {
   const program = compileTeachingSource(source);
@@ -22,6 +23,24 @@ function transitionsForEveryRecordedInstruction(program: ReturnType<typeof compi
     transitions.push(...deriveTeachingAnimationTransitions(program, before, [after]).transitions);
   }
   return transitions;
+}
+
+function replaceActiveFrame(
+  snapshot: TeachingVmSnapshot,
+  update: (frame: TeachingFrameSnapshot) => TeachingFrameSnapshot,
+): TeachingVmSnapshot {
+  const active = snapshot.frames.at(-1);
+  assert.ok(active);
+  const updated = update(active);
+  const frames = Object.freeze(snapshot.frames.map((frame) => frame.id === active.id ? updated : frame));
+  return Object.freeze({
+    ...snapshot,
+    pc: updated.pc,
+    nextInstructionIndex: snapshot.status === 'finished' ? null : updated.pc,
+    stack: updated.stack,
+    variables: updated.variables,
+    frames,
+  });
 }
 
 test('derives real stack, binding, object creation, mutation, and arithmetic transitions', () => {
@@ -69,6 +88,39 @@ test('caps a source-step transition list and reports omitted recognized instruct
   assert.ok(result.omittedCount > 0);
 });
 
+test('prioritizes control-flow boundaries under the cap and preserves their order', () => {
+  const condition = Array.from({ length: 16 }, () => '1').join(' + ');
+  const longBranch = runProgram(`if ${condition}:\n    selected = 1\nelse:\n    selected = 0`);
+  const branchBefore = longBranch.history.items[0];
+  assert.ok(branchBefore);
+  const branchResult = deriveTeachingAnimationTransitions(longBranch.program, branchBefore, longBranch.history.items.slice(1));
+  assert.ok(branchResult.transitions.some(({ kind }) => kind === 'branch'));
+  assert.equal(branchResult.transitions.length, 12);
+  assert.ok(branchResult.omittedCount > 0);
+
+  const loop = runProgram('index = 0\nwhile index < 8:\n    index = index + 1');
+  const loopBefore = loop.history.items[0];
+  assert.ok(loopBefore);
+  const allTransitions = transitionsForEveryRecordedInstruction(loop.program, loop.history.items);
+  const allBoundaries = allTransitions.filter(({ kind }) => ['branch', 'jump', 'short-circuit', 'iteration'].includes(kind));
+  const result = deriveTeachingAnimationTransitions(loop.program, loopBefore, loop.history.items.slice(1));
+  const selectedBoundaries = result.transitions.filter(({ kind }) => ['branch', 'jump', 'short-circuit', 'iteration'].includes(kind));
+  const summarize = (transitions: typeof allBoundaries) => transitions.map(({ kind, instructionIndex, nextInstructionIndex, controlFlowOutcome }) => ({
+    kind,
+    instructionIndex,
+    nextInstructionIndex,
+    controlFlowOutcome,
+  }));
+
+  assert.ok(allBoundaries.length > 12);
+  assert.equal(result.transitions.length, 12);
+  assert.ok(result.omittedCount > 0);
+  assert.deepEqual(summarize(selectedBoundaries), summarize([
+    ...allBoundaries.slice(0, 6),
+    ...allBoundaries.slice(-6),
+  ]));
+});
+
 test('keeps call and return boundaries when ordinary instruction transitions exceed the cap', () => {
   const { program, history } = runProgram([
     'def descend(n):',
@@ -97,7 +149,7 @@ test('keeps call and return boundaries when ordinary instruction transitions exc
   assert.ok(result.omittedCount > 0);
 });
 
-test('does not derive motion across discontinuous history or failed instructions', () => {
+test('does not derive motion across discontinuous history and records known runtime failures', () => {
   const { program, history } = runProgram('value = 1 + 2');
   const before = history.items[0];
   const secondAfter = history.items[2];
@@ -111,7 +163,257 @@ test('does not derive motion across discontinuous history or failed instructions
   const failedBefore = failed.history.items[0];
   assert.ok(failedBefore);
   const failure = deriveTeachingAnimationTransitions(failed.program, failedBefore, failed.history.items.slice(1));
-  assert.equal(failure.transitions.length, 0);
+  assert.equal(failure.transitions.length, 1);
+  assert.equal(failure.transitions[0]?.kind, 'runtime-error');
+  assert.equal(failure.transitions[0]?.diagnostic?.code, 'name-error');
+});
+
+test('derives branch decisions and forward or backward jumps from confirmed targets', () => {
+  const { program, history } = runProgram([
+    'selected = 0',
+    'if False:',
+    '    selected = 1',
+    'else:',
+    '    selected = 2',
+    'if True:',
+    '    selected = 3',
+    'else:',
+    '    selected = 9',
+    'while selected < 4:',
+    '    selected = selected + 1',
+  ].join('\n'));
+  const control = transitionsForEveryRecordedInstruction(program, history.items)
+    .filter(({ kind }) => kind === 'branch' || kind === 'jump');
+  const branches = control.filter(({ kind }) => kind === 'branch');
+  const jumps = control.filter(({ kind }) => kind === 'jump');
+
+  assert.deepEqual(branches.map(({ controlFlowOutcome }) => controlFlowOutcome), [
+    'branch-skipped',
+    'branch-taken',
+    'branch-taken',
+    'branch-skipped',
+  ]);
+  assert.deepEqual(branches.map(({ operands }) => operands[0]?.display), ['False', 'True', 'True', 'False']);
+  assert.ok(jumps.some(({ instructionIndex, nextInstructionIndex }) => nextInstructionIndex !== null && nextInstructionIndex > instructionIndex));
+  assert.ok(jumps.some(({ instructionIndex, nextInstructionIndex }) => nextInstructionIndex !== null && nextInstructionIndex < instructionIndex));
+
+  for (const transition of control) {
+    assert.equal(transition.nextInstructionIndex, transition.after.nextInstructionIndex);
+    assert.equal(transition.nextInstructionIndex, transition.after.frames.at(-1)?.pc);
+    const target = transition.nextInstructionIndex === null ? undefined : program.instructions[transition.nextInstructionIndex];
+    assert.equal(transition.nextInstructionSpan?.line ?? null, target?.opcode === 'HALT' ? null : target?.span.line ?? null);
+  }
+});
+
+test('derives short-circuit outcomes and actual range iteration values', () => {
+  const { program, history } = runProgram([
+    'and_short = 0 and missing',
+    'and_right = 2 and 3',
+    'or_short = 2 or missing',
+    'or_right = 0 or 4',
+    'for item in range(2):',
+    '    print(item)',
+    'for empty_item in range(0):',
+    '    print(empty_item)',
+  ].join('\n'));
+  const transitions = transitionsForEveryRecordedInstruction(program, history.items);
+  const shortCircuit = transitions.filter(({ kind }) => kind === 'short-circuit');
+  const iteration = transitions.filter(({ kind }) => kind === 'iteration');
+
+  assert.deepEqual(shortCircuit.map(({ controlFlowOutcome, operands, value }) => ({
+    outcome: controlFlowOutcome,
+    left: operands[0]?.display,
+    retained: value?.display ?? null,
+  })), [
+    { outcome: 'short-circuited', left: '0', retained: '0' },
+    { outcome: 'evaluated-right', left: '2', retained: null },
+    { outcome: 'short-circuited', left: '2', retained: '2' },
+    { outcome: 'evaluated-right', left: '0', retained: null },
+  ]);
+  assert.deepEqual(iteration.map(({ controlFlowOutcome, value, instructionIndex, nextInstructionIndex }) => ({
+    outcome: controlFlowOutcome,
+    value: value?.display ?? null,
+    line: program.instructions[instructionIndex]?.span.line,
+    next: nextInstructionIndex,
+  })), [
+    { outcome: 'next-value', value: '0', line: 5, next: iteration[0]?.instructionIndex + 1 },
+    { outcome: 'next-value', value: '1', line: 5, next: iteration[1]?.instructionIndex + 1 },
+    { outcome: 'loop-finished', value: null, line: 5, next: program.instructions[iteration[2]?.instructionIndex ?? -1]?.argument },
+    { outcome: 'loop-finished', value: null, line: 7, next: program.instructions[iteration[3]?.instructionIndex ?? -1]?.argument },
+  ]);
+  assert.equal(history.items.at(-1)?.variables.some(({ name }) => name === 'empty_item'), false);
+});
+
+test('rejects range iteration snapshots with an inconsistent yielded value or iterator update', () => {
+  const { program, history } = runProgram('for item in range(0, 5, 2):\n  total = item');
+  const iteration = transitionsForEveryRecordedInstruction(program, history.items)
+    .find(({ kind, controlFlowOutcome }) => kind === 'iteration' && controlFlowOutcome === 'next-value');
+  assert.ok(iteration);
+
+  const wrongYield = replaceActiveFrame(iteration.after, (frame) => {
+    const yielded = frame.stack.at(-1);
+    assert.equal(yielded?.type, 'int');
+    const corrupted = Object.freeze({ ...yielded!, value: '999', display: '999' });
+    return Object.freeze({ ...frame, stack: Object.freeze([...frame.stack.slice(0, -1), corrupted]) });
+  });
+  const wrongIterator = replaceActiveFrame(iteration.after, (frame) => {
+    const iteratorIndex = frame.stack.length - 2;
+    const iterator = frame.stack[iteratorIndex];
+    assert.equal(iterator?.type, 'iterator');
+    const corrupted = Object.freeze({
+      ...iterator!,
+      value: 'iterator(range(0, 5, 2), next=4)',
+      display: 'iterator(range(0, 5, 2), next=4)',
+    });
+    return Object.freeze({
+      ...frame,
+      stack: Object.freeze(frame.stack.map((value, index) => index === iteratorIndex ? corrupted : value)),
+    });
+  });
+
+  for (const after of [wrongYield, wrongIterator]) {
+    const result = deriveTeachingAnimationTransitions(program, iteration.before, [after]);
+    assert.equal(result.baselineAvailable, false);
+    assert.deepEqual(result.transitions, []);
+  }
+});
+
+test('rejects control-flow transitions when the recorded operand, outcome, or next PC disagrees', () => {
+  const { program, history } = runProgram('if False:\n    value = 1\nelse:\n    value = 2');
+  const branch = transitionsForEveryRecordedInstruction(program, history.items).find(({ kind }) => kind === 'branch');
+  assert.ok(branch);
+
+  const wrongOutcome = Object.freeze({
+    ...branch.after,
+    controlFlow: Object.freeze({
+      kind: 'branch' as const,
+      outcome: 'branch-taken',
+      nextInstructionIndex: branch.after.pc,
+    }),
+  });
+  const wrongTarget = Object.freeze({
+    ...branch.after,
+    controlFlow: Object.freeze({
+      ...branch.after.controlFlow!,
+      nextInstructionIndex: branch.after.pc + 1,
+    }),
+  });
+  const wrongStack = replaceActiveFrame(branch.after, (frame) => Object.freeze({
+    ...frame,
+    stack: Object.freeze([...frame.stack, branch.operands[0]!]),
+  }));
+
+  for (const after of [wrongOutcome, wrongTarget, wrongStack]) {
+    const result = deriveTeachingAnimationTransitions(program, branch.before, [after]);
+    assert.equal(result.baselineAvailable, false);
+    assert.deepEqual(result.transitions, []);
+  }
+});
+
+test('derives common runtime failures only when the failed instruction commits no state', () => {
+  const cases = [
+    { source: 'value = missing', code: 'name-error', opcode: 'LOAD_NAME', operands: [] },
+    { source: 'value = 1 + "x"', code: 'type-error', opcode: 'BINARY_ADD', operands: ['1', '"x"'] },
+    { source: 'items = [1]\nvalue = items[2]', code: 'index-out-of-range', opcode: 'BINARY_SUBSCR', operands: ['list #1', '2'] },
+    { source: 'mapping = {"a": 1}\nvalue = mapping["missing"]', code: 'key-not-found', opcode: 'BINARY_SUBSCR', operands: ['dict #1', '"missing"'] },
+    { source: 'for item in range(1, 2, 0):\n    result = item', code: 'zero-range-step', opcode: 'BUILD_RANGE', operands: ['1', '2', '0'] },
+    { source: 'items = [1]\nitems[2] = 9', code: 'index-out-of-range', opcode: 'STORE_SUBSCR', operands: ['9', 'list #1', '2'] },
+  ] as const;
+
+  for (const scenario of cases) {
+    const { program, history } = runProgram(scenario.source);
+    const before = history.items.at(-2);
+    const after = history.items.at(-1);
+    assert.ok(before);
+    assert.ok(after);
+    const result = deriveTeachingAnimationTransitions(program, before, [after]);
+    const failure = result.transitions.at(-1);
+    assert.equal(result.baselineAvailable, true, scenario.source);
+    assert.equal(failure?.kind, 'runtime-error', scenario.source);
+    assert.equal(failure?.opcode, scenario.opcode, scenario.source);
+    assert.equal(failure?.diagnostic?.code, scenario.code, scenario.source);
+    assert.deepEqual(failure?.operands.map(({ display }) => display), scenario.operands, scenario.source);
+    assert.deepEqual(before.frames.map(({ id, pc, stack, variables }) => ({ id, pc, stack, variables })),
+      after.frames.map(({ id, pc, stack, variables }) => ({ id, pc, stack, variables })), scenario.source);
+    assert.deepEqual(before.heap, after.heap, scenario.source);
+    assert.deepEqual(before.output, after.output, scenario.source);
+  }
+});
+
+test('does not partially append output when the output limit rejects a print', () => {
+  const longLine = 'x'.repeat(4_096);
+  const source = `for item in range(8):\n    print("${longLine}")`;
+  const { program, history } = runProgram(source);
+  const before = history.items.at(-2);
+  const after = history.items.at(-1);
+  assert.ok(before);
+  assert.ok(after);
+  const result = deriveTeachingAnimationTransitions(program, before, [after]);
+  const failure = result.transitions.at(-1);
+
+  assert.equal(after.diagnostic?.code, 'output-too-long');
+  assert.equal(failure?.kind, 'runtime-error');
+  assert.equal(failure?.opcode, 'PRINT');
+  assert.equal(failure?.operands[0]?.value.length, 4_096);
+  assert.deepEqual(after.output, before.output);
+  assert.deepEqual(after.stack, before.stack);
+});
+
+test('marks the instruction-budget boundary as not executed and leaves state unchanged', () => {
+  const { program, history } = runProgram('while True:\n    value = 1');
+  const before = history.items.at(-2);
+  const after = history.items.at(-1);
+  assert.ok(before);
+  assert.ok(after);
+  const result = deriveTeachingAnimationTransitions(program, before, [after]);
+  const failure = result.transitions.at(-1);
+
+  assert.equal(after.diagnostic?.code, 'instruction-budget-exceeded');
+  assert.equal(after.executedInstructionCount, before.executedInstructionCount);
+  assert.equal(failure?.kind, 'budget-exhausted');
+  assert.equal(failure?.instructionIndex, before.nextInstructionIndex);
+  assert.equal(failure?.nextInstructionIndex, before.nextInstructionIndex);
+  assert.equal(failure?.diagnostic?.code, 'instruction-budget-exceeded');
+  assert.deepEqual(after.frames.map(({ id, pc, stack, variables }) => ({ id, pc, stack, variables })),
+    before.frames.map(({ id, pc, stack, variables }) => ({ id, pc, stack, variables })));
+  assert.deepEqual(after.heap, before.heap);
+  assert.deepEqual(after.output, before.output);
+});
+
+test('does not explain unknown or inconsistent runtime failures as a committed event', () => {
+  const { program, history } = runProgram('value = 1 + "x"');
+  const before = history.items.at(-2);
+  const after = history.items.at(-1);
+  assert.ok(before);
+  assert.ok(after);
+  const unknown = Object.freeze({
+    ...after,
+    diagnostic: Object.freeze({ ...after.diagnostic!, code: 'internal-vm-error' }),
+  });
+  const wrongSpan = Object.freeze({
+    ...after,
+    diagnostic: Object.freeze({ ...after.diagnostic!, span: Object.freeze({ ...after.diagnostic!.span, line: 99 }) }),
+  });
+  const changedHeap = Object.freeze({ ...after, heap: Object.freeze([{ id: 999, type: 'list' as const, items: Object.freeze([]) }]) });
+
+  for (const candidate of [unknown, wrongSpan, changedHeap]) {
+    const result = deriveTeachingAnimationTransitions(program, before, [candidate]);
+    assert.equal(result.baselineAvailable, true);
+    assert.equal(result.transitions.some(({ kind }) => kind === 'runtime-error'), false);
+  }
+});
+
+test('preserves a runtime-error boundary when ordinary instructions exceed the transition cap', () => {
+  const expression = Array.from({ length: 16 }, () => '1').join(' + ');
+  const { program, history } = runProgram(`result = (${expression}) + "x"`);
+  const before = history.items[0];
+  assert.ok(before);
+  const result = deriveTeachingAnimationTransitions(program, before, history.items.slice(1));
+
+  assert.equal(result.transitions.length, 12);
+  assert.ok(result.omittedCount > 0);
+  assert.equal(result.transitions.at(-1)?.kind, 'runtime-error');
+  assert.equal(result.transitions.at(-1)?.diagnostic?.code, 'type-error');
 });
 
 test('identifies a circular list by object ID without expanding its contents', () => {
