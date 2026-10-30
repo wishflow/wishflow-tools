@@ -238,6 +238,18 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     'the elevated sprite remains bottom-anchored to its ground position minus the original arc offset',
   );
 
+  const movementStart = drawCalls.length;
+  drawGame(context, {
+    ...view,
+    frame: 1,
+    units: [{ ...view.units[0]!, positionFine: { ...view.units[0]!.positionFine, y: 10 * 7680 } }],
+  }, images);
+  const movementImages = drawCalls.slice(movementStart).map(([image]) => image);
+  assert.ok(
+    movementImages.indexOf(unitImage) < movementImages.indexOf(bushImage),
+    'a unit that moves down to a static prop’s exact depth keeps its prior queue position',
+  );
+
   const topRouteView = {
     ...view,
     enemies: [{

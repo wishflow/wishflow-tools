@@ -1,9 +1,11 @@
 import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
+import { DrawOrderQueue } from './draw-order';
 import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
 const FINE_UNITS_PER_CELL = 7680;
+const ROAD_DRAW_ORDER_CUTOFF = FINE_UNITS_PER_CELL * 100;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
 const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
 const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
@@ -158,130 +160,129 @@ function drawUnit(
   }
 }
 
-function drawBelowStreetObjects(
-  context: CanvasRenderingContext2D,
-  enemies: readonly EnemyView[],
-  shots: readonly ShotView[],
-  images: GameImages,
-  viewport: MapViewport,
-): void {
-  const drawItems: {
-    depth: number;
-    order: number;
-    kind: 'enemy' | 'shot';
-    id: string;
-    targetId?: string;
-    draw: () => void;
-  }[] = [];
-  let order = 0;
-  enemies.forEach((enemy) => {
-    drawItems.push({
-      depth: enemy.positionFine.y + (enemy.drawingOffsetFine?.y ?? 0),
-      order,
-      kind: 'enemy',
-      id: enemy.id,
-      draw: () => drawEnemy(context, enemy, images, viewport),
-    });
-    order += 1;
-  });
-  shots.forEach((shot) => {
-    if (shot.fineZ !== 0) return;
-    drawItems.push({
-      depth: shot.positionFine.y,
-      order,
-      kind: 'shot',
-      id: shot.id,
-      targetId: shot.targetId,
-      draw: () => drawShot(context, shot, images, viewport),
-    });
-    order += 1;
-  });
-  drawItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
+type DrawObjectKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris';
 
-  const enemiesById = new Map(
-    drawItems.filter((item) => item.kind === 'enemy').map((enemy) => [enemy.id, enemy] as const),
-  );
-  const targetShots = new Map<string, typeof drawItems>();
-  for (const shot of drawItems) {
-    if (shot.kind !== 'shot' || !shot.targetId) continue;
-    const target = enemiesById.get(shot.targetId);
-    if (!target || target.depth !== shot.depth) continue;
-    const shots = targetShots.get(target.id) ?? [];
-    shots.push(shot);
-    targetShots.set(target.id, shots);
-  }
-
-  const targetShotsDrawn = new Set<(typeof drawItems)[number]>();
-  for (const item of drawItems) {
-    if (targetShotsDrawn.has(item)) continue;
-    if (item.kind === 'enemy') {
-      // APK inserts a newly created equal-depth object before existing queue entries.
-      // A projectile and its already-existing target therefore draw projectile first.
-      const shots = targetShots.get(item.id) ?? [];
-      shots.sort((left, right) => right.order - left.order);
-      for (const shot of shots) {
-        shot.draw();
-        targetShotsDrawn.add(shot);
-      }
-    }
-    item.draw();
-  }
+interface DrawObject {
+  id: string;
+  kind: DrawObjectKind;
+  depth: number;
+  cell?: { x: number; y: number };
+  draw: () => void;
 }
 
-function drawSceneObjects(
+interface CanvasDrawOrderState {
+  scenarioId: string;
+  frame: number;
+  queue: DrawOrderQueue;
+}
+
+const drawOrderByContext = new WeakMap<CanvasRenderingContext2D, CanvasDrawOrderState>();
+
+function createDrawObjects(
   context: CanvasRenderingContext2D,
-  units: readonly UnitView[],
-  shots: readonly ShotView[],
-  wagonDebris: readonly WagonDebrisView[],
-  decorations: readonly MapDecoration[],
+  view: GameView,
   images: GameImages,
   viewport: MapViewport,
+): DrawObject[] {
+  const decorations = (view.map.decorations ?? []).map((decoration, index): DrawObject => ({
+    id: `decoration:${index}`,
+    kind: 'decoration',
+    cell: decoration.cell,
+    depth: ((decoration.cell.y + 1) * FINE_UNITS_PER_CELL) + ROAD_DRAW_ORDER_CUTOFF,
+    draw: () => drawMapDecoration(context, decoration, images, viewport),
+  }));
+  const units = view.units.map((unit): DrawObject => ({
+    id: `unit:${unit.id}`,
+    kind: 'unit',
+    cell: unit.cell,
+    depth: unit.positionFine.y + ROAD_DRAW_ORDER_CUTOFF,
+    draw: () => drawUnit(context, unit, images, viewport),
+  }));
+  const enemies = view.enemies.map((enemy): DrawObject => ({
+    id: `enemy:${enemy.id}`,
+    kind: 'enemy',
+    depth: enemy.positionFine.y + (enemy.drawingOffsetFine?.y ?? 0),
+    draw: () => drawEnemy(context, enemy, images, viewport),
+  }));
+  const shots = view.shots.map((shot): DrawObject => ({
+    id: `shot:${shot.id}`,
+    kind: 'shot',
+    depth: shot.positionFine.y + (shot.fineZ * 100),
+    draw: () => drawShot(context, shot, images, viewport),
+  }));
+  const wagonDebris = (view.wagonDebris ?? []).map((part): DrawObject => ({
+    id: `wagon-debris:${part.id}`,
+    kind: 'wagon-debris',
+    depth: part.depthFineY + ROAD_DRAW_ORDER_CUTOFF,
+    draw: () => drawWagonDebrisPart(context, part, images, viewport),
+  }));
+
+  const mapObjects = [...decorations, ...units].sort((left, right) => (
+    left.cell!.y - right.cell!.y || left.cell!.x - right.cell!.x
+  ));
+  return [...mapObjects, ...enemies, ...shots, ...wagonDebris];
+}
+
+function updateCanvasDrawOrder(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  objects: readonly DrawObject[],
+): readonly string[] {
+  let state = drawOrderByContext.get(context);
+  if (!state || state.scenarioId !== view.scenarioId || view.frame < state.frame) {
+    const queue = new DrawOrderQueue();
+    for (const object of objects) queue.insert(object.id, object.depth);
+    state = { scenarioId: view.scenarioId, frame: view.frame, queue };
+    drawOrderByContext.set(context, state);
+    return queue.items();
+  }
+
+  const currentIds = new Set(objects.map(({ id }) => id));
+  for (const id of state.queue.items()) {
+    if (!currentIds.has(id)) state.queue.remove(id);
+  }
+
+  const knownIds = new Set(state.queue.items());
+  const updateExisting = (kind: DrawObjectKind) => {
+    for (const object of objects) {
+      if (object.kind !== kind || !knownIds.has(object.id)) continue;
+      const previousDepth = state!.queue.depth(object.id);
+      if (previousDepth === undefined || previousDepth === object.depth) continue;
+      state!.queue.correct(object.id, object.depth, object.depth < previousDepth);
+    }
+  };
+  const insertNew = (kind: DrawObjectKind) => {
+    for (const object of objects) {
+      if (object.kind === kind && !knownIds.has(object.id)) state!.queue.insert(object.id, object.depth);
+    }
+  };
+
+  // This follows the APK update phases: enemies, map units, then projectiles.
+  updateExisting('enemy');
+  insertNew('enemy');
+  updateExisting('unit');
+  insertNew('unit');
+  updateExisting('shot');
+  insertNew('shot');
+  updateExisting('wagon-debris');
+  insertNew('wagon-debris');
+  updateExisting('decoration');
+  insertNew('decoration');
+  state.frame = view.frame;
+  return state.queue.items();
+}
+
+function drawWorldObjects(
+  orderedIds: readonly string[],
+  objects: readonly DrawObject[],
+  belowRoad: boolean,
 ): void {
-  const drawItems: { depth: number; order: number; draw: () => void }[] = [];
-  // GameObjectManager scans map objects row-major, then inserts equal-depth objects
-  // before existing ones. Drawing that list forward leaves older props on top.
-  const drawOrder = [...decorations].sort((a, b) => a.cell.y - b.cell.y || b.cell.x - a.cell.x);
-  let order = 0;
-
-  drawOrder.forEach((decoration) => {
-    drawItems.push({
-      depth: (decoration.cell.y + 1) * FINE_UNITS_PER_CELL,
-      order,
-      draw: () => drawMapDecoration(context, decoration, images, viewport),
-    });
-    order += 1;
-  });
-
-  units.forEach((unit) => {
-    drawItems.push({
-      depth: unit.positionFine.y,
-      order,
-      draw: () => drawUnit(context, unit, images, viewport),
-    });
-    order += 1;
-  });
-
-  shots.forEach((shot) => {
-    if (shot.fineZ === 0) return;
-    drawItems.push({
-      depth: shot.positionFine.y,
-      order,
-      draw: () => drawShot(context, shot, images, viewport),
-    });
-    order += 1;
-  });
-
-  wagonDebris.forEach((part) => {
-    drawItems.push({
-      depth: part.depthFineY,
-      order,
-      draw: () => drawWagonDebrisPart(context, part, images, viewport),
-    });
-    order += 1;
-  });
-
-  drawItems.sort((a, b) => a.depth - b.depth || a.order - b.order);
-  for (const item of drawItems) item.draw();
+  const objectsById = new Map(objects.map((object) => [object.id, object] as const));
+  for (const id of orderedIds) {
+    const object = objectsById.get(id);
+    if (!object || (object.depth < ROAD_DRAW_ORDER_CUTOFF) !== belowRoad) continue;
+    object.draw();
+  }
 }
 
 function drawTiles(
@@ -829,6 +830,8 @@ export function drawGame(
   context.fillRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
 
   const viewport = getMapViewport(view, displayPixelScale, camera);
+  const drawObjects = createDrawObjects(context, view, images, viewport);
+  const orderedDrawObjects = updateCanvasDrawOrder(context, view, drawObjects);
   context.beginPath();
   context.rect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   context.clip();
@@ -837,10 +840,10 @@ export function drawGame(
   context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
   context.clip();
   drawTiles(context, view.map.background, images, viewport);
-  drawBelowStreetObjects(context, view.enemies, view.shots, images, viewport);
+  drawWorldObjects(orderedDrawObjects, drawObjects, true);
   drawTiles(context, view.map.streets, images, viewport);
   context.restore();
-  drawSceneObjects(context, view.units, view.shots, view.wagonDebris ?? [], view.map.decorations ?? [], images, viewport);
+  drawWorldObjects(orderedDrawObjects, drawObjects, false);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 
