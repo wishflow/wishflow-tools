@@ -24,7 +24,7 @@
   - 验证：中英文术语一致、相对链接有效、`git diff --check`。
   - 文件：`docs/guide/usage.zh-CN.md`、`docs/guide/usage.en.md`、`docs/visual-execution-plan.md`、本 tasks。
 
-- [ ] **T05：完整回归与线上验收**
+- [x] **T05：完整回归与线上验收**
   - 验收：规格所列单测、浏览器、构建、catalog、整站构建与生产站点检查全部通过；如线上发现缺陷，记录具体复现并作为下一轮修复范围。
   - 验证：应用 typecheck、单测、build、Playwright；`pnpm test:catalog`、`pnpm build:site`；通过后提交，合并到 `master`、推送、等待 CI/CD，并用 Codex 内置浏览器在线实测。
   - 文件：依验证结果所需的相关 UI/测试文件。
@@ -41,8 +41,8 @@
 | Spec 与 tasks | 已完成 | 已依据 V2 计划细化分组边界、结构差异、无前态及历史控制；实现边界不含 Worker/VM 协议变更 |
 | 实现 | 已完成 | T01–T03 已完成，T04 双语说明已同步；观察分组与变化均从有界历史派生，UI 由单一快照驱动；未改 VM/Worker 协议 |
 | 本地验证 | 已完成 | `env PLAYWRIGHT_PORT=4200 pnpm test:ci` 通过：typecheck、153/153 单测、生产构建、53/53 Playwright；覆盖中间指令快照、别名与容器更新、断点、历史回到执行头、双语及现有 CPython/VM 回归 |
-| CI/CD | 待推送触发 | — |
-| 线上验收 | 待 CI/CD 成功 | — |
+| CI/CD | 已完成 | [Pages 工作流 41065148292](https://github.com/wishflow/wishflow-tools/actions/runs/41065148292) 成功；Python Interpreter Lab 测试、共享 catalog 检查、GitHub Pages 和 Cloudflare Pages 部署均通过；Worker 部署按静态应用变更规则跳过 |
+| 线上验收 | 已完成 | 生产页默认进入 Teaching VM；别名/列表修改样例显示 `List #1 · changed item [0]: 1 → 9` 且最终输出 `9`；组内指令选择、源码同步定位、历史回到执行头及中英文切换通过。Real CPython 分析显示 AST 与 19 条真实字节码，运行输出 `9` |
 
 ## 回滚
 
