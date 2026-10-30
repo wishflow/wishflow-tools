@@ -10,6 +10,8 @@ import type {
   TeachingVmSnapshot,
 } from '../teaching-vm/types';
 import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
+import type { TeachingAnimationTransition } from '../teaching-vm/animation';
+import type { TeachingPlaybackPhase, TeachingPlaybackPresentation } from '../teaching-vm/useTeachingPlayback';
 import type { MessageKey } from '../locales';
 import { MAX_BREAKPOINT_COUNT } from '../teaching-vm/resource-limits';
 import { mapTeachingSourceLines } from '../teaching-vm/source-mapping';
@@ -21,11 +23,14 @@ import {
   type TeachingObservationPoint,
 } from '../teaching-vm/observation';
 import { TeachingHeapPanel, TeachingValueDisplay, useTeachingHeapNavigation } from './TeachingHeapPanel';
+import { TeachingAnimationPanel } from './TeachingAnimationPanel';
 
 interface TeachingVmPanelProps {
   program: TeachingCompileResult | null;
   history: TeachingVmHistory;
   snapshot: TeachingVmSnapshot | null;
+  animationPresentation: TeachingPlaybackPresentation | null;
+  playbackPhase: TeachingPlaybackPhase;
   headSnapshot: TeachingVmSnapshot | null;
   atHead: boolean;
   diagnostic: TeachingDiagnosticSnapshot | null;
@@ -56,6 +61,20 @@ function positionLabel(span: SourceSpan, t: (key: MessageKey) => string): string
 function isSourceMatch(span: SourceSpan, sourceLink: SourceLink | null): boolean {
   const range = sourceRange(span);
   return Boolean(range && sourceLink?.range && rangesOverlap(range, sourceLink.range));
+}
+
+function stackAnimationClass(
+  index: number,
+  snapshot: TeachingVmSnapshot,
+  transition: TeachingAnimationTransition | null,
+  stage: 'before' | 'after',
+): string {
+  if (!transition || snapshot.frames.at(-1)?.id !== transition.frameId) return '';
+  if (stage === 'after' && ['push', 'operate', 'object-created'].includes(transition.kind)
+    && index === snapshot.stack.length - 1) return 'is-animation-result';
+  if (stage === 'before' && ['operate', 'bind-name', 'mutate-object'].includes(transition.kind)
+    && index >= snapshot.stack.length - transition.operands.length) return 'is-animation-source';
+  return '';
 }
 
 function DiagnosticPanel({ diagnostic, t }: { diagnostic: TeachingDiagnosticSnapshot; t: (key: MessageKey) => string }) {
@@ -574,6 +593,7 @@ function TeachingObservationPanel({
   group,
   program,
   snapshot,
+  isBusy,
   t,
   onLink,
   onSelectHistory,
@@ -581,6 +601,7 @@ function TeachingObservationPanel({
   group: TeachingObservationGroup;
   program: TeachingCompileResult;
   snapshot: TeachingVmSnapshot;
+  isBusy: boolean;
   t: (key: MessageKey) => string;
   onLink(link: SourceLink): void;
   onSelectHistory(stepIndex: number): void;
@@ -634,6 +655,7 @@ function TeachingObservationPanel({
                   className="teaching-observation-point"
                   aria-label={instruction ? `${pointLabel} · ${instruction.opcode}` : pointLabel}
                   aria-pressed={snapshot.stepIndex === point.stepIndex}
+                  disabled={isBusy}
                   onClick={() => {
                     onLink(observationPointSourceLink(program, point));
                     onSelectHistory(point.stepIndex);
@@ -972,7 +994,11 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
 });
 
 export function TeachingVmPanel(props: TeachingVmPanelProps) {
-  const { program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, sourceBreakpointLines, instructionBreakpointIndexes, t, onSelectHistory, onGoToHead, onLink, onToggleSourceBreakpoint, onToggleInstructionBreakpoint, onRetryWorker } = props;
+  const { program, history, snapshot: selectedSnapshot, animationPresentation, playbackPhase, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, sourceBreakpointLines, instructionBreakpointIndexes, t, onSelectHistory, onGoToHead, onLink, onToggleSourceBreakpoint, onToggleInstructionBreakpoint, onRetryWorker } = props;
+  const snapshot = animationPresentation?.snapshot ?? selectedSnapshot;
+  const animationTransition = animationPresentation?.transition ?? null;
+  const animationStage = animationPresentation?.stage ?? 'after';
+  const isPlaybackActive = playbackPhase !== 'idle';
   const { focusedObjectId, onLocateObject } = useTeachingHeapNavigation(snapshot);
   const observationGroups = useMemo(
     () => program ? deriveTeachingObservationGroups(program, history) : [],
@@ -1027,7 +1053,7 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
                 max={Math.max(0, historyCount - 1)}
                 step={1}
                 value={Math.max(0, selectedGroupIndex)}
-                disabled={historyCount < 2}
+                disabled={historyCount < 2 || isPlaybackActive}
                 aria-valuetext={historyValueText}
                 onChange={(event) => {
                   const group = observationGroups[Number(event.target.value)];
@@ -1044,7 +1070,7 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
             </p>
             <div className="teaching-history-state" role="status">
               <span>{atHead ? t('teachingHistoryAtHead') : t('teachingHistoryInPast')}</span>
-              {!atHead && <button type="button" className="text-button" onClick={onGoToHead}>{t('teachingReturnToHead')}</button>}
+              {!atHead && <button type="button" className="text-button" disabled={isBusy} onClick={onGoToHead}>{t('teachingReturnToHead')}</button>}
               {history.truncated && <span className="limit-notice">{t('teachingHistoryTruncated')}</span>}
             </div>
 
@@ -1053,6 +1079,7 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
                 group={selectedGroup}
                 program={program}
                 snapshot={snapshot}
+                isBusy={isBusy}
                 t={t}
                 onLink={onLink}
                 onSelectHistory={onSelectHistory}
@@ -1060,6 +1087,7 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
             )}
 
             <TeachingActionPanel program={program} snapshot={snapshot} t={t} onLink={onLink} />
+            {animationPresentation && <TeachingAnimationPanel presentation={animationPresentation} t={t} />}
             {snapshot?.controlFlow && (
               <p className="teaching-control-flow" role="status">
                 <strong>{t('teachingControlFlowDecision')}:</strong>{' '}
@@ -1088,7 +1116,7 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
                 {!snapshot || snapshot.stack.length === 0 ? <p className="empty-state">{t('teachingNoStack')}</p> : (
                   <ol className="teaching-value-list">
                     {snapshot.stack.map((value, index) => (
-                      <li className={index === snapshot.stack.length - 1 ? 'is-stack-top' : ''} key={`${index}-${value.type}-${value.value}`}>
+                      <li className={[index === snapshot.stack.length - 1 ? 'is-stack-top' : '', stackAnimationClass(index, snapshot, animationTransition, animationStage)].filter(Boolean).join(' ')} key={`${index}-${value.type}-${value.value}`}>
                         <span>{index}</span>
                         <TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} />
                         {index === snapshot.stack.length - 1 && <span className="teaching-stack-top">{t('teachingStackTop')}</span>}
@@ -1101,7 +1129,11 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
                 <h4 id="teaching-variables-heading">{t('teachingVariables')}</h4>
                 {!snapshot || snapshot.variables.length === 0 ? <p className="empty-state">{t('teachingNoVariables')}</p> : (
                   <dl className="trace-values teaching-variable-list">
-                    {snapshot.variables.map(({ name, value }) => <div key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>)}
+                    {snapshot.variables.map(({ name, value }) => {
+                      const isSource = animationTransition?.kind === 'push' && animationTransition.sourceName === name && animationStage === 'before';
+                      const isTarget = animationTransition?.kind === 'bind-name' && animationTransition.bindingName === name && animationStage === 'after';
+                      return <div className={isSource ? 'is-animation-source' : isTarget ? 'is-animation-result' : undefined} key={name}><dt>{name}</dt><dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd></div>;
+                    })}
                   </dl>
                 )}
               </section>
@@ -1114,7 +1146,14 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
                     <pre className="teaching-output">{snapshot.output.join('\n')}</pre>
                   )}
                 </section>
-                <TeachingHeapPanel snapshot={snapshot} t={t} focusedObjectId={focusedObjectId} onLocateObject={onLocateObject} />
+                <TeachingHeapPanel
+                  snapshot={snapshot}
+                  t={t}
+                  focusedObjectId={focusedObjectId}
+                  onLocateObject={onLocateObject}
+                  animationTransition={animationTransition}
+                  animationStage={animationStage}
+                />
               </div>
             </div>
             <TeachingFrameStack snapshot={snapshot} t={t} onLink={onLink} onLocateObject={onLocateObject} />

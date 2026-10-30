@@ -3,6 +3,7 @@ import { findTokenAtOffset, rangesEqual, tokenSourceRange, type SourceLink, type
 import type { PythonToken } from '../analysis/types';
 import type { AnalysisStatus } from '../analysis/usePyodideAnalysis';
 import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
+import type { TeachingPlaybackPhase } from '../teaching-vm/useTeachingPlayback';
 import type { TeachingSourceStepMode } from '../teaching-vm/source-step';
 import { normalizeTeachingRunSpeed, type TeachingRunSpeed } from '../teaching-vm/resource-limits';
 import { MAX_SOURCE_LENGTH } from '../analysis/source-limit';
@@ -17,6 +18,8 @@ interface SourcePanelProps {
   teachingHasProgram: boolean;
   teachingAtHead: boolean;
   teachingCanStepOut: boolean;
+  teachingPlaybackPhase: TeachingPlaybackPhase;
+  teachingPlaybackCanStart: boolean;
   error: string;
   tokens: PythonToken[];
   positionIndex: SourcePositionIndex;
@@ -32,6 +35,8 @@ interface SourcePanelProps {
   onCompileTeaching(): void;
   onStepTeaching(): void;
   onStepSourceTeaching(mode: TeachingSourceStepMode): void;
+  onStartTeachingPlayback(): void;
+  onPauseTeachingPlayback(): void;
   onRunTeaching(): void;
   onSetTeachingRunSpeed(speed: TeachingRunSpeed): void;
   onPauseTeaching(): void;
@@ -40,10 +45,12 @@ interface SourcePanelProps {
   onRestore(): void;
 }
 
-export function SourcePanel({ mode, source, status, teachingStatus, teachingRunSpeed, teachingHasProgram, teachingAtHead, teachingCanStepOut, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onStepSourceTeaching, onRunTeaching, onSetTeachingRunSpeed, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
+export function SourcePanel({ mode, source, status, teachingStatus, teachingRunSpeed, teachingHasProgram, teachingAtHead, teachingCanStepOut, teachingPlaybackPhase, teachingPlaybackCanStart, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onStepSourceTeaching, onStartTeachingPlayback, onPauseTeachingPlayback, onRunTeaching, onSetTeachingRunSpeed, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
+  const isTeachingPlaybackActive = teachingPlaybackPhase !== 'idle';
   const canControlTeaching = teachingHasProgram
     && teachingAtHead
+    && !isTeachingPlaybackActive
     && (teachingStatus === 'ready' || teachingStatus === 'paused');
 
   useEffect(() => {
@@ -119,10 +126,10 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingRunS
             </>
           ) : (
             <>
-              {teachingStatus === 'running' ? (
+              {teachingStatus === 'running' && !isTeachingPlaybackActive ? (
                 <button type="button" className="button button-secondary" onClick={onPauseTeaching}>{t('pauseTeaching')}</button>
               ) : (
-                <button type="button" className="button button-primary" disabled={Boolean(error) || teachingStatus === 'loading' || teachingStatus === 'compiling'} onClick={onCompileTeaching}>{t('compileTeaching')}</button>
+                <button type="button" className="button button-primary" disabled={isTeachingPlaybackActive || Boolean(error) || teachingStatus === 'loading' || teachingStatus === 'compiling'} onClick={onCompileTeaching}>{t('compileTeaching')}</button>
               )}
               <div className="teaching-step-controls" role="group" aria-label={t('teachingSourceStepControls')}>
                 <button type="button" className="button button-secondary" disabled={!canControlTeaching} onClick={onStepTeaching}>{t('stepTeaching')}</button>
@@ -135,10 +142,21 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingRunS
                   aria-describedby={!teachingCanStepOut ? 'teaching-step-out-reason' : undefined}
                   onClick={() => onStepSourceTeaching('out')}
                 >{t('stepOutTeaching')}</button>
+                <button
+                  type="button"
+                  className={`button ${isTeachingPlaybackActive ? 'button-secondary' : 'button-primary'}`}
+                  disabled={teachingPlaybackPhase === 'pausing' || (!isTeachingPlaybackActive && !teachingPlaybackCanStart)}
+                  aria-describedby="teaching-playback-hint"
+                  onClick={isTeachingPlaybackActive ? onPauseTeachingPlayback : onStartTeachingPlayback}
+                >{t(isTeachingPlaybackActive ? 'teachingPlaybackPause' : 'teachingPlaybackStart')}</button>
                 {canControlTeaching && !teachingCanStepOut && (
                   <span id="teaching-step-out-reason" className="small-meta teaching-step-out-reason">{t('teachingStepOutUnavailable')}</span>
                 )}
               </div>
+              <p id="teaching-playback-hint" className="small-meta teaching-playback-hint">{t('teachingPlaybackHint')}</p>
+              {teachingPlaybackPhase === 'requesting' && <p className="small-meta" role="status">{t('teachingPlaybackWaiting')}</p>}
+              {teachingPlaybackPhase === 'pausing' && <p className="small-meta" role="status">{t('teachingPlaybackPausing')}</p>}
+              {teachingPlaybackPhase === 'presenting' && <p className="small-meta" role="status">{t('teachingPlaybackPresenting')}</p>}
               <label className="teaching-speed-control">
                 <span>{t('teachingRunSpeed')}</span>
                 <select
@@ -153,7 +171,7 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingRunS
               </label>
               <p id="teaching-run-speed-hint" className="small-meta teaching-run-speed-hint">{t('teachingRunSpeedHint')}</p>
               {teachingStatus !== 'running' && (
-                <button type="button" className="button button-primary" disabled={!teachingHasProgram || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onRunTeaching}>{t(teachingStatus === 'paused' ? 'continueTeaching' : 'runTeaching')}</button>
+                <button type="button" className="button button-primary" disabled={isTeachingPlaybackActive || !teachingHasProgram || (teachingStatus !== 'ready' && teachingStatus !== 'paused')} onClick={onRunTeaching}>{t(teachingStatus === 'paused' ? 'continueTeaching' : 'runTeaching')}</button>
               )}
               <button type="button" className="button button-secondary" disabled={!teachingHasProgram || teachingStatus === 'compiling' || teachingStatus === 'loading'} onClick={onResetTeaching}>{t('resetTeaching')}</button>
             </>

@@ -9,17 +9,17 @@
   - 验证：纯函数测试覆盖算术、别名、列表原位修改、新对象、空栈、重复标量、循环引用、断续/截断历史、帧变化、未知指令；每个源码步最多返回 12 个动画过渡并报告省略数。
   - 文件：新增 `src/teaching-vm/animation.ts`；新增 `tests/teaching-animation.test.ts`；按需复用现有 observation 辅助逻辑，不重复实现 VM 状态比较。
 
-- [ ] **T02：串行讲解播放与生命周期**
+- [x] **T02：串行讲解播放与生命周期**
   - 验收：新增独立播放控制；一次只请求 `stepSource('over')`，等 Worker 响应并完成本步展示后才发下一请求；运行与演示速度分离。Worker 执行中暂停必须等待真实响应；展示中暂停取消定时器且不再推进。
   - 验证：对连续播放、Worker 暂停、展示中暂停、断点、终态、运行错误、历史游标限制、Reset/编辑/编译/引擎切换和快速连续点击验证无并发请求或旧帧回流。
   - 文件：按最小边界实现 `src/teaching-vm/useTeachingPlayback.ts` 或在现有教学 VM hook 中增加小型调度；`src/App.tsx` 连接已确认的 VM API；不增加 Worker 消息。
 
-- [ ] **T03：快照驱动的栈/变量/堆演示 UI**
+- [x] **T03：快照驱动的栈/变量/堆演示 UI**
   - 验收：同一展示快照驱动源码动作、栈、变量和堆；局部高亮不移动对象；别名、对象创建和条目修改可辨；播放结束/暂停后展示 Worker 最新确认快照。
   - 验证：键盘/焦点、无动画与减少动态效果状态、中英切换及 320/768/1024/1440px；自动化覆盖主例和已有调试控制回归。
   - 文件：`src/components/SourcePanel.tsx`、`src/components/TeachingVmPanel.tsx`、`src/components/TeachingHeapPanel.tsx`（若需要目标高亮）、`src/locales.ts`、`src/styles.css`、相关 `e2e/*.spec.ts`。
 
-- [ ] **T04：双语使用说明与路线状态同步**
+- [x] **T04：双语使用说明与路线状态同步**
   - 验收：中英文帮助页说明讲解播放与 Run 的差异、暂停确认、对象引用动画与减少动态效果；仅记录已实现能力。路线将 V3 状态更新为实际本地/线上验证结果。
   - 验证：两种语言术语一致、相对链接有效、`git diff --check`。
   - 文件：`docs/guide/usage.zh-CN.md`、`docs/guide/usage.en.md`、`docs/visual-execution-plan.md`、本 tasks。
@@ -40,8 +40,8 @@
 | 项目 | 状态 | 证据 |
 | --- | --- | --- |
 | Spec 与 tasks | 已完成 | 已确认独立讲解播放、串行 Step Over、Worker 暂停确认、12 条上限与 240ms 固定演示时长 |
-| 实现 | 进行中 | T01 已新增纯过渡派生函数，基于相邻快照识别 LOAD、运算、STORE_NAME、BUILD_LIST/BUILD_MAP、STORE_SUBSCR；不改写快照或 VM/Worker 协议 |
-| 本地验证 | 进行中 | `pnpm --dir apps/python-interpreter-lab run typecheck` 与 `test:unit` 通过（157/157）；覆盖别名、对象创建/修改、算术、循环引用、连续性与 12 条上限 |
+| 实现 | 已完成 | T01–T04 完成；过渡由相邻快照和实际教学指令纯派生，前端串行 Step Over 并等待 Worker 响应；未改写快照、VM 或 Worker 协议 |
+| 本地验证 | 已完成 | 应用 `test:ci`（159 条单测、63 条 Playwright、类型检查、生产构建）通过；`pnpm test:catalog`（15 项）和 `pnpm build:site` 通过。10 条 V3 浏览器专项覆盖别名/原位修改/重绑定、执行头历史、断点、运行错误、Worker 暂停、展示中暂停、Reset、编辑/引擎切换取消、键盘、减少动态效果和四种视口 |
 | CI/CD | 未开始 | — |
 | 线上验收 | 未开始 | — |
 

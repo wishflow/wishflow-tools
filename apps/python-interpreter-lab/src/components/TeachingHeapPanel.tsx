@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { TeachingHeapObjectSnapshot, TeachingValueSnapshot, TeachingVmSnapshot } from '../teaching-vm/types';
+import type { TeachingAnimationTransition } from '../teaching-vm/animation';
+import { sameSnapshotValue } from '../teaching-vm/observation';
 import type { MessageKey } from '../locales';
 
 function objectTypeKey(type: 'list' | 'dict'): MessageKey {
@@ -60,18 +62,24 @@ function TeachingHeapRecord({
   focusedObjectId,
   t,
   onLocateObject,
+  animationTransition,
+  animationStage,
 }: {
   object: TeachingHeapObjectSnapshot;
   focusedObjectId: number | null;
   t: (key: MessageKey) => string;
   onLocateObject(objectId: number): void;
+  animationTransition: TeachingAnimationTransition | null;
+  animationStage: 'before' | 'after';
 }) {
   const typeKey = objectTypeKey(object.type);
   const isEmpty = object.type === 'list' ? object.items.length === 0 : object.entries.length === 0;
+  const isAnimationObject = animationTransition?.objectId === object.id;
+  const animationClass = isAnimationObject ? `is-animation-${animationStage}` : '';
   return (
     <li
       id={`teaching-heap-object-${object.id}`}
-      className={`teaching-heap-object${focusedObjectId === object.id ? ' is-object-target' : ''}`}
+      className={`teaching-heap-object${focusedObjectId === object.id ? ' is-object-target' : ''}${animationClass ? ` ${animationClass}` : ''}`}
       tabIndex={-1}
     >
       <h5>
@@ -81,13 +89,13 @@ function TeachingHeapRecord({
         <dl className="teaching-heap-entries">
           {object.type === 'list'
             ? object.items.map((value, index) => (
-              <div key={index}>
+              <div className={isAnimationObject && animationTransition?.kind === 'mutate-object' && animationTransition.itemIndex === index ? `is-animation-entry is-animation-${animationStage}` : undefined} key={index}>
                 <dt><code>[{index}]</code></dt>
                 <dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd>
               </div>
             ))
             : object.entries.map(({ key, value }, index) => (
-              <div key={`${key.type}-${key.value}-${index}`}>
+              <div className={isAnimationObject && animationTransition?.kind === 'mutate-object' && animationTransition.itemKey && sameSnapshotValue(animationTransition.itemKey, key) ? `is-animation-entry is-animation-${animationStage}` : undefined} key={`${key.type}-${key.value}-${index}`}>
                 <dt><code>{key.display}</code></dt>
                 <dd><TeachingValueDisplay value={value} t={t} onLocateObject={onLocateObject} /></dd>
               </div>
@@ -103,11 +111,15 @@ export function TeachingHeapPanel({
   t,
   focusedObjectId,
   onLocateObject,
+  animationTransition,
+  animationStage,
 }: {
   snapshot: TeachingVmSnapshot | null;
   t: (key: MessageKey) => string;
   focusedObjectId: number | null;
   onLocateObject(objectId: number): void;
+  animationTransition: TeachingAnimationTransition | null;
+  animationStage: 'before' | 'after';
 }) {
   return (
     <section className="teaching-heap-panel" aria-labelledby="teaching-heap-heading">
@@ -122,6 +134,8 @@ export function TeachingHeapPanel({
                 focusedObjectId={focusedObjectId}
                 t={t}
                 onLocateObject={onLocateObject}
+                animationTransition={animationTransition}
+                animationStage={animationStage}
               />
             ))}
           </ol>

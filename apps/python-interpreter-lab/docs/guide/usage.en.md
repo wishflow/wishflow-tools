@@ -17,6 +17,7 @@ print(x)
 
 Watch multiplication produce `6`, then addition produce `7`, before the name `x` is bound to the result.
 One source line can produce several teaching instructions. Neither teaching instructions nor CPython bytecode are CPU machine code.
+To watch recorded actions continuously, use **Play explanation**. It advances one source step at a time and waits for the Worker response and presentation to finish before moving on.
 
 ## Read the runtime state
 
@@ -65,6 +66,8 @@ The complete output is `[9]`, `9`, `[9]`, and `[2]`, on separate lines.
 - On return, the function frame exits, and the returned value `9` is then bound to `result`.
 - After `b = [2]`, `b` refers to a new object while `a` still refers to the original one.
 
+Use **Play explanation** to inspect the first three object actions: `b = a` keeps the same object ID, `b[0] = 9` highlights an entry on that object, and `b = [2]` shows a new object before rebinding. Each source step animates at most 12 recognized data actions; additional records are coalesced into the final state with an omitted count. Calls, returns, and control flow remain static snapshots. Reduced motion keeps the same action text and final state.
+
 ## Control execution
 
 | Control | Use it to |
@@ -73,9 +76,10 @@ The complete output is `[9]`, `9`, `[9]`, and `[2]`, on separate lines.
 | Step Into | Advance through source positions, entering called functions and returning to the caller when a function exits |
 | Step Over | Advance through the current line and its calls to the next source-stepping position; a loop can stop on the same line again |
 | Step Out | Run until the current function returns; unavailable in the module frame |
+| Play / Pause explanation | Serially Step Over each source line and present data actions from recorded snapshots; if the Worker is stepping, pause waits for Worker confirmation |
 | Run / Continue teaching program | Run forward from the real execution head |
 | Pause teaching program | Pause at a complete instruction boundary |
-| Automatic run speed | Choose Slow, Standard, or Fast for Run / Continue; stepping rules stay the same |
+| Automatic run speed | Choose Slow, Standard, or Fast for Run / Continue; it does not affect stepping rules or explanation timing |
 
 Expand **Teaching instructions**, then use its **Line** or **Instruction** buttons to set breakpoints. Execution pauses before the corresponding instruction.
 Source stepping can also stop early at a breakpoint, an error, or a resource limit.

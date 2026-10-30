@@ -7,6 +7,7 @@ import { ResultsPanel } from './components/ResultsPanel';
 import { SourcePanel } from './components/SourcePanel';
 import { TeachingVmPanel } from './components/TeachingVmPanel';
 import { useTeachingVm } from './teaching-vm/useTeachingVm';
+import { useTeachingPlayback } from './teaching-vm/useTeachingPlayback';
 import { message, type MessageKey } from './locales';
 
 const EXAMPLE = 'x = 1 + 2\nprint(x)\n\ndef add(a, b):\n    return a + b\n';
@@ -20,6 +21,14 @@ export default function App() {
   const [sourceLink, setSourceLink] = useState<SourceLink | null>(null);
   const analysis = usePyodideAnalysis();
   const teaching = useTeachingVm();
+  const playback = useTeachingPlayback({
+    program: teaching.program,
+    history: teaching.history,
+    status: teaching.status,
+    atHead: teaching.atHead,
+    stepSourceAndWait: teaching.stepSourceAndWait,
+    pauseWorker: teaching.pause,
+  });
   const positionIndex = useMemo(() => createSourcePositionIndex(source), [source]);
   const t = useCallback((key: MessageKey) => message(key, language), [language]);
   const sourceValidation = validateSource(source);
@@ -32,6 +41,7 @@ export default function App() {
   useEffect(() => subscribeLanguage(setLanguage), []);
 
   function updateSource(nextSource: string) {
+    playback.cancel();
     const shouldRestart = analysis.status === 'analyzing' || analysis.status === 'running';
     setSource(nextSource);
     setSourceLink(null);
@@ -43,6 +53,7 @@ export default function App() {
 
   function updateMode(nextMode: EngineMode) {
     if (nextMode === mode) return;
+    playback.cancel();
     setMode(nextMode);
     setSourceLink(null);
     if (!(nextMode === 'cpython' && analysis.status === 'failed')) analysis.clearOutput();
@@ -67,6 +78,7 @@ export default function App() {
 
   function compileTeaching() {
     if (!sourceValidation.ok) return;
+    playback.cancel();
     setSourceLink(null);
     teaching.compile(source);
   }
@@ -97,6 +109,11 @@ export default function App() {
         .replace('{pyodide}', analysis.runtime.pyodideVersion)
         .replace('{python}', analysis.runtime.pythonVersion)
       : null;
+
+  function resetTeaching() {
+    playback.cancel();
+    teaching.reset();
+  }
 
   return (
     <main className="lab-page">
@@ -144,6 +161,8 @@ export default function App() {
           teachingHasProgram={Boolean(teaching.program)}
           teachingAtHead={teaching.atHead}
           teachingCanStepOut={teaching.headSnapshot?.frames.at(-1)?.kind === 'function'}
+          teachingPlaybackPhase={playback.phase}
+          teachingPlaybackCanStart={playback.canStart}
           error={sourceError}
           tokens={analysis.result?.tokens ?? []}
           positionIndex={positionIndex}
@@ -159,10 +178,12 @@ export default function App() {
           onCompileTeaching={compileTeaching}
           onStepTeaching={teaching.step}
           onStepSourceTeaching={teaching.stepSource}
+          onStartTeachingPlayback={playback.start}
+          onPauseTeachingPlayback={playback.pause}
           onRunTeaching={teaching.run}
           onSetTeachingRunSpeed={teaching.setRunSpeed}
           onPauseTeaching={teaching.pause}
-          onResetTeaching={teaching.reset}
+          onResetTeaching={resetTeaching}
           onClear={() => updateSource('')}
           onRestore={() => updateSource(EXAMPLE)}
         />
@@ -182,12 +203,14 @@ export default function App() {
             program={teaching.program}
             history={teaching.history}
             snapshot={teaching.snapshot}
+            animationPresentation={playback.presentation}
+            playbackPhase={playback.phase}
             headSnapshot={teaching.headSnapshot}
             atHead={teaching.atHead}
             diagnostic={teaching.diagnostic}
             status={teaching.status}
             sourceLink={sourceLink}
-            isBusy={teaching.status === 'compiling' || teaching.status === 'running'}
+            isBusy={teaching.status === 'compiling' || teaching.status === 'running' || playback.isActive}
             sourceBreakpointLines={teaching.sourceBreakpointLines}
             instructionBreakpointIndexes={teaching.instructionBreakpointIndexes}
             t={t}

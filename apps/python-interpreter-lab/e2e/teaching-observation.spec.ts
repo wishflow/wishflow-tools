@@ -92,8 +92,10 @@ test('uses source-step history to return to the execution head before continuing
   await page.getByRole('textbox', { name: 'Python source' }).fill('a = 1\nb = 2\nprint(a + b)');
   await page.getByRole('button', { name: 'Compile teaching program' }).click();
   await page.getByRole('button', { name: 'Step one instruction' }).click();
+  await expect(page.locator('.teaching-instruction-count')).toContainText('1 of');
 
   const history = page.getByRole('slider', { name: 'Source-step history' });
+  await expect(history).toBeEnabled();
   await history.focus();
   await history.press('Home');
   await expect(page.locator('.teaching-history-state')).toContainText('Viewing history. Return to the head before continuing.');

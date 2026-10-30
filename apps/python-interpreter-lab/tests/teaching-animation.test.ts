@@ -96,3 +96,27 @@ test('identifies a circular list by object ID without expanding its contents', (
   assert.equal(object?.type, 'list');
   assert.equal(object?.type === 'list' ? object.items[0]?.objectId : undefined, mutation.objectId);
 });
+
+test('highlights empty container creation and repeated equal list values by index', () => {
+  const { program, history } = runProgram('empty = []\nvalues = [1, 1]\nvalues[1] = 1');
+  const transitions = transitionsForEveryRecordedInstruction(program, history.items);
+  const emptyObject = transitions.find(({ kind, objectId }) => kind === 'object-created' && objectId === 1);
+  const repeatedValueMutation = transitions.find(({ kind }) => kind === 'mutate-object');
+
+  assert.equal(emptyObject?.objectType, 'list');
+  assert.ok(repeatedValueMutation);
+  assert.equal(repeatedValueMutation.itemIndex, 1);
+  assert.equal(repeatedValueMutation.value?.value, '1');
+});
+
+test('matches bool and int keys using the teaching VM dictionary key rules', () => {
+  const { program, history } = runProgram("mapping = {1: 'before'}\nmapping[True] = 'after'");
+  const mutation = transitionsForEveryRecordedInstruction(program, history.items)
+    .find(({ kind }) => kind === 'mutate-object');
+
+  assert.ok(mutation);
+  assert.equal(mutation.objectType, 'dict');
+  assert.equal(mutation.itemKey?.type, 'int');
+  assert.equal(mutation.itemKey?.value, '1');
+  assert.equal(mutation.value?.value, 'after');
+});

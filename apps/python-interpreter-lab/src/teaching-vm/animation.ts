@@ -5,6 +5,7 @@ import type {
   TeachingValueSnapshot,
   TeachingVmSnapshot,
 } from './types';
+import { sameSnapshotValue } from './observation';
 
 export const MAX_TEACHING_ANIMATION_TRANSITIONS = 12;
 
@@ -20,6 +21,7 @@ export interface TeachingAnimationTransition {
   after: TeachingVmSnapshot;
   operands: readonly TeachingValueSnapshot[];
   value: TeachingValueSnapshot | null;
+  sourceName: string | null;
   bindingName: string | null;
   objectId: number | null;
   objectType: 'list' | 'dict' | null;
@@ -92,6 +94,7 @@ function deriveTransition(
     frameId,
     before,
     after,
+    sourceName: null,
     bindingName: null,
     objectId: null,
     objectType: null,
@@ -102,7 +105,13 @@ function deriveTransition(
   if (instruction.opcode === 'LOAD_CONST' || instruction.opcode === 'LOAD_NAME') {
     const value = afterStack.at(-1);
     if (!value || afterStack.length !== beforeStack.length + 1) return null;
-    return Object.freeze({ ...base, kind: 'push', operands: Object.freeze([]), value });
+    return Object.freeze({
+      ...base,
+      kind: 'push',
+      operands: Object.freeze([]),
+      value,
+      sourceName: instruction.opcode === 'LOAD_NAME' && typeof instruction.argument === 'string' ? instruction.argument : null,
+    });
   }
 
   if (instruction.opcode === 'STORE_NAME') {
@@ -111,7 +120,7 @@ function deriveTransition(
     const binding = bindingName === null
       ? undefined
       : afterFrame.variables.find(({ name }) => name === bindingName)?.value;
-    if (!bindingName || !value || !binding || afterStack.length !== beforeStack.length - 1 || !sameValue(value, binding)) return null;
+    if (!bindingName || !value || !binding || afterStack.length !== beforeStack.length - 1 || !sameSnapshotValue(value, binding)) return null;
     return Object.freeze({ ...base, kind: 'bind-name', operands: Object.freeze([value]), value: binding, bindingName });
   }
 
@@ -141,7 +150,7 @@ function deriveTransition(
     const object = after.heap.find(({ id }) => id === container.objectId);
     if (!object || object.type !== container.type) return null;
     const entry = findStoredEntry(object, index, container.type);
-    if (!entry) return null;
+    if (!entry || !sameSnapshotValue(entry.value, storedValue)) return null;
     return Object.freeze({
       ...base,
       kind: 'mutate-object',
@@ -149,8 +158,8 @@ function deriveTransition(
       value: storedValue,
       objectId: object.id,
       objectType: object.type,
-      itemIndex: entry?.kind === 'list' ? entry.index : null,
-      itemKey: entry?.kind === 'dict' ? entry.key : null,
+      itemIndex: entry.kind === 'list' ? entry.index : null,
+      itemKey: entry.kind === 'dict' ? entry.key : null,
     });
   }
 
@@ -168,8 +177,8 @@ function deriveTransition(
 }
 
 type StoredEntry =
-  | { kind: 'list'; index: number }
-  | { kind: 'dict'; key: TeachingValueSnapshot };
+  | { kind: 'list'; index: number; value: TeachingValueSnapshot }
+  | { kind: 'dict'; key: TeachingValueSnapshot; value: TeachingValueSnapshot };
 
 function findStoredEntry(
   object: TeachingHeapObjectSnapshot,
@@ -187,18 +196,26 @@ function findStoredEntry(
     const normalized = rawIndex < 0n ? length + rawIndex : rawIndex;
     if (normalized < 0n || normalized >= length) return null;
     const itemIndex = Number(normalized);
-    return object.items[itemIndex] ? { kind: 'list', index: itemIndex } : null;
+    const value = object.items[itemIndex];
+    return value ? { kind: 'list', index: itemIndex, value } : null;
   }
 
   if (containerType === 'dict' && object.type === 'dict') {
-    const entry = object.entries.find(({ key }) => sameValue(key, index));
-    return entry ? { kind: 'dict', key: entry.key } : null;
+    const entry = object.entries.find(({ key }) => sameDictionaryKey(key, index));
+    return entry ? { kind: 'dict', key: entry.key, value: entry.value } : null;
   }
   return null;
 }
 
-function sameValue(left: TeachingValueSnapshot, right: TeachingValueSnapshot): boolean {
-  if (left.type !== right.type) return false;
-  if (left.type === 'list' || left.type === 'dict') return left.objectId === right.objectId;
-  return left.value === right.value;
+function sameDictionaryKey(left: TeachingValueSnapshot, right: TeachingValueSnapshot): boolean {
+  if ((left.type === 'int' || left.type === 'bool') && (right.type === 'int' || right.type === 'bool')) {
+    return numericKeyValue(left) === numericKeyValue(right);
+  }
+  if (left.type === 'none' && right.type === 'none') return true;
+  return left.type === 'str' && right.type === 'str' && left.value === right.value;
+}
+
+function numericKeyValue(value: TeachingValueSnapshot): bigint {
+  if (value.type === 'int') return BigInt(value.value);
+  return value.value === 'True' ? 1n : 0n;
 }

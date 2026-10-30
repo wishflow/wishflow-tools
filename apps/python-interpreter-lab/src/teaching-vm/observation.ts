@@ -541,7 +541,7 @@ function appendOutputChanges(
   changes.push({ kind: 'output-added', outputLines: Object.freeze(after.output.slice(before.output.length)) });
 }
 
-function sameSnapshotValue(left: TeachingValueSnapshot, right: TeachingValueSnapshot): boolean {
+export function sameSnapshotValue(left: TeachingValueSnapshot, right: TeachingValueSnapshot): boolean {
   if (left.type !== right.type) return false;
   if (left.type === 'list' || left.type === 'dict') return left.objectId === right.objectId;
   return left.value === right.value;

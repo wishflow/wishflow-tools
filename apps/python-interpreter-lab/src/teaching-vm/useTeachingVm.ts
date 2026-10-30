@@ -3,6 +3,7 @@ import type {
   TeachingCompileResult,
   TeachingDiagnosticSnapshot,
   TeachingVmHistory,
+  TeachingVmSnapshot,
 } from './types';
 import { boundTeachingHistory } from './history';
 import { DEFAULT_TEACHING_RUN_SPEED, MAX_BREAKPOINT_COUNT, type TeachingRunSpeed } from './resource-limits';
@@ -14,6 +15,15 @@ export type TeachingStatus = 'loading' | 'ready' | 'compiling' | 'running' | 'pa
 const EMPTY_HISTORY: TeachingVmHistory = Object.freeze({ items: Object.freeze([]), truncated: false });
 let nextSessionId = 0;
 
+export interface TeachingSourceStepResult {
+  snapshot: TeachingVmSnapshot;
+  history: TeachingVmHistory;
+}
+
+type PendingSourceStepWait = {
+  resolve(result: TeachingSourceStepResult | null): void;
+};
+
 export function useTeachingVm() {
   const workerRef = useRef<Worker | null>(null);
   const sessionIdRef = useRef(0);
@@ -21,6 +31,7 @@ export function useTeachingVm() {
   const workerReadyRef = useRef(false);
   const workerRecoveryAttemptsRef = useRef(0);
   const historyRef = useRef(EMPTY_HISTORY);
+  const pendingSourceStepWaitRef = useRef<PendingSourceStepWait | null>(null);
   const breakpointsRef = useRef({ sourceLines: [] as number[], instructionIndexes: [] as number[] });
   const [status, setStatus] = useState<TeachingStatus>('loading');
   const [workerGeneration, setWorkerGeneration] = useState(0);
@@ -42,13 +53,21 @@ export function useTeachingVm() {
     setInstructionBreakpointIndexes(next.instructionIndexes);
   }, []);
 
-  const receiveHistoryUpdate = useCallback((update: TeachingHistoryUpdate) => {
+  const receiveHistoryUpdate = useCallback((update: TeachingHistoryUpdate): TeachingVmHistory => {
     const next = applyHistoryUpdate(historyRef.current, update);
     historyRef.current = next;
     setHistory(next);
     setHistoryCursor((cursor) => cursor !== null && next.items.some(({ stepIndex }) => stepIndex === cursor)
       ? cursor
       : null);
+    return next;
+  }, []);
+
+  const resolvePendingSourceStepWait = useCallback((result: TeachingSourceStepResult | null) => {
+    const pending = pendingSourceStepWaitRef.current;
+    if (!pending) return;
+    pendingSourceStepWaitRef.current = null;
+    pending.resolve(result);
   }, []);
 
   const sessionIdentity = useCallback((): TeachingWorkerIdentity => ({
@@ -79,6 +98,7 @@ export function useTeachingVm() {
 
     const failWorker = (message: string) => {
       if (workerRef.current !== worker || sessionIdRef.current !== sessionId) return;
+      resolvePendingSourceStepWait(null);
       worker.terminate();
       workerRef.current = null;
       workerReadyRef.current = false;
@@ -139,6 +159,7 @@ export function useTeachingVm() {
         return;
       }
       if (message.type === 'error') {
+        resolvePendingSourceStepWait(null);
         setDiagnostic(message.diagnostic);
         setStatus('error');
         return;
@@ -148,10 +169,13 @@ export function useTeachingVm() {
         return;
       }
 
-      receiveHistoryUpdate(message.historyUpdate);
+      const nextHistory = receiveHistoryUpdate(message.historyUpdate);
       if (message.type === 'snapshot' || message.type === 'paused' || message.type === 'run-complete' || message.type === 'run-batch') {
         setDiagnostic(message.snapshot.diagnostic);
         setStatus(message.snapshot.status);
+        if (message.type === 'snapshot' || message.type === 'paused' || message.type === 'run-complete') {
+          resolvePendingSourceStepWait({ snapshot: message.snapshot, history: nextHistory });
+        }
       }
     });
 
@@ -161,13 +185,15 @@ export function useTeachingVm() {
 
     worker.postMessage({ type: 'init', sessionId, sourceRevision: 0 } satisfies TeachingWorkerRequest);
     return () => {
+      resolvePendingSourceStepWait(null);
       worker.terminate();
       if (workerRef.current === worker) workerRef.current = null;
       workerReadyRef.current = false;
     };
-  }, [receiveHistoryUpdate, replaceBreakpoints, workerGeneration]);
+  }, [receiveHistoryUpdate, replaceBreakpoints, resolvePendingSourceStepWait, workerGeneration]);
 
   const invalidate = useCallback(() => {
+    resolvePendingSourceStepWait(null);
     const identity = { ...sessionIdentity(), sourceRevision: sourceRevisionRef.current + 1 };
     sourceRevisionRef.current = identity.sourceRevision;
     setProgram(null);
@@ -178,11 +204,12 @@ export function useTeachingVm() {
     replaceBreakpoints([], []);
     setStatus(workerReadyRef.current ? 'ready' : 'loading');
     workerRef.current?.postMessage({ type: 'invalidate', ...identity } satisfies TeachingWorkerRequest);
-  }, [replaceBreakpoints, sessionIdentity]);
+  }, [replaceBreakpoints, resolvePendingSourceStepWait, sessionIdentity]);
 
   const compile = useCallback((source: string) => {
     const worker = workerRef.current;
     if (!worker || !workerReadyRef.current) return;
+    resolvePendingSourceStepWait(null);
     const identity = { ...sessionIdentity(), sourceRevision: sourceRevisionRef.current + 1 };
     sourceRevisionRef.current = identity.sourceRevision;
     setProgram(null);
@@ -193,7 +220,7 @@ export function useTeachingVm() {
     replaceBreakpoints([], []);
     setStatus('compiling');
     worker.postMessage({ type: 'compile', ...identity, source } satisfies TeachingWorkerRequest);
-  }, [replaceBreakpoints, sessionIdentity]);
+  }, [replaceBreakpoints, resolvePendingSourceStepWait, sessionIdentity]);
 
   const updateBreakpoints = useCallback((sourceLines: readonly number[], instructionIndexes: readonly number[]) => {
     const worker = workerRef.current;
@@ -238,6 +265,20 @@ export function useTeachingVm() {
     worker.postMessage({ type: 'step-source', mode, ...sessionIdentity() } satisfies TeachingWorkerRequest);
   }, [history, historyCursor, program, sessionIdentity, status]);
 
+  const stepSourceAndWait = useCallback((mode: TeachingSourceStepMode) => new Promise<TeachingSourceStepResult | null>((resolve) => {
+    const worker = workerRef.current;
+    if (!worker || !program || !isAtHead(historyRef.current, historyCursor) || (status !== 'ready' && status !== 'paused')
+      || pendingSourceStepWaitRef.current) {
+      resolve(null);
+      return;
+    }
+    const identity = sessionIdentity();
+    pendingSourceStepWaitRef.current = { resolve };
+    setHistoryCursor(null);
+    setStatus('running');
+    worker.postMessage({ type: 'step-source', mode, ...identity } satisfies TeachingWorkerRequest);
+  }), [historyCursor, program, sessionIdentity, status]);
+
   const run = useCallback(() => {
     const worker = workerRef.current;
     if (!worker || !program || (status !== 'ready' && status !== 'paused')) return;
@@ -259,12 +300,14 @@ export function useTeachingVm() {
 
   const reset = useCallback(() => {
     if (!program) return;
+    resolvePendingSourceStepWait(null);
     setDiagnostic(null);
     setHistoryCursor(null);
     workerRef.current?.postMessage({ type: 'reset', ...sessionIdentity() } satisfies TeachingWorkerRequest);
-  }, [program, sessionIdentity]);
+  }, [program, resolvePendingSourceStepWait, sessionIdentity]);
 
   const retryWorker = useCallback(() => {
+    resolvePendingSourceStepWait(null);
     workerRef.current?.terminate();
     workerRef.current = null;
     workerReadyRef.current = false;
@@ -277,7 +320,7 @@ export function useTeachingVm() {
     replaceBreakpoints([], []);
     setStatus('loading');
     setWorkerGeneration((generation) => generation + 1);
-  }, [replaceBreakpoints]);
+  }, [replaceBreakpoints, resolvePendingSourceStepWait]);
 
   const headSnapshot = history.items.at(-1) ?? null;
   const snapshot = historyCursor === null
@@ -306,6 +349,7 @@ export function useTeachingVm() {
     compile,
     step,
     stepSource,
+    stepSourceAndWait,
     run,
     setRunSpeed,
     pause,
