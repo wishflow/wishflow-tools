@@ -1239,6 +1239,6 @@ Cloudflare Pages 和 GitHub Pages 均已部署这个发布提交；本次仅补�
 | 应用完整 CI | `source /Users/shiwei/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=5438 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、168 项单元测试、Vite 生产构建和59项 Playwright E2E 全部通过。 |
 | 共享站点回归 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 15项全部通过。 |
 | Codex 内置浏览器本地检查 | 生产预览在桌面1440×900和手机390×844视口打开；确认 Cow Gulch 地图、Pedro 对白和 HUD 正常。手机画布为341.20×191.05，比例1.786，接近16:9，页面 `scrollWidth` 与 `clientWidth` 均为390，没有横向溢出。Playwright 定向触屏测试另行验证真实移动和招募操作。 |
-| 发布与公网实测 | 待本轮集成和部署后补录。 |
+| 发布与公网实测 | 触屏变更提交 `4b4262e` 已合入 `master`。GitHub Actions [run 41102853277](https://github.com/wishflow/wishflow-tools/actions/runs/41102853277) 最终成功：Guns’n’Glory 59项 E2E、共享站点检查及 Cloudflare Pages、GitHub Pages 部署均通过；Worker/config 检查按静态应用变更范围跳过。首次执行中两项 T15 存档 E2E 出现未带 URL 的 404，失败任务重跑后通过；错误未在重跑中复现。随后包含该应用版本的 master SHA `42c5789` 对应 [run 41104135193](https://github.com/wishflow/wishflow-tools/actions/runs/41104135193) 成功，两个 Pages 部署再次完成。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=42c5789)，确认牛溪谷正式战役、地图、Pedro 对话和 HUD 显示正常；继续后进入第1波，再暂停确认“战斗已暂停”。公开页控制台 error/warn 为空。浏览器档案始终为已完成1/1、最高分 `$356`；没有结算本次战斗。手机390×844下画布341.20×191.05（比例1.786），页面无横向溢出；桌面1440×900也已检查。 |
 
 本轮仅增加正式战役触屏路径的行为覆盖，不代表 Cow Gulch 首关地图、规则或全套交互的 P1-F 对照已完成；关卡完成验收仍为0/60。
