@@ -95,7 +95,7 @@ flowchart LR
 - **验收**：`bump(a)` 中 `xs` 与 `a` 共享同一对象；返回的标量先回到调用者栈，再按后续指令绑定 `n`；`fact(3)` 的同名帧仍有独立局部状态和返回位置。
 - **验证**：Into/Over/Out、递归、暂停在函数内、从历史检查非活动帧、参数与运行错误的失败显示；达到调用帧预算时不播放成功创建动画。
 - **回滚**：调用/返回退化为 V2 静态解释，V3 其他动作不受影响。
-- **状态**：spec/tasks 与 T01–T04 已完成；应用全量 CI（166 条单测、68 条 Playwright、类型检查、生产构建）、catalog（15 项）、整站构建和 `git diff --check` 均通过。代码审查完成，待提交、合并、推送及线上验收。细化范围与执行记录见 [V4 spec](specs/v04-function-call-return-animation.md) 和 [V4 tasks](tasks/v04-function-call-return-animation.md)。
+- **状态**：spec/tasks、实现、本地验证、代码审查、提交合并、推送、CI/CD 与线上验收均已完成。应用全量 CI（166 条单测、68 条 Playwright、类型检查、生产构建）、catalog（15 项）、整站构建和 `git diff --check` 均通过。提交 `42c5789` 已快进合并至 `master`；GitHub Actions [41104135193](https://github.com/wishflow/wishflow-tools/actions/runs/41104135193) 成功，GitHub Pages 与 Cloudflare Pages 部署成功。线上教学 VM 已播放 `bump(items)` 调用和返回，历史可见帧 #1 进入/退出且最终输出为 `9`；真实 CPython 已显示 AST、字节码并运行得到 `9`。细化范围与执行记录见 [V4 spec](specs/v04-function-call-return-animation.md) 和 [V4 tasks](tasks/v04-function-call-return-animation.md)。
 
 ### V5：控制流与既有运行错误
 

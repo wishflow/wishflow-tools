@@ -24,9 +24,9 @@
   - 验证：中英文术语一致、相对链接有效、`git diff --check`；Markdown 成品复制到 `/tmp/var/wishflow-tools/`。
   - 文件：`docs/guide/usage.zh-CN.md`、`docs/guide/usage.en.md`、`docs/visual-execution-plan.md`、本 tasks。
 
-- [ ] **T05：整体验证、审查、提交、发布与线上实测**
+- [x] **T05：整体验证、审查、提交、发布与线上实测**
   - 验收：应用 CI、catalog、整站构建及代码审查通过；提交并快进合并到 `master`，推送后相关 Actions 成功；线上 Teaching VM 函数动画和真实 CPython 视图均实测通过。
-  - 验证：运行应用 `test:ci`、根 `pnpm test:catalog`、`pnpm build:site`、`git diff --check`；通过 Codex 内置浏览器查看公开应用。记录提交、workflow 和线上证据。
+  - 验证：应用 `CI=1 PLAYWRIGHT_PORT=43871 pnpm run test:ci`（166 条单测、68 条 Playwright、类型检查和生产构建）、根 `pnpm test:catalog`（15 项）、`pnpm build:site`、`git diff --check` 均通过；代码审查无阻塞项。提交 `42c5789` 已快进合并并推送至 `master`；[GitHub Actions 41104135193](https://github.com/wishflow/wishflow-tools/actions/runs/41104135193) 的测试与 GitHub Pages、Cloudflare Pages 部署成功。通过 Codex 内置浏览器实测：Teaching VM 的 `bump(items)` 讲解播放完成，历史显示进入帧 #1、`CALL_FUNCTION`、`RETURN_VALUE` 和从帧 #1 返回，结果为 `9`；真实 CPython 为同一源码生成 AST、两个代码对象和 26 条字节码指令，运行轨迹记录 9 个事件且最终输出为 `9`。
   - 文件：依验证结果涉及的实现/测试/文档文件。
 
 ## 检查点
@@ -43,9 +43,9 @@
 | 实现 | 已完成 | T01 派生真实调用/返回/拒绝事件，并在 12 条上限内优先保留帧边界；T02 展示帧路线、调用位置、返回续行、参数/实际返回值与栈/变量高亮；T03 新增真实 Worker 用例覆盖 `bump(xs)`、`fact(3)`、NameError 无帧和中文文案。 |
 | 定向验证 | 已完成 | `tests/teaching-animation.test.ts` 13 条通过；定向 Playwright 验证函数别名与标量返回、递归 3 次调用/返回、失败无新帧和中英文说明通过。 |
 | 本地全量验证 | 已完成 | 应用 `test:ci`（166 条单测、68 条 Playwright、类型检查和生产构建）、`pnpm test:catalog`（15 项）、`pnpm build:site`、`git diff --check` 均通过；代码审查无阻塞项。 |
-| 提交与合并 | 未开始 | — |
-| CI/CD | 未开始 | — |
-| 线上验收 | 未开始 | — |
+| 提交与合并 | 已完成 | `42c5789 feat(python-lab): animate function calls and returns` 已快进合并至 `master` 并推送至 `origin/master`。 |
+| CI/CD | 已完成 | [GitHub Actions 41104135193](https://github.com/wishflow/wishflow-tools/actions/runs/41104135193) 全部必需检查成功；GitHub Pages 和 Cloudflare Pages 部署成功，Worker 按变更范围跳过。 |
+| 线上验收 | 已完成 | 公开 Python 解释器实验室页面实测 Teaching VM 调用/返回动画及最终输出 `9`，并切换至真实 CPython 验证 AST、字节码和执行轨迹输出 `9`。 |
 
 ## 回滚
 
