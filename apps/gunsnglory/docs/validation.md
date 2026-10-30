@@ -974,6 +974,6 @@ Cow Gulch 的静态装饰深度为 `(cell.y + 1) × 7680` fine units，同一行
 | APK 资源 | 从 APK 提取的 mdpi 图集为 96×24；应用构建清单加载 `sfx_death_pioneers`，不依赖研究目录或 APK 运行时访问。 |
 | 本地完整验证 | `CI=1 PLAYWRIGHT_PORT=4180 nvm exec 22.23.3 pnpm run test:ci` 通过：TypeScript 检查、156项单元测试、Vite 生产构建和52项 Playwright 测试。 |
 | Codex 内置浏览器本地检查 | 在 `http://localhost:5186/` 用内置浏览器启动单个 Pioneer 样例并确认胜利结算、击败数、现金和样例档案保存；速度设置曾调至0.25×后恢复1×。控制台 error/warn 为空。该浏览器观察确认页面交互和存档可用，但没有把截图作为死亡动画逐帧证据；帧裁切与计时边界由上方 Canvas 行为测试验证。 |
-| 发布与公网验证 | 待合并发布并检查公开版本后填写。 |
+| 发布与公网验证 | `master` 提交 `d609bea` 已推送。GitHub Actions [run 41002619950](https://github.com/wishflow/wishflow-tools/actions/runs/41002619950) 完成且结论为 success：`test-shared`、`test (gunsnglory)`、Cloudflare Pages 与 GitHub Pages 通过；`docs-only`、宠物 Windows、Cloudflare 配置和 Worker 作业按变更范围跳过。Codex 内置浏览器访问[发布页](https://wishflow-tools.pages.dev/gunsnglory/?release=d609bea)，确认标题、Cow Gulch 地图/HUD、现有档案1/1关卡与最高分 `$356`。资源加载后页面自动进入首关；为避免推进战役，短时运行后暂停在 Wave 3/8、生命50、敌人4、现金$107，未结算并关闭临时标签。模拟速度沿用页面读取到的4×偏好，没有更改设置；浏览器 error/warn 为空。直接打开[线上死亡图集](https://wishflow-tools.pages.dev/gunsnglory/assets/sfx_death_pioneers.png?release=d609bea)显示96×24 PNG。浏览器检查验证发布页和资源可加载，不替代 Canvas 帧阈值测试。 |
 
 本轮仅闭合 Cow Gulch 已实现 type1/2 步兵的死亡图集帧选择。车辆死亡烟雾、其他敌型、受击/状态效果的完整逐帧视觉对照，以及 Cow Gulch 首关整体验收仍未完成；关卡计数保持0/60。
