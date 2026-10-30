@@ -1267,3 +1267,25 @@ Game 测试 [`game.test.ts`](../tests/game.test.ts) 直接打开 [`campaign-new-
 | Codex 内置浏览器公网复核 | 打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=e49383b)，确认战役面板、Cow Gulch 地图、HUD 与4×速度控件显示正常。继续后观察到 Wave01 实际推进（生命50、现金 `$79`、敌人2），随后自然进入 Wave02 对白；刷新后未完成战役从 Wave01 重新开始，已存档的1/1完成记录和最高分 `$356` 保持不变。测试没有结算战役；控制台 error/warn 为空。 |
 
 本轮关闭的是正式 L01 内 Mexican 招募及 Wave02 群体命中的行为证据缺口；独立 fixture 仍用于价格和 AOE 边界回归。它不代表 P1-B 全部内容完成，也不改变 P1-F 首关验收状态。
+
+## 65. P1-F Cow Gulch 波次敌人生成时序
+
+正式战役的波次请求池原先在网页模拟步中先于单位和敌人更新处理，导致本帧新生成的敌人立即移动，并可能在同一帧被枪手选为攻击目标。按 APK 调用顺序调整后，既有对象在当前帧完成移动、射击和投射物处理，波次请求池随后生成新敌人；新敌人下一帧才开始移动并进入射击目标集合。波次间隔、随机抽取、请求扣减、重试和动态难度未改。
+
+### APK 依据与实现
+
+REA/JADX 对 APK 1.8.6 的反编译资料显示，`GunsAndGloryThread` 主循环在 `GunsAndGloryThread.java:1087–1097` 的调用次序为 `gom.update(dt) → ed.moveEnemys() → ud.updateSpawns() → ud.moveUnits() → ud.moveShots() → wm.updateWave() → spawnPoolManager.update()`；另一个线程变体 `GunsAndGloryThread.java:1600–1610` 保持相同关键顺序。`WaveManager.updateWave()`（`WaveManager.java:195–288`）消费波次请求池。反编译文件位于研究分支 `codex/gunsnglory-spec` 的 `apps/gunsnglory/docs/research/recovered-source/java/com/hg/gunsandglory/` 归档；它们是 JADX 分析产物，不是原始 Java 源码。
+
+网页在 [`GameSession.advance()`](../src/game/index.ts) 中把正式战役池更新移到敌人、单位和投射物移动/攻击之后、波次清空判定之前。新增的 [`campaign wave requests spawn after current-frame movement and attacks`](../tests/game.test.ts) 使用正式 Cow Gulch L01 内容，仅保留首波一个生成请求并固定随机种子：首个100ms模拟步生成一名敌人，没有 `unit-fired` 事件，敌人仍位于原始生成坐标；第二个100ms步敌人位置变化且出现 `unit-fired`。该测试在旧顺序下因本帧开火而失败，调整后通过。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 本地应用 CI | 显式使用 Node 22.23.3；`CI=1 PLAYWRIGHT_PORT=4186 pnpm run test:ci` 通过：TypeScript 检查、170项单元测试、Vite 生产构建及60项 Playwright E2E 全部通过。 |
+| 共享站点与构建 | `pnpm run test:catalog` 的15项测试通过；完整六应用共享站构建成功。3D 应用报告既有 chunk size warning，构建退出码为0。 |
+| GitHub Actions 与发布 | 功能提交 `7e977b6` 合入并推送 `master`。GitHub Actions [run 41125554910](https://github.com/wishflow/wishflow-tools/actions/runs/41125554910) 成功；Guns’n’Glory CI、共享 catalog 检查、Cloudflare Pages 与 GitHub Pages 部署通过。文档、宠物及 Cloudflare Worker/config 专项按本次文件变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=7e977b6)，检查桌面页面、正式战役面板、Cow Gulch 地图、HUD、4×速度控件及 Pedro 首波对白。继续后战局推进，状态仍为 Wave 1/8、生命50；随后暂停，未进入终局或生成新结算。浏览器日志为空。该浏览器已有的档案在测试开始和结束时均显示牛溪谷第1关已完成、最高分 `$356`；本次没有更改通关记录或速度设置。 |
+| 验收边界 | 本轮只对齐波次生成的当前帧/下一帧时序。其余首关地图、对象、规则和表现的完整对照仍未完成，P1-F 及完整关卡验收计数保持0/60。 |
+
+本轮完成波次生成顺序的一个可追溯差异修复，不代表 Cow Gulch 首关对照通过或完整游戏完成。
