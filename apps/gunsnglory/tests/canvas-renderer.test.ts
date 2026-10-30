@@ -15,6 +15,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const treeImage = { naturalWidth: 32, naturalHeight: 64 } as HTMLImageElement;
   const bushImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
   const drawCalls: unknown[][] = [];
+  const fillCalls: Array<{ color: string; rect: number[] }> = [];
   const clipRects: number[][] = [];
   const decorationClipStates: boolean[] = [];
   const decorationViewportClipStates: boolean[] = [];
@@ -25,6 +26,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const mapClipStack: boolean[] = [];
   const viewportClipStack: boolean[] = [];
   let currentAlpha = 1;
+  let currentFillStyle = '';
   let mapClipActive = false;
   let viewportClipActive = false;
   let pendingRect: number[] | undefined;
@@ -42,7 +44,9 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     get globalAlpha() { return currentAlpha; },
     set globalAlpha(value: number) { currentAlpha = value; },
     clearRect() {},
-    fillRect() {},
+    fillRect(...rect: number[]) { fillCalls.push({ color: currentFillStyle, rect }); },
+    get fillStyle() { return currentFillStyle; },
+    set fillStyle(value: string) { currentFillStyle = value; },
     beginPath() {},
     rect(...args: number[]) { pendingRect = args; },
     clip() {
@@ -284,6 +288,73 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     enemies: [{ ...view.enemies[0]!, alive: false, deathRemainingMs: 399 }],
   }, images);
   assert.equal(enemyDrawAlphas.at(-1), Math.max(0.15, 399 / 799), 'ordinary enemy death keeps the existing fade');
+
+  const damagedWagon = {
+    ...view.enemies[0]!,
+    type: 4 as const,
+    asset: 'wagon' as const,
+    hitPoints: 94,
+    maxHitPoints: 100,
+  };
+  fillCalls.length = 0;
+  drawGame(context, { ...view, enemies: [damagedWagon] }, { ...images, wagon: {} as HTMLImageElement });
+  const healthBarBackground = fillCalls.filter(({ color }) => color === '#3f0000');
+  const healthBarFill = fillCalls.filter(({ color }) => color === 'rgb(15, 239, 0)');
+  const damagedWagonCenterX = viewport.origin.x
+    + (damagedWagon.positionFine.x / 240) * viewport.scaleFactor;
+  const damagedWagonFeetY = viewport.origin.y
+    + (damagedWagon.positionFine.y / 240) * viewport.scaleFactor;
+  const sourceScale = viewport.tileSize / 48;
+  const expectedBackgroundHeight = (12 * sourceScale) - (sourceScale < 1 ? 1 : 0);
+  const nativeTileHalf = Math.trunc(viewport.tileSize / 2) * 3;
+  assert.deepEqual(healthBarBackground, [{
+    color: '#3f0000',
+    rect: [
+      damagedWagonCenterX - (18 * sourceScale),
+      damagedWagonFeetY - (6 * sourceScale) - nativeTileHalf,
+      36 * sourceScale,
+      expectedBackgroundHeight,
+    ],
+  }], 'a damaged vehicle shows the original dark-red 36×12 health-bar backing');
+  const sourceFillWidth = Math.trunc(
+    Math.trunc((damagedWagon.hitPoints * 10 * 6) * sourceScale)
+      / (damagedWagon.maxHitPoints * 2),
+  );
+  assert.deepEqual(healthBarFill, [{
+    color: 'rgb(15, 239, 0)',
+    rect: [
+      damagedWagonCenterX - (15 * sourceScale),
+      damagedWagonFeetY - (3 * sourceScale) - nativeTileHalf,
+      sourceFillWidth,
+      6 * sourceScale,
+    ],
+  }], 'the original fill uses integer-scaled HP width and HP-derived red/green color');
+
+  fillCalls.length = 0;
+  drawGame(context, {
+    ...view,
+    enemies: [{ ...damagedWagon, hitPoints: 95 }],
+  }, { ...images, wagon: {} as HTMLImageElement });
+  assert.equal(fillCalls.some(({ color }) => color === '#3f0000'), false,
+    'the original health bar stays hidden at the 95% cutoff');
+
+  fillCalls.length = 0;
+  drawGame(context, {
+    ...view,
+    enemies: [{ ...damagedWagon, hitPoints: 18, maxHitPoints: 19 }],
+  }, { ...images, wagon: {} as HTMLImageElement });
+  assert.equal(fillCalls.some(({ color }) => color === '#3f0000'), false,
+    'the 95% cutoff uses the source integer division for odd max HP values');
+
+  const reducedScaleView = { ...view, map: { ...view.map, width: 25 } };
+  const reducedScaleViewport = getMapViewport(reducedScaleView);
+  fillCalls.length = 0;
+  drawGame(context, { ...reducedScaleView, enemies: [damagedWagon] }, { ...images, wagon: {} as HTMLImageElement });
+  const reducedScaleBackground = fillCalls.find(({ color }) => color === '#3f0000');
+  assert.ok(reducedScaleBackground);
+  assert.ok(reducedScaleViewport.tileSize / 48 < 1);
+  assert.equal(reducedScaleBackground.rect[3], (12 * reducedScaleViewport.tileSize / 48) - 1,
+    'the source subtracts one canvas pixel from the backing at a scale below one');
 });
 
 test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {

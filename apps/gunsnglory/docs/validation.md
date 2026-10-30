@@ -875,3 +875,22 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 ### 开发预览排错记录
 
 本地 Vite 开发预览在重命名弹道切层函数后，热更新期间短暂报告旧符号 `updateShotFineZ` 未定义；整页重载后恢复。该日志来自热更新状态，不是最终源码构建或公开页面错误。今后若 HMR 在函数改名后报旧符号，先做整页重载并检查最终浏览器日志，再判断是否为可复现的代码缺陷。
+
+## 47. P1-F Cow Gulch 受损敌方生命条
+
+补齐原版对受损敌人的生命条绘制。仅敌人类型大于2、仍存活、`0 < HP < trunc(maxHP × 95 / 100)` 时显示；满血、达到95%门槛、死亡或无有效生命值时隐藏。生命条沿敌人的中心 X 和脚底 Y 锚定，背景为 `RGB(63,0,0)`，填充高度为背景的一半；原版缩放低于1时，背景底边缩短1个画布像素。填充宽度按 float32 转整数、再整数除法的顺序计算，颜色通道也按 Java float32 取整。原版几何以48像素/格和 `mScalingFactor` 表达；网页以32逻辑像素/格渲染，`mScalingFactor` 对应 `viewport.tileSize / 48`。
+
+实现依据为研究分支 `codex/gunsnglory-spec` 的 REA/JADX 反编译 `GunsAndGloryThread.drawEnemies()`；规则和源坐标换算已收录在[产品规格 §4.7](spec.md#47-动画与声音必须对应真实行为)。反编译结果是分析产物，不是原始源码。当前网页可用敌人类型没有9型，因此源码中的类型9例外不影响现有类型集合。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| TDD 回归 | Canvas 断言先确认原实现缺少生命条而失败；逐行对照源码后，新增断言也捕获了填充误用整条高度及宽度误缩放。修正后，底条/半高填充几何、float32/整数宽度、缩放低于1时的底边修正、普通与奇数 max HP 的95%门槛均通过。 |
+| 专项测试 | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4182 nvm exec 22.23.3 pnpm --dir apps/gunsnglory exec node --import tsx --test tests/canvas-renderer.test.ts` 通过，5项测试。 |
+| 类型检查 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm --dir apps/gunsnglory run typecheck` 通过。 |
+| 完整应用 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4183 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、154项单元测试、生产构建及52项 Playwright 测试。 |
+| 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 通过，14项测试。 |
+| 内置浏览器与公网发布 | 待完成；需确认受损敌人生命条实际可见，并保留既有正式档案与速度设置。 |
+
+本节只覆盖受损敌方生命条的绘制规则，不代表 Cow Gulch 或 P1-F 首关验收完成；关卡完成计数仍为0/60。
