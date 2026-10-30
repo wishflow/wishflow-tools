@@ -35,8 +35,8 @@
 | --- | --- | --- |
 | 实现完成 | 已完成 | Markdown 构建转换器、Vite 多页帮助、共享壳本地导航与页眉入口已实现 |
 | 本地验证 | 通过（两项首轮失败已定向复测） | 应用 typecheck、135 条单测、构建成功；Playwright 首轮 45/47，其中 1 项受 jsDelivr WASM 请求 `ERR_HTTP2_PROTOCOL_ERROR` 影响，1 项因默认运行速度与 UI 观察时序竞态失败；后者已明确选择慢速，两项均在隔离端口定向重跑通过，帮助页用例也在全量运行中通过；根 catalog 15 条测试，`pnpm build:site` 成功 |
-| CI/CD | 未开始 | 推送后记录 Actions 结果 |
-| 线上验收 | 未开始 | 发布成功后访问应用帮助路径 |
+| CI/CD | 成功 | [Actions #41034385992](https://github.com/wishflow/wishflow-tools/actions/runs/41034385992)：Python 实验室及共享站点测试通过，Cloudflare Pages 与 GitHub Pages 部署成功 |
+| 线上验收 | 通过 | 按根 README 公布的域名访问 `/python-interpreter-lab/help.html` 成功，Pages 规范化为无扩展名路径；刷新后正文与英文语言状态保留，中英文切换和“打开实验室”链接正常 |
 
 ## 交付与回滚
 
