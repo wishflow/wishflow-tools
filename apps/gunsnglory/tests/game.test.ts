@@ -126,6 +126,42 @@ test('starts an original campaign automatically without a start-wave intent', as
   assert.equal(session.submitIntent({ type: 'start-wave' }), false);
 });
 
+test('campaign wave requests spawn after current-frame movement and attacks', async () => {
+  const original = cowGulchLevelOneContent;
+  const firstWave = original.campaignWaves![0]!;
+  const pool = firstWave.spawnPools[0]!;
+  const gunslinger = original.units.find(({ id }) => id === 'gunslinger-1')!;
+  const scenarioUnderTest: ScenarioContent = {
+    ...original,
+    campaignWaveCount: 1,
+    campaignWaves: [{
+      ...firstWave,
+      spawnPools: [{ ...pool, requests: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0] }],
+    }],
+    units: [{
+      ...gunslinger,
+      id: 'spawn-order-gunslinger',
+      cell: { x: 0, y: 10 },
+      activity: 5,
+      weapon: { ...gunslinger.weapon!, reloadTimeMs: 1 },
+    }],
+  };
+  const session = await createGame({ scenarios: { [scenarioUnderTest.id]: scenarioUnderTest } }).open({
+    scenarioId: scenarioUnderTest.id,
+    mode: 'formal',
+    randomSeed: 17,
+  });
+
+  const spawnFrame = session.advance({ deltaMs: 100 });
+  assert.equal(spawnFrame.events.some((event) => event.type === 'unit-fired'), false);
+  assert.equal(spawnFrame.enemies.length, 1);
+  assert.deepEqual(spawnFrame.enemies[0]?.positionFine, { x: -11520, y: 80640 });
+
+  const nextFrame = session.advance({ deltaMs: 100 });
+  assert.ok(nextFrame.events.some((event) => event.type === 'unit-fired'));
+  assert.notDeepEqual(nextFrame.enemies[0]?.positionFine, spawnFrame.enemies[0]?.positionFine);
+});
+
 test('opens a controlled scene with one unselected unit and isolates observations', async () => {
   const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
   const initial = session.observe();

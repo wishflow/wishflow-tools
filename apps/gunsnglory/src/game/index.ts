@@ -2209,77 +2209,6 @@ export function createGame(options: {
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
             const campaignDefinition = campaignWaves?.find(({ number }) => number === wave!.number);
-            if (campaignMode && wave.campaignSpawnPools) {
-              for (const pool of wave.campaignSpawnPools) {
-                if (pool.delayMs > 0) {
-                  pool.delayMs = Math.max(0, pool.delayMs - deltaMs);
-                  continue;
-                }
-                const totalRequests = pool.requests.reduce((sum, count) => sum + count, 0);
-                if (totalRequests <= 0) continue;
-                let selection = random.nextInt(totalRequests);
-                let selectedRequestIndex = -1;
-                for (let index = 0; index < pool.requests.length; index += 1) {
-                  selection -= pool.requests[index]!;
-                  if (selection < 0) {
-                    selectedRequestIndex = index;
-                    break;
-                  }
-                }
-                const spawn = [scenario.previewWave.spawn, ...(scenario.previewWave.additionalSpawns ?? [])][pool.spawnPointId];
-                const spawnField = spawnFields[pool.spawnPointId];
-                if (selectedRequestIndex < 0 || !campaignDefinition || wave.dynamicDifficulty === undefined
-                  || !spawn || !spawnField) continue;
-
-                random.nextInt(1);
-                const spawnVector = directionVector(spawnField.direction);
-                const candidatePosition = {
-                  x: spawnField.positionFine.x - (spawnVector.x * 2 * FINE_UNITS_PER_CELL),
-                  y: spawnField.positionFine.y - (spawnVector.y * 2 * FINE_UNITS_PER_CELL),
-                };
-                const poolType = selectedRequestIndex + 2;
-                const collisionProbePosition = {
-                  x: candidatePosition.x + (spawnVector.x * FINE_UNITS_PER_CELL),
-                  y: candidatePosition.y + (spawnVector.y * FINE_UNITS_PER_CELL),
-                };
-                if (poolType === 7 && campaignSpawnCollides(collisionProbePosition, wave.enemies)) {
-                  pool.delayMs = Math.trunc(pool.intervalMs / 2);
-                  continue;
-                }
-
-                const requestType = poolType === 7 ? 4 : poolType;
-                const groupId = `campaign-${wave.number}-group-${nextCampaignGroupNumber++}`;
-                const nextEnemyId = () => `campaign-${wave!.number}-enemy-${nextCampaignEnemyNumber++}`;
-                const spawned = poolType === 7
-                  ? spawnCoveredWagonPair(
-                    scenario, spawn, candidatePosition, groupId, wave.dynamicDifficulty,
-                    campaignDefinition, difficulty, random, nextEnemyId,
-                  )
-                  : poolType >= 2 && poolType <= 5
-                    ? spawnSettlerGroup(
-                      scenario, spawn, candidatePosition, requestType, groupId, wave.dynamicDifficulty,
-                      campaignDefinition, difficulty, random, nextEnemyId,
-                    )
-                    : undefined;
-                if (!spawned) {
-                  pool.delayMs = Math.trunc(pool.intervalMs / 2);
-                  continue;
-                }
-
-                spawnField.positionFine = candidatePosition;
-                wave.enemies.push(...spawned);
-                pool.requests[selectedRequestIndex] = pool.requests[selectedRequestIndex]! - 1;
-                pool.delayMs = pool.intervalMs;
-                wave.events.push({
-                  type: 'enemy-group-spawned',
-                  enemyIds: spawned.map(({ id }) => id),
-                  waveNumber: wave.number,
-                  spawnPointId: pool.spawnPointId,
-                  requestType,
-                  groupSize: spawned.length,
-                });
-              }
-            }
             for (const enemy of [...wave.enemies]) {
               if (!enemy.alive) {
                 enemy.deathRemainingMs -= deltaMs;
@@ -2461,6 +2390,80 @@ export function createGame(options: {
                 });
               } else {
                 wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+              }
+            }
+
+            // The APK calls WaveManager.updateWave() after moving enemies, units, and shots.
+            // Spawn requests here so new enemies first move and become targetable next frame.
+            if (campaignMode && wave.campaignSpawnPools) {
+              for (const pool of wave.campaignSpawnPools) {
+                if (pool.delayMs > 0) {
+                  pool.delayMs = Math.max(0, pool.delayMs - deltaMs);
+                  continue;
+                }
+                const totalRequests = pool.requests.reduce((sum, count) => sum + count, 0);
+                if (totalRequests <= 0) continue;
+                let selection = random.nextInt(totalRequests);
+                let selectedRequestIndex = -1;
+                for (let index = 0; index < pool.requests.length; index += 1) {
+                  selection -= pool.requests[index]!;
+                  if (selection < 0) {
+                    selectedRequestIndex = index;
+                    break;
+                  }
+                }
+                const spawn = [scenario.previewWave.spawn, ...(scenario.previewWave.additionalSpawns ?? [])][pool.spawnPointId];
+                const spawnField = spawnFields[pool.spawnPointId];
+                if (selectedRequestIndex < 0 || !campaignDefinition || wave.dynamicDifficulty === undefined
+                  || !spawn || !spawnField) continue;
+
+                random.nextInt(1);
+                const spawnVector = directionVector(spawnField.direction);
+                const candidatePosition = {
+                  x: spawnField.positionFine.x - (spawnVector.x * 2 * FINE_UNITS_PER_CELL),
+                  y: spawnField.positionFine.y - (spawnVector.y * 2 * FINE_UNITS_PER_CELL),
+                };
+                const poolType = selectedRequestIndex + 2;
+                const collisionProbePosition = {
+                  x: candidatePosition.x + (spawnVector.x * FINE_UNITS_PER_CELL),
+                  y: candidatePosition.y + (spawnVector.y * FINE_UNITS_PER_CELL),
+                };
+                if (poolType === 7 && campaignSpawnCollides(collisionProbePosition, wave.enemies)) {
+                  pool.delayMs = Math.trunc(pool.intervalMs / 2);
+                  continue;
+                }
+
+                const requestType = poolType === 7 ? 4 : poolType;
+                const groupId = `campaign-${wave.number}-group-${nextCampaignGroupNumber++}`;
+                const nextEnemyId = () => `campaign-${wave!.number}-enemy-${nextCampaignEnemyNumber++}`;
+                const spawned = poolType === 7
+                  ? spawnCoveredWagonPair(
+                    scenario, spawn, candidatePosition, groupId, wave.dynamicDifficulty,
+                    campaignDefinition, difficulty, random, nextEnemyId,
+                  )
+                  : poolType >= 2 && poolType <= 5
+                    ? spawnSettlerGroup(
+                      scenario, spawn, candidatePosition, requestType, groupId, wave.dynamicDifficulty,
+                      campaignDefinition, difficulty, random, nextEnemyId,
+                    )
+                    : undefined;
+                if (!spawned) {
+                  pool.delayMs = Math.trunc(pool.intervalMs / 2);
+                  continue;
+                }
+
+                spawnField.positionFine = candidatePosition;
+                wave.enemies.push(...spawned);
+                pool.requests[selectedRequestIndex] = pool.requests[selectedRequestIndex]! - 1;
+                pool.delayMs = pool.intervalMs;
+                wave.events.push({
+                  type: 'enemy-group-spawned',
+                  enemyIds: spawned.map(({ id }) => id),
+                  waveNumber: wave.number,
+                  spawnPointId: pool.spawnPointId,
+                  requestType,
+                  groupSize: spawned.length,
+                });
               }
             }
 
