@@ -923,3 +923,33 @@ Cow Gulch 的静态装饰深度为 `(cell.y + 1) × 7680` fine units，同一行
 | 合并、部署与线上实测 | 开发提交 `7c6a21b` 合入 `master`，发布提交 `21294f33bed2f8ed977a7d8cc8e23fdfcd9259a0` 已推送。GitHub Actions [run 40991762223](https://github.com/wishflow/wishflow-tools/actions/runs/40991762223) 的 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 与 GitHub Pages 均成功；Worker/config 检查按本次静态应用变更范围跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=21294f3)，确认战役首页、Cow Gulch 地图、桥、静态装饰和 HUD 正常；暂停时为 Wave01/8、生命50、敌人5、现金$76，速度4×。正式档案仍为1/1、最高分 `$356`，未提交结算；控制台 error/warn 为空。此目视核对不代替 Canvas 同深度 drawCall 顺序断言。 |
 
 本轮只对 Cow Gulch 静态装饰之间的同深度地图扫描次序给出确定性保证。单位移动后的历史队列顺序、静态装饰与动态对象之间以及敌人/投射物之间的逐对象同深度次序仍待 P1-F 对照；Cow Gulch 首关仍为0/60。
+
+## 49. P1-F Cow Gulch 敌人行走动画帧推进
+
+敌人移动距离到行走图帧的映射原先只对 type1/2 使用了正确的四段序列，type4 和 type8 则按帧数等分循环，造成 type4 第三段错帧、type8 在边界提前切帧。本轮将网页逻辑改为按 APK 中已实现敌型各自的动画阈值表选帧；移动距离累计、转向期间暂停行走动画以及方向行选择维持原有实现。
+
+### APK 静态依据
+
+研究分支 `codex/gunsnglory-spec` 的 JADX 反编译产物 `GameDesignOptics.java`（`enemyAnimationWalk`，第19行）给出类型帧/距离阈值；`GameObjectEnemy.java`（`move()`，反编译行注释 436–477）累加本帧 `fineX/fineY` 位移，按最后阈值取模，再在 `animStep > 当前阈值` 时前进到下一项。因此表中阈值为包含端点，3,072 fine units 处回到循环起点。相同方法只在 `turningAnimationCounter <= 0` 时更新行走帧。以上是从 APK 反编译得到的分析产物，不是原始 Java 源码。
+
+| 敌型 | 循环内移动距离（fine units） | 帧号 |
+| --- | --- | --- |
+| type1、type2、type4 | 0–768 | 0 |
+| type1、type2、type4 | 769–1,536 | 1 |
+| type1、type2、type4 | 1,537–2,304 | 0 |
+| type1、type2、type4 | 2,305–3,071 | 2 |
+| type8 | 0–768 | 0 |
+| type8 | 769–1,536 | 1 |
+| type8 | 1,537–2,304 | 2 |
+| type8 | 2,305–3,071 | 3 |
+| 全部已实现敌型 | 3,072 | 回到帧0 |
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| TDD 帧阈值 | 新增 `tests/enemy-animation.test.ts`，通过 Cow Gulch 第三波运输队真实生成 type8/type4 敌组，固定速度为每100ms移动768 fine units，并关闭路线转弯以隔离动画状态。type8 在768阈值仍为帧0、跨过后为帧1、跨过1,536后为帧2；type4 覆盖0、1、0、2序列和3,072回绕。修改前 type8 在恰好768处变为帧1，type4 在2,304处显示帧2；修改后断言通过。 |
+| 本地检查 | Node 22.23.3 下 TypeScript 检查、全部156项单元测试和 Vite 生产构建通过。Playwright 因沙箱拒绝本地服务器 `listen`（`EPERM`）未能在同一 `test:ci` 进程内启动；启用本地网络后单独重跑 E2E，52项全部通过。 |
+| 内置浏览器 | 在 `http://127.0.0.1:5178/` 打开本地页面，Cow Gulch 地图画布与设置控件正常加载，浏览器控制台 error/warn 为空。当前入口处于静止的首个战斗样本，画面没有播放 type4/type8 行走；本轮两种车辆敌型的帧状态由上方确定性关卡测试核验，不把静止截图当作动画实测。 |
+
+本轮只闭合已实现敌型 type1/2/4/8 的行走帧距离映射。敌人攻击、受击、睡眠、死亡等动画，以及其它关卡、完整像素裁切和动画节奏观察仍待后续 P1-F 对照；Cow Gulch 首关验收仍为0/60。

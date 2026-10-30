@@ -535,6 +535,18 @@ const UNIT_COLLIDER_WIDTH = 5068;
 const UNIT_COLLIDER_HEIGHT = 4608;
 const UNIT_STOP_TOLERANCE_FINE = 2400;
 const MAX_DELTA_MS = 100;
+const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
+const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {
+  1: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
+  2: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
+  4: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
+  8: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
+};
+
+function enemyWalkAnimationFrame(type: CampaignEnemyType, distanceFine: number): number {
+  const frame = ENEMY_WALK_ANIMATION_FRAMES[type].find(([, endFine]) => distanceFine <= endFine);
+  return frame?.[0] ?? 0;
+}
 
 const BACKGROUND_BLOCKING_TILES = new Set([
   32, 40, 41, 42, 43, 44, 45, 46, 48,
@@ -1365,16 +1377,8 @@ function moveEnemy(enemy: MutableEnemy, deltaMs: number, scenario: ScenarioConte
   };
   const movedFine = Math.abs(enemy.positionFine.x - previous.x) + Math.abs(enemy.positionFine.y - previous.y);
   if (movedFine > 0 && !turningAtStart) {
-    enemy.animationDistance = (enemy.animationDistance + movedFine) % 3072;
-    const frames = enemy.type === 8 ? 4 : 3;
-    if (enemy.type === 1 || enemy.type === 2) {
-      if (enemy.animationDistance <= 768) enemy.animationFrame = 0;
-      else if (enemy.animationDistance <= 1536) enemy.animationFrame = 1;
-      else if (enemy.animationDistance <= 2304) enemy.animationFrame = 0;
-      else enemy.animationFrame = 2;
-    } else {
-      enemy.animationFrame = Math.min(frames - 1, Math.floor((enemy.animationDistance * frames) / 3072));
-    }
+    enemy.animationDistance = (enemy.animationDistance + movedFine) % ENEMY_WALK_ANIMATION_CYCLE_FINE;
+    enemy.animationFrame = enemyWalkAnimationFrame(enemy.type, enemy.animationDistance);
   }
   if (turningAtStart) enemy.turningRemainingMs = Math.max(0, enemy.turningRemainingMs - deltaMs);
 
