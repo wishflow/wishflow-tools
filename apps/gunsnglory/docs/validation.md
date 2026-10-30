@@ -889,8 +889,14 @@ REA/JADX 归档中的 `GunsAndGloryThread.drawEnemies()` 按 `GameObjectManager.
 | TDD 回归 | Canvas 断言先确认原实现缺少生命条而失败；逐行对照源码后，新增断言也捕获了填充误用整条高度及宽度误缩放。修正后，底条/半高填充几何、float32/整数宽度、缩放低于1时的底边修正、普通与奇数 max HP 的95%门槛均通过。 |
 | 专项测试 | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4182 nvm exec 22.23.3 pnpm --dir apps/gunsnglory exec node --import tsx --test tests/canvas-renderer.test.ts` 通过，5项测试。 |
 | 类型检查 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm --dir apps/gunsnglory run typecheck` 通过。 |
-| 完整应用 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4183 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、154项单元测试、生产构建及52项 Playwright 测试。 |
-| 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 通过，14项测试。 |
-| 内置浏览器与公网发布 | 待完成；需确认受损敌人生命条实际可见，并保留既有正式档案与速度设置。 |
+| 开发分支完整 CI | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4183 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript 检查、154项单元测试、生产构建及52项 Playwright 测试。 |
+| 合并后 master 检查 | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4184 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 的 TypeScript、154项单元测试和生产构建通过；首轮 52 项 E2E 中，`t05` 的结算状态断言失败一次，详见下方排错记录。 |
+| E2E 复核 | `source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4185 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory exec playwright test tests/e2e/t05.spec.ts -g "saves a formal result across reload and discards an unfinished wave" --workers=1` 单项通过（5.3秒）；`source /Users/shiwei/.nvm/nvm.sh && PLAYWRIGHT_PORT=4186 CI=1 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:e2e` 全部52项通过（1.8分钟）。 |
+| 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 在 master 通过，14项测试。 |
+| 内置浏览器与公网发布 | master 发布提交 `add71f94a45a750e41adf2efae1450fd410d55ed` 已推送。GitHub Actions [run 40985798994](https://github.com/wishflow/wishflow-tools/actions/runs/40985798994) 的 `test (gunsnglory)`、`test-shared`、Cloudflare Pages 和 GitHub Pages 成功；Worker 检查因本次只改静态应用而跳过。Codex 内置浏览器访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=add71f9)，确认页面、Cow Gulch 地图/桥、战役 HUD、暂停状态正常。战局暂停在 Wave02/8，生命50、敌人26、现金$81；正式档案仍为1/1、最高分 $356，速度仍为4×，未结算。该 smoke test 未等待满足类型与受伤门槛的敌人出现；生命条几何由本节 Canvas 断言验证。 |
+
+### 合并后 E2E 排错记录
+
+master 首轮 `test:ci` 的 `tests/e2e/t05.spec.ts` 在 `settlement-save-status` 等待“Result saved to this browser.”时超时；错误现场显示仍处于 Wave01/8、敌人10、现金$71。相同测试单独复跑通过，整套 E2E 随后52/52通过，当前没有证据能复现为产品缺陷。若再次出现，先核实 `openSingleWaveSample()` 的场景切换结果和结算状态，再决定是否改动规则或延长超时；不要仅凭一次状态超时修改存档实现。
 
 本节只覆盖受损敌方生命条的绘制规则，不代表 Cow Gulch 或 P1-F 首关验收完成；关卡完成计数仍为0/60。
