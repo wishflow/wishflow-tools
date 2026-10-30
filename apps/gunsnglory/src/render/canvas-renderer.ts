@@ -198,7 +198,9 @@ function drawSceneObjects(
   viewport: MapViewport,
 ): void {
   const drawItems: { depth: number; order: number; draw: () => void }[] = [];
-  const drawOrder = [...decorations].sort((a, b) => a.cell.y - b.cell.y || a.cell.x - b.cell.x);
+  // GameObjectManager scans map objects row-major, then inserts equal-depth objects
+  // before existing ones. Drawing that list forward leaves older props on top.
+  const drawOrder = [...decorations].sort((a, b) => a.cell.y - b.cell.y || b.cell.x - a.cell.x);
   let order = 0;
 
   drawOrder.forEach((decoration) => {

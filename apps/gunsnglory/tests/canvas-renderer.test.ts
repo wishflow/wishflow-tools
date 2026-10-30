@@ -14,6 +14,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const cactusImage = { naturalWidth: 32, naturalHeight: 44 } as HTMLImageElement;
   const treeImage = { naturalWidth: 32, naturalHeight: 64 } as HTMLImageElement;
   const bushImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
+  const rocksImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
+  const shackImage = { naturalWidth: 64, naturalHeight: 32 } as HTMLImageElement;
   const drawCalls: unknown[][] = [];
   const fillCalls: Array<{ color: string; rect: number[] }> = [];
   const clipRects: number[][] = [];
@@ -96,6 +98,9 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
         { asset: 'tree', cell: { x: 6, y: 7 } },
         { asset: 'cactus', cell: { x: 5, y: 6 } },
         { asset: 'bush', cell: { x: 9, y: 9 } },
+        { asset: 'b_2x1_shack', cell: { x: 15, y: 7 }, anchorOffsetX: -0.5 },
+        { asset: 'cactus', cell: { x: 8, y: 7 } },
+        { asset: 'e_1x1_rocks_a', cell: { x: 9, y: 7 } },
       ],
     },
     units: [{
@@ -168,6 +173,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     cactus: cactusImage,
     tree: treeImage,
     bush: bushImage,
+    e_1x1_rocks_a: rocksImage,
+    b_2x1_shack: shackImage,
     sfx_mexican_dynamite: { ...shotImage, naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
     sfx_exploding_parts: { ...wagonPartsImage, naturalWidth: 72, naturalHeight: 12 } as HTMLImageElement,
   };
@@ -185,12 +192,15 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(enemyDraw);
   assert.deepEqual(enemyDraw.slice(1, 5), [32, 24, 16, 24]);
 
-  const decorationDraws = drawCalls.filter((args) => args[0] === cactusImage || args[0] === treeImage || args[0] === bushImage);
-  assert.deepEqual(decorationDraws.map(([image]) => image), [cactusImage, treeImage, bushImage], 'draws scenery back-to-front by source row');
+  const decorationDraws = drawCalls.filter((args) => args[0] === cactusImage || args[0] === treeImage
+    || args[0] === bushImage || args[0] === rocksImage || args[0] === shackImage);
+  assert.deepEqual(decorationDraws.map(([image]) => image), [cactusImage, shackImage, rocksImage, cactusImage, treeImage, bushImage],
+    'same-depth static decorations draw in reverse map-scan insertion order');
   assert.deepEqual(decorationDraws[0]?.slice(1), [302, 115, 60, 82]);
-  assert.deepEqual(decorationDraws[1]?.slice(1), [362, 138, 60, 120]);
-  assert.deepEqual(decorationClipStates, [false, false, false], 'tall scenery may overhang a map edge but stays within the game viewport');
-  assert.deepEqual(decorationViewportClipStates, [true, true, true], 'scenery overhang remains clipped to the game viewport');
+  assert.deepEqual(decorationDraws.slice(1, 5).map((args) => args[1]), [842, 542, 482, 362],
+    'equal-depth map objects draw in reverse row-major insertion order');
+  assert.deepEqual(decorationClipStates, [false, false, false, false], 'tall scenery may overhang a map edge but stays within the game viewport');
+  assert.deepEqual(decorationViewportClipStates, [true, true, true, true], 'scenery overhang remains clipped to the game viewport');
   assert.ok(
     drawCalls.findIndex(([image]) => image === treeImage) < drawCalls.findIndex(([image]) => image === unitImage),
     'a unit with a lower ground anchor renders in front of scenery behind it',
@@ -206,8 +216,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, enemyImage, images.sfx_mexican_dynamite, bridgeImage, cactusImage, treeImage,
-      unitImage, images.sfx_exploding_parts, bushImage],
+    [mapImage, enemyImage, images.sfx_mexican_dynamite, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
+      treeImage, unitImage, images.sfx_exploding_parts, bushImage],
     'a low-depth shot shares the under-road draw pass while other scene objects keep their ground-depth order',
   );
   const dynamiteDraw = drawCalls.find((args) => args[0] === images.sfx_mexican_dynamite);
