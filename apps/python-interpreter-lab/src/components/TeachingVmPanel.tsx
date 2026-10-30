@@ -1,4 +1,4 @@
-import { memo, useEffect, useState, type ReactNode } from 'react';
+import { memo, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { rangesOverlap, type SourceLink } from '../analysis/source-position';
 import type {
   SourceSpan,
@@ -13,6 +13,13 @@ import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
 import type { MessageKey } from '../locales';
 import { MAX_BREAKPOINT_COUNT } from '../teaching-vm/resource-limits';
 import { mapTeachingSourceLines } from '../teaching-vm/source-mapping';
+import {
+  compareTeachingObservationChanges,
+  deriveTeachingObservationGroups,
+  type TeachingObservationChange,
+  type TeachingObservationGroup,
+  type TeachingObservationPoint,
+} from '../teaching-vm/observation';
 import { TeachingHeapPanel, TeachingValueDisplay, useTeachingHeapNavigation } from './TeachingHeapPanel';
 
 interface TeachingVmPanelProps {
@@ -431,6 +438,219 @@ function statusLabel(status: TeachingStatus, t: (key: MessageKey) => string): st
   return labels[status];
 }
 
+function observationStatusLabel(
+  group: TeachingObservationGroup,
+  t: (key: MessageKey) => string,
+  isGroupEnd = true,
+): string {
+  if (!isGroupEnd) return t('teachingObservationStatusIntermediate');
+  const keys: Record<TeachingObservationGroup['status'], MessageKey> = {
+    initial: 'teachingObservationStatusInitial',
+    complete: 'teachingObservationStatusComplete',
+    partial: 'teachingObservationStatusPartial',
+    breakpoint: 'teachingObservationStatusBreakpoint',
+    failed: 'teachingObservationStatusFailed',
+    finished: 'teachingObservationStatusFinished',
+    unavailable: 'teachingObservationStatusUnavailable',
+  };
+  return t(keys[group.status]);
+}
+
+function observationMessage(
+  t: (key: MessageKey) => string,
+  key: MessageKey,
+  values: Record<string, string>,
+): string {
+  return Object.entries(values).reduce((message, [name, value]) => (
+    message.replaceAll(`{${name}}`, value)
+  ), t(key));
+}
+
+function observationSummary(
+  group: TeachingObservationGroup,
+  changes: ReturnType<typeof compareTeachingObservationChanges>,
+  t: (key: MessageKey) => string,
+): string {
+  if (group.coverage === 'prefix-truncated') return t('teachingObservationTruncatedSummary');
+  if (group.coverage === 'discontinuous') return t('teachingObservationDiscontinuousSummary');
+  if (group.status === 'initial') return t('teachingObservationInitialSummary');
+  if (group.status === 'breakpoint') return t('teachingObservationBreakpointSummary');
+  if (group.status === 'failed') return t('teachingObservationFailureSummary');
+  if (group.status === 'finished') return t('teachingObservationFinishedSummary');
+  if (group.status === 'partial') return t('teachingObservationPartialSummary');
+  if (!changes.baseline) return t('teachingObservationTruncatedSummary');
+  if (changes.hasChanges) {
+    return observationMessage(t, 'teachingObservationChangesSummary', {
+      change: changes.changes[0] ? observationChangeText(changes.changes[0], t) : t('teachingObservationNoChanges'),
+    });
+  }
+  return t('teachingObservationNoChangesSummary');
+}
+
+function observationChangeText(change: TeachingObservationChange, t: (key: MessageKey) => string): string {
+  switch (change.kind) {
+    case 'frame-entered':
+      return observationMessage(t, 'teachingObservationFrameEntered', { name: change.frameName, id: String(change.frameId) });
+    case 'frame-returned':
+      return observationMessage(t, 'teachingObservationFrameReturned', { name: change.frameName, id: String(change.frameId) });
+    case 'binding-added': {
+      const detail = change.isAlias
+        ? observationMessage(t, 'teachingObservationAlias', { id: String(change.objectId) })
+        : change.createsObject && change.objectId !== null
+          ? observationMessage(t, 'teachingObservationNewObject', { id: String(change.objectId) })
+          : null;
+      const value = detail ? `${change.afterValue} · ${detail}` : change.afterValue;
+      return observationMessage(t, 'teachingObservationBindingAdded', { name: change.name, value, frame: change.frameName });
+    }
+    case 'binding-updated':
+      return observationMessage(t, 'teachingObservationBindingUpdated', {
+        name: change.name,
+        before: change.beforeValue,
+        after: change.afterValue,
+        frame: change.frameName,
+      });
+    case 'binding-removed':
+      return observationMessage(t, 'teachingObservationBindingRemoved', {
+        name: change.name,
+        value: change.beforeValue,
+        frame: change.frameName,
+      });
+    case 'object-created':
+      return observationMessage(t, 'teachingObservationObjectCreated', {
+        type: t(change.objectType === 'list' ? 'teachingListObject' : 'teachingDictObject').toLowerCase(),
+        id: String(change.objectId),
+      });
+    case 'object-removed':
+      return observationMessage(t, 'teachingObservationObjectRemoved', { id: String(change.objectId) });
+    case 'list-item-added':
+      return observationMessage(t, 'teachingObservationListItemAdded', {
+        id: String(change.objectId), index: String(change.index), value: change.afterValue ?? '',
+      });
+    case 'list-item-updated':
+      return observationMessage(t, 'teachingObservationListItemUpdated', {
+        id: String(change.objectId), index: String(change.index), before: change.beforeValue ?? '', after: change.afterValue ?? '',
+      });
+    case 'list-item-removed':
+      return observationMessage(t, 'teachingObservationListItemRemoved', {
+        id: String(change.objectId), index: String(change.index), value: change.beforeValue ?? '',
+      });
+    case 'dict-entry-added':
+      return observationMessage(t, 'teachingObservationDictEntryAdded', {
+        id: String(change.objectId), key: change.key, value: change.afterValue ?? '',
+      });
+    case 'dict-entry-updated':
+      return observationMessage(t, 'teachingObservationDictEntryUpdated', {
+        id: String(change.objectId), key: change.key, before: change.beforeValue ?? '', after: change.afterValue ?? '',
+      });
+    case 'dict-entry-removed':
+      return observationMessage(t, 'teachingObservationDictEntryRemoved', {
+        id: String(change.objectId), key: change.key, value: change.beforeValue ?? '',
+      });
+    case 'output-added':
+      return observationMessage(t, 'teachingObservationOutputAdded', { lines: change.outputLines.join('\n') });
+  }
+}
+
+function observationPointSourceLink(program: TeachingCompileResult, point: TeachingObservationPoint): SourceLink {
+  const instruction = point.instructionIndex === null ? undefined : program.instructions[point.instructionIndex];
+  const hasSource = instruction && instruction.opcode !== 'HALT';
+  return {
+    origin: { kind: 'teaching', index: hasSource ? instruction.index : null },
+    range: hasSource ? sourceRange(instruction.span) : null,
+    focus: false,
+  };
+}
+
+function observationGroupSourceLink(program: TeachingCompileResult, group: TeachingObservationGroup): SourceLink {
+  const point = [...group.points].reverse().find(({ instructionIndex }) => (
+    instructionIndex !== null && program.instructions[instructionIndex]?.opcode !== 'HALT'
+  ));
+  return point
+    ? observationPointSourceLink(program, point)
+    : { origin: { kind: 'teaching', index: null }, range: null, focus: false };
+}
+
+function TeachingObservationPanel({
+  group,
+  program,
+  snapshot,
+  t,
+  onLink,
+  onSelectHistory,
+}: {
+  group: TeachingObservationGroup;
+  program: TeachingCompileResult;
+  snapshot: TeachingVmSnapshot;
+  t: (key: MessageKey) => string;
+  onLink(link: SourceLink): void;
+  onSelectHistory(stepIndex: number): void;
+}) {
+  const diff = compareTeachingObservationChanges(group, snapshot);
+  const sourceLine = group.sourceLine === null
+    ? null
+    : t('teachingObservationLine').replace('{line}', String(group.sourceLine));
+  return (
+    <section
+      className="teaching-observation-panel"
+      aria-labelledby="teaching-observation-heading"
+      data-source-line={group.sourceLine ?? ''}
+    >
+      <div className="teaching-observation-heading">
+        <h4 id="teaching-observation-heading">{t('teachingObservationTitle')}</h4>
+        <span className={`teaching-observation-status status-${group.status}`}>
+          {observationStatusLabel(group, t, snapshot.stepIndex === group.endStepIndex)}
+        </span>
+      </div>
+      {sourceLine && <p className="small-meta teaching-observation-line">{sourceLine}</p>}
+      <p className="teaching-observation-summary" role="status">{observationSummary(group, diff, t)}</p>
+      <div className="teaching-observation-diff" aria-live="polite">
+        <strong>{t('teachingObservationChanges')}</strong>
+        {diff.changes.length > 0 ? (
+          <ul className="teaching-observation-change-list">
+            {diff.changes.map((change, index) => <li key={`${change.kind}-${index}`}>{observationChangeText(change, t)}</li>)}
+          </ul>
+        ) : (
+          <p className="small-meta">{diff.baseline ? t('teachingObservationNoChanges') : t('teachingObservationDiffUnavailable')}</p>
+        )}
+        {diff.omittedCount > 0 && <p className="small-meta">{t('teachingObservationOmittedChanges').replace('{count}', String(diff.omittedCount))}</p>}
+      </div>
+      <details className="teaching-observation-instructions">
+        <summary>{t('teachingObservationRecordedInstructions').replace('{count}', String(group.points.length))}</summary>
+        <ol>
+          {group.points.map((point) => {
+            const instruction = point.instructionIndex === null ? undefined : program.instructions[point.instructionIndex];
+            const indexLabel = point.instructionIndex === null ? null : String(point.instructionIndex);
+            const pointLabel = point.kind === 'breakpoint' && indexLabel !== null
+              ? observationMessage(t, 'teachingObservationBreakpointPoint', { index: indexLabel, step: String(point.stepIndex) })
+              : point.kind === 'initial'
+                ? observationMessage(t, 'teachingObservationInitialPoint', { step: String(point.stepIndex) })
+                : indexLabel !== null
+                  ? observationMessage(t, 'teachingObservationObserveInstruction', { index: indexLabel, step: String(point.stepIndex) })
+                  : observationMessage(t, 'teachingObservationUnknownPoint', { step: String(point.stepIndex) });
+            return (
+              <li key={point.stepIndex}>
+                <button
+                  type="button"
+                  className="teaching-observation-point"
+                  aria-label={instruction ? `${pointLabel} · ${instruction.opcode}` : pointLabel}
+                  aria-pressed={snapshot.stepIndex === point.stepIndex}
+                  onClick={() => {
+                    onLink(observationPointSourceLink(program, point));
+                    onSelectHistory(point.stepIndex);
+                  }}
+                >
+                  <span>{instruction?.opcode ?? (point.kind === 'initial' ? t('teachingObservationStatusInitial') : t('teachingCurrentAction'))}</span>
+                  <small>#{indexLabel ?? '—'} · {t('teachingObservationPointStep').replace('{step}', String(point.stepIndex))}</small>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </details>
+    </section>
+  );
+}
+
 function TeachingActionPanel({ program, snapshot, t, onLink }: {
   program: TeachingCompileResult;
   snapshot: TeachingVmSnapshot | null;
@@ -754,10 +974,26 @@ const TeachingInstructionPanel = memo(function TeachingInstructionPanel({
 export function TeachingVmPanel(props: TeachingVmPanelProps) {
   const { program, history, snapshot, headSnapshot, atHead, diagnostic, status, sourceLink, isBusy, sourceBreakpointLines, instructionBreakpointIndexes, t, onSelectHistory, onGoToHead, onLink, onToggleSourceBreakpoint, onToggleInstructionBreakpoint, onRetryWorker } = props;
   const { focusedObjectId, onLocateObject } = useTeachingHeapNavigation(snapshot);
+  const observationGroups = useMemo(
+    () => program ? deriveTeachingObservationGroups(program, history) : [],
+    [program, history],
+  );
+  const selectedGroupIndex = snapshot
+    ? observationGroups.findIndex(({ points }) => points.some(({ stepIndex }) => stepIndex === snapshot.stepIndex))
+    : -1;
+  const selectedGroup = selectedGroupIndex < 0 ? null : observationGroups[selectedGroupIndex] ?? null;
   const shownDiagnostic = diagnostic ?? snapshot?.diagnostic ?? null;
-  const historyStart = history.items[0]?.stepIndex ?? 0;
-  const historyEnd = headSnapshot?.stepIndex ?? historyStart;
-  const historyValue = snapshot?.stepIndex ?? historyEnd;
+  const historyCount = observationGroups.length;
+  const historyPosition = t('teachingHistoryPosition')
+    .replace('{current}', String(selectedGroupIndex < 0 ? 0 : selectedGroupIndex + 1))
+    .replace('{last}', String(historyCount));
+  const historyValueText = selectedGroup
+    ? [historyPosition,
+      selectedGroup.sourceLine === null ? null : t('teachingObservationLine').replace('{line}', String(selectedGroup.sourceLine)),
+      observationStatusLabel(selectedGroup, t, snapshot?.stepIndex === selectedGroup.endStepIndex)]
+      .filter(Boolean)
+      .join(' · ')
+    : historyPosition;
   const activeFrame = snapshot?.frames.at(-1);
 
   return (
@@ -787,15 +1023,21 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
               <input
                 id="teaching-history-slider"
                 type="range"
-                min={historyStart}
-                max={historyEnd}
+                min={0}
+                max={Math.max(0, historyCount - 1)}
                 step={1}
-                value={historyValue}
-                disabled={history.items.length < 2}
-                aria-valuetext={t('teachingHistoryPosition').replace('{current}', String(historyValue)).replace('{last}', String(historyEnd))}
-                onChange={(event) => onSelectHistory(Number(event.target.value))}
+                value={Math.max(0, selectedGroupIndex)}
+                disabled={historyCount < 2}
+                aria-valuetext={historyValueText}
+                onChange={(event) => {
+                  const group = observationGroups[Number(event.target.value)];
+                  if (group) {
+                    onLink(observationGroupSourceLink(program, group));
+                    onSelectHistory(group.after.stepIndex);
+                  }
+                }}
               />
-              <span className="small-meta">{t('teachingHistoryPosition').replace('{current}', String(historyValue)).replace('{last}', String(historyEnd))}</span>
+              <span className="small-meta">{historyPosition}</span>
             </div>
             <p className="small-meta teaching-instruction-count">
               {t('teachingInstructionCount').replace('{count}', String(snapshot?.executedInstructionCount ?? 0))}
@@ -805,6 +1047,17 @@ export function TeachingVmPanel(props: TeachingVmPanelProps) {
               {!atHead && <button type="button" className="text-button" onClick={onGoToHead}>{t('teachingReturnToHead')}</button>}
               {history.truncated && <span className="limit-notice">{t('teachingHistoryTruncated')}</span>}
             </div>
+
+            {selectedGroup && snapshot && (
+              <TeachingObservationPanel
+                group={selectedGroup}
+                program={program}
+                snapshot={snapshot}
+                t={t}
+                onLink={onLink}
+                onSelectHistory={onSelectHistory}
+              />
+            )}
 
             <TeachingActionPanel program={program} snapshot={snapshot} t={t} onLink={onLink} />
             {snapshot?.controlFlow && (

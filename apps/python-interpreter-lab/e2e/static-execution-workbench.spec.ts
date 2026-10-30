@@ -29,7 +29,7 @@ test('keeps compile details folded until opened by keyboard without moving the e
 
   const ast = page.locator('.teaching-ast-disclosure');
   const instructions = page.locator('.teaching-instruction-disclosure');
-  const history = page.getByRole('slider', { name: 'Instruction history' });
+  const history = page.getByRole('slider', { name: 'Source-step history' });
   const historyPosition = await history.inputValue();
   const action = await page.locator('.teaching-current-action').innerText();
   await expect(ast.locator('.teaching-ast-root')).toBeHidden();
@@ -76,7 +76,7 @@ test('shows aliases and frame state in one static scene without changing executi
 
   const moduleFrame = page.locator('.teaching-frame-list > li').first();
   const moduleSummary = moduleFrame.locator('summary');
-  const history = page.getByRole('slider', { name: 'Instruction history' });
+  const history = page.getByRole('slider', { name: 'Source-step history' });
   const historyPosition = await history.inputValue();
   await moduleSummary.click();
 

@@ -16,6 +16,7 @@ export type SourceLinkOrigin =
 export interface SourceLink {
   origin: SourceLinkOrigin;
   range: SourceRange | null;
+  focus?: boolean;
 }
 
 export interface SourcePosition {

@@ -30,6 +30,12 @@ One source line can produce several teaching instructions. Neither teaching inst
 | Object heap | Reachable lists and dictionaries at the selected step, with their contents. Click an object ID in the variables to locate it |
 | AST / teaching instructions | Collapsed by default to keep the runtime scene in focus; expand to inspect the full AST, instructions, and breakpoints |
 
+### Browse source steps
+
+The **Source-step history** slider uses dynamically executed source-line steps. Selecting a group updates the source, current action, call frames, operand stack, variables, heap, and output to its last recorded point. Repeated loop visits to the same source line appear as separate groups. Expand **Recorded instructions** to inspect the snapshots within a group. Selecting an instruction updates every runtime panel to the state after that instruction and selects its source range without moving focus away from the slider or instruction button.
+
+The change explanation compares the available state before the group with the selected point. It shows changes to bindings, list/dictionary contents, call frames, and appended output. When you select an intermediate instruction, the summary describes the state **through that recorded point** and does not include later instructions. Breakpoints pause before execution; partial steps, failures, and program completion have distinct statuses. If the earlier state is missing or history has a gap, the UI says comparison is unavailable instead of claiming there were no changes.
+
 These are teaching VM states. Object IDs are not memory addresses, and this view does not show CPython's complete memory layout.
 An object disappearing from the current heap view does not demonstrate that real memory was freed.
 
@@ -78,9 +84,10 @@ Click an instruction's source position to locate the original text. **Next instr
 
 ## History, reset, and source edits
 
-- **Instruction history** changes only what you observe; it does not execute code again or restore an earlier runtime state.
+- **Source-step history** changes only what you observe; it does not execute code again or restore an earlier runtime state. The slider browses source-step groups, and each group can be expanded to select a recorded instruction snapshot.
 - **Return to head** shows the latest state. Stepping is disabled while viewing history; Run / Continue first returns to the execution head.
-- After execution completes or fails, use **Reset teaching VM** before running again. Reset clears runtime state and history, retaining the compiled program and breakpoints.
+- After history is truncated, retained snapshots remain available, but the first retained point may not have a comparison baseline; its change explanation says comparison is unavailable.
+- After execution completes or fails, use **Reset teaching VM** before running again. Reset clears runtime state and history, retains the compiled program and breakpoints, and returns to the initial observation point.
 - Editing source or compiling again clears teaching breakpoints. Editing source or switching execution views clears old results; compile or analyze again.
 
 ## Check with real CPython
