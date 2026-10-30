@@ -94,9 +94,9 @@ flowchart LR
 
 ## T07：代码审查修正
 
-- **状态**：修复和回归用例已实现；本地应用、catalog 与站点验证通过，Git 发布与线上验证待完成。
+- **状态**：已完成并发布。
 - **规范修正**：教学 Worker 出错后清除旧程序及 UI 历史并自动重建；保留手动重试入口。把 VM 和 UI 重复实现的快照数量统计、历史裁剪收敛到共享 helper。移除应用文档中重复维护的公开域名，仅保留 `/python-interpreter-lab/` 子路径。
 - **语义修正**：关键字判断改用无原型污染的 `Map`；`for` 行断点映射到每轮都会经过的 `FOR_ITER`；调用前解析函数名，使未定义函数先于实参副作用报告 `NameError`，教学 ISA 升为 `mini-vm-v5`。
 - **可视化与轨迹修正**：下标赋值展示完整的容器、索引和右值 AST；CPython AST 节点在递归前分配唯一 ID；快照安全读取类型名时绕过可覆盖的元类描述符；顶层变量差异按稳定变量 ID 比较，并在对象别名仅新增绑定时保持旧变量不变；轨迹达到上限后仍有独立的最终输出面板。
 - **回归覆盖**：关键字原型属性名称、函数调用副作用顺序、重复循环断点、下标赋值 AST、元类 `__name__` 描述符、变量别名、截断显示名冲突、事件上限后的最终输出、AST 唯一 ID、Worker 重建及共用历史裁剪均有针对性测试。
-- **验证记录**：应用类型检查、130 项单测、生产构建和 46 项 Playwright 浏览器测试全部通过；根 catalog 测试 14/14 通过，整站构建通过，`git diff --check` 通过。应用 `pi` 契约的实际加载仍未验证：当前环境未配置 provider credentials。
+- **验证记录**：应用类型检查、130 项单测、生产构建和 46 项 Playwright 浏览器测试全部通过；根 catalog 测试 14/14 通过，整站构建通过，`git diff --check` 通过。GitHub Actions [41011346672](https://github.com/wishflow/wishflow-tools/actions/runs/41011346672) 的共享检查、应用测试、GitHub Pages 和 Cloudflare Pages 部署均成功；Worker 按静态资源变更分类跳过。正式页面已在 Codex 内置浏览器验证显示 `mini-vm-v5`；`result = missing(tick())` 报 `NameError` 且没有 `TICK` 输出；`constructor` 与 `toString` 均可赋值并运行，结果为 `3`。应用 `pi` 契约的实际加载仍未验证：当前环境未配置 provider credentials。

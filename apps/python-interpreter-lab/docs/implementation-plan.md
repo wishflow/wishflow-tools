@@ -154,7 +154,7 @@ P5 等待 M1/M2 完成是已确认的产品优先顺序，不表示教学解析�
 - **前置**：P7/P8；产品语义已于 2026-10-30 确认。Step Line 与 Step Over 合并；源码断点绑定首条可执行指令；Continue 仅跳过当前命中一次；Reset 保留断点，编辑/重新编译清除；速度档为慢 1 条/250ms、标准 8 条/16ms、快 32 条/16ms。
 - **交付**：源码行和教学指令断点、单指令 Step、Step Into/Over/Out、Continue、Pause、Reset 及执行速度控制。时间轴浏览旧快照时，继续执行先返回执行头；不实现历史分叉。
 - **验收**：同一行多条指令、同一行循环、递归、调用后返回、断点后继续都停在规定位置；Continue 不在同一暂停点立即重复命中；根帧 Step Out 和结束后的操作有明确反馈。
-- **进度**：P9 原始阶段已完成并发布。代码审查后补充 T07 修正：恢复教学 Worker、修正调用顺序/循环断点/快照差异等边界问题，教学 ISA 升为 `mini-vm-v5`；回归、发布与线上验收进度见 [P9 tasks](tasks/p09-teaching-debugger.md)。应用 `pi` 契约实际加载因当前未配置 provider credentials 未验证。
+- **进度**：P9 原始阶段已完成并发布。T07 代码审查修正已完成并发布：恢复教学 Worker、修正调用顺序/循环断点/快照差异等边界问题，教学 ISA 升为 `mini-vm-v5`。应用类型检查、130 项单测、46 项 E2E、catalog 14/14、整站构建和线上页面验收通过；GitHub Actions [41011346672](https://github.com/wishflow/wishflow-tools/actions/runs/41011346672) 的应用测试、共享检查及两类 Pages 部署成功。应用 `pi` 契约实际加载仍因当前未配置 provider credentials 未验证；细节见 [P9 tasks](tasks/p09-teaching-debugger.md)。
 - **详细文档**：[P9 规格](specs/p09-teaching-debugger.md) 与 [P9 tasks](tasks/p09-teaching-debugger.md)。
 - **回滚**：撤回高级调试入口，P5 的逐指令单步及各阶段语言能力仍工作。
 
