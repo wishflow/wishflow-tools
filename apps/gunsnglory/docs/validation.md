@@ -1074,3 +1074,24 @@ REA/JADX 反编译分析中，`GameObject.addToObjectManager()` 先把对象加�
 | 合并、部署与公网实测 | `b4d1176` 已快进合入并推送至 `master`。GitHub Actions [run 41022653505](https://github.com/wishflow/wishflow-tools/actions/runs/41022653505) 成功：Guns’n’Glory CI、共享检查、Cloudflare Pages 和 GitHub Pages 部署通过；Worker、Cloudflare 配置与宠物专用作业按变更范围跳过。Codex 内置浏览器打开[本次公网版本](https://wishflow-tools.pages.dev/gunsnglory/?release=b4d1176)，确认 Cow Gulch 地图、HUD、语言切换和 4× 速度控件加载；正式档案仍为 1/1、最高分 `$356`，音效仍为关。页面自动开始后立即暂停于 Wave 1/8、生命 50、敌人 11、现金 `$70`；未产生新结算，暂停状态可见，浏览器控制台 error/warn 为空。公网截图核对部署与主要画面，不声称截图中的动态帧能单独证明同深度遮挡；对应 draw-call 次序由 Canvas 行为断言验证。 |
 
 本轮闭合的是 Cow Gulch 低层渲染中“后创建目标投射物与其既存目标敌人恰好同深度”的遮挡关系。其它跨类型同深度组合、对象深度变化后的历史队列、完整首关 P1-F 验收仍未完成；Cow Gulch 首关保持 0/60。
+
+## 56. P1-F Cow Gulch 跨类型绘制历史队列
+
+第55节的目标投射物特例无法复现对象移动后保留的队列顺序，也不能覆盖静态装饰、单位、敌人、投射物和车厢残骸之间的一般关系。本轮把这些可见对象放进同一条深度队列，避免按对象类型分批排序。
+
+REA/JADX 反编译分析显示，`GameObjectManager.getValueByObject()` 使用 `fineY + drawingOffsetY + fineZ × 100` 计算深度；`insertDrawOrder()` 只越过严格浅于新对象的条目，故新对象在相等深度时插到已有对象之前。`correctDrawOrder()` 在对象移动后只向移动方向越过严格深浅的邻项；相等时不重排，从而保留历史顺序。`GunsAndGloryThread` 先调用 `EnemyDirector.moveEnemys()`，再调用 `UnitDirector.moveUnits()` 和 `moveShots()`；绘制时队列深度低于 `768000` 的对象在道路前绘制，其余对象在道路之后继续绘制。依据为研究分支 `codex/gunsnglory-spec` 的 REA/JADX 产物 `GameObjectManager.java`、`GunsAndGloryThread.java`、`EnemyDirector.java`、`UnitDirector.java` 及对应 DEX dump；反编译结果不是原始 Java 源码。
+
+Canvas 渲染器现在按原始地图扫描顺序初始化装饰和单位，再将敌人、投射物、残骸加入同一 `DrawOrderQueue`。同一个 Canvas 通过弱映射保留绘制历史；后续绘制按敌人、单位、投射物等更新阶段执行严格深度修正，并在 `768000` 处分成道路前后两次绘制。这样覆盖了静态对象与单位的移动并列、同深度目标投射物，以及不同类别对象跨绘制帧的历史次序。未修改 `GameView`、规则状态、存档或回放格式。
+
+这条队列目前属于渲染器，并根据相邻两次 Canvas 绘制观察到的状态更新。若浏览器在一次绘制前连续推进多个模拟帧，队列不会看到各中间帧的校正；若首次绘制发生在已运行的关卡中途，也只能从当前对象和深度初始化，无法还原先前已形成的相等深度历史。要完全复现 APK 的每次模拟步顺序，后续需让 `GameSession` 暴露每步的队列快照或顺序变更。此缺口保留在 P1-F 门槛中，不能据本轮结果宣称首关对照完成。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 深度队列规则 | 新对象在相等深度时先于旧对象；对象仅越过严格更深或更浅的邻项；移到相等深度时保持队列历史。对应单元测试覆盖插入、向上与向下移动。 |
+| Canvas 回归 | 原有同深度目标投射物仍先于目标敌人绘制；新增用例让单位下移到静态灌木的同一深度，断言单位保留先前队列位置；地图、道路分层和其它 Canvas 断言通过。 |
+| 本地验证 | Node 22.23.3 下 160 项单元测试通过，TypeScript 检查通过，Vite 生产构建通过，Playwright 53 项 E2E 通过。第一次 E2E 启动因沙箱阻止 `127.0.0.1` 绑定而得到 `EPERM`；受限提权后重跑 E2E 成功。 |
+| 合并、部署与内置浏览器 | 代码提交 `0cf3f1f` 已快进合入并推送到 `master`。GitHub Actions [run 41028040067](https://github.com/wishflow/wishflow-tools/actions/runs/41028040067) 成功：Guns’n’Glory 测试、共享检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker/config 与宠物任务按变更范围跳过。Codex 内置浏览器打开[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=0cf3f1f)，检查页面标题、战役档案、Cow Gulch 全图、峡谷道路/桥、HUD 与 4× 倍速控件均正常。页面按已有 4× 设置启动未完成战局，进入第 3/8 波后暂停；画面和 AX 状态显示生命 50、敌人 6、现金 `$117`。正式档案仍为 1/1 完成、最高分 `$356`，没有新结算；浏览器控制台 error/warn 为空。公网烟测验证部署、主要画面和暂停控件；截图不单独证明同深度排序，具体绘制次序由上方 Canvas 定向断言和队列单元测试验证。 |
+
+本轮把渲染排序从目标投射物特例扩展为全对象队列，但队列状态仍由绘制帧推导；未观察到的模拟帧顺序仍需补齐。Cow Gulch 首关仍为 0/60。
