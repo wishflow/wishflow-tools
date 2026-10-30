@@ -245,6 +245,11 @@ export interface UnitView extends ScenarioUnit {
   selected: boolean;
   moving: boolean;
   positionFine: { x: number; y: number };
+  walkingAnimation?: {
+    frame: 0 | 1 | 2;
+    row: 0 | 1 | 2 | 3 | 4;
+    mirrored: boolean;
+  };
   /** Effective target radius and origin used by Game's strict outer-range check. */
   attackRange?: {
     centerTenthTiles: { x: number; y: number };
@@ -510,6 +515,8 @@ interface MutableUnit {
   shootingAnimationElapsedMs?: number;
   shootingAnimationFrame?: number;
   shootingDirection?: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
+  walkingAnimationStep: number;
+  walkingAnimation?: NonNullable<UnitView['walkingAnimation']>;
 }
 
 interface MutableWave {
@@ -584,6 +591,10 @@ const UNIT_COLLIDER_WIDTH = 5068;
 const UNIT_COLLIDER_HEIGHT = 4608;
 const UNIT_STOP_TOLERANCE_FINE = 2400;
 const MAX_DELTA_MS = 100;
+// APK GameDesignOptics.animationWalkDefault, with inclusive distance thresholds selected using strict >.
+const PLAYER_WALK_ANIMATION_CYCLE_FINE = 6144;
+const PLAYER_WALK_ANIMATION_FRAME_THRESHOLDS = [1536, 3072, 4608] as const;
+const PLAYER_WALK_ANIMATION_FRAMES = [0, 1, 0, 2] as const;
 const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
 const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {
   1: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
@@ -760,6 +771,7 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
     selected: unit.selected,
     moving: unit.movementTargetFine !== undefined,
     positionFine: { ...positionFine },
+    ...(unit.walkingAnimation ? { walkingAnimation: { ...unit.walkingAnimation } } : {}),
     ...(unit.weapon ? {
       attackRange: {
         centerTenthTiles: unitAttackCenterTenthTiles(unit),
@@ -827,6 +839,54 @@ function advanceShootingAnimation(unit: MutableUnit, deltaMs: number, didMove: b
     unit.shootingAnimationFrame = undefined;
     unit.shootingDirection = undefined;
   }
+}
+
+function advanceWalkingAnimation(unit: MutableUnit, deltaX: number, deltaY: number): void {
+  if ((unit.definition.type !== 'gunslinger' && unit.definition.type !== 'mexican')
+    || (deltaX === 0 && deltaY === 0)) return;
+
+  const horizontalDistance = Math.abs(deltaX);
+  const verticalDistance = Math.abs(deltaY);
+  unit.walkingAnimationStep = (unit.walkingAnimationStep
+    + (horizontalDistance >= verticalDistance ? horizontalDistance : verticalDistance)) % PLAYER_WALK_ANIMATION_CYCLE_FINE;
+
+  // Android's source uses integer division here; Math.trunc preserves its odd-distance boundaries.
+  let frameIndex = 0;
+  while (frameIndex < PLAYER_WALK_ANIMATION_FRAME_THRESHOLDS.length
+    && unit.walkingAnimationStep > PLAYER_WALK_ANIMATION_FRAME_THRESHOLDS[frameIndex]!) {
+    frameIndex += 1;
+  }
+
+  let row: 0 | 1 | 2 | 3 | 4;
+  let mirrored = false;
+  if (horizontalDistance > verticalDistance) {
+    if (deltaX > 0) {
+      row = 1;
+      mirrored = true;
+      if (deltaY < Math.trunc(-deltaX / 2)) row = 2;
+      if (deltaY > Math.trunc(deltaX / 2)) row = 0;
+    } else {
+      row = 1;
+      if (deltaY > Math.trunc(-deltaX / 2)) row = 0;
+      if (deltaY < Math.trunc(deltaX / 2)) row = 2;
+    }
+  } else if (deltaY > 0) {
+    row = 3;
+    if (deltaX < Math.trunc(-deltaY / 2)) row = 0;
+    if (deltaX > Math.trunc(deltaY / 2)) {
+      row = 0;
+      mirrored = true;
+    }
+  } else {
+    row = 4;
+    if (deltaX < Math.trunc(deltaY / 2)) row = 2;
+    if (deltaX > Math.trunc(-deltaY / 2)) {
+      row = 2;
+      mirrored = true;
+    }
+  }
+
+  unit.walkingAnimation = { frame: PLAYER_WALK_ANIMATION_FRAMES[frameIndex]!, row, mirrored };
 }
 
 function isBackgroundCollisionCode(code: number): boolean {
@@ -1672,6 +1732,7 @@ export function createGame(options: {
         positionFine: initialUnitPosition(definition),
         upgradeLevel: 0,
         movementSpeedFinePer100Ms: definition.movementSpeedFinePer100Ms,
+        walkingAnimationStep: 0,
         ...(definition.weapon ? { weapon: clone(definition.weapon) } : {}),
         weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
         shotsUntilSpecialReload: definition.weapon?.specialReloadFrequency ?? 0,
@@ -2139,7 +2200,10 @@ export function createGame(options: {
           for (const unit of units) {
             const previousPosition = { ...unit.positionFine };
             moveUnit(unit, scenario, deltaMs);
-            const didMove = unit.positionFine.x !== previousPosition.x || unit.positionFine.y !== previousPosition.y;
+            const deltaX = unit.positionFine.x - previousPosition.x;
+            const deltaY = unit.positionFine.y - previousPosition.y;
+            const didMove = deltaX !== 0 || deltaY !== 0;
+            if (didMove) advanceWalkingAnimation(unit, deltaX, deltaY);
             advanceShootingAnimation(unit, deltaMs, didMove);
           }
 

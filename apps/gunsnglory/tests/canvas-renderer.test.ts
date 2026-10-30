@@ -736,6 +736,23 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
   assert.deepEqual(firingDraw.slice(1, 5), [32, 88, 32, 44]);
   assert.deepEqual(transforms.map(([name]) => name), ['translate', 'scale']);
   assert.deepEqual(transforms[1], ['scale', -1, 1]);
+
+  const walkingDrawStart = drawCalls.length;
+  const walkingTransformStart = transforms.length;
+  drawGame(context, {
+    ...view,
+    units: [{
+      ...view.units[0]!,
+      shootingAnimation: undefined,
+      walkingAnimation: { frame: 2, row: 4, mirrored: true },
+    }],
+    shots: [],
+    drawOrder: ['unit:gunslinger-1'],
+  }, { ground, player_gunslinger: gunslinger });
+  const walkingDraw = drawCalls.slice(walkingDrawStart).find(([image]) => image === gunslinger);
+  assert.deepEqual(walkingDraw?.slice(1, 5), [64, 176, 32, 44], 'walk frame and row select the exact source atlas cell');
+  assert.deepEqual(transforms.slice(walkingTransformStart).map(([name]) => name), ['translate', 'scale']);
+  assert.deepEqual(transforms.at(-1), ['scale', -1, 1], 'the walking atlas mirrors only when its direction row requests it');
 });
 
 

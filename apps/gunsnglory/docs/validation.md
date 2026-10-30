@@ -1116,3 +1116,27 @@ REA/JADX 反编译分析显示，`GameObjectManager.getValueByObject()` 使用 `
 | 公网部署与内置浏览器 | 提交 `10910e1` 已部署；GitHub Actions [run 41036709955](https://github.com/wishflow/wishflow-tools/actions/runs/41036709955) 中 Guns’n’Glory 测试、共享站点 catalog 检查、GitHub Pages 与 Cloudflare Pages 部署均成功，Worker/config 与宠物任务按变更范围跳过。Codex 内置浏览器打开[本轮公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=10910e1)，确认页面标题、Cow Gulch 地图、峡谷/桥、HUD 与倍速滑杆可见；游戏在 4× 下推进至 Wave 4/8 后可暂停，AX 状态为 Lives 44、Enemies 25、Cash `$122`，暂停按钮切换为 Resume battle。正式档案仍为 Cow Gulch 1/1 完成、最高分 `$356`，本次未结算战斗。浏览器 console 的 error/warn 日志为空。公网截图只验证部署、画面与控件；跨模拟步的排序历史由上方定向自动化测试验证。 |
 
 本轮闭合的是第56节提出的“模拟步之间及首次绘制前丢失绘制历史”问题。它只解决 P1-F 的跨类型绘制队列所有权与时序，不代表 Cow Gulch 首关画面和规则已完成全量对照；首关仍为 0/60。
+
+## 58. P1-F Cow Gulch 玩家行走动画
+
+Gunslinger 和 Mexican 实际移动时，网页此前保持静态图集首帧。本轮按 APK 的移动距离阈值选择循环帧，并按本次实际位移选择方向行与镜像；单位停止后保留最后的行走姿态，射击动画仍优先绘制，移动则继续中断正在播放的射击动画。
+
+### APK 静态依据
+
+研究分支 `codex/gunsnglory-spec` 的 JADX 分析产物 `GameDesignOptics.java` 将默认玩家行走表记录为 `{0,1536, 1,3072, 0,4608, 2,6144}`，并将其用于 Gunslinger 和 Mexican 等玩家单位。`GameObjectUnit.move()` 按主位移轴累计实际 fine 坐标变化，达到6144后回绕；选择帧时只在累计距离**严格大于**1536、3072、4608时切换到下一项。它再依实际方向选择图集第0–4行，按半轴阈值切到斜向帧，必要时水平镜像。奇数位移的半轴比较采用 Java 整数除法语义。
+
+同一研究资料中的 APK drawable 图集为96×220像素，玩家动画裁片为32×44像素，即3列、5行。上述路径是 APK 的反编译分析结果，不是原始 Java 源码；本轮没有依赖原版 ADB 运行观察。
+
+### 实现与验证
+
+| 检查 | 结果 |
+| --- | --- |
+| 红灯回归 | 先加入通过 Game 公共 Interface 选择并移动单位的测试；修改前 `walkingAnimation` 缺失，在1536 fine units时对比预期 `{frame:0,row:1,mirrored:true}` 失败。 |
+| 帧阈值、方向与静止 | 新测试覆盖1536/1537、3072/3073、4608/4609的严格边界和6144回绕；验证西、南、北及东南方向的图集行/镜像，并验证停止移动后姿态保持。Gunslinger 与 Mexican 均由相同 APK 默认行走表驱动。 |
+| Canvas 裁片 | 定向 draw-call 断言核对第2帧、第4行裁切为`64,176,32,44`，并确认镜像状态实际进入 Canvas 变换。 |
+| 回放兼容 | `captureReplayState()` 去除新增的渲染专用 `walkingAnimation` 字段，避免旧版重放检查点摘要因显示帧字段改变；规则版本、回放格式和战斗输入不变。 |
+| 边界敏感性复核 | 临时把帧切换比较从`>`改为`>=`，定向测试在1536处失败（错误地提前到frame 1）；恢复实现后重新通过。 |
+| 本地验证 | 显式使用 Node 22.23.3，应用 `pnpm run test:ci` 全部通过：TypeScript 检查、162项单元测试、Vite 生产构建及53项 Playwright 测试；仓库 `pnpm run test:catalog` 15项全部通过。 |
+| 内置浏览器实测 | 本地生产预览 `http://127.0.0.1:4398/`：桌面视口 1440×900 下画布约1022×574，手机视口390×844下画布约326×183，页面横向滚动宽度仍为375px；两种视口均保持约16:9画布。用鼠标选中并拖动 Gunslinger，检查面板从初始 `(8.5, 8.75)` 更新到 `(7.77, 8.32)`，界面显示 Cell `(8, 8)`；随后暂停在 Wave 3/8，没有完成关卡或产生通关档案。浏览器控制台无 error/warn。 |
+
+本轮只补齐 Cow Gulch 玩家步行图集状态；不改变移动距离、碰撞、路线或速度。其它玩家类型、命中/睡眠等角色状态及完整 P1-F 首关对照仍待完成，首关验收计数保持0/60。

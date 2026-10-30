@@ -1,4 +1,4 @@
-import type { GameDifficulty, GameIntent, GameMode, GameView, ShotView, WaveSettlement } from './index';
+import type { GameDifficulty, GameIntent, GameMode, GameView, ShotView, UnitView, WaveSettlement } from './index';
 import { canonicalSha256Digest } from '../value-digest';
 
 export const GAME_RULES_VERSION = 'gng-rules-3';
@@ -86,7 +86,7 @@ export function captureReplayState(view: GameView): ReplayState {
   return {
     frame: view.frame,
     elapsedMs: view.elapsedMs,
-    units: view.units,
+    units: view.units.map(({ walkingAnimation: _walkingAnimation, ...unit }) => unit),
     enemies: view.enemies,
     shots: view.shots.map(({ fineZ: _fineZ, heightFine: _heightFine, ...shot }) => shot),
     recruitPool: view.recruitPool,
@@ -96,11 +96,13 @@ export function captureReplayState(view: GameView): ReplayState {
 }
 
 type ReplayShotState = Omit<ShotView, 'fineZ' | 'heightFine'>;
+type ReplayUnitState = Omit<UnitView, 'walkingAnimation'>;
 
 export type ReplayState = Omit<
   Pick<GameView, 'frame' | 'elapsedMs' | 'units' | 'enemies' | 'shots' | 'recruitPool' | 'events'>,
-  'shots'
+  'shots' | 'units'
 > & {
+  units: readonly ReplayUnitState[];
   shots: readonly ReplayShotState[];
   wave: GameView['wave'] | null;
 };

@@ -109,14 +109,22 @@ function drawUnit(
   }
 
   const firing = unit.shootingAnimation;
+  const walking = unit.walkingAnimation;
   const asset = firing?.asset ?? unit.asset;
   const image = images[asset];
   if (!image) throw new Error('Missing game image: ' + asset);
   const frame = firing
     ? { x: firing.frame * unit.frame.width, y: firing.row * unit.frame.height, width: unit.frame.width, height: unit.frame.height }
+    : walking
+      ? {
+        x: unit.frame.x + walking.frame * unit.frame.width,
+        y: unit.frame.y + walking.row * unit.frame.height,
+        width: unit.frame.width,
+        height: unit.frame.height,
+      }
     : unit.frame;
   context.save();
-  if (firing?.mirrored) {
+  if (firing?.mirrored ?? walking?.mirrored ?? false) {
     context.translate(left * 2 + width, 0);
     context.scale(-1, 1);
   }

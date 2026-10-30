@@ -1198,6 +1198,82 @@ test('keeps the shooting animation when a move intent produces no actual displac
     'actual movement cancels the shooting animation');
 });
 
+test('matches the APK Gunslinger and Mexican walking frames by movement distance and direction', async () => {
+  const moveOneStep = async (input: {
+    id: string;
+    type: 'gunslinger' | 'mexican';
+    asset: 'player_gunslinger' | 'player_mexican';
+    speed: number;
+    dx: number;
+    dy: number;
+  }) => {
+    const movingScenario: ScenarioContent = {
+      ...scenario,
+      id: input.id,
+      units: [{
+        ...scenario.units[0]!,
+        type: input.type,
+        asset: input.asset,
+        movementSpeedFinePer100Ms: input.speed,
+      }],
+    };
+    const session = await createGame({ scenarios: { [movingScenario.id]: movingScenario } }).open({
+      scenarioId: movingScenario.id,
+      randomSeed: 42,
+    });
+    const initialUnit = session.observe().units[0]!;
+    assert.equal(session.submitIntent({
+      type: 'select-at',
+      x: initialUnit.hitArea.x + initialUnit.hitArea.width / 2,
+      y: initialUnit.hitArea.y + initialUnit.hitArea.height / 2,
+    }), true);
+    session.advance({ deltaMs: 0 });
+    assert.equal(session.submitIntent({
+      type: 'move-unit',
+      targetX: initialUnit.positionFine.x / 7680 + input.dx * 8,
+      targetY: initialUnit.positionFine.y / 7680 + input.dy * 8,
+    }), true);
+    return { session, view: session.advance({ deltaMs: 100 }) };
+  };
+
+  for (const [distance, expectedFrame] of [
+    [1536, 0], [1537, 1], [3072, 1], [3073, 0], [4608, 0], [4609, 2], [6144, 0],
+  ] as const) {
+    const { session, view } = await moveOneStep({
+      id: 'walking-threshold-' + distance,
+      type: 'gunslinger',
+      asset: 'player_gunslinger',
+      speed: distance,
+      dx: 1,
+      dy: 0,
+    });
+    assert.deepEqual(view.units[0]?.walkingAnimation, {
+      frame: expectedFrame,
+      row: 1,
+      mirrored: true,
+    }, 'walk distance ' + distance + ' uses the APK frame threshold');
+
+    session.submitIntent({ type: 'stop-moving' });
+    const stopped = session.advance({ deltaMs: 0 });
+    assert.deepEqual(stopped.units[0]?.walkingAnimation, view.units[0]?.walkingAnimation,
+      'the last walking pose stays visible while the unit is idle');
+    assert.equal('walkingAnimation' in captureReplayState(stopped).units[0]!, false,
+      'render-only walk animation does not change the replay state format');
+  }
+
+  const directions = [
+    { id: 'walking-west', type: 'gunslinger' as const, asset: 'player_gunslinger' as const, speed: 1536, dx: -1, dy: 0, row: 1, mirrored: false },
+    { id: 'walking-south', type: 'gunslinger' as const, asset: 'player_gunslinger' as const, speed: 1536, dx: 0, dy: 1, row: 3, mirrored: false },
+    { id: 'walking-north', type: 'gunslinger' as const, asset: 'player_gunslinger' as const, speed: 1536, dx: 0, dy: -1, row: 4, mirrored: false },
+    { id: 'walking-southeast', type: 'mexican' as const, asset: 'player_mexican' as const, speed: 3606, dx: 3, dy: 2, row: 0, mirrored: true },
+  ];
+  for (const direction of directions) {
+    const { view } = await moveOneStep(direction);
+    assert.equal(view.units[0]?.walkingAnimation?.row, direction.row, direction.id + ' chooses the original atlas row');
+    assert.equal(view.units[0]?.walkingAnimation?.mirrored, direction.mirrored, direction.id + ' mirrors only the original directions');
+  }
+});
+
 test('does not attack at or beyond the strict outer range boundary', async () => {
   const outOfRangeScenario: ScenarioContent = {
     ...combatScenario,
