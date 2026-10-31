@@ -1670,8 +1670,8 @@ function moveEnemy(
   const cellX = fullCell(enemy.positionFine.x);
   const cellY = fullCell(enemy.positionFine.y);
   return {
-    escaped: passedCenter && (cellX >= scenario.map.width + 3 || cellY >= scenario.map.height + 3
-      || cellX <= -3 || cellY <= -3),
+    escaped: cellX >= scenario.map.width + 3 || cellY >= scenario.map.height + 3
+      || cellX <= -3 || cellY <= -3,
     collisionBlocked,
   };
 }
@@ -2373,10 +2373,13 @@ export function createGame(options: {
               }
               if (!result.escaped) continue;
               wave.enemies = wave.enemies.filter((candidate) => candidate !== enemy);
-              if (campaignMode) {
-                recordCampaignEscape(wave, scenario.previewWave.initialLives, scenario.previewWave.escapePenalty);
+              // APK removeEnemyWithPenalty() removes type-8 tow objects without charging a life.
+              if (enemy.type !== 8) {
+                if (campaignMode) {
+                  recordCampaignEscape(wave, scenario.previewWave.initialLives, scenario.previewWave.escapePenalty);
+                }
+                wave.lives = Math.max(0, wave.lives - scenario.previewWave.escapePenalty);
               }
-              wave.lives = Math.max(0, wave.lives - scenario.previewWave.escapePenalty);
               wave.escapedEnemies += 1;
             }
             updateWagonDebris(wave.wagonDebris, deltaMs);

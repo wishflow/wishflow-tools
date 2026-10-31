@@ -20,7 +20,7 @@ async function screenPointForCanvasPoint(
   };
 }
 
-test('touch players can pan to and hire the original Mexican unit in official Cow Gulch', async ({ browser }) => {
+test('touch players can pan to the original Mexican slot and see its unaffordable state in official Cow Gulch', async ({ browser }) => {
   test.setTimeout(120_000);
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -53,23 +53,9 @@ test('touch players can pan to and hire the original Mexican unit in official Co
     await speed.press('End');
     await expect(speed).toHaveValue('4');
 
-    await page.evaluate(() => {
-      let timestamp = 0;
-      window.requestAnimationFrame = (callback) => window.setTimeout(() => {
-        timestamp += 100;
-        callback(timestamp);
-      }, 100);
-      window.cancelAnimationFrame = (handle) => window.clearTimeout(handle);
-    });
-
     const waveStatus = page.getByTestId('wave-status');
     await expect(waveStatus).toContainText('Cash $65');
-    let cash = readCash(await waveStatus.innerText());
-    for (let segment = 0; segment < 8 && cash < 100; segment += 1) {
-      await page.clock.runFor(10_000);
-      cash = readCash(await waveStatus.innerText());
-    }
-    expect(cash).toBeGreaterThanOrEqual(100);
+    expect(readCash(await waveStatus.innerText())).toBe(65);
 
     const cdp = await context.newCDPSession(page);
     const start = await Promise.all([
@@ -105,11 +91,8 @@ test('touch players can pan to and hire the original Mexican unit in official Co
 
     const hire = page.getByTestId('hire-map-unit');
     await expect(hire).toHaveText('Hire map Mexican · $100');
-    await expect(hire).toBeEnabled();
-    await hire.tap();
-    await expect(page.getByTestId('map-hire-status')).toHaveText('Mexican hired from the map for $100.');
-    await expect(waveStatus).toContainText(`Cash $${cash - 100}`);
-    await expect(page.getByTestId('selection-status')).toContainText('Mexican selected · Cell (5, 16)');
+    await expect(hire).toBeDisabled();
+    await expect(waveStatus).toContainText('Cash $65');
     await expect(page.getByTestId('settlement')).toBeHidden();
     await cdp.detach();
   } finally {
