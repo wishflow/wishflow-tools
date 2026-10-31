@@ -1448,4 +1448,6 @@ APK 1.8.6 `GameObjectUnit.makeMoveCheck()` 先逐轴调用玩家碰撞管理器�
 | 应用 CI | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 env CI=1 PLAYWRIGHT_PORT=4271 pnpm run test:ci` 通过：TypeScript、176项单元测试、Vite 生产构建及61项 Playwright E2E。 |
 | 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试通过。 |
 | Codex 内置浏览器本地操作 | 在本地 Vite 页面打开 Cow Gulch 单波样本，点击选中枪手并把拖动目标移到地图左缘；状态从 Cell (9, 9) 更新为 Cell (8, 9)，截图确认枪手随输入移动并停在峡谷地形边缘。样本仍为 Wave 1 ready、生命50、现金 `$65`，未结算或修改正式进度；浏览器 error/warn 日志为空。 |
+| GitHub Actions 与公开部署 | 提交 `df89ebb` 的 [Actions run 41185318893](https://github.com/wishflow/wishflow-tools/actions/runs/41185318893) 成功；Guns’n’Glory 测试、共享站点检查及 Cloudflare Pages、GitHub Pages 部署均通过。 |
+| Codex 内置浏览器公开版 | 打开 [`df89ebb` 公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=df89ebb)，切到隔离样本后用鼠标拖动枪手，界面从“尚未选择单位”更新为“已选择枪手 · Cell (10, 9)”；战局检查显示 `gunslinger-1` 位于 `(9.07, 8.65)`，无敌人，松开后再次读取状态未变化。样本保持第1波待开始、生命50、现金 `$65`；正式档案仍显示已完成1/1、最高分 `$356`，模拟速度4×、音效关闭；浏览器 error/warn 日志为空。此为桌面鼠标公网烟测，缩放后触屏拖动由本地 Playwright 回归覆盖。 |
 | P1-F 总门槛 | 玩家边界规则和相机后触屏拖动的坐标一致性已有覆盖；不代表路线、绘制、所有关卡及鼠标/触屏对照完成，首关整体验收仍为0/60。 |
