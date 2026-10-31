@@ -1330,3 +1330,35 @@ APK map01 的敌人路线从 spawn `(0,10)` 依次经过 redirect `(4,10) → (4
 | 背景碰撞 | `R/route-and-wave-model.md` 依据 `GunsAndGloryThread.onLoadGame` 和 `CollisionManager` 证据记录 `backgroundMapCollisions=false`；网页不得加入与 APK 相反的全图地形阻挡。 |
 | 线上运行观察 | 本轮公开实测只覆盖 Wave01 的整体推进与地图显示，没有逐帧记录 `(12,9)` 通过事件；此条结论来自可复算静态资料，不计为动态坐标观察。 |
 | P1-F 总门槛 | 该路线复核不代表完整移动、碰撞、离场、桥面遮挡或全关卡验收通过；Cow Gulch 与完整关卡计数仍为0/60。 |
+
+## 68. P1-F Cow Gulch 异组敌人碰撞
+
+网页此前只在运输队生成前检查同类碰撞，运输敌人进入路线后没有执行 APK 的异组阻挡，迎面运输队可能互相穿过。本次按 APK 碰撞查询补上 type4/type8 行进阻挡，并保留步兵无碰撞框、同组关系及“背景地形碰撞关闭”的原版边界。此项不改变路线、桥面贴图或玩家单位碰撞规则。
+
+### APK 规则与范围
+
+研究分支 `codex/gunsnglory-spec` 的 DEX/Smali 分析显示，`GunsAndGloryThread.onLoadGame()` 分别创建玩家单位碰撞管理器和敌人碰撞管理器；敌人管理器参数为 `backgroundMapCollisions=false`、`ignoreSameUnitGroup=false`。`EnemyDirector.isCollsionObject()` 只为 type8、4、5、6、3、7 注册敌人碰撞对象，敌方管理器的列表仅由 `EnemyDirector.addEnemy()` 添加这些敌人；它不含地形、地图装饰、生成点或玩家单位。
+
+每个敌人碰撞框尺寸为 `7678×7678` fine units。构造时起点是 `(fineX - 3840 + 1, fineY - 3840 + 1)`；`GameObjectEnemy.move()` 更新后改用 `(fineX - 3840, fineY - 3840)`。碰撞查询根据当前 `xDir/yDir` 运行 `CollisionManager.testCollisionEnemy()` 与 `boxCheck()`；候选条件是“候选组号不同，或 `ignoreSameUnitGroup=true`”。敌人管理器传入 `false`，故同组对象会被跳过，只有异组候选参与碰撞。`EnemyDirector.moveEnemys()` 在命中时调用 `undoMove(xDir, yDir)` 恢复上次存储的位置并恢复方向。若碰撞者列表中紧接着的对象同组，则把该对象标为 `movementBlocked`，使其本次 `move()` 不移动。
+
+Cow Gulch 已实现敌人类型为1、2、4、8，因此当前只有 type4 车厢和 type8 牵引对象进入碰撞查询；type1/2 步兵没有碰撞对象，敌人与桥面、峡谷、装饰或玩家单位之间也不会由该管理器阻挡。type8/type4 同组运输对生成时中心间距为7680，碰撞框宽7678；同组过滤使牵引件和车厢保持各自移动，不会互相回退。异组运输对象按列表顺序更新时，碰撞管理器用当前方向作两段预测；命中时才回退。该规则确认“敌人经过东侧桥面是原版路线”，不能据此增加全图地形碰撞。
+
+网页 [`enemyCollisionBlocksMove()`](../src/game/index.ts) 复用上述碰撞框、过滤同组对象的规则、APK `boxCheck` 角点判定及速度方向预测。碰撞时恢复上一步位置和方向，将行走距离累计清零，并让列表中的同组下一成员跳过本次移动。规则版本升至 [`gng-rules-5`](../src/game/replay.ts)，因为旧回放没有该移动碰撞行为；IndexedDB 档案结构未变。
+
+### 行为覆盖
+
+[`p1f-enemy-collision.test.ts`](../tests/p1f-enemy-collision.test.ts) 从真实 Cow Gulch 战役内容派生两组相向运输敌人，使用 Game 公共 Interface 推进并逐帧核对异组碰撞框不重叠；碰撞时双方保持停止。同组 type8/type4 运输对在整个观察区间保持原始间距，验证 `ignoreSameUnitGroup=false` 会过滤同组候选。相同路线上的步兵测试核对 type1/2 会互相穿过，防止把所有敌人错误加入碰撞管理器。
+
+第一次运行红测在第27帧复现运输敌人跨组碰撞框相交，中心差 `7440`；实现后定向测试和 TypeScript 检查通过。该用例是依据反编译 CollisionManager 行为的静态/本地模型对照，不是 Android 实机帧录制。
+
+碰撞实现过程中曾尝试把地图越界清理改成每帧执行，随后三项既有战斗测试失败，表现为现金/射击进度变化及 Wave03 生成对数减少。复核 APK smali 后确认，`passesFieldCenter()` 只包住路线转向和离场计数分支；紧随其后的地图范围清理位于分支外，在 `EnemyDirector.moveEnemys()` 的 `.line 503` 每帧执行。网页当前 `moveEnemy()` 仍把越界清理限制在 `passedCenter`，与 APK 不同。失败用例的结果不能推翻 smali 证据；这属于既有移动规则差异，本次碰撞切片未改它，也不把当前测试结果当作原版行为的证明。后续应单独复核三个失败用例所用出生点、波次请求及结算预期，再决定如何准确更新模型和测试。
+
+### 验证
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向行为测试 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm --dir apps/gunsnglory exec node --import tsx --test tests/p1f-enemy-collision.test.ts` 两项通过；修改前第一项按独立预期在第27帧失败。 |
+| 本地应用 CI | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 env CI=1 PLAYWRIGHT_PORT=4201 pnpm --dir apps/gunsnglory test:ci` 通过：TypeScript、173项单元测试、Vite生产构建及60项 Playwright E2E 全通过。临时 worktree 使用已有应用依赖的本地 `node_modules` 链接；未改依赖或 lockfile。 |
+| 共享站点目录检查 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 15项通过。 |
+| 发布与内置浏览器 | 待本地提交合并、推送并由工作流部署后实测。 |
+| P1-F 总门槛 | 异组敌人碰撞这一局部行为通过，不代表整个 Cow Gulch 首关视觉/交互对照通过；完整关卡验收计数仍为0/60。 |

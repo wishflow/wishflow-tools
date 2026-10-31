@@ -437,6 +437,7 @@ interface MutableEnemy {
   speed: number;
   direction: Direction;
   positionFine: { x: number; y: number };
+  collisionStartOffsetFine?: number;
   drawingOffsetFine: { x: number; y: number };
   groupId: string;
   damageable: boolean;
@@ -1192,6 +1193,7 @@ function createCampaignEnemy(
     speed,
     direction: spawn.direction,
     positionFine: { ...positionFine },
+    collisionStartOffsetFine: type === 4 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
     drawingOffsetFine: { ...drawingOffsetFine },
     groupId,
     damageable: type !== 8,
@@ -1489,36 +1491,124 @@ function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[]): Muta
   return bestTarget;
 }
 
-function moveEnemy(enemy: MutableEnemy, deltaMs: number, scenario: ScenarioContent, random: JavaRandom): boolean {
-  if (deltaMs === 0) return false;
+const ENEMY_COLLISION_BOX_SIZE_FINE = 7678;
+const ENEMY_COLLISION_INITIAL_START_OFFSET_FINE = 3839;
+const ENEMY_COLLISION_MOVED_START_OFFSET_FINE = 3840;
+const ENEMY_COLLISION_MAX_START_DELTA_X_FINE = 23040;
+const ENEMY_COLLISION_MAX_START_DELTA_Y_FINE = 15360;
+
+function enemyCollisionBoxCheck(
+  movingStartX: number,
+  movingStartY: number,
+  stationaryStartX: number,
+  stationaryStartY: number,
+  deltaX: number,
+  deltaY: number,
+): boolean {
+  const movingEndX = movingStartX + ENEMY_COLLISION_BOX_SIZE_FINE;
+  const movingEndY = movingStartY + ENEMY_COLLISION_BOX_SIZE_FINE;
+  const stationaryEndX = stationaryStartX + ENEMY_COLLISION_BOX_SIZE_FINE;
+  const stationaryEndY = stationaryStartY + ENEMY_COLLISION_BOX_SIZE_FINE;
+  const movedStartX = movingStartX + deltaX;
+  const movedStartY = movingStartY + deltaY;
+  const movedEndX = movingEndX + deltaX;
+  const movedEndY = movingEndY + deltaY;
+  return (movedStartX >= stationaryStartX && movedStartX <= stationaryEndX
+    && movedEndY >= stationaryStartY && movedEndY <= stationaryEndY)
+    || (movedStartX >= stationaryStartX && movedStartX <= stationaryEndX
+      && movedStartY >= stationaryStartY && movedStartY <= stationaryEndY)
+    || (movedEndX >= stationaryStartX && movedEndX <= stationaryEndX
+      && movedStartY >= stationaryStartY && movedStartY <= stationaryEndY)
+    || (movedEndX >= stationaryStartX && movedEndX <= stationaryEndX
+      && movedEndY >= stationaryStartY && movedEndY <= stationaryEndY);
+}
+
+function enemyCollisionBlocksMove(
+  enemy: MutableEnemy,
+  enemies: readonly MutableEnemy[],
+  deltaX: number,
+  deltaY: number,
+): boolean {
+  if (enemy.type !== 4 && enemy.type !== 8) return false;
+
+  const movingOffset = enemy.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
+  const movingStartX = enemy.positionFine.x - movingOffset;
+  const movingStartY = enemy.positionFine.y - movingOffset;
+
+  // The APK checks the other object moving backward by xDir/yDir first, then
+  // checks this object's next 100 ms movement if no first-pass collision hit.
+  for (let pass = 0; pass < 2; pass += 1) {
+    const candidateDeltaX = pass === 0 ? -deltaX : deltaX;
+    const candidateDeltaY = pass === 0 ? -deltaY : deltaY;
+    for (const other of enemies) {
+      // The APK enemy manager uses ignoreSameUnitGroup=false, which filters
+      // candidates whose unitGroup matches the moving collision object.
+      if (other === enemy || other.groupId === enemy.groupId || (other.type !== 4 && other.type !== 8)) continue;
+      const otherOffset = other.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
+      const otherStartX = other.positionFine.x - otherOffset;
+      const otherStartY = other.positionFine.y - otherOffset;
+      if (Math.abs(otherStartX - movingStartX) >= ENEMY_COLLISION_MAX_START_DELTA_X_FINE
+        || Math.abs(otherStartY - movingStartY) >= ENEMY_COLLISION_MAX_START_DELTA_Y_FINE) continue;
+
+      const blocked = pass === 0
+        ? enemyCollisionBoxCheck(
+          otherStartX, otherStartY, movingStartX, movingStartY, candidateDeltaX, candidateDeltaY,
+        )
+        : enemyCollisionBoxCheck(
+          movingStartX, movingStartY, otherStartX, otherStartY, candidateDeltaX, candidateDeltaY,
+        );
+      if (blocked) return true;
+    }
+  }
+  return false;
+}
+
+interface EnemyMoveResult {
+  escaped: boolean;
+  collisionBlocked: boolean;
+}
+
+function moveEnemy(
+  enemy: MutableEnemy,
+  deltaMs: number,
+  scenario: ScenarioContent,
+  random: JavaRandom,
+  enemies: readonly MutableEnemy[],
+  movementBlocked = false,
+): EnemyMoveResult {
   const definition = scenario.previewWave;
-  if (!definition) return false;
+  if (!definition) return { escaped: false, collisionBlocked: false };
 
   const previous = { ...enemy.positionFine };
+  const previousDirection = enemy.direction;
   const turningAtStart = enemy.turningRemainingMs > 0;
-  if (!turningAtStart) enemy.turningImageActive = false;
   const vector = directionVector(enemy.direction);
-  const distance = Math.fround((enemy.speed * deltaMs) / 100);
-  enemy.positionFine = {
-    x: Math.trunc(Math.fround(previous.x + vector.x * distance)),
-    y: Math.trunc(Math.fround(previous.y + vector.y * distance)),
-  };
+  if (!movementBlocked) {
+    if (!turningAtStart) enemy.turningImageActive = false;
+    const distance = Math.fround((enemy.speed * deltaMs) / 100);
+    enemy.positionFine = {
+      x: Math.trunc(Math.fround(previous.x + vector.x * distance)),
+      y: Math.trunc(Math.fround(previous.y + vector.y * distance)),
+    };
+    if (enemy.type === 4 || enemy.type === 8) {
+      enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
+    }
+  }
   const movedFine = Math.abs(enemy.positionFine.x - previous.x) + Math.abs(enemy.positionFine.y - previous.y);
   if (movedFine > 0 && !turningAtStart) {
     enemy.animationDistance = (enemy.animationDistance + movedFine) % ENEMY_WALK_ANIMATION_CYCLE_FINE;
     enemy.animationFrame = enemyWalkAnimationFrame(enemy.type, enemy.animationDistance);
   }
-  if (turningAtStart) enemy.turningRemainingMs = Math.max(0, enemy.turningRemainingMs - deltaMs);
+  if (!movementBlocked && turningAtStart) enemy.turningRemainingMs = Math.max(0, enemy.turningRemainingMs - deltaMs);
 
-  const passedCenter = vector.x !== 0
+  const passedCenter = !movementBlocked && (vector.x !== 0
     ? passesFieldCenter(previous.x, enemy.positionFine.x)
-    : passesFieldCenter(previous.y, enemy.positionFine.y);
-  if (!passedCenter) return false;
+    : passesFieldCenter(previous.y, enemy.positionFine.y));
 
   if (passedCenter) {
     if (enemy.despawnOnNextFieldCounter > 0) {
       enemy.despawnOnNextFieldCounter -= 1;
-      if (enemy.despawnOnNextFieldCounter === 0) return true;
+      if (enemy.despawnOnNextFieldCounter === 0) return { escaped: true, collisionBlocked: false };
     } else {
       const cell = { x: fullCell(enemy.positionFine.x), y: fullCell(enemy.positionFine.y) };
       if (cell.x === definition.exit.x && cell.y === definition.exit.y) {
@@ -1563,10 +1653,27 @@ function moveEnemy(enemy: MutableEnemy, deltaMs: number, scenario: ScenarioConte
     }
   }
 
+  const nextVector = directionVector(enemy.direction);
+  const collisionBlocked = enemyCollisionBlocksMove(
+    enemy,
+    enemies,
+    nextVector.x * enemy.speed,
+    nextVector.y * enemy.speed,
+  );
+  if (collisionBlocked) {
+    enemy.positionFine = previous;
+    enemy.direction = previousDirection;
+    enemy.animationDistance = 0;
+    enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
+  }
+
   const cellX = fullCell(enemy.positionFine.x);
   const cellY = fullCell(enemy.positionFine.y);
-  return cellX >= scenario.map.width + 3 || cellY >= scenario.map.height + 3
-    || cellX <= -3 || cellY <= -3;
+  return {
+    escaped: passedCenter && (cellX >= scenario.map.width + 3 || cellY >= scenario.map.height + 3
+      || cellX <= -3 || cellY <= -3),
+    collisionBlocked,
+  };
 }
 
 export function createGame(options: {
@@ -2214,7 +2321,10 @@ export function createGame(options: {
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
             const campaignDefinition = campaignWaves?.find(({ number }) => number === wave!.number);
-            for (const enemy of [...wave.enemies]) {
+            const movingEnemies = [...wave.enemies];
+            let movementBlockedEnemyId: string | undefined;
+            for (let enemyIndex = 0; enemyIndex < movingEnemies.length; enemyIndex += 1) {
+              const enemy = movingEnemies[enemyIndex]!;
               if (!enemy.alive) {
                 enemy.deathRemainingMs -= deltaMs;
                 if (campaignMode && enemy.type === 4 && enemy.deathRemainingMs < 500 && !enemy.wagonPartsCreated
@@ -2254,7 +2364,14 @@ export function createGame(options: {
                 }
                 continue;
               }
-              if (!moveEnemy(enemy, deltaMs, scenario, random)) continue;
+              const movementBlocked = movementBlockedEnemyId === enemy.id;
+              movementBlockedEnemyId = undefined;
+              const result = moveEnemy(enemy, deltaMs, scenario, random, wave.enemies, movementBlocked);
+              if (result.collisionBlocked) {
+                const nextEnemy = movingEnemies[enemyIndex + 1];
+                if (nextEnemy?.groupId === enemy.groupId) movementBlockedEnemyId = nextEnemy.id;
+              }
+              if (!result.escaped) continue;
               wave.enemies = wave.enemies.filter((candidate) => candidate !== enemy);
               if (campaignMode) {
                 recordCampaignEscape(wave, scenario.previewWave.initialLives, scenario.previewWave.escapePenalty);
