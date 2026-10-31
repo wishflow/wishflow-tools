@@ -1633,5 +1633,7 @@ Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；�
 | 验收面 | 结果 |
 | --- | --- |
 | 定向 Game 回归 | Node 22.23.3 下运行 `node --import tsx --test --test-name-pattern='keeps the pioneer inside the TDM route cells' tests/game.test.ts`：完整 Cow Gulch 路径通过，并确认西、东两座原版桥格均被经过。 |
-| 类型、单元、构建与站点目录 | `test:ci` 的类型检查、186项单元测试与 Vite 构建通过；`pnpm run test:catalog` 的15项测试通过。E2E 全套两次运行均有不稳定失败，首次为手机暂停测试（66/67），再次为两项既有 IndexedDB 测试（65/67）；三项失败用例分别隔离重跑均通过，故全套 E2E 本轮仍记为未稳定通过。 |
+| 类型、单元、构建与站点目录 | Node 22.23.3 下类型检查、186项单元测试、Vite生产构建均通过；`pnpm run test:catalog` 的15项测试通过。完整 Playwright 第三次运行 `CI=1 PLAYWRIGHT_PORT=53845 pnpm --dir apps/gunsnglory run test:e2e`：67项全部通过。前两次分别有1项和2项既有浏览器用例超时；对应3项单独重跑均通过，未复现产品失败。 |
+| GitHub Actions 与公开发布 | 提交 `521839f` 已合入 `gunsnglory` 与 `master` 并推送。[Actions run 41217697999](https://github.com/wishflow/wishflow-tools/actions/runs/41217697999) 成功：Guns’n’Glory 测试、共享站点目录检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker 按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[提交 `521839f` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=521839f)，确认地图、HUD、战役档案加载；在隔离样本中启动单个拓荒者并观察胜利结算：生命50、逃脱0、击败1、现金 `$66`、样本高分 `$50`。随后重启样本并留在待开始状态；正式档案仍为1/1、最高分 `$356`，倍速保持4×、音效关闭。控制台 error/warn 为空。没有完成或结算正式战役。 |
 | 行为边界 | 未改寻路、地图数据或地形碰撞；双桥经过的东桥部分由确定性 Game 测试支持，短时浏览器观察只确认西桥。贴图锚点、图层遮挡和整关验收仍未完成，P1-F 计数保持0/60。 |
