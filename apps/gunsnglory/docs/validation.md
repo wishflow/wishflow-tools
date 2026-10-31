@@ -1440,9 +1440,12 @@ APK 1.8.6 `GameObjectUnit.makeMoveCheck()` 先逐轴调用玩家碰撞管理器�
 
 `game.test.ts` 使用空地图把单位向四个地图外目标移动，核对每个坐标都停在公式边界之内且离边界不到一个移动步长；另以60与80设备像素图块宽复核 margin 的反比变化，固定慢速枪手结果分别为3380与3480 fine units。坏的 `tileSizePixels` 必须在消费帧前拒绝。回放用例检查每帧保存正整数环境值、格式版本2、损坏的环境值被拒绝，且完整确定性重放一致。
 
+移动端集成回归还把镜头与输入串起来：在 Cow Gulch 单波隔离样本中，以枪手位置为焦点放大1.5倍，再按变换后的同一地图坐标触屏拖动；页面到达 `Cell (10, 9)`，抬手后 Canvas 像素保持稳定。该用例不启动波次、不写正式档案，验证相机变换不会让绘制与触屏输入分叉。
+
 | 验收面 | 结果 |
 | --- | --- |
-| 应用 CI | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 env CI=1 PLAYWRIGHT_PORT=4233 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript、176项单元测试、Vite 生产构建及60项 Playwright E2E。 |
+| 定向移动端浏览器回归 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm exec playwright test tests/e2e/t10-camera.spec.ts --reporter=line` 通过：3项镜头/触屏用例。 |
+| 应用 CI | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 env CI=1 PLAYWRIGHT_PORT=4271 pnpm run test:ci` 通过：TypeScript、176项单元测试、Vite 生产构建及61项 Playwright E2E。 |
 | 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试通过。 |
 | Codex 内置浏览器本地操作 | 在本地 Vite 页面打开 Cow Gulch 单波样本，点击选中枪手并把拖动目标移到地图左缘；状态从 Cell (9, 9) 更新为 Cell (8, 9)，截图确认枪手随输入移动并停在峡谷地形边缘。样本仍为 Wave 1 ready、生命50、现金 `$65`，未结算或修改正式进度；浏览器 error/warn 日志为空。 |
-| P1-F 总门槛 | 关闭玩家边界这一项规则差异；不代表路线、绘制、所有关卡及鼠标/触屏对照完成，首关整体验收仍为0/60。 |
+| P1-F 总门槛 | 玩家边界规则和相机后触屏拖动的坐标一致性已有覆盖；不代表路线、绘制、所有关卡及鼠标/触屏对照完成，首关整体验收仍为0/60。 |

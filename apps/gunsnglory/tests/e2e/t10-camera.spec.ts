@@ -87,6 +87,65 @@ test('two-finger map zoom follows its focal point and preserves touch hit testin
   }
 });
 
+test('a single-finger unit drag after zoom uses the same map coordinates for drawing and input', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 1,
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
+  const cdp = await context.newCDPSession(page);
+  try {
+    await page.goto('/');
+    await openSingleWaveSample(page, 'tap');
+    const canvas = page.getByTestId('game-canvas');
+    const selection = page.getByTestId('selection-status');
+    const unitPoint = await mapPoint(page, 8.5, 8.25);
+    const tilePixels = (await canvas.boundingBox())!.width * (60 / 1024);
+
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [
+        { x: unitPoint.x - 24, y: unitPoint.y, id: 1 },
+        { x: unitPoint.x + 24, y: unitPoint.y, id: 2 },
+      ],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [
+        { x: unitPoint.x - 36, y: unitPoint.y, id: 1 },
+        { x: unitPoint.x + 36, y: unitPoint.y, id: 2 },
+      ],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+    const zoomedTarget = {
+      x: unitPoint.x + (11.5 - 8.5) * tilePixels * 1.5,
+      y: unitPoint.y + (8.75 - 8.25) * tilePixels * 1.5,
+    };
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ ...unitPoint, id: 3 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ ...zoomedTarget, id: 3 }],
+    });
+    await expect(selection).toContainText('Gunslinger selected');
+    await expect(selection).toContainText('(10, 9)', { timeout: 5000 });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+
+    const stoppedCanvas = await canvasHash(page);
+    await page.waitForTimeout(250);
+    expect(await canvasHash(page), 'releasing after the transformed drag stops movement').toBe(stoppedCanvas);
+    await cdp.detach();
+  } finally {
+    await context.close();
+  }
+});
+
 
 test('converting a one-finger drag to a pinch stops movement and locks the remaining finger', async ({ browser }) => {
   const context = await browser.newContext({
