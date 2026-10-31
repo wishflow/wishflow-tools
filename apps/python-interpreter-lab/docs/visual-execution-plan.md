@@ -105,7 +105,7 @@ flowchart LR
 - **验收**：可解释为什么跳到该行、循环为什么重复暂停、短路为何不执行右侧；失败停在真实位置，错误后状态与 VM 一致。
 - **验证**：条件两分支、零次与多次循环、循环断点重复命中、短路副作用、失败操作数保留和资源终止；同步双语帮助。
 - **回滚**：新增动作退化为静态说明，不改变控制流与错误行为。
-- **状态**：T01–T04 已实现。重放前全量应用 CI（176 条单测、75 条 Playwright）、代码审查与修正复核、catalog 和整站构建均已通过；本次已将功能分支重放到最新 `master` `d78297d`，重放后验证正在进行。V4 `bump(xs)` 与 `fact(3)` 理解检查仍待确认；未通过前不合并、推送或发布 V5。细化范围见 [V5 spec](specs/v05-control-flow-explanations.md) 和 [V5 tasks](tasks/v05-control-flow-explanations.md)。
+- **状态**：T01–T04 已实现并验证。V5 分支已重放到 `master` `d78297d`；重放后应用 CI（177 条单测、78 条 Playwright、类型检查和生产构建）、catalog（15 项）与整站构建均通过。V4 `bump(xs)` 与 `fact(3)` 理解检查仍待确认；未通过前不合并、推送或发布 V5。细化范围见 [V5 spec](specs/v05-control-flow-explanations.md) 和 [V5 tasks](tasks/v05-control-flow-explanations.md)。
 
 ### V6：真实 CPython 的源码片段对照
 

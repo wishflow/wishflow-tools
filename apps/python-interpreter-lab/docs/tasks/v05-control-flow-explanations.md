@@ -61,10 +61,10 @@
 | V4 理解检查 | 待确认 | V5 规格列出两个前置场景；仓库无用户理解反馈记录，自动化和线上技术验证不替代理解验证 |
 | T01–T04 实现 | 已完成 | 新增严格校验的分支/跳转/短路/迭代和失败过渡；更新讲解卡、中英文词条及双语指南 |
 | 定向验证 | 已通过 | `teaching-animation.test.ts` 23 项通过；V5 新增/扩展真实 Worker 与 Pyodide 浏览器场景通过，覆盖矛盾迭代快照回退和中英文前跳/回边文案 |
-| 全量应用验证 | 已通过 | 最终 `pnpm run test:ci` 完整通过：typecheck、176 项单测、生产构建及 Playwright 75/75。此前一次 E2E 出现既有 Pyodide 下载告警超时；单项复测和之后两次完整 E2E 均通过 |
-| 根目录验证 | 已通过 | `pnpm test:catalog` 15/15 通过；`pnpm build:site` 成功；3D Objects 仍有既有大 chunk 提示，gzip bundle 检查通过；`git diff --check` 通过 |
+| 全量应用验证 | 已通过 | 基于最新 `master` 重放后，`pnpm run test:ci` 通过：typecheck、177 项单测、生产构建及 Playwright 78/78（含 V6 回归） |
+| 根目录验证 | 已通过 | 重放后 `pnpm test:catalog` 15/15 通过；`pnpm build:site` 成功；3D Objects 仍有既有大 chunk 提示，gzip bundle 检查通过 |
 | 代码审查 | 已通过 | 独立审查发现两项 Required：前跳/回边共用文案、迭代器产值及推进状态未交叉校验；已补中英文与矛盾快照回归，并复审关闭，两项均无遗留 Required |
-| 提交与合并 | 功能分支已提交并重放 | `codex/python-lab-v5-control-flow` 已基于 `master` `7fed2e8`；尚未合入主分支，等待 V4 理解检查结果 |
+| 提交与合并 | 已重放，等待 V4 理解检查 | V5 提交 `b8cb755` 已基于最新 `master` `d78297d` 重放；尚未合入主分支，等待理解检查结果 |
 | CI/CD | 未开始 | — |
 | 线上验收 | 未开始 | — |
 
