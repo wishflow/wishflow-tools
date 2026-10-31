@@ -1550,5 +1550,6 @@ Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；�
 | 规则、Canvas 与回放回归 | `pnpm run test:ci` 包含182项单元测试，全部通过；覆盖新增目标选择、ReplayState 和 Canvas 图集断言。 |
 | 桌面与触屏 E2E | 完整 Playwright 共66项全部通过；新增桌面鼠标、手机触屏选敌和“从敌人处拖动不移动已选枪手”3项均通过。手机选敌用例另以 `--repeat-each=3`，3/3通过。 |
 | 类型与构建 | 同一 `pnpm run test:ci` 中 TypeScript 检查和 Vite 生产构建通过。 |
-| 共享站点与发布 | 本轮提交前待执行；Actions 与公开版浏览器检查完成后在此补记。 |
+| 共享站点与发布 | 提交 `570c5a4` 已快进合入 `gunsnglory` 与 `master` 并推送。GitHub Actions [run 41200013618](https://github.com/wishflow/wishflow-tools/actions/runs/41200013618) 全部成功：Guns’n’Glory 测试、共享站点目录检查、Cloudflare Pages 和 GitHub Pages 部署通过；Worker 按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[提交 `570c5a4` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=570c5a4)，在 Cow Gulch 隔离样本中用鼠标点选敌人 `(0.65, 10.50)`；上下两段红色准星可见并围绕该敌人，状态显示 Wave 1、生命50、敌人1、现金 `$65`。随即暂停，未结算；正式档案仍为1/1、最高分 `$356`。将测试中调低的模拟倍速恢复为已保存的4×，音效保持关闭。该公网页面控制台 error/warn 查询为空。 |
 | P1-F 总门槛 | 优先目标输入、可视标记、目标生命周期和10倍因子局部关闭；完整 `PriorityMap` 目标基分、Cow Gulch 全关对照及其余59关仍未完成，关卡验收保持0/60。 |
