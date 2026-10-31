@@ -1603,3 +1603,21 @@ Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；�
 | GitHub Actions 与发布 | 提交 `dd58a5f` 已合入 `gunsnglory` 和 `master` 并推送。[Actions run 41208511244](https://github.com/wishflow/wishflow-tools/actions/runs/41208511244) 成功；Guns’n’Glory 测试、共享检查、GitHub Pages 与 Cloudflare Pages 部署均通过，Worker 按变更范围跳过。 |
 | Codex 内置浏览器公网实测 | 打开[提交 `dd58a5f` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=dd58a5f)，截图与无障碍树确认战役进度、Cow Gulch 地图、8波 HUD 和倍速控件正常加载；页面保留已有进度1/1、最高分 `$356`。将模拟速度从已显示的4×改为3×，页面提示“设置已保存”，再恢复4×并确认显示4×；未启动或结算战斗。浏览器当前没有 `dev` 控制台能力，因此本轮未核对 error/warn 日志。截图烟测只确认发布与主界面；并列队列由上述定向测试验证。 |
 | P1-F 总门槛 | 本节关闭“同一步跨类型新对象因按类型分组而破坏并列创建顺序”的局部差异。其它深度变化历史、完整 Cow Gulch 首关画面/规则对照及其余关卡仍未验收；完整关卡计数保持0/60。 |
+
+## 78. P1-F Cow Gulch 视口缩放与玩家边界输入
+
+绘制与点选已使用 `mapCamera` 变换后的视口，但 `currentGameStepEnvironment()` 曾只计算基础视口，并把未缩放的图块像素宽交给每个 Game 帧。玩家边界按图块显示像素宽计算容差（公式与 APK 依据见[第71节](#71-p1-f-cow-gulch-玩家地图边界)），因此捏合缩放后，移动边界与画面比例不一致。
+
+现让 Game 帧环境从同一 `mapCamera` 计算当前视口图块宽。Game 规则、每帧输入结构、规则版本和回放格式均未改变；回放仍逐帧记录实际消费的 `tileSizePixels`。
+
+新增 [`t10-camera.spec.ts`](../tests/e2e/t10-camera.spec.ts) 手机回归：先以双指捏合放大，再完成单波隔离样例并导出回放，检查所有帧记录的图块像素宽均超过基础宽度两倍。旧实现下该断言失败；修复后通过。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向回归 | `CI=1 PLAYWRIGHT_PORT=53718 pnpm --dir apps/gunsnglory exec playwright test tests/e2e/t10-camera.spec.ts --grep "simulation replay records"`：旧实现失败；修复后通过。改名整理后以端口 `53719` 复测，1项通过。 |
+| 完整应用 CI | `CI=1 PLAYWRIGHT_PORT=53718 pnpm --dir apps/gunsnglory run test:ci`：TypeScript 检查、186项单元测试、Vite 生产构建、67项 Playwright E2E 全部通过。 |
+| 站点目录 | `pnpm run test:catalog`：15项测试全部通过。 |
+| Codex 内置浏览器本地实测 | `http://127.0.0.1:5176/` 的 Cow Gulch 隔离样例以4×运行并胜利：生命50、逃脱0、击败1、现金 `$66`、画面分数 `$50`。结束后将本地倍速恢复到1×；未完成正式战役。 |
+| 提交、部署 | `0955a7f` 已合入 `gunsnglory` 与 `master` 并推送。[Actions run 41212233016](https://github.com/wishflow/wishflow-tools/actions/runs/41212233016) 成功：应用测试、共享目录检查、Cloudflare Pages 与 GitHub Pages 部署通过；Worker 按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[提交 `0955a7f` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=0955a7f)，以4×完成一波隔离样例：生命50、逃脱0、击败1、现金 `$66`、画面分数及已保存样例高分 `$50`。正式战役档案保持1/1、最高分 `$356`；未继续战役。error/warn 控制台记录为空。 |
+| P1-F 总门槛 | 本节关闭“地图缩放后 Game 边界输入仍用基础图块宽”的局部差异；完整 Cow Gulch 首关画面/规则对照和其余59关仍待验收，完整关卡计数保持0/60。 |
