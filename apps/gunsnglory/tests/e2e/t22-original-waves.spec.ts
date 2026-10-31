@@ -1,8 +1,7 @@
 import { expect, test } from './auto-continue-fixtures';
-import { clickCanvasPoint, cowGulchMarkerPoint } from './helpers';
 
-test('completes official Cow Gulch level one and restores only settled campaign progress', async ({ page }) => {
-  test.setTimeout(120_000);
+test('official Cow Gulch defeat saves a result without unlocking the next stage', async ({ page }) => {
+  test.setTimeout(180_000);
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.addInitScript(() => {
@@ -14,28 +13,36 @@ test('completes official Cow Gulch level one and restores only settled campaign 
       }
       return Promise.resolve();
     };
+
+    const originalGetRandomValues = crypto.getRandomValues.bind(crypto);
+    let provideCampaignSeed = true;
+    crypto.getRandomValues = ((array: Uint32Array<ArrayBuffer>) => {
+      if (provideCampaignSeed && array instanceof Uint32Array && array.length === 1) {
+        array[0] = 42;
+        provideCampaignSeed = false;
+        return array;
+      }
+      return originalGetRandomValues(array) as typeof array;
+    }) as typeof crypto.getRandomValues;
   });
   await page.goto('/');
 
   const playedMusic = () => page.evaluate(() =>
     (window as unknown as Window & { __musicTracks: string[] }).__musicTracks);
   await expect.poll(playedMusic).toContain('music_loop1.ogg');
-
-  await expect(page.locator('.scene-caption')).toHaveText('The Cow Gulch battle has eight playable waves and settles after wave eight.');
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await speed.focus();
   await speed.press('End');
   await expect(speed).toHaveValue('4');
-
-  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
+  await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
   await expect(page.getByTestId('campaign-next-level-status')).toContainText(/locked/i);
   const waveStatus = page.getByTestId('wave-status');
   await expect(waveStatus).toContainText('Wave 1/8');
-  await expect(waveStatus).not.toContainText('ready');
-  await expect(page.getByRole('button', { name: /^Start wave/ })).toBeHidden();
+  await expect(waveStatus).toContainText('Cash $65');
 
-  // Emulate the engine's 100 ms frame ceiling; the selected 4× speed still uses the production accumulator.
+  // Emulate the engine's 100 ms frame ceiling while using the production 4× accumulator.
   await page.evaluate(() => {
     let timestamp = 0;
     window.requestAnimationFrame = (callback) => window.setTimeout(() => {
@@ -44,36 +51,18 @@ test('completes official Cow Gulch level one and restores only settled campaign 
     }, 100);
     window.cancelAnimationFrame = (handle) => window.clearTimeout(handle);
   });
-  await page.clock.runFor(60_000);
-  await expect(waveStatus).toContainText(/Wave [2-8]\/8 · Lives/);
-  const cash = Number((await waveStatus.innerText()).match(/Cash \$(\d+)/)?.[1] ?? 0);
-  expect(cash).toBeGreaterThanOrEqual(75);
+  // The source-faithful run now removes each enemy at its actual map boundary.
+  // At 4× the fixed-seed no-input campaign needs just over four minutes of
+  // simulated time to settle, so advance 100 seconds of browser time.
+  await page.clock.runFor(100_000);
 
-  await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
-  const mapHire = page.getByTestId('hire-map-unit');
-  await expect(mapHire).toHaveText('Hire map Gunslinger · $75');
-  await expect(mapHire).toBeEnabled();
-  await mapHire.click();
-  await expect(page.getByTestId('map-hire-status')).toHaveText('Gunslinger hired from the map for $75.');
-  await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
-  await expect(page.getByTestId('selection-status')).toContainText('Gunslinger selected');
-
-  await page.clock.runFor(8 * 60_000);
-  await expect(waveStatus).toContainText('Wave 8/8 complete');
   await expect(page.getByTestId('settlement')).toBeVisible();
-  await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
-  await expect.poll(playedMusic).toContain('music_level_won.ogg');
-  const playedTracks = await playedMusic();
-  expect(playedTracks.find((track) => /^music_loop[234]\.ogg$/.test(track))).toBe('music_loop2.ogg');
-  expect(playedTracks).toContain('music_loop2.ogg');
-  expect(playedTracks).toContain('music_loop3.ogg');
-  expect(playedTracks).toContain('music_loop4.ogg');
-  await expect(page.getByTestId('settlement-summary')).toContainText('Wave 8');
+  await expect(page.getByTestId('settlement-outcome')).toHaveText('Defeat');
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/1 stages complete');
   await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
   await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
-  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/unlocked/i);
+  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/locked/i);
 
   const profile = await page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {
     const request = indexedDB.open('gunsnglory-profile', 1);
@@ -88,16 +77,14 @@ test('completes official Cow Gulch level one and restores only settled campaign 
     };
   }));
   expect(profile.schemaVersion).toBe(2);
-  expect(profile.completedScenarios).toEqual(['campaign-new-mexico-01']);
+  expect(profile.completedScenarios).toEqual([]);
   expect(profile.highScores).toHaveProperty('campaign-new-mexico-01');
   expect((profile.appliedSettlementIds as string[])).toHaveLength(1);
 
   await page.reload();
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50 ·');
-  await expect(page.getByTestId('wave-status')).not.toContainText('ready');
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
-  await expect(page.getByTestId('campaign-stage-list')).toContainText('Completed');
-  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/unlocked/i);
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/1 stages complete');
+  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/locked/i);
 });

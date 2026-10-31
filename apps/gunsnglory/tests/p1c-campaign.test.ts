@@ -187,8 +187,17 @@ test('original Wave03 emits all three covered-wagon pairs at the six-second inte
 
   assert.equal(view.wave?.phase, 'active', 'a cleared request pool does not settle while transport units remain alive');
   assert.equal(view.wave?.pendingSpawnRequests, 0);
-  assert.equal(view.enemies.filter(({ alive }) => alive).length, 6);
-  assert.deepEqual(view.enemies.map(({ type }) => type), [8, 4, 8, 4, 8, 4]);
+  assert.equal(view.enemies.filter(({ alive }) => alive).length, 4,
+    'the second pair has already been removed at the APK map boundary before the third request is emitted');
+  assert.deepEqual(view.enemies.map(({ type }) => type), [8, 4, 8, 4]);
+  assert.equal(view.wave?.escapedEnemies, 2);
+  assert.equal(view.wave?.lives, 49, 'type8 tow cleanup is free; its type4 wagon partner costs one life');
+
+  view = session.advance({ deltaMs: 100 });
+  assert.equal(view.enemies.filter(({ alive }) => alive).length, 2,
+    'the third pair is likewise removed on its first movement update');
+  assert.equal(view.wave?.escapedEnemies, 4);
+  assert.equal(view.wave?.lives, 48, 'each removed type4 wagon costs one life while type8 tow does not');
 });
 
 test('a blocked transport spawn keeps its request and retries after the three-second half interval', async () => {

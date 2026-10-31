@@ -21,7 +21,7 @@ function readCash(text: string): number {
   return cash;
 }
 
-test('touch can move the active Cow Gulch unit and hire a map Gunslinger in the official campaign', async ({ browser }) => {
+test('touch can move an active unit and inspect a sleeping Gunslinger before earning its hire price', async ({ browser }) => {
   test.setTimeout(120_000);
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -31,6 +31,18 @@ test('touch can move the active Cow Gulch unit and hire a map Gunslinger in the 
   });
   const page = await context.newPage();
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
+  await page.addInitScript(() => {
+    const originalGetRandomValues = crypto.getRandomValues.bind(crypto);
+    let provideCampaignSeed = true;
+    crypto.getRandomValues = ((array: Uint32Array<ArrayBuffer>) => {
+      if (provideCampaignSeed && array instanceof Uint32Array && array.length === 1) {
+        array[0] = 42;
+        provideCampaignSeed = false;
+        return array;
+      }
+      return originalGetRandomValues(array) as typeof array;
+    }) as typeof crypto.getRandomValues;
+  });
   await installAutoContinueCampaignWaveIntro(page);
 
   try {
@@ -49,11 +61,9 @@ test('touch can move the active Cow Gulch unit and hire a map Gunslinger in the 
       }, 100);
       window.cancelAnimationFrame = (handle) => window.clearTimeout(handle);
     });
-    await page.clock.runFor(60_000);
-
     const waveStatus = page.getByTestId('wave-status');
-    await expect(waveStatus).toContainText(/Wave [2-8]\/8 · Lives/);
-    expect(readCash(await waveStatus.innerText())).toBeGreaterThanOrEqual(75);
+    await expect(waveStatus).toContainText('Wave 1/8');
+    await expect(waveStatus).toContainText('Cash $65');
 
     const cdp = await context.newCDPSession(page);
     const start = await screenPointForCanvasPoint(page, cowGulchMarkerPoint(8, 8));
@@ -71,15 +81,12 @@ test('touch can move the active Cow Gulch unit and hire a map Gunslinger in the 
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger selected · Cell (9, 10)');
 
-    const cashBeforeHire = readCash(await waveStatus.innerText());
+    expect(readCash(await waveStatus.innerText())).toBeLessThan(75);
     await tapCanvasPoint(page, cowGulchMarkerPoint(3, 6));
     const hire = page.getByTestId('hire-map-unit');
     await expect(hire).toHaveText('Hire map Gunslinger · $75');
-    await hire.tap();
-    await expect(page.getByTestId('map-hire-status')).toHaveText('Gunslinger hired from the map for $75.');
-    await expect(waveStatus).toContainText(`Cash $${cashBeforeHire - 75}`);
-    await tapCanvasPoint(page, cowGulchMarkerPoint(3, 6));
-    await expect(page.getByTestId('selection-status')).toContainText('Gunslinger selected · Cell (4, 7)');
+    await expect(hire).toBeDisabled();
+    await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired · Cell (4, 7)');
     await cdp.detach();
   } finally {
     await context.close();
