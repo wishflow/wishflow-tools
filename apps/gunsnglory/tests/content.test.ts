@@ -14,9 +14,31 @@ import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
 import { calculateMapViewport } from '../src/render/map-viewport';
 import { mapDecorationDestination } from '../src/render/canvas-renderer';
+import { createRoutePriorityMap } from '../src/game/route-priority';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 const content = JSON.parse(readFileSync(path.join(appRoot, 'src/content/cow-gulch.json'), 'utf8'));
+
+test('matches the APK Cow Gulch PriorityMap values and redirect minimum', () => {
+  const priorityMap = createRoutePriorityMap(cowGulchContent);
+  assert.deepEqual(
+    [
+      priorityMap.get(0, 10),
+      priorityMap.get(4, 10),
+      priorityMap.get(4, 13),
+      priorityMap.get(12, 13),
+      priorityMap.get(12, 6),
+      priorityMap.get(9, 6),
+      priorityMap.get(9, 2),
+      priorityMap.get(12, 2),
+      priorityMap.get(12, 3),
+      priorityMap.get(15, 3),
+      priorityMap.get(16, 3),
+    ],
+    [219, 222, 225, 233, 240, 243, 247, 250, 251, 254, 255],
+  );
+  assert.equal(priorityMap.minValue, 222);
+});
 
 test('contains the researched Cow Gulch scenario and exactly its first-map unit', () => {
   assert.equal(content.id, 'cow-gulch');

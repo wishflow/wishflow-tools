@@ -225,9 +225,11 @@ Cow Gulch / New Mexico 的战斗配乐按 APK 消费链切换：关卡进入、�
 
 战斗进行时，玩家可点击或触摸一名存活敌人，将其标记为优先目标。原版把输入点和敌人绘制偏移都量化到十分之一格后比较；输入 Y 先补偿四分之一格，并选择严格小于 `0.8²` 格距离内最近的敌人。再次点中当前目标会取消标记；点在有效半径外不会清除现有标记。点到 type8 牵引马时，原版转而标记同组、非 type8 的车体。
 
-优先标记不取消玩家已选中的我方单位。原版在普通目标得分后对标记敌人乘以10；普通得分还包含 `PriorityMap` 路线优先值、武器穿透以及燃烧弹状态修正，不能只用敌人距离排序代替。目标死亡时自动取消标记。存活标记显示 `hud_crosshair` 的两段上下准星，随目标的绘制偏移和地图视口移动，并在越出画面后受视口裁切。暂停中的战局拒绝新的 Game 输入；测试和实战点选都应在战斗恢复时进行。
+优先标记不取消玩家已选中的我方单位。原版仅对存活、非 type8 且处于有效射程的敌人评分；射程平方距离满足 `50 < d² < maxSquareRange`。候选分数为 `getPrio(enemy.fullX, enemy.fullY) × (enemy.damageKindPenetration[weapon.damageType] + 1400)`；敌人正在持续受伤且我方单位有燃烧弹时，分数先以 Java 整数除法减半；被标记目标最后乘以10。按敌人列表顺序扫描并只在分数严格大于当前最高值时替换，因此同分保留先遇到者。越界坐标的 `getPrio` 为−1；地图内但未被路线赋值的格子得分为0。`PriorityMap.minValue` 用于动态难度归一化，不进入攻击目标分数。
 
-以上交互和原版目标分数依据为研究分支 `codex/gunsnglory-spec` 的 `EnemyDirector.setEnemyAsTopPrio`、`UnitDirector`、`GunsAndGloryThread.drawCrossHair` 及 `GameObjectEnemy` REA/JADX DEX 反编译产物；它们不是原始 Java 源码。网页当前已实现命中、切换、死亡清理、视觉反馈和现有目标分数上的10倍标记因子；完整 `PriorityMap` 基分与原版所有状态修正仍归 P1-F 规则对照，不能据此声称整个目标选择已闭环。
+目标死亡时自动取消标记。存活标记显示 `hud_crosshair` 的两段上下准星，随目标的绘制偏移和地图视口移动，并在越出画面后受视口裁切。暂停中的战局拒绝新的 Game 输入；测试和实战点选都应在战斗恢复时进行。
+
+以上交互和原版目标分数依据为研究分支 `codex/gunsnglory-spec` 的 `EnemyDirector.setEnemyAsTopPrio`、`UnitDirector`、`PriorityMap`、`GunsAndGloryThread.drawCrossHair` 及 `GameObjectEnemy` REA/JADX DEX 反编译产物；它们不是原始 Java 源码。网页规则状态与尚未覆盖的内容见[验证记录第76节](validation.md#76-p1-f-cow-gulch-攻击目标完整基础分)。
 
 ## 5. 已确认的实现决策（Implementation Decisions）
 

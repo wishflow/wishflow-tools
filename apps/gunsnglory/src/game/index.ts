@@ -17,6 +17,7 @@ import {
   synchronizeDrawOrder,
   type DrawOrderEntry,
 } from './draw-order';
+import { createRoutePriorityMap, normalizedRoutePriority, type RoutePriorityMap } from './route-priority';
 import type {
   GameReplayFrame,
   GameReplayPayload,
@@ -1378,44 +1379,16 @@ function recordCampaignEscape(wave: MutableWave, livesMax: number, penalty: numb
   wave.difficultyValueCounter += weight;
 }
 
-function cowGulchPriority(scenario: ScenarioContent, positionFine: { x: number; y: number }): number {
-  const definition = scenario.previewWave;
-  if (!definition) return 0;
-  const waypoints = [definition.spawn.cell, ...definition.redirects.map(({ cell }) => cell), definition.exit];
-  const cells: Array<{ x: number; y: number }> = [];
-  for (let index = 0; index < waypoints.length - 1; index += 1) {
-    const start = waypoints[index]!;
-    const end = waypoints[index + 1]!;
-    const dx = Math.sign(end.x - start.x);
-    const dy = Math.sign(end.y - start.y);
-    const steps = Math.abs(end.x - start.x) + Math.abs(end.y - start.y);
-    for (let step = 0; step < steps; step += 1) {
-      const cell = { x: start.x + (dx * step), y: start.y + (dy * step) };
-      if (cells.at(-1)?.x !== cell.x || cells.at(-1)?.y !== cell.y) cells.push(cell);
-    }
-  }
-  const last = waypoints.at(-1)!;
-  if (cells.at(-1)?.x !== last.x || cells.at(-1)?.y !== last.y) cells.push({ x: last.x, y: last.y });
-  const priority = new Map(cells.map((cell, index) => [
-    `${cell.x},${cell.y}`,
-    255 - (cells.length - 1 - index),
-  ]));
-  const redirectPriorities = definition.redirects
-    .map(({ cell }) => priority.get(`${cell.x},${cell.y}`))
-    .filter((value): value is number => value !== undefined);
-  const minimum = Math.min(255, ...redirectPriorities);
-  const cellX = fullCell(positionFine.x);
-  const cellY = fullCell(positionFine.y);
-  const mapPriority = priority.get(`${cellX},${cellY}`) ?? 0;
-  return Math.trunc(((mapPriority - minimum) * 1000) / (255 - minimum));
-}
-
-function recordCampaignKill(wave: MutableWave, scenario: ScenarioContent, enemy: MutableEnemy): void {
+function recordCampaignKill(wave: MutableWave, priorityMap: RoutePriorityMap, enemy: MutableEnemy): void {
   if (wave.dynamicDifficulty === undefined || wave.difficultyValue === undefined
     || wave.difficultyValueCounter === undefined) return;
   const weight = enemy.type === 4 ? 6 : enemy.type === 8 ? 0 : 1;
   if (weight === 0) return;
-  const routeValue = cowGulchPriority(scenario, enemy.positionFine);
+  const routeValue = normalizedRoutePriority(
+    priorityMap,
+    fullCell(enemy.positionFine.x),
+    fullCell(enemy.positionFine.y),
+  );
   wave.difficultyValue += (1500 - routeValue) * weight;
   wave.difficultyValueCounter += weight;
 }
@@ -1489,7 +1462,12 @@ function shouldTransitionShotFineZ(shot: MutableShot): boolean {
   return progress < 0.5 && shotArcHeightFine(shot.damageStyle, shot.remainingMs, shot.totalTravelTimeMs) < 7680;
 }
 
-function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[], priorityTargetId?: string): MutableEnemy | undefined {
+function selectTarget(
+  unit: MutableUnit,
+  enemies: readonly MutableEnemy[],
+  priorityMap: RoutePriorityMap,
+  priorityTargetId?: string,
+): MutableEnemy | undefined {
   const weapon = unit.weapon;
   if (!weapon) return undefined;
   const maxSquareRange = maxWeaponSquareRange(weapon);
@@ -1501,9 +1479,10 @@ function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[], prior
     const distanceSquare = unitEnemyDistanceSquare(unit, enemy);
     if (distanceSquare <= 50 || distanceSquare >= maxSquareRange) continue;
 
-    // The APK multiplies the selected preferred target's normal score by ten.
-    // Strict greater-than preserves the recovered Vector order for equal scores.
-    const score = (damagePenetration(enemy, weapon.damageType) + 1400)
+    // UnitDirector scores PriorityMap × (penetration + 1400), then applies the selected-target multiplier.
+    // Strict greater-than preserves the APK Vector order for equal scores.
+    const mapPriority = priorityMap.getTargetPriority(fullCell(enemy.positionFine.x), fullCell(enemy.positionFine.y));
+    const score = mapPriority * (damagePenetration(enemy, weapon.damageType) + 1400)
       * (enemy.id === priorityTargetId ? 10 : 1);
     if (score > bestScore) {
       bestTarget = enemy;
@@ -1916,6 +1895,7 @@ export function createGame(options: {
       let nextCampaignGroupNumber = 1;
       let nextWagonPartNumber = 1;
       const spawnFields = campaignSpawnFields(scenario);
+      const priorityMap = createRoutePriorityMap(scenario);
       let frame = 0;
       let elapsedMs = 0;
       let priorityTargetId: string | undefined;
@@ -2460,7 +2440,7 @@ export function createGame(options: {
               if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
               if (unit.weaponCooldownMs > 0) continue;
 
-              const target = selectTarget(unit, wave.enemies, priorityTargetId);
+              const target = selectTarget(unit, wave.enemies, priorityMap, priorityTargetId);
               if (!target) continue;
               const distanceSquare = unitEnemyDistanceSquare(unit, target);
               const maxSquareRange = maxWeaponSquareRange(weapon);
@@ -2551,7 +2531,7 @@ export function createGame(options: {
                 if (hitEnemy.hitPoints <= 0) {
                   hitEnemy.alive = false;
                   hitEnemy.deathRemainingMs = hitEnemy.type === 4 || hitEnemy.type === 8 ? 799 : campaignMode ? 599 : 799;
-                  if (campaignMode) recordCampaignKill(wave, scenario, hitEnemy);
+                  if (campaignMode) recordCampaignKill(wave, priorityMap, hitEnemy);
                   wave.cash += hitEnemy.cashReward;
                   wave.cashMade += hitEnemy.cashReward;
                   wave.defeatedEnemies += 1;

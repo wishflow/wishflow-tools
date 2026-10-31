@@ -6,6 +6,7 @@ import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { cowGulchLevelOneContent } from '../src/content/official-campaign';
 import { GAME_RULES_VERSION, createGame, type GameSession, type ScenarioContent, type UnitView } from '../src/game';
 import { captureReplayState, serializeReplay, type GameReplayPayload } from '../src/game/replay';
+import { createRoutePriorityMap } from '../src/game/route-priority';
 
 const scenario: ScenarioContent = {
   id: 'fixture',
@@ -157,9 +158,15 @@ test('campaign wave requests spawn after current-frame movement and attacks', as
   assert.equal(spawnFrame.enemies.length, 1);
   assert.deepEqual(spawnFrame.enemies[0]?.positionFine, { x: -11520, y: 80640 });
 
-  const nextFrame = session.advance({ deltaMs: 100 });
-  assert.ok(nextFrame.events.some((event) => event.type === 'unit-fired'));
-  assert.notDeepEqual(nextFrame.enemies[0]?.positionFine, spawnFrame.enemies[0]?.positionFine);
+  let targetableFrame = session.advance({ deltaMs: 100 });
+  assert.equal(targetableFrame.events.some((event) => event.type === 'unit-fired'), false,
+    'the spawned enemy is still outside UnitDirector.getPrio() map bounds');
+  for (let index = 0; index < 30 && !targetableFrame.events.some((event) => event.type === 'unit-fired'); index += 1) {
+    targetableFrame = session.advance({ deltaMs: 100 });
+  }
+  assert.ok(targetableFrame.events.some((event) => event.type === 'unit-fired'));
+  assert.ok(Math.trunc(targetableFrame.enemies[0]!.positionFine.x / 7680) >= 0,
+    'the first shot is only selected after the enemy enters the priority map');
 });
 
 test('opens a controlled scene with one unselected unit and isolates observations', async () => {
@@ -2252,27 +2259,88 @@ function priorityTargetScenario(hitPoints = 1000, includeSecondEnemy = true): Sc
   return {
     ...combatScenario,
     id: `priority-target-${hitPoints}-${includeSecondEnemy}`,
+    units: [{
+      ...combatScenario.units[0]!,
+      cell: { x: 9, y: 7 },
+      render: { x: 9, y: 6.625, width: 1, height: 1.375 },
+      hitArea: { x: 9, y: 6.625, width: 1, height: 1.375 },
+    }],
     previewWave: {
       ...combatScenario.previewWave!,
-      spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
-      additionalSpawns: includeSecondEnemy ? [{ cell: { x: 12, y: 8 }, direction: 'east' }] : [],
+      spawn: { cell: { x: 8, y: 8 }, direction: 'east' },
+      additionalSpawns: includeSecondEnemy
+        ? [{ cell: { x: 10, y: 8 }, direction: 'east' }, { cell: { x: 12, y: 8 }, direction: 'east' }]
+        : [],
       baseEnemySpeed: 0,
+      redirects: [],
+      exit: { x: 16, y: 8 },
       enemy: { ...combatScenario.previewWave!.enemy!, hitPoints },
     },
   };
 }
 
+test('uses the APK route priority map before choosing among in-range enemies', async () => {
+  const routeScenario = priorityTargetScenario();
+  const routePriority = createRoutePriorityMap(routeScenario);
+  assert.deepEqual(
+    [routePriority.get(8, 8), routePriority.get(9, 8), routePriority.get(10, 8), routePriority.get(12, 8), routePriority.get(16, 8)],
+    [248, 248, 250, 252, 255],
+    'spawn fields inherit the next cell value, while ordinary route cells lose one point per step',
+  );
+  const session = await createGame({ scenarios: { [routeScenario.id]: routeScenario } }).open({
+    scenarioId: routeScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  const spawned = session.advance({ deltaMs: 0 });
+  assert.equal(spawned.enemies.length, 3);
+
+  advanceFor(session, 249);
+  const fired = session.advance({ deltaMs: 1 });
+  assert.equal(fired.shots[0]?.targetId, spawned.enemies[2]?.id,
+    'map values 248 and 250 make the later route cell win over an equally distant candidate');
+});
+
+test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async () => {
+  const baseScenario = priorityTargetScenario(1000, false);
+  const boundaryScenario: ScenarioContent = {
+    ...baseScenario,
+    id: 'priority-target-out-of-map',
+    units: [{
+      ...baseScenario.units[0]!,
+      cell: { x: 0, y: 8 },
+      render: { x: 0, y: 7.625, width: 1, height: 1.375 },
+      hitArea: { x: 0, y: 7.625, width: 1, height: 1.375 },
+    }],
+    previewWave: {
+      ...baseScenario.previewWave!,
+      spawn: { cell: { x: 0, y: 8 }, direction: 'east' },
+      exit: { x: 6, y: 8 },
+    },
+  };
+  const session = await createGame({ scenarios: { [boundaryScenario.id]: boundaryScenario } }).open({
+    scenarioId: boundaryScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+
+  const view = advanceFor(session, 250);
+  assert.equal(view.enemies[0]?.positionFine.x, -11_520);
+  assert.equal(view.shots.length, 0, 'an out-of-map priority of -1 scores below the initial target score');
+});
+
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-8');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-9');
 
-  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });
   assert.equal(view.units[0]?.selected, true);
   session.submitIntent({ type: 'start-wave' });
   view = session.advance({ deltaMs: 0 });
-  assert.equal(view.enemies.length, 2);
+  assert.equal(view.enemies.length, 3);
 
   const preferred = view.enemies[1]!;
   const inputX = preferred.positionFine.x / 7680;

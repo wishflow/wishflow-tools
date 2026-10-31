@@ -105,7 +105,7 @@ test('covered wagon death rewards once, emits debris and passengers, and remains
   assert.equal(tow.damageable, false);
   assert.equal(wagon.groupId, tow.groupId);
 
-  for (let attempt = 0; attempt < 20; attempt += 1) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
     view = session.advance({ deltaMs: 100 });
     if (view.events.some((event) => event.type === 'enemy-defeated' && event.enemyId === wagon.id)) break;
   }

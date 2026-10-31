@@ -1,7 +1,7 @@
 import type { GameDifficulty, GameIntent, GameMode, GameView, ShotView, UnitView, WaveSettlement } from './index';
 import { canonicalSha256Digest } from '../value-digest';
 
-export const GAME_RULES_VERSION = 'gng-rules-8';
+export const GAME_RULES_VERSION = 'gng-rules-9';
 export const GAME_REPLAY_FORMAT_VERSION = 2;
 export const GAME_REPLAY_CHECKPOINT_INTERVAL = 120;
 export const GAME_REPLAY_MAX_CHARACTERS = 10_000_000;
