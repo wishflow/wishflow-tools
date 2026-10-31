@@ -155,6 +155,8 @@ Mexican 的初始档速度字段为0。`GameObjectUnit.hire()` 只扣价、切�
 
 这些检查按参与对象和生命周期分别处理，不能合成一个“可行走”开关。PriorityMap 是静态优先数据，不是每帧寻路器；地图像素不是碰撞真源。异常原图字段保留并单独回归，禁止凭猜测更正或用通用寻路替代基线。完整方向表、碰撞形状和判定顺序在对应任务开始前由源消费点展开成可验证样例。
 
+玩家步行边界以 `GameObjectUnit.makeMoveCheck()` 中的单位中心坐标判定，逐轴检查当前物理碰撞框后应用原版边界。原版按显示图块像素宽 `realTilesize` 计算 `edgeMarginFine = trunc(30720 / realTilesize)`；X 范围为 `[3840 - edgeMarginFine, mapWidth × 7680 - 3840 + edgeMarginFine]`，Y 范围为 `[7680 - edgeMarginFine, mapHeight × 7680 + edgeMarginFine]`。地图越界的背景格读取为 `-1`，不作为地形阻挡；不能再额外要求完整精灵矩形留在地图纹理内。屏幕视口裁切仍由 Renderer 负责，镜头缩放不改变该规则输入。APK 依据与网页边界回归见[验证记录第71节](validation.md#71-p1-f-cow-gulch-玩家地图边界)。
+
 APK 敌人碰撞管理器与玩家单位碰撞分离，参数为 `backgroundMapCollisions=false`、`ignoreSameUnitGroup=false`，只注册 type 8、4、5、6、3、7 敌人；每个敌人碰撞框为 `7678×7678` fine units，使用物理坐标，不含绘制偏移。碰撞查询只比较已注册敌人对象，不包括地图、地形、装饰、生成点或玩家单位。源条件为“组号不同，或 `ignoreSameUnitGroup=true`”才纳入候选；敌人管理器传入 `false`，所以同组对象按组号排除。type8/type4 运输对生成时中心间距为7680 fine units，比碰撞框宽度多2 units；同组车厢与牵引件不会互相阻挡。命中异组对象时会撤销当前位移并恢复移动方向；若碰撞者列表中的紧邻下一对象属于同组，该成员本次更新不移动。Cow Gulch 当前实现的敌人类型为1、2、4、8，因此只有 type4/8 进入敌人碰撞查询，type1/2 可以互相穿行；该规则不能被解释为峡谷、桥面或建筑地形阻挡。逐步复现与适用边界见[验证记录第68节](validation.md#68-p1-f-cow-gulch-异组敌人碰撞)。`EnemyDirector.moveEnemys()` 在格心处理分支之后、分支外每帧检查 fullX/fullY；越过地图宽高外3格或到达 `-3` 时移除对象。`removeEnemyWithPenalty()` 对 type8 只移除、不扣生命或更新逃逸难度，其它类型扣除该对象的存活惩罚。网页已按该顺序和 type8 例外处理；复核见[验证记录第69节](validation.md#69-p1-f-cow-gulch生成点漂移与越界清理)。
 
 生成请求先按 spawn ID 选择共享 action1 字段，并沿生成方向把字段 fine 坐标临时后退两个 tile。对原版要求碰撞对象的运输类型，预检框中心位于该临时字段沿行进方向的一格处，尺寸为7678×7678 fine units；它使用敌人的物理碰撞坐标，不应用绘制偏移。预检失败会恢复字段坐标且不扣池请求，成功则保留后退后的字段坐标，供后续成功请求继续使用。该可变字段跨波次共享，不能每次从静态 spawn cell 重新计算。Cow Gulch map01 唯一的东向 action1 字段位于 `(0,10)`；连续成功请求会逐次把生成位置向地图西侧推移，越界处理见[验证记录第69节](validation.md#69-p1-f-cow-gulch生成点漂移与越界清理)。

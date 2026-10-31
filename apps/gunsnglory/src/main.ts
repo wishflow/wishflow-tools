@@ -1718,6 +1718,12 @@ function getDisplayPixelScale(): number {
   return cssScale * Math.max(1, window.devicePixelRatio || 1);
 }
 
+function currentGameStepEnvironment(): { tileSizePixels: number } {
+  const displayPixelScale = getDisplayPixelScale();
+  const baseMapViewport = getMapViewport(view, displayPixelScale);
+  return { tileSizePixels: Math.max(1, Math.trunc(baseMapViewport.tileSize * displayPixelScale)) };
+}
+
 const assetNames = new Set([
   ...view.map.background.map((tile) => tile.asset),
   ...view.map.streets.map((tile) => tile.asset),
@@ -2481,9 +2487,11 @@ function startGameLoop(): void {
     const deltaMs = previousTimestamp === undefined ? 0 : currentTimestamp - previousTimestamp;
     previousTimestamp = currentTimestamp;
     const frameEvents: GameEvent[] = [];
+    let stepEnvironment: { tileSizePixels: number } | undefined;
     for (const stepMs of simulationTime.advanceElapsed(deltaMs, simulationSpeed)) {
+      stepEnvironment ??= currentGameStepEnvironment();
       const previousWaveNumber = view.wave?.number;
-      view = loopSession.advance({ deltaMs: stepMs });
+      view = loopSession.advance({ deltaMs: stepMs, ...stepEnvironment });
       frameEvents.push(...view.events);
       playRequestedSounds(view.events, previousWaveNumber);
       if (view.wave?.number !== previousWaveNumber && showCampaignWaveIntroForCurrentWave()) break;
@@ -2506,7 +2514,7 @@ function dispatch(intent: GameIntent): void {
   if (replaying || replacingSession) return;
   if (!session.submitIntent(intent)) return;
   const eventWaveNumber = view.wave?.number;
-  view = session.advance();
+  view = session.advance(currentGameStepEnvironment());
   playRequestedSounds(view.events, eventWaveNumber);
   renderStatus();
   redraw();
@@ -2537,7 +2545,7 @@ pauseControl.addEventListener('click', () => {
 singleStepControl.addEventListener('click', () => {
   if (!view.paused || singleStepControl.disabled) return;
   const eventWaveNumber = view.wave?.number;
-  view = session.singleStep({ deltaMs: 16 });
+  view = session.singleStep({ deltaMs: 16, ...currentGameStepEnvironment() });
   playRequestedSounds(view.events, eventWaveNumber);
   renderStatus();
   redraw();

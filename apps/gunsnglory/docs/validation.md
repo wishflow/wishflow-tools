@@ -1423,3 +1423,26 @@ APK 1.8.6 的 `GunsAndGloryThread.drawEnemies()` 按对象顺序调用 `GameObje
 | GitHub Actions 与发布 | 代码提交 `6e61788` 合入 `master` 发布提交 `e24dc69`；[Actions run 41172716366](https://github.com/wishflow/wishflow-tools/actions/runs/41172716366) 成功，Guns’n’Glory 测试、共享 catalog、Cloudflare Pages 与 GitHub Pages 部署均通过。Worker 按变更范围跳过。 |
 | Codex 内置浏览器公网核对 | 打开[线上版本](https://wishflow-tools.pages.dev/gunsnglory/?release=e24dc69)，确认战役地图及单个拓荒者隔离样例可加载和结算；样例结果为生命50、逃脱0、击败1、现金 `$66`。正式档案仍为已完成1/1、最高分 `$356`；测试后把临时调低的速度恢复到已保存的4×。这是发布烟测，不是整关对照；全离图/部分越界的逐帧公网页面画面对照未单独录制，边缘判定由 APK 反编译证据与渲染调用测试验证。 |
 | P1-F 总门槛 | 本轮只关闭敌人贴图完全离开地图时仍显示的网页差异；原版允许仍与地图相交的贴图越过边缘。完整 Cow Gulch 地图、规则及鼠标/触屏对照仍未完成，关卡验收计数保持0/60。 |
+
+## 71. P1-F Cow Gulch 玩家地图边界
+
+网页先前用两条额外规则限制玩家移动：碰撞框任一角越过地图格索引就判为碰撞，并要求完整精灵矩形位于地图纹理内。这与 APK 的玩家移动边界不一致，可能让单位在应可通行的边缘提前停下。现按 APK 的单位中心边界、地图越界背景返回值和实际显示图块像素宽修正。
+
+### APK 静态依据
+
+APK 1.8.6 `GameObjectUnit.makeMoveCheck()` 先逐轴调用玩家碰撞管理器，然后对移动后的 `fineX/fineY` 单位中心应用独立边界公式；其 margin 为整数除法 `30720 / realTilesize`。X 下界为 `3840 - margin`，X 上界为 `mapWidth × 7680 - 3840 + margin`；Y 下界为 `7680 - margin`，Y 上界为 `mapHeight × 7680 + margin`。`BackgroundMap.getBackground()` 对越界格返回 `-1`，`isReachableXGround()` / `isReachableYGround()` 不将 `-1` 列入阻挡地形。因此，地图越界探测本身不会阻挡玩家，独立中心边界才限制可移动范围。上述内容来自 APK 反编译后的 DEX/Smali 对照，不是原始 Java 源码，也没有额外假定完整贴图须留在地图内。
+
+`realTilesize` 会随场景显示缩放变化。网页每帧把未应用用户镜头缩放的底图 `tileSizePixels` 作为规则环境输入；Game 使用其整数值复现 APK 的边界除法，Replay 同帧保存并重放该值。规则版本升为 `gng-rules-7`、回放格式升为2，避免将缺少该输入的旧格式静默解释为新规则。
+
+### 网页规则与验证
+
+网页 `playerAxisWithinOriginalMapBounds()` 现在应用以上逐轴中心边界；`mapBlocksUnit()` 只对地图内的碰撞探测格读取地形，越界探测视为原版 `-1`。玩家实体碰撞框、装饰碰撞、逐轴移动和地图尺寸均未因此重设。镜头缩放只改变观察，不进入 `tileSizePixels`，所以缩放/平移不会修改游戏边界。
+
+`game.test.ts` 使用空地图把单位向四个地图外目标移动，核对每个坐标都停在公式边界之内且离边界不到一个移动步长；另以60与80设备像素图块宽复核 margin 的反比变化，固定慢速枪手结果分别为3380与3480 fine units。坏的 `tileSizePixels` 必须在消费帧前拒绝。回放用例检查每帧保存正整数环境值、格式版本2、损坏的环境值被拒绝，且完整确定性重放一致。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 应用 CI | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 env CI=1 PLAYWRIGHT_PORT=4233 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript、176项单元测试、Vite 生产构建及60项 Playwright E2E。 |
+| 共享站点目录 | `source /Users/shiwei/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试通过。 |
+| Codex 内置浏览器本地操作 | 在本地 Vite 页面打开 Cow Gulch 单波样本，点击选中枪手并把拖动目标移到地图左缘；状态从 Cell (9, 9) 更新为 Cell (8, 9)，截图确认枪手随输入移动并停在峡谷地形边缘。样本仍为 Wave 1 ready、生命50、现金 `$65`，未结算或修改正式进度；浏览器 error/warn 日志为空。 |
+| P1-F 总门槛 | 关闭玩家边界这一项规则差异；不代表路线、绘制、所有关卡及鼠标/触屏对照完成，首关整体验收仍为0/60。 |

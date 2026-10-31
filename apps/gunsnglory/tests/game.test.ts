@@ -821,12 +821,18 @@ test('blocks movement against the original static decoration collision boxes', a
   }
 });
 
-test('keeps the full Gunslinger sprite inside the map texture at its outer edges', async () => {
-  const edgeTargets = [
-    { name: 'left', x: 0, y: 8.75 },
-    { name: 'right', x: 17, y: 8.75 },
-    { name: 'top', x: 8.5, y: 0 },
-    { name: 'bottom', x: 8.5, y: 17 },
+test('keeps the player center within APK map bounds while collision probes beyond the map stay empty', async () => {
+  const edgeTargets: Array<{
+    name: string;
+    x: number;
+    y: number;
+    axis: 'x' | 'y';
+    boundary: { kind: 'minimum' | 'maximum'; value: number };
+  }> = [
+    { name: 'left', x: -1, y: 8.75, axis: 'x', boundary: { kind: 'minimum', value: 3840 - Math.trunc(30720 / 60) } },
+    { name: 'right', x: 18, y: 8.75, axis: 'x', boundary: { kind: 'maximum', value: (17 * 7680) - 3840 + Math.trunc(30720 / 60) } },
+    { name: 'top', x: 8.5, y: -1, axis: 'y', boundary: { kind: 'minimum', value: 7680 - Math.trunc(30720 / 60) } },
+    { name: 'bottom', x: 8.5, y: 18, axis: 'y', boundary: { kind: 'maximum', value: (17 * 7680) + Math.trunc(30720 / 60) } },
   ];
 
   for (const target of edgeTargets) {
@@ -839,7 +845,7 @@ test('keeps the full Gunslinger sprite inside the map texture at its outer edges
     let stableFrames = 0;
     let previousPosition = view.units[0]!.positionFine;
     for (let index = 0; index < 600 && stableFrames < 5; index += 1) {
-      view = session.advance({ deltaMs: 100 });
+      view = session.advance({ deltaMs: 100, tileSizePixels: 60 });
       const position = view.units[0]!.positionFine;
       stableFrames = position.x === previousPosition.x && position.y === previousPosition.y
         ? stableFrames + 1
@@ -848,13 +854,59 @@ test('keeps the full Gunslinger sprite inside the map texture at its outer edges
     }
 
     const unit = view.units[0]!;
-    assert.ok(unit.render.x >= 0, `${target.name}: sprite must not cross the left map edge`);
-    assert.ok(unit.render.y >= 0, `${target.name}: sprite must not cross the top map edge`);
-    assert.ok(unit.render.x + unit.render.width <= view.map.width,
-      `${target.name}: sprite must not cross the right map edge`);
-    assert.ok(unit.render.y + unit.render.height <= view.map.height,
-      `${target.name}: sprite must not cross the bottom map edge`);
+    const position = target.axis === 'x' ? unit.positionFine.x : unit.positionFine.y;
+    if (target.boundary.kind === 'minimum') {
+      assert.ok(position >= target.boundary.value, `${target.name}: center stays above the APK lower bound`);
+      assert.ok(position - target.boundary.value < unit.movementSpeedFinePer100Ms,
+        `${target.name}: movement stops on the first step before crossing the APK lower bound`);
+    } else {
+      assert.ok(position <= target.boundary.value, `${target.name}: center stays below the APK upper bound`);
+      assert.ok(target.boundary.value - position < unit.movementSpeedFinePer100Ms,
+        `${target.name}: movement stops on the first step before crossing the APK upper bound`);
+    }
+    assert.ok(unit.moving, `${target.name}: an off-map movement target remains pending at the source boundary`);
   }
+});
+
+test('derives the player edge margin from display tile pixels and rejects invalid frame environments', async () => {
+  const scenarioWithSlowUnit: ScenarioContent = {
+    ...scenario,
+    units: scenario.units.map((unit) => ({ ...unit, movementSpeedFinePer100Ms: 100 })),
+  };
+  const reachLeftBound = async (tileSizePixels: number): Promise<number> => {
+    const session = await createGame({ scenarios: { fixture: scenarioWithSlowUnit } }).open({ scenarioId: 'fixture' });
+    session.submitIntent({ type: 'select-at', x: 8.5, y: 8.75 });
+    session.advance({ deltaMs: 0, tileSizePixels });
+    session.submitIntent({ type: 'move-unit', targetX: -1, targetY: 8.75 });
+    let view = session.advance({ deltaMs: 0, tileSizePixels });
+    for (let index = 0; index < 700; index += 1) view = session.advance({ deltaMs: 100, tileSizePixels });
+    return view.units[0]!.positionFine.x;
+  };
+
+  assert.equal(await reachLeftBound(60), 3380);
+  assert.equal(await reachLeftBound(80), 3480);
+
+  const session = await createGame({ scenarios: { fixture: scenario } }).open({ scenarioId: 'fixture' });
+  const before = session.observe();
+  assert.throws(() => session.advance({ tileSizePixels: 0 }), /positive integer/);
+  assert.equal(session.observe().frame, before.frame, 'invalid environment input does not consume a frame');
+});
+
+test('checks the APK player boundary on the moving axis only', async () => {
+  const topRowScenario: ScenarioContent = {
+    ...scenario,
+    units: scenario.units.map((unit) => ({ ...unit, cell: { x: 8, y: 0 } })),
+  };
+  const session = await createGame({ scenarios: { fixture: topRowScenario } }).open({ scenarioId: 'fixture' });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8 });
+  session.advance({ deltaMs: 0, tileSizePixels: 60 });
+  session.submitIntent({ type: 'move-unit', targetX: -1, targetY: 0.25 });
+
+  let view = session.advance({ deltaMs: 0, tileSizePixels: 60 });
+  for (let index = 0; index < 100; index += 1) view = session.advance({ deltaMs: 100, tileSizePixels: 60 });
+
+  assert.ok(view.units[0]!.positionFine.x < 65280, 'horizontal movement is allowed when the starting Y is above its movement bound');
+  assert.equal(view.units[0]!.positionFine.y, 5760);
 });
 
 test('treats a researched street overlay as walkable over blocking canyon terrain', async () => {
@@ -1942,16 +1994,17 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
     formatVersion: number;
     rulesVersion: string;
     startRecord: { contentVersion: string; mode: string };
-    frames: Array<{ frame: number; deltaMs: number; intents: unknown[] }>;
+    frames: Array<{ frame: number; deltaMs: number; tileSizePixels: number; intents: unknown[] }>;
     checkpoints: Array<{ frame: number; stateDigest: string }>;
     terminal: { frame: number; settlement: unknown; stateDigest: string };
     digest: string;
   };
-  assert.equal(record.formatVersion, 1);
+  assert.equal(record.formatVersion, 2);
   assert.ok(record.rulesVersion.length > 0);
   assert.equal(record.startRecord.contentVersion, cowGulchContent.contentVersion);
   assert.equal(record.startRecord.mode, 'formal');
-  assert.deepEqual(record.frames[0], { frame: 1, deltaMs: 0, intents: [] });
+  assert.deepEqual(record.frames[0], { frame: 1, deltaMs: 0, tileSizePixels: 60, intents: [] });
+  assert.ok(record.frames.every(({ tileSizePixels }) => Number.isInteger(tileSizePixels) && tileSizePixels > 0));
   assert.deepEqual(record.frames[120]?.intents, [{ type: 'start-wave' }]);
   assert.ok(record.checkpoints.some((checkpoint) => checkpoint.frame === 120));
   assert.equal(record.checkpoints.at(-1)?.frame, view.frame);
@@ -1976,7 +2029,7 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
     (error as { code?: string }).code === 'corrupt-input');
 
   const unsupportedFormatVersion = structuredClone(record);
-  unsupportedFormatVersion.formatVersion = 2;
+  unsupportedFormatVersion.formatVersion = 3;
   await assert.rejects(game.replay(JSON.stringify(unsupportedFormatVersion)), (error: unknown) =>
     (error as { code?: string }).code === 'unsupported-version');
 
@@ -1995,6 +2048,11 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
   const corruptFrame = structuredClone(record);
   corruptFrame.frames[0]!.deltaMs = 101;
   await assert.rejects(game.replay(JSON.stringify(corruptFrame)), (error: unknown) =>
+    (error as { code?: string }).code === 'corrupt-input');
+
+  const invalidTileSize = structuredClone(record);
+  invalidTileSize.frames[0]!.tileSizePixels = 0;
+  await assert.rejects(game.replay(JSON.stringify(invalidTileSize)), (error: unknown) =>
     (error as { code?: string }).code === 'corrupt-input');
 
   const digestMismatch = structuredClone(record);
@@ -2035,7 +2093,7 @@ test('prepares a complete immutable numeric setup without allocating a session o
 
   assert.equal(prepared.scenarioId, cowGulchContent.id);
   assert.equal(prepared.contentVersion, cowGulchContent.contentVersion);
-  assert.equal(prepared.rulesVersion, 'gng-rules-6');
+  assert.equal(prepared.rulesVersion, 'gng-rules-7');
   assert.ok(prepared.parameters.some(({ path, value }) =>
     path === 'units/gunslinger-1/weapon/damage' && value === 140));
   assert.ok(prepared.parameters.some(({ path, value }) => path === 'maxUpgrades' && value === 0));
