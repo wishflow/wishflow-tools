@@ -2005,6 +2005,7 @@ function continueCampaignWaveIntro(): void {
   campaignWaveIntroDialog.close();
   playBackgroundMusic();
   if (pauseReason !== 'wave-intro' || !view.paused || document.hidden) return;
+  frame?.scrollIntoView({ block: 'center', behavior: 'instant' });
   pauseReason = undefined;
   view = session.resume();
   renderStatus();
