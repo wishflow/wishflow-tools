@@ -12,7 +12,7 @@
 | V1 静态执行现场与默认教学入口 | 已实现、验证、发布并完成线上验收 |
 | V2 统一观察位置、源码步进分组与变化说明 | 已实现、验证、合并发布并完成线上验收 |
 | V3 操作数栈与对象引用动画 | 已实现、本地验证、双站部署并完成线上验收 |
-| V1–V6 spec/tasks | V1–V4 已发布；V5 在独立分支完成实现和本地验证、待发布；V6 已发布并完成线上验收 |
+| V1–V6 spec/tasks | V1–V6 均已发布并完成线上验收 |
 
 依托 P1–P9 已有能力开展，保留[整体计划](implementation-plan.md)的 P10 异常语法和 O1 可选真实 opcode 编号。本体验路线使用 V0–V6，优先处理已确认的可视化问题；不以尚未实施的 P10/O1 为前置，也不顺带扩大 Python 子集。
 
@@ -105,7 +105,7 @@ flowchart LR
 - **验收**：可解释为什么跳到该行、循环为什么重复暂停、短路为何不执行右侧；失败停在真实位置，错误后状态与 VM 一致。
 - **验证**：条件两分支、零次与多次循环、循环断点重复命中、短路副作用、失败操作数保留和资源终止；同步双语帮助。
 - **回滚**：新增动作退化为静态说明，不改变控制流与错误行为。
-- **状态**：T01–T04 已实现并验证。V5 分支已重放到 `master` `d78297d`；重放后应用 CI（177 条单测、78 条 Playwright、类型检查和生产构建）、catalog（15 项）与整站构建均通过。V5 使用真实 Worker 测试及固定 Pyodide CPython 对照验证共享语义；目前待合并、推送和线上验收。细化范围见 [V5 spec](specs/v05-control-flow-explanations.md) 和 [V5 tasks](tasks/v05-control-flow-explanations.md)。
+- **状态**：V5 规格、实现、审查、发布与线上验收均已完成。应用全量 CI（177 条单测、78 条 Playwright、类型检查、生产构建）、catalog（15 项）和整站构建通过；V5 提交 `b8cb755` 已快进合并并推送至 `master`，GitHub Actions [41167790066](https://github.com/wishflow/wishflow-tools/actions/runs/41167790066) 成功，GitHub Pages 与 Cloudflare Pages 部署成功。2026-10-31 生产验收中，教学 VM 的分支、while/for、and/or 短路输出与真实 Pyodide CPython 一致；失败下标赋值停在 `STORE_SUBSCR`，列表保持 `[1]`，真实 CPython 报告 `IndexError`。细化范围与证据见 [V5 spec](specs/v05-control-flow-explanations.md) 和 [V5 tasks](tasks/v05-control-flow-explanations.md)。
 
 ### V6：真实 CPython 的源码片段对照
 
