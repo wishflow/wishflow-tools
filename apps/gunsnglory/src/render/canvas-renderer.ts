@@ -339,6 +339,26 @@ function drawEnemyHealthBar(
   context.fillRect(centerX - (15 * nativeScale), fillTop, sourceWidth, fillHeight);
 }
 
+function intersectsMapPlayfield(
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+  viewport: MapViewport,
+): boolean {
+  // Android tests integer sprite bounds for map overlap; it does not clip partial sprites to the map edge.
+  const destinationLeft = Math.trunc(left);
+  const destinationTop = Math.trunc(top);
+  const destinationRight = Math.trunc(right);
+  const destinationBottom = Math.trunc(bottom);
+  const mapRight = viewport.origin.x + viewport.mapWidth;
+  const mapBottom = viewport.origin.y + viewport.mapHeight;
+  return destinationLeft < mapRight
+    && destinationRight > viewport.origin.x
+    && destinationTop < mapBottom
+    && destinationBottom > viewport.origin.y;
+}
+
 function drawEnemy(
   context: CanvasRenderingContext2D,
   enemy: EnemyView,
@@ -364,6 +384,7 @@ function drawEnemy(
   const feetY = viewport.origin.y + ((enemy.positionFine.y + offset.y) / 240) * tileScale;
   const left = centerX - width / 2;
   const top = feetY - height;
+  const spriteIntersectsMap = intersectsMapPlayfield(left, top, left + width, top + height, viewport);
   const frameCount = enemy.type === 8 ? 4 : 3;
   const sourceX = deathFrame !== undefined
     ? deathFrame * sourceWidth
@@ -379,7 +400,7 @@ function drawEnemy(
     context.translate((left * 2) + width, 0);
     context.scale(-1, 1);
   }
-  if (!vehicle || enemy.alive || enemy.deathRemainingMs > 350) {
+  if (spriteIntersectsMap && (!vehicle || enemy.alive || enemy.deathRemainingMs > 350)) {
     context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, width, height);
   }
   context.restore();
@@ -392,17 +413,21 @@ function drawEnemy(
     const smokeWidth = 48 * tileScale;
     const smokeHeight = 64 * tileScale;
     const smokeFrame = Math.max(0, Math.min(7, 7 - Math.floor(enemy.deathRemainingMs / 100)));
-    context.drawImage(
-      smoke,
-      smokeFrame * 48,
-      0,
-      48,
-      64,
-      centerX - smokeWidth / 2,
-      feetY - smokeHeight,
-      smokeWidth,
-      smokeHeight,
-    );
+    const smokeLeft = centerX - smokeWidth / 2;
+    const smokeTop = feetY - smokeHeight;
+    if (intersectsMapPlayfield(smokeLeft, smokeTop, smokeLeft + smokeWidth, smokeTop + smokeHeight, viewport)) {
+      context.drawImage(
+        smoke,
+        smokeFrame * 48,
+        0,
+        48,
+        64,
+        smokeLeft,
+        smokeTop,
+        smokeWidth,
+        smokeHeight,
+      );
+    }
   }
 }
 
