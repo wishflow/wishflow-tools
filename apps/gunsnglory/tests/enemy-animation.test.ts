@@ -64,11 +64,11 @@ async function startCoveredWagonWave(): Promise<{ session: GameSession; view: Ga
   return { session, view };
 }
 
-async function startCoveredWagonTurnWave(): Promise<{ session: GameSession; view: GameView }> {
+async function startCoveredWagonTurnWave(randomSeed = 1): Promise<{ session: GameSession; view: GameView }> {
   const session = await createGame({ scenarios: { [turningScenario.id]: turningScenario } }).open({
     scenarioId: turningScenario.id,
     mode: 'formal',
-    randomSeed: 1,
+    randomSeed,
   });
 
   let view = session.observe();
@@ -161,6 +161,28 @@ test('type 8 uses its APK color-specific turn atlas for the first Cow Gulch turn
   assert.equal(vehicle(view, 8).direction, 'south');
 });
 
+test('type 8 selects the matching APK turn atlas for the alternate wagon color', async () => {
+  const { session } = await startCoveredWagonTurnWave(2);
+  let view = session.observe();
+
+  for (let step = 0; step < 80; step += 1) {
+    view = session.advance({ deltaMs: 100 });
+    if (vehicle(view, 8).turningAnimation) break;
+  }
+
+  const turningFrame = vehicle(view, 8);
+  assert.equal(turningFrame.asset, 'horse_wagon');
+  assert.deepEqual(turningFrame.turningAnimation, {
+    asset: 'horse_wagon_turn',
+    frame: 0,
+    mirrored: true,
+  });
+  view = session.advance({ deltaMs: 100 });
+  assert.deepEqual(vehicle(view, 8).turningAnimation, turningFrame.turningAnimation);
+  view = session.advance({ deltaMs: 1 });
+  assert.equal(vehicle(view, 8).turningAnimation, undefined);
+});
+
 test('type 4 uses the APK wagon turn atlas and holds it for 200 ms', async () => {
   const { session } = await startCoveredWagonTurnWave();
   let view = session.observe();
@@ -190,4 +212,64 @@ test('type 4 uses the APK wagon turn atlas and holds it for 200 ms', async () =>
   view = session.advance({ deltaMs: 1 });
   assert.equal(vehicle(view, 4).turningAnimation, undefined, 'walking atlas resumes after the 200 ms turn');
   assert.equal(vehicle(view, 4).direction, 'south');
+});
+
+test('type 4 and type 8 use the APK turn frame and mirror for every Cow Gulch route redirect', async () => {
+  const expectedTurns = [
+    { cell: { x: 4, y: 10 }, from: 'east', to: 'south', frame: 0, mirrored: true },
+    { cell: { x: 4, y: 13 }, from: 'south', to: 'east', frame: 0, mirrored: true },
+    { cell: { x: 12, y: 13 }, from: 'east', to: 'north', frame: 1, mirrored: true },
+    { cell: { x: 12, y: 6 }, from: 'north', to: 'west', frame: 1, mirrored: false },
+    { cell: { x: 9, y: 6 }, from: 'west', to: 'north', frame: 1, mirrored: false },
+    { cell: { x: 9, y: 2 }, from: 'north', to: 'east', frame: 1, mirrored: true },
+    { cell: { x: 12, y: 2 }, from: 'east', to: 'south', frame: 0, mirrored: true },
+    { cell: { x: 12, y: 3 }, from: 'south', to: 'east', frame: 0, mirrored: true },
+  ] as const;
+  const { session } = await startCoveredWagonTurnWave();
+  const expectedIndex = new Map<4 | 8, number>([[4, 0], [8, 0]]);
+  const lastDirection = new Map<4 | 8, string>([[4, 'east'], [8, 'east']]);
+  const activeTurns = new Map<4 | 8, { step: number; durationSteps: number; walkFrame: number; animation: NonNullable<GameView['enemies'][number]['turningAnimation']> }>();
+
+  let view = session.observe();
+  for (let step = 0; step < 500 && view.enemies.length > 0; step += 1) {
+    view = session.advance({ deltaMs: 100 });
+    for (const enemy of view.enemies) {
+      if (enemy.type !== 4 && enemy.type !== 8) continue;
+
+      const animation = enemy.turningAnimation;
+      const active = activeTurns.get(enemy.type);
+      if (animation && !active) {
+        const index = expectedIndex.get(enemy.type)!;
+        const expected = expectedTurns[index];
+        assert.ok(expected, `type ${enemy.type} must not turn at an unexpected route marker`);
+        assert.deepEqual({
+          cell: {
+            x: Math.trunc(enemy.positionFine.x / 7680),
+            y: Math.trunc(enemy.positionFine.y / 7680),
+          },
+          from: lastDirection.get(enemy.type),
+          to: enemy.direction,
+          frame: animation.frame,
+          mirrored: animation.mirrored,
+        }, expected);
+        assert.equal(animation.asset, enemy.type === 4 ? 'wagon_turn' : 'horse_wagon_turn_white');
+        const durationSteps = enemy.type === 4 ? 2 : 1;
+        activeTurns.set(enemy.type, { step, durationSteps, walkFrame: enemy.animationFrame, animation });
+        expectedIndex.set(enemy.type, index + 1);
+      } else if (animation && active) {
+        assert.deepEqual(animation, active.animation);
+        assert.equal(enemy.animationFrame, active.walkFrame, 'the current walking frame remains fixed through the turn');
+        assert.ok(step - active.step <= active.durationSteps, 'the turn atlas remains visible through its duration boundary');
+      } else if (!animation && active) {
+        assert.equal(step - active.step, active.durationSteps + 1, 'walking atlas resumes on the next update after the turn boundary');
+        activeTurns.delete(enemy.type);
+      }
+
+      lastDirection.set(enemy.type, enemy.direction);
+    }
+  }
+
+  assert.equal(view.enemies.length, 0, 'both vehicles should finish the route');
+  assert.deepEqual([...expectedIndex], [[4, expectedTurns.length], [8, expectedTurns.length]]);
+  assert.equal(activeTurns.size, 0, 'both vehicles should have left their final turn animation');
 });

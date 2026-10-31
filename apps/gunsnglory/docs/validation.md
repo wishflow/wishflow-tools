@@ -1472,3 +1472,40 @@ APK 1.8.6 `GameObjectUnit.makeMoveCheck()` 先逐轴调用玩家碰撞管理器�
 | GitHub Actions 与公开版 | 提交 `f83675f` 快进合入 `gunsnglory` 和 `master`；[Actions run 41188397608](https://github.com/wishflow/wishflow-tools/actions/runs/41188397608) 成功，应用 CI、共享 catalog、Cloudflare Pages 与 GitHub Pages 均通过。Worker 按变更范围跳过。 |
 | Codex 内置浏览器公开版 | 打开[`f83675f` 公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=f83675f)，确认战役列表、Cow Gulch 地图、HUD 与4×速度控件加载，error/warn 查询无返回。开局对白的“继续”使正式战役按已保存的4×速度自动推进到 Wave02 提示；随即返回隔离样本，最终样本仍为第1波待开始、生命50、现金 `$65`，正式档案仍为已完成1/1、最高分 `$356`。未结算或新增正式记录。此为公网页面烟测，不是 Wave03 车辆转向的实测；转向图集与计时由上述实际路线回归验证。 |
 | P1-F 总门槛 | 本轮关闭 Cow Gulch Wave03 两种运输车辆首次转向图集与计时这一局部差异；其他动画状态、完整首关画面和交互仍待对照，整关与全部关卡验收仍为0/60。 |
+
+## 73. P1-F Cow Gulch 运输车辆全路线转向映射
+
+第72节验证了 map01 的首次东转南。本轮将核对扩展到 Wave03 车辆沿整条 action2 路线的所有实际方向变化，并覆盖 type8 的两种车身图集。生产代码未改动；新增的固定路线回归用于防止后续方向帧或镜像回退。
+
+### APK 证据与独立预期
+
+研究分支 `codex/gunsnglory-spec` 的 JADX 恢复源码记录显示，`EnemyDirector.java:311–317` 在方向确实变化时读取 `enemyDesignData[unit-1][7]` 转向计时，调用 `GameObjectEnemy.setTurningFrame()` 后改变方向。`GameObjectEnemy.java:191–209` 按旧、新 X/Y 方向选择 `animFrame` 和 `mMirrored`；该逻辑由四组互斥方向条件构成。结合 map01 的实际路线，Wave03 只有以下8个方向变化；末尾 `(15,3)` 标记仍为东向，不产生第9次转向：
+
+| 地图格 | 方向 | 图集帧 | 水平镜像 |
+| --- | --- | --- | --- |
+| `(4,10)` | 东→南 | 0 | 是 |
+| `(4,13)` | 南→东 | 0 | 是 |
+| `(12,13)` | 东→北 | 1 | 是 |
+| `(12,6)` | 北→西 | 1 | 否 |
+| `(9,6)` | 西→北 | 1 | 否 |
+| `(9,2)` | 北→东 | 1 | 是 |
+| `(12,2)` | 东→南 | 0 | 是 |
+| `(12,3)` | 南→东 | 0 | 是 |
+
+APK 中 type4 使用 `wagon_turn` 并持续200 ms。type8 持续100 ms，`mIsWhite=true` 使用 `horse_wagon_turn`，否则使用 `horse_wagon_turn_white`。计时到0的更新仍显示转向帧，下一次模拟更新才恢复行走图集。以上为 APK 反编译证据，不是原始源码或运行录像。
+
+### 网页回归与验证
+
+[`enemy-animation.test.ts`](../tests/enemy-animation.test.ts) 以 Wave03 真实请求和 Cow Gulch 路线推进 type4/type8 到退出，逐次断言8个转向格、前后方向、帧、镜像、转向期间行走帧保持和计时边界；准确事件数同时证明直行标记没有误触发转向。固定种子1覆盖 `horse_wagon_white` 对应 `horse_wagon_turn_white` 的全路线；种子2的首转另覆盖 `horse_wagon` 对应 `horse_wagon_turn`。
+
+临时把东转北映射的镜像值反转后，全路线测试在 `(12,13)` 按预期失败（期望镜像、实际未镜像）；随即恢复生产代码，验证测试 6/6 通过。此 mutation check 只证明回归能识别该差异，不表示 APK 中存在对应错误。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向动画回归 | Node 22.23.3 下 `node --import tsx --test tests/enemy-animation.test.ts`：6项通过。 |
+| 变异敏感性 | 反转东转北的镜像映射时，全路线断言在 `(12,13)` 失败；恢复映射后测试通过，生产代码无改动。 |
+| 应用 CI | Node 22.23.3 下 TypeScript、180项单元测试和 Vite 生产构建通过；初次 E2E 使用的端口4274被已有服务占用，未终止该服务。改用 `CI=1 PLAYWRIGHT_PORT=53672 pnpm run test:e2e` 后61项 Playwright 全部通过。 |
+| 共享站点目录 | `pnpm run test:catalog`：15项通过。 |
+| GitHub Actions 与公开版 | 本地提交合并推送后记录 Actions、Pages 部署结果。 |
+| Codex 内置浏览器 | 部署后确认公网页面加载及控制台；不将页面烟测写作 Wave03 实际路线运行观察。 |
+| P1-F 总门槛 | 本轮确认关闭 Wave03 type4/type8 全路线转向帧/镜像映射与 type8 两种图集变体这一局部验证缺口；其它动画和完整首关对照未完成，仍为0/60。 |
