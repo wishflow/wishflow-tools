@@ -1321,7 +1321,7 @@ REA/JADX 对 APK 1.8.6 的反编译资料显示，`GunsAndGloryThread` 主循环
 
 APK map01 的敌人路线从 spawn `(0,10)` 依次经过 redirect `(4,10) → (4,13) → (12,13) → (12,6) → (9,6) → (9,2) → (12,2) → (12,3) → (15,3)`，最后从 exit `(16,3)` 离场。`(12,13) → (12,6)` 的直线路段经过 `(12,9)`；原始地图的水平桥面绘制范围为 `x=11.75..13.25, y=9`，覆盖该路线中心。因此敌人经过这里是路线字段与贴图桥面的对应结果。依据为研究资料 `R/data/map-inventory.json`、`R/data/static-route-graph.json` 和 `R/route-and-wave-model.md`，并与网页 `cow-gulch-preview-wave.ts`、`cow-gulch.json` 对照。
 
-同一来源还确认生成池成功生成时，会把共享 spawn 字段沿反方向移动两格；Cow Gulch spawn `(0,10)` 朝东，所以后续生成会继续向西偏移。第69节进一步核对了成功生成保留偏移、每帧越界清理及 type8 免扣命分支。APK 的敌人碰撞管理器关闭背景地形碰撞，路线由 action 1/2/3 字段驱动。该证据解释生成位置在地图外与桥面路线为何可能出现，但**不能单独证明原版渲染时的裁切/可见效果**；本轮没有据此修改路线或地图碰撞。地图外贴图与对象的视口裁切仍需单独核对。
+同一来源还确认生成池成功生成时，会把共享 spawn 字段沿反方向移动两格；Cow Gulch spawn `(0,10)` 朝东，所以后续生成会继续向西偏移。第69节进一步核对了成功生成保留偏移、每帧越界清理及 type8 免扣命分支。APK 的敌人碰撞管理器关闭背景地形碰撞，路线由 action 1/2/3 字段驱动。该证据解释生成位置在地图外与桥面路线为何可能出现，但不能单独证明原版渲染时的可见边界；渲染规则见第70节。本轮没有据此修改路线或地图碰撞。
 
 ### 验证边界
 
@@ -1401,3 +1401,25 @@ Cow Gulch map01 的原始 action1 是 `(0,10)` 向东，且地图目录只列出
 | Codex 内置浏览器公网实测 | 打开 [`?release=952e360`](https://wishflow-tools.pages.dev/gunsnglory/?release=952e360)，检查原版战役页和 Cow Gulch 场景，关闭 Pedro 第一波提示后 HUD 正常显示；切回不结算正式战役的样本，确认 Wave 1 待开始、生命50、现金 `$65`、模拟速度4×。页面保留已有档案“已完成1/1、最高分 `$356`”；未运行至战局结算。控制台 error/warn 查询无返回。 |
 | 原版运行核对 | 尚未记录相同地图/波次/生成请求的 APK 运行画面或坐标；不把网页固定种子输出写作原版运行观察。若后续确认其输出与 Smali 推导不同，记录具体点位及新证据并重新检查字段初始化/恢复路径。 |
 | P1-F 总门槛 | 越界清理这一行为差异关闭；Cow Gulch 完整规则、画面、触屏/鼠标及原版运行对照未完成，关卡与整体计数仍为0/60。 |
+
+## 70. P1-F Cow Gulch 敌人地图边缘可见性
+
+网页此前只按 1024×576 游戏视口裁切世界对象；Cow Gulch 地图比视口高时，生成在地图西侧之外但仍落在画布内的敌人会被画出来。APK 对敌人贴图另有地图范围相交检查：全身贴图完全离开地图后隐藏，贴图仍与地图相交时完整绘制，允许部分越过地图边缘。它不把敌人贴图裁成地图边缘形状。
+
+### APK 依据与网页修正
+
+APK 1.8.6 的 `GunsAndGloryThread.drawEnemies()` 按对象顺序调用 `GameObjectEnemy.draw(Canvas,int,int)`；`GameObjectEnemy.draw()` 在绘制主体前用 `GunsAndGloryThread.isObjectOnScreen(Rect)` 检查对象是否仍在 playfield。该检查将对象矩形交给 `isObjectOnPlayfield(...)`，以整数边界判断矩形与地图范围是否相交。主循环对画布应用的是屏幕矩形裁切，没有再按地图矩形裁切敌人贴图。因此，不能因贴图越过地图边缘就判定原版错误；判断条件是敌人矩形是否还与地图相交。以上来自 APK 1.8.6 的 JADX/REA 反编译结果，不是原始 Java 源码。
+
+网页 [`intersectsMapPlayfield()`](../src/render/canvas-renderer.ts) 现使用相同的整数矩形相交条件。敌人主体及运输车烟雾在完全离开地图后不画；仍有相交时保留整张贴图，外沿交由游戏画布视口裁切。健康条仍按其独立绘制逻辑处理。本轮只调整可见性，不改变地图贴图、路线、碰撞或相机。
+
+### 回归与验证
+
+[`canvas-renderer.test.ts`](../tests/canvas-renderer.test.ts) 对同一渲染调用记录三种情况：地图内敌人正常绘制；完全位于地图外的敌人不绘制；只部分压入地图的敌人仍绘制，且目标矩形仍越过地图边界。该断言防止网页误把“是否可见”改成“按地图裁切贴图”。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向渲染回归 | `canvas-renderer.test.ts` 通过，覆盖全离图隐藏与部分越界保留。 |
+| 本地应用 CI | 显式使用 Node 22.23.3 执行 `CI=1 PLAYWRIGHT_PORT=4221 pnpm --dir apps/gunsnglory run test:ci`：TypeScript、174 项单元测试、Vite 生产构建和60项 Playwright E2E 全部通过。根目录 `pnpm run test:catalog` 的15项测试通过。 |
+| GitHub Actions 与发布 | 代码提交 `6e61788` 合入 `master` 发布提交 `e24dc69`；[Actions run 41172716366](https://github.com/wishflow/wishflow-tools/actions/runs/41172716366) 成功，Guns’n’Glory 测试、共享 catalog、Cloudflare Pages 与 GitHub Pages 部署均通过。Worker 按变更范围跳过。 |
+| Codex 内置浏览器公网核对 | 打开[线上版本](https://wishflow-tools.pages.dev/gunsnglory/?release=e24dc69)，确认战役地图及单个拓荒者隔离样例可加载和结算；样例结果为生命50、逃脱0、击败1、现金 `$66`。正式档案仍为已完成1/1、最高分 `$356`；测试后把临时调低的速度恢复到已保存的4×。这是发布烟测，不是整关对照；全离图/部分越界的逐帧公网页面画面对照未单独录制，边缘判定由 APK 反编译证据与渲染调用测试验证。 |
+| P1-F 总门槛 | 本轮只关闭敌人贴图完全离开地图时仍显示的网页差异；原版允许仍与地图相交的贴图越过边缘。完整 Cow Gulch 地图、规则及鼠标/触屏对照仍未完成，关卡验收计数保持0/60。 |
