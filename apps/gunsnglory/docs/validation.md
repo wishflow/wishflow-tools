@@ -1397,5 +1397,7 @@ Cow Gulch map01 的原始 action1 是 `(0,10)` 向东，且地图目录只列出
 | Game 与应用 CI | `source ~/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4220 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript、174 项单元测试、Vite 生产构建及60项 Playwright E2E。根目录 `source ~/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试通过。 |
 | 浏览器测试时间边界 | 原 T22 只推进60秒浏览器时钟，按4×累计规则实际只推进约4分钟游戏时间，固定种子战役尚未败北；增加到100秒后定向测试通过。未设置 `CI=1` 的5 worker 初跑还使两个其他 E2E 超时；它们单 worker 复测及最终 `CI=1` 全套均通过。之后运行此套件应沿用 CI 单 worker 配置，并根据模拟器时长设置虚拟时间。 |
 | Codex 内置浏览器本地检查 | 在隔离的新 origin `http://127.0.0.1:5237/` 检查初始0/1档案、Cow Gulch 地图/HUD 与 Pedro 的第一波提示；继续后可见战斗 HUD。没有完成正式战役结算，未写入新档案。 |
+| GitHub Actions 与发布 | 代码提交 `d482dbb` 经合并提交 `952e360` 推入 `master`；[workflow 41169809259](https://github.com/wishflow/wishflow-tools/actions/runs/41169809259) 成功。应用测试（2分18秒）、共享目录检查、Cloudflare Pages 与 GitHub Pages 部署全部通过；Worker 按变更分类跳过。 |
+| Codex 内置浏览器公网实测 | 打开 [`?release=952e360`](https://wishflow-tools.pages.dev/gunsnglory/?release=952e360)，检查原版战役页和 Cow Gulch 场景，关闭 Pedro 第一波提示后 HUD 正常显示；切回不结算正式战役的样本，确认 Wave 1 待开始、生命50、现金 `$65`、模拟速度4×。页面保留已有档案“已完成1/1、最高分 `$356`”；未运行至战局结算。控制台 error/warn 查询无返回。 |
 | 原版运行核对 | 尚未记录相同地图/波次/生成请求的 APK 运行画面或坐标；不把网页固定种子输出写作原版运行观察。若后续确认其输出与 Smali 推导不同，记录具体点位及新证据并重新检查字段初始化/恢复路径。 |
 | P1-F 总门槛 | 越界清理这一行为差异关闭；Cow Gulch 完整规则、画面、触屏/鼠标及原版运行对照未完成，关卡与整体计数仍为0/60。 |
