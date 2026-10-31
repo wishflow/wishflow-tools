@@ -78,6 +78,8 @@ button:disabled { cursor: not-allowed; }
 .source-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 14px; }
 .quiet-actions, .primary-actions { display: flex; align-items: center; gap: 11px; }
 .primary-actions { min-width: 0; flex-wrap: wrap; }
+.cpython-contrast-entry { display: grid; width: 100%; min-width: 0; justify-items: start; gap: 5px; }
+.cpython-contrast-entry .small-meta { max-width: 100%; white-space: normal; line-height: 1.45; }
 .teaching-step-controls { display: flex; width: 100%; min-width: 0; flex-wrap: wrap; gap: 8px; }
 .teaching-speed-control { display: grid; width: min(100%, 300px); min-width: 0; gap: 4px; color: #58647c; font-size: 10px; font-weight: 750; }
 .teaching-speed-control select { width: 100%; min-width: 0; max-width: 100%; min-height: 38px; padding: 6px 9px; border: 1px solid #d5d9d2; border-radius: 8px; background: var(--card); color: var(--ink); font-size: 12px; }
@@ -94,6 +96,11 @@ button:disabled { cursor: not-allowed; }
 
 .results-area { min-width: 0; }
 .results-header { min-height: 52px; margin: 0 2px 11px; }
+.cpython-explanation { margin-bottom: 14px; padding: 14px 15px; }
+.cpython-explanation .output-panel-heading { margin-bottom: 8px; }
+.cpython-explanation-points { display: grid; gap: 7px; margin: 0; padding-left: 19px; color: #4f5b72; font-size: 11px; line-height: 1.5; }
+.cpython-runtime-flow { max-width: 100%; margin: 10px 0 0; overflow: auto; padding: 10px; border: 1px solid #e2e3dc; border-radius: 8px; background: var(--code); color: #33415d; font-size: 10px; line-height: 1.5; white-space: pre; }
+.cpython-runtime-flow code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 .output-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 14px; }
 .tokens-panel { grid-column: 1 / -1; padding: 13px 15px; }
 .tokens-summary { display: flex; min-height: 28px; align-items: center; gap: 10px; cursor: pointer; color: var(--ink); font-size: 14px; font-weight: 750; }

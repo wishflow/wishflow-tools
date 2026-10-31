@@ -166,6 +166,18 @@ export function rangesEqual(left: SourceRange | null, right: SourceRange | null)
   return left === right || Boolean(left && right && left.start === right.start && left.end === right.end);
 }
 
+export function isValidSourceRange(
+  range: SourceRange | null | undefined,
+  sourceLength: number,
+): range is SourceRange {
+  return Boolean(range
+    && Number.isInteger(range.start)
+    && Number.isInteger(range.end)
+    && range.start >= 0
+    && range.end > range.start
+    && range.end <= sourceLength);
+}
+
 export function findTokenAtOffset<T extends SourceToken>(
   tokens: T[],
   index: SourcePositionIndex,

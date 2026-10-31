@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { findTokenAtOffset, rangesEqual, tokenSourceRange, type SourceLink, type SourcePositionIndex, type SourceRange } from '../analysis/source-position';
+import { findTokenAtOffset, isValidSourceRange, rangesEqual, tokenSourceRange, type SourceLink, type SourcePositionIndex, type SourceRange } from '../analysis/source-position';
 import type { PythonToken } from '../analysis/types';
 import type { AnalysisStatus } from '../analysis/usePyodideAnalysis';
 import type { TeachingStatus } from '../teaching-vm/useTeachingVm';
@@ -33,6 +33,7 @@ interface SourcePanelProps {
   onCancel(): void;
   onRetry(): void;
   onCompileTeaching(): void;
+  onInspectCpythonSelection(): void;
   onStepTeaching(): void;
   onStepSourceTeaching(mode: TeachingSourceStepMode): void;
   onStartTeachingPlayback(): void;
@@ -45,13 +46,15 @@ interface SourcePanelProps {
   onRestore(): void;
 }
 
-export function SourcePanel({ mode, source, status, teachingStatus, teachingRunSpeed, teachingHasProgram, teachingAtHead, teachingCanStepOut, teachingPlaybackPhase, teachingPlaybackCanStart, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onStepTeaching, onStepSourceTeaching, onStartTeachingPlayback, onPauseTeachingPlayback, onRunTeaching, onSetTeachingRunSpeed, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
+export function SourcePanel({ mode, source, status, teachingStatus, teachingRunSpeed, teachingHasProgram, teachingAtHead, teachingCanStepOut, teachingPlaybackPhase, teachingPlaybackCanStart, error, tokens, positionIndex, sourceLink, t, onLink, onChange, onAnalyze, onRun, onStopExecution, onCancel, onRetry, onCompileTeaching, onInspectCpythonSelection, onStepTeaching, onStepSourceTeaching, onStartTeachingPlayback, onPauseTeachingPlayback, onRunTeaching, onSetTeachingRunSpeed, onPauseTeaching, onResetTeaching, onClear, onRestore }: SourcePanelProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const isTeachingPlaybackActive = teachingPlaybackPhase !== 'idle';
   const canControlTeaching = teachingHasProgram
     && teachingAtHead
     && !isTeachingPlaybackActive
     && (teachingStatus === 'ready' || teachingStatus === 'paused');
+  const hasValidSelection = isValidSourceRange(sourceLink?.range, source.length);
+  const canInspectCpython = hasValidSelection && !error && status === 'ready';
 
   useEffect(() => {
     if (!sourceLink || sourceLink.origin.kind === 'editor') return;
@@ -126,6 +129,24 @@ export function SourcePanel({ mode, source, status, teachingStatus, teachingRunS
             </>
           ) : (
             <>
+              <div className="cpython-contrast-entry">
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  disabled={!canInspectCpython}
+                  aria-describedby="cpython-contrast-hint"
+                  onClick={onInspectCpythonSelection}
+                >{t('inspectCpythonSelection')}</button>
+                <p id="cpython-contrast-hint" className="small-meta">
+                  {!hasValidSelection
+                    ? t('inspectCpythonSelectHint')
+                    : status !== 'ready'
+                      ? t('inspectCpythonRuntimeHint')
+                      : error
+                        ? t('inspectCpythonSourceErrorHint')
+                        : t('inspectCpythonReadyHint')}
+                </p>
+              </div>
               {teachingStatus === 'running' && !isTeachingPlaybackActive ? (
                 <button type="button" className="button button-secondary" onClick={onPauseTeaching}>{t('pauseTeaching')}</button>
               ) : (

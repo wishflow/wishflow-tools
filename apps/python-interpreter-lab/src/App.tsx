@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getLanguage, subscribeLanguage, type Language } from '@wishflow/site-shell';
-import { createSourcePositionIndex, type SourceLink } from './analysis/source-position';
+import { createSourcePositionIndex, isValidSourceRange, type SourceLink } from './analysis/source-position';
 import { MAX_SOURCE_LENGTH, validateSource } from './analysis/source-limit';
 import { usePyodideAnalysis } from './analysis/usePyodideAnalysis';
 import { ResultsPanel } from './components/ResultsPanel';
@@ -51,17 +51,26 @@ export default function App() {
     if (shouldRestart) analysis.restart();
   }
 
-  function updateMode(nextMode: EngineMode) {
+  function updateMode(nextMode: EngineMode, preservedSourceLink: SourceLink | null = null) {
     if (nextMode === mode) return;
     playback.cancel();
     setMode(nextMode);
-    setSourceLink(null);
+    setSourceLink(preservedSourceLink);
     if (!(nextMode === 'cpython' && analysis.status === 'failed')) analysis.clearOutput();
     analysis.clearExecution();
     teaching.invalidate();
     if (nextMode === 'teaching' && (analysis.status === 'analyzing' || analysis.status === 'running')) {
       analysis.cancel();
     }
+  }
+
+  function inspectSelectionInCpython() {
+    const range = sourceLink?.range;
+    if (!isValidSourceRange(range, source.length)
+      || !sourceValidation.ok || analysis.status !== 'ready') return;
+
+    updateMode('cpython', { origin: { kind: 'teaching', index: null }, range });
+    analysis.analyze(source);
   }
 
   function startAnalysis() {
@@ -176,6 +185,7 @@ export default function App() {
           onCancel={analysis.cancel}
           onRetry={analysis.retry}
           onCompileTeaching={compileTeaching}
+          onInspectCpythonSelection={inspectSelectionInCpython}
           onStepTeaching={teaching.step}
           onStepSourceTeaching={teaching.stepSource}
           onStartTeachingPlayback={playback.start}

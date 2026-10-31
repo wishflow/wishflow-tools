@@ -5,6 +5,7 @@ import {
   createSourcePositionIndex,
   findTokenAtOffset,
   instructionSourceRange,
+  isValidSourceRange,
   rangesOverlap,
   sourcePositionOffset,
   sourcePositionRange,
@@ -74,6 +75,17 @@ test('uses half-open ranges and finds the token under a caret', () => {
   assert.equal(rangesOverlap({ start: 0, end: 2 }, { start: 1, end: 3 }), true);
   assert.equal(rangesOverlap({ start: 0, end: 2 }, { start: 2, end: 4 }), false);
   assert.deepEqual(tokenSourceRange(tokens[1], index), { start: 2, end: 3 });
+});
+
+test('accepts only non-empty source ranges within the UTF-16 source bounds', () => {
+  const sourceLength = 'x🐍'.length;
+
+  assert.equal(isValidSourceRange({ start: 0, end: sourceLength }, sourceLength), true);
+  assert.equal(isValidSourceRange(null, sourceLength), false);
+  assert.equal(isValidSourceRange({ start: 1, end: 1 }, sourceLength), false);
+  assert.equal(isValidSourceRange({ start: -1, end: 1 }, sourceLength), false);
+  assert.equal(isValidSourceRange({ start: 0, end: sourceLength + 1 }, sourceLength), false);
+  assert.equal(isValidSourceRange({ start: 0.5, end: 1 }, sourceLength), false);
 });
 
 test('maps AST and bytecode UTF-8 locations and rejects missing positions', () => {

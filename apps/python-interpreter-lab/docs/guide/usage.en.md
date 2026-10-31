@@ -98,12 +98,18 @@ Click an instruction's source position to locate the original text. **Next instr
 
 Select **Real CPython** under **Execution view** and wait for the runtime to become ready. The initial load needs a network connection.
 
+You can also select source text in Teaching VM and click **Inspect selection in real CPython**. The app preserves the full source, switches engines, and analyzes the whole source file. The selection is only used to link Tokens, the AST, and bytecode; it is not compiled as a standalone program, and it is not run automatically. Click **Run Python** separately to produce output and an execution trace.
+
 1. Click **Analyze source** to inspect tokens, the AST, code objects, and real bytecode. This does not execute the program.
 2. Click **Run Python** to execute the source and record output, calls, line events, returns, exceptions, and variable snapshots.
 3. Once execution stops, use **Play playback**, the event position, and **Adjacent changes** to inspect the record. Playback does not run the program again.
 
 Variables in a **Line · before execution** event show the state before that line runs. An exception event may later be caught; also check the final result.
 This view does not expose CPython's internal value stack or live instruction stepping. Its instructions do not map one-to-one to teaching instructions.
+
+Real CPython may fold constants during compilation, so source expressions and bytecode are not guaranteed to correspond one-to-one. The page shows only actual disassembly and positions reported by the runtime. Execution history records trace events such as calls, lines, exceptions, and returns; it is not an opcode-by-opcode trace, and playback only browses recorded events.
+
+Python bytecode is not CPU machine code. Pyodide runs CPython in a WebAssembly environment; this page does not show a Wasm or CPU instruction for each bytecode instruction.
 
 ## Understand notices
 

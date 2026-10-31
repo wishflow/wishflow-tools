@@ -81,6 +81,21 @@ export function ResultsPanel({ result, execution, diagnostic, isBusy, positionIn
         </div>
         {result && <span className="result-count">{t('codeObjectCount').replace('{count}', String(result.codeObjects.length))}</span>}
       </div>
+      <section className="panel cpython-explanation" aria-labelledby="cpython-explanation-heading">
+        <div className="output-panel-heading">
+          <h3 id="cpython-explanation-heading">{t('cpythonExplanationTitle')}</h3>
+        </div>
+        <ul className="cpython-explanation-points">
+          <li>{t('cpythonExplanationData')}</li>
+          <li>{t('cpythonExplanationOptimization')}</li>
+          <li>{t('cpythonExplanationPositions')}</li>
+          <li>{t('cpythonExplanationTrace')}</li>
+          <li>{t('cpythonExplanationMachineCode')}</li>
+        </ul>
+        <pre className="cpython-runtime-flow" aria-label={t('cpythonExplanationFlowLabel')}>
+          <code>{t('cpythonExplanationFlow')}</code>
+        </pre>
+      </section>
       {diagnostic && <ErrorPanel diagnostic={diagnostic} t={t} />}
       <ExecutionPanel execution={execution} sourcePositionIndex={positionIndex} t={t} onLink={onLink} />
       {result && sourceLink && (
