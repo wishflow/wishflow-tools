@@ -397,8 +397,8 @@ export interface GameSession {
   pause(): GameView;
   resume(): GameView;
   /** Advances exactly one ordinary frame while paused, then remains paused. */
-  singleStep(input?: { deltaMs?: number }): GameView;
-  advance(input?: { deltaMs?: number }): GameView;
+  singleStep(input?: { deltaMs?: number; tileSizePixels?: number }): GameView;
+  advance(input?: { deltaMs?: number; tileSizePixels?: number }): GameView;
   observe(): GameView;
   terminalRecord(): GameSettlementRecord | undefined;
   exportReplay(): Promise<string>;
@@ -592,6 +592,7 @@ const UNIT_COLLIDER_WIDTH = 5068;
 const UNIT_COLLIDER_HEIGHT = 4608;
 const UNIT_STOP_TOLERANCE_FINE = 2400;
 const MAX_DELTA_MS = 100;
+const REFERENCE_VIEWPORT_WIDTH = 1024;
 // APK GameDesignOptics.animationWalkDefault, with inclusive distance thresholds selected using strict >.
 const PLAYER_WALK_ANIMATION_CYCLE_FINE = 6144;
 const PLAYER_WALK_ANIMATION_FRAME_THRESHOLDS = [1536, 3072, 4608] as const;
@@ -919,10 +920,10 @@ function mapBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: number):
   ];
 
   for (const corner of corners) {
-    if (corner.x < 0 || corner.y < 0) return true;
     const x = Math.floor(corner.x / FINE_UNITS_PER_CELL);
     const y = Math.floor(corner.y / FINE_UNITS_PER_CELL);
-    if (x >= width || y >= height) return true;
+    // BackgroundMap.getBackground() returns -1 outside the map; -1 is not a blocking tile.
+    if (x < 0 || y < 0 || x >= width || y >= height) continue;
     if (!grid) continue;
     const rawTile = grid[y]?.[x];
     if (rawTile === undefined) return true;
@@ -947,19 +948,22 @@ function mapBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: number):
   });
 }
 
-function unitSpriteWithinMap(unit: MutableUnit, scenario: ScenarioContent, fineX: number, fineY: number): boolean {
-  const { x: renderOffsetX, y: renderOffsetY } = unitRenderOffsetAt(unit.definition, { x: fineX, y: fineY });
-  const render = unit.definition.render;
-  const left = render.x + renderOffsetX;
-  const top = render.y + renderOffsetY;
-
-  return left >= 0
-    && top >= 0
-    && left + render.width <= scenario.map.width
-    && top + render.height <= scenario.map.height;
+function playerAxisWithinOriginalMapBounds(
+  scenario: ScenarioContent,
+  axis: 'x' | 'y',
+  coordinateFine: number,
+  tileSizePixels: number,
+): boolean {
+  const edgeMarginFine = Math.trunc(30720 / tileSizePixels);
+  if (axis === 'x') {
+    return coordinateFine >= 3840 - edgeMarginFine
+      && coordinateFine <= (scenario.map.width * FINE_UNITS_PER_CELL) - 3840 + edgeMarginFine;
+  }
+  return coordinateFine >= FINE_UNITS_PER_CELL - edgeMarginFine
+    && coordinateFine <= (scenario.map.height * FINE_UNITS_PER_CELL) + edgeMarginFine;
 }
 
-function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number): void {
+function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number, tileSizePixels: number): void {
   const target = unit.movementTargetFine;
   if (!target || deltaMs === 0) return;
 
@@ -980,12 +984,12 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number)
   const nextY = unit.positionFine.y + moveY;
 
   if (moveX !== 0
-    && unitSpriteWithinMap(unit, scenario, nextX, unit.positionFine.y)
+    && playerAxisWithinOriginalMapBounds(scenario, 'x', nextX, tileSizePixels)
     && !mapBlocksUnit(scenario, nextX, unit.positionFine.y)) {
     unit.positionFine.x = nextX;
   }
   if (moveY !== 0
-    && unitSpriteWithinMap(unit, scenario, unit.positionFine.x, nextY)
+    && playerAxisWithinOriginalMapBounds(scenario, 'y', nextY, tileSizePixels)
     && !mapBlocksUnit(scenario, unit.positionFine.x, nextY)) {
     unit.positionFine.y = nextY;
   }
@@ -1064,6 +1068,21 @@ function fullCell(fine: number): number {
 function normalizedDelta(deltaMs: number | undefined): number {
   if (deltaMs === undefined || !Number.isFinite(deltaMs)) return 0;
   return Math.trunc(Math.max(0, Math.min(MAX_DELTA_MS, deltaMs)));
+}
+
+function defaultTileSizePixels(scenario: ScenarioContent): number {
+  const requestedScale = REFERENCE_VIEWPORT_WIDTH / (scenario.map.width * scenario.map.tileSize);
+  const boundedScale = Math.max(0.85, Math.min(2, requestedScale));
+  const roundedScale = Math.round(boundedScale * 100) / 100;
+  return Math.max(1, Math.trunc(roundedScale * scenario.map.tileSize));
+}
+
+function normalizedTileSizePixels(value: number | undefined, scenario: ScenarioContent): number {
+  if (value === undefined) return defaultTileSizePixels(scenario);
+  if (!Number.isSafeInteger(value) || value < 1 || value > 65_536) {
+    throw new RangeError('Tile size in display pixels must be a positive integer no greater than 65536');
+  }
+  return value;
 }
 
 function tenthTileCoordinate(fine: number): number {
@@ -2021,7 +2040,7 @@ export function createGame(options: {
           paused = false;
           return observe();
         },
-        singleStep(input: { deltaMs?: number } = {}): GameView {
+        singleStep(input: { deltaMs?: number; tileSizePixels?: number } = {}): GameView {
           assertOpen();
           if (!paused) throw new Error('Game session must be paused before single-stepping');
           if (wave?.settlement) throw new Error('A settled game session cannot be single-stepped');
@@ -2132,7 +2151,7 @@ export function createGame(options: {
           nextIntentSequence += 1;
           return true;
         },
-        advance(input: { deltaMs?: number } = {}): GameView {
+        advance(input: { deltaMs?: number; tileSizePixels?: number } = {}): GameView {
           assertOpen();
           if (paused) return observe();
           if (wave?.settlement) {
@@ -2144,8 +2163,9 @@ export function createGame(options: {
             shot.fineZ = 0;
             shot.fineZTransitionPending = false;
           }
-          frame += 1;
           const deltaMs = normalizedDelta(input.deltaMs);
+          const tileSizePixels = normalizedTileSizePixels(input.tileSizePixels, scenario);
+          frame += 1;
           elapsedMs += deltaMs;
           if (wave) wave.events = [];
           let waveStarted = false;
@@ -2311,7 +2331,7 @@ export function createGame(options: {
 
           for (const unit of units) {
             const previousPosition = { ...unit.positionFine };
-            moveUnit(unit, scenario, deltaMs);
+            moveUnit(unit, scenario, deltaMs, tileSizePixels);
             const deltaX = unit.positionFine.x - previousPosition.x;
             const deltaY = unit.positionFine.y - previousPosition.y;
             const didMove = deltaX !== 0 || deltaY !== 0;
@@ -2653,6 +2673,7 @@ export function createGame(options: {
           recordedFrames.push({
             frame,
             deltaMs,
+            tileSizePixels,
             intents: frameCommands.map(({ intent }) => clone(intent)),
           });
           if (frame % GAME_REPLAY_CHECKPOINT_INTERVAL === 0 || nextView.wave?.settlement) {
@@ -2767,7 +2788,7 @@ export function createGame(options: {
               throw new GameReplayError('corrupt-input', `Replay command is not accepted at frame ${frame.frame}`, frame.frame);
             }
           }
-          const view = session.advance({ deltaMs: frame.deltaMs });
+          const view = session.advance({ deltaMs: frame.deltaMs, tileSizePixels: frame.tileSizePixels });
           if (view.frame !== frame.frame) {
             throw new GameReplayError('result-mismatch', `Replay frame sequence differs at frame ${frame.frame}`, frame.frame);
           }

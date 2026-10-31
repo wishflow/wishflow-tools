@@ -1,8 +1,8 @@
 import type { GameDifficulty, GameIntent, GameMode, GameView, ShotView, UnitView, WaveSettlement } from './index';
 import { canonicalSha256Digest } from '../value-digest';
 
-export const GAME_RULES_VERSION = 'gng-rules-6';
-export const GAME_REPLAY_FORMAT_VERSION = 1;
+export const GAME_RULES_VERSION = 'gng-rules-7';
+export const GAME_REPLAY_FORMAT_VERSION = 2;
 export const GAME_REPLAY_CHECKPOINT_INTERVAL = 120;
 export const GAME_REPLAY_MAX_CHARACTERS = 10_000_000;
 export const GAME_REPLAY_MAX_FRAMES = 250_000;
@@ -37,6 +37,7 @@ export interface GameStartRecord {
 export interface GameReplayFrame {
   frame: number;
   deltaMs: number;
+  tileSizePixels: number;
   intents: readonly GameIntent[];
 }
 
@@ -184,6 +185,9 @@ export async function parseReplay(serialized: string): Promise<GameReplayDocumen
       || !Number.isSafeInteger(value.deltaMs)
       || (value.deltaMs as number) < 0
       || (value.deltaMs as number) > 100
+      || !Number.isSafeInteger(value.tileSizePixels)
+      || (value.tileSizePixels as number) < 1
+      || (value.tileSizePixels as number) > 65_536
       || !Array.isArray(value.intents)
       || value.intents.length > 1_000
       || !value.intents.every(isGameIntent)) {
@@ -192,6 +196,7 @@ export async function parseReplay(serialized: string): Promise<GameReplayDocumen
     frames.push({
       frame: value.frame as number,
       deltaMs: value.deltaMs as number,
+      tileSizePixels: value.tileSizePixels as number,
       intents: value.intents,
     });
   }
