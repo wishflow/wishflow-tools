@@ -42,10 +42,16 @@
 | T01 范围入口 | 完成 | 教学源码选区经统一 UTF-16 范围校验；切换时保留完整源码与范围，清理旧会话后仅分析、不自动运行。 |
 | T02 CPython 概念说明 | 完成 | 真实结果面板加入中英文编译、位置映射、trace 粒度和 Wasm/CPU 边界说明。 |
 | T03 固定 Pyodide 浏览器验证 | 本地验证完成 | 固定 Pyodide 314.0.7 浏览器测试通过：教学校验失败语法的真实分析、emoji 前偏移、嵌套 code object、常量折叠、显式运行与只读回放。 |
-| T04 双语帮助、回归、发布与线上验收 | 文档与应用 CI 完成；发布流程待执行 | 双语指南已更新；应用 `test:ci` 通过（167 条单测、71 条 Playwright、类型检查、生产构建）。catalog、整站构建、审查、提交合并、CI/CD 与线上验收仍待完成。 |
+| T04 双语帮助、回归、发布与线上验收 | 完成 | 双语指南已更新；本地应用 CI、catalog（15 项）、整站构建通过。提交 `a4103ea` 已合并并推送；GitHub Actions [41160361840](https://github.com/wishflow/wishflow-tools/actions/runs/41160361840) 全部通过，GitHub Pages 与 Cloudflare Pages 部署成功。 |
 
 ## 本地验证记录
 
 - 应用完整 CI：通过；固定 Pyodide 314.0.7 / CPython 3.14.2 在 Chromium 中加载并执行浏览器用例。
 - 关键门槛的反向验证：临时反转选区有效性条件并重建后，针对性 Playwright 用例因按钮保持禁用而失败；恢复源码并重建后重新运行完整 CI，71 条浏览器测试全部通过。
 - `git diff --check`：通过。
+
+## 发布与线上验收
+
+- 提交 `a4103ea` 已快进合并到 `master` 并推送到 `origin/master`；部署工作流 [41160361840](https://github.com/wishflow/wishflow-tools/actions/runs/41160361840) 的应用测试、共享站点检查、GitHub Pages 与 Cloudflare Pages 部署均成功。
+- 生产页 `https://wishflow-tools.pages.dev/python-interpreter-lab/` 实测显示 Pyodide 314.0.7 / CPython 3.14.2。选中包含 emoji 前缀的完整源码后进入真实 CPython，AST 有 2 个匹配节点、字节码有 9 条匹配指令；优化结果为 `LOAD_SMALL_INT 3`，没有补造 `BINARY_OP`。
+- 显式运行前没有执行轨迹或输出区；点击“运行 Python”后程序完成，最终输出为 `3`，记录 4 个 CPython trace 事件。

@@ -12,7 +12,7 @@
 | V1 静态执行现场与默认教学入口 | 已实现、验证、发布并完成线上验收 |
 | V2 统一观察位置、源码步进分组与变化说明 | 已实现、验证、合并发布并完成线上验收 |
 | V3 操作数栈与对象引用动画 | 已实现、本地验证、双站部署并完成线上验收 |
-| V1–V6 spec/tasks | V1–V4 已发布；V5 在独立分支完成实现和本地验证、等待 V4 理解核对；V6 已完成实现和本地验证，待合并发布与线上验收 |
+| V1–V6 spec/tasks | V1–V4 已发布；V5 在独立分支完成实现和本地验证、等待 V4 理解核对；V6 已发布并完成线上验收 |
 
 依托 P1–P9 已有能力开展，保留[整体计划](implementation-plan.md)的 P10 异常语法和 O1 可选真实 opcode 编号。本体验路线使用 V0–V6，优先处理已确认的可视化问题；不以尚未实施的 P10/O1 为前置，也不顺带扩大 Python 子集。
 
@@ -116,7 +116,7 @@ flowchart LR
 - **验证**：常量折叠、嵌套函数、中文/emoji 位置、真实执行结果与录制回放；实际 Pyodide 版本测试，不能用本机 Python 冒充；双语概念说明同步。
 - **回滚**：撤回新对照入口，保留两个独立引擎及原模式切换。
 - **详细文档**：[V6 spec](specs/v06-cpython-source-contrast.md)；[V6 tasks](tasks/v06-cpython-source-contrast.md)。
-- **状态**：实现与本地验证已完成；待代码审查、提交合并、CI/CD 和线上验收。详情见 [V6 tasks](tasks/v06-cpython-source-contrast.md)。
+- **状态**：实现、代码审查、合并发布与线上验收已完成。提交 `a4103ea`；GitHub Actions [41160361840](https://github.com/wishflow/wishflow-tools/actions/runs/41160361840) 全部通过，GitHub Pages 与 Cloudflare Pages 部署成功。生产页已验证教学选区映射真实 AST/字节码、整份源码只分析不运行，以及显式运行后输出 `3` 和 4 条真实事件。详见 [V6 tasks](tasks/v06-cpython-source-contrast.md)。
 
 ## 5. 基准样例与理解验收
 
