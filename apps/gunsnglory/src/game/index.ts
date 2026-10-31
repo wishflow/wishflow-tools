@@ -2186,6 +2186,7 @@ export function createGame(options: {
           elapsedMs += deltaMs;
           if (wave) wave.events = [];
           let waveStarted = false;
+          const drawOrderCreationOrder: string[] = [];
           pending.sort((left, right) => left.sequence - right.sequence);
           const frameCommands = pending.splice(0);
           for (const command of frameCommands) {
@@ -2210,7 +2211,9 @@ export function createGame(options: {
                   const speedMultiplier = scenario.previewWave.speedMultiplierMin
                     + random.nextInt(scenario.previewWave.speedMultiplierCount);
                   const speed = Math.trunc((scenario.previewWave.baseEnemySpeed * speedMultiplier) / 100);
-                  wave.enemies.push(createPreviewEnemy('preview-pioneer-' + (index + 1), spawn, scenario.previewWave, speed));
+                  const enemy = createPreviewEnemy('preview-pioneer-' + (index + 1), spawn, scenario.previewWave, speed);
+                  wave.enemies.push(enemy);
+                  drawOrderCreationOrder.push('enemy:' + enemy.id);
                 }
               }
               wave.phase = 'active';
@@ -2379,9 +2382,11 @@ export function createGame(options: {
                 if (campaignMode && enemy.type === 4 && enemy.deathRemainingMs < 500 && !enemy.wagonPartsCreated
                   && campaignDefinition && wave.dynamicDifficulty !== undefined) {
                   enemy.wagonPartsCreated = true;
-                  wave.wagonDebris.push(...createWagonDebris(
+                  const debris = createWagonDebris(
                     enemy, random, () => `wagon-part-${nextWagonPartNumber++}`,
-                  ));
+                  );
+                  wave.wagonDebris.push(...debris);
+                  drawOrderCreationOrder.push(...debris.map(({ id }) => 'wagon-debris:' + id));
                   const passengerCount = Math.trunc(random.nextInt(
                     Math.trunc(wave.dynamicDifficulty / 50) + 20,
                   ) / 10);
@@ -2395,7 +2400,7 @@ export function createGame(options: {
                     const colorVariant = random.nextInt(2);
                     const passengerGroupId = `wagon-passenger-group-${enemy.id}-${slot + 1}`;
                     const enemyDefinition = campaignEnemyDefinition(scenario, type);
-                    wave.enemies.push(createCampaignEnemy(
+                    const passenger = createCampaignEnemy(
                       `wagon-passenger-${enemy.id}-${slot + 1}`,
                       type,
                       spawn,
@@ -2408,7 +2413,9 @@ export function createGame(options: {
                       enemyDefinition,
                       passengerGroupId,
                       colorVariant,
-                    ));
+                    );
+                    wave.enemies.push(passenger);
+                    drawOrderCreationOrder.push('enemy:' + passenger.id);
                   }
                 }
                 continue;
@@ -2449,7 +2456,7 @@ export function createGame(options: {
                 y: unit.positionFine.y - FIELD_CENTER_HALF,
               };
               const travelMs = projectileTravelTime(distanceSquare, maxSquareRange, weapon);
-              wave.shots.push({
+              const shot: MutableShot = {
                 id: 'preview-shot-' + nextShotNumber,
                 shooterId: unit.definition.id,
                 targetId: target.id,
@@ -2467,7 +2474,9 @@ export function createGame(options: {
                 remainingMs: travelMs,
                 impactResolved: false,
                 explosionRemainingMs: 0,
-              });
+              };
+              wave.shots.push(shot);
+              drawOrderCreationOrder.push('shot:' + shot.id);
               nextShotNumber += 1;
               unit.shootingAnimationElapsedMs = 0;
               unit.shootingAnimationFrame = 0;
@@ -2628,6 +2637,7 @@ export function createGame(options: {
 
                 spawnField.positionFine = candidatePosition;
                 wave.enemies.push(...spawned);
+                drawOrderCreationOrder.push(...spawned.map(({ id }) => 'enemy:' + id));
                 pool.requests[selectedRequestIndex] = pool.requests[selectedRequestIndex]! - 1;
                 pool.delayMs = pool.intervalMs;
                 wave.events.push({
@@ -2700,7 +2710,7 @@ export function createGame(options: {
           if (priorityTargetId && !wave?.enemies.some((enemy) => enemy.id === priorityTargetId && enemy.alive)) {
             priorityTargetId = undefined;
           }
-          synchronizeDrawOrder(drawOrderQueue, drawOrderEntries(scenario, units, wave));
+          synchronizeDrawOrder(drawOrderQueue, drawOrderEntries(scenario, units, wave), drawOrderCreationOrder);
           const nextView = observe();
           recordedFrames.push({
             frame,

@@ -66,14 +66,19 @@ export class DrawOrderQueue {
   }
 }
 
-/** Applies one Game step in the original object update phases. */
-export function synchronizeDrawOrder(queue: DrawOrderQueue, entries: readonly DrawOrderEntry[]): void {
+/** Applies one Game step while preserving APK depth updates and object creation order. */
+export function synchronizeDrawOrder(
+  queue: DrawOrderQueue,
+  entries: readonly DrawOrderEntry[],
+  creationOrder: readonly string[],
+): void {
   const currentIds = new Set(entries.map(({ id }) => id));
   for (const id of queue.items()) {
     if (!currentIds.has(id)) queue.remove(id);
   }
 
   const knownIds = new Set(queue.items());
+  const entriesById = new Map(entries.map((entry) => [entry.id, entry]));
   const phases: readonly DrawOrderKind[] = ['enemy', 'unit', 'shot', 'wagon-debris', 'decoration'];
   for (const kind of phases) {
     for (const entry of entries) {
@@ -82,8 +87,17 @@ export function synchronizeDrawOrder(queue: DrawOrderQueue, entries: readonly Dr
       if (previousDepth === undefined || previousDepth === entry.depth) continue;
       queue.correct(entry.id, entry.depth, entry.depth < previousDepth);
     }
-    for (const entry of entries) {
-      if (entry.kind === kind && !knownIds.has(entry.id)) queue.insert(entry.id, entry.depth);
-    }
+  }
+
+  for (const id of creationOrder) {
+    const entry = entriesById.get(id);
+    if (!entry || knownIds.has(id)) continue;
+    queue.insert(entry.id, entry.depth);
+    knownIds.add(id);
+  }
+
+  const untracked = entries.find(({ id }) => !knownIds.has(id));
+  if (untracked) {
+    throw new Error('New drawable object was not added to the creation order: ' + untracked.id);
   }
 }

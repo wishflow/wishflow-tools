@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DrawOrderQueue } from '../src/game/draw-order';
+import { DrawOrderQueue, synchronizeDrawOrder } from '../src/game/draw-order';
 
 test('new objects insert before existing objects at an equal depth', () => {
   const queue = new DrawOrderQueue();
@@ -30,4 +30,20 @@ test('moving objects cross only strictly shallower or deeper neighbors', () => {
 
   movingDown.correct('middle', 31, false);
   assert.deepEqual(movingDown.items(), ['front', 'back', 'middle'], 'a strict depth change crosses its neighbor');
+});
+
+test('new cross-type objects preserve APK creation order when their depths tie', () => {
+  const queue = new DrawOrderQueue();
+  queue.insert('older-decoration', 100);
+
+  synchronizeDrawOrder(queue, [
+    { id: 'older-decoration', kind: 'decoration', depth: 100 },
+    { id: 'new-wagon-debris', kind: 'wagon-debris', depth: 100 },
+    { id: 'new-shot', kind: 'shot', depth: 100 },
+    { id: 'new-wave-enemy', kind: 'enemy', depth: 100 },
+  ], ['new-wagon-debris', 'new-shot', 'new-wave-enemy']);
+
+  assert.deepEqual(queue.items(), [
+    'new-wave-enemy', 'new-shot', 'new-wagon-debris', 'older-decoration',
+  ]);
 });
