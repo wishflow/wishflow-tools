@@ -1469,6 +1469,6 @@ APK 1.8.6 `GameObjectUnit.makeMoveCheck()` 先逐轴调用玩家碰撞管理器�
 | 定向动画回归 | Node 22.23.3 下 `node --import tsx --test tests/enemy-animation.test.ts`：4项通过，包含两个既有行走帧用例与两个新增实际路线转向用例。 |
 | 应用 CI | `CI=1 PLAYWRIGHT_PORT=4273 pnpm run test:ci`：TypeScript、178项单元测试、Vite生产构建及61项 Playwright E2E 全部通过。 |
 | 共享站点目录 | `pnpm run test:catalog`：15项通过。 |
-| GitHub Actions 与公开版 | 本地提交、合入、推送及 Actions/部署尚未完成，完成后补记。 |
-| Codex 内置浏览器 | 本轮尚未进行发布后检查，完成部署后核对公开战役页面及控制台。定向转向时序由实际路线测试验证；不将普通页面烟测描述为 Wave03 运行观察。 |
+| GitHub Actions 与公开版 | 提交 `f83675f` 快进合入 `gunsnglory` 和 `master`；[Actions run 41188397608](https://github.com/wishflow/wishflow-tools/actions/runs/41188397608) 成功，应用 CI、共享 catalog、Cloudflare Pages 与 GitHub Pages 均通过。Worker 按变更范围跳过。 |
+| Codex 内置浏览器公开版 | 打开[`f83675f` 公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=f83675f)，确认战役列表、Cow Gulch 地图、HUD 与4×速度控件加载，error/warn 查询无返回。开局对白的“继续”使正式战役按已保存的4×速度自动推进到 Wave02 提示；随即返回隔离样本，最终样本仍为第1波待开始、生命50、现金 `$65`，正式档案仍为已完成1/1、最高分 `$356`。未结算或新增正式记录。此为公网页面烟测，不是 Wave03 车辆转向的实测；转向图集与计时由上述实际路线回归验证。 |
 | P1-F 总门槛 | 本轮关闭 Cow Gulch Wave03 两种运输车辆首次转向图集与计时这一局部差异；其他动画状态、完整首关画面和交互仍待对照，整关与全部关卡验收仍为0/60。 |
