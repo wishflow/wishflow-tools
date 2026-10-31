@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { GameView } from '../src/game';
+import type { EnemyView, GameView } from '../src/game';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
@@ -83,6 +83,19 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     measureText(text: string) { return { width: text.length * 6 } as TextMetrics; },
     fillText(text: string) { overlayText.push(text); },
   } as unknown as CanvasRenderingContext2D;
+  const sampleEnemy = {
+    id: 'pioneer-1',
+    type: 1,
+    asset: 'pioneer_male',
+    speed: 5,
+    direction: 'south',
+    positionFine: { x: (4 * 7680) + 3840, y: (6 * 7680) + 3840 },
+    hitPoints: 18,
+    maxHitPoints: 18,
+    alive: true,
+    deathRemainingMs: 0,
+    animationFrame: 2,
+  } satisfies EnemyView;
   const view: GameView = {
     frame: 0,
     elapsedMs: 0,
@@ -135,19 +148,11 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
         damageStyle: 0,
       },
     }],
-    enemies: [{
-      id: 'pioneer-1',
-      type: 1,
-      asset: 'pioneer_male',
-      speed: 5,
-      direction: 'south',
-      positionFine: { x: (4 * 7680) + 3840, y: (6 * 7680) + 3840 },
-      hitPoints: 18,
-      maxHitPoints: 18,
-      alive: true,
-      deathRemainingMs: 0,
-      animationFrame: 2,
-    }],
+    enemies: [
+      sampleEnemy,
+      { ...sampleEnemy, id: 'pioneer-outside-map', positionFine: { x: -3840, y: sampleEnemy.positionFine.y } },
+      { ...sampleEnemy, id: 'pioneer-overhanging-map-edge', positionFine: { x: -768, y: sampleEnemy.positionFine.y } },
+    ],
     shots: [{
       id: 'dynamite-1',
       shooterId: 'gunslinger-1',
@@ -168,7 +173,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       frame: 2,
     }],
     drawOrder: [
-      'shot:dynamite-1', 'enemy:pioneer-1',
+      'shot:dynamite-1', 'enemy:pioneer-1', 'enemy:pioneer-outside-map', 'enemy:pioneer-overhanging-map-edge',
       'decoration:1', 'decoration:3', 'decoration:5', 'decoration:4', 'decoration:0',
       'unit:gunslinger-1', 'wagon-debris:wagon-part-1', 'decoration:2',
     ],
@@ -206,6 +211,13 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const enemyDraw = drawCalls.find((args) => args[0] === enemyImage);
   assert.ok(enemyDraw);
   assert.deepEqual(enemyDraw.slice(1, 5), [32, 24, 16, 24]);
+  const enemyDraws = drawCalls.filter((args) => args[0] === enemyImage);
+  assert.equal(enemyDraws.length, 2, 'fully off-map enemies are hidden while a sprite that still overlaps the map remains visible');
+  const overhangingEnemy = enemyDraws[1];
+  assert.ok(overhangingEnemy);
+  assert.ok((overhangingEnemy[5] as number) < viewport.origin.x);
+  assert.ok((overhangingEnemy[5] as number) + (overhangingEnemy[7] as number) > viewport.origin.x,
+    'map-edge visibility uses intersection without clipping the sprite at the map edge');
 
   const decorationDraws = drawCalls.filter((args) => args[0] === cactusImage || args[0] === treeImage
     || args[0] === bushImage || args[0] === rocksImage || args[0] === shackImage);
@@ -231,7 +243,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, images.sfx_mexican_dynamite, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
+    [mapImage, images.sfx_mexican_dynamite, enemyImage, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
       treeImage, unitImage, images.sfx_exploding_parts, bushImage],
     'a shot created after its target draws first when both share the same under-road depth',
   );
