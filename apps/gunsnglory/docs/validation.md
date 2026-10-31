@@ -1506,6 +1506,6 @@ APK 中 type4 使用 `wagon_turn` 并持续200 ms。type8 持续100 ms，`mIsWhi
 | 变异敏感性 | 反转东转北的镜像映射时，全路线断言在 `(12,13)` 失败；恢复映射后测试通过，生产代码无改动。 |
 | 应用 CI | Node 22.23.3 下 TypeScript、180项单元测试和 Vite 生产构建通过；初次 E2E 使用的端口4274被已有服务占用，未终止该服务。改用 `CI=1 PLAYWRIGHT_PORT=53672 pnpm run test:e2e` 后61项 Playwright 全部通过。 |
 | 共享站点目录 | `pnpm run test:catalog`：15项通过。 |
-| GitHub Actions 与公开版 | 本地提交合并推送后记录 Actions、Pages 部署结果。 |
-| Codex 内置浏览器 | 部署后确认公网页面加载及控制台；不将页面烟测写作 Wave03 实际路线运行观察。 |
+| GitHub Actions 与公开版 | 提交 `deed31e` 快进合入 `gunsnglory` 和 `master`；[Actions run 41190315521](https://github.com/wishflow/wishflow-tools/actions/runs/41190315521) 成功，应用测试、共享 catalog、Cloudflare Pages 与 GitHub Pages 均通过。Worker 按变更范围跳过。 |
+| Codex 内置浏览器公开版 | 打开[`deed31e` 公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=deed31e)，确认 Cow Gulch 地图/战役页、HUD、4×速度控件与存档状态加载；最终回到隔离样本为第1波待开始、生命50、现金 `$65`，正式档案仍显示已完成1/1、最高分 `$356`。error/warn 查询无返回。页面烟测未运行 Wave03；全路线转向由上述固定 GameSession 测试验证。 |
 | P1-F 总门槛 | 本轮确认关闭 Wave03 type4/type8 全路线转向帧/镜像映射与 type8 两种图集变体这一局部验证缺口；其它动画和完整首关对照未完成，仍为0/60。 |
