@@ -1578,3 +1578,28 @@ Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；�
 | GitHub Actions 与公开发布 | 提交 `edfd8f7` 已合入 `gunsnglory` 和 `master` 并推送。[Actions run 41205430346](https://github.com/wishflow/wishflow-tools/actions/runs/41205430346) 成功：应用测试和共享目录检查通过，Cloudflare Pages 与 GitHub Pages 部署通过；Worker 按变更范围跳过。 |
 | Codex 内置浏览器公网实测 | 打开[提交 `edfd8f7` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=edfd8f7)，确认正式 Cow Gulch L01、Canvas 地图、HUD、战役入口和保存档案加载。关闭 Wave01 对白后，4×下短时推进到 Wave02 对白，随后返回隔离样本，未结算正式战役。样本临时调为0.25×并完成一波：生命50、逃逸0、击败1、现金 `$66`；本地显示并保存样本高分 `$50`。正式档案仍为已完成1/1、最高分 `$356`；模拟速度恢复为原有4×，页面 error/warn 日志为空。该短时检查不代表完成整关或验证多个目标之间的目标分排序；对应排序由 GameSession 行为测试覆盖。 |
 | P1-F 总门槛 | 本节关闭 Cow Gulch L01 的路线基础分、穿透权重、越界目标分和标记倍数行为差异。燃烧弹/持续伤害组合、整关静态/动态对照和其余59关仍未验收；完整关卡计数保持0/60。 |
+
+## 77. P1-F Cow Gulch 跨类型并列新对象创建顺序
+
+第57节已把深度队列同步移入 `GameSession`，但对每步新增对象仍按对象类型分组插入。多个类型在同一更新步、同一绘制深度创建时，这个分组顺序会改变 APK 的并列队列。本轮保留原来的深度更新阶段，仅按对象实际创建先后插入新对象。
+
+### APK 证据
+
+研究分支 `codex/gunsnglory-spec` 的 REA/JADX 分析中，`GunsAndGloryThread.java:1087–1097` 显示每步先更新对象，再依次移动敌人、更新玩家生成、移动玩家单位和投射物，最后更新波次。车厢残骸与乘员在敌人阶段创建，投射物在单位阶段创建，波次敌人由最后的 `WaveManager` 阶段创建。因此，同一步的创建顺序为残骸/乘员、投射物、波次敌人。
+
+第56节所引 `GameObjectManager.insertDrawOrder()` DEX 区间 `0x408674–0x4086e8` 证明新对象只越过严格更浅的条目；深度相同则插在既有对象之前。故按创建次序依次插入后，队列中的并列顺序应反向排列：波次敌人、投射物、残骸、旧对象。以上为 REA/JADX 与 DEX 分析证据，不是原始 Java 源码。
+
+### 实现与定向回归
+
+`src/game/index.ts` 在预览敌人、车厢残骸、乘员、投射物和波次敌人的创建点记录稳定对象键；`src/game/draw-order.ts` 仍先按原更新阶段修正已存在对象的深度，再按记录的创建顺序插入新对象。若新增绘制对象未登记创建顺序则明确报错，避免静默退回类型分组顺序。
+
+新增 [`draw-order.test.ts`](../tests/draw-order.test.ts) 使用同一深度的旧装饰、新车厢残骸、新投射物和新波次敌人固定 APK 并列规则。旧实现按类型插入，得到 `[残骸, 投射物, 波次敌人, 旧装饰]`，与创建先后推导的预期相反；修复后为 `[波次敌人, 投射物, 残骸, 旧装饰]`。此测试证明并列队列，不宣称精简素材发生像素重叠。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向测试 | 修复前用例按预期失败；修复后 draw-order、运输对象及战役收尾相关定向测试13项通过。 |
+| 应用 CI | Node 22.23.3 下 `CI=1 PLAYWRIGHT_PORT=53673 pnpm run test:ci` 通过：TypeScript 检查、186项单元测试、Vite 生产构建和66项 Playwright E2E。 |
+| 共享站点目录 | `pnpm run test:catalog`：15项测试通过。 |
+| GitHub Actions 与发布 | 提交 `dd58a5f` 已合入 `gunsnglory` 和 `master` 并推送。[Actions run 41208511244](https://github.com/wishflow/wishflow-tools/actions/runs/41208511244) 成功；Guns’n’Glory 测试、共享检查、GitHub Pages 与 Cloudflare Pages 部署均通过，Worker 按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[提交 `dd58a5f` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=dd58a5f)，截图与无障碍树确认战役进度、Cow Gulch 地图、8波 HUD 和倍速控件正常加载；页面保留已有进度1/1、最高分 `$356`。将模拟速度从已显示的4×改为3×，页面提示“设置已保存”，再恢复4×并确认显示4×；未启动或结算战斗。浏览器当前没有 `dev` 控制台能力，因此本轮未核对 error/warn 日志。截图烟测只确认发布与主界面；并列队列由上述定向测试验证。 |
+| P1-F 总门槛 | 本节关闭“同一步跨类型新对象因按类型分组而破坏并列创建顺序”的局部差异。其它深度变化历史、完整 Cow Gulch 首关画面/规则对照及其余关卡仍未验收；完整关卡计数保持0/60。 |
