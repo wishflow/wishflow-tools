@@ -381,6 +381,8 @@ export interface GameView {
   route?: readonly RoutePoint[];
   units: readonly UnitView[];
   enemies: readonly EnemyView[];
+  /** Live enemy chosen by the player as the preferred attack target. */
+  priorityTargetId?: string;
   wagonDebris?: readonly WagonDebrisView[];
   shots: readonly ShotView[];
   /** Stable object keys in the original shared depth queue order. */
@@ -1487,7 +1489,7 @@ function shouldTransitionShotFineZ(shot: MutableShot): boolean {
   return progress < 0.5 && shotArcHeightFine(shot.damageStyle, shot.remainingMs, shot.totalTravelTimeMs) < 7680;
 }
 
-function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[]): MutableEnemy | undefined {
+function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[], priorityTargetId?: string): MutableEnemy | undefined {
   const weapon = unit.weapon;
   if (!weapon) return undefined;
   const maxSquareRange = maxWeaponSquareRange(weapon);
@@ -1499,15 +1501,48 @@ function selectTarget(unit: MutableUnit, enemies: readonly MutableEnemy[]): Muta
     const distanceSquare = unitEnemyDistanceSquare(unit, enemy);
     if (distanceSquare <= 50 || distanceSquare >= maxSquareRange) continue;
 
-    // This sample has one enemy type and no per-enemy priority-map variation.
+    // The APK multiplies the selected preferred target's normal score by ten.
     // Strict greater-than preserves the recovered Vector order for equal scores.
-    const score = damagePenetration(enemy, weapon.damageType) + 1400;
+    const score = (damagePenetration(enemy, weapon.damageType) + 1400)
+      * (enemy.id === priorityTargetId ? 10 : 1);
     if (score > bestScore) {
       bestTarget = enemy;
       bestScore = score;
     }
   }
   return bestTarget;
+}
+
+function nearestPriorityTargetAt(
+  x: number,
+  y: number,
+  enemies: readonly MutableEnemy[],
+): MutableEnemy | undefined {
+  const inputX = tenthTileCoordinate(Math.trunc(x * FINE_UNITS_PER_CELL));
+  const inputY = tenthTileCoordinate(Math.trunc(y * FINE_UNITS_PER_CELL) + 1920);
+  let nearestDistanceSquare = 64;
+  let nearest: MutableEnemy | undefined;
+
+  for (const enemy of enemies) {
+    if (!enemy.alive) continue;
+    const enemyX = tenthTileCoordinate(enemy.positionFine.x + enemy.drawingOffsetFine.x);
+    const enemyY = tenthTileCoordinate(enemy.positionFine.y + enemy.drawingOffsetFine.y);
+    const deltaX = enemyX - inputX;
+    const deltaY = enemyY - inputY;
+    const distanceSquare = (deltaX * deltaX) + (deltaY * deltaY);
+    if (distanceSquare >= nearestDistanceSquare) continue;
+
+    if (enemy.type === 8) {
+      const wagon = enemies.find((candidate) => candidate.alive && candidate.type !== 8
+        && candidate.groupId === enemy.groupId);
+      if (!wagon) continue;
+      nearest = wagon;
+    } else {
+      nearest = enemy;
+    }
+    nearestDistanceSquare = distanceSquare;
+  }
+  return nearest;
 }
 
 const ENEMY_COLLISION_BOX_SIZE_FINE = 7678;
@@ -1883,6 +1918,7 @@ export function createGame(options: {
       const spawnFields = campaignSpawnFields(scenario);
       let frame = 0;
       let elapsedMs = 0;
+      let priorityTargetId: string | undefined;
       let closed = false;
       let paused = false;
       const firstCampaignWave = campaignWaves?.find(({ number }) => number === 1);
@@ -1965,6 +2001,7 @@ export function createGame(options: {
             deathRemainingMs: enemy.deathRemainingMs,
             animationFrame: enemy.animationFrame,
           })),
+          ...(priorityTargetId ? { priorityTargetId } : {}),
           wagonDebris: (wave?.wagonDebris ?? []).map(({ id, positionFine, depthFineY, heightFine, frame }) => ({
             id,
             positionFine: { ...positionFine },
@@ -2323,8 +2360,20 @@ export function createGame(options: {
               const current = unitView(unit, scenario.maxUpgrades ?? 0, elapsedMs);
               return contains(current.hitArea, selection.x, selection.y);
             });
+            if (target) {
+              for (const unit of units) {
+                unit.selected = unit === target;
+                unit.movementTargetFine = undefined;
+              }
+              continue;
+            }
+            const priorityTarget = nearestPriorityTargetAt(selection.x, selection.y, wave?.enemies ?? []);
+            if (priorityTarget) {
+              priorityTargetId = priorityTargetId === priorityTarget.id ? undefined : priorityTarget.id;
+              continue;
+            }
             for (const unit of units) {
-              unit.selected = unit === target;
+              unit.selected = false;
               unit.movementTargetFine = undefined;
             }
           }
@@ -2411,7 +2460,7 @@ export function createGame(options: {
               if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
               if (unit.weaponCooldownMs > 0) continue;
 
-              const target = selectTarget(unit, wave.enemies);
+              const target = selectTarget(unit, wave.enemies, priorityTargetId);
               if (!target) continue;
               const distanceSquare = unitEnemyDistanceSquare(unit, target);
               const maxSquareRange = maxWeaponSquareRange(weapon);
@@ -2667,6 +2716,9 @@ export function createGame(options: {
               wave.settlement = calculateSettlement(wave, difficultyScorePercent, 'victory');
               wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
             }
+          }
+          if (priorityTargetId && !wave?.enemies.some((enemy) => enemy.id === priorityTargetId && enemy.alive)) {
+            priorityTargetId = undefined;
           }
           synchronizeDrawOrder(drawOrderQueue, drawOrderEntries(scenario, units, wave));
           const nextView = observe();

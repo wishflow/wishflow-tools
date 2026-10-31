@@ -4,7 +4,7 @@ import { cowGulchContent, cowGulchP1aSampleContent } from '../src/content/cow-gu
 import { cowGulchDefeatContent } from '../src/content/cow-gulch-defeat';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { cowGulchLevelOneContent } from '../src/content/official-campaign';
-import { createGame, type GameSession, type ScenarioContent, type UnitView } from '../src/game';
+import { GAME_RULES_VERSION, createGame, type GameSession, type ScenarioContent, type UnitView } from '../src/game';
 import { captureReplayState, serializeReplay, type GameReplayPayload } from '../src/game/replay';
 
 const scenario: ScenarioContent = {
@@ -2093,7 +2093,7 @@ test('prepares a complete immutable numeric setup without allocating a session o
 
   assert.equal(prepared.scenarioId, cowGulchContent.id);
   assert.equal(prepared.contentVersion, cowGulchContent.contentVersion);
-  assert.equal(prepared.rulesVersion, 'gng-rules-7');
+  assert.equal(prepared.rulesVersion, GAME_RULES_VERSION);
   assert.ok(prepared.parameters.some(({ path, value }) =>
     path === 'units/gunslinger-1/weapon/damage' && value === 140));
   assert.ok(prepared.parameters.some(({ path, value }) => path === 'maxUpgrades' && value === 0));
@@ -2245,4 +2245,73 @@ test('cycles the sleeping Zzz frames every 200 ms and freezes them while paused'
   session.pause();
   const pausedFrame = sleepingFrame(session.observe().units);
   assert.equal(sleepingFrame(session.advance({ deltaMs: 100 }).units), pausedFrame);
+});
+
+
+function priorityTargetScenario(hitPoints = 1000, includeSecondEnemy = true): ScenarioContent {
+  return {
+    ...combatScenario,
+    id: `priority-target-${hitPoints}-${includeSecondEnemy}`,
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 11, y: 8 }, direction: 'east' },
+      additionalSpawns: includeSecondEnemy ? [{ cell: { x: 12, y: 8 }, direction: 'east' }] : [],
+      baseEnemySpeed: 0,
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints },
+    },
+  };
+}
+
+test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
+  const scenario = priorityTargetScenario();
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-8');
+
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  let view = session.advance({ deltaMs: 0 });
+  assert.equal(view.units[0]?.selected, true);
+  session.submitIntent({ type: 'start-wave' });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.enemies.length, 2);
+
+  const preferred = view.enemies[1]!;
+  const inputX = preferred.positionFine.x / 7680;
+  const inputY = preferred.positionFine.y / 7680 - 0.25;
+  session.submitIntent({ type: 'select-at', x: inputX, y: inputY });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.priorityTargetId, preferred.id);
+  assert.equal(view.units[0]?.selected, true, 'focusing an enemy does not clear the selected player unit');
+  assert.equal(captureReplayState(view).priorityTargetId, preferred.id);
+
+  session.submitIntent({ type: 'select-at', x: inputX + 0.8, y: inputY });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.priorityTargetId, preferred.id, 'the strict 0.8-cell radius excludes the boundary and preserves the current target');
+
+  session.submitIntent({ type: 'select-at', x: inputX, y: inputY });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.priorityTargetId, undefined, 'tapping the current target toggles focus off');
+
+  session.submitIntent({ type: 'select-at', x: inputX, y: inputY });
+  session.advance({ deltaMs: 0 });
+  view = advanceFor(session, 250);
+  assert.equal(view.shots[0]?.targetId, preferred.id, 'the preferred target wins over an equally eligible settler');
+});
+
+test('clears the preferred target when the target dies', async () => {
+  const scenario = priorityTargetScenario(1, false);
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  const target = view.enemies[0]!;
+  session.submitIntent({ type: 'select-at', x: target.positionFine.x / 7680, y: target.positionFine.y / 7680 - 0.25 });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.priorityTargetId, target.id);
+
+  view = advanceFor(session, 250);
+  assert.equal(view.shots[0]?.targetId, target.id);
+  for (let frame = 0; frame < 10 && view.enemies[0]?.alive; frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  assert.equal(view.enemies[0]?.alive, false);
+  assert.equal(view.priorityTargetId, undefined);
 });

@@ -497,7 +497,7 @@ P1 的原始对象数量、状态、基础值、波次明细和来源由[产品�
 | 地图层、道路、路线与 PriorityMap | 60 张 campaign map；原始 tile、background/street/variation 三层、action 1/2/3、分支方向和出口；Cow Gulch / L01 起 | `P1-A/F`，每张新图由对应 `P2/P3-Lxx` 验证；`R/content-inventory.md`、`R/route-and-wave-model.md`、`R/data/static-route-graph.json` | ✓* / 部分 / 部分 / 部分 |
 | 波次、spawn slot 与生成池 | 60 关、527 条 `newWave`、1,377 个 `addToWave`、86 个 spawn-pool action；L01 的 8 波起 | `P1-B/D`，后续全关分别归 P2/P3；`R/data/waves.json`、`R/recovered-source/java/.../Wave.java`、`R/route-and-wave-model.md` | ✓* / 部分 / 部分 / 部分 |
 | 敌人移动、组队、占格、阻挡与生成重试 | 9 类敌人、254 个 spawn、2,350 个 redirector、183 个出口；先验收 L01 直线/分支与第三波配对，再覆盖真实地图组合 | `P1-B/C`，地图组合随 P2/P3；`R/game-loop-and-enemy-update.md`、`R/route-and-wave-model.md`、`R/data/static-route-graph.json` | ✓* / 部分 / 部分 / 部分 |
-| 雇用、升级、目标选择、武器与伤害状态 | 21 个 type 映射、14 组共44行升级数据、9 行敌人抗性/奖励；L01 的枪手/炸弹手，再按首用表扩展 | `P1-A/B`；后续对象归对应首用任务；[产品规格 §4.3–4.7](spec.md#43-参数确定单位与规则消费) | ✓* / 部分 / 部分 / 部分 |
+| 雇用、升级、目标选择、武器与伤害状态 | 21 个 type 映射、14 组共44行升级数据、9 行敌人抗性/奖励；L01 的枪手/炸弹手，再按首用表扩展 | `P1-A/B`；后续对象归对应首用任务；[产品规格 §4.3–4.9](spec.md#43-参数确定单位与规则消费) | ✓* / 部分 / 部分 / 部分 |
 | 运输组死亡、派生乘员、奖励与清理 | enemy type4–6 请求、type8 牵引、最多四个派生槽；L01 第三波 | P1-C 在 L01 完成 type4/type8 运输对；type5/type6 与跨关卡复用留待首用任务；R/game-loop-and-enemy-update.md、R/data/campaign-wave-paired-spawns.json | ✓* / 部分 / 部分 / 部分 |
 | 特殊对象交互 | 炸药 102/110、赌场配对132/150、计时/下注/延迟生成；首个解锁后实图分别 L25/L43 | `P3-OR-L25`、`P3-NV-L43`；[产品规格 §4.4](spec.md#44-地图构造首关初态与雇用)、`R/special-map-interactions.md` | ✓* / 未开始 / 未开始 / 未开始 |
 | 战役进度、难度、结算与正式档案 | 60 关/6 区、三档难度、开放门槛、波间和整关结算、正式进度/高分；Cow Gulch / L01 | `P1-D/E` 已实现 L01 结算与正式档案；`P1-F` 做首关对照；其余关卡归 P2/P3；[产品规格 §4.8](spec.md#48-关卡身份切换与结算)、`R/progress-and-save-data.md` | ✓* / 部分 / 部分 / 部分 |

@@ -221,6 +221,14 @@ Cow Gulch / New Mexico 的战斗配乐按 APK 消费链切换：关卡进入、�
 
 一波结束与整关终局分别判断。每次逻辑更新先检查 `lives <= 0` 并进入败北；否则只有 `WaveManager.waveEmpty` 且敌人列表为空，原版游戏循环才自动调用 `nextWave()`，不要求玩家逐波确认开波。正 `waveDelay` 在更新中倒数；原版倒数按钮只加速该倒数，不负责启动下一波。Cow Gulch L01 八次 `newWave` 的 `waveDelay` 参数均为0，因此没有单独的波次倒数或人工开波输入；但原版仍会在每波前显示对应叙事对白，并暂停游戏线程，直到玩家关闭对白后继续。网页须保留对白序列及其暂停边界，不能把关闭对白模拟成 `start-wave` 输入。仍有活动请求池、等待中的正延迟、敌人或死亡动画尚未清理的运输对象时，不得提前结算；单波清空不等于整关胜利。只有第8波请求、敌人及待清理对象均为空时才胜利。只有正式 Game 终局可由 Progress 写入进度，同一 settlement ID 只应用一次。重开从该关初态开始；旧样本胜利不自动转成真实战役完成，失败或未完成关卡也不能标为已通关。静态依据为 `GunsAndGloryThread` 每帧调用、`WaveManager.updateWave()`、L01 `GameDesignWaves.newWave()` 参数与 Progress 档案契约；首关验收场景见[实施计划](implementation-plan.md)。
 
+### 4.9 敌人优先标记与攻击选择
+
+战斗进行时，玩家可点击或触摸一名存活敌人，将其标记为优先目标。原版把输入点和敌人绘制偏移都量化到十分之一格后比较；输入 Y 先补偿四分之一格，并选择严格小于 `0.8²` 格距离内最近的敌人。再次点中当前目标会取消标记；点在有效半径外不会清除现有标记。点到 type8 牵引马时，原版转而标记同组、非 type8 的车体。
+
+优先标记不取消玩家已选中的我方单位。原版在普通目标得分后对标记敌人乘以10；普通得分还包含 `PriorityMap` 路线优先值、武器穿透以及燃烧弹状态修正，不能只用敌人距离排序代替。目标死亡时自动取消标记。存活标记显示 `hud_crosshair` 的两段上下准星，随目标的绘制偏移和地图视口移动，并在越出画面后受视口裁切。暂停中的战局拒绝新的 Game 输入；测试和实战点选都应在战斗恢复时进行。
+
+以上交互和原版目标分数依据为研究分支 `codex/gunsnglory-spec` 的 `EnemyDirector.setEnemyAsTopPrio`、`UnitDirector`、`GunsAndGloryThread.drawCrossHair` 及 `GameObjectEnemy` REA/JADX DEX 反编译产物；它们不是原始 Java 源码。网页当前已实现命中、切换、死亡清理、视觉反馈和现有目标分数上的10倍标记因子；完整 `PriorityMap` 基分与原版所有状态修正仍归 P1-F 规则对照，不能据此声称整个目标选择已闭环。
+
 ## 5. 已确认的实现决策（Implementation Decisions）
 
 | 决策 | 约束与理由 |

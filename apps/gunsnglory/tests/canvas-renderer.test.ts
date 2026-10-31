@@ -328,6 +328,18 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   );
 
   drawGame(context, view, images, 1, undefined, true);
+  const priorityCrosshair = { naturalWidth: 64, naturalHeight: 16 } as HTMLImageElement;
+  const priorityDrawStart = drawCalls.length;
+  drawGame(context, { ...view, priorityTargetId: 'pioneer-1', elapsedMs: 0 }, {
+    ...images,
+    hud_crosshair: priorityCrosshair,
+  });
+  const priorityDraws = drawCalls.slice(priorityDrawStart).filter((args) => args[0] === priorityCrosshair);
+  assert.equal(priorityDraws.length, 2, 'the original marker draws above and below the preferred target');
+  assert.deepEqual(priorityDraws[0]?.slice(1, 5), [0, 0, 16, 16], 'the APK atlas uses its first 16×16 marker frame');
+  assert.equal(priorityDraws[0]?.[5], priorityDraws[1]?.[5], 'both marker halves stay centered on the target');
+  assert.ok((priorityDraws[0]?.[6] as number) + 16 < (priorityDraws[1]?.[6] as number),
+    'the pulsing marker halves remain separated around the enemy sprite');
   assert.equal(routeCommands.filter((command) => command === 'lineTo').length, view.route!.length - 1);
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));

@@ -832,6 +832,42 @@ export function gameHudPointerActionAt(x: number, y: number): GameHudPointerActi
   return 'covered';
 }
 
+function drawPriorityTargetFeedback(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const target = view.enemies.find((enemy) => enemy.id === view.priorityTargetId && enemy.alive);
+  if (!target) return;
+
+  const image = requiredImage(images, 'hud_crosshair');
+  const frameWidth = image.naturalWidth / 4;
+  const frameHeight = image.naturalHeight;
+  const size = Math.trunc(frameWidth * viewport.scaleFactor);
+  const offset = target.drawingOffsetFine ?? { x: 0, y: 0 };
+  const centerX = viewport.origin.x + ((target.positionFine.x + offset.x) / 240) * viewport.scaleFactor;
+  const feetY = viewport.origin.y + ((target.positionFine.y + offset.y) / 240) * viewport.scaleFactor;
+  const targetFrameHeight = target.type === 4 || target.type === 8 ? 40 : 24;
+  const centerY = Math.trunc(feetY - (targetFrameHeight * viewport.scaleFactor) / 2);
+  const gap = priorityCrosshairGap(view.elapsedMs);
+  const left = Math.trunc(centerX - size / 2);
+  const upperTop = Math.trunc(centerY - size - gap);
+  const lowerTop = Math.trunc(centerY + gap);
+
+  context.save();
+  context.drawImage(image, 0, 0, frameWidth, frameHeight, left, upperTop, size, size);
+  context.drawImage(image, 0, 0, frameWidth, frameHeight, left, lowerTop, size, size);
+  context.restore();
+}
+
+function priorityCrosshairGap(elapsedMs: number): number {
+  const phase = elapsedMs % 1800;
+  return phase < 900
+    ? 20 - (phase / 50)
+    : 2 + ((phase - 900) / 50);
+}
+
 export function drawGame(
   context: CanvasRenderingContext2D,
   view: GameView,
@@ -861,6 +897,7 @@ export function drawGame(
   drawTiles(context, view.map.streets, images, viewport);
   context.restore();
   drawWorldObjects(orderedDrawObjects, drawObjects, false);
+  drawPriorityTargetFeedback(context, view, images, viewport);
   drawSelectedUnitFeedback(context, view, images, viewport);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);

@@ -1745,6 +1745,7 @@ const assetNames = new Set([
   'player_mexican',
   'player_mexican_shot',
   'cursor',
+  'hud_crosshair',
   'sfx_mexican_dynamite',
   'sfx_explosion',
   'gng_hud_0_top',
@@ -2856,7 +2857,9 @@ canvas.addEventListener('pointerdown', (event: PointerEvent) => {
     return;
   }
   dispatch({ type: 'select-at', x: mapPoint.mapX, y: mapPoint.mapY });
-  activeDragUnitId = view.units.find((unit) => unit.selected)?.id;
+  activeDragUnitId = view.units.find((unit) => unit.selected
+    && mapPoint.mapX >= unit.hitArea.x && mapPoint.mapX < unit.hitArea.x + unit.hitArea.width
+    && mapPoint.mapY >= unit.hitArea.y && mapPoint.mapY < unit.hitArea.y + unit.hitArea.height)?.id;
 });
 
 canvas.addEventListener('pointermove', (event: PointerEvent) => {
@@ -2890,7 +2893,7 @@ canvas.addEventListener('pointermove', (event: PointerEvent) => {
     const viewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
     const origin = screenToMapCell(viewport, activePointerOrigin.x, activePointerOrigin.y);
     dispatch({ type: 'select-at', x: origin.x, y: origin.y });
-    activeDragUnitId = view.units.find((unit) => unit.selected)?.id;
+    activeDragUnitId = selectedUnitAt(origin.x, origin.y);
   }
   if (!activeDragUnitId || !view.units.some((unit) => unit.id === activeDragUnitId && unit.selected)) return;
 

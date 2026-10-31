@@ -1524,3 +1524,31 @@ APK 中 type4 使用 `wagon_turn` 并持续200 ms。type8 持续100 ms，`mIsWhi
 | GitHub Actions 与公开发布 | 提交 `ff4aa7c` 合入 `master`；[Actions run 41193440767](https://github.com/wishflow/wishflow-tools/actions/runs/41193440767) 成功，应用测试、共享目录和 Cloudflare Pages / GitHub Pages 部署均通过。Worker 按变更范围跳过。 |
 | Codex 内置浏览器公网核对 | 在[公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=ff4aa7c)关闭首波对白，确认页面滚到完整地图与 HUD；正式档案仍为已完成1/1、最高分 `$356`。已保存的4×速度使临时战局推进到第二波对白并暂停；未完成或结算临时战局，正式档案进度未变。该检查只验证初次地图可见性，不是整关对照。 |
 | P1-F 总门槛 | 修复对白关闭后地图不在首屏内的视口交接问题。路线、战斗、完整关卡画面对照及其余关卡仍未完成，整关验收保持0/60。 |
+
+## 75. P1-F Cow Gulch 敌人优先目标标记
+
+战斗中点选存活敌人后，网页为该目标绘制原版双段准星，并让枪手优先攻击；重复点选同一目标可取消标记，目标死亡后清除标记。本轮交付的是这条输入与反馈切片，不表示 Cow Gulch 完整目标排序或 P1-F 已完成。
+
+### APK 证据与边界
+
+- `codex/gunsnglory-spec` 研究分支中的 REA/JADX DEX 反编译产物 `EnemyDirector.dexdump.txt`，`setEnemyAsTopPrio(II)` 位于 `0x40311c`：输入 Y 加1920 fine units（四分之一格），输入与敌人位置/绘制偏移量化为十分之一格；选择平方距离严格小于64的最近存活敌人。type8 会解析到同组非 type8 车体；再次选中当前对象会清空当前优先目标。
+- `UnitDirector.dexdump.txt` 的 `0x40b17a–0x40b1b4` 显示普通目标分数包含 `PriorityMap` 值和武器穿透；燃烧弹状态可能再将分数减半，当前优先目标之后乘10。网页本轮在既有分数上应用10倍因子；APK 的完整 `PriorityMap` 基分和所有状态修正仍待 P1-F 规则对照，本记录不把它们算作已复刻。
+- `GunsAndGloryThread.dexdump.txt` 的 `drawCrossHair` 位于 `0x3fbab0`，绘制调用位于 `0x3ff638`；它使用 `hud_crosshair` 四格图集的首格绘制上下两段，随 `drawingOffset` 和镜头定位并动画调整间距。对应迁入 PNG 为64×16，首格为16×16。`GameObjectEnemy.dexdump.txt@0x407766` 在被选中的敌人死亡时清除引用。
+
+以上均是 DEX 反编译分析输出，不是原始 Java 源码或运行录像。原 APK 的消费者位置用于核对行为；本节结论不扩展为完整敌人攻击评分的实现声明。
+
+### 实现与验证
+
+Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；战斗意图仍是可重放的 `select-at`。优先目标随战局存在，不写入 IndexedDB；正式档案结构未改变。规则版本升为 `gng-rules-8`，回放 JSON 格式仍为2；旧 `gng-rules-7` 回放按现有版本校验拒绝，不静默迁移。
+
+[`game.test.ts`](../tests/game.test.ts) 验证最近目标、严格0.8格半径、重复点选切换、保持我方单位选择、优先目标在相同候选中优先开火，以及目标死亡清理；[`canvas-renderer.test.ts`](../tests/canvas-renderer.test.ts) 验证两次准星绘制均取原图第一格并分别落在目标锚点上下。新增 [`t26-priority-target.spec.ts`](../tests/e2e/t26-priority-target.spec.ts) 使用真实 Canvas 鼠标和手机触屏输入，再核对准星图集实际绘制。
+
+调试中确认暂停状态会拒绝 Game 输入；在暂停后单步的测试方法无法验证点选，应在活动战斗中输入。触屏测试在生成敌人后减到0.25×并固定随机种子，避免移动目标和随机阵型让点击跨出 APK 的命中半径。拖动起点也必须命中己方单位的实际 hitArea；不能仅因先前已有选中单位，就把从敌人处开始的拖动当成该单位移动。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 规则、Canvas 与回放回归 | `pnpm run test:ci` 包含182项单元测试，全部通过；覆盖新增目标选择、ReplayState 和 Canvas 图集断言。 |
+| 桌面与触屏 E2E | 完整 Playwright 共66项全部通过；新增桌面鼠标、手机触屏选敌和“从敌人处拖动不移动已选枪手”3项均通过。手机选敌用例另以 `--repeat-each=3`，3/3通过。 |
+| 类型与构建 | 同一 `pnpm run test:ci` 中 TypeScript 检查和 Vite 生产构建通过。 |
+| 共享站点与发布 | 本轮提交前待执行；Actions 与公开版浏览器检查完成后在此补记。 |
+| P1-F 总门槛 | 优先目标输入、可视标记、目标生命周期和10倍因子局部关闭；完整 `PriorityMap` 目标基分、Cow Gulch 全关对照及其余59关仍未完成，关卡验收保持0/60。 |
