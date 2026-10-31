@@ -1509,3 +1509,18 @@ APK 中 type4 使用 `wagon_turn` 并持续200 ms。type8 持续100 ms，`mIsWhi
 | GitHub Actions 与公开版 | 提交 `deed31e` 快进合入 `gunsnglory` 和 `master`；[Actions run 41190315521](https://github.com/wishflow/wishflow-tools/actions/runs/41190315521) 成功，应用测试、共享 catalog、Cloudflare Pages 与 GitHub Pages 均通过。Worker 按变更范围跳过。 |
 | Codex 内置浏览器公开版 | 打开[`deed31e` 公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=deed31e)，确认 Cow Gulch 地图/战役页、HUD、4×速度控件与存档状态加载；最终回到隔离样本为第1波待开始、生命50、现金 `$65`，正式档案仍显示已完成1/1、最高分 `$356`。error/warn 查询无返回。页面烟测未运行 Wave03；全路线转向由上述固定 GameSession 测试验证。 |
 | P1-F 总门槛 | 本轮确认关闭 Wave03 type4/type8 全路线转向帧/镜像映射与 type8 两种图集变体这一局部验证缺口；其它动画和完整首关对照未完成，仍为0/60。 |
+
+## 74. P1-F 首波对白后地图视口聚焦
+
+首次进入 Cow Gulch 战役时，开场对白会占用游戏区域。关闭对白后，页面原滚动位置可能让 16:9 游戏画布落在桌面或手机首屏之外；此时战斗已恢复，玩家需要边滚动页面边寻找地图。本轮在对白关闭、确认暂停原因仍为战役对白且页面可见后，先将游戏容器滚动到视口中央，再恢复模拟。规则、相机、地图比例和存档均未改变。
+
+实现位于 [`main.ts`](../src/main.ts) 的 `continueCampaignWaveIntro()`。新增 [`t22-playfield-focus.spec.ts`](../tests/e2e/t22-playfield-focus.spec.ts) 覆盖 1280×720 桌面鼠标与 390×844 手机触屏：对白完整可见，继续后游戏画布完整进入视口，随后立即暂停。该回归只检查开场到战斗视口的交接，不代表关卡玩法验收。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向视口回归 | Node 22.23.3 下运行 `pnpm exec playwright test tests/e2e/t22-playfield-focus.spec.ts --reporter=line`：桌面与手机2项通过；修复前二者均因画布未完整进入视口而失败。 |
+| 应用 CI | Node 22.23.3 下 `CI=1 PLAYWRIGHT_PORT=4312 pnpm run test:ci`：TypeScript、180项单元测试、Vite生产构建和63项 Playwright E2E 全部通过。 |
+| 共享站点目录 | `pnpm run test:catalog`：15项测试通过。 |
+| GitHub Actions 与公开发布 | 提交 `ff4aa7c` 合入 `master`；[Actions run 41193440767](https://github.com/wishflow/wishflow-tools/actions/runs/41193440767) 成功，应用测试、共享目录和 Cloudflare Pages / GitHub Pages 部署均通过。Worker 按变更范围跳过。 |
+| Codex 内置浏览器公网核对 | 在[公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=ff4aa7c)关闭首波对白，确认页面滚到完整地图与 HUD；正式档案仍为已完成1/1、最高分 `$356`。已保存的4×速度使临时战局推进到第二波对白并暂停；未完成或结算临时战局，正式档案进度未变。该检查只验证初次地图可见性，不是整关对照。 |
+| P1-F 总门槛 | 修复对白关闭后地图不在首屏内的视口交接问题。路线、战斗、完整关卡画面对照及其余关卡仍未完成，整关验收保持0/60。 |
