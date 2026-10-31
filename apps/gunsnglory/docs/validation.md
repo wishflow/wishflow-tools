@@ -1451,3 +1451,24 @@ APK 1.8.6 `GameObjectUnit.makeMoveCheck()` 先逐轴调用玩家碰撞管理器�
 | GitHub Actions 与公开部署 | 提交 `df89ebb` 的 [Actions run 41185318893](https://github.com/wishflow/wishflow-tools/actions/runs/41185318893) 成功；Guns’n’Glory 测试、共享站点检查及 Cloudflare Pages、GitHub Pages 部署均通过。 |
 | Codex 内置浏览器公开版 | 打开 [`df89ebb` 公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=df89ebb)，切到隔离样本后用鼠标拖动枪手，界面从“尚未选择单位”更新为“已选择枪手 · Cell (10, 9)”；战局检查显示 `gunslinger-1` 位于 `(9.07, 8.65)`，无敌人，松开后再次读取状态未变化。样本保持第1波待开始、生命50、现金 `$65`；正式档案仍显示已完成1/1、最高分 `$356`，模拟速度4×、音效关闭；浏览器 error/warn 日志为空。此为桌面鼠标公网烟测，缩放后触屏拖动由本地 Playwright 回归覆盖。 |
 | P1-F 总门槛 | 玩家边界规则和相机后触屏拖动的坐标一致性已有覆盖；不代表路线、绘制、所有关卡及鼠标/触屏对照完成，首关整体验收仍为0/60。 |
+
+## 72. P1-F Cow Gulch 车辆首次转向表现
+
+此前测试已覆盖 type4/type8 行走帧与转向图集的渲染镜像，但没有沿 Cow Gulch 实际路线验证首次转向触发、车辆图集选择和计时。本轮补齐 Wave03 运输组在 map01 首个转向点的动态回归；仅新增测试与规格记录，没有改变游戏实现。
+
+### APK 依据与观察范围
+
+研究分支 `codex/gunsnglory-spec` 中 APK 1.8.6 的 JADX/Smali 反编译结果显示：`EnemyDirector` 在路线方向改变时读取 `GameDesignData.enemyDesignData` 的转向计时，并调用 `GameObjectEnemy.setTurningFrame()`；map01 Wave03 的首次转向位于 `(4,10)`，方向由东转南。type4 使用 `wagon_turn`、计时200 ms；type8 的计时为100 ms，其 `mIsWhite=true` 使用 `horse_wagon_turn`，否则使用 `horse_wagon_turn_white`。东转南对应转向图集帧0并水平镜像。转向计时为正时，单位沿新方向移动但保留当前行走帧；计时降至0的更新仍绘制转向帧，下一次模拟更新才恢复行走图集。以上是 APK 反编译分析产物，不是原始 Java 源码，也不是 APK 运行录像。
+
+### 网页回归
+
+[`enemy-animation.test.ts`](../tests/enemy-animation.test.ts) 保留 map01 的路线与 Wave03 type4/type8 内容，清空 Wave01/02 的生成请求以隔离目标运输队，再用固定种子推进真实路线。测试分别断言首次东转南时的图集、帧、镜像和行走帧保持，并验证 type8 经过100 ms、type4经过200 ms后仍显示转向帧，后续1 ms推进才恢复行走图集。另以临时反转 type8 图集映射的 mutation check 确认断言会失败；映射已恢复，生产代码未改动。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向动画回归 | Node 22.23.3 下 `node --import tsx --test tests/enemy-animation.test.ts`：4项通过，包含两个既有行走帧用例与两个新增实际路线转向用例。 |
+| 应用 CI | `CI=1 PLAYWRIGHT_PORT=4273 pnpm run test:ci`：TypeScript、178项单元测试、Vite生产构建及61项 Playwright E2E 全部通过。 |
+| 共享站点目录 | `pnpm run test:catalog`：15项通过。 |
+| GitHub Actions 与公开版 | 本地提交、合入、推送及 Actions/部署尚未完成，完成后补记。 |
+| Codex 内置浏览器 | 本轮尚未进行发布后检查，完成部署后核对公开战役页面及控制台。定向转向时序由实际路线测试验证；不将普通页面烟测描述为 Wave03 运行观察。 |
+| P1-F 总门槛 | 本轮关闭 Cow Gulch Wave03 两种运输车辆首次转向图集与计时这一局部差异；其他动画状态、完整首关画面和交互仍待对照，整关与全部关卡验收仍为0/60。 |
