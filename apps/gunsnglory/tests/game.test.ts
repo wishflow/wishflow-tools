@@ -1570,6 +1570,7 @@ test('keeps the pioneer inside the TDM route cells from spawn through the exit',
   const definition = cowGulchPreviewWave;
   const waypoints = [definition.spawn.cell, ...definition.redirects.map(({ cell }) => cell), definition.exit];
   const routeCells = new Set<string>();
+  const crossedOriginalBridges = new Set<string>();
 
   for (let index = 1; index < waypoints.length; index += 1) {
     const from = waypoints[index - 1]!;
@@ -1601,11 +1602,15 @@ test('keeps the pioneer inside the TDM route cells from spawn through the exit',
       if (x >= 0 && x < cowGulchContent.map.width && y >= 0 && y < cowGulchContent.map.height) {
         assert.ok(routeCells.has(`${x},${y}`), `enemy must stay on the TDM route at (${x}, ${y})`);
       }
+      if (x === 2 && y === 10) crossedOriginalBridges.add('west');
+      if (x === 12 && y === 9) crossedOriginalBridges.add('east');
     }
     view = session.advance({ deltaMs: 100 });
   }
 
   assert.equal(view.wave?.phase, 'complete', 'the sample should leave the map through its TDM exit');
+  assert.deepEqual([...crossedOriginalBridges].sort(), ['east', 'west'],
+    'the original route crosses the west and east bridge cells; it must not be rerouted around them');
 });
 
 test('observing a running wave does not advance time, position, or its random stream', async () => {
