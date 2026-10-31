@@ -1720,8 +1720,8 @@ function getDisplayPixelScale(): number {
 
 function currentGameStepEnvironment(): { tileSizePixels: number } {
   const displayPixelScale = getDisplayPixelScale();
-  const baseMapViewport = getMapViewport(view, displayPixelScale);
-  return { tileSizePixels: Math.max(1, Math.trunc(baseMapViewport.tileSize * displayPixelScale)) };
+  const mapViewport = getMapViewport(view, displayPixelScale, mapCamera);
+  return { tileSizePixels: Math.max(1, Math.trunc(mapViewport.tileSize * displayPixelScale)) };
 }
 
 const assetNames = new Set([

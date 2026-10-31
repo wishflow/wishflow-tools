@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
 import { openSingleWaveSample } from './helpers';
 
@@ -203,6 +204,70 @@ test('converting a one-finger drag to a pinch stops movement and locks the remai
     expect(await canvasHash(page)).toBe(stableCanvas);
     await cdp.detach();
   } finally {
+    await context.close();
+  }
+});
+
+test('simulation replay records the zoomed map tile width after a touch pinch', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 1,
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await context.newPage();
+  await installAutoContinueCampaignWaveIntro(page);
+  const cdp = await context.newCDPSession(page);
+  try {
+    await page.goto('/');
+    await openSingleWaveSample(page, 'tap');
+    const canvas = page.getByTestId('game-canvas');
+    const unitPoint = await mapPoint(page, 8.5, 8.25);
+    const centered = { x: unitPoint.x, y: unitPoint.y };
+    const shifted = { x: centered.x - 8, y: centered.y + 5 };
+
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [
+        { x: centered.x - 18, y: centered.y, id: 1 },
+        { x: centered.x + 18, y: centered.y, id: 2 },
+      ],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [
+        { x: shifted.x - 42, y: shifted.y, id: 1 },
+        { x: shifted.x + 42, y: shifted.y, id: 2 },
+      ],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await expect(canvas).toBeVisible();
+
+    const displayedBaseTilePixels = await canvas.evaluate((element) => {
+      const bounds = element.getBoundingClientRect();
+      return Math.floor(bounds.width * (60 / 1024));
+    });
+    const speed = page.getByRole('slider', { name: 'Simulation speed' });
+    await speed.focus();
+    await speed.press('End');
+    await expect(speed).toHaveValue('4');
+    await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
+    await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory', { timeout: 15_000 });
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByTestId('export-replay').click(),
+    ]);
+    const replayPath = await download.path();
+    expect(replayPath).not.toBeNull();
+    const replay = JSON.parse(await readFile(replayPath!, 'utf8')) as {
+      frames: Array<{ tileSizePixels: number }>;
+    };
+    expect(replay.frames.length).toBeGreaterThan(0);
+    expect(replay.frames.every(({ tileSizePixels }) => tileSizePixels > displayedBaseTilePixels * 2),
+      'every frame should use the map tile width after the pinch zoom').toBe(true);
+  } finally {
+    await cdp.detach();
     await context.close();
   }
 });
