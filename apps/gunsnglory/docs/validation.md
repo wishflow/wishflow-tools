@@ -1576,5 +1576,5 @@ Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；�
 | 完整类型、单元、构建与浏览器验证 | Node 22.23.3（显式设置当前进程 PATH；未改默认版本）运行 `CI=1 PLAYWRIGHT_PORT=53672 pnpm run test:ci`：类型检查、185 项单元测试、Vite 生产构建及 66 项 Playwright E2E 全部通过。 |
 | 共享站点目录 | `pnpm run test:catalog`：15 项测试全部通过。 |
 | GitHub Actions 与公开发布 | 提交 `edfd8f7` 已合入 `gunsnglory` 和 `master` 并推送。[Actions run 41205430346](https://github.com/wishflow/wishflow-tools/actions/runs/41205430346) 成功：应用测试和共享目录检查通过，Cloudflare Pages 与 GitHub Pages 部署通过；Worker 按变更范围跳过。 |
-| Codex 内置浏览器公网实测 | 打开[提交 `edfd8f7` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=edfd8f7)，确认正式 Cow Gulch L01、Canvas 地图、HUD、战役入口和保存档案加载。为避免推进正式战役，切回隔离样本并观察一波结算：生命50、逃逸0、击败1、现金 `$66`；样本本地高分显示 `$50`。正式档案仍为已完成1/1、最高分 `$356`；模拟速度已恢复为原有4×，页面 error/warn 日志为空。该短时检查不代表完成整关或验证多个目标之间的目标分排序；对应排序由 GameSession 行为测试覆盖。 |
+| Codex 内置浏览器公网实测 | 打开[提交 `edfd8f7` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=edfd8f7)，确认正式 Cow Gulch L01、Canvas 地图、HUD、战役入口和保存档案加载。关闭 Wave01 对白后，4×下短时推进到 Wave02 对白，随后返回隔离样本，未结算正式战役。样本临时调为0.25×并完成一波：生命50、逃逸0、击败1、现金 `$66`；本地显示并保存样本高分 `$50`。正式档案仍为已完成1/1、最高分 `$356`；模拟速度恢复为原有4×，页面 error/warn 日志为空。该短时检查不代表完成整关或验证多个目标之间的目标分排序；对应排序由 GameSession 行为测试覆盖。 |
 | P1-F 总门槛 | 本节关闭 Cow Gulch L01 的路线基础分、穿透权重、越界目标分和标记倍数行为差异。燃烧弹/持续伤害组合、整关静态/动态对照和其余59关仍未验收；完整关卡计数保持0/60。 |
