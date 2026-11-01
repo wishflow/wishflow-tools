@@ -59,7 +59,6 @@ test('desktop mouse pans the map and moves the minimap viewport frame with it', 
   await page.mouse.move(minimapEnd.x, minimapEnd.y, { steps: 5 });
   await page.mouse.up();
   expect(await canvasHash(page), 'dragging the minimap moves the main view and its outline').not.toBe(beforeMinimapDrag);
-  await page.screenshot({ path: '/private/tmp/gng-map-pan-minimap.png' });
 });
 
 test('mobile touch drags the minimap viewport', async ({ browser }) => {
