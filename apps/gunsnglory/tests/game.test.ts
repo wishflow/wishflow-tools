@@ -1083,7 +1083,7 @@ test('Mexican dynamite follows the researched arc and drops below roads without 
   let descendingLowArcDrawnAboveRoad = false;
   let sameFrameDepthStayedStable = false;
   let lateLowArcSeen = false;
-  for (let frame = 0; frame < 80; frame += 1) {
+  for (let frame = 0; frame < 140; frame += 1) {
     const view = session.advance({ deltaMs: 50 });
     const shot = view.shots.find((candidate) => candidate.explosionRemainingMs === undefined);
     if (!shot) continue;
@@ -1144,7 +1144,7 @@ test('special projectile arcs use the original Java float32 ratio for all four d
           damage: 1,
           damageStyle: style,
           areaDamageFine: 0,
-          projectileSpeed: 2160,
+          projectileSpeed: style === 6 ? 2_160 : 400,
           reloadTimeMs: 500,
         },
       }],
@@ -1166,9 +1166,14 @@ test('special projectile arcs use the original Java float32 ratio for all four d
     session.advance({ deltaMs: 100 });
     session.advance({ deltaMs: 51 });
     session.advance({ deltaMs: 100 });
-    const view = session.advance({ deltaMs: 99 });
-    const shot = view.shots.find((candidate) => candidate.explosionRemainingMs === undefined);
+    let view = session.advance({ deltaMs: 99 });
+    let shot = view.shots.find((candidate) => candidate.explosionRemainingMs === undefined);
     assert.ok(shot, `damage style ${style} produces an active projectile at the fixture boundary`);
+    if (shot.remainingMs > 50) {
+      view = advanceFor(session, shot.remainingMs - 50);
+      shot = view.shots.find((candidate) => candidate.explosionRemainingMs === undefined);
+      assert.ok(shot);
+    }
     assert.equal(shot.remainingMs, 50);
     assert.equal(shot.heightFine, expectedHeightFine,
       `damage style ${style} must preserve Java float32 rounding before integer casts`);
@@ -1213,7 +1218,12 @@ test('the Mexican dynamite hits inside the strict one-tile radius and leaves bou
   session.submitIntent({ type: 'start-wave' });
   session.advance({ deltaMs: 0 });
   advanceFor(session, 300);
-  const view = session.advance({ deltaMs: 100 });
+  const shot = session.observe().shots.find((candidate) => candidate.id === 'preview-shot-1');
+  assert.ok(shot);
+  const beforeImpact = advanceFor(session, shot.remainingMs - 1);
+  assert.equal(beforeImpact.events.some((event) => event.type === 'shot-exploded' && event.shotId === shot.id), false,
+    'the dynamite has not arrived one millisecond before its endpoint');
+  const view = session.advance({ deltaMs: 1 });
 
   assert.deepEqual(view.events.filter((event) => event.type === 'shot-exploded'), [{
     type: 'shot-exploded',
@@ -1270,7 +1280,7 @@ test('requests the dynamite impact sound for damage style 4', async () => {
   session.submitIntent({ type: 'start-wave' });
   session.advance({ deltaMs: 0 });
   advanceFor(session, 300);
-  const view = session.advance({ deltaMs: 100 });
+  const view = advanceFor(session, 1_040);
 
   assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
 });
@@ -2292,6 +2302,260 @@ function priorityTargetScenario(hitPoints = 1000, includeSecondEnemy = true): Sc
     },
   };
 }
+
+test('uses the APK projectile base-time percentage and integer divisions for styles 0 and 3', async () => {
+  const cases = [
+    { style: 0 as const, spawnX: 11, totalMs: 80 },
+    { style: 0 as const, spawnX: 12, totalMs: 140 },
+    { style: 0 as const, spawnX: 13, totalMs: 250 },
+    { style: 0 as const, spawnX: 11.4, totalMs: 100 },
+    { style: 3 as const, spawnX: 11, totalMs: 1150 },
+    { style: 3 as const, spawnX: 12, totalMs: 1220 },
+    { style: 3 as const, spawnX: 13, totalMs: 1330 },
+    { style: 3 as const, spawnX: 11.4, totalMs: 1170 },
+  ];
+
+  for (const { style, spawnX, totalMs } of cases) {
+    const base = combatScenario.units[0]!.weapon!;
+    const projectileScenario: ScenarioContent = {
+      ...combatScenario,
+      id: `projectile-time-${style}-${spawnX}`,
+      units: [{
+        ...combatScenario.units[0]!,
+        type: style === 3 ? 'mexican' : 'gunslinger',
+        weapon: {
+          ...base,
+          damage: 1,
+          rangeFine: style === 3 ? 30_720 : 38_400,
+          projectileSpeed: style === 3 ? 1_500 : 600,
+          damageStyle: style,
+          areaDamageFine: style === 3 ? 7_680 : 0,
+        },
+      }],
+      previewWave: {
+        ...combatScenario.previewWave!,
+        spawn: { cell: { x: spawnX, y: 8 }, direction: 'east' },
+        baseEnemySpeed: 0,
+        enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 100_000 },
+      },
+    };
+    const session = await createGame({ scenarios: { [projectileScenario.id]: projectileScenario } }).open({
+      scenarioId: projectileScenario.id,
+      randomSeed: 42,
+    });
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+    advanceFor(session, 249);
+    const fired = session.advance({ deltaMs: 1 });
+
+    assert.equal(fired.shots.length, 1, `style ${style} at spawn ${spawnX} remains in flight`);
+    assert.equal(fired.shots[0]?.remainingMs, totalMs - 1,
+      `style ${style} at spawn ${spawnX} uses the recovered time percentage and truncation; ${JSON.stringify({ unit: fired.units[0]?.positionFine, target: fired.enemies[0]?.positionFine })}`);
+  }
+});
+
+test('keeps dynamite alive through target death and cleanup, then damages a nearby survivor', async () => {
+  const base = priorityTargetScenario(1_000, true);
+  const mexican = combatScenario.units[0]!;
+  const gunslinger = combatScenario.units[0]!;
+  const lifecycleScenario: ScenarioContent = {
+    ...base,
+    id: 'dynamite-target-cleanup-lifecycle',
+    units: [
+      {
+        ...mexican,
+        id: 'mexican-lifecycle',
+        type: 'mexican',
+        cell: { x: 9, y: 7 },
+        weapon: {
+          ...mexican.weapon!,
+          damage: 500,
+          damageType: 'heavy',
+          rangeFine: 30_720,
+          reloadTimeMs: 500,
+          projectileSpeed: 1_500,
+          damageStyle: 3,
+          areaDamageFine: 7_680,
+          specialReloadFrequency: 1,
+          specialReloadTimeMs: 20_000,
+        },
+      },
+      {
+        ...gunslinger,
+        id: 'ordinary-lifecycle',
+        type: 'gunslinger',
+        cell: { x: 9, y: 6 },
+        weapon: {
+          ...gunslinger.weapon!,
+          damage: 50,
+          reloadTimeMs: 500,
+          projectileSpeed: 4_000,
+          damageStyle: 0,
+          specialReloadFrequency: 1,
+          specialReloadTimeMs: 20_000,
+        },
+      },
+      {
+        ...gunslinger,
+        id: 'gunslinger-lifecycle',
+        type: 'gunslinger',
+        cell: { x: 7, y: 7 },
+        weapon: {
+          ...gunslinger.weapon!,
+          damage: 2_000,
+          rangeFine: 38_400,
+          reloadTimeMs: 1_100,
+          projectileSpeed: 100,
+          damageStyle: 0,
+          specialReloadFrequency: 1,
+          specialReloadTimeMs: 20_000,
+        },
+      },
+    ],
+    previewWave: {
+      ...base.previewWave!,
+      spawn: { cell: { x: 8, y: 8 }, direction: 'east' },
+      additionalSpawns: [{ cell: { x: 8.5, y: 8 }, direction: 'east' }],
+      baseEnemySpeed: 0,
+      enemy: {
+        ...base.previewWave!.enemy!,
+        hitPoints: 1_000,
+        penetration: { ...base.previewWave!.enemy!.penetration, light: 100, heavy: 25 },
+      },
+    },
+  };
+  const session = await createGame({ scenarios: { [lifecycleScenario.id]: lifecycleScenario } }).open({
+    scenarioId: lifecycleScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  const mainTarget = view.enemies[0]!;
+  const survivor = view.enemies[1]!;
+  session.submitIntent({ type: 'select-at', x: mainTarget.positionFine.x / 7_680, y: mainTarget.positionFine.y / 7_680 - 0.25 });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.priorityTargetId, mainTarget.id);
+
+  view = advanceFor(session, 249);
+  view = session.advance({ deltaMs: 1 });
+  const dynamite = view.shots.find((shot) => shot.shooterId === 'mexican-lifecycle');
+  assert.ok(dynamite, 'Mexican throws before the Gunslinger kills the focused target');
+  const ordinaryShot = view.shots.find((shot) => shot.shooterId === 'ordinary-lifecycle');
+  assert.ok(ordinaryShot, 'an ordinary single-target shot is also in flight');
+
+  let target = view.enemies.find((enemy) => enemy.id === mainTarget.id);
+  for (let frame = 0; frame < 20 && target?.alive; frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+    target = view.enemies.find((enemy) => enemy.id === mainTarget.id);
+  }
+  assert.equal(target?.alive, false, 'the other unit kills the original target while dynamite is in flight');
+  assert.ok(view.shots.some(({ id }) => id === dynamite.id), 'the shot survives its target becoming dead');
+  assert.ok(view.shots.some(({ id }) => id === ordinaryShot.id), 'the ordinary bullet also completes its flight');
+
+  for (let frame = 0; frame < 20 && target; frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+    target = view.enemies.find((enemy) => enemy.id === mainTarget.id);
+  }
+  assert.equal(target, undefined, 'the dead target is cleaned from the active enemy list before impact');
+  assert.ok(view.shots.some(({ id }) => id === dynamite.id), 'the shot survives target cleanup');
+  assert.ok(view.shots.some(({ id }) => id === ordinaryShot.id), 'the ordinary bullet survives target cleanup without changing its hit rules');
+
+  let impact = view;
+  for (let frame = 0; frame < 20 && !impact.events.some((event) => event.type === 'shot-exploded' && event.shotId === dynamite.id); frame += 1) {
+    impact = session.advance({ deltaMs: 100 });
+  }
+  assert.deepEqual(impact.events.filter((event) => event.type === 'shot-exploded' && event.shotId === dynamite.id), [{
+    type: 'shot-exploded',
+    shotId: dynamite.id,
+    targetId: mainTarget.id,
+    affectedEnemyIds: [survivor.id],
+  }]);
+  assert.equal(impact.enemies.find((enemy) => enemy.id === survivor.id)?.hitPoints, 875);
+
+  for (let frame = 0; frame < 30 && impact.shots.some(({ id }) => id === ordinaryShot.id); frame += 1) {
+    impact = session.advance({ deltaMs: 100 });
+  }
+  assert.equal(impact.shots.some(({ id }) => id === ordinaryShot.id), false, 'the ordinary bullet expires at its endpoint');
+  assert.equal(impact.enemies.find((enemy) => enemy.id === survivor.id)?.hitPoints, 875,
+    'an ordinary bullet cannot damage an unrelated survivor after its locked target is gone');
+});
+
+test('keeps dynamite flying to its last endpoint after the target escapes', async () => {
+  const base = combatScenario.units[0]!;
+  const scenarioUnderTest: ScenarioContent = {
+    ...combatScenario,
+    id: 'dynamite-target-escape-lifecycle',
+    units: [{
+      ...base,
+      type: 'mexican',
+      cell: { x: 2, y: 7 },
+      weapon: {
+        ...base.weapon!,
+        damage: 500,
+        damageType: 'heavy',
+        rangeFine: 30_720,
+        reloadTimeMs: 500,
+        projectileSpeed: 1_500,
+        damageStyle: 3,
+        areaDamageFine: 7_680,
+        specialReloadFrequency: 1,
+        specialReloadTimeMs: 20_000,
+      },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 2, y: 8 }, direction: 'east' },
+      additionalSpawns: [],
+      exit: { x: 1, y: 8 },
+      baseEnemySpeed: 3_000,
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 1_000 },
+    },
+  };
+  const session = await createGame({ scenarios: { [scenarioUnderTest.id]: scenarioUnderTest } }).open({
+    scenarioId: scenarioUnderTest.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  view = advanceFor(session, 249);
+  view = session.advance({ deltaMs: 1 });
+  const dynamite = view.shots[0];
+  assert.ok(dynamite);
+
+  let sawEscapingTarget = false;
+  let lastTargetPosition = { ...view.enemies[0]!.positionFine };
+  let targetSpeed = view.enemies[0]!.speed;
+  let escapeEndpoint: { x: number; y: number } | undefined;
+  for (let frame = 0; frame < 20 && view.enemies.length > 0; frame += 1) {
+    const previousPosition = { ...view.enemies[0]!.positionFine };
+    targetSpeed = view.enemies[0]!.speed;
+    view = session.advance({ deltaMs: 100 });
+    if (view.enemies[0]) {
+      lastTargetPosition = { ...view.enemies[0].positionFine };
+    } else if (view.wave?.escapedEnemies === 1) {
+      escapeEndpoint = { x: previousPosition.x + targetSpeed, y: previousPosition.y };
+    }
+    sawEscapingTarget ||= view.wave?.escapedEnemies === 1;
+  }
+  assert.equal(sawEscapingTarget, true, 'the target leaves through the configured exit');
+  assert.equal(view.enemies.length, 0);
+  assert.ok(view.shots.some(({ id }) => id === dynamite.id), 'the projectile is independent of enemy-list membership');
+
+  let impact = view;
+  for (let frame = 0; frame < 20 && !impact.events.some((event) => event.type === 'shot-exploded' && event.shotId === dynamite.id); frame += 1) {
+    impact = session.advance({ deltaMs: 100 });
+  }
+  assert.deepEqual(impact.events.filter((event) => event.type === 'shot-exploded' && event.shotId === dynamite.id), [{
+    type: 'shot-exploded',
+    shotId: dynamite.id,
+    targetId: dynamite.targetId,
+    affectedEnemyIds: [],
+  }]);
+  assert.deepEqual(escapeEndpoint, { x: lastTargetPosition.x + targetSpeed, y: lastTargetPosition.y },
+    'the escape-frame endpoint is the previous position plus the final eastward movement step');
+  assert.deepEqual(impact.shots.find(({ id }) => id === dynamite.id)?.positionFine, escapeEndpoint,
+    'the projectile resolves at the target position captured on its escape frame');
+});
 
 test('uses the APK route priority map before choosing among in-range enemies', async () => {
   const routeScenario = priorityTargetScenario();

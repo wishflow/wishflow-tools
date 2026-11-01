@@ -472,6 +472,8 @@ interface MutableShot {
   imageAsset: ShotView['imageAsset'];
   animationFrame: number;
   startFine: { x: number; y: number };
+  /** Last target draw position; the APK keeps its target reference after enemy-list cleanup. */
+  targetPositionFine: { x: number; y: number };
   positionFine: { x: number; y: number };
   /** Cow Gulch player units inherit the original above-road fineZ at projectile creation. */
   fineZ: 0 | 7680;
@@ -1426,6 +1428,21 @@ function enemyDistanceSquare(first: MutableEnemy, second: MutableEnemy): number 
   return (dx * dx) + (dy * dy);
 }
 
+function enemyShotPosition(enemy: MutableEnemy): { x: number; y: number } {
+  return {
+    x: enemy.positionFine.x + enemy.drawingOffsetFine.x,
+    y: enemy.positionFine.y + enemy.drawingOffsetFine.y,
+  };
+}
+
+function shotTargetDistanceSquare(positionFine: { x: number; y: number }, enemy: MutableEnemy): number {
+  const dx = tenthTileCoordinate(positionFine.x)
+    - tenthTileCoordinate(enemy.positionFine.x + enemy.drawingOffsetFine.x);
+  const dy = tenthTileCoordinate(positionFine.y)
+    - tenthTileCoordinate(enemy.positionFine.y + enemy.drawingOffsetFine.y);
+  return (dx * dx) + (dy * dy);
+}
+
 function unitAttackCenterTenthTiles(unit: MutableUnit): { x: number; y: number } {
   return {
     x: tenthTileCoordinate(unit.positionFine.x),
@@ -1442,12 +1459,27 @@ function maxWeaponSquareRange(weapon: UnitWeaponDefinition): number {
   return rangeInTenthTiles * rangeInTenthTiles;
 }
 
+function projectileBaseTimePercent(damageStyle: UnitWeaponDefinition['damageStyle']): number {
+  switch (damageStyle) {
+    case 0: return 10;
+    case 1:
+    case 2: return 50;
+    case 3:
+    case 4:
+    case 5: return 75;
+    case 6:
+      // Rocket style uses a separate two-leg algorithm in the APK, outside Cow Gulch R4.
+      return 10;
+  }
+}
+
 function projectileTravelTime(
   distanceSquare: number,
   maxSquareRange: number,
   weapon: UnitWeaponDefinition,
 ): number {
-  const baseTimePercent = 10;
+  // Styles 0-5 use this straight-line formula; style 6 keeps its existing fallback above.
+  const baseTimePercent = projectileBaseTimePercent(weapon.damageStyle);
   const baseSteps = Math.trunc(weapon.projectileSpeed / 10);
   const distanceSteps = Math.trunc(((100 - baseTimePercent) * baseSteps * distanceSquare) / maxSquareRange);
   return Math.trunc(((baseTimePercent * baseSteps) + distanceSteps) / 100) * 10;
@@ -2444,6 +2476,11 @@ export function createGame(options: {
                 if (nextEnemy?.groupId === enemy.groupId) movementBlockedEnemyId = nextEnemy.id;
               }
               if (!result.escaped) continue;
+              for (const shot of wave.shots) {
+                if (!shot.impactResolved && shot.targetId === enemy.id) {
+                  shot.targetPositionFine = enemyShotPosition(enemy);
+                }
+              }
               wave.enemies = wave.enemies.filter((candidate) => candidate !== enemy);
               // APK removeEnemyWithPenalty() removes type-8 tow objects without charging a life.
               if (enemy.type !== 8) {
@@ -2486,6 +2523,7 @@ export function createGame(options: {
                 imageAsset: weapon.damageStyle === 3 ? 'sfx_mexican_dynamite' : undefined,
                 animationFrame: 0,
                 startFine,
+                targetPositionFine: enemyShotPosition(target),
                 positionFine: { ...startFine },
                 fineZ: 7680,
                 fineZTransitionPending: false,
@@ -2530,15 +2568,13 @@ export function createGame(options: {
                 continue;
               }
               const target = wave.enemies.find((enemy) => enemy.id === shot.targetId);
-              if (!target || !target.alive) {
-                wave.shots = wave.shots.filter((candidate) => candidate !== shot);
-                continue;
-              }
+              if (target) shot.targetPositionFine = enemyShotPosition(target);
+              const targetPositionFine = shot.targetPositionFine;
               shot.remainingMs = Math.max(0, shot.remainingMs - deltaMs);
               const elapsedShotMs = shot.totalTravelTimeMs - shot.remainingMs;
               shot.positionFine = {
-                x: Math.trunc(((shot.startFine.x * shot.remainingMs) + ((target.positionFine.x + target.drawingOffsetFine.x) * elapsedShotMs)) / shot.totalTravelTimeMs),
-                y: Math.trunc(((shot.startFine.y * shot.remainingMs) + ((target.positionFine.y + target.drawingOffsetFine.y) * elapsedShotMs)) / shot.totalTravelTimeMs),
+                x: Math.trunc(((shot.startFine.x * shot.remainingMs) + (targetPositionFine.x * elapsedShotMs)) / shot.totalTravelTimeMs),
+                y: Math.trunc(((shot.startFine.y * shot.remainingMs) + (targetPositionFine.y * elapsedShotMs)) / shot.totalTravelTimeMs),
               };
               shot.animationFrame = Math.floor(elapsedShotMs / 100) % (shot.damageStyle === 3 ? 3 : 10);
               if (shot.remainingMs > 0) continue;
@@ -2546,9 +2582,13 @@ export function createGame(options: {
               const areaRadiusTenthTiles = Math.trunc((shot.areaDamageFine * 10) / FINE_UNITS_PER_CELL);
               const areaSquare = areaRadiusTenthTiles * areaRadiusTenthTiles;
               const affected = shot.areaDamageFine > 0
-                ? wave.enemies.filter((enemy) => enemy.alive && enemy.damageable && (enemy.id === target.id
-                  || enemyDistanceSquare(target, enemy) < areaSquare))
-                : [target];
+                ? wave.enemies.filter((enemy) => enemy.alive && enemy.damageable && (
+                  enemy.id === shot.targetId
+                  || (target
+                    ? enemyDistanceSquare(target, enemy)
+                    : shotTargetDistanceSquare(targetPositionFine, enemy)) < areaSquare
+                ))
+                : target ? [target] : [];
               const affectedEnemyIds: string[] = [];
               for (const hitEnemy of affected) {
                 if (!hitEnemy.alive || !hitEnemy.damageable) continue;
@@ -2583,11 +2623,11 @@ export function createGame(options: {
                 shot.explosionRemainingMs = 799;
                 shot.remainingMs = 799;
                 shot.animationFrame = 0;
-                shot.positionFine = { x: target.positionFine.x + target.drawingOffsetFine.x, y: target.positionFine.y + target.drawingOffsetFine.y };
+                shot.positionFine = { ...targetPositionFine };
                 wave.events.push({
                   type: 'shot-exploded',
                   shotId: shot.id,
-                  targetId: target.id,
+                  targetId: shot.targetId,
                   affectedEnemyIds,
                 });
               } else {
