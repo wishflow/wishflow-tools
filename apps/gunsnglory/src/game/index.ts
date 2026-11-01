@@ -1185,7 +1185,8 @@ function campaignEnemyHitPoints(
   const baseHitPoints = campaignEnemyDefinition(scenario, type).hitPoints;
   const levelMultiplier = scenario.previewWave?.enemyHitPointMultiplierPercentByDifficulty?.[difficulty] ?? 100;
   const scaledWaveHitPoints = Math.trunc((levelMultiplier * wave.hitPointMultiplierPercent) / 100);
-  const hpFactor = Math.trunc((dynamicDifficulty * scaledWaveHitPoints * 2) / 10);
+  const hpDifficulty = Math.max(500, Math.min(difficulty === 'easy' ? 1250 : 1500, dynamicDifficulty));
+  const hpFactor = Math.trunc((hpDifficulty * scaledWaveHitPoints * 2) / 10);
   return Math.max(1, Math.trunc((baseHitPoints * hpFactor) / 2000));
 }
 
@@ -1370,6 +1371,14 @@ function updateWagonDebris(parts: MutableWagonPart[], deltaMs: number): void {
     const part = parts[index]!;
     if (part.zDirection <= 0 && part.heightFine < FINE_UNITS_PER_CELL) parts.splice(index, 1);
   }
+}
+
+function campaignEscapePenalty(type: number): number {
+  if (type === 4) return 2;
+  if (type === 5) return 3;
+  if (type === 6) return 4;
+  if (type === 7) return 10;
+  return 1;
 }
 
 function recordCampaignEscape(wave: MutableWave, livesMax: number, penalty: number): void {
@@ -2431,10 +2440,13 @@ export function createGame(options: {
               wave.enemies = wave.enemies.filter((candidate) => candidate !== enemy);
               // APK removeEnemyWithPenalty() removes type-8 tow objects without charging a life.
               if (enemy.type !== 8) {
+                const escapePenalty = campaignMode
+                  ? campaignEscapePenalty(enemy.type)
+                  : scenario.previewWave.escapePenalty;
                 if (campaignMode) {
-                  recordCampaignEscape(wave, scenario.previewWave.initialLives, scenario.previewWave.escapePenalty);
+                  recordCampaignEscape(wave, scenario.previewWave.initialLives, escapePenalty);
                 }
-                wave.lives = Math.max(0, wave.lives - scenario.previewWave.escapePenalty);
+                wave.lives = Math.max(0, wave.lives - escapePenalty);
               }
               wave.escapedEnemies += 1;
             }
@@ -2677,14 +2689,14 @@ export function createGame(options: {
               const rawNextDifficulty = Math.trunc(((wave.dynamicDifficulty ?? 1000) + averageDifficulty) / 2);
               const minDifficulty = 500;
               const maxDifficulty = difficulty === 'easy' ? 1250 : 1500;
-              const nextDifficulty = Math.max(minDifficulty, Math.min(maxDifficulty, rawNextDifficulty));
+              const nextHitPointDifficulty = Math.max(minDifficulty, Math.min(maxDifficulty, rawNextDifficulty));
               const nextCampaignWave = campaignWaves?.find(({ number }) => number === wave!.number + 1);
               if (nextCampaignWave) {
                 wave.number = nextCampaignWave.number;
-                wave.dynamicDifficulty = nextDifficulty;
-                wave.difficultyValue = nextDifficulty;
+                wave.dynamicDifficulty = rawNextDifficulty;
+                wave.difficultyValue = nextHitPointDifficulty;
                 wave.difficultyValueCounter = 1;
-                wave.campaignSpawnPools = campaignSpawnPools(nextCampaignWave, nextDifficulty, true);
+                wave.campaignSpawnPools = campaignSpawnPools(nextCampaignWave, rawNextDifficulty, true);
                 wave.phase = 'active';
               } else if (wave.number >= campaignWaveCount && (campaignWaves?.length ?? 0) >= campaignWaveCount) {
                 wave.phase = 'complete';
