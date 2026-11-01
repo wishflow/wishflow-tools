@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { EnemyView, GameView } from '../src/game';
-import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport } from '../src/render/canvas-renderer';
+import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
 test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts', () => {
@@ -1004,4 +1004,100 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
   }, images);
   assert.deepEqual(scales, [[-1, 1]], 'a mirrored turn atlas frame must flip even when the next direction is east');
   assert.deepEqual(drawCalls.find((args) => args[0] === images.wagon_turn)?.slice(1, 5), [0, 0, 32, 40]);
+});
+
+test('ordinary horse-wagon and covered-wagon frames mirror eastward movement like the APK', () => {
+  const scales: number[][] = [];
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage() {},
+    translate() {},
+    scale(x: number, y: number) { scales.push([x, y]); },
+  } as unknown as CanvasRenderingContext2D;
+  const map = {
+    width: 17,
+    height: 17,
+    tileSize: 32,
+    background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 17, height: 17 }],
+    streets: [],
+  };
+  const variants = [
+    { type: 4 as const, asset: 'wagon' as const },
+    { type: 8 as const, asset: 'horse_wagon' as const },
+    { type: 8 as const, asset: 'horse_wagon_white' as const },
+  ];
+  const facings = [
+    { direction: 'east' as const, mirrored: undefined, expectedMirror: true },
+    { direction: 'west' as const, mirrored: undefined, expectedMirror: false },
+    { direction: 'north' as const, mirrored: true, expectedMirror: true },
+    { direction: 'south' as const, mirrored: false, expectedMirror: false },
+  ];
+
+  for (const variant of variants) {
+    for (const facing of facings) {
+      scales.length = 0;
+      const enemy: EnemyView = {
+        id: `vehicle-${variant.type}-${facing.direction}`,
+        type: variant.type,
+        asset: variant.asset,
+        speed: 500,
+        direction: facing.direction,
+        ...(facing.mirrored === undefined ? {} : { mirrored: facing.mirrored }),
+        positionFine: { x: 8 * 7680 + 3840, y: 8 * 7680 + 3840 },
+        drawingOffsetFine: { x: 0, y: 0 },
+        groupId: 'vehicle-group',
+        damageable: variant.type === 4,
+        hitPoints: 200,
+        maxHitPoints: 200,
+        alive: true,
+        deathRemainingMs: 0,
+        animationFrame: 0,
+      };
+      const view: GameView = {
+        frame: 0,
+        elapsedMs: 0,
+        paused: false,
+        scenarioId: 'vehicle-mirror-fixture',
+        map,
+        units: [],
+        enemies: [enemy],
+        shots: [],
+        drawOrder: [`enemy:${enemy.id}`],
+        recruitPool: [],
+        events: [],
+      };
+      drawGame(context, view, { ground: {} as HTMLImageElement, [variant.asset]: {} as HTMLImageElement });
+      assert.deepEqual(scales, facing.expectedMirror ? [[-1, 1]] : [], `${variant.asset} facing ${facing.direction}`);
+    }
+  }
+});
+
+test('HUD minimap geometry exposes a draggable panel and the current viewport rectangle', () => {
+  const view: GameView = {
+    frame: 0,
+    elapsedMs: 0,
+    paused: false,
+    scenarioId: 'minimap-geometry-fixture',
+    map: { width: 17, height: 17, tileSize: 32, background: [], streets: [] },
+    units: [],
+    enemies: [],
+    shots: [],
+    drawOrder: [],
+    recruitPool: [],
+    events: [],
+  };
+
+  const geometry = getHudMinimapGeometry(view, getMapViewport(view));
+  assert.deepEqual(geometry.panel, { x: 686, y: 2, width: 66, height: 50 });
+  assert.deepEqual(geometry.map, { x: 702, y: 10, width: 34, height: 34 });
+  assert.equal(geometry.viewport.x, 702);
+  assert.equal(geometry.viewport.y, 17.4);
+  assert.equal(geometry.viewport.width, 34);
+  assert.ok(Math.abs(geometry.viewport.height - 19.2) < 1e-9);
 });

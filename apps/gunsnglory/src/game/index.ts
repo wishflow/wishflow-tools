@@ -273,6 +273,8 @@ export interface EnemyView {
   asset: 'pioneer_male' | 'pioneer_female' | 'wagon' | 'horse_wagon' | 'horse_wagon_white';
   speed: number;
   direction: Direction;
+  /** APK mirror state persists through vertical movement until a horizontal leg or turn changes it. */
+  mirrored?: boolean;
   positionFine: { x: number; y: number };
   drawingOffsetFine?: { x: number; y: number };
   groupId?: string;
@@ -439,6 +441,7 @@ interface MutableEnemy {
   asset: EnemyView['asset'];
   speed: number;
   direction: Direction;
+  mirrored: boolean;
   positionFine: { x: number; y: number };
   collisionStartOffsetFine?: number;
   drawingOffsetFine: { x: number; y: number };
@@ -1112,6 +1115,7 @@ function createPreviewEnemy(
     asset: 'pioneer_male',
     speed,
     direction: spawn.direction,
+    mirrored: false,
     positionFine: {
       x: ((spawn.cell.x - 2) * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
       y: (spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
@@ -1217,6 +1221,7 @@ function createCampaignEnemy(
     asset,
     speed,
     direction: spawn.direction,
+    mirrored: false,
     positionFine: { ...positionFine },
     collisionStartOffsetFine: type === 4 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
     drawingOffsetFine: { ...drawingOffsetFine },
@@ -1676,6 +1681,10 @@ function moveEnemy(
     }
   }
   const movedFine = Math.abs(enemy.positionFine.x - previous.x) + Math.abs(enemy.positionFine.y - previous.y);
+  if (movedFine > 0 && !turningAtStart
+    && Math.abs(enemy.positionFine.x - previous.x) > Math.abs(enemy.positionFine.y - previous.y)) {
+    enemy.mirrored = enemy.positionFine.x > previous.x;
+  }
   if (movedFine > 0 && !turningAtStart) {
     enemy.animationDistance = (enemy.animationDistance + movedFine) % ENEMY_WALK_ANIMATION_CYCLE_FINE;
     enemy.animationFrame = enemyWalkAnimationFrame(enemy.type, enemy.animationDistance);
@@ -1702,26 +1711,31 @@ function moveEnemy(
           if (nextDirection !== enemy.direction) {
             const previousVector = directionVector(enemy.direction);
             const nextVector = directionVector(nextDirection);
-            if (enemy.turningDurationMs > 0) {
+            let turnFrame: 0 | 1 | undefined;
+            let turnMirrored: boolean | undefined;
+            if ((previousVector.x === -1 && nextVector.y === 1)
+              || (previousVector.y === 1 && nextVector.x === -1)) {
+              turnFrame = 0;
+              turnMirrored = false;
+            } else if ((previousVector.x === 1 && nextVector.y === 1)
+              || (previousVector.y === 1 && nextVector.x === 1)) {
+              turnFrame = 0;
+              turnMirrored = true;
+            } else if ((previousVector.x === -1 && nextVector.y === -1)
+              || (previousVector.y === -1 && nextVector.x === -1)) {
+              turnFrame = 1;
+              turnMirrored = false;
+            } else if ((previousVector.x === 1 && nextVector.y === -1)
+              || (previousVector.y === -1 && nextVector.x === 1)) {
+              turnFrame = 1;
+              turnMirrored = true;
+            }
+            if (turnMirrored !== undefined) enemy.mirrored = turnMirrored;
+            if (enemy.turningDurationMs > 0 && turnFrame !== undefined && turnMirrored !== undefined) {
               enemy.turningImageActive = true;
               enemy.turningRemainingMs = enemy.turningDurationMs;
-              if ((previousVector.x === -1 && nextVector.y === 1)
-                || (previousVector.y === 1 && nextVector.x === -1)) {
-                enemy.turningFrame = 0;
-                enemy.turningMirrored = false;
-              } else if ((previousVector.x === 1 && nextVector.y === 1)
-                || (previousVector.y === 1 && nextVector.x === 1)) {
-                enemy.turningFrame = 0;
-                enemy.turningMirrored = true;
-              } else if ((previousVector.x === -1 && nextVector.y === -1)
-                || (previousVector.y === -1 && nextVector.x === -1)) {
-                enemy.turningFrame = 1;
-                enemy.turningMirrored = false;
-              } else if ((previousVector.x === 1 && nextVector.y === -1)
-                || (previousVector.y === -1 && nextVector.x === 1)) {
-                enemy.turningFrame = 1;
-                enemy.turningMirrored = true;
-              }
+              enemy.turningFrame = turnFrame;
+              enemy.turningMirrored = turnMirrored;
             }
             enemy.direction = nextDirection;
             enemy.positionFine = {
@@ -2011,6 +2025,7 @@ export function createGame(options: {
             asset: enemy.asset,
             speed: enemy.speed,
             direction: enemy.direction,
+            ...(enemy.mirrored !== (enemy.direction === 'east') ? { mirrored: enemy.mirrored } : {}),
             positionFine: { ...enemy.positionFine },
             drawingOffsetFine: { ...enemy.drawingOffsetFine },
             groupId: enemy.groupId,

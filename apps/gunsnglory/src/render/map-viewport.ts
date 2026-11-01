@@ -118,8 +118,8 @@ export function mapViewportWithCamera(
   const mapHeight = mapHeightTiles * tileSize;
   const centeredOriginX = (viewportWidth - mapWidth) / 2;
   const centeredOriginY = (viewportHeight - mapHeight) / 2;
-  const requestedOriginX = zoom === MIN_MAP_ZOOM ? centeredOriginX : centeredOriginX + camera.offsetX;
-  const requestedOriginY = zoom === MIN_MAP_ZOOM ? centeredOriginY : centeredOriginY + camera.offsetY;
+  const requestedOriginX = centeredOriginX + camera.offsetX;
+  const requestedOriginY = centeredOriginY + camera.offsetY;
   const originX = clampOrigin(snapToDisplayPixel(requestedOriginX, displayPixelScale), mapWidth, viewportWidth);
   const originY = clampOrigin(snapToDisplayPixel(requestedOriginY, displayPixelScale), mapHeight, viewportHeight);
 
@@ -149,8 +149,6 @@ export function cameraForAnchor(
   if (![mapAnchor.x, mapAnchor.y, screenAnchor.x, screenAnchor.y].every(Number.isFinite)) {
     throw new RangeError('Map camera anchor coordinates must be finite');
   }
-  if (zoom === MIN_MAP_ZOOM) return createMapCamera();
-
   const tileSize = snapToDisplayPixel(baseViewport.tileSize * zoom, displayPixelScale);
   const mapWidth = mapWidthTiles * tileSize;
   const mapHeight = mapHeightTiles * tileSize;
@@ -160,6 +158,55 @@ export function cameraForAnchor(
     zoom,
     offsetX: originX - (viewportWidth - mapWidth) / 2,
     offsetY: originY - (viewportHeight - mapHeight) / 2,
+  };
+}
+
+/** Moves the view by screen-space pixels while keeping the map inside the playfield. */
+export function panCameraByScreenDelta(
+  baseViewport: MapViewport,
+  mapWidthTiles: number,
+  mapHeightTiles: number,
+  viewportWidth: number,
+  viewportHeight: number,
+  camera: Readonly<MapCamera>,
+  deltaX: number,
+  deltaY: number,
+  displayPixelScale = 1,
+): MapCamera {
+  assertPositiveFinite('Display pixel scale', displayPixelScale);
+  if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) {
+    throw new RangeError('Map camera pan deltas must be finite');
+  }
+
+  const current = mapViewportWithCamera(
+    baseViewport,
+    mapWidthTiles,
+    mapHeightTiles,
+    viewportWidth,
+    viewportHeight,
+    camera,
+    displayPixelScale,
+  );
+  const tileSize = current.tileSize;
+  const mapWidth = mapWidthTiles * tileSize;
+  const mapHeight = mapHeightTiles * tileSize;
+  const centeredOriginX = (viewportWidth - mapWidth) / 2;
+  const centeredOriginY = (viewportHeight - mapHeight) / 2;
+  const originX = clampOrigin(
+    snapToDisplayPixel(current.origin.x + deltaX, displayPixelScale),
+    mapWidth,
+    viewportWidth,
+  );
+  const originY = clampOrigin(
+    snapToDisplayPixel(current.origin.y + deltaY, displayPixelScale),
+    mapHeight,
+    viewportHeight,
+  );
+
+  return {
+    zoom: camera.zoom,
+    offsetX: originX - centeredOriginX,
+    offsetY: originY - centeredOriginY,
   };
 }
 

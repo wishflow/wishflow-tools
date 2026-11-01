@@ -7,7 +7,7 @@ import {
   getBrowserScenarioContentVersion,
 } from './bootstrap/browser';
 import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent, cowGulchP1dCampaignContent } from './content/cow-gulch';
-import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getMapViewport, resizeCanvas } from './render/canvas-renderer';
+import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cowGulchLevelOneContent } from './content/official-campaign';
 import { CampaignWaveIntroCursor, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import {
@@ -16,7 +16,7 @@ import {
   cowGulchVictoryMusic,
   type CowGulchMusicTrack,
 } from './content/cow-gulch-music';
-import { cameraForAnchor, createMapCamera, screenToMapCell, type MapCamera } from './render/map-viewport';
+import { cameraForAnchor, createMapCamera, panCameraByScreenDelta, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
@@ -1822,6 +1822,7 @@ type PinchGesture = {
   startZoom: number;
   mapAnchor: PointerPoint;
 };
+type MapPanGesture = { kind: 'world' | 'minimap'; lastPoint: PointerPoint };
 
 let activePointerId: number | undefined;
 let activePointerOrigin: PointerPoint | undefined;
@@ -1830,6 +1831,7 @@ let dragStarted = false;
 let pointerMovedBeyondTolerance = false;
 let multiTouchGestureLocked = false;
 let pinchGesture: PinchGesture | undefined;
+let activeMapPan: MapPanGesture | undefined;
 const trackedPointers = new Map<number, TrackedPointer>();
 const DRAG_START_TOLERANCE = 20;
 
@@ -2398,6 +2400,7 @@ function finishPointerMovement(pointerId?: number): void {
   activePointerId = undefined;
   activePointerOrigin = undefined;
   activeDragUnitId = undefined;
+  activeMapPan = undefined;
   dragStarted = false;
   pointerMovedBeyondTolerance = false;
   if (endedPointerId !== undefined) trackedPointers.delete(endedPointerId);
@@ -2409,6 +2412,7 @@ function cancelPointerGesture(): void {
   activePointerId = undefined;
   activePointerOrigin = undefined;
   activeDragUnitId = undefined;
+  activeMapPan = undefined;
   dragStarted = false;
   pointerMovedBeyondTolerance = false;
   multiTouchGestureLocked = false;
@@ -2738,6 +2742,7 @@ function startPinchGesture(): void {
   activePointerId = undefined;
   activePointerOrigin = undefined;
   activeDragUnitId = undefined;
+  activeMapPan = undefined;
   dragStarted = false;
   pointerMovedBeyondTolerance = false;
   multiTouchGestureLocked = true;
@@ -2803,6 +2808,39 @@ function selectedUnitAt(mapX: number, mapY: number): string | undefined {
     && mapY >= unit.hitArea.y && mapY < unit.hitArea.y + unit.hitArea.height)?.id;
 }
 
+function pointInHudMinimap(point: PointerPoint): boolean {
+  if (!view.wave) return false;
+  const viewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
+  const panel = getHudMinimapGeometry(view, viewport).panel;
+  return point.x >= panel.x && point.x < panel.x + panel.width
+    && point.y >= panel.y && point.y < panel.y + panel.height;
+}
+
+function panMapByPointerDelta(kind: MapPanGesture['kind'], delta: PointerPoint): void {
+  const displayPixelScale = getDisplayPixelScale();
+  const viewport = getMapViewport(view, displayPixelScale, mapCamera);
+  let mapDelta = delta;
+  if (kind === 'minimap') {
+    const geometry = getHudMinimapGeometry(view, viewport);
+    mapDelta = {
+      x: -delta.x * viewport.mapWidth / geometry.map.width,
+      y: -delta.y * viewport.mapHeight / geometry.map.height,
+    };
+  }
+  mapCamera = panCameraByScreenDelta(
+    getMapViewport(view, displayPixelScale),
+    view.map.width,
+    view.map.height,
+    GAME_VIEWPORT.width,
+    GAME_VIEWPORT.height,
+    mapCamera,
+    mapDelta.x,
+    mapDelta.y,
+    displayPixelScale,
+  );
+  redraw();
+}
+
 canvas.addEventListener('pointerdown', (event: PointerEvent) => {
   if (event.pointerType === 'mouse' && event.button !== 0) return;
   if (event.pointerType !== 'touch' && !event.isPrimary) return;
@@ -2814,9 +2852,10 @@ canvas.addEventListener('pointerdown', (event: PointerEvent) => {
 
   const point = pointerLogicalPosition(event.clientX, event.clientY);
   if (!point) return;
+  const minimapHit = pointInHudMinimap(point);
   if (view.wave) {
     const hudAction = gameHudPointerActionAt(point.x, point.y);
-    if (hudAction) {
+    if (hudAction && !minimapHit) {
       event.preventDefault();
       if (hudAction === 'pause') pauseControl.click();
       return;
@@ -2842,12 +2881,18 @@ canvas.addEventListener('pointerdown', (event: PointerEvent) => {
   activePointerId = event.pointerId;
   activePointerOrigin = point;
   activeDragUnitId = undefined;
+  activeMapPan = undefined;
   dragStarted = false;
   pointerMovedBeyondTolerance = false;
+  if (minimapHit) {
+    activeMapPan = { kind: 'minimap', lastPoint: point };
+    return;
+  }
   if (event.pointerType === 'touch') {
     const mapViewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
     const mapCell = screenToMapCell(mapViewport, point.x, point.y);
     activeDragUnitId = selectedUnitAt(mapCell.x, mapCell.y);
+    if (!activeDragUnitId && view.wave) activeMapPan = { kind: 'world', lastPoint: point };
     return;
   }
 
@@ -2860,6 +2905,7 @@ canvas.addEventListener('pointerdown', (event: PointerEvent) => {
   activeDragUnitId = view.units.find((unit) => unit.selected
     && mapPoint.mapX >= unit.hitArea.x && mapPoint.mapX < unit.hitArea.x + unit.hitArea.width
     && mapPoint.mapY >= unit.hitArea.y && mapPoint.mapY < unit.hitArea.y + unit.hitArea.height)?.id;
+  if (!activeDragUnitId && view.wave) activeMapPan = { kind: 'world', lastPoint: point };
 });
 
 canvas.addEventListener('pointermove', (event: PointerEvent) => {
@@ -2878,14 +2924,9 @@ canvas.addEventListener('pointermove', (event: PointerEvent) => {
     return;
   }
   if (event.pointerId !== activePointerId || !activePointerOrigin) return;
-  const point = pointerMapPosition(event);
-  if (!point) {
-    finishPointerContact(event.pointerId);
-    return;
-  }
   if (!pointerMovedBeyondTolerance
-    && Math.abs(point.x - activePointerOrigin.x) <= DRAG_START_TOLERANCE
-    && Math.abs(point.y - activePointerOrigin.y) <= DRAG_START_TOLERANCE) return;
+    && Math.abs(logicalPoint.x - activePointerOrigin.x) <= DRAG_START_TOLERANCE
+    && Math.abs(logicalPoint.y - activePointerOrigin.y) <= DRAG_START_TOLERANCE) return;
 
   pointerMovedBeyondTolerance = true;
   event.preventDefault();
@@ -2894,8 +2935,21 @@ canvas.addEventListener('pointermove', (event: PointerEvent) => {
     const origin = screenToMapCell(viewport, activePointerOrigin.x, activePointerOrigin.y);
     dispatch({ type: 'select-at', x: origin.x, y: origin.y });
     activeDragUnitId = selectedUnitAt(origin.x, origin.y);
+    if (activeDragUnitId) activeMapPan = undefined;
+  }
+  if (activeMapPan) {
+    const delta = { x: logicalPoint.x - activeMapPan.lastPoint.x, y: logicalPoint.y - activeMapPan.lastPoint.y };
+    activeMapPan.lastPoint = logicalPoint;
+    panMapByPointerDelta(activeMapPan.kind, delta);
+    return;
   }
   if (!activeDragUnitId || !view.units.some((unit) => unit.id === activeDragUnitId && unit.selected)) return;
+
+  const point = pointerMapPosition(event);
+  if (!point) {
+    finishPointerContact(event.pointerId);
+    return;
+  }
 
   dragStarted = true;
   dispatch({ type: 'move-unit', targetX: point.mapX, targetY: point.mapY });
@@ -2913,7 +2967,7 @@ canvas.addEventListener('pointerup', (event: PointerEvent) => {
     finishPointerContact(event.pointerId);
     return;
   }
-  if (pointer.pointerType === 'touch' && !pointerMovedBeyondTolerance) {
+  if (pointer.pointerType === 'touch' && !pointerMovedBeyondTolerance && activeMapPan?.kind !== 'minimap') {
     const point = pointerMapPosition(event);
     if (point) dispatch({ type: 'select-at', x: point.mapX, y: point.mapY });
   }

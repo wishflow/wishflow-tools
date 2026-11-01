@@ -212,6 +212,8 @@ test('type 4 uses the APK wagon turn atlas and holds it for 200 ms', async () =>
   view = session.advance({ deltaMs: 1 });
   assert.equal(vehicle(view, 4).turningAnimation, undefined, 'walking atlas resumes after the 200 ms turn');
   assert.equal(vehicle(view, 4).direction, 'south');
+  assert.equal((vehicle(view, 4) as { mirrored?: boolean }).mirrored, true,
+    'APK keeps the east-facing mirror when the wagon continues south');
 });
 
 test('type 4 and type 8 use the APK turn frame and mirror for every Cow Gulch route redirect', async () => {

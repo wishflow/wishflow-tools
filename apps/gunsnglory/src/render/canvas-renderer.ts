@@ -395,7 +395,9 @@ function drawEnemy(
   if (!vehicle && !enemy.alive && deathFrame === undefined) {
     context.globalAlpha = Math.max(0.15, enemy.deathRemainingMs / 799);
   }
-  const mirrored = turn && deathFrame === undefined ? turn.mirrored : enemy.direction === 'west';
+  const mirrored = turn && deathFrame === undefined
+    ? turn.mirrored
+    : (enemy.mirrored ?? (enemy.direction === 'east'));
   if (mirrored) {
     context.translate((left * 2) + width, 0);
     context.scale(-1, 1);
@@ -628,6 +630,35 @@ const HUD_MINIMAP = { x: 174, y: 2, width: 66, height: 50 } as const;
 const HUD_MINIMAP_REFERENCE_COLUMNS = 32;
 const HUD_MINIMAP_REFERENCE_ROWS = 24;
 
+export interface HudMinimapGeometry {
+  panel: { x: number; y: number; width: number; height: number };
+  map: { x: number; y: number; width: number; height: number };
+  viewport: { x: number; y: number; width: number; height: number };
+}
+
+export function getHudMinimapGeometry(view: GameView, viewport: MapViewport): HudMinimapGeometry {
+  const { width: panelWidth, height: panelHeight } = HUD_MINIMAP;
+  const pixelSize = Math.min(
+    Math.floor(panelWidth / HUD_MINIMAP_REFERENCE_COLUMNS),
+    Math.max(Math.floor(panelHeight / HUD_MINIMAP_REFERENCE_ROWS), 1),
+  );
+  const mapWidth = view.map.width * pixelSize;
+  const mapHeight = view.map.height * pixelSize;
+  const panelX = GAME_VIEWPORT.width / 2 + HUD_MINIMAP.x;
+  const panelY = HUD_MINIMAP.y;
+  const mapX = panelX + Math.floor((panelWidth - mapWidth) / 2);
+  const mapY = panelY + Math.floor((panelHeight - mapHeight) / 2);
+  const left = mapX + (Math.max(0, Math.min(viewport.mapWidth, -viewport.origin.x)) / viewport.mapWidth) * mapWidth;
+  const top = mapY + (Math.max(0, Math.min(viewport.mapHeight, -viewport.origin.y)) / viewport.mapHeight) * mapHeight;
+  const right = mapX + (Math.max(0, Math.min(viewport.mapWidth, GAME_VIEWPORT.width - viewport.origin.x)) / viewport.mapWidth) * mapWidth;
+  const bottom = mapY + (Math.max(0, Math.min(viewport.mapHeight, GAME_VIEWPORT.height - viewport.origin.y)) / viewport.mapHeight) * mapHeight;
+  return {
+    panel: { x: panelX, y: panelY, width: panelWidth, height: panelHeight },
+    map: { x: mapX, y: mapY, width: mapWidth, height: mapHeight },
+    viewport: { x: left, y: top, width: Math.max(2, right - left), height: Math.max(2, bottom - top) },
+  };
+}
+
 function requiredImage(images: GameImages, asset: string): HTMLImageElement {
   const image = images[asset];
   if (!image) throw new Error('Missing game image: ' + asset);
@@ -702,17 +733,9 @@ function drawHudMinimap(
   view: GameView,
   viewport: MapViewport,
 ): void {
-  const { width: panelWidth, height: panelHeight } = HUD_MINIMAP;
-  const pixelSize = Math.min(
-    Math.floor(panelWidth / HUD_MINIMAP_REFERENCE_COLUMNS),
-    Math.max(Math.floor(panelHeight / HUD_MINIMAP_REFERENCE_ROWS), 1),
-  );
-  const mapWidth = view.map.width * pixelSize;
-  const mapHeight = view.map.height * pixelSize;
-  const panelX = GAME_VIEWPORT.width / 2 + HUD_MINIMAP.x;
-  const panelY = HUD_MINIMAP.y;
-  const mapX = panelX + Math.floor((panelWidth - mapWidth) / 2);
-  const mapY = panelY + Math.floor((panelHeight - mapHeight) / 2);
+  const geometry = getHudMinimapGeometry(view, viewport);
+  const { x: mapX, y: mapY, width: mapWidth, height: mapHeight } = geometry.map;
+  const pixelSize = mapWidth / view.map.width;
   const terrain = view.map.originalTileGrid;
 
   if (terrain) {
@@ -755,11 +778,13 @@ function drawHudMinimap(
     context.fillRect(mapX + Math.floor(x) * pixelSize, mapY + Math.floor(y) * pixelSize, pixelSize, pixelSize);
   }
 
-  const left = mapX + (Math.max(0, Math.min(viewport.mapWidth, -viewport.origin.x)) / viewport.mapWidth) * mapWidth;
-  const top = mapY + (Math.max(0, Math.min(viewport.mapHeight, -viewport.origin.y)) / viewport.mapHeight) * mapHeight;
-  const right = mapX + (Math.max(0, Math.min(viewport.mapWidth, GAME_VIEWPORT.width - viewport.origin.x)) / viewport.mapWidth) * mapWidth;
-  const bottom = mapY + (Math.max(0, Math.min(viewport.mapHeight, GAME_VIEWPORT.height - viewport.origin.y)) / viewport.mapHeight) * mapHeight;
-  drawHudOutline(context, left, top, Math.max(2, right - left), Math.max(2, bottom - top));
+  drawHudOutline(
+    context,
+    geometry.viewport.x,
+    geometry.viewport.y,
+    geometry.viewport.width,
+    geometry.viewport.height,
+  );
 }
 
 function drawGameHud(

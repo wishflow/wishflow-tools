@@ -5,6 +5,7 @@ import {
   cameraForAnchor,
   createMapCamera,
   mapCellToScreen,
+  panCameraByScreenDelta,
   mapViewportWithCamera,
   screenToMapCell,
 } from '../src/render/map-viewport';
@@ -114,4 +115,21 @@ test('camera scaling keeps integer device pixels and map edges inside the logica
     assert.ok(viewport.origin.y <= 0);
     assert.ok(viewport.origin.y + viewport.mapHeight >= 576);
   }
+});
+
+test('pans the map at the fitted zoom and clamps both camera edges to the map', () => {
+  const base = calculateMapViewport(17, 17, 1024, 576);
+  const initial = createMapCamera();
+  const movedDown = panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 0, 120);
+  const movedDownViewport = mapViewportWithCamera(base, 17, 17, 1024, 576, movedDown);
+  assert.equal(movedDown.zoom, 1);
+  assert.equal(movedDownViewport.origin.y, -102);
+
+  const movedToTop = panCameraByScreenDelta(base, 17, 17, 1024, 576, movedDown, 0, 500);
+  const topViewport = mapViewportWithCamera(base, 17, 17, 1024, 576, movedToTop);
+  assert.equal(topViewport.origin.y, 0, 'the top edge remains covered instead of exposing the void outside the map');
+
+  const movedToBottom = panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 0, -500);
+  const bottomViewport = mapViewportWithCamera(base, 17, 17, 1024, 576, movedToBottom);
+  assert.equal(bottomViewport.origin.y, -444, 'the bottom edge remains covered instead of exposing the void outside the map');
 });
