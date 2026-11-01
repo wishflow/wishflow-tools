@@ -1665,3 +1665,20 @@ Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；�
 发布与内置浏览器核验：开发提交 `aa6fc28` 快进合入 `gunsnglory`，合并提交 `2d057c2` 已推送到 `master`。[Actions run 41285991399](https://github.com/wishflow/wishflow-tools/actions/runs/41285991399) 的 Guns’n’Glory 测试、共享目录检查、GitHub Pages 与 Cloudflare Pages 部署均通过；Worker 和配置校验按静态应用变更范围跳过。Codex 内置浏览器打开[本次发布版本](https://wishflow-tools.pages.dev/gunsnglory/?release=2d057c2)，确认战役入口、地图 Canvas、HUD、4×速度和音效开关加载正常；点击第一波对白继续后，观察到第一波运行并自动进入第二波对白，生命保持50、档案仍为已完成1/1与最高分 `$356`。战局未完成、未结算，保存设置未改。此为功能冒烟检查，不作为 type4 处罚/动态难度的规则证据；该规则以本节公共接口回归为准。此处未检查浏览器开发者控制台。
 
 P1-R1中 A05/A06 的范围校正随本轮纳入；G01现有成功、失败与跨波次生成点回归保持原样。Mexican初始速度等剩余规格差异由计划中的对应步骤处理；本节不表示它们已修复。Cow Gulch全关运行、所有单位/表现及0/60总验收仍未通过。
+
+## 81. P1-R3 Cow Gulch 运输乘员绘制偏移
+
+`spec.md` §4.6 已依据 APK 的运输死亡派生链记录四个固定乘员绘制偏移，并区分 `drawingOffsetX/Y` 与寻路 `fineX/fineY`。实现原先误用了普通 settlers 的生成偏移，导致乘员虽然继承车厢物理坐标，显示锚点却不符合原版。本轮仅将车毁乘员改用独立的绘制偏移，普通 settlers 的生成偏移与乘员的物理坐标均保持原样。
+
+`src/game/index.ts` 现在按派生槽顺序使用 `(-1280,-1760)、(1280,-1760)、(-1280,800)、(1280,800)`。`tests/p1c-campaign.test.ts` 的固定随机状态行为测试通过 `GameSession` 公共接口推进到 Wave02，生成四名乘员，并逐一核对偏移、ID/组号、方向、速度515、HP168、继承车厢坐标以及后续帧不重复派生。夹具把第一辆车击毁后的 raw 动态难度推进到1252，以覆盖第四槽；这不是正式战役的替代场景。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 定向行为测试 | `node --import tsx --test tests/p1c-campaign.test.ts`：7项通过。临时把车毁乘员调用恢复为普通 settlers 偏移后，新用例在偏移断言处失败；恢复实现后通过，确认测试能检出本次差异。 |
+| 完整应用 CI | Node 22.23.3 下运行 `CI=1 PLAYWRIGHT_PORT=54832 pnpm run test:ci`：类型检查、192项单元测试、Vite生产构建和67项 Playwright E2E 全部通过。 |
+| 共享站点目录 | `pnpm run test:catalog`：15项测试全部通过。 |
+| 集成与部署 | `5bf958b` 已快进集成到 `gunsnglory` 和 `master` 并推送。[Actions run 41299314456](https://github.com/wishflow/wishflow-tools/actions/runs/41299314456) 的 Guns’n’Glory 测试、共享目录检查、Cloudflare Pages 和 GitHub Pages 部署通过；Worker 与 Cloudflare 配置校验按静态应用变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[提交 `5bf958b` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=5bf958b)，确认页面标题、正式战役进度、地图 Canvas、HUD 和4×速度控件加载。关闭首波对白后进入 Wave01，HUD 显示生命50、敌人数和现金随游戏推进更新；随后暂停确认暂停状态。未继续完整战役或结算；页面显示的既有正式进度仍为1/1、最高分 `$356`。此为部署和基础交互烟测，不作为乘员偏移证据。 |
+| 任务边界 | 乘员四槽具体行为由上述固定状态 `GameSession` 测试验收；本次浏览器烟测未推进到车毁派生。P1-R3 任务级验收完成；P1-F 全关对照门槛仍未通过，完整关卡计数保持0/60。 |
+
+P1-R4 爆炸投射物生命周期与飞行时间是下一任务；R4开始前仍须按计划核对当前代码和对应 APK 证据。
