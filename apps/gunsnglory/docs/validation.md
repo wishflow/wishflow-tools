@@ -1403,7 +1403,9 @@ Cow Gulch map01 唯一 action1 为 `(0,10)` 向东。其原始中心为 `(3840,8
 | 战役用例边界 | `game.test.ts` 只推进到后续波次首次成功生成；E2E `t22-original-waves.spec.ts` 仅以4×推进20秒浏览器时钟，确认进入后续波次、未提前结算且下一关仍锁定，不为存档测试跑完整战役。 |
 | 本地应用 CI | Node 22.23.3 下运行 `CI=1 PLAYWRIGHT_PORT=53847 pnpm --dir apps/gunsnglory run test:ci`：类型检查通过、186 项单测通过、Vite 构建通过、67 项 Playwright E2E 全部通过。E2E 需允许本地 WebServer 绑定 `127.0.0.1`。 |
 | 站点目录测试 | `pnpm run test:catalog` 的15项测试通过。 |
-| 发布与线上实测 | 本轮发布完成后更新。 |
+| GitHub Actions 与发布 | `4cba2aa` 已推送至 `master`。[Actions run 41266130797](https://github.com/wishflow/wishflow-tools/actions/runs/41266130797) 结论为 success：Guns’n’Glory 测试、共享目录检查、GitHub Pages 与 Cloudflare Pages 部署通过；Cloudflare 配置/Worker 作业按变更范围跳过。 |
+| 公开版浏览器实测 | Node 22.23.3 下用隔离 Playwright Chromium 访问[公开版本](https://wishflow-tools.pages.dev/gunsnglory/?release=4cba2aa)，HTTP 200。桌面视口 1280×720 设置4×后推进20秒，观察到 Wave 3/8、生命50、敌人2、现金 `$107`，未结算、战役进度仍为0/1；IndexedDB 无已完成关卡或结算记录。刷新后未完成战役回到 Wave 1、生命50。390×844 触屏视口中 Canvas 与倍速控件均加载，未捕获页面异常。两种视口均无 console error/warn；记录到一次音乐资源 GET 被浏览器取消（`music_loop2.ogg`、`ERR_ABORTED`），本轮未验证实际音频播放。 |
+| Codex 内置浏览器限制 | 当前会话没有可调用的 computer-use/DevTools 浏览器控制工具；打开 Codex 内置浏览器的请求两次均返回 `queued`，因此未把 Playwright 结果冒称为内置浏览器实测。截图保存在本机临时文件 `/tmp/gng-spawn-field-online.png`，未纳入仓库。 |
 | P1-F 总门槛 | 当前只关闭生成字段累计漂移这一项；越界清理的既有实现不变。Cow Gulch 其余规则、表现、鼠标/触屏对照及完整关卡门槛仍未完成，计数保持0/60。 |
 
 ## 70. P1-F Cow Gulch 敌人地图边缘可见性
