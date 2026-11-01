@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { EnemyView, GameView } from '../src/game';
-import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport } from '../src/render/canvas-renderer';
+import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, mapDecorationDestination } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
 test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts', () => {
@@ -21,7 +21,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const treeImage = { naturalWidth: 32, naturalHeight: 64 } as HTMLImageElement;
   const bushImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
   const rocksImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
-  const shackImage = { naturalWidth: 64, naturalHeight: 32 } as HTMLImageElement;
+  const shackImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
   const drawCalls: unknown[][] = [];
   const fillCalls: Array<{ color: string; rect: number[] }> = [];
   const clipRects: number[][] = [];
@@ -228,6 +228,17 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.deepEqual(decorationDraws.map(([image]) => image), [cactusImage, shackImage, rocksImage, cactusImage, treeImage, bushImage],
     'same-depth static decorations draw in reverse map-scan insertion order');
   assert.deepEqual(decorationDraws[0]?.slice(1), [302, 115, 60, 82]);
+  const shackDecoration = view.map.decorations?.find(({ asset }) => asset === 'b_2x1_shack');
+  assert.ok(shackDecoration);
+  const expectedShackDestination = mapDecorationDestination(shackDecoration, { width: 96, height: 72 }, viewport);
+  const actualShackDraw = decorationDraws.find(([image]) => image === shackImage);
+  assert.ok(actualShackDraw);
+  assert.deepEqual(actualShackDraw.slice(1), [
+    expectedShackDestination.x,
+    expectedShackDestination.y,
+    expectedShackDestination.width,
+    expectedShackDestination.height,
+  ], 'the APK hdpi map cart retains the original logical footprint and anchor');
   assert.deepEqual(decorationDraws.slice(1, 5).map((args) => args[1]), [842, 542, 482, 362],
     'equal-depth map objects draw in reverse row-major insertion order');
   assert.deepEqual(decorationClipStates, [false, false, false, false], 'tall scenery may overhang a map edge but stays within the game viewport');

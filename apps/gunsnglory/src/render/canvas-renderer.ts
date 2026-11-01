@@ -1,6 +1,7 @@
 import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
 import { GAME_DRAW_ORDER_ROAD_CUTOFF } from '../game/draw-order';
 import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
+import { gameAssetLogicalSize } from './game-asset-path';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
@@ -62,8 +63,9 @@ export function mapDecorationDestination(
   imageSize: { width: number; height: number },
   viewport: MapViewport,
 ): MapDecorationDestination {
-  const width = imageSize.width * viewport.scaleFactor;
-  const height = imageSize.height * viewport.scaleFactor;
+  const logicalImageSize = gameAssetLogicalSize(decoration.asset, imageSize);
+  const width = logicalImageSize.width * viewport.scaleFactor;
+  const height = logicalImageSize.height * viewport.scaleFactor;
   const centerX = viewport.origin.x + (decoration.cell.x + 0.5 + (decoration.anchorOffsetX ?? 0)) * viewport.tileSize;
   const feetY = viewport.origin.y + (decoration.cell.y + 1) * viewport.tileSize;
   const x = Math.trunc(centerX - width / 2);

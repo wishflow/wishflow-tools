@@ -260,7 +260,7 @@ test('anchors scenery sprites at each source cell foot and preserves wide-object
   ), { x: 302, y: 115, width: 60, height: 82 });
   assert.deepEqual(mapDecorationDestination(
     { asset: 'b_2x1_shack', cell: { x: 15, y: 7 }, anchorOffsetX: -0.5 },
-    { width: 64, height: 48 },
+    { width: 96, height: 72 },
     viewport,
   ), { x: 842, y: 168, width: 120, height: 90 });
 });
