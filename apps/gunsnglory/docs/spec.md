@@ -141,7 +141,7 @@ Cow Gulch 的原图包含8个 tile96 枪手槽、7个 tile97 Mexican（重型爆
 
 首关升级上限保持0；升级行为在允许升级的真实后续关卡验收，边界场景可另用 fixture，实验模式可以显式改变限制。首关炸弹手取 `unitDataMexican` 的初始配置：购买价100、基础重型伤害500、AOE7680即一格，实际命中范围、穿透和伤害仍按对应消费公式计算。首关战斗必须覆盖群体伤害，而非只保留枪手的单目标射击。
 
-Mexican 的初始档速度字段为0。`GameObjectUnit.hire()` 只扣价、切换 activity 并刷新素材，不改速度；因此首关 Mexican 可被选中并原地攻击，但不能移动。不得因雇用流程通用而给 Mexican 增加移动能力；只有升级后的速度数据才另行验证，Cow Gulch 的升级上限仍为0。
+Mexican 的初始档速度为1500 fine units/100ms。`GameObjectUnit.hire()` 只扣价、切换 activity 并刷新素材，不改速度；activity4 的待雇用 Mexican 不移动，合法雇用后转为 activity5，可按该速度移动、选择和攻击。Cow Gulch 的升级上限仍为0，不能把其他等级速度带入首关。此前把反编译 Java 中的同值外部常量误读为0，已由[审计报告 N01](implementation-audit.md#n01-p1-mexican初始移动速度错误设为0)和[验证记录第83节](validation.md#83-p1-m0-cow-gulch-首关空间基线)纠正。
 
 ### 4.5 路线、占格与障碍
 

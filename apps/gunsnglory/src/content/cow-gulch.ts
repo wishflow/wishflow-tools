@@ -27,6 +27,7 @@ const firstMapMexicanWeapon = Object.freeze({
 } as const);
 
 const firstMapGunslingerMovementSpeedFinePer100Ms = 1500;
+const firstMapMexicanMovementSpeedFinePer100Ms = 1500;
 
 const sleepingUnitMarkers = {
   96: {
@@ -37,7 +38,7 @@ const sleepingUnitMarkers = {
   97: {
     prefix: 'mexican-hire', type: 'mexican', asset: 'player_mexican_sleep', awakeAsset: 'player_mexican',
     awakeFrame: { x: 0, y: 0, width: 32, height: 44 },
-    hirePrice: 100, speed: 0, weapon: firstMapMexicanWeapon,
+    hirePrice: 100, speed: firstMapMexicanMovementSpeedFinePer100Ms, weapon: firstMapMexicanWeapon,
   },
 } as const;
 

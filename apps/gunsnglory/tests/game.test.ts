@@ -434,11 +434,11 @@ test('rejects an unaffordable map-slot hire without waking or charging the same 
   }]);
 });
 
-test('the original Mexican hire slot wakes in place but remains immobile at its researched speed of zero', async () => {
+test('the original Mexican hire slot wakes in place and moves at its researched speed', async () => {
   const originalMexican = cowGulchContent.units.find((unit) => unit.type === 'mexican' && unit.activity === 4);
   assert.ok(originalMexican);
   assert.equal(originalMexican.hirePrice, 100);
-  assert.equal(originalMexican.movementSpeedFinePer100Ms, 0);
+  assert.equal(originalMexican.movementSpeedFinePer100Ms, 1500);
   assert.equal(originalMexican.awakeAsset, 'player_mexican');
   assert.equal(originalMexican.weapon?.damage, 500);
   assert.equal(originalMexican.weapon?.damageType, 'heavy');
@@ -446,7 +446,7 @@ test('the original Mexican hire slot wakes in place but remains immobile at its 
 
   const fundedScenario: ScenarioContent = {
     ...cowGulchContent,
-    id: 'mexican-immobile-fixture',
+    id: 'mexican-hire-fixture',
     formalSettlementSupported: false,
     previewWave: { ...cowGulchContent.previewWave!, initialCash: 100 },
     units: [originalMexican],
@@ -462,9 +462,20 @@ test('the original Mexican hire slot wakes in place but remains immobile at its 
 
   assert.equal(hired.wave?.cash, 0);
   assert.equal(hired.units[0]?.activity, 5);
-  assert.equal(hired.units[0]?.movementSpeedFinePer100Ms, 0);
+  assert.equal(hired.units[0]?.movementSpeedFinePer100Ms, 1500);
   assert.equal(hired.units[0]?.asset, 'player_mexican');
-  assert.equal(session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 8 }), false);
+  assert.equal(hired.units[0]?.id, originalMexican.id, 'hiring preserves the original map-unit identity');
+
+  const start = hired.units[0]!.positionFine;
+  assert.equal(session.submitIntent({
+    type: 'move-unit',
+    targetX: (start.x + (2 * 7680)) / 7680,
+    targetY: start.y / 7680,
+  }), true);
+  const moved = session.advance({ deltaMs: 100 });
+  assert.deepEqual(moved.units[0]?.positionFine, { x: start.x + 1500, y: start.y });
+  assert.equal(moved.units[0]?.moving, true);
+  session.close();
 });
 
 test('official Cow Gulch restores its shared spawn field after each successful group across waves', async () => {
@@ -2611,7 +2622,7 @@ test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async 
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-11');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-12');
 
   session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });
