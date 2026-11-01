@@ -1757,7 +1757,21 @@ P1-M0 当前为**未通过**。在新增地图或 R5/R6 非空间机制前，须
 | 地图、路线与锚点回归 | `content.test.ts`、`terrain-rendering.test.ts`、`game.test.ts`、`canvas-renderer.test.ts` 和 `map-viewport.test.ts` 覆盖格码/裁片/路线/双桥/脚底锚点/视口变换；`t27-map-pan.spec.ts` 覆盖桌面主地图拖动、小地图拖动及移动触屏小地图拖动。航点覆盖层确认网页路线在道路和桥面上；这仍不是原版完整运行画面对照。 |
 | 车辆资源与朝向 | APK 中 `b_2x1_shack`、`wagon`、`horse_wagon`、`horse_wagon_white` 与网页 PNG 逐字节一致；APK 的水平移动、转弯镜像状态和竖直路段状态保持规则已在网页复刻。`canvas-renderer.test.ts` 覆盖 type4/type8 的东西向及显式南北向镜像，`enemy-animation.test.ts` 断言首个东转南后的镜像状态不会丢失，并覆盖完整 Cow Gulch 转向序列。网页内置浏览器已定点推进到 Wave03 查看实际车辆帧；不代表原版运行录像逐帧比对。 |
 | 视口拖动 | Node 22.23.3 下 `map-viewport.test.ts` 覆盖 1×平移、地图边界夹紧；Playwright `t27-map-pan.spec.ts` 的桌面鼠标和移动触屏用例通过，暂停战局后检查 Canvas 画面确实随小地图拖动改变。 |
+| 首次 CI 失败与修正 | 首次 GitHub Actions 运行 [`41328599956`](https://github.com/wishflow/wishflow-tools/actions/runs/41328599956) 中，68/69 个 E2E 通过；唯一失败是地图测试把非必要截图写入开发机专属 `/private/tmp/gng-map-pan-minimap.png`。删除该绝对路径截图副作用后，本地全量与 CI 全量重跑通过。今后 E2E 截图应使用测试输出目录，或在断言与交付不需要截图时不保存。 |
 | Mexican 公共行为 | Node 22.23.3 定向 Game 测试：旧断言先失败，修复后首档速度与100ms位移通过。 |
 | APK 与网页原版画面对照 | 部分通过：在模拟器原版开局截图与网页正式 Cow Gulch 开局图之间按宽度归一后，地图格宽、峡谷边界以及东西桥所在格位相符；原版游戏区约1920×910，网页逻辑画布为1024×576，底部广告区域造成约91个逻辑像素的可见高度差。单位位置和帧受运行时刻、随机状态影响，本轮未作像素差分；完整敌人路线和己方墙边移动仍待对照。 |
 | 原版定点运行与限制 | 在 `emulator-5554` 上显式启动 `com.hg.gunsandgloryfree/com.hg.gunsandglory.GameActivity`，进入 New Mexico → Cow Gulch → Easy，仅截取首关开局。`monkey -p` 返回退出码 `-5`，不是可用启动路径；教程对白不会自动暂停战局，移除首条对白后在短观察内进入 Wave02，随即停止原版进程。没有继续完成战役。网页 CUA 拖动可以确认枪手选中，但该次快速 press/release 在0.25×倍速下没有形成可读的格位变化，不能作为移动距离证据；后续优先用有持续时间的 Playwright 拖动和定点原版观察，避免把对白或快速拖动误报成规则验证。 |
-| 发布状态 | N01 Mexican 速度纠错与 N02 地图视口/车辆朝向共2个独立验收切片。N02 修复 1× 下无法平移到首尾路线区域的问题，按影响完整地图可玩性的核心缺陷使用提前发布例外；公开工作流成功后计为1次/2切片（50%），届时常规发布暂停，直到累计比率回到20%以内且新批次至少包含5个已验收切片。P1-M0 整体空间验收仍未通过；这次例外不代表整关通过。 |
+| Codex 内置浏览器公网实测 | 打开[`ab70dd4` 公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=ab70dd4)，进入 Cow Gulch 正式第1关、关闭对白并暂停首波；在主地图空地拖动后，场景相对视口发生平移；再拖动 HUD 小地图，主地图继续同步平移。浏览器 error 日志为空。此项验证网页交互可达，不替代原版路线逐帧比对。 |
+| 发布状态与频率 | Mexican 速度纠错、地图平移/小地图操作/车辆朝向共2个独立实现切片，经一次影响核心地图可玩性的提前发布例外上线。GitHub Actions [运行 `41329069832`](https://github.com/wishflow/wishflow-tools/actions/runs/41329069832) 的 Guns’n’Glory 测试、共享站点检查、Cloudflare Pages 与 GitHub Pages 部署全部成功；Worker 未触发。累计比例为1次/2切片（50%）。按发布后比例上限20%计算，下一次普通发布至少再积累8个独立验收切片，达到2次发布/10个切片；期间文档、测试和小修复不单独发布。P1-M0 整体空间验收仍未通过，本次例外不代表整关通过。 |
+
+### 发布规范的 AGENTS 加载验证
+
+从 `apps/gunsnglory/` 执行以下只读 Pi 检查，退出码为0：
+
+```sh
+pi --no-extensions --no-skills --no-prompt-templates --no-themes \
+  --no-session --no-approve --offline --tools read --mode json \
+  -p '列出启动加载的 AGENTS.md；实际 read docs/implementation-plan.md 与 docs/validation.md；核对发布比例、最新 CI 和公网拖动结果、P1-M0 状态。不要修改文件或运行命令。'
+```
+
+启动上下文列出仓库 `AGENTS.md` 和 `apps/gunsnglory/AGENTS.md`；Pi 随后实际调用两次 `read` 读取上述计划及验证记录。返回内容确认当前比例为1次发布/2切片、下一次普通发布至少再积累8个切片、工作流与公网拖动验证成功，且 P1-M0 未通过。直接在沙箱运行时，Pi 曾因无法创建用户配置锁文件而无法加载模型；通过本机已有 Pi 配置执行同一只读检查后成功，过程中未读取、输出或修改凭证与配置。
