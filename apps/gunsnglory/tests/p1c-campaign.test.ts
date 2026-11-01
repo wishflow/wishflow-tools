@@ -30,6 +30,41 @@ function makeTransportFixture(requestCount = 1): ScenarioContent {
   };
 }
 
+function makeFourPassengerFixture(): ScenarioContent {
+  const waves = cowGulchP1cCampaignContent.campaignWaves!;
+  const oneWagonRequest = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
+  const transportWave = (wave: CampaignWaveDefinition, requests: readonly number[]): CampaignWaveDefinition => ({
+    ...wave,
+    spawnPools: [{ spawnPointId: 0, intervalMs: 0, requests }],
+  });
+  const baseGun = cowGulchContent.units.find((unit) => unit.id === 'gunslinger-1')!;
+
+  return {
+    ...cowGulchP1cCampaignContent,
+    id: 'p1c-four-passenger-offset-fixture',
+    campaignWaveCount: 3,
+    previewWave: { ...cowGulchP1cCampaignContent.previewWave!, baseEnemySpeed: 500 },
+    campaignWaves: [
+      transportWave(waves[0]!, oneWagonRequest),
+      transportWave(waves[1]!, oneWagonRequest),
+      transportWave(waves[2]!, emptyRequests),
+    ],
+    units: [{
+      ...baseGun,
+      activity: 5,
+      cell: { x: 4, y: 10 },
+      weapon: {
+        damage: 5000,
+        damageType: 'light',
+        rangeFine: 153600,
+        reloadTimeMs: 100,
+        projectileSpeed: 600,
+        damageStyle: 0,
+      },
+    }],
+  };
+}
+
 test('Cow Gulch P1-C declares the third wave as pool type 7, not enemy type 7', () => {
   const wave = cowGulchP1cCampaignContent.campaignWaves?.[2];
   assert.deepEqual(wave, {
@@ -149,6 +184,52 @@ test('covered wagon death rewards once, emits debris and passengers, and remains
   view = session.advance({ deltaMs: 1 });
   assert.ok(!view.enemies.some(({ id }) => id === wagon.id || id === tow.id),
     'the original manager keeps dead objects at counter zero and removes them only after it becomes negative');
+});
+
+test('covered-wagon passengers use all four source drawing offsets and retain vehicle physics', async () => {
+  const scenario = makeFourPassengerFixture();
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    mode: 'formal',
+    randomSeed: 10,
+  });
+  let view = session.observe();
+  let passengers = view.enemies.filter(({ id }) => id.startsWith('wagon-passenger-'));
+
+  for (let step = 0; step < 1500 && (view.wave?.number !== 2 || passengers.length !== 4); step += 1) {
+    view = session.advance({ deltaMs: 100 });
+    passengers = view.enemies.filter(({ id }) => id.startsWith('wagon-passenger-'));
+  }
+
+  assert.equal(view.wave?.number, 2);
+  assert.equal(view.wave?.dynamicDifficulty, 1252,
+    'the first covered-wagon kill raises raw difficulty enough to exercise the fourth passenger slot');
+  assert.equal(passengers.length, 4);
+
+  const wreck = view.enemies.find(({ id }) => id === 'campaign-2-enemy-4');
+  assert.ok(wreck);
+  assert.equal(wreck.alive, false);
+  const expectedOffsets = [
+    { x: -1280, y: -1760 },
+    { x: 1280, y: -1760 },
+    { x: -1280, y: 800 },
+    { x: 1280, y: 800 },
+  ];
+  const expectedIds = expectedOffsets.map((_, index) => `wagon-passenger-${wreck.id}-${index + 1}`);
+  assert.deepEqual(passengers.map(({ id }) => id), expectedIds);
+  assert.deepEqual(passengers.map(({ drawingOffsetFine }) => drawingOffsetFine), expectedOffsets);
+  assert.ok(passengers.every(({ type }) => type === 1 || type === 2));
+  assert.ok(passengers.every(({ direction }) => direction === wreck.direction));
+  assert.ok(passengers.every(({ speed }) => speed === 515));
+  assert.ok(passengers.every(({ maxHitPoints }) => maxHitPoints === 168));
+  assert.deepEqual(passengers.map(({ positionFine }) => positionFine), passengers.map(() => wreck.positionFine));
+  assert.deepEqual(passengers.map(({ groupId }, index) => groupId), expectedIds.map((_, index) =>
+    `wagon-passenger-group-${wreck.id}-${index + 1}`));
+  assert.equal(new Set(passengers.map(({ groupId }) => groupId)).size, 4);
+
+  view = session.advance({ deltaMs: 100 });
+  assert.deepEqual(view.enemies.filter(({ id }) => id.startsWith('wagon-passenger-')).map(({ id }) => id), expectedIds,
+    'the same vehicle cannot derive passengers twice on later death frames');
 });
 
 

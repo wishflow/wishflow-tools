@@ -1245,6 +1245,13 @@ const SETTLER_SPAWN_OFFSETS = Object.freeze([
   Object.freeze({ x: 2560, y: 4000 }),
 ]);
 
+const WAGON_PASSENGER_DRAWING_OFFSETS = Object.freeze([
+  Object.freeze({ x: -1280, y: -1760 }),
+  Object.freeze({ x: 1280, y: -1760 }),
+  Object.freeze({ x: -1280, y: 800 }),
+  Object.freeze({ x: 1280, y: 800 }),
+]);
+
 function campaignEnemySpeed(scenario: ScenarioContent, wave: CampaignWaveDefinition, speedPercent = 100): number {
   const waveSpeed = Math.trunc((wave.speedMultiplierPercent * speedPercent) / 100);
   return Math.trunc(((scenario.previewWave?.baseEnemySpeed ?? 0) * waveSpeed) / 100);
@@ -2414,7 +2421,7 @@ export function createGame(options: {
                       type,
                       spawn,
                       { ...enemy.positionFine },
-                      SETTLER_SPAWN_OFFSETS[slot]!,
+                      WAGON_PASSENGER_DRAWING_OFFSETS[slot]!,
                       campaignEnemySpeed(scenario, campaignDefinition, passengerSpeedPercent),
                       campaignEnemyHitPoints(
                         scenario, campaignDefinition, wave.dynamicDifficulty, difficulty, type,
