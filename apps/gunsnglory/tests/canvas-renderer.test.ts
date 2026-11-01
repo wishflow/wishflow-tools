@@ -7,6 +7,8 @@ import { mapCellToScreen } from '../src/render/map-viewport';
 test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts', () => {
   const mapImage = {} as HTMLImageElement;
   const bridgeImage = {} as HTMLImageElement;
+  const verticalBridgeImage = {} as HTMLImageElement;
+  const horizontalBridgeImage = {} as HTMLImageElement;
   const enemyImage = {} as HTMLImageElement;
   const pioneerDeathImage = { naturalWidth: 96, naturalHeight: 24 } as HTMLImageElement;
   const wagonImage = {} as HTMLImageElement;
@@ -184,6 +186,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const images = {
     ground: mapImage,
     bridge: bridgeImage,
+    tiles_bridge_verti: verticalBridgeImage,
+    tiles_bridge_hori: horizontalBridgeImage,
     pioneer_male: enemyImage,
     sfx_death_pioneers: pioneerDeathImage,
     wagon: wagonImage,
@@ -474,6 +478,63 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   }, images);
   assert.equal(ellipseCalls, ellipseCallsBeforeLegacyHitFlash,
     'a legacy hit-flash timer does not add an enemy ellipse absent from the original renderer');
+
+  const bridgeCrossingView: GameView = {
+    ...view,
+    map: {
+      ...view.map,
+      streets: [
+        {
+          asset: 'tiles_bridge_verti', source: { x: 0, y: 0, width: 32, height: 48 },
+          x: 2, y: 9.75, width: 1, height: 1.5,
+        },
+        {
+          asset: 'tiles_bridge_hori', source: { x: 0, y: 0, width: 48, height: 32 },
+          x: 11.75, y: 9, width: 1.5, height: 1,
+        },
+      ],
+      decorations: [],
+    },
+    units: [],
+    enemies: [
+      {
+        ...sampleEnemy,
+        id: 'pioneer-west-bridge',
+        positionFine: { x: 2.5 * 7680, y: 10.5 * 7680 },
+      },
+      {
+        ...sampleEnemy,
+        id: 'pioneer-east-bridge',
+        positionFine: { x: 12.5 * 7680, y: 9.5 * 7680 },
+      },
+    ],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:pioneer-east-bridge', 'enemy:pioneer-west-bridge'],
+  };
+  const bridgeCrossingDrawStart = drawCalls.length;
+  drawGame(context, bridgeCrossingView, images);
+  const bridgeCrossingDraws = drawCalls.slice(bridgeCrossingDrawStart);
+  const bridgeImageIndex = (image: HTMLImageElement) => bridgeCrossingDraws.findIndex(([drawnImage]) => drawnImage === image);
+  const firstEnemyDrawIndex = bridgeImageIndex(enemyImage);
+  const lastEnemyDrawIndex = bridgeCrossingDraws.map(([drawnImage]) => drawnImage).lastIndexOf(enemyImage);
+  const westBridgeDrawIndex = bridgeImageIndex(verticalBridgeImage);
+  const eastBridgeDrawIndex = bridgeImageIndex(horizontalBridgeImage);
+  assert.ok(firstEnemyDrawIndex >= 0 && firstEnemyDrawIndex < westBridgeDrawIndex,
+    'the enemy crossing Cow Gulch’s west bridge draws beneath its vertical deck overlay');
+  assert.ok(lastEnemyDrawIndex >= 0 && lastEnemyDrawIndex < eastBridgeDrawIndex,
+    'the enemy crossing Cow Gulch’s east bridge draws beneath its horizontal deck overlay');
+
+  const bridgeViewport = getMapViewport(bridgeCrossingView);
+  for (const [index, cell] of [[0, { x: 12.5, y: 9.5 }], [1, { x: 2.5, y: 10.5 }]] as const) {
+    const enemyDraw = bridgeCrossingDraws.filter(([image]) => image === enemyImage)[index];
+    assert.ok(enemyDraw);
+    const feet = mapCellToScreen(bridgeViewport, cell.x, cell.y);
+    assert.equal((enemyDraw[5] as number) + ((enemyDraw[7] as number) / 2), feet.x,
+      'bridge-crossing enemy sprite stays centered on its route position');
+    assert.equal((enemyDraw[6] as number) + (enemyDraw[8] as number), feet.y,
+      'bridge-crossing enemy feet stay anchored to the TDM route position');
+  }
 });
 
 test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {
