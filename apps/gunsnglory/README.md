@@ -38,6 +38,7 @@ pnpm --dir apps/gunsnglory run simulate:batch -- --input examples/serial-batch.j
 | [模拟与自动化契约](docs/simulation-and-automation.md) | 战局操作、时间随机、回放、策略和实验格式 | 实现交互控制、复现与比较 |
 | [实施计划](docs/implementation-plan.md) | 唯一进度、里程碑、内容阶段归属、任务契约、启动与完成门槛 | 选择和执行下一项工作 |
 | [验证记录](docs/validation.md) | 历史任务、规划审计及 pi 上下文加载的实际检查证据 | 核对已验证与未验证的范围 |
+| [完整实现审核](docs/implementation-audit.md) | 完整游戏与大规模模拟审核；46项问题，含UI、交互、数值、音画、文案、复现证据与验收建议 | 处理审核发现；当前排期仍以实施计划为准 |
 
 ## 维护方式
 

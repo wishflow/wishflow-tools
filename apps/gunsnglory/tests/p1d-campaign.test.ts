@@ -37,7 +37,7 @@ test('P1-D content matches the original Cow Gulch wave metadata and request pool
   ]);
 });
 
-test('original waves auto-start and auto-advance to victory without per-wave start intents', async () => {
+test('empty-request campaign fixture verifies automatic wave progression without gameplay coverage', async () => {
   const content: ScenarioContent = {
     ...cowGulchP1dCampaignContent,
     id: 'p1d-empty-auto-progression-fixture',
