@@ -162,6 +162,12 @@ test('original Wave03 emits all three covered-wagon pairs at the six-second inte
   await advanceToWave(session, 3);
   let view = session.advance({ deltaMs: 0 });
   const spawnedGroups = () => view.events.filter((event) => event.type === 'enemy-group-spawned').length;
+  const spawnAnchorX = () => {
+    const event = view.events.find((candidate) => candidate.type === 'enemy-group-spawned');
+    if (event?.type !== 'enemy-group-spawned') return undefined;
+    return view.enemies.find(({ id }) => id === event.enemyIds[0])?.positionFine.x;
+  };
+  const spawnAnchorXs = [spawnAnchorX()];
   const advanceFor = (durationMs: number) => {
     let remaining = durationMs;
     while (remaining > 0) {
@@ -182,22 +188,25 @@ test('original Wave03 emits all three covered-wagon pairs at the six-second inte
     assert.equal(spawnedGroups(), 0, 'the countdown reaching zero is observed on the following update');
     view = session.advance({ deltaMs: 0 });
     assert.equal(spawnedGroups(), 1);
+    spawnAnchorXs.push(spawnAnchorX());
     assert.equal(view.wave?.pendingSpawnRequests, 3 - expectedGroups);
   }
 
   assert.equal(view.wave?.phase, 'active', 'a cleared request pool does not settle while transport units remain alive');
   assert.equal(view.wave?.pendingSpawnRequests, 0);
-  assert.equal(view.enemies.filter(({ alive }) => alive).length, 4,
-    'the second pair has already been removed at the APK map boundary before the third request is emitted');
-  assert.deepEqual(view.enemies.map(({ type }) => type), [8, 4, 8, 4]);
-  assert.equal(view.wave?.escapedEnemies, 2);
-  assert.equal(view.wave?.lives, 49, 'type8 tow cleanup is free; its type4 wagon partner costs one life');
+  assert.deepEqual(spawnAnchorXs, [-11_520, -11_520, -11_520],
+    'each successful Wave03 request uses the same temporary anchor and restores the shared field');
+  assert.equal(view.enemies.filter(({ alive }) => alive).length, 6,
+    'all three pairs remain active when the third request is emitted');
+  assert.deepEqual(view.enemies.map(({ type }) => type), [8, 4, 8, 4, 8, 4]);
+  assert.equal(view.wave?.escapedEnemies, 0);
+  assert.equal(view.wave?.lives, 50);
 
   view = session.advance({ deltaMs: 100 });
-  assert.equal(view.enemies.filter(({ alive }) => alive).length, 2,
-    'the third pair is likewise removed on its first movement update');
-  assert.equal(view.wave?.escapedEnemies, 4);
-  assert.equal(view.wave?.lives, 48, 'each removed type4 wagon costs one life while type8 tow does not');
+  assert.equal(view.enemies.filter(({ alive }) => alive).length, 6,
+    'the pairs continue along the route instead of being removed due to accumulated spawn drift');
+  assert.equal(view.wave?.escapedEnemies, 0);
+  assert.equal(view.wave?.lives, 50);
 });
 
 test('a blocked transport spawn keeps its request and retries after the three-second half interval', async () => {

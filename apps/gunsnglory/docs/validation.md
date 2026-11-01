@@ -1353,7 +1353,7 @@ Cow Gulch 已实现敌人类型为1、2、4、8，因此当前只有 type4 车�
 
 第一次运行红测在第27帧复现运输敌人跨组碰撞框相交，中心差 `7440`；实现后定向测试和 TypeScript 检查通过。该用例是依据反编译 CollisionManager 行为的静态/本地模型对照，不是 Android 实机帧录制。
 
-碰撞实现期间先发现越界清理差异，详见[第69节](#69-p1-f-cow-gulch生成点漂移与越界清理)。当时三项旧战斗测试失败，表现为现金/射击进度变化及 Wave03 存活组数减少；这些用例建立在缺少逐帧清理的网页模型上，不能据此否定 Smali。第69节已单独调整规则与测试预期；本节异组碰撞范围与结论不变。
+碰撞实现期间先发现越界清理差异，详见[第69节](#69-p1-f-cow-gulch-生成点临时偏移恢复与越界清理)。当时三项旧战斗测试失败，表现为现金/射击进度变化及 Wave03 存活组数减少；这些用例建立在缺少逐帧清理的网页模型上，不能据此否定 Smali。第69节已单独调整规则与测试预期；本节异组碰撞范围与结论不变。
 
 ### 验证
 
@@ -1365,42 +1365,46 @@ Cow Gulch 已实现敌人类型为1、2、4、8，因此当前只有 type4 车�
 | 发布与内置浏览器 | 待本地提交合并、推送并由工作流部署后实测。 |
 | P1-F 总门槛 | 异组敌人碰撞这一局部行为通过，不代表整个 Cow Gulch 首关视觉/交互对照通过；完整关卡验收计数仍为0/60。 |
 
-## 69. P1-F Cow Gulch 生成点漂移与越界清理
+## 69. P1-F Cow Gulch 生成点临时偏移恢复与越界清理
 
-网页此前只在敌人通过格心、进入路线节点分支时检查地图边界。APK 在该分支之后仍对每个存活敌人逐帧执行地图范围检查；网页敌人能因此多走若干格，后续请求和波次结果也随之偏离。本轮按 Smali 消费顺序修正，并补上越界移除时 type8 牵引马车的免扣命规则。
+本节更正此前对 `EnemyDirector.addEnemyAtSpawnPoint()` 的控制流解释。旧报告把公共恢复分支误读为“只有碰撞失败才恢复”，并据此将成功生成后的累计西移写成原版行为；Smali 的实际分支表明，碰撞失败与正常生成完成都会到达恢复代码。由此推导的网页固定种子 Wave04 失败结果和对应断言不再是有效的原版行为预期。
 
 ### APK 证据与可下结论
 
 | 行为 | APK 证据 | 结论 |
 | --- | --- | --- |
-| action1 生成字段移动 | `codex/gunsnglory-spec` 中 `EnemyDirector.smali` 的 `addEnemyAtSpawnPoint()`，`.line 792–793` | 每次请求先将所选共享 action1 字段的 `fineX/fineY` 减去 `spawnDirectionX/Y × 2 × 0x1e00`；`0x1e00 = 7680` fine units，即沿生成反方向移动两格。 |
-| 成功/失败的位移差异 | 同方法 `.line 909–910` 和成功生成分支 `.line 814–901` | 只有预检碰撞失败时才把字段加回两格；成功生成会保留位移，后续成功请求复用已变更字段。该逻辑跨波次共享。 |
-| 越界时机及阈值 | `EnemyDirector.moveEnemys()` `.line 503–505` | `passesFieldCenter()` 仅控制转向/路线离场分支；其后分支外检查 fullX/fullY。坐标到达 `-3` 或达到地图宽/高加3时立即移除。 |
-| fullX/fullY 换算 | `GameObjectEnemy.move()` 及构造逻辑；DEX/Smali 反编译记录 | `fineX/fineY ÷ 7680.0f` 转成 Java `int`，对负数向零截断；不能替换为向下取整。 |
-| 移除扣命 | `EnemyDirector.removeEnemyWithPenalty()` `.line 722–742` | 所有类型从对象/绘制/碰撞集合移除；type8 在扣生命和更新逃逸难度前跳过，其它类型调用 `getPenaltyForSurviving()` 并扣相应生命。 |
+| action1 临时偏移 | `codex/gunsnglory-spec` 的 `EnemyDirector.smali`，`addEnemyAtSpawnPoint()` `.line 792–793` | 请求开始时，所选字段 `fineX/fineY` 减去 `spawnDirectionX/Y × 2 × 0x1e00`；`0x1e00 = 7680` fine units，即沿生成反方向移动两格。 |
+| 正常生成后的恢复 | 同方法成功生成分支 `.line 814–901` 汇入 `:cond_19`；`.line 909–910` | 公共出口把字段沿生成方向加回两格后返回。成功生成不会留下偏移。 |
+| 碰撞失败后的恢复 | 同方法预检分支跳转到 `:cond_19`；`.line 909–910` | 失败路径也恢复字段；调用方保留请求并按半间隔重试。 |
+| 字段生命周期 | Android `EnemyDirector` 的 action1 字段及网页 `GameSession` 初始化 | 字段对象供同一关卡的多个波次复用；公共出口恢复后，跨波次复用的是原始坐标，不是累计偏移。 |
+| 越界时机及阈值 | `EnemyDirector.moveEnemys()` `.line 503–505` | `passesFieldCenter()` 控制转向/路线离场分支；之后仍逐帧检查 fullX/fullY，坐标到达 `-3` 或地图宽/高加3时立即移除。 |
+| fullX/fullY 换算 | `GameObjectEnemy.move()` 与构造逻辑的 DEX/Smali | `fineX/fineY ÷ 7680.0f` 转成 Java `int`，负数向零截断，不能替换成向下取整。 |
+| 移除扣命 | `EnemyDirector.removeEnemyWithPenalty()` `.line 722–742` | 所有类型从对象、绘制和碰撞集合移除；type8 在扣生命和更新逃逸难度前跳过，其它类型按存活惩罚扣命。 |
 
-Cow Gulch map01 的原始 action1 是 `(0,10)` 向东，且地图目录只列出一个该生成点。因生成字段在成功请求后持续向西移动，后续敌人可在地图西侧生成；越界检查会在它们的首次或后续移动更新中移除。这个结论来自静态 Smali 与地图数据交叉核对。它证明网页必须复现这套行为，但**尚未单独证明原版 1.8.6 运行时的整关最终现金、死亡波次或能否通过玩家操作获胜**。
+Cow Gulch map01 唯一 action1 为 `(0,10)` 向东。其原始中心为 `(3840,80640)`；每次请求在临时偏移期间的首成员生成锚点为 `(-11520,80640)`，方法返回前字段恢复到 `(3840,80640)`。因此每次成功请求应从同一锚点开始，而不是继续向地图西侧漂移。该结论由 Smali 控制流和地图坐标交叉核对；它不证明 APK 整关经济、玩家操作结果或胜负。
 
-### 网页修正与独立预期
+越界清理仍是独立规则：`moveEnemy()` 在每个移动更新后计算 fullX/fullY，不等待 `passedCenter`；结算移除时仅对 `type !== 8` 扣生命和更新逃逸难度。路线、地图数据、相机裁切和碰撞框不因本次生成字段修正而改变。
 
-网页 `moveEnemy()` 现在在每个移动更新后直接计算边界结果，不等待 `passedCenter`；汇总移除时仅对 `type !== 8` 扣生命和更新逃逸难度，type8 仍移除并计入网页诊断的移除数量。路线节点、地图数据、相机裁切和碰撞框均未因该修正移动。
+### 网页修正与回归
 
-固定 Java 随机种子42、无玩家命令的当前模型在 Wave04 以 `$66` 和0生命进入 defeat；这是网页规则模型的可复现结果，不是 APK 运行记录，也不代表手动操控下必然同样失败。第64节的 Wave02 `$100` 与 Mexican 招募结果来自旧网页规则，已标为无效 APK oracle；对应正式场景与触屏测试改为验证当前源规则，单位招募及 Mexican AOE 由隔离行为测试覆盖。
+网页此前把 `candidatePosition` 写回共享 `spawnField.positionFine`。现在只将该临时位置传给生成逻辑，不持久化回字段；字段仍在会话开始时初始化一次并跨波次共享。碰撞失败继续保留池请求，成功才扣除请求。规则版本从 `gng-rules-9` 升为 `gng-rules-10`，旧回放不再被当作当前规则回放。
 
-新增 [`p1f-map-boundary-cleanup.test.ts`](../tests/p1f-map-boundary-cleanup.test.ts) 确认敌人越过 `fullX <= -3` 的当前帧即被移除并只扣一次命；修正前断言失败，修正后通过。`p1c-campaign.test.ts` 的 Wave03 测试保留全部三个请求和六秒间隔断言，同时确认第二/第三运输组在边界处移除、牵引 type8 不扣命、车厢 type4 各扣一次。`game.test.ts` 固定种子路径回归当前模型现金、波次和 defeat 结果；Gunslinger 特殊装填本身仍由实际六发 fixture 验证，不依赖已被清理的正式敌群。
+旧固定种子42 Wave04 defeat、现金 `$66` 的结果来自错误的累计偏移模型，现已撤销；它不能作为 APK 行为或雇用可达性的依据。此前第64节中基于旧网页模型的 Wave02 `$100` / Mexican 招募结果也仍不是 APK oracle。首关经济和正式战役可达性需在纠正后的模型上单独验证；不得注资或篡改生成字段来满足旧测试预期。
+
+[`game.test.ts`](../tests/game.test.ts) 通过正式 Cow Gulch `GameSession` 捕获各波成功生成事件，断言 action1 首成员锚点始终为 `x=-11,520, y=80,640`，并在进入后续波次后停止。该测试先在旧写回实现上因 x 坐标漂移而失败，临时恢复写回也会重现失败。纠正后，固定种子首波达到第六次实际射击并触发特殊装填；`p1c-campaign.test.ts` 确认 Wave03 三组都按六秒间隔生成，第三组出现时六个运输成员仍存活，同时继续覆盖碰撞失败、3000ms 重试及请求保留。越界边界仍由 [`p1f-map-boundary-cleanup.test.ts`](../tests/p1f-map-boundary-cleanup.test.ts) 覆盖。
 
 ### 验证边界
 
 | 验收面 | 结果 |
 | --- | --- |
-| APK 静态证据 | `EnemyDirector` 生成、移动清理、扣命三处 Smali 与 `GameObjectEnemy` fullX 换算交叉核对；反编译文件不是原始源码。 |
-| Game 与应用 CI | `source ~/.nvm/nvm.sh && CI=1 PLAYWRIGHT_PORT=4220 nvm exec 22.23.3 pnpm --dir apps/gunsnglory run test:ci` 通过：TypeScript、174 项单元测试、Vite 生产构建及60项 Playwright E2E。根目录 `source ~/.nvm/nvm.sh && nvm exec 22.23.3 pnpm run test:catalog` 的15项测试通过。 |
-| 浏览器测试时间边界 | 原 T22 只推进60秒浏览器时钟，按4×累计规则实际只推进约4分钟游戏时间，固定种子战役尚未败北；增加到100秒后定向测试通过。未设置 `CI=1` 的5 worker 初跑还使两个其他 E2E 超时；它们单 worker 复测及最终 `CI=1` 全套均通过。之后运行此套件应沿用 CI 单 worker 配置，并根据模拟器时长设置虚拟时间。 |
-| Codex 内置浏览器本地检查 | 在隔离的新 origin `http://127.0.0.1:5237/` 检查初始0/1档案、Cow Gulch 地图/HUD 与 Pedro 的第一波提示；继续后可见战斗 HUD。没有完成正式战役结算，未写入新档案。 |
-| GitHub Actions 与发布 | 代码提交 `d482dbb` 经合并提交 `952e360` 推入 `master`；[workflow 41169809259](https://github.com/wishflow/wishflow-tools/actions/runs/41169809259) 成功。应用测试（2分18秒）、共享目录检查、Cloudflare Pages 与 GitHub Pages 部署全部通过；Worker 按变更分类跳过。 |
-| Codex 内置浏览器公网实测 | 打开 [`?release=952e360`](https://wishflow-tools.pages.dev/gunsnglory/?release=952e360)，检查原版战役页和 Cow Gulch 场景，关闭 Pedro 第一波提示后 HUD 正常显示；切回不结算正式战役的样本，确认 Wave 1 待开始、生命50、现金 `$65`、模拟速度4×。页面保留已有档案“已完成1/1、最高分 `$356`”；未运行至战局结算。控制台 error/warn 查询无返回。 |
-| 原版运行核对 | 尚未记录相同地图/波次/生成请求的 APK 运行画面或坐标；不把网页固定种子输出写作原版运行观察。若后续确认其输出与 Smali 推导不同，记录具体点位及新证据并重新检查字段初始化/恢复路径。 |
-| P1-F 总门槛 | 越界清理这一行为差异关闭；Cow Gulch 完整规则、画面、触屏/鼠标及原版运行对照未完成，关卡与整体计数仍为0/60。 |
+| APK 静态证据 | `EnemyDirector` 的偏移、成功/失败公共恢复、移动边界与扣命 Smali，以及 `GameObjectEnemy` fullX 换算交叉核对；反编译记录不是原始 Java 源码。 |
+| 定向生成回归 | Node 22.23.3 下运行 `node --import tsx --test --test-name-pattern='official Cow Gulch restores its shared spawn field' tests/game.test.ts`；原实现失败，修正后通过，覆盖固定种子42及跨波次生成锚点。 |
+| 回归测试有效性 | 按代码审查要求临时重新加入 `spawnField.positionFine = candidatePosition`，上述跨波次测试再次失败；移除该变异后定向测试通过。 |
+| 战役用例边界 | `game.test.ts` 只推进到后续波次首次成功生成；E2E `t22-original-waves.spec.ts` 仅以4×推进20秒浏览器时钟，确认进入后续波次、未提前结算且下一关仍锁定，不为存档测试跑完整战役。 |
+| 本地应用 CI | Node 22.23.3 下运行 `CI=1 PLAYWRIGHT_PORT=53847 pnpm --dir apps/gunsnglory run test:ci`：类型检查通过、186 项单测通过、Vite 构建通过、67 项 Playwright E2E 全部通过。E2E 需允许本地 WebServer 绑定 `127.0.0.1`。 |
+| 站点目录测试 | `pnpm run test:catalog` 的15项测试通过。 |
+| 发布与线上实测 | 本轮发布完成后更新。 |
+| P1-F 总门槛 | 当前只关闭生成字段累计漂移这一项；越界清理的既有实现不变。Cow Gulch 其余规则、表现、鼠标/触屏对照及完整关卡门槛仍未完成，计数保持0/60。 |
 
 ## 70. P1-F Cow Gulch 敌人地图边缘可见性
 
