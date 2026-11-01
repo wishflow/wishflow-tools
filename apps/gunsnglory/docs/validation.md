@@ -1681,4 +1681,41 @@ P1-R1中 A05/A06 的范围校正随本轮纳入；G01现有成功、失败与跨
 | Codex 内置浏览器公网实测 | 打开[提交 `5bf958b` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=5bf958b)，确认页面标题、正式战役进度、地图 Canvas、HUD 和4×速度控件加载。关闭首波对白后进入 Wave01，HUD 显示生命50、敌人数和现金随游戏推进更新；随后暂停确认暂停状态。未继续完整战役或结算；页面显示的既有正式进度仍为1/1、最高分 `$356`。此为部署和基础交互烟测，不作为乘员偏移证据。 |
 | 任务边界 | 乘员四槽具体行为由上述固定状态 `GameSession` 测试验收；本次浏览器烟测未推进到车毁派生。P1-R3 任务级验收完成；P1-F 全关对照门槛仍未通过，完整关卡计数保持0/60。 |
 
-P1-R4 爆炸投射物生命周期与飞行时间是下一任务；R4开始前仍须按计划核对当前代码和对应 APK 证据。
+P1-R4 爆炸投射物生命周期与飞行时间已在第82节完成任务级验收；G04 的 AOE 坐标与半径边界是下一项 R5 工作。
+
+## 82. P1-R4 Cow Gulch 投射物生命周期与飞行时间
+
+### 原版依据与实现边界
+
+本轮复核了研究分支的 REA/JADX 恢复代码及 Smali/DEX：`GameObjectShot` 的直线飞行时间按 `damageStyle` 选择基础比例，0→10%、1/2→50%、3/4/5→75%；原目标失效后，投射物仍可继续到达其最后有效位置。Mexican 炸药使用 style3。相关恢复代码是 APK 的分析产物，不是原始 Java 源码；原始问题与独立复现见审核报告 G03、N04。
+
+`src/game/index.ts` 现在给投射物保存最后有效的目标绘制终点。目标仍在活动对象集合时持续更新终点；目标死亡后清理或逃逸移除时，投射物保留该终点并继续推进。到达后，范围弹仍结算爆炸；普通单体弹只作用于原目标仍存在且存活的情况，不改投其他敌人。
+
+style0–5 的飞行时间实现为：
+
+```text
+baseSteps = trunc(projectileSpeed / 10)
+distanceSteps = trunc(((100 - baseTimePercent) * baseSteps * distanceSquare) / maxSquareRange)
+totalTravelMs = trunc((baseTimePercent * baseSteps + distanceSteps) / 100) * 10
+```
+
+`baseTimePercent` 按上述 style 表选择。这里保留 Java 向零截断的计算顺序；style6 的火箭两段路径未纳入本轮。G04 中 AOE 物理坐标及半径边界仍由 R5 单独处理，本节不宣称该差异关闭。
+
+### 定向回归
+
+新增与调整的 [`game.test.ts`](../tests/game.test.ts) 覆盖：
+
+- style0 与 style3 在近、中、远距离及小数取整边界下的飞行时间；
+- Mexican 炸药与普通单体弹同时飞行时，主目标被击杀后两种投射物均继续运行；炸药命中附近存活敌人，普通弹不误伤其他敌人；
+- 主目标逃逸并被移出活动对象集合后，炸药仍飞至缓存终点；测试检查到达边界、爆炸结果和该终点坐标。
+
+新增行为测试先在旧实现上失败，分别暴露 style3 时间错误、目标死亡清理投射物和目标逃逸删除投射物；实现后定向用例通过。普通弹没有目标时到达终点并结束，不产生伤害。该组测试核对 `GameSession` 行为，不是 APK 运行输出，也不覆盖 G04 的物理坐标规则。
+
+| 验收面 | 结果 |
+| --- | --- |
+| 完整应用 CI | Node 22.23.3 下 `CI=1 PLAYWRIGHT_PORT=54850 pnpm run test:ci` 通过：TypeScript 检查、195项单元测试、Vite生产构建和67项 Playwright E2E 全部通过。 |
+| 站点目录 | `pnpm run test:catalog`：15项测试通过。 |
+| 代码审阅 | 对照审核报告 G03/N04、APK 恢复代码和本轮行为测试复核；临时把逃逸终点更新条件反转后，终点行为测试按预期失败，恢复后通过。该 mutation check 只验证测试能识别回归。 |
+| 集成与部署 | 代码提交 `358471c` 已合入 `gunsnglory`、`master` 并推送。[Actions run 41302617061](https://github.com/wishflow/wishflow-tools/actions/runs/41302617061) 全部通过：Guns’n’Glory 测试、共享目录检查、GitHub Pages 和 Cloudflare Pages 部署成功；Worker 按变更范围跳过。 |
+| Codex 内置浏览器公网实测 | 打开[提交 `358471c` 的公开版](https://wishflow-tools.pages.dev/gunsnglory/?release=358471c)，确认战役入口、Cow Gulch Canvas 地图、HUD 和4×速度控件加载。点击 Wave01 对白继续，短时观察正式战局自动推进到 Wave02；再次继续后看到 Wave02 有4名敌人、生命50、现金 `$99`，随后暂停。原有战役档案显示已完成1/1、最高分 `$356`；返回隔离样本后为第1波待开始、生命50、现金 `$65`，未结算战役。页面交互与计时推进正常；本次烟测不作为投射物伤害/生命周期的规则证据，且未覆盖真实手机。 |
+| P1-R4 状态 | G03、N04 按本节的任务范围关闭；G04、style6 火箭路径、完整首关对照及整关/其余关卡验收仍未完成，关卡计数仍为0/60。 |

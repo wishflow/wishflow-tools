@@ -182,6 +182,8 @@ flowchart LR
 
 每种玩法交付包括其可雇用/睡眠、唤醒、待机、移动、攻击/装填、受击/状态效果、死亡等实际存在的状态，以及相应方向、选择反馈、弹丸/残片/爆炸、声音和清理条件。原版不存在的状态不另造。素材字段与文件组织由[架构设计](architecture.md)维护；本节维护具体基线。枪手与 Mexican 的攻击帧阈值来自 `GameDesignOptics`，帧选择和计时顺序来自 `GameObjectUnit.move()`；动画验收预期不再留给实现时推测。
 
+Cow Gulch 的直线投射物 style0–5按 APK 的基础飞行比例计算：0→10%、1/2→50%、3/4/5→75%。计算顺序为 `baseSteps=trunc(projectileSpeed/10)`、`distanceSteps=trunc(((100-baseTimePercent)×baseSteps×distanceSquare)/maxSquareRange)`、`totalTravelMs=trunc((baseTimePercent×baseSteps+distanceSteps)/100)×10`，各整数转换遵循 Java 向零截断。style6 火箭采用独立两段路径，不套用这条直线公式。飞行中的投射物随活动目标更新终点；目标被清理或逃逸移出活动列表后，继续飞向最后缓存的终点。范围弹在终点结算范围效果；普通单体弹只伤害原目标存活时的对象，不转而攻击其他敌人。AOE 候选的物理坐标与边界另按相应规则核对，不由本生命周期条款推定。依据为研究分支 `codex/gunsnglory-spec` 中 GameObjectShot/UnitDirector 的 REA/JADX 与 Smali/DEX 分析；反编译文件是 APK 分析产物，不是原始 Java 源码。实现与测试记录见[验证记录第82节](validation.md#82-p1-r4-cow-gulch-投射物生命周期与飞行时间)。
+
 敌人受击反馈按实际 APK 状态实现：`GameObjectEnemy` 类清单没有通用受击闪光状态（REA-005）；`getsDamaged()` 更新生命值，并按投射物参数设置持续伤害或减速计时（REA-420）；`draw()` 绘制死亡、持续伤害、减速与治疗等已有状态效果，没有通用的命中描边分支（REA-012）。网页不得另加每次命中都触发的通用闪光计时或椭圆。受损敌人的生命条是独立反馈，具体阈值和尺寸按本节下方规则实现。
 
 枪手依据 `R/recovered-source/` 下的 `GameDesignOptics.java`、`GameObjectUnit.java`：
