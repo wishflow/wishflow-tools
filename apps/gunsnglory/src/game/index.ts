@@ -2635,7 +2635,6 @@ export function createGame(options: {
                   continue;
                 }
 
-                spawnField.positionFine = candidatePosition;
                 wave.enemies.push(...spawned);
                 drawOrderCreationOrder.push(...spawned.map(({ id }) => 'enemy:' + id));
                 pool.requests[selectedRequestIndex] = pool.requests[selectedRequestIndex]! - 1;

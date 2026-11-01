@@ -1,7 +1,7 @@
 import { expect, test } from './auto-continue-fixtures';
 
-test('official Cow Gulch defeat saves a result without unlocking the next stage', async ({ page }) => {
-  test.setTimeout(180_000);
+test('official Cow Gulch advances through its waves without a premature defeat or unlock', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.addInitScript(() => {
@@ -51,14 +51,12 @@ test('official Cow Gulch defeat saves a result without unlocking the next stage'
     }, 100);
     window.cancelAnimationFrame = (handle) => window.clearTimeout(handle);
   });
-  // The source-faithful run now removes each enemy at its actual map boundary.
-  // At 4× the fixed-seed no-input campaign needs just over four minutes of
-  // simulated time to settle, so advance 100 seconds of browser time.
-  await page.clock.runFor(100_000);
+  // Advance through the first wave and into later campaign traffic. Do not run
+  // the full campaign just to test that a spawn-field fix avoids false defeat.
+  await page.clock.runFor(20_000);
 
-  await expect(page.getByTestId('settlement')).toBeVisible();
-  await expect(page.getByTestId('settlement-outcome')).toHaveText('Defeat');
-  await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
+  await expect(waveStatus).toContainText(/Wave [2-8]\/8/);
+  await expect(page.getByTestId('settlement')).toBeHidden();
   await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/1 stages complete');
   await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
   await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
@@ -78,8 +76,8 @@ test('official Cow Gulch defeat saves a result without unlocking the next stage'
   }));
   expect(profile.schemaVersion).toBe(2);
   expect(profile.completedScenarios).toEqual([]);
-  expect(profile.highScores).toHaveProperty('campaign-new-mexico-01');
-  expect((profile.appliedSettlementIds as string[])).toHaveLength(1);
+  expect(profile.highScores).not.toHaveProperty('campaign-new-mexico-01');
+  expect(profile.appliedSettlementIds).toEqual([]);
 
   await page.reload();
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');

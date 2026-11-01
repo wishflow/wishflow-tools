@@ -467,7 +467,7 @@ test('the original Mexican hire slot wakes in place but remains immobile at its 
   assert.equal(session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 8 }), false);
 });
 
-test('official Cow Gulch preserves APK spawn cleanup even when later groups prevent the Mexican hire', async () => {
+test('official Cow Gulch restores its shared spawn field after each successful group across waves', async () => {
   const session = await createGame({ scenarios: { [cowGulchLevelOneContent.id]: cowGulchLevelOneContent } }).open({
     scenarioId: cowGulchLevelOneContent.id,
     mode: 'formal',
@@ -488,16 +488,24 @@ test('official Cow Gulch preserves APK spawn cleanup even when later groups prev
   assert.equal(sleepingMexican.activity, 4);
   assert.equal(sleepingMexican.hirePrice, 100);
 
-  for (let frame = 0; frame < 3000 && view.wave?.settlement?.outcome !== 'defeat'; frame += 1) {
+  const successfulSpawnAnchors: Array<{ wave: number; x: number; y: number }> = [];
+  for (let frame = 0; frame < 2_000
+    && !successfulSpawnAnchors.some(({ wave }) => wave > 1); frame += 1) {
     view = session.advance({ deltaMs: 100 });
+    for (const event of view.events) {
+      if (event.type !== 'enemy-group-spawned') continue;
+      const firstEnemy = view.enemies.find(({ id }) => id === event.enemyIds[0]);
+      assert.ok(firstEnemy, 'the successful spawn event exposes its first member in the same frame');
+      successfulSpawnAnchors.push({ wave: event.waveNumber, ...firstEnemy.positionFine });
+    }
   }
-  assert.equal(view.wave?.settlement?.outcome, 'defeat');
-  assert.equal(view.wave?.number, 4);
-  assert.equal(view.wave?.lives, 0);
-  assert.equal(view.wave?.escapedEnemies, 53);
-  assert.equal(view.wave?.defeatedEnemies, 1);
-  assert.equal(view.wave?.cash, 66, 'the fixed source-faithful run never reaches the $100 Mexican price');
-  assert.equal(view.units.find((unit) => unit.id === mexicanId)?.activity, 4);
+  assert.ok(successfulSpawnAnchors.length > 1, 'the formal level produces repeated successful campaign requests');
+  assert.ok(new Set(successfulSpawnAnchors.map(({ wave }) => wave)).size > 1,
+    'the same action1 field is reused after the campaign advances into a later wave');
+  assert.ok(successfulSpawnAnchors.every(({ x }) => x === -11_520),
+    'each group starts two tiles behind Cow Gulch action1 at x=-11,520, without accumulating the temporary offset');
+  assert.ok(successfulSpawnAnchors.every(({ y }) => y === 80_640),
+    'the shared action1 field returns to its original y=80,640 after every successful request');
 });
 
 test('applies the Gunslinger special reload after the sixth actual shot', async () => {
@@ -535,7 +543,7 @@ test('applies the Gunslinger special reload after the sixth actual shot', async 
   assert.deepEqual(shots.map(({ specialReload }) => specialReload), [false, false, false, false, false, true, false]);
 });
 
-test('official Cow Gulch first wave ends before six Gunslinger shots under the source-faithful spawn cleanup', async () => {
+test('official Cow Gulch first wave can reach the sixth-shot special reload with restored spawn fields', async () => {
   const session = await createGame({ scenarios: { [cowGulchContent.id]: cowGulchContent } }).open({
     scenarioId: cowGulchContent.id,
     mode: 'formal',
@@ -557,8 +565,9 @@ test('official Cow Gulch first wave ends before six Gunslinger shots under the s
   }
 
   assert.equal(view.wave?.number, 2, 'the first wave still clears after its surviving enemy is handled');
-  assert.ok(shots.length < 6, 'the original wave does not reach the special-reload threshold');
-  assert.ok(shots.every(({ specialReload }) => !specialReload));
+  assert.ok(shots.length >= 6, 'enemies spawned from the restored action1 field remain in the original battle long enough');
+  assert.ok(shots.slice(0, 5).every(({ specialReload }) => !specialReload));
+  assert.equal(shots[5]?.specialReload, true, 'the sixth actual shot uses the researched special reload');
 });
 
 test('upgrades a selected Gunslinger once, charges the next-level price, and applies its researched stats', async () => {
@@ -2338,7 +2347,7 @@ test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async 
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-9');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-10');
 
   session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });
