@@ -374,11 +374,13 @@ function drawEnemy(
   const image = images[asset];
   if (!image) throw new Error('Missing game image: ' + asset);
 
-  const sourceWidth = vehicle ? 32 : 16;
-  const sourceHeight = vehicle ? 40 : 24;
+  const sourceWidth = vehicle ? 48 : 16;
+  const sourceHeight = vehicle ? 60 : 24;
+  const frameWidth = vehicle ? 32 : sourceWidth;
+  const frameHeight = vehicle ? 40 : sourceHeight;
   const tileScale = viewport.scaleFactor;
-  const width = sourceWidth * tileScale;
-  const height = sourceHeight * tileScale;
+  const width = frameWidth * tileScale;
+  const height = frameHeight * tileScale;
   const offset = enemy.drawingOffsetFine ?? { x: 0, y: 0 };
   const centerX = viewport.origin.x + ((enemy.positionFine.x + offset.x) / 240) * tileScale;
   const feetY = viewport.origin.y + ((enemy.positionFine.y + offset.y) / 240) * tileScale;

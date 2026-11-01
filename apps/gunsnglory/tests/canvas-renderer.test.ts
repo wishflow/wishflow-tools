@@ -385,6 +385,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       const bodyDraws = drawCalls.filter(([image]) => image === bodyImage);
       assert.equal(bodyDraws.length, bodyVisible ? 1 : 0,
         'vehicle body visibility matches the original 350 ms cutoff at ' + deathRemainingMs + ' ms');
+      if (bodyDraws[0]) {
+        assert.deepEqual(bodyDraws[0].slice(3, 5), [48, 60], 'vehicles crop one APK hdpi atlas frame');
+        assert.deepEqual(bodyDraws[0].slice(7, 9), [60, 75], 'hdpi frames retain their 32×40 logical draw size');
+      }
       const smokeDraw = drawCalls.find(([image]) => image === smokeImage);
       assert.ok(smokeDraw, 'death style for enemy type ' + type + ' keeps its smoke at ' + deathRemainingMs + ' ms');
       assert.deepEqual(smokeDraw.slice(1, 5), [smokeFrame * 48, 0, 48, 64],
@@ -994,7 +998,8 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
   drawGame(context, baseView, images);
   assert.deepEqual(scales, [], 'a west-facing direction must not override a non-mirrored turn atlas frame');
   const turnDraw = drawCalls.find((args) => args[0] === images.wagon_turn);
-  assert.deepEqual(turnDraw?.slice(1, 5), [32, 0, 32, 40]);
+  assert.deepEqual(turnDraw?.slice(1, 5), [48, 0, 48, 60]);
+  assert.deepEqual(turnDraw?.slice(7, 9), [64, 80]);
 
   scales.length = 0;
   drawCalls.length = 0;
@@ -1003,7 +1008,7 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
     enemies: [{ ...baseView.enemies[0]!, direction: 'east', turningAnimation: { asset: 'wagon_turn', frame: 0, mirrored: true } }],
   }, images);
   assert.deepEqual(scales, [[-1, 1]], 'a mirrored turn atlas frame must flip even when the next direction is east');
-  assert.deepEqual(drawCalls.find((args) => args[0] === images.wagon_turn)?.slice(1, 5), [0, 0, 32, 40]);
+  assert.deepEqual(drawCalls.find((args) => args[0] === images.wagon_turn)?.slice(1, 5), [0, 0, 48, 60]);
 });
 
 test('ordinary horse-wagon and covered-wagon frames mirror eastward movement like the APK', () => {

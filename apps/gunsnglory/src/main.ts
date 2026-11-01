@@ -18,6 +18,7 @@ import {
 } from './content/cow-gulch-music';
 import { cameraForAnchor, createMapCamera, panCameraByScreenDelta, screenToMapCell, type MapCamera } from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
+import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
 import { createExperiments, type ExperimentComparisonReport } from './experiments';
@@ -1782,7 +1783,7 @@ async function loadSettings(): Promise<void> {
 
 async function loadImage(assetName: string): Promise<void> {
   const image = new Image();
-  image.src = new URL(import.meta.env.BASE_URL + 'assets/' + assetName + '.png', window.location.href).toString();
+  image.src = new URL(import.meta.env.BASE_URL + 'assets/' + gameAssetRelativePath(assetName), window.location.href).toString();
   await image.decode();
   images[assetName] = image;
 }
