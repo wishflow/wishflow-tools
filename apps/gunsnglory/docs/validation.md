@@ -1662,4 +1662,6 @@ Game 将 `priorityTargetId` 暴露到只读视图并纳入回放状态摘要；�
 
 完整应用 CI 通过：TypeScript 类型检查、191项单元测试、Vite 生产构建和67项 Playwright 测试。回归有效性另做 mutation check：临时把 type4 处罚改回1后，公共行为测试实际得到49命而非48并失败；源码已恢复。仓库 catalog 检查15项全部通过。
 
+发布与内置浏览器核验：开发提交 `aa6fc28` 快进合入 `gunsnglory`，合并提交 `2d057c2` 已推送到 `master`。[Actions run 41285991399](https://github.com/wishflow/wishflow-tools/actions/runs/41285991399) 的 Guns’n’Glory 测试、共享目录检查、GitHub Pages 与 Cloudflare Pages 部署均通过；Worker 和配置校验按静态应用变更范围跳过。Codex 内置浏览器打开[本次发布版本](https://wishflow-tools.pages.dev/gunsnglory/?release=2d057c2)，确认战役入口、地图 Canvas、HUD、4×速度和音效开关加载正常；点击第一波对白继续后，观察到第一波运行并自动进入第二波对白，生命保持50、档案仍为已完成1/1与最高分 `$356`。战局未完成、未结算，保存设置未改。此为功能冒烟检查，不作为 type4 处罚/动态难度的规则证据；该规则以本节公共接口回归为准。此处未检查浏览器开发者控制台。
+
 P1-R1中 A05/A06 的范围校正随本轮纳入；G01现有成功、失败与跨波次生成点回归保持原样。Mexican初始速度等剩余规格差异由计划中的对应步骤处理；本节不表示它们已修复。Cow Gulch全关运行、所有单位/表现及0/60总验收仍未通过。
