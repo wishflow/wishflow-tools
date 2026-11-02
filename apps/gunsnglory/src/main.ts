@@ -1835,6 +1835,7 @@ let pinchGesture: PinchGesture | undefined;
 let activeMapPan: MapPanGesture | undefined;
 const trackedPointers = new Map<number, TrackedPointer>();
 const DRAG_START_TOLERANCE = 20;
+const MINIMAP_DRAG_START_TOLERANCE = 2;
 
 function stopGameLoop(): void {
   loopGeneration += 1;
@@ -2925,9 +2926,12 @@ canvas.addEventListener('pointermove', (event: PointerEvent) => {
     return;
   }
   if (event.pointerId !== activePointerId || !activePointerOrigin) return;
+  const dragStartTolerance = activeMapPan?.kind === 'minimap'
+    ? MINIMAP_DRAG_START_TOLERANCE
+    : DRAG_START_TOLERANCE;
   if (!pointerMovedBeyondTolerance
-    && Math.abs(logicalPoint.x - activePointerOrigin.x) <= DRAG_START_TOLERANCE
-    && Math.abs(logicalPoint.y - activePointerOrigin.y) <= DRAG_START_TOLERANCE) return;
+    && Math.abs(logicalPoint.x - activePointerOrigin.x) <= dragStartTolerance
+    && Math.abs(logicalPoint.y - activePointerOrigin.y) <= dragStartTolerance) return;
 
   pointerMovedBeyondTolerance = true;
   event.preventDefault();

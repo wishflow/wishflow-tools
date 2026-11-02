@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { deriveOriginalMapDrawCommands } from './helpers/terrain-render-reference';
+import { gameAssetRelativePath } from '../src/render/game-asset-path';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 const content = JSON.parse(readFileSync(path.join(appRoot, 'src/content/cow-gulch.json'), 'utf8'));
@@ -28,6 +29,6 @@ test('every map draw command resolves to a bundled original atlas', () => {
     ...content.map.streets.map((tile: { asset: string }) => tile.asset),
   ]);
   for (const asset of assets) {
-    assert.ok(existsSync(path.join(appRoot, 'public/assets', asset + '.png')), asset + '.png must be bundled');
+    assert.ok(existsSync(path.join(appRoot, 'public/assets', gameAssetRelativePath(asset))), asset + ' atlas must be bundled at its selected density');
   }
 });

@@ -6,6 +6,7 @@ import { mapCellToScreen } from '../src/render/map-viewport';
 
 test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts', () => {
   const mapImage = {} as HTMLImageElement;
+  const hdpiTerrainImage = {} as HTMLImageElement;
   const bridgeImage = {} as HTMLImageElement;
   const verticalBridgeImage = {} as HTMLImageElement;
   const horizontalBridgeImage = {} as HTMLImageElement;
@@ -17,10 +18,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const unitImage = {} as HTMLImageElement;
   const shotImage = {} as HTMLImageElement;
   const wagonPartsImage = {} as HTMLImageElement;
-  const cactusImage = { naturalWidth: 32, naturalHeight: 44 } as HTMLImageElement;
-  const treeImage = { naturalWidth: 32, naturalHeight: 64 } as HTMLImageElement;
-  const bushImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
-  const rocksImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
+  const cactusImage = { naturalWidth: 48, naturalHeight: 66 } as HTMLImageElement;
+  const treeImage = { naturalWidth: 48, naturalHeight: 96 } as HTMLImageElement;
+  const bushImage = { naturalWidth: 48, naturalHeight: 60 } as HTMLImageElement;
+  const rocksImage = { naturalWidth: 48, naturalHeight: 66 } as HTMLImageElement;
   const shackImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
   const drawCalls: unknown[][] = [];
   const fillCalls: Array<{ color: string; rect: number[] }> = [];
@@ -111,17 +112,20 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       background: [{
         asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 },
         x: 0, y: 0, width: 1, height: 1,
+      }, {
+        asset: 'tiles_desert', source: { x: 32, y: 0, width: 32, height: 32 },
+        x: 1, y: 0, width: 1, height: 1,
       }],
       streets: [{
         asset: 'bridge', source: { x: 0, y: 0, width: 48, height: 32 },
         x: 11.75, y: 9, width: 1.5, height: 1,
       }],
       decorations: [
-        { asset: 'tree', cell: { x: 6, y: 7 } },
-        { asset: 'cactus', cell: { x: 5, y: 6 } },
-        { asset: 'bush', cell: { x: 9, y: 9 } },
+        { asset: 'e_1x1_tree', cell: { x: 6, y: 7 } },
+        { asset: 'e_1x1_cactus_a', cell: { x: 5, y: 6 } },
+        { asset: 'e_1x1_bush', cell: { x: 9, y: 9 } },
         { asset: 'b_2x1_shack', cell: { x: 15, y: 7 }, anchorOffsetX: -0.5 },
-        { asset: 'cactus', cell: { x: 8, y: 7 } },
+        { asset: 'e_1x1_cactus_b', cell: { x: 8, y: 7 } },
         { asset: 'e_1x1_rocks_a', cell: { x: 9, y: 7 } },
       ],
     },
@@ -185,6 +189,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
 
   const images = {
     ground: mapImage,
+    tiles_desert: hdpiTerrainImage,
     bridge: bridgeImage,
     tiles_bridge_verti: verticalBridgeImage,
     tiles_bridge_hori: horizontalBridgeImage,
@@ -194,9 +199,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     horse_wagon: horseWagonImage,
     sfx_smoke_explosion: smokeImage,
     unit: unitImage,
-    cactus: cactusImage,
-    tree: treeImage,
-    bush: bushImage,
+    e_1x1_cactus_a: cactusImage,
+    e_1x1_cactus_b: cactusImage,
+    e_1x1_tree: treeImage,
+    e_1x1_bush: bushImage,
     e_1x1_rocks_a: rocksImage,
     b_2x1_shack: shackImage,
     sfx_mexican_dynamite: { ...shotImage, naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
@@ -212,6 +218,11 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const mapDraw = drawCalls.find((args) => args[0] === mapImage);
   assert.ok(mapDraw);
   assert.deepEqual(mapDraw.slice(5), [viewport.origin.x, viewport.origin.y, viewport.tileSize, viewport.tileSize]);
+  const hdpiTerrainDraw = drawCalls.find((args) => args[0] === hdpiTerrainImage);
+  assert.ok(hdpiTerrainDraw);
+  assert.deepEqual(hdpiTerrainDraw.slice(1, 5), [48, 0, 48, 48], 'mdpi atlas crops scale to the matching APK hdpi source pixels');
+  assert.deepEqual(hdpiTerrainDraw.slice(5), [viewport.origin.x + viewport.tileSize, viewport.origin.y, viewport.tileSize, viewport.tileSize],
+    'density selection does not change map-cell size or placement');
   const enemyDraw = drawCalls.find((args) => args[0] === enemyImage);
   assert.ok(enemyDraw);
   assert.deepEqual(enemyDraw.slice(1, 5), [32, 24, 16, 24]);
@@ -258,7 +269,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, images.sfx_mexican_dynamite, enemyImage, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
+    [mapImage, hdpiTerrainImage, images.sfx_mexican_dynamite, enemyImage, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
       treeImage, unitImage, images.sfx_exploding_parts, bushImage],
     'a shot created after its target draws first when both share the same under-road depth',
   );

@@ -53,7 +53,7 @@ test('desktop mouse pans the map and moves the minimap viewport frame with it', 
 
   const beforeMinimapDrag = afterWorldDrag;
   const minimapStart = await canvasPoint(page, 719, 15);
-  const minimapEnd = await canvasPoint(page, 719, 45);
+  const minimapEnd = await canvasPoint(page, 719, 23);
   await page.mouse.move(minimapStart.x, minimapStart.y);
   await page.mouse.down();
   await page.mouse.move(minimapEnd.x, minimapEnd.y, { steps: 5 });
@@ -88,7 +88,7 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
 
     const beforeMinimapDrag = await canvasHash(page);
     const start = await canvasPoint(page, 719, 15);
-    const end = await canvasPoint(page, 719, 45);
+    const end = await canvasPoint(page, 719, 23);
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart',
       touchPoints: [{ ...start, id: 2 }],

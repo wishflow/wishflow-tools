@@ -255,7 +255,7 @@ test('anchors scenery sprites at each source cell foot and preserves wide-object
   const viewport = calculateMapViewport(17, 17, 1024, 576);
   assert.deepEqual(mapDecorationDestination(
     { asset: 'e_1x1_cactus_a', cell: { x: 5, y: 6 } },
-    { width: 32, height: 44 },
+    { width: 48, height: 66 },
     viewport,
   ), { x: 302, y: 115, width: 60, height: 82 });
   assert.deepEqual(mapDecorationDestination(

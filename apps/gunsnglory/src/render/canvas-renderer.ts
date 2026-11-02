@@ -1,7 +1,7 @@
 import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
 import { GAME_DRAW_ORDER_ROAD_CUTOFF } from '../game/draw-order';
 import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
-import { gameAssetLogicalSize } from './game-asset-path';
+import { gameAssetLogicalSize, gameAssetSourceScale } from './game-asset-path';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
@@ -288,12 +288,13 @@ function drawTiles(
   for (const tile of tiles) {
     const image = images[tile.asset];
     if (!image) throw new Error('Missing game image: ' + tile.asset);
+    const sourceScale = gameAssetSourceScale(tile.asset);
     context.drawImage(
       image,
-      tile.source.x,
-      tile.source.y,
-      tile.source.width,
-      tile.source.height,
+      tile.source.x * sourceScale,
+      tile.source.y * sourceScale,
+      tile.source.width * sourceScale,
+      tile.source.height * sourceScale,
       viewport.origin.x + tile.x * viewport.tileSize,
       viewport.origin.y + tile.y * viewport.tileSize,
       tile.width * viewport.tileSize,
