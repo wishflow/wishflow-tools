@@ -38,10 +38,13 @@ const highDensityVehicleAssets = new Set([
   'horse_wagon_turn_white',
 ]);
 
+const highDensityMapFrameAssets = new Set(['gng_frame']);
+
 export function gameAssetRelativePath(assetName: string): string {
   const densityDirectory = highDensityMapAtlases.has(assetName)
     || highDensityMapDecorations.has(assetName)
     || highDensityVehicleAssets.has(assetName)
+    || highDensityMapFrameAssets.has(assetName)
     ? 'hdpi/'
     : '';
   return `${densityDirectory}${assetName}.png`;

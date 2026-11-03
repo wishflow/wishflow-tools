@@ -1,7 +1,14 @@
 import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
 import { GAME_DRAW_ORDER_ROAD_CUTOFF } from '../game/draw-order';
-import { calculateMapViewport, DEFAULT_MAP_CAMERA, mapViewportWithCamera, type MapCamera, type MapViewport } from './map-viewport';
+import {
+  calculateMapViewport,
+  DEFAULT_MAP_CAMERA,
+  mapViewportWithCamera,
+  type MapCamera,
+  type MapViewport,
+} from './map-viewport';
 import { gameAssetLogicalSize, gameAssetSourceScale } from './game-asset-path';
+import { drawMapFrame, drawRouteInspectionOverlay } from './map-overlays';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
@@ -387,9 +394,13 @@ function drawEnemy(
   const offset = enemy.drawingOffsetFine ?? { x: 0, y: 0 };
   const centerX = viewport.origin.x + ((enemy.positionFine.x + offset.x) / 240) * tileScale;
   const feetY = viewport.origin.y + ((enemy.positionFine.y + offset.y) / 240) * tileScale;
-  const left = centerX - width / 2;
-  const top = feetY - height;
-  const spriteIntersectsMap = intersectsMapPlayfield(left, top, left + width, top + height, viewport);
+  const left = Math.trunc(centerX - width / 2);
+  const top = Math.trunc(feetY - height);
+  const right = Math.trunc(centerX + width / 2);
+  const bottom = Math.trunc(feetY);
+  const destinationWidth = right - left;
+  const destinationHeight = bottom - top;
+  const spriteIntersectsMap = intersectsMapPlayfield(left, top, right, bottom, viewport);
   const frameCount = enemy.type === 8 ? 4 : 3;
   const sourceX = deathFrame !== undefined
     ? deathFrame * sourceWidth
@@ -404,11 +415,11 @@ function drawEnemy(
     ? turn.mirrored
     : (enemy.mirrored ?? (enemy.direction === 'east'));
   if (mirrored) {
-    context.translate((left * 2) + width, 0);
+    context.translate(left + right, 0);
     context.scale(-1, 1);
   }
   if (spriteIntersectsMap && (!vehicle || enemy.alive || enemy.deathRemainingMs > 350)) {
-    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, width, height);
+    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, left, top, destinationWidth, destinationHeight);
   }
   context.restore();
 
@@ -551,29 +562,6 @@ function drawInspectionOverlay(
     x: viewport.origin.x + x * viewport.tileSize,
     y: viewport.origin.y + y * viewport.tileSize,
   });
-
-  if (view.route && view.route.length > 1) {
-    context.beginPath();
-    view.route.forEach((point, index) => {
-      const screen = toScreen(point.x, point.y);
-      if (index === 0) context.moveTo(screen.x, screen.y);
-      else context.lineTo(screen.x, screen.y);
-    });
-    context.strokeStyle = '#45e0d2';
-    context.lineWidth = Math.max(1.5, 2 * viewport.scaleFactor);
-    context.lineCap = 'round';
-    context.setLineDash([5 * viewport.scaleFactor, 3 * viewport.scaleFactor]);
-    context.stroke();
-    context.setLineDash([]);
-    for (const [index, point] of view.route.entries()) {
-      const screen = toScreen(point.x, point.y);
-      context.beginPath();
-      context.arc(screen.x, screen.y, Math.max(2, 2.5 * viewport.scaleFactor), 0, Math.PI * 2);
-      context.fillStyle = index === view.route.length - 1 ? '#f17b56' : '#45e0d2';
-      context.fill();
-    }
-  }
-
   for (const unit of view.units) drawUnitInspection(context, unit, viewport, toScreen, language);
   for (const enemy of view.enemies) {
     const logical = { x: enemy.positionFine.x / FINE_UNITS_PER_CELL, y: enemy.positionFine.y / FINE_UNITS_PER_CELL };
@@ -918,11 +906,13 @@ export function drawGame(
   context.beginPath();
   context.rect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
   context.clip();
+  drawMapFrame(context, view, images.gng_frame, viewport, GAME_VIEWPORT, displayPixelScale);
   context.save();
   context.beginPath();
   context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
   context.clip();
   drawTiles(context, view.map.background, images, viewport);
+  if (showInspectionOverlay) drawRouteInspectionOverlay(context, view.route, viewport);
   drawWorldObjects(orderedDrawObjects, drawObjects, true);
   drawTiles(context, view.map.streets, images, viewport);
   context.restore();

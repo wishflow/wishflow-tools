@@ -14,6 +14,7 @@ test('uses the APK high-density atlases for all wagon and cart assets', () => {
   ]) {
     assert.equal(gameAssetRelativePath(asset), `hdpi/${asset}.png`);
   }
+  assert.equal(gameAssetRelativePath('gng_frame'), 'hdpi/gng_frame.png');
 });
 
 test('keeps unrelated resources on their existing asset paths', () => {

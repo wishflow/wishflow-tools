@@ -30,6 +30,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const decorationViewportClipStates: boolean[] = [];
   const overlayText: string[] = [];
   const routeCommands: string[] = [];
+  const routeLayerOrder: string[] = [];
   const enemyDrawAlphas: number[] = [];
   const pioneerDeathDraws: Array<{ args: unknown[]; alpha: number }> = [];
   const alphaStack: number[] = [];
@@ -69,6 +70,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     },
     drawImage(...args: unknown[]) {
       drawCalls.push(args);
+      if (args[0] === mapImage || args[0] === hdpiTerrainImage) routeLayerOrder.push('background');
+      if (args[0] === bridgeImage || args[0] === verticalBridgeImage || args[0] === horizontalBridgeImage) {
+        routeLayerOrder.push('bridge');
+      }
       if (args[0] === enemyImage) enemyDrawAlphas.push(currentAlpha);
       if (args[0] === pioneerDeathImage) pioneerDeathDraws.push({ args, alpha: currentAlpha });
       if (args[0] === cactusImage || args[0] === treeImage || args[0] === bushImage) {
@@ -76,7 +81,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
         decorationViewportClipStates.push(viewportClipActive);
       }
     },
-    moveTo() { routeCommands.push('moveTo'); },
+    moveTo() { routeCommands.push('moveTo'); routeLayerOrder.push('route'); },
     lineTo() { routeCommands.push('lineTo'); },
     arc() {},
     ellipse() { ellipseCalls += 1; },
@@ -353,7 +358,15 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     'the centered map stays aligned to the display-pixel grid',
   );
 
+  routeLayerOrder.length = 0;
   drawGame(context, view, images, 1, undefined, true);
+  const mapFrameImage = { naturalWidth: 192, naturalHeight: 192 } as HTMLImageElement;
+  const mapFrameDrawStart = drawCalls.length;
+  drawGame(context, view, { ...images, gng_frame: mapFrameImage }, 1, { zoom: 1, offsetX: 118, offsetY: 342 });
+  const mapFrameDraws = drawCalls.slice(mapFrameDrawStart).filter(([image]) => image === mapFrameImage);
+  assert.ok(mapFrameDraws.length > 0, 'exposed map edges draw the original frame atlas');
+  assert.deepEqual(mapFrameDraws[0]?.slice(1, 5), [0, 96, 48, 48], 'the frame uses a quarter-cell from the APK 4×4 atlas');
+  assert.deepEqual(mapFrameDraws[0]?.slice(5), [0, 0, 60, 60], 'frame tiles align to the logical map tile size');
   const priorityCrosshair = { naturalWidth: 64, naturalHeight: 16 } as HTMLImageElement;
   const priorityDrawStart = drawCalls.length;
   drawGame(context, { ...view, priorityTargetId: 'pioneer-1', elapsedMs: 0 }, {
@@ -367,6 +380,9 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok((priorityDraws[0]?.[6] as number) + 16 < (priorityDraws[1]?.[6] as number),
     'the pulsing marker halves remain separated around the enemy sprite');
   assert.equal(routeCommands.filter((command) => command === 'lineTo').length, view.route!.length - 1);
+  assert.ok(routeLayerOrder.indexOf('background') < routeLayerOrder.indexOf('route'));
+  assert.ok(routeLayerOrder.indexOf('route') < routeLayerOrder.indexOf('bridge'),
+    'the route debug line must sit below bridge art so it does not imply enemies walk on the bridge');
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
@@ -999,7 +1015,7 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
       asset: 'wagon',
       speed: 500,
       direction: 'west',
-      positionFine: { x: 3840, y: 3840 },
+      positionFine: { x: 4001, y: 4051 },
       drawingOffsetFine: { x: 0, y: 0 },
       groupId: 'wagon-group',
       damageable: true,
@@ -1021,7 +1037,8 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
   assert.deepEqual(scales, [], 'a west-facing direction must not override a non-mirrored turn atlas frame');
   const turnDraw = drawCalls.find((args) => args[0] === images.wagon_turn);
   assert.deepEqual(turnDraw?.slice(1, 5), [48, 0, 48, 60]);
-  assert.deepEqual(turnDraw?.slice(7, 9), [64, 80]);
+  assert.deepEqual(turnDraw?.slice(5, 9), [481, 209, 64, 80],
+    'each destination edge is truncated to an integer pixel like Android Rect.set');
 
   scales.length = 0;
   drawCalls.length = 0;

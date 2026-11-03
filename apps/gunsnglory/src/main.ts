@@ -1739,6 +1739,7 @@ const assetNames = new Set([
   'horse_wagon_white',
   'horse_wagon_turn',
   'horse_wagon_turn_white',
+  'gng_frame',
   'sfx_death_pioneers',
   'sfx_smoke_explosion',
   'sfx_exploding_parts',
