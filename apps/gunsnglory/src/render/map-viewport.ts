@@ -20,6 +20,11 @@ export interface MapCamera {
   offsetY: number;
 }
 
+export interface MapCameraOriginBounds {
+  minimum: number;
+  maximum: number;
+}
+
 export const DEFAULT_MAP_CAMERA: Readonly<MapCamera> = Object.freeze({ zoom: 1, offsetX: 0, offsetY: 0 });
 
 export function createMapCamera(): MapCamera {
@@ -78,9 +83,32 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.max(minimum, Math.min(maximum, value));
 }
 
-function clampOrigin(origin: number, mapSize: number, viewportSize: number): number {
-  if (mapSize >= viewportSize) return clamp(origin, viewportSize - mapSize, 0);
-  return clamp(origin, 0, viewportSize - mapSize);
+export function getMapCameraOriginBounds(
+  mapSize: number,
+  viewportSize: number,
+  tileSize: number,
+  displayPixelScale = 1,
+): MapCameraOriginBounds {
+  assertPositiveFinite('Map size', mapSize);
+  assertPositiveFinite('Viewport size', viewportSize);
+  assertPositiveFinite('Tile size', tileSize);
+  assertPositiveFinite('Display pixel scale', displayPixelScale);
+  const edgeMargin = Math.max(tileSize * 2, (viewportSize - mapSize) / 2);
+  return {
+    minimum: snapToDisplayPixel(viewportSize - mapSize - edgeMargin, displayPixelScale),
+    maximum: snapToDisplayPixel(edgeMargin, displayPixelScale),
+  };
+}
+
+function clampOrigin(
+  origin: number,
+  mapSize: number,
+  viewportSize: number,
+  tileSize: number,
+  displayPixelScale: number,
+): number {
+  const bounds = getMapCameraOriginBounds(mapSize, viewportSize, tileSize, displayPixelScale);
+  return clamp(origin, bounds.minimum, bounds.maximum);
 }
 
 function snapToDisplayPixel(value: number, displayPixelScale: number): number {
@@ -120,8 +148,12 @@ export function mapViewportWithCamera(
   const centeredOriginY = (viewportHeight - mapHeight) / 2;
   const requestedOriginX = centeredOriginX + camera.offsetX;
   const requestedOriginY = centeredOriginY + camera.offsetY;
-  const originX = clampOrigin(snapToDisplayPixel(requestedOriginX, displayPixelScale), mapWidth, viewportWidth);
-  const originY = clampOrigin(snapToDisplayPixel(requestedOriginY, displayPixelScale), mapHeight, viewportHeight);
+  const originX = clampOrigin(
+    snapToDisplayPixel(requestedOriginX, displayPixelScale), mapWidth, viewportWidth, tileSize, displayPixelScale,
+  );
+  const originY = clampOrigin(
+    snapToDisplayPixel(requestedOriginY, displayPixelScale), mapHeight, viewportHeight, tileSize, displayPixelScale,
+  );
 
   return {
     scale: baseViewport.scale * zoomRatio,
@@ -152,8 +184,12 @@ export function cameraForAnchor(
   const tileSize = snapToDisplayPixel(baseViewport.tileSize * zoom, displayPixelScale);
   const mapWidth = mapWidthTiles * tileSize;
   const mapHeight = mapHeightTiles * tileSize;
-  const originX = clampOrigin(screenAnchor.x - mapAnchor.x * tileSize, mapWidth, viewportWidth);
-  const originY = clampOrigin(screenAnchor.y - mapAnchor.y * tileSize, mapHeight, viewportHeight);
+  const originX = clampOrigin(
+    screenAnchor.x - mapAnchor.x * tileSize, mapWidth, viewportWidth, tileSize, displayPixelScale,
+  );
+  const originY = clampOrigin(
+    screenAnchor.y - mapAnchor.y * tileSize, mapHeight, viewportHeight, tileSize, displayPixelScale,
+  );
   return {
     zoom,
     offsetX: originX - (viewportWidth - mapWidth) / 2,
@@ -196,11 +232,15 @@ export function panCameraByScreenDelta(
     snapToDisplayPixel(current.origin.x + deltaX, displayPixelScale),
     mapWidth,
     viewportWidth,
+    tileSize,
+    displayPixelScale,
   );
   const originY = clampOrigin(
     snapToDisplayPixel(current.origin.y + deltaY, displayPixelScale),
     mapHeight,
     viewportHeight,
+    tileSize,
+    displayPixelScale,
   );
 
   return {
