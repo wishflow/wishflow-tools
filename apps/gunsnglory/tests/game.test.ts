@@ -1640,7 +1640,7 @@ test('keeps the pioneer inside the TDM route cells from spawn through the exit',
 
   assert.equal(view.wave?.phase, 'complete', 'the sample should leave the map through its TDM exit');
   assert.deepEqual([...crossedOriginalBridges].sort(), ['east', 'west'],
-    'the original route crosses the west and east bridge cells; it must not be rerouted around them');
+    'the original TDM route crosses both recorded bridge-image footprints and must not be rerouted around them');
 });
 
 test('observing a running wave does not advance time, position, or its random stream', async () => {

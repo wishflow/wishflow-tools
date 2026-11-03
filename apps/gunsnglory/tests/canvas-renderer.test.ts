@@ -382,7 +382,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal(routeCommands.filter((command) => command === 'lineTo').length, view.route!.length - 1);
   assert.ok(routeLayerOrder.indexOf('background') < routeLayerOrder.indexOf('route'));
   assert.ok(routeLayerOrder.indexOf('route') < routeLayerOrder.indexOf('bridge'),
-    'the route debug line must sit below bridge art so it does not imply enemies walk on the bridge');
+    'bridge art covers the diagnostic route line, matching draw order without assigning route elevation');
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
