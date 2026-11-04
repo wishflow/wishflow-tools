@@ -1219,7 +1219,7 @@ test('the first in-range Desperado shot follows its target, deals damage, kills 
   assert.equal(view.wave?.defeatedEnemies, 1);
   assert.deepEqual(view.events, [
     { type: 'enemy-hit', enemyId: 'preview-pioneer-1', damage: 140, hitPoints: -14 },
-    { type: 'enemy-defeated', enemyId: 'preview-pioneer-1', cashReward: 1 },
+    { type: 'enemy-defeated', enemyId: 'preview-pioneer-1', enemyType: 1, cashReward: 1 },
   ]);
 
   for (let index = 0; index < 10; index += 1) view = session.advance({ deltaMs: 100 });
@@ -1920,7 +1920,7 @@ test('keeps the pioneer inside the TDM route cells from spawn through the exit',
 
   assert.equal(view.wave?.phase, 'complete', 'the sample should leave the map through its TDM exit');
   assert.deepEqual([...crossedOriginalBridges].sort(), ['east', 'west'],
-    'the original route crosses the west and east bridge cells; it must not be rerouted around them');
+    'the original TDM route crosses both recorded bridge-image footprints and must not be rerouted around them');
 });
 
 test('observing a running wave does not advance time, position, or its random stream', async () => {

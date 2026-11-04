@@ -31,13 +31,27 @@ test('keeps the original level locked and upgrades the selected Gunslinger in th
   const confirmation = page.getByTestId('upgrade-confirmation');
   const details = page.getByTestId('upgrade-confirmation-details');
   await expect(confirmation).toBeVisible();
+  await expect.poll(() => confirmation.evaluate((dialog) => dialog.parentElement?.classList.contains('game-frame'))).toBe(true);
   await expect(details).toContainText('Level 0 → 1');
-  await expect(details).toContainText('Speed 1500 → 1750');
-  await expect(details).toContainText('Damage 140 → 140');
-  await expect(details).toContainText('Range 38400 → 38400 fine units');
+  await expect(details).toContainText('Speed 1.95 cells/s (1500 fine/100ms) → 2.28 cells/s (1750 fine/100ms)');
+  await expect(details).toContainText('Damage 140 → 140 base damage/shot');
+  await expect(details).toContainText('pioneers 100%, wagons 50%');
+  await expect(details).toContainText('HP loss = trunc(base × target multiplier / 100)');
+  await expect(details).toContainText('Range 5.00 cells (38400 fine units) → 5.00 cells (38400 fine units)');
   await expect(details).toContainText('Reload 500 → 400 ms');
   await expect(details).toContainText('Special reload 1500 → 1250 ms');
   await expect(details).toContainText('Price $25 · Cash $25');
+
+  await page.keyboard.press('Escape');
+  await expect(confirmation).toBeHidden();
+  await upgrade.click();
+  await expect(confirmation).toBeVisible();
+
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(details).toContainText('移动速度 1.95 格/秒（原始 1500 fine/100ms） → 2.28 格/秒（原始 1750 fine/100ms）');
+  await expect(details).toContainText('基础伤害');
+  await expect(details).toContainText('实际扣血');
+  await page.getByRole('button', { name: '切换界面语言为英文' }).click();
 
   await page.getByRole('button', { name: 'Cancel upgrade' }).click();
   await expect(confirmation).toBeHidden();

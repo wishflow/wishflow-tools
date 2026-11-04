@@ -36,10 +36,10 @@ test('scales the map by width and clips drawing at map and playfield edges', asy
     const sample = (x: number) => [...context.getImageData(Math.round(x * pixelScale), Math.round(300 * pixelScale), 1, 1).data];
     return { outsideLeft: sample(0), insideLeft: sample(10), insideRight: sample(1018), outsideRight: sample(1023) };
   });
-  expect(mapEdgePixels.outsideLeft).toEqual([26, 23, 18, 255]);
+  expect(mapEdgePixels.outsideLeft, 'the exposed left edge uses the APK wood frame').toEqual([66, 43, 21, 255]);
   expect(mapEdgePixels.insideLeft).not.toEqual([26, 23, 18, 255]);
   expect(mapEdgePixels.insideRight).not.toEqual([26, 23, 18, 255]);
-  expect(mapEdgePixels.outsideRight).toEqual([26, 23, 18, 255]);
+  expect(mapEdgePixels.outsideRight, 'the exposed right edge uses the APK wood frame').toEqual([52, 34, 16, 255]);
   const beforePioneerMoves = await playfieldHash();
   await page.waitForTimeout(800);
   const afterPioneerMoves = await playfieldHash();

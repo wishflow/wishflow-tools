@@ -6,6 +6,7 @@ import { mapCellToScreen } from '../src/render/map-viewport';
 
 test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts', () => {
   const mapImage = {} as HTMLImageElement;
+  const hdpiTerrainImage = {} as HTMLImageElement;
   const bridgeImage = {} as HTMLImageElement;
   const verticalBridgeImage = {} as HTMLImageElement;
   const horizontalBridgeImage = {} as HTMLImageElement;
@@ -17,10 +18,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const unitImage = {} as HTMLImageElement;
   const shotImage = {} as HTMLImageElement;
   const wagonPartsImage = {} as HTMLImageElement;
-  const cactusImage = { naturalWidth: 32, naturalHeight: 44 } as HTMLImageElement;
-  const treeImage = { naturalWidth: 32, naturalHeight: 64 } as HTMLImageElement;
-  const bushImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
-  const rocksImage = { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement;
+  const cactusImage = { naturalWidth: 48, naturalHeight: 66 } as HTMLImageElement;
+  const treeImage = { naturalWidth: 48, naturalHeight: 96 } as HTMLImageElement;
+  const bushImage = { naturalWidth: 48, naturalHeight: 60 } as HTMLImageElement;
+  const rocksImage = { naturalWidth: 48, naturalHeight: 66 } as HTMLImageElement;
   const shackImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
   const drawCalls: unknown[][] = [];
   const fillCalls: Array<{ color: string; rect: number[] }> = [];
@@ -29,6 +30,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const decorationViewportClipStates: boolean[] = [];
   const overlayText: string[] = [];
   const routeCommands: string[] = [];
+  const routeLayerOrder: string[] = [];
   const enemyDrawAlphas: number[] = [];
   const pioneerDeathDraws: Array<{ args: unknown[]; alpha: number }> = [];
   const alphaStack: number[] = [];
@@ -68,6 +70,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     },
     drawImage(...args: unknown[]) {
       drawCalls.push(args);
+      if (args[0] === mapImage || args[0] === hdpiTerrainImage) routeLayerOrder.push('background');
+      if (args[0] === bridgeImage || args[0] === verticalBridgeImage || args[0] === horizontalBridgeImage) {
+        routeLayerOrder.push('bridge');
+      }
       if (args[0] === enemyImage) enemyDrawAlphas.push(currentAlpha);
       if (args[0] === pioneerDeathImage) pioneerDeathDraws.push({ args, alpha: currentAlpha });
       if (args[0] === cactusImage || args[0] === treeImage || args[0] === bushImage) {
@@ -75,7 +81,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
         decorationViewportClipStates.push(viewportClipActive);
       }
     },
-    moveTo() { routeCommands.push('moveTo'); },
+    moveTo() { routeCommands.push('moveTo'); routeLayerOrder.push('route'); },
     lineTo() { routeCommands.push('lineTo'); },
     arc() {},
     ellipse() { ellipseCalls += 1; },
@@ -111,17 +117,20 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       background: [{
         asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 },
         x: 0, y: 0, width: 1, height: 1,
+      }, {
+        asset: 'tiles_desert', source: { x: 32, y: 0, width: 32, height: 32 },
+        x: 1, y: 0, width: 1, height: 1,
       }],
       streets: [{
         asset: 'bridge', source: { x: 0, y: 0, width: 48, height: 32 },
         x: 11.75, y: 9, width: 1.5, height: 1,
       }],
       decorations: [
-        { asset: 'tree', cell: { x: 6, y: 7 } },
-        { asset: 'cactus', cell: { x: 5, y: 6 } },
-        { asset: 'bush', cell: { x: 9, y: 9 } },
+        { asset: 'e_1x1_tree', cell: { x: 6, y: 7 } },
+        { asset: 'e_1x1_cactus_a', cell: { x: 5, y: 6 } },
+        { asset: 'e_1x1_bush', cell: { x: 9, y: 9 } },
         { asset: 'b_2x1_shack', cell: { x: 15, y: 7 }, anchorOffsetX: -0.5 },
-        { asset: 'cactus', cell: { x: 8, y: 7 } },
+        { asset: 'e_1x1_cactus_b', cell: { x: 8, y: 7 } },
         { asset: 'e_1x1_rocks_a', cell: { x: 9, y: 7 } },
       ],
     },
@@ -185,6 +194,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
 
   const images = {
     ground: mapImage,
+    tiles_desert: hdpiTerrainImage,
     bridge: bridgeImage,
     tiles_bridge_verti: verticalBridgeImage,
     tiles_bridge_hori: horizontalBridgeImage,
@@ -194,9 +204,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     horse_wagon: horseWagonImage,
     sfx_smoke_explosion: smokeImage,
     unit: unitImage,
-    cactus: cactusImage,
-    tree: treeImage,
-    bush: bushImage,
+    e_1x1_cactus_a: cactusImage,
+    e_1x1_cactus_b: cactusImage,
+    e_1x1_tree: treeImage,
+    e_1x1_bush: bushImage,
     e_1x1_rocks_a: rocksImage,
     b_2x1_shack: shackImage,
     sfx_mexican_dynamite: { ...shotImage, naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
@@ -212,6 +223,11 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const mapDraw = drawCalls.find((args) => args[0] === mapImage);
   assert.ok(mapDraw);
   assert.deepEqual(mapDraw.slice(5), [viewport.origin.x, viewport.origin.y, viewport.tileSize, viewport.tileSize]);
+  const hdpiTerrainDraw = drawCalls.find((args) => args[0] === hdpiTerrainImage);
+  assert.ok(hdpiTerrainDraw);
+  assert.deepEqual(hdpiTerrainDraw.slice(1, 5), [48, 0, 48, 48], 'mdpi atlas crops scale to the matching APK hdpi source pixels');
+  assert.deepEqual(hdpiTerrainDraw.slice(5), [viewport.origin.x + viewport.tileSize, viewport.origin.y, viewport.tileSize, viewport.tileSize],
+    'density selection does not change map-cell size or placement');
   const enemyDraw = drawCalls.find((args) => args[0] === enemyImage);
   assert.ok(enemyDraw);
   assert.deepEqual(enemyDraw.slice(1, 5), [32, 24, 16, 24]);
@@ -258,7 +274,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
   assert.deepEqual(
     drawCalls.map((args) => args[0]),
-    [mapImage, images.sfx_mexican_dynamite, enemyImage, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
+    [mapImage, hdpiTerrainImage, images.sfx_mexican_dynamite, enemyImage, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
       treeImage, unitImage, images.sfx_exploding_parts, bushImage],
     'a shot created after its target draws first when both share the same under-road depth',
   );
@@ -342,7 +358,15 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     'the centered map stays aligned to the display-pixel grid',
   );
 
+  routeLayerOrder.length = 0;
   drawGame(context, view, images, 1, undefined, true);
+  const mapFrameImage = { naturalWidth: 192, naturalHeight: 192 } as HTMLImageElement;
+  const mapFrameDrawStart = drawCalls.length;
+  drawGame(context, view, { ...images, gng_frame: mapFrameImage }, 1, { zoom: 1, offsetX: 118, offsetY: 342 });
+  const mapFrameDraws = drawCalls.slice(mapFrameDrawStart).filter(([image]) => image === mapFrameImage);
+  assert.ok(mapFrameDraws.length > 0, 'exposed map edges draw the original frame atlas');
+  assert.deepEqual(mapFrameDraws[0]?.slice(1, 5), [0, 96, 48, 48], 'the frame uses a quarter-cell from the APK 4×4 atlas');
+  assert.deepEqual(mapFrameDraws[0]?.slice(5), [0, 0, 60, 60], 'frame tiles align to the logical map tile size');
   const priorityCrosshair = { naturalWidth: 64, naturalHeight: 16 } as HTMLImageElement;
   const priorityDrawStart = drawCalls.length;
   drawGame(context, { ...view, priorityTargetId: 'pioneer-1', elapsedMs: 0 }, {
@@ -356,6 +380,9 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok((priorityDraws[0]?.[6] as number) + 16 < (priorityDraws[1]?.[6] as number),
     'the pulsing marker halves remain separated around the enemy sprite');
   assert.equal(routeCommands.filter((command) => command === 'lineTo').length, view.route!.length - 1);
+  assert.ok(routeLayerOrder.indexOf('background') < routeLayerOrder.indexOf('route'));
+  assert.ok(routeLayerOrder.indexOf('route') < routeLayerOrder.indexOf('bridge'),
+    'bridge art covers the diagnostic route line, matching draw order without assigning route elevation');
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
@@ -953,6 +980,76 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
   assert.deepEqual(transforms.at(-1), ['scale', -1, 1], 'the walking atlas mirrors only when its direction row requests it');
 });
 
+test('draws ordinary bullets as small dark-red rectangles without an outline', () => {
+  const ground = {} as HTMLImageElement;
+  const fillCalls: Array<{ color: string; rect: number[] }> = [];
+  const arcs: number[][] = [];
+  const strokes: string[] = [];
+  let fillStyle = '';
+  let strokeStyle = '';
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    get fillStyle() { return fillStyle; },
+    set fillStyle(value: string) { fillStyle = value; },
+    get strokeStyle() { return strokeStyle; },
+    set strokeStyle(value: string) { strokeStyle = value; },
+    fillRect(...rect: number[]) { fillCalls.push({ color: fillStyle, rect }); },
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage() {},
+    arc(...arc: number[]) { arcs.push(arc); },
+    fill() {},
+    stroke() { strokes.push(strokeStyle); },
+  } as unknown as CanvasRenderingContext2D;
+  const view: GameView = {
+    frame: 0,
+    elapsedMs: 0,
+    paused: false,
+    scenarioId: 'ordinary-projectile-render-fixture',
+    map: {
+      width: 1,
+      height: 1,
+      tileSize: 32,
+      background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 1, height: 1 }],
+      streets: [],
+    },
+    units: [],
+    enemies: [],
+    shots: [{
+      id: 'ordinary',
+      shooterId: 'gunslinger-1',
+      targetId: 'pioneer-1',
+      positionFine: { x: 3840, y: 3840 },
+      remainingMs: 100,
+      damageStyle: 0,
+      fineZ: 7680,
+      heightFine: 0,
+      animationFrame: 0,
+    }],
+    drawOrder: ['shot:ordinary'],
+    recruitPool: [],
+    events: [],
+  };
+
+  drawGame(context, view, { ground });
+
+  const viewport = getMapViewport(view);
+  const bulletCenter = viewport.origin.x + (3840 / 240) * viewport.scaleFactor;
+  const bulletY = viewport.origin.y + (3840 / 240) * viewport.scaleFactor;
+  const bullet = fillCalls.find(({ color }) => color.toLowerCase() === '#7f0000');
+  assert.ok(bullet, 'the projectile uses the APK dark-red fill');
+  assert.ok(bullet.rect[2] <= 5 * viewport.scaleFactor && bullet.rect[3] <= 5 * viewport.scaleFactor,
+    'the projectile remains a small rectangle');
+  assert.equal(bullet.rect[0]! + bullet.rect[2]! / 2, bulletCenter);
+  assert.equal(bullet.rect[1]! + bullet.rect[3]! / 2, bulletY);
+  assert.equal(arcs.some(([x, y]) => x === bulletCenter && y === bulletY), false,
+    'ordinary bullets are not rendered as circles');
+  assert.deepEqual(strokes, [], 'ordinary bullets have no outline');
+});
+
 
 test('turning vehicle sprites use only the mirroring direction chosen by the turn atlas', () => {
   const drawCalls: unknown[][] = [];
@@ -988,7 +1085,7 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
       asset: 'wagon',
       speed: 500,
       direction: 'west',
-      positionFine: { x: 3840, y: 3840 },
+      positionFine: { x: 4001, y: 4051 },
       drawingOffsetFine: { x: 0, y: 0 },
       groupId: 'wagon-group',
       damageable: true,
@@ -1010,7 +1107,8 @@ test('turning vehicle sprites use only the mirroring direction chosen by the tur
   assert.deepEqual(scales, [], 'a west-facing direction must not override a non-mirrored turn atlas frame');
   const turnDraw = drawCalls.find((args) => args[0] === images.wagon_turn);
   assert.deepEqual(turnDraw?.slice(1, 5), [48, 0, 48, 60]);
-  assert.deepEqual(turnDraw?.slice(7, 9), [64, 80]);
+  assert.deepEqual(turnDraw?.slice(5, 9), [481, 209, 64, 80],
+    'each destination edge is truncated to an integer pixel like Android Rect.set');
 
   scales.length = 0;
   drawCalls.length = 0;

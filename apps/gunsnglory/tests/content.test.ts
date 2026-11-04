@@ -150,7 +150,7 @@ test('keeps the converted Cow Gulch grid and route controls aligned with the raw
     'the preview exits at the raw action-3 field');
 });
 
-test('follows the original shadow route beneath both bridge overlays', () => {
+test('follows the original shadow route and intersects both bridge image footprints', () => {
   const backgroundByCell = new Map(content.map.background.map((tile: {
     asset: string;
     x: number;
@@ -191,14 +191,14 @@ test('follows the original shadow route beneath both bridge overlays', () => {
       tile.asset === 'tiles_bridge_hori'
       && tile.x <= 12.5 && tile.x + tile.width >= 12.5
       && tile.y <= 9.5 && tile.y + tile.height >= 9.5),
-    'the original TDM route passes beneath the horizontal bridge at (12.5, 9.5)',
+    'the original TDM route intersects the horizontal bridge image at (12.5, 9.5); TDM does not encode elevation',
   );
   assert.ok(
     content.map.streets.some((tile: { asset: string; x: number; y: number; width: number; height: number }) =>
       tile.asset === 'tiles_bridge_verti'
       && tile.x <= 2.5 && tile.x + tile.width >= 2.5
       && tile.y <= 10.5 && tile.y + tile.height >= 10.5),
-    'the original TDM route passes beneath the vertical bridge at (2.5, 10.5)',
+    'the original TDM route intersects the vertical bridge image at (2.5, 10.5); TDM does not encode elevation',
   );
 });
 
@@ -255,7 +255,7 @@ test('anchors scenery sprites at each source cell foot and preserves wide-object
   const viewport = calculateMapViewport(17, 17, 1024, 576);
   assert.deepEqual(mapDecorationDestination(
     { asset: 'e_1x1_cactus_a', cell: { x: 5, y: 6 } },
-    { width: 32, height: 44 },
+    { width: 48, height: 66 },
     viewport,
   ), { x: 302, y: 115, width: 60, height: 82 });
   assert.deepEqual(mapDecorationDestination(

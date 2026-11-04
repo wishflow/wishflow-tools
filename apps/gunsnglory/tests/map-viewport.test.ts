@@ -4,6 +4,7 @@ import {
   calculateMapViewport,
   cameraForAnchor,
   createMapCamera,
+  getMapCameraOriginBounds,
   mapCellToScreen,
   panCameraByScreenDelta,
   mapViewportWithCamera,
@@ -117,7 +118,37 @@ test('camera scaling keeps integer device pixels and map edges inside the logica
   }
 });
 
-test('pans the map at the fitted zoom and clamps both camera edges to the map', () => {
+test('Cow Gulch camera exposes the APK two-tile frame for horizontal and vertical navigation', () => {
+  const base = calculateMapViewport(17, 17, 1024, 576);
+  const initial = createMapCamera();
+  const shortHorizontalPan = panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 40, 0);
+  const shortHorizontalViewport = mapViewportWithCamera(base, 17, 17, 1024, 576, shortHorizontalPan);
+  assert.equal(shortHorizontalViewport.origin.x, 42, 'a horizontal drag must move the map instead of clamping to four pixels');
+
+  const leftEdge = mapViewportWithCamera(
+    base, 17, 17, 1024, 576, panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, -1000, 0),
+  );
+  const rightEdge = mapViewportWithCamera(
+    base, 17, 17, 1024, 576, panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 1000, 0),
+  );
+  const topEdge = mapViewportWithCamera(
+    base, 17, 17, 1024, 576, panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 0, 1000),
+  );
+  const bottomEdge = mapViewportWithCamera(
+    base, 17, 17, 1024, 576, panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 0, -1000),
+  );
+
+  assert.equal(leftEdge.origin.x, -116);
+  assert.equal(rightEdge.origin.x, 120);
+  assert.equal(topEdge.origin.y, 120);
+  assert.equal(bottomEdge.origin.y, -564);
+});
+
+test('camera bounds keep maps smaller than the viewport centered without inverted limits', () => {
+  assert.deepEqual(getMapCameraOriginBounds(512, 1024, 64), { minimum: 256, maximum: 256 });
+});
+
+test('pans the map at the fitted zoom and clamps both camera edges to the original two-tile frame', () => {
   const base = calculateMapViewport(17, 17, 1024, 576);
   const initial = createMapCamera();
   const movedDown = panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 0, 120);
@@ -127,9 +158,9 @@ test('pans the map at the fitted zoom and clamps both camera edges to the map', 
 
   const movedToTop = panCameraByScreenDelta(base, 17, 17, 1024, 576, movedDown, 0, 500);
   const topViewport = mapViewportWithCamera(base, 17, 17, 1024, 576, movedToTop);
-  assert.equal(topViewport.origin.y, 0, 'the top edge remains covered instead of exposing the void outside the map');
+  assert.equal(topViewport.origin.y, 120, 'the camera may expose the original two-tile top frame');
 
   const movedToBottom = panCameraByScreenDelta(base, 17, 17, 1024, 576, initial, 0, -500);
   const bottomViewport = mapViewportWithCamera(base, 17, 17, 1024, 576, movedToBottom);
-  assert.equal(bottomViewport.origin.y, -444, 'the bottom edge remains covered instead of exposing the void outside the map');
+  assert.equal(bottomViewport.origin.y, -564, 'the camera may expose the original two-tile bottom frame');
 });

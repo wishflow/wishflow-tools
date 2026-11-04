@@ -52,6 +52,7 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
     await speed.focus();
     await speed.press('End');
     await expect(speed).toHaveValue('4');
+    await page.getByTestId('game-toolbar-toggle').click();
 
     const waveStatus = page.getByTestId('wave-status');
     await expect(waveStatus).toContainText('Cash $65');
@@ -63,8 +64,8 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
       screenPointForCanvasPoint(page, { x: 512, y: 550 }),
     ]);
     const end = await Promise.all([
-      screenPointForCanvasPoint(page, { x: 512, y: 45 }),
-      screenPointForCanvasPoint(page, { x: 512, y: 155 }),
+      screenPointForCanvasPoint(page, { x: 512, y: 193.2 }),
+      screenPointForCanvasPoint(page, { x: 512, y: 303.2 }),
     ]);
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart',

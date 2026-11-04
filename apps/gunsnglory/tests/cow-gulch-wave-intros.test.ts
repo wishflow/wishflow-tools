@@ -8,6 +8,8 @@ test('maps all eight Cow Gulch wave messages to their original wave order', () =
   assert.match(cowGulchWaveIntros[0]!.text.en, /move him to the canyon/i);
   assert.match(cowGulchWaveIntros[1]!.text.en, /sleeping Desperados/i);
   assert.match(cowGulchWaveIntros[2]!.text.en, /covered wagons/i);
+  assert.match(cowGulchWaveIntros[4]!.text.en, /click or tap one to set a priority target/i);
+  assert.doesNotMatch(cowGulchWaveIntros[4]!.text.en, /Action key/i);
   assert.match(cowGulchWaveIntros[7]!.text.en, /last group has set off/i);
   assert.ok(cowGulchWaveIntros.every(({ speaker, portraitAsset, voiceSound, text }) =>
     speaker.en === 'Pedro' && speaker.zh === '佩德罗'

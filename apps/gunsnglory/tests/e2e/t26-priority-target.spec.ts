@@ -108,6 +108,7 @@ test('phone touch selects a preferred settler and renders the APK marker pair', 
     await installAutoContinueCampaignWaveIntro(page);
     await installPriorityCrosshairCounter(page);
     const point = await pointAtVisibleSettler(page);
+    await page.getByTestId('game-toolbar-toggle').click();
     const before = await page.evaluate(() =>
       (window as Window & { __priorityCrosshairDrawCount?: number }).__priorityCrosshairDrawCount ?? 0);
     await page.getByTestId('game-canvas').scrollIntoViewIfNeeded();
@@ -146,6 +147,7 @@ test('dragging from an enemy does not move the previously selected unit', async 
       input.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await expect(page.getByTestId('simulation-speed-value')).toHaveText('0.25×');
+    await page.getByTestId('game-toolbar-toggle').click();
 
     const playerStart = await page.getByTestId('inspection-units').textContent() ?? '';
     const playerMatch = playerStart.match(/gunslinger-1 (?:at|位置) \((-?\d+(?:\.\d+)?),\s*(-?\d+(?:\.\d+)?)\)/);

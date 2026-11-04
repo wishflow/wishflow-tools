@@ -6,7 +6,14 @@ import {
   createBrowserProgress,
   getBrowserScenarioContentVersion,
 } from './bootstrap/browser';
-import { cowGulchP1aSampleContent, cowGulchP1cCampaignContent, cowGulchP1dCampaignContent } from './content/cow-gulch';
+import {
+  cowGulchP1aSampleContent,
+  cowGulchP1bCampaignContent,
+  cowGulchP1cCampaignContent,
+  cowGulchP1dCampaignContent,
+  cowGulchUpgradeSampleContent,
+} from './content/cow-gulch';
+import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { cowGulchLevelOneContent } from './content/official-campaign';
 import { CampaignWaveIntroCursor, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
@@ -21,10 +28,13 @@ import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import { SoundEffectsManager } from './audio/sfx-manager';
+import { acquireAudioPlayer, silenceAudioPlayers } from './audio/audio-playback';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
+import { summarizeEnemyDefeats, type EnemyDefeatSummary } from './ui/combat-feedback';
 import { createExperiments, type ExperimentComparisonReport } from './experiments';
 import type {
   GameEvent,
+  CampaignEnemyType,
   GameDifficulty,
   GameIntent,
   GameMode,
@@ -60,6 +70,40 @@ app.innerHTML = [
   '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
   '    <div class="game-frame">',
   '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
+  '      <details class="game-toolbar" data-testid="game-toolbar" aria-label="Game controls" open>',
+  '        <summary data-testid="game-toolbar-toggle" data-locale="Game controls">Game controls</summary>',
+  '        <div class="game-toolbar-panel">',
+  '          <div class="game-toolbar-actions">',
+  '          <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
+  '          <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
+  '          <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
+  '          <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
+  '          <button type="button" data-testid="hire-map-unit" data-action="hire-map-unit" hidden>Hire selected map unit</button>',
+  '          <button type="button" data-action="clear-selection">Clear selection</button>',
+  '          </div>',
+  '          <div class="game-toolbar-options">',
+  '          <label class="simulation-speed-control" for="simulation-speed">',
+  '            <span id="simulation-speed-label">Simulation speed</span>',
+  '            <input id="simulation-speed" data-testid="simulation-speed" aria-labelledby="simulation-speed-label" type="range" min="0.25" max="4" step="0.25" value="1" disabled>',
+  '            <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
+  '          </label>',
+  '          <button type="button" class="sound-toggle" data-testid="sound-toggle" data-action="toggle-sound" aria-pressed="true">Sound: On</button>',
+  '          <details class="controls-help" data-testid="controls-help">',
+  '            <summary data-locale="Controls">Controls</summary>',
+  '            <ul>',
+  '              <li data-locale="Click or tap a unit to select it; click empty ground to clear selection.">Click or tap a unit to select it; click empty ground to clear selection.</li>',
+  '              <li data-locale="Drag a selected unit to move it to a reachable cell.">Drag a selected unit to move it to a reachable cell.</li>',
+  '              <li data-locale="Click or tap a settler to set or clear a priority target.">Click or tap a settler to set or clear a priority target.</li>',
+  '              <li data-locale="Drag empty ground to pan the map; drag the minimap to move its viewport.">Drag empty ground to pan the map; drag the minimap to move its viewport.</li>',
+  '              <li data-locale="Pinch with two fingers to zoom the map.">Pinch with two fingers to zoom the map.</li>',
+  '              <li data-locale="Use the pause button or HUD pause icon to pause and resume.">Use the pause button or HUD pause icon to pause and resume.</li>',
+  '              <li data-locale="Tap Game controls to show or hide the in-game toolbar.">Tap Game controls to show or hide the in-game toolbar.</li>',
+  '              <li data-locale="Open Inspect battle for state details; single-step works while paused.">Open Inspect battle for state details; single-step works while paused.</li>',
+  '            </ul>',
+  '          </details>',
+  '          </div>',
+  '        </div>',
+  '      </details>',
   '      <section class="settlement-panel" data-testid="settlement" aria-labelledby="settlement-title" aria-live="polite" hidden>',
   '        <h2 id="settlement-title">Battle result</h2>',
   '        <p data-testid="settlement-outcome"></p>',
@@ -70,9 +114,40 @@ app.innerHTML = [
   '        <button type="button" data-action="retry-settlement-save" hidden>Retry saving result</button>',
   '        <button type="button" data-action="restart-sample">Restart this sample</button>',
   '      </section>',
+  '      <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
+  '        <h2 id="recruit-confirmation-title"></h2>',
+  '        <div class="recruit-confirmation-actions">',
+  '          <button type="button" data-action="confirm-recruit">Recruit</button>',
+  '          <button type="button" data-action="cancel-recruit">Cancel</button>',
+  '        </div>',
+  '      </dialog>',
+  '      <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
+  '        <h2 id="upgrade-confirmation-title"></h2>',
+  '        <p data-testid="upgrade-confirmation-details"></p>',
+  '        <div class="recruit-confirmation-actions">',
+  '          <button type="button" data-action="confirm-upgrade">Confirm upgrade</button>',
+  '          <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
+  '        </div>',
+  '      </dialog>',
+  '      <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
+  '        <div class="campaign-wave-intro-card">',
+  '          <img data-testid="campaign-wave-intro-portrait" alt="" width="96" height="110">',
+  '          <div class="campaign-wave-intro-copy">',
+  '            <p class="eyebrow" data-testid="campaign-wave-intro-wave"></p>',
+  '            <h2 id="campaign-wave-intro-title"></h2>',
+  '            <p id="campaign-wave-intro-text" data-testid="campaign-wave-intro-text"></p>',
+  '            <div class="campaign-wave-intro-actions">',
+  '              <button type="button" data-action="retry-wave-intro-voice" hidden>Retry Pedro’s voice</button>',
+  '              <button type="button" data-action="continue-wave-intro">Continue</button>',
+  '            </div>',
+  '          </div>',
+  '        </div>',
+  '      </dialog>',
   '    </div>',
   '    <div class="game-controls">',
   '      <p data-testid="profile-status" role="status" aria-live="polite"></p>',
+  '      <p data-testid="pending-settlement-status" role="status" aria-live="polite" hidden></p>',
+  '      <button type="button" data-testid="retry-pending-settlement" data-action="retry-pending-settlement" hidden disabled>Retry saving pending result</button>',
   '      <p data-testid="profile-recovery-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="export-corrupt-profile" hidden>Download profile backup</button>',
   '      <button type="button" data-action="reset-corrupt-profile" hidden>Replace damaged profile</button>',
@@ -84,12 +159,6 @@ app.innerHTML = [
   '      </section>',
   '      <p data-testid="wave-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="combat-status" role="status" aria-live="polite"></p>',
-  '      <label class="simulation-speed-control" for="simulation-speed">',
-  '        <span id="simulation-speed-label">Simulation speed</span>',
-  '        <input id="simulation-speed" data-testid="simulation-speed" aria-labelledby="simulation-speed-label" type="range" min="0.25" max="4" step="0.25" value="1" disabled>',
-  '        <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
-  '      </label>',
-  '      <button type="button" class="sound-toggle" data-testid="sound-toggle" data-action="toggle-sound" aria-pressed="true">Sound: On</button>',
   '      <p data-testid="sound-playback-status" role="status" aria-live="polite" hidden></p>',
   '      <button type="button" data-testid="retry-sound-playback" data-action="retry-sound-playback" hidden>Retry sound playback</button>',
   '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
@@ -99,17 +168,11 @@ app.innerHTML = [
   '      <p data-testid="upgrade-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="recruit-pool-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
-  '      <button type="button" data-testid="hire-map-unit" data-action="hire-map-unit" hidden>Hire selected map unit</button>',
   '      <p data-testid="map-hire-status" role="status" aria-live="polite"></p>',
-  '      <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
-  '      <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
-  '      <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
   '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
   '      <button type="button" data-testid="open-single-wave-sample" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
-  '      <button type="button" data-action="clear-selection">Clear selection</button>',
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
-  '      <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
   '    </div>',
   '    <section class="experiment-panel" aria-labelledby="experiment-title">',
   '      <h2 id="experiment-title" data-locale="Compare numeric schemes">Compare numeric schemes</h2>',
@@ -177,36 +240,7 @@ app.innerHTML = [
   '      <p data-testid="inspection-enemies"></p>',
   '      <p data-testid="inspection-route"></p>',
   '    </details>',
-  '    <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-labelledby="recruit-confirmation-title">',
-  '      <h2 id="recruit-confirmation-title"></h2>',
-  '      <div class="recruit-confirmation-actions">',
-  '        <button type="button" data-action="confirm-recruit">Recruit</button>',
-  '        <button type="button" data-action="cancel-recruit">Cancel</button>',
-  '      </div>',
-  '    </dialog>',
-  '    <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" aria-labelledby="upgrade-confirmation-title">',
-  '      <h2 id="upgrade-confirmation-title"></h2>',
-  '      <p data-testid="upgrade-confirmation-details"></p>',
-  '      <div class="recruit-confirmation-actions">',
-  '        <button type="button" data-action="confirm-upgrade">Confirm upgrade</button>',
-  '        <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
-  '      </div>',
-  '    </dialog>',
-  '    <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
-  '      <div class="campaign-wave-intro-card">',
-  '        <img data-testid="campaign-wave-intro-portrait" alt="" width="96" height="110">',
-  '        <div class="campaign-wave-intro-copy">',
-  '          <p class="eyebrow" data-testid="campaign-wave-intro-wave"></p>',
-  '          <h2 id="campaign-wave-intro-title"></h2>',
-  '          <p id="campaign-wave-intro-text" data-testid="campaign-wave-intro-text"></p>',
-  '          <div class="campaign-wave-intro-actions">',
-  '            <button type="button" data-action="retry-wave-intro-voice" hidden>Retry Pedro’s voice</button>',
-  '            <button type="button" data-action="continue-wave-intro">Continue</button>',
-  '          </div>',
-  '        </div>',
-  '      </div>',
-  '    </dialog>',
-  '    <p class="scene-caption" data-locale="The Cow Gulch battle has eight playable waves and settles after wave eight.">The Cow Gulch battle has eight playable waves and settles after wave eight.</p>',
+  '    <p class="scene-caption" data-testid="scene-caption"></p>',
   '  </section>',
   '</section>',
 ].join('');
@@ -215,6 +249,8 @@ registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
+const pendingSettlementStatusElement = app.querySelector<HTMLElement>('[data-testid="pending-settlement-status"]');
+const retryPendingSettlementButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-pending-settlement"]');
 const profileRecoveryStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-recovery-status"]');
 const exportCorruptProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="export-corrupt-profile"]');
 const resetCorruptProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="reset-corrupt-profile"]');
@@ -236,6 +272,7 @@ const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat
 const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
 const sceneContextElement = app.querySelector<HTMLElement>('[data-testid="scene-context"]');
 const sceneDifficultyElement = app.querySelector<HTMLElement>('[data-testid="scene-difficulty"]');
+const sceneCaptionElement = app.querySelector<HTMLElement>('[data-testid="scene-caption"]');
 const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-sample-status"]');
 const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-status"]');
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
@@ -304,14 +341,14 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
+if (!canvasElement || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
   || !retrySceneOpenButtonElement || !returnPreviousSceneButtonElement || !waveStatusElement || !combatStatusElement
   || !assetLoadErrorElement || !assetLoadErrorMessageElement || !retryAssetsButtonElement
   || !campaignProgressSummaryElement || !campaignStageListElement || !campaignStatusElement
   || !campaignDifficultySelectElement || !campaignDifficultyStatusElement
-  || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement
+  || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement || !sceneCaptionElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !mapHireButtonElement || !mapHireStatusElement
   || !recruitButton || !recruitConfirmationElement
@@ -340,6 +377,8 @@ if (!canvasElement || !profileStatusElement || !profileRecoveryStatusElement
 }
 const canvas: HTMLCanvasElement = canvasElement;
 const profileStatus: HTMLElement = profileStatusElement;
+const pendingSettlementStatus: HTMLElement = pendingSettlementStatusElement;
+const retryPendingSettlementControl: HTMLButtonElement = retryPendingSettlementButtonElement;
 const profileRecoveryStatus: HTMLElement = profileRecoveryStatusElement;
 const exportCorruptProfileButton: HTMLButtonElement = exportCorruptProfileButtonElement;
 const resetCorruptProfileButton: HTMLButtonElement = resetCorruptProfileButtonElement;
@@ -361,6 +400,7 @@ const campaignDifficultyStatus: HTMLElement = campaignDifficultyStatusElement;
 const sceneTitle: HTMLElement = sceneTitleElement;
 const sceneContext: HTMLElement = sceneContextElement;
 const sceneDifficulty: HTMLElement = sceneDifficultyElement;
+const sceneCaption: HTMLElement = sceneCaptionElement;
 const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
 const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
@@ -460,7 +500,7 @@ let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let soundEnabled = true;
-const failedSoundElements = new Map<string, HTMLAudioElement>();
+const failedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let selectedDifficulty: GameDifficulty = 'easy';
 let pauseReason: 'manual' | 'background' | 'wave-intro' | undefined;
 let campaignWaveIntroCursor = new CampaignWaveIntroCursor();
@@ -475,6 +515,12 @@ let profileRecoveryStatusKey: 'backup-exported' | 'export-failed' | 'reset-faile
 let corruptProfileBackup: string | undefined;
 let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | 'replay' | undefined;
 let activeSettlementRecord: GameSettlementRecord | undefined;
+type PendingFormalSettlement = {
+  record: GameSettlementRecord;
+  state: 'saving' | 'failed' | 'conflict';
+};
+const pendingFormalSettlements = new Map<string, PendingFormalSettlement>();
+let pendingSettlementSavedNotice = false;
 let replaying = false;
 let replacingSession = false;
 let assetLoadFailureNames: string[] = [];
@@ -495,7 +541,7 @@ type ReplayStatusState =
   | { type: 'verified'; checkpointCount: number; outcome: 'victory' | 'defeat' }
   | { type: 'error'; code: GameReplayErrorCode };
 let replayStatusState: ReplayStatusState | undefined;
-let lastDefeatReward: number | undefined;
+let lastDefeatFeedback: EnemyDefeatSummary[] = [];
 let lastRecruitmentEvent: Extract<GameEvent, { type: 'unit-recruited' | 'unit-recruitment-rejected' }> | undefined;
 let lastMapHireEvent: Extract<GameEvent, { type: 'map-unit-hired' | 'map-unit-hire-rejected' }> | undefined;
 let pendingRecruitmentType: string | undefined;
@@ -507,6 +553,20 @@ let upgradeCommandNumber = 0;
 let settingsSaveSequence = 0;
 const simulationTime = new SimulationTimeAccumulator();
 let mapCamera: MapCamera = createMapCamera();
+function speedDisplay(finePer100Ms: number, language: 'en' | 'zh'): string {
+  const cellsPerSecond = (finePer100Ms * 10 / 7680).toFixed(2);
+  return language === 'en'
+    ? `${cellsPerSecond} cells/s (${finePer100Ms} fine/100ms)`
+    : `${cellsPerSecond} 格/秒（原始 ${finePer100Ms} fine/100ms）`;
+}
+
+function rangeDisplay(fine: number, language: 'en' | 'zh'): string {
+  const cells = (fine / 7680).toFixed(2);
+  return language === 'en'
+    ? `${cells} cells (${fine} fine units)`
+    : `${cells} 格（原始 ${fine} fine units）`;
+}
+
 const languageMessages = {
   en: {
     result: 'Battle result',
@@ -522,10 +582,21 @@ const languageMessages = {
     nextLevelUnlockedUnavailable: 'Unlocked · content is not implemented yet.',
     retryAssets: 'Retry loading game resources',
     assetLoadFailed: (count: number) => `${count} required game image${count === 1 ? '' : 's'} could not load. The recovery scene remains available; retry before starting a battle.`,
+    canvasAssetFallback: 'Map display is paused until required images load.',
     difficultyNames: { easy: 'Easy', medium: 'Medium', hard: 'Hard' } satisfies Record<GameDifficulty, string>,
     campaignDifficultyLocked: 'Hard unlocks after completing the 10th level in any region.',
     campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
     sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
+    sceneCaption: (scenarioId: string) => {
+      if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
+      if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
+      if (scenarioId === cowGulchP1bCampaignContent.id) return 'Archived original-waves sample: waves 1–2 only. It stops before campaign settlement.';
+      if (scenarioId === cowGulchP1cCampaignContent.id) return 'Archived original-waves sample: waves 1–3 only. It does not settle the campaign.';
+      if (scenarioId === cowGulchP1dCampaignContent.id) return 'Original eight-wave sample: clearing wave 8 settles this sample, not the official level.';
+      if (scenarioId === cowGulchUpgradeSampleContent.id) return 'Debug-only upgrade sample: starts with $25 and raises the upgrade limit to 1. It never writes profile progress.';
+      if (scenarioId === cowGulchDefeatContent.id) return 'Defeat-path sample: no defenders, one starting life, and no official campaign progress.';
+      return 'This scene is not part of official campaign progress.';
+    },
     openCampaignStage: (name: string) => `Open ${name}`,
     campaignLocked: (name: string) => `${name} is locked. Complete its prerequisites first.`,
     campaignOpening: (name: string) => `Opening ${name}…`,
@@ -534,6 +605,7 @@ const languageMessages = {
     none: 'No unit selected',
     unitName: (type: string) => type === 'mexican' ? 'Mexican' : 'Gunslinger',
     selected: (name: string) => `${name} selected`,
+    selectedCell: (x: number, y: number) => ` · Cell (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name} is waiting to be hired`,
     mapHireButton: (name: string, price: number) => `Hire map ${name} · $${price}`,
     mapHired: (name: string, price: number) => `${name} hired from the map for $${price}.`,
@@ -577,7 +649,16 @@ const languageMessages = {
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number, total?: number) => `Wave ${number}${total ? `/${total}` : ''} complete · Lives ${lives} · Escaped ${escaped} · Defeated ${defeated} · Cash $${cash}`,
     campaignWavesUnavailable: (next: number, total: number) => `Wave ${next} of ${total} is not implemented in this build.`,
     startCampaignWave: (number: number, total: number) => `Start wave ${number} of ${total}`,
-    defeated: (cashReward: number) => `Pioneer defeated · +$${cashReward}`,
+    defeated: (enemyType: CampaignEnemyType | undefined, count: number, cashReward: number) => {
+      const names: Record<CampaignEnemyType, readonly [string, string]> = {
+        1: ['Pioneer', 'Pioneers'],
+        2: ['Female pioneer', 'Female pioneers'],
+        4: ['Wagon', 'Wagons'],
+        8: ['Covered wagon', 'Covered wagons'],
+      };
+      const [singular, plural] = enemyType ? names[enemyType] : ['Enemy', 'Enemies'];
+      return `${count} ${count === 1 ? singular : plural} defeated · +$${cashReward}`;
+    },
     recruitButton: (name: string, price: number) => `Hire ${name} · $${price}`,
     recruitPool: (units: string) => `Recruit pool: ${units}`,
     recruitPoolEmpty: 'Recruit pool: empty',
@@ -592,11 +673,11 @@ const languageMessages = {
     debugUpgradeFixture: 'Debug-only fixture · upgrade limit 1 · $25 starting cash · no profile writes.',
     upgradeButton: (price: number) => `Upgrade Gunslinger · $${price}`,
     upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
-      `Level ${level} → ${level + 1} · Speed ${speed} → ${nextSpeed} · Reload ${reload} → ${nextReload} ms`,
+      `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Reload ${reload} → ${nextReload} ms`,
     upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
       range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
       nextSpecialReload: number, price: number, cash: number) =>
-      `Level ${level} → ${level + 1} · Speed ${speed} → ${nextSpeed} · Damage ${damage} → ${nextDamage} · Range ${range} → ${nextRange} fine units · Reload ${reload} → ${nextReload} ms · Special reload ${specialReload} → ${nextSpecialReload} ms · Price $${price} · Cash $${cash}`,
+      `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Damage ${damage} → ${nextDamage} base damage/shot · Cow Gulch light multiplier: pioneers 100%, wagons 50% · HP loss = trunc(base × target multiplier / 100) · Range ${rangeDisplay(range, 'en')} → ${rangeDisplay(nextRange, 'en')} · Reload ${reload} → ${nextReload} ms · Special reload ${specialReload} → ${nextSpecialReload} ms · Price $${price} · Cash $${cash}`,
     confirmUpgrade: (name: string, price: number) => `Upgrade ${name} for $${price}?`,
     confirmUpgradeButton: 'Confirm upgrade',
     cancelUpgradeButton: 'Cancel upgrade',
@@ -636,6 +717,10 @@ const languageMessages = {
     settlementSaved: 'Result saved to this browser.',
     settlementFailed: 'Result is not saved. Retry to save it.',
     settlementConflict: 'A newer profile exists. Retry to merge this result.',
+    pendingSettlementWaiting: 'A battle result is waiting to be saved.',
+    pendingSettlementSaving: 'Saving the pending result…',
+    pendingSettlementSaved: 'The pending result was saved.',
+    retryPendingSettlement: 'Retry pending save',
     settlementDebug: 'Debug result · not added to the saved profile.',
     settlementReplay: 'Replay result · not added to the saved profile.',
     replayExported: 'Replay file exported.',
@@ -675,10 +760,21 @@ const languageMessages = {
     nextLevelUnlockedUnavailable: '已解锁 · 关卡内容尚未实现。',
     retryAssets: '重试加载游戏资源',
     assetLoadFailed: (count: number) => `${count} 项必需游戏图片未能加载。恢复场景仍可查看；请重试加载后再开始战斗。`,
+    canvasAssetFallback: '必需图片加载完成前，地图暂不可显示。',
     difficultyNames: { easy: '简单', medium: '中等', hard: '困难' } satisfies Record<GameDifficulty, string>,
     campaignDifficultyLocked: '完成任意区域的第 10 关后解锁困难模式。',
     campaignDifficultyUnlocked: '困难模式已解锁。',
     sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
+    sceneCaption: (scenarioId: string) => {
+      if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
+      if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
+      if (scenarioId === cowGulchP1bCampaignContent.id) return '原版波次归档样本：仅包含第 1–2 波，不会进行战役结算。';
+      if (scenarioId === cowGulchP1cCampaignContent.id) return '原版波次归档样本：仅包含第 1–3 波，不会进行战役结算。';
+      if (scenarioId === cowGulchP1dCampaignContent.id) return '原版 8 波样本：完成第 8 波可结算该样本，但不会完成正式关卡。';
+      if (scenarioId === cowGulchUpgradeSampleContent.id) return '仅供调试的升级样本：初始现金 $25，升级上限为 1，不会写入正式进度。';
+      if (scenarioId === cowGulchDefeatContent.id) return '败北流程样本：不部署防守单位，初始生命为 1，不计入正式战役进度。';
+      return '此场景不属于正式战役进度。';
+    },
     openCampaignStage: (name: string) => `进入${name}`,
     campaignLocked: (name: string) => `${name}尚未解锁，请先完成前置关卡。`,
     campaignOpening: (name: string) => `正在进入${name}…`,
@@ -687,6 +783,7 @@ const languageMessages = {
     none: '尚未选择单位',
     unitName: (type: string) => type === 'mexican' ? '墨西哥人' : '枪手',
     selected: (name: string) => `已选择${name}`,
+    selectedCell: (x: number, y: number) => ` · 格子 (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name}待招募，尚未雇用`,
     mapHireButton: (name: string, price: number) => `雇佣地图上的${name} · $${price}`,
     mapHired: (name: string, price: number) => `已花费 $${price} 雇佣地图上的${name}。`,
@@ -730,7 +827,16 @@ const languageMessages = {
     complete: (lives: number, number: number, escaped: number, defeated: number, cash: number, total?: number) => `第 ${number}${total ? `/${total}` : ''} 波完成 · 生命 ${lives} · 逃脱 ${escaped} · 击败 ${defeated} · 现金 $${cash}`,
     campaignWavesUnavailable: (next: number, total: number) => `当前版本尚未实现第 ${next}/${total} 波。`,
     startCampaignWave: (number: number, total: number) => `开始第 ${number}/${total} 波`,
-    defeated: (cashReward: number) => `拓荒者被击败 · +$${cashReward}`,
+    defeated: (enemyType: CampaignEnemyType | undefined, count: number, cashReward: number) => {
+      const names: Record<CampaignEnemyType, string> = {
+        1: '拓荒者',
+        2: '女拓荒者',
+        4: '马车',
+        8: '篷车',
+      };
+      const name = enemyType ? names[enemyType] : '敌人';
+      return `${name}被击败 ×${count} · +$${cashReward}`;
+    },
     recruitButton: (name: string, price: number) => `招募${name} · $${price}`,
     recruitPool: (units: string) => `预备单位：${units}`,
     recruitPoolEmpty: '预备单位：无',
@@ -745,11 +851,11 @@ const languageMessages = {
     debugUpgradeFixture: '仅供规则测试 · 升级上限 1 · 初始现金 $25 · 不写入档案。',
     upgradeButton: (price: number) => `升级枪手 · $${price}`,
     upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
-      `等级 ${level} → ${level + 1} · 移动速度 ${speed} → ${nextSpeed} · 装填 ${reload} → ${nextReload} 毫秒`,
+      `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒`,
     upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
       range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
       nextSpecialReload: number, price: number, cash: number) =>
-      `等级 ${level} → ${level + 1} · 移动速度 ${speed} → ${nextSpeed} · 伤害 ${damage} → ${nextDamage} · 射程 ${range} → ${nextRange} 细单位 · 装填 ${reload} → ${nextReload} 毫秒 · 特殊装填 ${specialReload} → ${nextSpecialReload} 毫秒 · 价格 $${price} · 当前现金 $${cash}`,
+      `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 伤害 ${damage} → ${nextDamage} 点/发（目标倍率前基础伤害）· 牛溪谷轻型伤害倍率：拓荒者 100%，马车 50% · 实际扣血 = trunc(基础伤害 × 目标倍率 / 100) · 射程 ${rangeDisplay(range, 'zh')} → ${rangeDisplay(nextRange, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒 · 特殊装填 ${specialReload} → ${nextSpecialReload} 毫秒 · 价格 $${price} · 当前现金 $${cash}`,
     confirmUpgrade: (name: string, price: number) => `花费 $${price} 升级${name}？`,
     confirmUpgradeButton: '确认升级',
     cancelUpgradeButton: '取消升级',
@@ -789,6 +895,10 @@ const languageMessages = {
     settlementSaved: '结算已保存到此浏览器。',
     settlementFailed: '结算尚未保存。请重试保存。',
     settlementConflict: '档案已有更新版本。重试可合并本次结果。',
+    pendingSettlementWaiting: '有一条战局结算尚未保存。',
+    pendingSettlementSaving: '正在重试保存待处理的结算…',
+    pendingSettlementSaved: '待处理的结算已保存。',
+    retryPendingSettlement: '重试保存结算',
     settlementDebug: '调试结果 · 不会写入已保存档案。',
     settlementReplay: '重放结果 · 不会写入已保存档案。',
     replayExported: '战局文件已导出。',
@@ -831,7 +941,7 @@ function profileMessage(language: keyof typeof languageMessages): string {
 
 function applyProfileSettings(settings: ProfileView['settings']): void {
   simulationSpeed = settings.simulationSpeed;
-  soundEnabled = settings.soundEnabled;
+  setSoundEnabled(settings.soundEnabled);
   simulationSpeedInput.value = String(simulationSpeed);
   selectedDifficulty = settings.difficulty === 'hard' && !campaignProgressView?.hardModeUnlocked
     ? 'easy'
@@ -1000,6 +1110,23 @@ function settlementSaveMessage(language: keyof typeof languageMessages): string 
     case 'replay': return messages.settlementReplay;
     default: return '';
   }
+}
+
+function rememberPendingSettlement(
+  record: GameSettlementRecord,
+  state: SettlementSaveResult['status'] | 'saving',
+): void {
+  if (state === 'saved') {
+    const wasPending = pendingFormalSettlements.has(record.settlementId);
+    pendingFormalSettlements.delete(record.settlementId);
+    pendingSettlementSavedNotice = wasPending;
+    return;
+  }
+  pendingSettlementSavedNotice = false;
+  pendingFormalSettlements.set(record.settlementId, {
+    record,
+    state,
+  });
 }
 
 function replayMessage(language: keyof typeof languageMessages): string {
@@ -1312,9 +1439,11 @@ async function applyFormalSettlement(record: GameSettlementRecord): Promise<void
       profileLoadFailed = false;
       profileLoadErrorCode = undefined;
     }
-    settlementSaveState = result.status;
+    if (activeSettlementRecord?.settlementId === record.settlementId) settlementSaveState = result.status;
+    rememberPendingSettlement(record, result.status);
   } catch {
-    settlementSaveState = 'failed';
+    if (activeSettlementRecord?.settlementId === record.settlementId) settlementSaveState = 'failed';
+    rememberPendingSettlement(record, 'failed');
     try {
       profile = await progress.loadProfile();
       profileLoadFailed = false;
@@ -1338,9 +1467,15 @@ async function applyFormalSettlement(record: GameSettlementRecord): Promise<void
 }
 
 async function retryFormalSettlement(): Promise<void> {
-  const settlementId = activeSettlementRecord?.settlementId;
-  if (!settlementId || (settlementSaveState !== 'failed' && settlementSaveState !== 'conflict')) return;
-  settlementSaveState = 'saving';
+  const activePending = activeSettlementRecord
+    ? pendingFormalSettlements.get(activeSettlementRecord.settlementId)
+    : undefined;
+  const pending = activePending ?? pendingFormalSettlements.values().next().value as PendingFormalSettlement | undefined;
+  if (!pending || (pending.state !== 'failed' && pending.state !== 'conflict')) return;
+  const settlementId = pending.record.settlementId;
+  const isActiveSettlement = activeSettlementRecord?.settlementId === settlementId;
+  if (isActiveSettlement) settlementSaveState = 'saving';
+  rememberPendingSettlement(pending.record, 'saving');
   renderStatus();
   try {
     const result = await progress.retrySettlement(settlementId);
@@ -1349,9 +1484,11 @@ async function retryFormalSettlement(): Promise<void> {
       profileLoadFailed = false;
       profileLoadErrorCode = undefined;
     }
-    settlementSaveState = result.status;
+    if (activeSettlementRecord?.settlementId === settlementId) settlementSaveState = result.status;
+    rememberPendingSettlement(pending.record, result.status);
   } catch {
-    settlementSaveState = 'failed';
+    if (activeSettlementRecord?.settlementId === settlementId) settlementSaveState = 'failed';
+    rememberPendingSettlement(pending.record, 'failed');
   }
   try {
     campaignProgressView = await progress.loadCampaign();
@@ -1390,6 +1527,14 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   }
   const profileText = profileMessage(language);
   if (profileStatus.textContent !== profileText) profileStatus.textContent = profileText;
+  const pendingSettlement = pendingFormalSettlements.values().next().value as PendingFormalSettlement | undefined;
+  pendingSettlementStatus.hidden = !pendingSettlement && !pendingSettlementSavedNotice;
+  pendingSettlementStatus.textContent = pendingSettlement
+    ? pendingSettlement.state === 'saving' ? messages.pendingSettlementSaving : messages.pendingSettlementWaiting
+    : pendingSettlementSavedNotice ? messages.pendingSettlementSaved : '';
+  retryPendingSettlementControl.hidden = pendingSettlement === undefined;
+  retryPendingSettlementControl.disabled = pendingSettlement?.state === 'saving';
+  retryPendingSettlementControl.textContent = messages.retryPendingSettlement;
   const profileRecoveryText = profileRecoveryMessage(language);
   if (profileRecoveryStatus.textContent !== profileRecoveryText) profileRecoveryStatus.textContent = profileRecoveryText;
   exportCorruptProfileButton.hidden = !profileLoadFailed
@@ -1402,8 +1547,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   exportReplayControl.disabled = replaying || replacingSession || !view.wave?.settlement
     || session.startRecord.mode === 'replay';
   importReplayControl.disabled = replaying || replacingSession;
-  const defeatEvent = events.find((event) => event.type === 'enemy-defeated');
-  if (defeatEvent?.type === 'enemy-defeated') lastDefeatReward = defeatEvent.cashReward;
+  const defeatFeedback = summarizeEnemyDefeats(events, view.enemies);
+  if (defeatFeedback.length > 0) lastDefeatFeedback = defeatFeedback;
   const recruitmentEvent = [...events].reverse().find((event) =>
     event.type === 'unit-recruited' || event.type === 'unit-recruitment-rejected');
   if (recruitmentEvent?.type === 'unit-recruited' || recruitmentEvent?.type === 'unit-recruitment-rejected') {
@@ -1423,7 +1568,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? (unit.activity === 4
       ? messages.selectedSleeping(messages.unitName(unit.type))
       : messages.selected(messages.unitName(unit.type)))
-      + ' · Cell (' + (unit.cell.x + 1) + ', ' + (unit.cell.y + 1) + ')'
+      + messages.selectedCell(unit.cell.x + 1, unit.cell.y + 1)
     : messages.none;
   if (status.textContent !== selectionText) status.textContent = selectionText;
   simulationSpeedValue.textContent = simulationSpeed + '×';
@@ -1495,7 +1640,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
         ? messages.startCampaignWave(wave.number, wave.totalWaves)
         : messages.startSample;
   }
-  const combatText = lastDefeatReward === undefined ? '' : messages.defeated(lastDefeatReward);
+  const combatText = lastDefeatFeedback
+    .map(({ enemyType, count, cashReward }) => messages.defeated(enemyType, count, cashReward))
+    .join(' · ');
   if (combatStatus.textContent !== combatText) combatStatus.textContent = combatText;
   const poolEntries = view.recruitPool.filter((entry) => entry.count > 0);
   const poolText = poolEntries.length === 0
@@ -1563,6 +1710,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       ? messages.originalWaveContext
     : officialCampaignScenario ? 'NEW MEXICO · 01'
       : activeCampaignStage ? language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE' : 'NEW MEXICO · 01';
+  sceneCaption.textContent = messages.sceneCaption(view.scenarioId);
   upgradeSampleStatus.textContent = upgradeScenario
     ? messages.debugUpgradeFixture
     : originalWaveScenario ? originalWaveNotice
@@ -1711,7 +1859,23 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
 function redraw(resize = false): void {
   const displayPixelScale = getDisplayPixelScale();
   if (resize || !context) context = resizeCanvas(canvas, displayPixelScale);
-  drawGame(context, view, images, displayPixelScale, mapCamera, showInspectionOverlay, getLanguage());
+  try {
+    drawGame(context, view, images, displayPixelScale, mapCamera, showInspectionOverlay, getLanguage());
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    const missingImage = /^Missing game image: (.+)$/.exec(error.message)?.[1];
+    if (!missingImage) throw error;
+    if (!assetLoadFailureNames.includes(missingImage)) assetLoadFailureNames = [...assetLoadFailureNames, missingImage];
+    context.save();
+    context.fillStyle = '#251c14';
+    context.fillRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
+    context.fillStyle = '#f5ead4';
+    context.font = '18px ui-sans-serif, system-ui, sans-serif';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText(languageMessages[getLanguage()].canvasAssetFallback, GAME_VIEWPORT.width / 2, GAME_VIEWPORT.height / 2);
+    context.restore();
+  }
 }
 
 function getDisplayPixelScale(): number {
@@ -1740,6 +1904,7 @@ const assetNames = new Set([
   'horse_wagon_white',
   'horse_wagon_turn',
   'horse_wagon_turn_white',
+  'gng_frame',
   'sfx_death_pioneers',
   'sfx_smoke_explosion',
   'sfx_exploding_parts',
@@ -1761,6 +1926,11 @@ const assetNames = new Set([
   'portrait_pedro',
 ]);
 const images: Record<string, HTMLImageElement> = {};
+const audioElements = new Map<string, HTMLAudioElement[]>();
+const gameSoundEffects = new SoundEffectsManager();
+let backgroundMusic: HTMLAudioElement | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | undefined;
+let battleMusicWaveNumber: number | undefined;
 
 async function loadSettings(): Promise<void> {
   try {
@@ -1836,6 +2006,7 @@ let pinchGesture: PinchGesture | undefined;
 let activeMapPan: MapPanGesture | undefined;
 const trackedPointers = new Map<number, TrackedPointer>();
 const DRAG_START_TOLERANCE = 20;
+const MINIMAP_DRAG_START_TOLERANCE = 2;
 
 function stopGameLoop(): void {
   loopGeneration += 1;
@@ -1845,20 +2016,16 @@ function stopGameLoop(): void {
   simulationTime.reset();
 }
 
-const audioElements = new Map<string, HTMLAudioElement>();
-const gameSoundEffects = new SoundEffectsManager();
-let backgroundMusic: HTMLAudioElement | undefined;
-let backgroundMusicTrack: CowGulchMusicTrack | undefined;
-let battleMusicWaveNumber: number | undefined;
-
 function isOfficialCowGulchSession(): boolean {
   return session.startRecord.mode === 'formal'
     && session.startRecord.scenarioId === cowGulchLevelOneContent.id;
 }
 
 function recordSoundPlaybackFailure(sound: string, audio: HTMLAudioElement): void {
-  if (failedSoundElements.get(sound) === audio) return;
-  failedSoundElements.set(sound, audio);
+  const failedPlayers = failedSoundElements.get(sound) ?? new Set<HTMLAudioElement>();
+  if (failedPlayers.has(audio)) return;
+  failedPlayers.add(audio);
+  failedSoundElements.set(sound, failedPlayers);
   renderStatus();
 }
 
@@ -1866,8 +2033,9 @@ function playSound(sound: string, audio: HTMLAudioElement, resetPosition = true)
   try {
     if (resetPosition) audio.currentTime = 0;
     void audio.play().then(() => {
-      if (failedSoundElements.get(sound) !== audio) return;
-      failedSoundElements.delete(sound);
+      const failedPlayers = failedSoundElements.get(sound);
+      if (!failedPlayers?.delete(audio)) return;
+      if (failedPlayers.size === 0) failedSoundElements.delete(sound);
       renderStatus();
     }).catch(() => recordSoundPlaybackFailure(sound, audio));
   } catch {
@@ -1876,24 +2044,35 @@ function playSound(sound: string, audio: HTMLAudioElement, resetPosition = true)
 }
 
 function retryFailedSoundPlayback(): void {
-  for (const [sound, audio] of failedSoundElements) {
-    playSound(sound, audio, audio !== backgroundMusic);
+  for (const [sound, players] of failedSoundElements) {
+    for (const audio of players) playSound(sound, audio, audio !== backgroundMusic);
   }
 }
 
 function playAudioAsset(sound: string): void {
   if (!soundEnabled) return;
-  let audio = audioElements.get(sound);
-  if (!audio) {
+  const players = audioElements.get(sound) ?? [];
+  const audio = acquireAudioPlayer(players, () => {
     const createdAudio = new Audio(new URL(
       import.meta.env.BASE_URL + 'assets/sounds/' + sound + '.ogg',
       window.location.href,
     ).toString());
-    audio = createdAudio;
-    audioElements.set(sound, createdAudio);
     createdAudio.addEventListener('error', () => recordSoundPlaybackFailure(sound, createdAudio));
-  }
+    return createdAudio;
+  });
+  if (!audio) return;
+  audioElements.set(sound, players);
   playSound(sound, audio);
+}
+
+function setSoundEnabled(enabled: boolean): void {
+  soundEnabled = enabled;
+  if (enabled) {
+    playBackgroundMusic();
+    return;
+  }
+  silenceAudioPlayers([...audioElements.values()].flat());
+  pauseBackgroundMusic(true);
 }
 
 function playBackgroundMusic(): void {
@@ -2013,6 +2192,7 @@ function renderCampaignWaveIntro(): void {
   retryCampaignWaveIntroVoiceControl.textContent = languageMessages[language].retryWaveIntroVoice;
   retryCampaignWaveIntroVoiceControl.hidden = !soundEnabled || !failedSoundElements.has(intro.voiceSound);
   continueCampaignWaveIntroControl.textContent = language === 'en' ? 'Continue' : '继续';
+  retryCampaignWaveIntroVoiceControl.setAttribute('aria-label', languageMessages[language].retryWaveIntroVoice);
   campaignWaveIntroDialog.dataset.waveNumber = String(intro.waveNumber);
 }
 
@@ -2028,11 +2208,16 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   stopGameLoop();
   pauseReason = 'wave-intro';
   view = session.pause();
+  frame?.scrollIntoView({ block: 'center', behavior: 'instant' });
   renderCampaignWaveIntro();
   if (!campaignWaveIntroDialog.open) campaignWaveIntroDialog.show();
   continueCampaignWaveIntroControl.focus({ preventScroll: true });
   playAudioAsset(intro.voiceSound);
   return true;
+}
+
+function showCampaignWaveIntroAfterWaveChange(previousWaveNumber: number | undefined): boolean {
+  return view.wave?.number !== previousWaveNumber && showCampaignWaveIntroForCurrentWave();
 }
 
 function continueCampaignWaveIntro(): void {
@@ -2065,7 +2250,7 @@ function activateSession(
   pauseReason = undefined;
   mapCamera = createMapCamera();
   previousSession.close();
-  lastDefeatReward = undefined;
+  lastDefeatFeedback = [];
   lastRecruitmentEvent = undefined;
   lastMapHireEvent = undefined;
   pendingRecruitmentType = undefined;
@@ -2268,16 +2453,7 @@ simulationSpeedInput.addEventListener('change', () => {
 retrySoundPlaybackButton.addEventListener('click', retryFailedSoundPlayback);
 
 soundToggleButton.addEventListener('click', () => {
-  soundEnabled = !soundEnabled;
-  if (!soundEnabled) {
-    for (const audio of audioElements.values()) {
-      audio.pause();
-      audio.currentTime = 0;
-    }
-    pauseBackgroundMusic(true);
-  } else {
-    playBackgroundMusic();
-  }
+  setSoundEnabled(!soundEnabled);
   saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
 });
 
@@ -2533,7 +2709,7 @@ function startGameLoop(): void {
       view = loopSession.advance({ deltaMs: stepMs, ...stepEnvironment });
       frameEvents.push(...view.events);
       playRequestedSounds(view.events, previousWaveNumber, stepMs);
-      if (view.wave?.number !== previousWaveNumber && showCampaignWaveIntroForCurrentWave()) break;
+      if (showCampaignWaveIntroAfterWaveChange(previousWaveNumber)) break;
       if (view.wave?.phase !== 'active') break;
     }
     renderStatus(frameEvents);
@@ -2586,6 +2762,11 @@ singleStepControl.addEventListener('click', () => {
   const eventWaveNumber = view.wave?.number;
   view = session.singleStep({ deltaMs: 16, ...currentGameStepEnvironment() });
   playRequestedSounds(view.events, eventWaveNumber, 16);
+  if (showCampaignWaveIntroAfterWaveChange(eventWaveNumber)) {
+    renderStatus();
+    redraw();
+    return;
+  }
   renderStatus();
   redraw();
 });
@@ -2630,7 +2811,7 @@ recruitControl.addEventListener('click', () => {
   recruitConfirmationTitle.textContent = languageMessages[getLanguage()].confirmRecruit(
     recruit.name[getLanguage()], recruit.price,
   );
-  recruitConfirmation.showModal();
+  recruitConfirmation.show();
   confirmRecruitControl.focus();
 });
 confirmRecruitControl.addEventListener('click', () => {
@@ -2643,17 +2824,28 @@ confirmRecruitControl.addEventListener('click', () => {
     unitType,
     commandId: `${session.id}:recruit:${++recruitmentCommandNumber}`,
   });
+  if (!recruitControl.disabled && !recruitControl.hidden) recruitControl.focus({ preventScroll: true });
 });
 cancelRecruitControl.addEventListener('click', () => {
   pendingRecruitmentType = undefined;
   recruitConfirmation.close();
+  recruitControl.focus({ preventScroll: true });
 });
-recruitConfirmation.addEventListener('cancel', () => {
+recruitConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
   pendingRecruitmentType = undefined;
+  recruitConfirmation.close();
+  recruitControl.focus({ preventScroll: true });
 });
 continueCampaignWaveIntroControl.addEventListener('click', continueCampaignWaveIntro);
 retryCampaignWaveIntroVoiceControl.addEventListener('click', retryCampaignWaveIntroVoice);
 campaignWaveIntroDialog.addEventListener('cancel', (event: Event) => {
+  event.preventDefault();
+  continueCampaignWaveIntro();
+});
+campaignWaveIntroDialog.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key !== 'Escape') return;
   event.preventDefault();
   continueCampaignWaveIntro();
 });
@@ -2668,7 +2860,7 @@ upgradeControl.addEventListener('click', () => {
   if (!unit || upgradeConfirmation.open || view.wave?.cash === undefined) return;
   pendingUpgradeUnitId = unit.id;
   renderUpgradeConfirmation(getLanguage());
-  upgradeConfirmation.showModal();
+  upgradeConfirmation.show();
   (confirmUpgradeControl.hidden ? cancelUpgradeControl : confirmUpgradeControl).focus();
 });
 confirmUpgradeControl.addEventListener('click', () => {
@@ -2683,15 +2875,23 @@ confirmUpgradeControl.addEventListener('click', () => {
     commandId: `${session.id}:upgrade:${++upgradeCommandNumber}`,
   });
   if (upgradeControl.hidden) canvas.focus({ preventScroll: true });
+  else if (!upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
 });
 cancelUpgradeControl.addEventListener('click', () => {
   pendingUpgradeUnitId = undefined;
   upgradeConfirmation.close();
   confirmUpgradeControl.hidden = false;
+  if (!upgradeControl.hidden && !upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
+  else canvas.focus({ preventScroll: true });
 });
-upgradeConfirmation.addEventListener('cancel', () => {
+upgradeConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
   pendingUpgradeUnitId = undefined;
+  upgradeConfirmation.close();
   confirmUpgradeControl.hidden = false;
+  if (!upgradeControl.hidden && !upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
+  else canvas.focus({ preventScroll: true });
 });
 clearSelectionControl.addEventListener('click', () => dispatch({ type: 'clear-selection' }));
 startDefeatControl.addEventListener('click', () => {
@@ -2722,6 +2922,7 @@ returnPreviousSceneControl.addEventListener('click', () => {
   renderStatus();
 });
 retrySettlementControl.addEventListener('click', () => { void retryFormalSettlement(); });
+retryPendingSettlementControl.addEventListener('click', () => { void retryFormalSettlement(); });
 exportReplayControl.addEventListener('click', () => { void exportCurrentReplay(); });
 importReplayControl.addEventListener('change', () => { void importReplayFile(importReplayControl.files?.[0]); });
 restartControl.addEventListener('click', () => {
@@ -2957,9 +3158,12 @@ canvas.addEventListener('pointermove', (event: PointerEvent) => {
     return;
   }
   if (event.pointerId !== activePointerId || !activePointerOrigin) return;
+  const dragStartTolerance = activeMapPan?.kind === 'minimap'
+    ? MINIMAP_DRAG_START_TOLERANCE
+    : DRAG_START_TOLERANCE;
   if (!pointerMovedBeyondTolerance
-    && Math.abs(logicalPoint.x - activePointerOrigin.x) <= DRAG_START_TOLERANCE
-    && Math.abs(logicalPoint.y - activePointerOrigin.y) <= DRAG_START_TOLERANCE) return;
+    && Math.abs(logicalPoint.x - activePointerOrigin.x) <= dragStartTolerance
+    && Math.abs(logicalPoint.y - activePointerOrigin.y) <= dragStartTolerance) return;
 
   pointerMovedBeyondTolerance = true;
   event.preventDefault();
@@ -3013,10 +3217,10 @@ window.addEventListener('blur', cancelPointerGesture);
 
 subscribeLanguage(() => {
   renderStatus();
+  redraw();
   renderExperimentComparison();
   renderSavedComparisonOptions();
   renderSavedComparisonStatus();
-  redraw();
 });
 
 if (assetLoadFailureNames.length === 0 && campaignProgressView) {

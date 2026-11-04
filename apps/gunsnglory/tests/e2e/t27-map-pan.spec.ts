@@ -51,14 +51,33 @@ test('desktop mouse pans the map and moves the minimap viewport frame with it', 
   const afterWorldDrag = await canvasHash(page);
   expect(afterWorldDrag, 'an empty playfield drag scrolls the map').not.toBe(beforeWorldDrag);
 
-  const beforeMinimapDrag = afterWorldDrag;
+  const beforeHorizontalDrag = afterWorldDrag;
+  const horizontalStart = await canvasPoint(page, 350, 300);
+  const horizontalEnd = await canvasPoint(page, 410, 300);
+  await page.mouse.move(horizontalStart.x, horizontalStart.y);
+  await page.mouse.down();
+  await page.mouse.move(horizontalEnd.x, horizontalEnd.y, { steps: 5 });
+  await page.mouse.up();
+  const afterHorizontalDrag = await canvasHash(page);
+  expect(afterHorizontalDrag, 'an empty playfield horizontal drag pans Cow Gulch').not.toBe(beforeHorizontalDrag);
+
+  const beforeMinimapDrag = afterHorizontalDrag;
   const minimapStart = await canvasPoint(page, 719, 15);
-  const minimapEnd = await canvasPoint(page, 719, 45);
+  const minimapEnd = await canvasPoint(page, 719, 23);
   await page.mouse.move(minimapStart.x, minimapStart.y);
   await page.mouse.down();
   await page.mouse.move(minimapEnd.x, minimapEnd.y, { steps: 5 });
   await page.mouse.up();
   expect(await canvasHash(page), 'dragging the minimap moves the main view and its outline').not.toBe(beforeMinimapDrag);
+
+  const beforeMinimapHorizontalDrag = await canvasHash(page);
+  const minimapHorizontalStart = await canvasPoint(page, 719, 15);
+  const minimapHorizontalEnd = await canvasPoint(page, 727, 15);
+  await page.mouse.move(minimapHorizontalStart.x, minimapHorizontalStart.y);
+  await page.mouse.down();
+  await page.mouse.move(minimapHorizontalEnd.x, minimapHorizontalEnd.y, { steps: 4 });
+  await page.mouse.up();
+  expect(await canvasHash(page), 'horizontal minimap dragging pans Cow Gulch').not.toBe(beforeMinimapHorizontalDrag);
 });
 
 test('mobile touch drags the minimap viewport', async ({ browser }) => {
@@ -73,8 +92,8 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
   try {
     await openPausedOfficialBattle(page);
     const beforeWorldDrag = await canvasHash(page);
-    const worldStart = await canvasPoint(page, 350, 300);
-    const worldEnd = await canvasPoint(page, 350, 350);
+    const worldStart = await canvasPoint(page, 80, 100);
+    const worldEnd = await canvasPoint(page, 80, 160);
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart',
       touchPoints: [{ ...worldStart, id: 1 }],
@@ -86,9 +105,24 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     expect(await canvasHash(page), 'touching and dragging empty playfield pans the map').not.toBe(beforeWorldDrag);
 
+    const beforeHorizontalDrag = await canvasHash(page);
+    const horizontalStart = await canvasPoint(page, 80, 100);
+    const horizontalEnd = await canvasPoint(page, 160, 100);
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ ...horizontalStart, id: 3 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ ...horizontalEnd, id: 3 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    expect(await canvasHash(page), 'touching and dragging empty playfield pans Cow Gulch horizontally')
+      .not.toBe(beforeHorizontalDrag);
+
     const beforeMinimapDrag = await canvasHash(page);
     const start = await canvasPoint(page, 719, 15);
-    const end = await canvasPoint(page, 719, 45);
+    const end = await canvasPoint(page, 719, 23);
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart',
       touchPoints: [{ ...start, id: 2 }],
@@ -99,6 +133,21 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
     });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     expect(await canvasHash(page), 'touching and dragging the minimap updates the main view').not.toBe(beforeMinimapDrag);
+
+    const beforeMinimapHorizontalDrag = await canvasHash(page);
+    const minimapHorizontalStart = await canvasPoint(page, 719, 15);
+    const minimapHorizontalEnd = await canvasPoint(page, 727, 15);
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ ...minimapHorizontalStart, id: 4 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: [{ ...minimapHorizontalEnd, id: 4 }],
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    expect(await canvasHash(page), 'horizontal touch dragging the minimap pans Cow Gulch')
+      .not.toBe(beforeMinimapHorizontalDrag);
   } finally {
     await cdp.detach();
     await context.close();
