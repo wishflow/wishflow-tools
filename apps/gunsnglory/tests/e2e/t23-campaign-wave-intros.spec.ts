@@ -117,26 +117,57 @@ test('keeps a reusable bilingual controls guide inside the game window without a
   await expect(guide).toHaveAttribute('open', '');
 });
 
-test('fits the campaign introduction and touch target on a phone viewport', async ({ browser }) => {
-  const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    hasTouch: true,
-    isMobile: true,
-  });
-  const page = await context.newPage();
-  await page.goto('/');
+test('keeps campaign dialogue and its touch target inside the game frame without scrolling on phones', async ({ browser }) => {
+  for (const viewport of [{ width: 320, height: 844 }, { width: 390, height: 844 }, { width: 844, height: 390 }]) {
+    const context = await browser.newContext({
+      viewport,
+      hasTouch: true,
+      isMobile: viewport.width < viewport.height,
+    });
+    const page = await context.newPage();
+    await page.goto('/');
 
-  const intro = page.getByTestId('campaign-wave-intro');
-  await expect(intro).toBeVisible();
-  const bounds = await intro.boundingBox();
-  if (!bounds) throw new Error('Campaign introduction has no visible layout box');
-  expect(bounds.x).toBeGreaterThanOrEqual(0);
-  expect(bounds.y).toBeGreaterThanOrEqual(0);
-  expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
-  expect(bounds.y + bounds.height).toBeLessThanOrEqual(844);
-  await page.getByRole('button', { name: 'Continue' }).tap();
-  await expect(intro).toBeHidden();
-  await context.close();
+    const intro = page.getByTestId('campaign-wave-intro');
+    const frame = page.locator('.game-frame');
+    await expect(intro).toBeVisible();
+
+    const assertFits = async (buttonName: string) => {
+      const continueButton = intro.getByRole('button', { name: buttonName, exact: true });
+      const frameBounds = await frame.boundingBox();
+      const introBounds = await intro.boundingBox();
+      const continueBounds = await continueButton.boundingBox();
+      if (!frameBounds || !introBounds || !continueBounds) {
+        throw new Error('Campaign dialogue, game frame, or Continue control has no visible layout box');
+      }
+
+      expect(introBounds.x).toBeGreaterThanOrEqual(frameBounds.x);
+      expect(introBounds.y).toBeGreaterThanOrEqual(frameBounds.y);
+      expect(introBounds.x + introBounds.width).toBeLessThanOrEqual(frameBounds.x + frameBounds.width);
+      expect(introBounds.y + introBounds.height).toBeLessThanOrEqual(frameBounds.y + frameBounds.height);
+      expect(continueBounds.x).toBeGreaterThanOrEqual(frameBounds.x);
+      expect(continueBounds.y).toBeGreaterThanOrEqual(frameBounds.y);
+      expect(continueBounds.x + continueBounds.width).toBeLessThanOrEqual(frameBounds.x + frameBounds.width);
+      expect(continueBounds.y + continueBounds.height).toBeLessThanOrEqual(frameBounds.y + frameBounds.height);
+
+      const overflow = await intro.evaluate((dialog) => ({
+        scrollHeight: dialog.scrollHeight,
+        clientHeight: dialog.clientHeight,
+      }));
+      expect(overflow.scrollHeight).toBeLessThanOrEqual(overflow.clientHeight);
+      return continueButton;
+    };
+
+    let continueButton = await assertFits('Continue');
+    if (viewport.width < viewport.height) {
+      await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+      await expect(intro.getByRole('button', { name: '继续' })).toBeVisible();
+      continueButton = await assertFits('继续');
+    }
+
+    await continueButton.tap();
+    await expect(intro).toBeHidden();
+    await context.close();
+  }
 });
 
 test('respects the saved mute setting when the campaign intro is reopened', async ({ page }) => {

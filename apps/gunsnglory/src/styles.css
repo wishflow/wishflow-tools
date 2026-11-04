@@ -1131,11 +1131,15 @@ body {
     padding: 0.75rem;
   }
 
+  .campaign-wave-intro {
+    max-height: calc(100% - 0.125rem);
+  }
+
   .campaign-wave-intro-card {
     grid-template-columns: 52px minmax(0, 1fr);
     align-items: start;
     gap: 0.5rem;
-    padding: 0.65rem;
+    padding: 0.35rem;
   }
 
   .campaign-wave-intro-card img {
@@ -1144,7 +1148,7 @@ body {
   }
 
   .campaign-wave-intro-copy {
-    gap: 0.4rem;
+    gap: 0.25rem;
   }
 
   .campaign-wave-intro-copy h2 {
@@ -1360,6 +1364,49 @@ body {
   .replay-actions button,
   .replay-import-label {
     width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .campaign-wave-intro-card {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+
+  .campaign-wave-intro-card img {
+    width: 36px;
+    height: 42px;
+  }
+
+  .campaign-wave-intro-copy {
+    gap: 0.125rem;
+  }
+
+  .campaign-wave-intro-copy .eyebrow {
+    font-size: 0.7rem;
+    line-height: 1.15;
+  }
+
+  .campaign-wave-intro-copy h2 {
+    font-size: 0.9rem;
+    line-height: 1.15;
+  }
+
+  .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .campaign-wave-intro-actions {
+    gap: 0.4rem;
+    margin-top: 0.125rem;
+  }
+
+  .campaign-wave-intro-actions button {
+    min-width: 4.75rem;
+    min-height: 2rem;
+    padding: 0.3rem 0.55rem;
   }
 }
 
