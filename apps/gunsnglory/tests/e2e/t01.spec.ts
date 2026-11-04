@@ -104,7 +104,7 @@ test('renders the original battle HUD and routes its pause tap away from map sel
   const canvas = page.getByTestId('game-canvas');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
   await expect(page.getByRole('button', { name: 'Pause battle' })).toBeEnabled();
-  const minimapTerrain = await canvas.evaluate((element) => {
+  const minimapPixels = await canvas.evaluate((element) => {
     const canvasElement = element as HTMLCanvasElement;
     const context = canvasElement.getContext('2d');
     if (!context) throw new Error('Canvas 2D is unavailable');
@@ -116,10 +116,14 @@ test('renders the original battle HUD and routes its pause tap away from map sel
     };
     return {
       water: sampleTile(2, 1), desert: sampleTile(8, 2),
+      minimapViewportTop: [...context.getImageData(Math.ceil(710 * scale), Math.ceil(16 * scale), 1, 1).data],
+      minimapViewportInner: [...context.getImageData(Math.ceil(710 * scale), Math.ceil(17 * scale), 1, 1).data],
     };
   });
-  expect(minimapTerrain.water).toEqual([96, 157, 179, 255]);
-  expect(minimapTerrain.desert).toEqual([251, 209, 159, 255]);
+  expect(minimapPixels.water).toEqual([96, 157, 179, 255]);
+  expect(minimapPixels.desert).toEqual([251, 209, 159, 255]);
+  expect(minimapPixels.minimapViewportTop.slice(0, 3).every((channel) => channel >= 220)).toBe(true);
+  expect(minimapPixels.minimapViewportInner.slice(0, 3).every((channel) => channel <= 32)).toBe(true);
 
   await clickCanvasPoint(page, { x: 314, y: 24 });
   await expect(pauseStatus).toHaveText('Battle paused.');

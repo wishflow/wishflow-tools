@@ -1192,7 +1192,7 @@ test('ordinary horse-wagon and covered-wagon frames mirror eastward movement lik
   }
 });
 
-test('HUD minimap geometry exposes a draggable panel and the current viewport rectangle', () => {
+test('HUD minimap viewport uses the APK integer cell arithmetic while its panel stays draggable', () => {
   const view: GameView = {
     frame: 0,
     elapsedMs: 0,
@@ -1211,7 +1211,12 @@ test('HUD minimap geometry exposes a draggable panel and the current viewport re
   assert.deepEqual(geometry.panel, { x: 686, y: 2, width: 66, height: 50 });
   assert.deepEqual(geometry.map, { x: 702, y: 10, width: 34, height: 34 });
   assert.equal(geometry.viewport.x, 702);
-  assert.equal(geometry.viewport.y, 17.4);
+  assert.equal(geometry.viewport.y, 16, 'APK integer division floors the camera offset to three minimap cells');
   assert.equal(geometry.viewport.width, 34);
-  assert.ok(Math.abs(geometry.viewport.height - 19.2) < 1e-9);
+  assert.equal(geometry.viewport.height, 18, 'APK integer division floors the visible canvas height to nine map cells');
+
+  const subcellPan = getHudMinimapGeometry(view, getMapViewport(view, 1, { zoom: 1, offsetX: 0, offsetY: -10 }));
+  assert.equal(subcellPan.viewport.y, 16, 'the APK minimap outline does not move until the integer camera crosses a tile');
+  const wholeCellPan = getHudMinimapGeometry(view, getMapViewport(view, 1, { zoom: 1, offsetX: 0, offsetY: -30 }));
+  assert.equal(wholeCellPan.viewport.y, 18, 'the outline advances by one minimap cell after the camera crosses the tile boundary');
 });

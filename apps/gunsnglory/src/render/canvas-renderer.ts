@@ -638,10 +638,18 @@ export function getHudMinimapGeometry(view: GameView, viewport: MapViewport): Hu
   const panelY = HUD_MINIMAP.y;
   const mapX = panelX + Math.floor((panelWidth - mapWidth) / 2);
   const mapY = panelY + Math.floor((panelHeight - mapHeight) / 2);
-  const left = mapX + (Math.max(0, Math.min(viewport.mapWidth, -viewport.origin.x)) / viewport.mapWidth) * mapWidth;
-  const top = mapY + (Math.max(0, Math.min(viewport.mapHeight, -viewport.origin.y)) / viewport.mapHeight) * mapHeight;
-  const right = mapX + (Math.max(0, Math.min(viewport.mapWidth, GAME_VIEWPORT.width - viewport.origin.x)) / viewport.mapWidth) * mapWidth;
-  const bottom = mapY + (Math.max(0, Math.min(viewport.mapHeight, GAME_VIEWPORT.height - viewport.origin.y)) / viewport.mapHeight) * mapHeight;
+  // Minimap.drawMiniMapObjects uses Java int division for camera-cell offsets
+  // and canvas-visible tile counts, so its outline advances in whole map cells.
+  const cameraXFine = Math.trunc((viewport.origin.x / viewport.tileSize) * FINE_UNITS_PER_CELL);
+  const cameraYFine = Math.trunc((viewport.origin.y / viewport.tileSize) * FINE_UNITS_PER_CELL);
+  const cameraCellsX = Math.trunc(-cameraXFine / FINE_UNITS_PER_CELL);
+  const cameraCellsY = Math.trunc(-cameraYFine / FINE_UNITS_PER_CELL);
+  const visibleCellsX = Math.trunc(GAME_VIEWPORT.width / viewport.tileSize);
+  const visibleCellsY = Math.trunc(GAME_VIEWPORT.height / viewport.tileSize);
+  const left = mapX + Math.max(cameraCellsX * pixelSize, 0);
+  const top = mapY + Math.max(cameraCellsY * pixelSize, 0);
+  const right = Math.min(mapX + (cameraCellsX + visibleCellsX) * pixelSize, mapX + mapWidth);
+  const bottom = Math.min(mapY + (cameraCellsY + visibleCellsY) * pixelSize, mapY + mapHeight);
   return {
     panel: { x: panelX, y: panelY, width: panelWidth, height: panelHeight },
     map: { x: mapX, y: mapY, width: mapWidth, height: mapHeight },
