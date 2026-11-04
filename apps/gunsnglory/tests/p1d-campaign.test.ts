@@ -73,6 +73,35 @@ test('empty-request campaign fixture verifies automatic wave progression without
   assert.ok(payload.frames.every((frame) => frame.intents.length === 0));
 });
 
+test('projects pending campaign spawn indicators with the original entrance and boss metadata', async () => {
+  const content: ScenarioContent = {
+    ...cowGulchP1dCampaignContent,
+    id: 'p1d-spawn-indicator-projection-fixture',
+    previewWave: {
+      ...cowGulchP1dCampaignContent.previewWave!,
+      additionalSpawns: [
+        { cell: { x: 14, y: 5 }, direction: 'west' },
+        { cell: { x: 7, y: 2 }, direction: 'south' },
+      ],
+    },
+    campaignWaves: [{
+      ...cowGulchP1dCampaignContent.campaignWaves![0]!,
+      spawnPools: [
+        { spawnPointId: 0, intervalMs: 1500, requests: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+        { spawnPointId: 1, intervalMs: 1500, requests: [...emptyRequests] },
+        { spawnPointId: 2, intervalMs: 1500, requests: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1] },
+      ],
+    }],
+  };
+  const game = createGame({ scenarios: { [content.id]: content } });
+  const session = await game.open({ scenarioId: content.id, mode: 'formal', randomSeed: 9 });
+
+  assert.deepEqual(session.observe().wave?.spawnIndicators, [
+    { spawnPointId: 0, cell: { x: 0, y: 10 }, direction: 'east', boss: false },
+    { spawnPointId: 2, cell: { x: 7, y: 2 }, direction: 'south', boss: true },
+  ]);
+});
+
 test('a defeated original campaign can be reopened from wave one without saved partial progress', async () => {
   const content: ScenarioContent = {
     ...cowGulchP1dCampaignContent,

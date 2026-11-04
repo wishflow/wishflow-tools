@@ -9,6 +9,7 @@ import {
 } from './map-viewport';
 import { gameAssetLogicalSize, gameAssetSourceScale } from './game-asset-path';
 import { drawMapFrame, drawRouteInspectionOverlay } from './map-overlays';
+import { getWaveSpawnIndicatorDraws } from './wave-spawn-indicators';
 
 export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 
@@ -882,6 +883,33 @@ function priorityCrosshairGap(elapsedMs: number): number {
     : 2 + ((phase - 900) / 50);
 }
 
+function drawWaveSpawnIndicators(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  images: GameImages,
+  viewport: MapViewport,
+  displayPixelScale: number,
+): void {
+  for (const indicator of getWaveSpawnIndicatorDraws(view, viewport, displayPixelScale, GAME_VIEWPORT)) {
+    context.drawImage(
+      requiredImage(images, indicator.assetName),
+      indicator.x,
+      indicator.y,
+      indicator.size,
+      indicator.size,
+    );
+    if (indicator.boss) {
+      context.drawImage(
+        requiredImage(images, 'boss_hat'),
+        indicator.x + indicator.bossHatOffsetX,
+        indicator.y + indicator.bossHatOffsetY,
+        indicator.size,
+        indicator.size,
+      );
+    }
+  }
+}
+
 export function drawGame(
   context: CanvasRenderingContext2D,
   view: GameView,
@@ -915,6 +943,7 @@ export function drawGame(
   drawWorldObjects(orderedDrawObjects, drawObjects, false);
   drawPriorityTargetFeedback(context, view, images, viewport);
   drawSelectedUnitFeedback(context, view, images, viewport);
+  drawWaveSpawnIndicators(context, view, images, viewport, displayPixelScale);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);
 

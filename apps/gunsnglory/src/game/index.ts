@@ -375,8 +375,17 @@ export interface WaveView {
   cash: number;
   activeEnemies: number;
   pendingSpawnRequests?: number;
+  /** Active campaign spawn entrances, projected for original wave-direction indicators. */
+  spawnIndicators?: readonly WaveSpawnIndicatorView[];
   dynamicDifficulty?: number;
   settlement?: WaveSettlement;
+}
+
+export interface WaveSpawnIndicatorView {
+  spawnPointId: number;
+  cell: { x: number; y: number };
+  direction: Direction;
+  boss: boolean;
 }
 
 export interface GameView {
@@ -501,6 +510,7 @@ interface MutableCampaignSpawnPool {
 }
 
 interface MutableSpawnField {
+  cell: { x: number; y: number };
   positionFine: { x: number; y: number };
   direction: Direction;
 }
@@ -1150,6 +1160,7 @@ function campaignSpawnFields(scenario: ScenarioContent): MutableSpawnField[] {
   return [scenario.previewWave?.spawn, ...(scenario.previewWave?.additionalSpawns ?? [])]
     .filter((spawn): spawn is WaveSpawn => spawn !== undefined)
     .map((spawn) => ({
+      cell: { ...spawn.cell },
       positionFine: {
         x: (spawn.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
         y: (spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
@@ -1172,6 +1183,27 @@ function campaignSpawnPools(definition: CampaignWaveDefinition, dynamicDifficult
 
 function campaignPendingRequests(pools: readonly MutableCampaignSpawnPool[] | undefined): number {
   return pools?.reduce((total, pool) => total + pool.requests.reduce((sum, count) => sum + count, 0), 0) ?? 0;
+}
+
+function campaignSpawnIndicators(
+  pools: readonly MutableCampaignSpawnPool[] | undefined,
+  spawnFields: readonly MutableSpawnField[],
+): WaveSpawnIndicatorView[] {
+  const activePoints = new Map<number, { boss: boolean }>();
+  for (const pool of pools ?? []) {
+    if (!pool.requests.some((count) => count > 0)) continue;
+    const previous = activePoints.get(pool.spawnPointId);
+    activePoints.set(pool.spawnPointId, {
+      boss: (previous?.boss ?? false) || (pool.requests[9] ?? 0) > 0,
+    });
+  }
+
+  return spawnFields.flatMap((spawn, spawnPointId) => {
+    const activePoint = activePoints.get(spawnPointId);
+    return activePoint === undefined
+      ? []
+      : [{ spawnPointId, cell: { ...spawn.cell }, direction: spawn.direction, boss: activePoint.boss }];
+  });
 }
 
 function campaignEnemyDefinition(scenario: ScenarioContent, type: CampaignEnemyType): PreviewEnemyDefinition {
@@ -2086,6 +2118,7 @@ export function createGame(options: {
               activeEnemies: wave.enemies.filter((enemy) => enemy.alive).length,
               ...(campaignMode ? {
                 pendingSpawnRequests: campaignPendingRequests(wave.campaignSpawnPools),
+                spawnIndicators: campaignSpawnIndicators(wave.campaignSpawnPools, spawnFields),
                 dynamicDifficulty: wave.dynamicDifficulty!,
               } : {}),
               ...(wave.settlement ? { settlement: clone(wave.settlement) } : {}),
