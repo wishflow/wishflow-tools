@@ -359,7 +359,7 @@ body {
   outline-offset: -3px;
 }
 
-.game-frame:has(dialog[open])::before,
+.game-frame:has(dialog[open]:not(.campaign-wave-intro))::before,
 .game-frame:has(.settlement-panel:not([hidden]))::before {
   position: absolute;
   z-index: 3;
@@ -977,39 +977,57 @@ body {
   z-index: 5;
   top: 50%;
   left: 50%;
-  width: min(42rem, calc(100% - 1rem));
+  width: min(52%, 42rem);
   max-height: calc(100% - 1rem);
+  aspect-ratio: 2 / 1;
   margin: 0;
   padding: 0;
-  overflow: auto;
-  border: 1px solid rgba(255, 225, 168, 0.8);
-  border-radius: 0.85rem;
-  color: #ffe8c1;
-  background: linear-gradient(145deg, #3b2a1c, #211b15 76%);
-  box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.75);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  color: #23160c;
+  background: transparent;
+  box-shadow: none;
   transform: translate(-50%, -50%);
 }
 
 .campaign-wave-intro-card {
-  display: grid;
-  grid-template-columns: 96px minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(0.85rem, 3vw, 1.4rem);
-  padding: clamp(1rem, 4vw, 1.6rem);
+  position: absolute;
+  inset: 0;
 }
 
-.campaign-wave-intro-card img {
+.campaign-wave-intro-parchment {
+  position: absolute;
+  inset: 0;
   display: block;
-  width: 96px;
-  height: 110px;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  object-fit: fill;
+}
+
+.campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
+  position: absolute;
+  z-index: 1;
+  top: -31%;
+  left: 50%;
+  display: block;
+  width: 27%;
+  max-width: 11rem;
+  height: auto;
   object-fit: contain;
   image-rendering: pixelated;
+  transform: translateX(-50%);
 }
 
 .campaign-wave-intro-copy {
+  position: absolute;
+  inset: 22% 12% 27%;
   display: grid;
-  gap: 0.65rem;
+  align-content: center;
+  justify-items: center;
   min-width: 0;
+  text-align: center;
 }
 
 .campaign-wave-intro-copy .eyebrow,
@@ -1018,51 +1036,101 @@ body {
   margin: 0;
 }
 
-.campaign-wave-intro-copy .eyebrow {
-  color: #e0a752;
-}
-
+.campaign-wave-intro-copy .eyebrow,
 .campaign-wave-intro-copy h2 {
-  color: #ffe1a8;
-  font-family: Georgia, "Noto Serif CJK SC", serif;
-  font-size: 1.2rem;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
-  color: #f0d5a8;
-  font-size: 0.95rem;
-  line-height: 1.55;
+  color: #23160c;
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+  font-size: clamp(0.85rem, 1.45vw, 1.25rem);
+  line-height: 1.25;
 }
 
 .campaign-wave-intro-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .campaign-wave-intro-actions button {
-  min-width: 7rem;
-  min-height: 2.65rem;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid rgba(237, 191, 117, 0.8);
-  border-radius: 0.6rem;
-  color: #fff0d3;
-  background: #67482b;
+  position: absolute;
+  bottom: 13%;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #23160c;
+  background: transparent;
   font: inherit;
-  font-weight: 750;
   cursor: pointer;
+  pointer-events: auto;
 }
 
-.campaign-wave-intro-actions button:hover {
-  background: #805a32;
+.campaign-wave-intro-actions button[data-action="continue-wave-intro"] {
+  display: grid;
+  left: 5%;
+  width: clamp(1.5rem, 8%, 3rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.campaign-wave-intro-confirm-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.campaign-wave-intro-continue-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.campaign-wave-intro-actions button[data-action="retry-wave-intro-voice"] {
+  right: 6%;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  overflow: hidden;
+  font-size: 0;
+}
+
+.campaign-wave-intro-actions button[data-action="retry-wave-intro-voice"]::before {
+  color: #23160c;
+  content: "↻";
+  font-size: 1.25rem;
+}
+
+.campaign-wave-intro-actions button[hidden] {
+  display: none;
 }
 
 .campaign-wave-intro-actions button:focus-visible {
-  outline: 2px solid #ffe28a;
+  outline: 2px solid #397b2e;
   outline-offset: 3px;
+}
+
+.campaign-wave-intro-actions button:hover {
+  filter: brightness(1.2);
 }
 
 .recruit-confirmation {
@@ -1132,52 +1200,22 @@ body {
   }
 
   .campaign-wave-intro {
+    width: min(92%, 42rem);
     max-height: calc(100% - 0.125rem);
   }
 
-  .campaign-wave-intro-card {
-    grid-template-columns: 52px minmax(0, 1fr);
-    align-items: start;
-    gap: 0.5rem;
-    padding: 0.35rem;
-  }
-
-  .campaign-wave-intro-card img {
-    width: 52px;
-    height: 60px;
+  .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
+    top: -28%;
+    width: 30%;
   }
 
   .campaign-wave-intro-copy {
-    gap: 0.25rem;
-  }
-
-  .campaign-wave-intro-copy h2 {
-    font-size: 1rem;
+    inset: 22% 10% 27%;
   }
 
   .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
-    font-size: 0.78rem;
-    line-height: 1.35;
-  }
-
-  .campaign-wave-intro-actions button {
-    min-width: 5rem;
-    min-height: 2.2rem;
-    padding: 0.4rem 0.65rem;
-  }
-
-  .campaign-wave-intro-actions button[data-action="retry-wave-intro-voice"] {
-    width: 2.2rem;
-    min-width: 2.2rem;
-    padding: 0;
-    overflow: hidden;
-    font-size: 0;
-  }
-
-  .campaign-wave-intro-actions button[data-action="retry-wave-intro-voice"]::before {
-    color: #fff0d3;
-    content: "↻";
-    font-size: 1.05rem;
+    font-size: clamp(0.72rem, 3.2vw, 1rem);
+    line-height: 1.22;
   }
 
   .game-panel {
@@ -1368,45 +1406,18 @@ body {
 }
 
 @media (max-width: 360px) {
-  .campaign-wave-intro-card {
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: 0.25rem;
-    padding: 0.25rem;
-  }
-
-  .campaign-wave-intro-card img {
-    width: 36px;
-    height: 42px;
+  .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
+    top: -26%;
+    width: 29%;
   }
 
   .campaign-wave-intro-copy {
-    gap: 0.125rem;
-  }
-
-  .campaign-wave-intro-copy .eyebrow {
-    font-size: 0.7rem;
-    line-height: 1.15;
-  }
-
-  .campaign-wave-intro-copy h2 {
-    font-size: 0.9rem;
-    line-height: 1.15;
+    inset: 23% 9% 28%;
   }
 
   .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
-    font-size: 0.72rem;
-    line-height: 1.2;
-  }
-
-  .campaign-wave-intro-actions {
-    gap: 0.4rem;
-    margin-top: 0.125rem;
-  }
-
-  .campaign-wave-intro-actions button {
-    min-width: 4.75rem;
-    min-height: 2rem;
-    padding: 0.3rem 0.55rem;
+    font-size: 0.68rem;
+    line-height: 1.18;
   }
 }
 
@@ -1424,27 +1435,21 @@ body {
     width: min(100%, calc((100dvh - 1rem) * 16 / 9));
   }
 
-  .campaign-wave-intro-card {
-    grid-template-columns: 48px minmax(0, 1fr);
-    gap: 0.4rem;
-    padding: 0.5rem;
+  .campaign-wave-intro {
+    width: min(62%, 42rem);
   }
 
-  .campaign-wave-intro-card img {
-    width: 48px;
-    height: 56px;
+  .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
+    top: -29%;
+    width: 25%;
   }
 
   .campaign-wave-intro-copy {
-    gap: 0.35rem;
-  }
-
-  .campaign-wave-intro-copy h2 {
-    font-size: 1rem;
+    inset: 22% 10% 26%;
   }
 
   .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
-    font-size: 0.82rem;
-    line-height: 1.3;
+    font-size: clamp(0.76rem, 1.6vw, 1rem);
+    line-height: 1.2;
   }
 }

@@ -131,15 +131,16 @@ app.innerHTML = [
   '      </dialog>',
   '      <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
   '        <div class="campaign-wave-intro-card">',
+  '          <img class="campaign-wave-intro-parchment" data-testid="campaign-wave-intro-parchment" alt="" width="384" height="192">',
   '          <img data-testid="campaign-wave-intro-portrait" alt="" width="96" height="110">',
   '          <div class="campaign-wave-intro-copy">',
   '            <p class="eyebrow" data-testid="campaign-wave-intro-wave"></p>',
   '            <h2 id="campaign-wave-intro-title"></h2>',
   '            <p id="campaign-wave-intro-text" data-testid="campaign-wave-intro-text"></p>',
-  '            <div class="campaign-wave-intro-actions">',
+  '          </div>',
+  '          <div class="campaign-wave-intro-actions">',
   '              <button type="button" data-action="retry-wave-intro-voice" hidden>Retry Pedro’s voice</button>',
-  '              <button type="button" data-action="continue-wave-intro">Continue</button>',
-  '            </div>',
+  '              <button type="button" data-action="continue-wave-intro"><img class="campaign-wave-intro-confirm-icon" data-testid="campaign-wave-intro-confirm-icon" alt="" width="32" height="32"><span class="campaign-wave-intro-continue-label">Continue</span></button>',
   '          </div>',
   '        </div>',
   '      </dialog>',
@@ -311,10 +312,13 @@ const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-
 const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
 const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
 const campaignWaveIntroDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-wave-intro"]');
+const campaignWaveIntroParchmentElement = app.querySelector<HTMLImageElement>('[data-testid="campaign-wave-intro-parchment"]');
 const campaignWaveIntroWaveElement = app.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-wave"]');
 const campaignWaveIntroTitleElement = app.querySelector<HTMLElement>('#campaign-wave-intro-title');
 const campaignWaveIntroTextElement = app.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-text"]');
 const campaignWaveIntroPortraitElement = app.querySelector<HTMLImageElement>('[data-testid="campaign-wave-intro-portrait"]');
+const campaignWaveIntroConfirmIconElement = app.querySelector<HTMLImageElement>('[data-testid="campaign-wave-intro-confirm-icon"]');
+const campaignWaveIntroContinueLabelElement = app.querySelector<HTMLElement>('.campaign-wave-intro-continue-label');
 const retryCampaignWaveIntroVoiceButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-wave-intro-voice"]');
 const continueCampaignWaveIntroButtonElement = app.querySelector<HTMLButtonElement>('[data-action="continue-wave-intro"]');
 const startDefeatButton = app.querySelector<HTMLButtonElement>('[data-action="start-defeat-sample"]');
@@ -354,8 +358,9 @@ if (!canvasElement || !profileStatusElement || !pendingSettlementStatusElement |
   || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
-  || !campaignWaveIntroDialogElement || !campaignWaveIntroWaveElement || !campaignWaveIntroTitleElement
-  || !campaignWaveIntroTextElement || !campaignWaveIntroPortraitElement || !retryCampaignWaveIntroVoiceButtonElement
+  || !campaignWaveIntroDialogElement || !campaignWaveIntroParchmentElement || !campaignWaveIntroWaveElement || !campaignWaveIntroTitleElement
+  || !campaignWaveIntroTextElement || !campaignWaveIntroPortraitElement || !campaignWaveIntroConfirmIconElement
+  || !campaignWaveIntroContinueLabelElement || !retryCampaignWaveIntroVoiceButtonElement
   || !continueCampaignWaveIntroButtonElement
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
   || !retrySettingsButtonElement || !reloadProfileButtonElement
@@ -438,10 +443,13 @@ const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElemen
 const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
 const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
 const campaignWaveIntroDialog: HTMLDialogElement = campaignWaveIntroDialogElement;
+const campaignWaveIntroParchment: HTMLImageElement = campaignWaveIntroParchmentElement;
 const campaignWaveIntroWave: HTMLElement = campaignWaveIntroWaveElement;
 const campaignWaveIntroTitle: HTMLElement = campaignWaveIntroTitleElement;
 const campaignWaveIntroText: HTMLElement = campaignWaveIntroTextElement;
 const campaignWaveIntroPortrait: HTMLImageElement = campaignWaveIntroPortraitElement;
+const campaignWaveIntroConfirmIcon: HTMLImageElement = campaignWaveIntroConfirmIconElement;
+const campaignWaveIntroContinueLabel: HTMLElement = campaignWaveIntroContinueLabelElement;
 const retryCampaignWaveIntroVoiceControl: HTMLButtonElement = retryCampaignWaveIntroVoiceButtonElement;
 const continueCampaignWaveIntroControl: HTMLButtonElement = continueCampaignWaveIntroButtonElement;
 const startDefeatControl: HTMLButtonElement = startDefeatButton;
@@ -2184,14 +2192,24 @@ function renderCampaignWaveIntro(): void {
   campaignWaveIntroTitle.textContent = intro.speaker[language];
   campaignWaveIntroText.textContent = intro.text[language];
   campaignWaveIntroPortrait.alt = intro.speaker[language];
+  const parchmentUrl = new URL(
+    import.meta.env.BASE_URL + 'assets/gng_hud_2_textbox_large.png',
+    window.location.href,
+  ).toString();
+  if (campaignWaveIntroParchment.src !== parchmentUrl) campaignWaveIntroParchment.src = parchmentUrl;
   const portraitUrl = new URL(
     import.meta.env.BASE_URL + 'assets/' + intro.portraitAsset + '.png',
     window.location.href,
   ).toString();
   if (campaignWaveIntroPortrait.src !== portraitUrl) campaignWaveIntroPortrait.src = portraitUrl;
+  const confirmIconUrl = new URL(
+    import.meta.env.BASE_URL + 'assets/gng_hud_2_yes.png',
+    window.location.href,
+  ).toString();
+  if (campaignWaveIntroConfirmIcon.src !== confirmIconUrl) campaignWaveIntroConfirmIcon.src = confirmIconUrl;
   retryCampaignWaveIntroVoiceControl.textContent = languageMessages[language].retryWaveIntroVoice;
   retryCampaignWaveIntroVoiceControl.hidden = !soundEnabled || !failedSoundElements.has(intro.voiceSound);
-  continueCampaignWaveIntroControl.textContent = language === 'en' ? 'Continue' : '继续';
+  campaignWaveIntroContinueLabel.textContent = language === 'en' ? 'Continue' : '继续';
   retryCampaignWaveIntroVoiceControl.setAttribute('aria-label', languageMessages[language].retryWaveIntroVoice);
   campaignWaveIntroDialog.dataset.waveNumber = String(intro.waveNumber);
 }

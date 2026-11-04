@@ -45,6 +45,66 @@ test('pauses the official campaign for first and next-wave introductions until c
   expect(await page.getByTestId('inspection-frame').textContent()).toBe(frameAtWaveTwoIntro);
 });
 
+test('uses the original parchment, Pedro placement, and confirm icon inside the game frame', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+
+  const intro = page.getByTestId('campaign-wave-intro');
+  const parchment = page.getByTestId('campaign-wave-intro-parchment');
+  const portrait = page.getByTestId('campaign-wave-intro-portrait');
+  const text = page.getByTestId('campaign-wave-intro-text');
+  const continueButton = page.getByRole('button', { name: 'Continue' });
+  const confirmIcon = page.getByTestId('campaign-wave-intro-confirm-icon');
+
+  await expect(intro).toBeVisible();
+  await expect(parchment).toHaveJSProperty('naturalWidth', 384);
+  await expect(portrait).toHaveJSProperty('naturalWidth', 96);
+  await expect(confirmIcon).toHaveJSProperty('naturalWidth', 32);
+  await expect(continueButton).toBeVisible();
+
+  const layout = await page.evaluate(() => {
+    const dialog = document.querySelector<HTMLElement>('[data-testid="campaign-wave-intro"]');
+    const pedro = document.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-portrait"]');
+    const copy = document.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-text"]');
+    const button = document.querySelector<HTMLElement>('[data-action="continue-wave-intro"]');
+    if (!dialog || !pedro || !copy || !button) throw new Error('Campaign dialogue elements are missing');
+    const dialogBounds = dialog.getBoundingClientRect();
+    const pedroBounds = pedro.getBoundingClientRect();
+    const buttonBounds = button.getBoundingClientRect();
+    const textRange = document.createRange();
+    textRange.selectNodeContents(copy);
+    const textLines = Array.from(textRange.getClientRects());
+    return {
+      dialogCenter: dialogBounds.left + dialogBounds.width / 2,
+      pedroCenter: pedroBounds.left + pedroBounds.width / 2,
+      pedroBottom: pedroBounds.bottom,
+      dialogTop: dialogBounds.top,
+      buttonLeft: buttonBounds.left,
+      buttonTop: buttonBounds.top,
+      buttonBottom: buttonBounds.bottom,
+      dialogLeft: dialogBounds.left,
+      dialogBottom: dialogBounds.bottom,
+      dialogWidth: dialogBounds.width,
+      dialogHeight: dialogBounds.height,
+      textOverlapsButton: textLines.some((line) => line.left < buttonBounds.right
+        && line.right > buttonBounds.left
+        && line.top < buttonBounds.bottom
+        && line.bottom > buttonBounds.top),
+      textAlign: getComputedStyle(copy).textAlign,
+      textColor: getComputedStyle(copy).color,
+    };
+  });
+
+  expect(Math.abs(layout.dialogCenter - layout.pedroCenter)).toBeLessThan(2);
+  expect(layout.pedroBottom).toBeGreaterThan(layout.dialogTop);
+  expect(layout.buttonLeft).toBeLessThan(layout.dialogLeft + layout.dialogWidth * 0.15);
+  expect(layout.buttonTop).toBeGreaterThan(layout.dialogTop + layout.dialogHeight * 0.6);
+  expect(layout.buttonBottom).toBeLessThan(layout.dialogBottom);
+  expect(layout.textOverlapsButton).toBe(false);
+  expect(layout.textAlign).toBe('center');
+  expect(layout.textColor).toBe('rgb(35, 22, 12)');
+});
+
 test('a paused single step that crosses into wave two opens its introduction once', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
