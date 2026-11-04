@@ -27,6 +27,23 @@ const animationScenario: ScenarioContent = {
   ] satisfies CampaignWaveDefinition[],
 };
 
+const settlerAnimationScenario: ScenarioContent = {
+  ...animationScenario,
+  id: 'enemy-settler-animation-fixture',
+  campaignWaves: [
+    ...animationScenario.campaignWaves!.slice(0, 2),
+    {
+      ...sourceWaves[2]!,
+      spawnPools: [{
+        spawnPointId: 0,
+        intervalMs: 3000,
+        intervalMultiplier: 2,
+        requests: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+      }],
+    },
+  ] satisfies CampaignWaveDefinition[],
+};
+
 const turningScenario: ScenarioContent = {
   ...cowGulchP1cCampaignContent,
   id: 'enemy-turn-animation-fixture',
@@ -64,6 +81,25 @@ async function startCoveredWagonWave(): Promise<{ session: GameSession; view: Ga
   return { session, view };
 }
 
+async function startSettlerAnimationWave(): Promise<{ session: GameSession; view: GameView }> {
+  const session = await createGame({ scenarios: { [settlerAnimationScenario.id]: settlerAnimationScenario } }).open({
+    scenarioId: settlerAnimationScenario.id,
+    mode: 'formal',
+    randomSeed: 3,
+  });
+
+  let view = session.observe();
+  for (let step = 0; step < 20 && view.wave?.number !== 3; step += 1) {
+    view = session.advance({ deltaMs: 0 });
+  }
+  assert.equal(view.wave?.number, 3);
+
+  view = session.advance({ deltaMs: 0 });
+  assert.deepEqual(view.enemies.map(({ type }) => type).sort(), [1, 1, 1, 2]);
+  assert.ok(view.enemies.every(({ speed }) => speed === 768));
+  return { session, view };
+}
+
 async function startCoveredWagonTurnWave(randomSeed = 1): Promise<{ session: GameSession; view: GameView }> {
   const session = await createGame({ scenarios: { [turningScenario.id]: turningScenario } }).open({
     scenarioId: turningScenario.id,
@@ -95,6 +131,38 @@ function framesByType(view: GameView): Record<4 | 8, number> {
   assert.ok(tow);
   return { 4: wagon.animationFrame, 8: tow.animationFrame };
 }
+
+test('types 1 and 2 follow the APK walk cycle at each distance boundary and wrap', async () => {
+  const { session, view: initial } = await startSettlerAnimationWave();
+  // GameDesignOptics.enemyAnimationWalk assigns both types 0/1/0/2 at
+  // inclusive 768-unit intervals; GameObjectEnemy.move advances on strict >.
+  const steps = [
+    { deltaMs: 100, movedFine: 768, distanceFine: 768, frame: 0 },
+    { deltaMs: 100, movedFine: 768, distanceFine: 1536, frame: 1 },
+    { deltaMs: 100, movedFine: 768, distanceFine: 2304, frame: 0 },
+    { deltaMs: 99, movedFine: 760, distanceFine: 3064, frame: 2 },
+    { deltaMs: 1, movedFine: 7, distanceFine: 3071, frame: 2 },
+    { deltaMs: 1, movedFine: 7, distanceFine: 6, frame: 0 },
+  ] as const;
+
+  let view = initial;
+  for (const step of steps) {
+    const previous = new Map(view.enemies.map((enemy) => [enemy.id, enemy] as const));
+    view = session.advance({ deltaMs: step.deltaMs });
+    for (const type of [1, 2] as const) {
+      const walkers = view.enemies.filter((enemy) => enemy.type === type);
+      assert.ok(walkers.length > 0, `Cow Gulch spawns walker type ${type}`);
+      for (const walker of walkers) {
+        const prior = previous.get(walker.id);
+        assert.ok(prior);
+        assert.equal(walker.direction, 'east');
+        assert.equal(walker.positionFine.x - prior.positionFine.x, step.movedFine);
+        assert.equal(walker.positionFine.y, prior.positionFine.y);
+        assert.equal(walker.animationFrame, step.frame, `type ${type} at ${step.distanceFine} fine units in the walk cycle`);
+      }
+    }
+  }
+});
 
 test('type 8 keeps each APK walk frame through its inclusive 768-fine-unit boundary', async () => {
   const { session, view: initial } = await startCoveredWagonWave();

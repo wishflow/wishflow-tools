@@ -11,6 +11,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const verticalBridgeImage = {} as HTMLImageElement;
   const horizontalBridgeImage = {} as HTMLImageElement;
   const enemyImage = {} as HTMLImageElement;
+  const femaleEnemyImage = {} as HTMLImageElement;
   const pioneerDeathImage = { naturalWidth: 96, naturalHeight: 24 } as HTMLImageElement;
   const wagonImage = {} as HTMLImageElement;
   const horseWagonImage = {} as HTMLImageElement;
@@ -199,6 +200,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     tiles_bridge_verti: verticalBridgeImage,
     tiles_bridge_hori: horizontalBridgeImage,
     pioneer_male: enemyImage,
+    pioneer_female: femaleEnemyImage,
     sfx_death_pioneers: pioneerDeathImage,
     wagon: wagonImage,
     horse_wagon: horseWagonImage,
@@ -272,8 +274,37 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const [, , , , , enemyLeft, enemyTop, enemyWidth, enemyHeight] = enemyDraw;
   assert.equal((enemyLeft as number) + (enemyWidth as number) / 2, routeCellCenter.x);
   assert.equal((enemyTop as number) + (enemyHeight as number), routeCellCenter.y);
+
+  const femaleWalkerView: GameView = {
+    ...view,
+    units: [],
+    enemies: [{
+      ...sampleEnemy,
+      id: 'pioneer-female',
+      type: 2,
+      asset: 'pioneer_female',
+      direction: 'west',
+      mirrored: false,
+      animationFrame: 1,
+    }],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:pioneer-female'],
+  };
+  const femaleDrawStart = drawCalls.length;
+  drawGame(context, femaleWalkerView, images);
+  const femaleDraw = drawCalls.slice(femaleDrawStart).find(([image]) => image === femaleEnemyImage);
+  assert.ok(femaleDraw);
+  assert.deepEqual(femaleDraw.slice(1, 5), [16, 0, 16, 24], 'type 2 uses the west-facing frame from its original 3×3 atlas');
+  const femaleViewport = getMapViewport(femaleWalkerView);
+  assert.equal((femaleDraw[5] as number) + (femaleDraw[7] as number) / 2,
+    femaleViewport.origin.x + (sampleEnemy.positionFine.x / 240) * femaleViewport.scaleFactor);
+  assert.equal((femaleDraw[6] as number) + (femaleDraw[8] as number),
+    femaleViewport.origin.y + (sampleEnemy.positionFine.y / 240) * femaleViewport.scaleFactor,
+  'type 2 remains anchored to its feet while walking');
+
   assert.deepEqual(
-    drawCalls.map((args) => args[0]),
+    drawCalls.slice(0, femaleDrawStart).map((args) => args[0]),
     [mapImage, hdpiTerrainImage, images.sfx_mexican_dynamite, enemyImage, enemyImage, bridgeImage, cactusImage, shackImage, rocksImage, cactusImage,
       treeImage, unitImage, images.sfx_exploding_parts, bushImage],
     'a shot created after its target draws first when both share the same under-road depth',
@@ -806,7 +837,7 @@ test('renders the original campaign HUD artwork and numeric atlas over the game 
       lives: 50,
       escapedEnemies: 0,
       defeatedEnemies: 0,
-      cash: 70,
+      cash: 65,
       activeEnemies: 0,
     },
   };
@@ -830,7 +861,7 @@ test('renders the original campaign HUD artwork and numeric atlas over the game 
     .filter(([image]) => image === hudImages.hud_font_numbers_scaled)
     .map((call) => call.slice(1, 5));
   assert.deepEqual(numberGlyphs, [
-    [84, 0, 12, 24], [0, 0, 12, 24], // cash 70
+    [72, 0, 12, 24], [60, 0, 12, 24], // Cow Gulch initial cash 65
     [0, 0, 12, 24], [12, 0, 12, 24], // wave 01
     [0, 0, 12, 24], [96, 0, 12, 24], // total 08
     [60, 0, 12, 24], [0, 0, 12, 24], // lives 50
@@ -864,6 +895,11 @@ test('renders the original campaign HUD artwork and numeric atlas over the game 
   const partialLivesStar = drawCalls.slice(partialLivesStart)
     .find(([image]) => image === hudImages.gng_hud_1_top_star);
   assert.deepEqual(partialLivesStar?.slice(1), [0, 32, 68, 32, 478, 37, 68, 32]);
+
+  const pausedDrawStart = drawCalls.length;
+  drawGame(context, { ...view, paused: true }, images);
+  assert.ok(drawCalls.slice(pausedDrawStart)
+    .some(([image]) => image === hudImages.gng_hud_1_top_pause_pressed), 'manual pause draws the original pressed HUD bitmap');
 });
 
 test('draws original firing, Mexican dynamite, and explosion atlas frames', () => {
