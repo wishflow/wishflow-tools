@@ -305,7 +305,7 @@ test('the Cow Gulch gunslinger kills the pioneer and updates the cash display', 
   expect(soundPlayCount).toBeGreaterThan(0);
 });
 
-test('reports blocked audio and retries from an accessible bilingual recovery action', async ({ page }) => {
+test('reports real audio failures and retries from an accessible bilingual recovery action', async ({ page }) => {
   await page.addInitScript(() => {
     const testWindow = window as Window & {
       __allowSoundPlayback?: boolean;
@@ -326,7 +326,7 @@ test('reports blocked audio and retries from an accessible bilingual recovery ac
       testWindow.__soundPlayAttempts = (testWindow.__soundPlayAttempts ?? 0) + 1;
       return testWindow.__allowSoundPlayback
         ? Promise.resolve()
-        : Promise.reject(new DOMException('Playback requires a user gesture', 'NotAllowedError'));
+        : Promise.reject(new DOMException('Audio source could not be decoded', 'NotSupportedError'));
     };
   });
   await page.goto('/');

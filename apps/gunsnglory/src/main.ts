@@ -1944,6 +1944,8 @@ const gameSoundEffects = new SoundEffectsManager();
 let backgroundMusic: HTMLAudioElement | undefined;
 let backgroundMusicTrack: CowGulchMusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
+const blockedSoundElements = new Map<string, Set<HTMLAudioElement>>();
+let audioUserGestureObserved = false;
 
 async function loadSettings(): Promise<void> {
   try {
@@ -2034,7 +2036,24 @@ function isOfficialCowGulchSession(): boolean {
     && session.startRecord.scenarioId === cowGulchLevelOneContent.id;
 }
 
+function removeAudioPlayer(
+  playersBySound: Map<string, Set<HTMLAudioElement>>,
+  sound: string,
+  audio: HTMLAudioElement,
+): void {
+  const players = playersBySound.get(sound);
+  if (!players) return;
+  players.delete(audio);
+  if (players.size === 0) playersBySound.delete(sound);
+}
+
+function isAutoplayPolicyRejection(error: unknown): boolean {
+  return typeof error === 'object' && error !== null
+    && 'name' in error && error.name === 'NotAllowedError';
+}
+
 function recordSoundPlaybackFailure(sound: string, audio: HTMLAudioElement): void {
+  removeAudioPlayer(blockedSoundElements, sound, audio);
   const failedPlayers = failedSoundElements.get(sound) ?? new Set<HTMLAudioElement>();
   if (failedPlayers.has(audio)) return;
   failedPlayers.add(audio);
@@ -2042,19 +2061,60 @@ function recordSoundPlaybackFailure(sound: string, audio: HTMLAudioElement): voi
   renderStatus();
 }
 
+function handleSoundPlaybackFailure(sound: string, audio: HTMLAudioElement, error: unknown): void {
+  if (!audioUserGestureObserved && isAutoplayPolicyRejection(error)) {
+    const blockedPlayers = blockedSoundElements.get(sound) ?? new Set<HTMLAudioElement>();
+    blockedPlayers.add(audio);
+    blockedSoundElements.set(sound, blockedPlayers);
+    return;
+  }
+  recordSoundPlaybackFailure(sound, audio);
+}
+
 function playSound(sound: string, audio: HTMLAudioElement, resetPosition = true): void {
   try {
     if (resetPosition) audio.currentTime = 0;
+    removeAudioPlayer(blockedSoundElements, sound, audio);
     void audio.play().then(() => {
+      removeAudioPlayer(blockedSoundElements, sound, audio);
       const failedPlayers = failedSoundElements.get(sound);
       if (!failedPlayers?.delete(audio)) return;
       if (failedPlayers.size === 0) failedSoundElements.delete(sound);
       renderStatus();
-    }).catch(() => recordSoundPlaybackFailure(sound, audio));
-  } catch {
-    recordSoundPlaybackFailure(sound, audio);
+    }).catch((error: unknown) => handleSoundPlaybackFailure(sound, audio, error));
+  } catch (error) {
+    handleSoundPlaybackFailure(sound, audio, error);
   }
 }
+
+function eventTargetsSoundToggle(event: Event): boolean {
+  const target = event.target;
+  return target instanceof Element && target.closest('[data-action="toggle-sound"]') !== null;
+}
+
+function retryCurrentAudioOnFirstGesture(event: Event): void {
+  if (audioUserGestureObserved) return;
+  audioUserGestureObserved = true;
+  document.removeEventListener('pointerdown', retryCurrentAudioOnFirstGesture, true);
+  document.removeEventListener('keydown', retryCurrentAudioOnFirstGesture, true);
+
+  const pending = [...blockedSoundElements.entries()];
+  blockedSoundElements.clear();
+  if (!soundEnabled || document.hidden || eventTargetsSoundToggle(event)) return;
+
+  const currentMusicSound = backgroundMusicTrack ? `music:${backgroundMusicTrack}` : undefined;
+  const currentVoiceSound = pendingCampaignWaveIntro?.voiceSound;
+  for (const [sound, players] of pending) {
+    for (const audio of players) {
+      const currentMusic = audio === backgroundMusic && sound === currentMusicSound;
+      const currentVoice = audio !== backgroundMusic && sound === currentVoiceSound;
+      if (currentMusic || currentVoice) playSound(sound, audio, !currentMusic);
+    }
+  }
+}
+
+document.addEventListener('pointerdown', retryCurrentAudioOnFirstGesture, true);
+document.addEventListener('keydown', retryCurrentAudioOnFirstGesture, true);
 
 function retryFailedSoundPlayback(): void {
   for (const [sound, players] of failedSoundElements) {
@@ -2084,12 +2144,13 @@ function setSoundEnabled(enabled: boolean): void {
     playBackgroundMusic();
     return;
   }
+  blockedSoundElements.clear();
   silenceAudioPlayers([...audioElements.values()].flat());
   pauseBackgroundMusic(true);
 }
 
 function playBackgroundMusic(): void {
-  if (!soundEnabled || document.hidden || !backgroundMusic || !backgroundMusicTrack) return;
+  if (!soundEnabled || document.hidden || !backgroundMusic || !backgroundMusicTrack || !backgroundMusic.paused) return;
   playSound(`music:${backgroundMusicTrack}`, backgroundMusic, false);
 }
 
@@ -2106,7 +2167,10 @@ function setCowGulchBackgroundMusic(track: CowGulchMusicTrack): void {
     return;
   }
 
-  if (backgroundMusicTrack) failedSoundElements.delete(`music:${backgroundMusicTrack}`);
+  if (backgroundMusicTrack) {
+    failedSoundElements.delete(`music:${backgroundMusicTrack}`);
+    if (backgroundMusic) removeAudioPlayer(blockedSoundElements, `music:${backgroundMusicTrack}`, backgroundMusic);
+  }
   pauseBackgroundMusic(true);
   backgroundMusicTrack = track;
   if (!backgroundMusic) {
@@ -2129,7 +2193,10 @@ function setCowGulchBackgroundMusic(track: CowGulchMusicTrack): void {
 
 function stopCowGulchBackgroundMusic(): void {
   pauseBackgroundMusic(true);
-  if (backgroundMusicTrack) failedSoundElements.delete(`music:${backgroundMusicTrack}`);
+  if (backgroundMusicTrack) {
+    failedSoundElements.delete(`music:${backgroundMusicTrack}`);
+    if (backgroundMusic) removeAudioPlayer(blockedSoundElements, `music:${backgroundMusicTrack}`, backgroundMusic);
+  }
   backgroundMusicTrack = undefined;
   battleMusicWaveNumber = undefined;
 }

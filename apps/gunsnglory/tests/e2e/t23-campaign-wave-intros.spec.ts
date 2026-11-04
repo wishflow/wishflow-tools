@@ -45,6 +45,50 @@ test('pauses the official campaign for first and next-wave introductions until c
   expect(await page.getByTestId('inspection-frame').textContent()).toBe(frameAtWaveTwoIntro);
 });
 
+test('retries browser-blocked campaign music and Pedro voice on the first real user gesture', async ({ page }) => {
+  await page.addInitScript(() => {
+    const testWindow = window as Window & {
+      __allowSoundPlayback?: boolean;
+      __soundPlayAttempts?: string[];
+    };
+    testWindow.__allowSoundPlayback = false;
+    testWindow.__soundPlayAttempts = [];
+    HTMLMediaElement.prototype.play = function () {
+      testWindow.__soundPlayAttempts?.push(this.currentSrc || this.src);
+      return testWindow.__allowSoundPlayback
+        ? Promise.resolve()
+        : Promise.reject(new DOMException('Playback requires a user gesture', 'NotAllowedError'));
+    };
+  });
+  await page.goto('/');
+
+  const intro = page.getByTestId('campaign-wave-intro');
+  const playbackStatus = page.getByTestId('sound-playback-status');
+  await expect(intro).toBeVisible();
+  await expect.poll(() => page.evaluate(() =>
+    (window as Window & { __soundPlayAttempts?: string[] }).__soundPlayAttempts?.length ?? 0))
+    .toBeGreaterThan(0);
+  await expect(playbackStatus).toBeHidden();
+
+  const attemptsBeforeGesture = await page.evaluate(() =>
+    (window as Window & { __soundPlayAttempts?: string[] }).__soundPlayAttempts?.length ?? 0);
+  await page.evaluate(() => {
+    (window as Window & { __allowSoundPlayback?: boolean }).__allowSoundPlayback = true;
+  });
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(intro).toBeHidden();
+  await expect.poll(() => page.evaluate(() =>
+    (window as Window & { __soundPlayAttempts?: string[] }).__soundPlayAttempts?.length ?? 0))
+    .toBeGreaterThan(attemptsBeforeGesture);
+  const resumedSounds = await page.evaluate((startIndex) =>
+    (window as Window & { __soundPlayAttempts?: string[] }).__soundPlayAttempts?.slice(startIndex) ?? [],
+  attemptsBeforeGesture);
+  expect(resumedSounds.some((source) => source.includes('/assets/music/music_loop1.ogg'))).toBe(true);
+  expect(resumedSounds.some((source) => source.includes('/assets/sounds/sound_pedro.ogg'))).toBe(true);
+  await expect(playbackStatus).toBeHidden();
+});
+
 test('uses the original parchment, Pedro placement, and confirm icon inside the game frame', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
