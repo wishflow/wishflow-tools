@@ -1,4 +1,4 @@
-import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
+import { expect, test } from './auto-continue-fixtures';
 import { cowGulchMarkerPoint, tapCanvasPoint } from './helpers';
 
 async function screenPointForCanvasPoint(
@@ -21,8 +21,29 @@ function readCash(text: string): number {
   return cash;
 }
 
-test('touch can move a unit and hire an original Cow Gulch Gunslinger with earned cash', async ({ browser }) => {
-  test.setTimeout(120_000);
+function readLives(text: string): number {
+  const lives = Number(text.match(/Lives (\d+)/)?.[1]);
+  if (!Number.isSafeInteger(lives)) throw new Error(`Life count is not visible in wave status: ${text}`);
+  return lives;
+}
+
+async function readProfile(page: import('@playwright/test').Page): Promise<Record<string, unknown>> {
+  return page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {
+    const request = indexedDB.open('gunsnglory-profile', 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const database = request.result;
+      const transaction = database.transaction('profiles', 'readonly');
+      const read = transaction.objectStore('profiles').get('default');
+      read.onsuccess = () => resolve(read.result as Record<string, unknown>);
+      read.onerror = () => reject(read.error);
+      transaction.oncomplete = () => database.close();
+    };
+  }));
+}
+
+test('touch completes the official Cow Gulch level through real movement and naturally earned recruitment', async ({ browser }) => {
+  test.setTimeout(180_000);
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 1,
@@ -43,11 +64,13 @@ test('touch can move a unit and hire an original Cow Gulch Gunslinger with earne
       return originalGetRandomValues(array) as typeof array;
     }) as typeof crypto.getRandomValues;
   });
-  await installAutoContinueCampaignWaveIntro(page);
-
   try {
     await page.goto('/');
     await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+    const intro = page.getByTestId('campaign-wave-intro');
+    await expect(intro).toHaveAttribute('data-wave-number', '1');
+    await intro.getByRole('button', { name: 'Continue', exact: true }).click();
+
     const speed = page.getByRole('slider', { name: 'Simulation speed' });
     await speed.focus();
     await speed.press('End');
@@ -65,6 +88,8 @@ test('touch can move a unit and hire an original Cow Gulch Gunslinger with earne
     await expect(waveStatus).toContainText('Wave 1/8');
     await expect(waveStatus).toContainText('Cash $65');
 
+    const canvas = page.getByTestId('game-canvas');
+    await canvas.scrollIntoViewIfNeeded();
     const cdp = await context.newCDPSession(page);
     const start = await screenPointForCanvasPoint(page, cowGulchMarkerPoint(8, 8));
     const target = await screenPointForCanvasPoint(page, cowGulchMarkerPoint(8, 10));
@@ -80,23 +105,64 @@ test('touch can move a unit and hire an original Cow Gulch Gunslinger with earne
     await page.clock.runFor(2_000);
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger selected · Cell (9, 10)');
+    await cdp.detach();
 
-    expect(readCash(await waveStatus.innerText())).toBeLessThan(75);
     await tapCanvasPoint(page, cowGulchMarkerPoint(3, 6));
     const hire = page.getByTestId('hire-map-unit');
     await expect(hire).toHaveText('Hire map Gunslinger · $75');
     await expect(hire).toBeDisabled();
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired · Cell (4, 7)');
-    await page.clock.runFor(10_000);
+
+    let lastIntroWave = 1;
+    for (let step = 0; step < 80 && readCash(await waveStatus.innerText()) < 75; step += 1) {
+      await page.clock.runFor(500);
+      if (await intro.isVisible()) {
+        const introWave = Number(await intro.getAttribute('data-wave-number'));
+        expect(introWave).toBe(lastIntroWave + 1);
+        lastIntroWave = introWave;
+        await intro.getByRole('button', { name: 'Continue', exact: true }).click();
+      }
+    }
     await expect(hire).toBeEnabled();
     const cashBeforeHire = readCash(await waveStatus.innerText());
     expect(cashBeforeHire).toBeGreaterThanOrEqual(75);
     await hire.click();
     await expect(page.getByTestId('map-hire-status')).toHaveText('Gunslinger hired from the map for $75.');
-    // The official wave keeps running and can award more cash while Playwright
-    // polls the status. The deterministic game test checks the exact $75 debit.
+    // Combat can award a $1 bounty while the click is committed; the game test
+    // checks the exact $75 debit without concurrent simulation steps.
     expect(readCash(await waveStatus.innerText())).toBeLessThan(cashBeforeHire);
-    await cdp.detach();
+
+    const settlement = page.getByTestId('settlement');
+    for (let attempt = 0; attempt < 20 && !(await settlement.isVisible()); attempt += 1) {
+      await page.clock.runFor(45_000);
+      if (await intro.isVisible()) {
+        const introWave = Number(await intro.getAttribute('data-wave-number'));
+        expect(introWave).toBe(lastIntroWave + 1);
+        lastIntroWave = introWave;
+        await expect(waveStatus).toContainText(`Wave ${introWave}/8`);
+        await intro.getByRole('button', { name: 'Continue', exact: true }).click();
+      }
+    }
+
+    await expect(settlement).toBeVisible();
+    expect(lastIntroWave).toBe(8);
+    await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
+    await expect(waveStatus).toContainText('Wave 8/8');
+    expect(readLives(await waveStatus.innerText())).toBeGreaterThan(0);
+    await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
+    await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
+
+    const profile = await readProfile(page);
+    expect(profile.completedScenarios).toEqual(['campaign-new-mexico-01']);
+    expect(profile.appliedSettlementIds).toHaveLength(1);
+    expect((profile.highScores as Record<string, number>)['campaign-new-mexico-01']).toBeGreaterThan(0);
+
+    await page.reload();
+    await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+    await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
+    await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
+    await expect(page.getByTestId('settlement')).toBeHidden();
+    expect(await readProfile(page)).toEqual(profile);
   } finally {
     await context.close();
   }
