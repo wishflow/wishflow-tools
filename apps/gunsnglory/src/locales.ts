@@ -39,13 +39,43 @@ export const messages = {
     zh: '一条生命测试：不部署防守单位，让拓荒者抵达出口。',
   },
   'Simulation speed': { en: 'Simulation speed', zh: '模拟速度' },
+  'Game controls': { en: 'Game controls', zh: '游戏操作' },
+  Controls: { en: 'Controls', zh: '操作说明' },
+  'Click or tap a unit to select it; click empty ground to clear selection.': {
+    en: 'Click or tap a unit to select it; click empty ground to clear selection.',
+    zh: '点击或轻触单位进行选择；点击空地可取消选择。',
+  },
+  'Drag a selected unit to move it to a reachable cell.': {
+    en: 'Drag a selected unit to move it to a reachable cell.',
+    zh: '拖动已选单位，将它移动到可到达的格子。',
+  },
+  'Click or tap a settler to set or clear a priority target.': {
+    en: 'Click or tap a settler to set or clear a priority target.',
+    zh: '点击或轻触拓荒者可设置或取消优先目标。',
+  },
+  'Drag empty ground to pan the map; drag the minimap to move its viewport.': {
+    en: 'Drag empty ground to pan the map; drag the minimap to move its viewport.',
+    zh: '拖动空地可平移地图；拖动小地图视口框可移动主视口。',
+  },
+  'Pinch with two fingers to zoom the map.': {
+    en: 'Pinch with two fingers to zoom the map.',
+    zh: '双指捏合可缩放地图。',
+  },
+  'Use the pause button or HUD pause icon to pause and resume.': {
+    en: 'Use the pause button or HUD pause icon to pause and resume.',
+    zh: '使用暂停按钮或 HUD 暂停图标暂停和继续战斗。',
+  },
+  'Tap Game controls to show or hide the in-game toolbar.': {
+    en: 'Tap Game controls to show or hide the in-game toolbar.',
+    zh: '轻触“游戏操作”可展开或收起战斗控制条。',
+  },
+  'Open Inspect battle for state details; single-step works while paused.': {
+    en: 'Open Inspect battle for state details; single-step works while paused.',
+    zh: '打开“检查战局”查看状态；单步推进仅在暂停时可用。',
+  },
   'Battle replay': { en: 'Battle replay', zh: '战局重放' },
   'Export settled battle': { en: 'Export settled battle', zh: '导出已结算战局' },
   'Import replay': { en: 'Import replay', zh: '导入重放文件' },
-  'The Cow Gulch battle has eight playable waves and settles after wave eight.': {
-    en: 'The Cow Gulch battle has eight playable waves and settles after wave eight.',
-    zh: '牛溪谷战斗共 8 波；完成第 8 波后结算。',
-  },
   'Hire selected map unit': { en: 'Hire selected map unit', zh: '雇佣选中的地图单位' },
   'Cow Gulch game map': { en: 'Cow Gulch game map', zh: '牛溪谷游戏地图' },
   'Compare numeric schemes': { en: 'Compare numeric schemes', zh: '比较数值方案' },

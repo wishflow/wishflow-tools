@@ -57,8 +57,8 @@ export const cowGulchWaveIntros: readonly CampaignWaveIntro[] = Object.freeze([
     waveNumber: 5,
     speaker: { en: 'Pedro', zh: '佩德罗' },
     text: {
-      en: 'Boss, want to bet on who will be first to hit a settler? Just use the Action key to highlight one of them!',
-      zh: '老板，要不要赌谁会先打中拓荒者？点选其中一个，就能让队伍集中攻击他！',
+      en: 'Boss, want to bet on who will be first to hit a settler? Click or tap one to set a priority target!',
+      zh: '老板，要不要赌谁会先打中拓荒者？点击或轻触其中一个，将其设为优先目标！',
     },
     portraitAsset: 'portrait_pedro',
     voiceSound: 'sound_pedro',

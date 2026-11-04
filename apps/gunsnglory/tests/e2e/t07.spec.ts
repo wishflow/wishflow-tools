@@ -7,6 +7,8 @@ test('shows the original price and refuses a Gunslinger hire without charging Co
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   const recruit = page.getByRole('button', { name: 'Hire Gunslinger · $75' });
   await expect(recruit).toBeEnabled();
+  await expect.poll(() => page.getByTestId('recruit-confirmation')
+    .evaluate((dialog) => dialog.parentElement?.classList.contains('game-frame'))).toBe(true);
   await recruit.click();
 
   await expect(page.getByTestId('recruit-status')).toContainText('need $75, have $65');

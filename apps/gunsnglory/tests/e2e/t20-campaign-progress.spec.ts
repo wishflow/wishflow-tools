@@ -107,6 +107,26 @@ test('opens the official first level by touch and localizes the unavailable next
   await context.close();
 });
 
+test('describes the official level, playable sample, and upgrade fixture accurately', async ({ page }) => {
+  await page.goto('/');
+  const caption = page.getByTestId('scene-caption');
+  await expect(caption).toHaveText(
+    'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.',
+  );
+
+  await page.getByRole('button', { name: 'Return to Cow Gulch sample' }).click();
+  await expect(caption).toHaveText(
+    'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.',
+  );
+  await page.getByRole('button', { name: 'Open upgrade rules sample' }).click();
+  await expect(caption).toHaveText(
+    'Debug-only upgrade sample: starts with $25 and raises the upgrade limit to 1. It never writes profile progress.',
+  );
+
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(caption).toHaveText('仅供调试的升级样本：初始现金 $25，升级上限为 1，不会写入正式进度。');
+});
+
 test('keeps a playable recovery scene and retries missing game assets before opening the campaign', async ({ page }) => {
   let blockAsset = true;
   await page.route('**/assets/pioneer_male.png', (route) =>
@@ -130,4 +150,25 @@ test('keeps a playable recovery scene and retries missing game assets before ope
   await page.getByTestId('retry-assets').click();
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+});
+
+test('keeps the page initialized when an image used by the first map draw fails', async ({ page }) => {
+  let blockAsset = true;
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
+  await page.route('**/assets/hdpi/tiles_water.png', (route) =>
+    blockAsset ? route.abort() : route.continue());
+  await page.goto('/');
+
+  await expect(page.getByTestId('asset-load-error')).toBeVisible();
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch');
+  await expect(page.getByTestId('campaign-stage-button-1')).toBeDisabled();
+  await expect(page.getByTestId('start-wave')).toBeDisabled();
+  expect(pageErrors).toEqual([]);
+
+  blockAsset = false;
+  await page.getByTestId('retry-assets').click();
+  await expect(page.getByTestId('asset-load-error')).toBeHidden();
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+  expect(pageErrors).toEqual([]);
 });

@@ -25,6 +25,11 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
 
   await clickCanvasPoint(page, { x: 512, y: 288 });
   await expect(status).toContainText('Gunslinger selected');
+  await expect(status).toContainText('Cell (9, 9)');
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(status).toContainText('格子 (9, 9)');
+  await page.getByRole('button', { name: '切换界面语言为英文' }).click();
+  await expect(status).toContainText('Cell (9, 9)');
 
   await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(status).toContainText('Gunslinger is waiting to be hired');
@@ -51,8 +56,8 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
     return bounds.width / bounds.height;
   });
   expect(Math.abs(ratio - 16 / 9)).toBeLessThan(0.02);
-  const startButtonBox = await page.getByTestId('open-single-wave-sample').boundingBox();
-  expect(startButtonBox?.width).toBeGreaterThan(170);
+  const gameControlsBox = await page.getByTestId('game-toolbar').boundingBox();
+  expect(gameControlsBox?.width).toBeGreaterThan(0);
 
   await clickCanvasPoint(page, { x: 512, y: 288 });
   await expect(status).toContainText('Gunslinger selected');

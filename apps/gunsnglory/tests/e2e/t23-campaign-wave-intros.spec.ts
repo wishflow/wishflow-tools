@@ -45,6 +45,78 @@ test('pauses the official campaign for first and next-wave introductions until c
   expect(await page.getByTestId('inspection-frame').textContent()).toBe(frameAtWaveTwoIntro);
 });
 
+test('a paused single step that crosses into wave two opens its introduction once', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+
+  const intro = page.getByTestId('campaign-wave-intro');
+  await expect(intro).toBeVisible();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
+  await page.getByRole('button', { name: 'Pause battle' }).click();
+  await page.getByTestId('inspection-panel').locator('summary').click();
+
+  const singleStep = page.getByTestId('single-step');
+  await expect(singleStep).toBeEnabled();
+  const transition = await page.evaluate(() => {
+    const dialog = document.querySelector<HTMLDialogElement>('[data-testid="campaign-wave-intro"]');
+    const step = document.querySelector<HTMLButtonElement>('[data-testid="single-step"]');
+    if (!dialog || !step) throw new Error('Wave introduction controls are missing');
+    let count = 0;
+    while (!dialog.open && count < 10_000 && !step.disabled) {
+      step.click();
+      count += 1;
+    }
+    return {
+      count,
+      open: dialog.open,
+      wave: dialog.dataset.waveNumber,
+      frame: document.querySelector('[data-testid="inspection-frame"]')?.textContent,
+    };
+  });
+
+  expect(transition.open).toBe(true);
+  expect(transition.wave).toBe('2');
+  expect(transition.count).toBeLessThan(10_000);
+  const introFrame = await page.getByTestId('inspection-frame').textContent();
+  await page.waitForTimeout(100);
+  expect(await page.getByTestId('inspection-frame').textContent()).toBe(introFrame);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(intro).toBeHidden();
+});
+
+test('keeps a reusable bilingual controls guide inside the game window without advancing simulation', async ({ page }) => {
+  await page.goto('/');
+  const intro = page.getByTestId('campaign-wave-intro');
+  await expect(intro).toBeVisible();
+  await expect.poll(() => intro.evaluate((dialog) => dialog.parentElement?.classList.contains('game-frame'))).toBe(true);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await expect(intro).toBeHidden();
+  await page.getByRole('button', { name: 'Pause battle' }).click();
+  const guide = page.getByTestId('controls-help');
+  const summary = guide.locator('summary');
+  const frame = page.getByTestId('inspection-frame');
+  const readFrame = async () => (await frame.textContent())?.match(/\d+/g)?.map(Number);
+  const beforeFrame = await readFrame();
+
+  await summary.click();
+  await expect(guide).toHaveAttribute('open', '');
+  await expect(guide).toContainText('Click or tap a unit to select it');
+  await expect(guide).toContainText('Pinch with two fingers to zoom');
+  expect(await readFrame()).toEqual(beforeFrame);
+
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(guide).toContainText('点击或轻触单位进行选择');
+  await expect(guide).toContainText('双指捏合可缩放地图');
+  expect(await readFrame()).toEqual(beforeFrame);
+
+  await summary.click();
+  await expect(guide).not.toHaveAttribute('open', '');
+  await summary.click();
+  await expect(guide).toHaveAttribute('open', '');
+});
+
 test('fits the campaign introduction and touch target on a phone viewport', async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },

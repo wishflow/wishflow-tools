@@ -52,6 +52,7 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
     await speed.focus();
     await speed.press('End');
     await expect(speed).toHaveValue('4');
+    await page.getByTestId('game-toolbar-toggle').click();
 
     const waveStatus = page.getByTestId('wave-status');
     await expect(waveStatus).toContainText('Cash $65');

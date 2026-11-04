@@ -1219,7 +1219,7 @@ test('the first in-range Desperado shot follows its target, deals damage, kills 
   assert.equal(view.wave?.defeatedEnemies, 1);
   assert.deepEqual(view.events, [
     { type: 'enemy-hit', enemyId: 'preview-pioneer-1', damage: 140, hitPoints: -14 },
-    { type: 'enemy-defeated', enemyId: 'preview-pioneer-1', cashReward: 1 },
+    { type: 'enemy-defeated', enemyId: 'preview-pioneer-1', enemyType: 1, cashReward: 1 },
   ]);
 
   for (let index = 0; index < 10; index += 1) view = session.advance({ deltaMs: 100 });

@@ -262,6 +262,34 @@ body {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
+.controls-help {
+  grid-column: 1 / -1;
+  color: #e2c28e;
+  font-size: 0.85rem;
+}
+
+.controls-help summary {
+  width: fit-content;
+  min-height: 2.35rem;
+  padding: 0.55rem 0;
+  color: #ffe1a8;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.controls-help summary:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 2px;
+}
+
+.controls-help ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+  line-height: 1.45;
+}
+
 .simulation-speed-control {
   display: grid;
   grid-column: 1 / -1;
@@ -289,11 +317,6 @@ body {
   color: #ffe1a8;
   text-align: right;
   font-variant-numeric: tabular-nums;
-}
-
-.game-controls .sound-toggle {
-  grid-column: 1 / -1;
-  justify-self: start;
 }
 
 .scene-heading h2 {
@@ -336,9 +359,180 @@ body {
   outline-offset: -3px;
 }
 
-.settlement-panel {
+.game-frame:has(dialog[open])::before,
+.game-frame:has(.settlement-panel:not([hidden]))::before {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  background: rgba(10, 8, 6, 0.6);
+  backdrop-filter: blur(1px);
+  content: "";
+}
+
+.game-toolbar {
   position: absolute;
   z-index: 2;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  left: auto;
+  width: max-content;
+  max-width: 100%;
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 225, 168, 0.4);
+  border-radius: 0.5rem;
+  color: #f0d5a8;
+  background: linear-gradient(0deg, rgba(23, 19, 15, 0.96), rgba(32, 25, 18, 0.9));
+  box-shadow: 0 -0.35rem 1rem rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(4px);
+}
+
+.game-toolbar[open] {
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: auto;
+  padding: 0.45rem 0.5rem 0.5rem;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.game-toolbar > summary {
+  min-height: 2rem;
+  padding: 0.4rem 0.6rem;
+  color: #ffe1a8;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-align: right;
+  white-space: nowrap;
+  cursor: pointer;
+  list-style: none;
+}
+
+.game-toolbar > summary::-webkit-details-marker {
+  display: none;
+}
+
+.game-toolbar > summary::before {
+  margin-right: 0.4rem;
+  color: #e0a752;
+  content: "▸";
+}
+
+.game-toolbar[open] > summary::before {
+  content: "▾";
+}
+
+.game-toolbar-panel {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.game-toolbar-actions,
+.game-toolbar-options {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.game-toolbar-actions {
+  overflow-x: auto;
+  scrollbar-color: rgba(224, 167, 82, 0.62) rgba(23, 19, 15, 0.85);
+  scrollbar-width: thin;
+}
+
+.game-toolbar button {
+  flex: 0 0 auto;
+  min-height: 2.3rem;
+  padding: 0.45rem 0.72rem;
+  border: 1px solid rgba(237, 191, 117, 0.65);
+  border-radius: 0.45rem;
+  color: #ffe8c1;
+  background: rgba(81, 56, 33, 0.94);
+  font: inherit;
+  font-size: clamp(0.72rem, 1.15vw, 0.86rem);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.game-toolbar button:hover {
+  background: #67482b;
+}
+
+.game-toolbar button:disabled {
+  color: #a99a84;
+  background: rgba(48, 39, 31, 0.94);
+  cursor: default;
+}
+
+.game-toolbar button:focus-visible,
+.game-toolbar summary:focus-visible,
+.game-toolbar input:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 2px;
+}
+
+.game-toolbar-options {
+  justify-content: flex-end;
+}
+
+.game-toolbar-options .simulation-speed-control {
+  flex: 1 1 15rem;
+  grid-column: auto;
+  grid-template-columns: auto minmax(3rem, 1fr) 2.8rem;
+  gap: 0.5rem;
+  min-width: 10rem;
+  font-size: 0.78rem;
+}
+
+.game-toolbar-options .simulation-speed-control input {
+  min-height: 2.3rem;
+}
+
+.game-toolbar-options .sound-toggle {
+  justify-self: auto;
+}
+
+.game-toolbar .controls-help {
+  flex: 0 0 auto;
+  grid-column: auto;
+  font-size: 0.78rem;
+}
+
+.game-toolbar .controls-help summary {
+  min-height: 2.3rem;
+  padding: 0.55rem 0.35rem;
+  white-space: nowrap;
+}
+
+.game-toolbar .controls-help ul {
+  position: absolute;
+  z-index: 7;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  width: min(26rem, calc(100vw - 1.5rem));
+  max-height: min(55vh, 18rem);
+  overflow: auto;
+  padding: 0.75rem 1rem 0.75rem 2rem;
+  border: 1px solid rgba(255, 225, 168, 0.56);
+  border-radius: 0.55rem;
+  color: #f0d5a8;
+  background: rgba(30, 25, 20, 0.98);
+  box-shadow: 0 0.6rem 1.8rem rgba(0, 0, 0, 0.55);
+  line-height: 1.45;
+}
+
+.game-toolbar .controls-help[open] {
+  position: relative;
+  z-index: 7;
+}
+
+.settlement-panel {
+  position: absolute;
+  z-index: 4;
   top: 50%;
   left: 50%;
   display: grid;
@@ -406,6 +600,15 @@ body {
   margin: 0;
   color: #ffe0a3;
   font-weight: 650;
+}
+
+.game-controls > p[data-testid="selection-status"],
+.game-controls > p[data-testid="wave-status"],
+.game-controls > p[data-testid="combat-status"],
+.game-controls > p[data-testid="pause-status"] {
+  color: #c6b89f;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .game-controls p[data-testid="sound-playback-status"] {
@@ -770,21 +973,21 @@ body {
 }
 
 .campaign-wave-intro {
-  width: min(42rem, calc(100% - 2rem));
-  max-height: calc(100% - 2rem);
-  margin: auto;
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  width: min(42rem, calc(100% - 1rem));
+  max-height: calc(100% - 1rem);
+  margin: 0;
   padding: 0;
   overflow: auto;
   border: 1px solid rgba(255, 225, 168, 0.8);
   border-radius: 0.85rem;
   color: #ffe8c1;
   background: linear-gradient(145deg, #3b2a1c, #211b15 76%);
-  box-shadow: 0 0 0 100vmax rgba(10, 8, 6, 0.5), 0 0.8rem 3rem rgba(0, 0, 0, 0.7);
-}
-
-.campaign-wave-intro::backdrop {
-  background: rgba(10, 8, 6, 0.78);
-  backdrop-filter: blur(2px);
+  box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.75);
+  transform: translate(-50%, -50%);
 }
 
 .campaign-wave-intro-card {
@@ -863,18 +1066,21 @@ body {
 }
 
 .recruit-confirmation {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
   width: min(28rem, calc(100% - 2rem));
-  margin: auto;
+  max-height: calc(100% - 1rem);
+  overflow: auto;
+  margin: 0;
   padding: 1.25rem;
   border: 1px solid rgba(237, 191, 117, 0.8);
   border-radius: 0.75rem;
   color: #ffe8c1;
   background: #211b15;
   box-shadow: 0 0.8rem 3rem rgba(0, 0, 0, 0.65);
-}
-
-.recruit-confirmation::backdrop {
-  background: rgba(10, 8, 6, 0.72);
+  transform: translate(-50%, -50%);
 }
 
 .recruit-confirmation h2 {
@@ -926,18 +1132,48 @@ body {
   }
 
   .campaign-wave-intro-card {
-    grid-template-columns: 64px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
     align-items: start;
-    gap: 0.75rem;
+    gap: 0.5rem;
+    padding: 0.65rem;
   }
 
   .campaign-wave-intro-card img {
-    width: 64px;
-    height: 74px;
+    width: 52px;
+    height: 60px;
+  }
+
+  .campaign-wave-intro-copy {
+    gap: 0.4rem;
+  }
+
+  .campaign-wave-intro-copy h2 {
+    font-size: 1rem;
   }
 
   .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
-    font-size: 0.88rem;
+    font-size: 0.78rem;
+    line-height: 1.35;
+  }
+
+  .campaign-wave-intro-actions button {
+    min-width: 5rem;
+    min-height: 2.2rem;
+    padding: 0.4rem 0.65rem;
+  }
+
+  .campaign-wave-intro-actions button[data-action="retry-wave-intro-voice"] {
+    width: 2.2rem;
+    min-width: 2.2rem;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .campaign-wave-intro-actions button[data-action="retry-wave-intro-voice"]::before {
+    color: #fff0d3;
+    content: "↻";
+    font-size: 1.05rem;
   }
 
   .game-panel {
@@ -997,10 +1233,6 @@ body {
     font-size: 0.85rem;
   }
 
-  .game-controls button[data-action="start-wave"] {
-    grid-column: 1 / -1;
-  }
-
   .game-controls p {
     font-size: 0.85rem;
   }
@@ -1009,6 +1241,88 @@ body {
     grid-template-columns: auto minmax(0, 1fr) 3.2rem;
     gap: 0.5rem;
     font-size: 0.82rem;
+  }
+
+  .game-toolbar {
+    padding: 0.2rem;
+  }
+
+  .game-toolbar[open] {
+    padding: 0.3rem;
+  }
+
+  .game-toolbar-panel {
+    gap: 0.25rem;
+  }
+
+  .game-toolbar > summary {
+    min-height: 2.1rem;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.72rem;
+  }
+
+  .game-toolbar[open] > summary {
+    position: absolute;
+    z-index: 1;
+    right: 0.25rem;
+    top: 0.25rem;
+    bottom: auto;
+    max-width: 7rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .game-toolbar-actions,
+  .game-toolbar-options {
+    gap: 0.3rem;
+  }
+
+  .game-toolbar-actions {
+    padding-right: 7rem;
+  }
+
+  .game-toolbar button {
+    min-height: 2rem;
+    padding: 0.24rem 0.38rem;
+    font-size: 0.66rem;
+  }
+
+  .game-toolbar-options {
+    justify-content: space-between;
+  }
+
+  .game-toolbar-options .simulation-speed-control {
+    grid-template-columns: minmax(0, 1fr) 2.4rem;
+    min-width: 0;
+    gap: 0.25rem;
+  }
+
+  .game-toolbar-options .simulation-speed-control > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    clip-path: inset(50%);
+  }
+
+  .game-toolbar-options .simulation-speed-control output {
+    grid-column: 2;
+    grid-row: 1;
+    font-size: 0.72rem;
+  }
+
+  .game-toolbar-options .simulation-speed-control input {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 2rem;
+  }
+
+  .game-toolbar .controls-help summary {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.72rem;
   }
 
   .replay-panel {
@@ -1046,5 +1360,44 @@ body {
   .replay-actions button,
   .replay-import-label {
     width: 100%;
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .game-page {
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .game-heading {
+    display: none;
+  }
+
+  .game-frame {
+    width: min(100%, calc((100dvh - 1rem) * 16 / 9));
+  }
+
+  .campaign-wave-intro-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 0.4rem;
+    padding: 0.5rem;
+  }
+
+  .campaign-wave-intro-card img {
+    width: 48px;
+    height: 56px;
+  }
+
+  .campaign-wave-intro-copy {
+    gap: 0.35rem;
+  }
+
+  .campaign-wave-intro-copy h2 {
+    font-size: 1rem;
+  }
+
+  .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
+    font-size: 0.82rem;
+    line-height: 1.3;
   }
 }

@@ -28,6 +28,8 @@ test('saves a formal result across reload and discards an unfinished wave', asyn
 
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.', { timeout: 10000 });
+  await expect.poll(() => page.getByTestId('settlement')
+    .evaluate((panel) => panel.parentElement?.classList.contains('game-frame'))).toBe(true);
   await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
   const stored = await page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {
@@ -100,8 +102,15 @@ test('reports a real IndexedDB transaction abort and retries the pending settlem
   await expect(page.getByRole('button', { name: 'Retry saving result' })).toBeVisible();
   await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
-  await page.getByRole('button', { name: 'Retry saving result' }).click();
-  await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
+  await page.getByRole('button', { name: 'Open upgrade rules sample' }).click();
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · upgrade test');
+  await expect(page.getByTestId('settlement')).toBeHidden();
+  await expect(page.getByTestId('pending-settlement-status')).toHaveText('A battle result is waiting to be saved.');
+  const retryPending = page.getByTestId('retry-pending-settlement');
+  await expect(retryPending).toBeVisible();
+  await retryPending.click();
+  await expect(page.getByTestId('pending-settlement-status')).toHaveText('The pending result was saved.');
+  await expect(retryPending).toBeHidden();
   await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 });
 

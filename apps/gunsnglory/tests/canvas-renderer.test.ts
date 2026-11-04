@@ -980,6 +980,76 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
   assert.deepEqual(transforms.at(-1), ['scale', -1, 1], 'the walking atlas mirrors only when its direction row requests it');
 });
 
+test('draws ordinary bullets as small dark-red rectangles without an outline', () => {
+  const ground = {} as HTMLImageElement;
+  const fillCalls: Array<{ color: string; rect: number[] }> = [];
+  const arcs: number[][] = [];
+  const strokes: string[] = [];
+  let fillStyle = '';
+  let strokeStyle = '';
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    get fillStyle() { return fillStyle; },
+    set fillStyle(value: string) { fillStyle = value; },
+    get strokeStyle() { return strokeStyle; },
+    set strokeStyle(value: string) { strokeStyle = value; },
+    fillRect(...rect: number[]) { fillCalls.push({ color: fillStyle, rect }); },
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage() {},
+    arc(...arc: number[]) { arcs.push(arc); },
+    fill() {},
+    stroke() { strokes.push(strokeStyle); },
+  } as unknown as CanvasRenderingContext2D;
+  const view: GameView = {
+    frame: 0,
+    elapsedMs: 0,
+    paused: false,
+    scenarioId: 'ordinary-projectile-render-fixture',
+    map: {
+      width: 1,
+      height: 1,
+      tileSize: 32,
+      background: [{ asset: 'ground', source: { x: 0, y: 0, width: 32, height: 32 }, x: 0, y: 0, width: 1, height: 1 }],
+      streets: [],
+    },
+    units: [],
+    enemies: [],
+    shots: [{
+      id: 'ordinary',
+      shooterId: 'gunslinger-1',
+      targetId: 'pioneer-1',
+      positionFine: { x: 3840, y: 3840 },
+      remainingMs: 100,
+      damageStyle: 0,
+      fineZ: 7680,
+      heightFine: 0,
+      animationFrame: 0,
+    }],
+    drawOrder: ['shot:ordinary'],
+    recruitPool: [],
+    events: [],
+  };
+
+  drawGame(context, view, { ground });
+
+  const viewport = getMapViewport(view);
+  const bulletCenter = viewport.origin.x + (3840 / 240) * viewport.scaleFactor;
+  const bulletY = viewport.origin.y + (3840 / 240) * viewport.scaleFactor;
+  const bullet = fillCalls.find(({ color }) => color.toLowerCase() === '#7f0000');
+  assert.ok(bullet, 'the projectile uses the APK dark-red fill');
+  assert.ok(bullet.rect[2] <= 5 * viewport.scaleFactor && bullet.rect[3] <= 5 * viewport.scaleFactor,
+    'the projectile remains a small rectangle');
+  assert.equal(bullet.rect[0]! + bullet.rect[2]! / 2, bulletCenter);
+  assert.equal(bullet.rect[1]! + bullet.rect[3]! / 2, bulletY);
+  assert.equal(arcs.some(([x, y]) => x === bulletCenter && y === bulletY), false,
+    'ordinary bullets are not rendered as circles');
+  assert.deepEqual(strokes, [], 'ordinary bullets have no outline');
+});
+
 
 test('turning vehicle sprites use only the mirroring direction chosen by the turn atlas', () => {
   const drawCalls: unknown[][] = [];

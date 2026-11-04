@@ -514,13 +514,9 @@ function drawShot(
     return;
   }
 
-  context.beginPath();
-  context.arc(x, y, Math.max(1.5, 2.2 * tileScale), 0, Math.PI * 2);
-  context.fillStyle = '#8f2118';
-  context.fill();
-  context.strokeStyle = '#f5cf79';
-  context.lineWidth = Math.max(1, tileScale);
-  context.stroke();
+  const bulletSize = Math.max(1, 3 * tileScale);
+  context.fillStyle = '#7f0000';
+  context.fillRect(x - bulletSize / 2, y - bulletSize / 2, bulletSize, bulletSize);
 }
 
 function drawInspectionLabel(

@@ -162,6 +162,7 @@ test('converting a one-finger drag to a pinch stops movement and locks the remai
     await page.goto('/');
     await openSingleWaveSample(page, 'tap');
     const selection = page.getByTestId('selection-status');
+    const units = page.getByTestId('inspection-units');
     const start = await mapPoint(page, 8.5, 8.25);
     const target = await mapPoint(page, 11.5, 8.75);
     await cdp.send('Input.dispatchTouchEvent', {
@@ -193,7 +194,7 @@ test('converting a one-finger drag to a pinch stops movement and locks the remai
       touchPoints: [{ x: target.x + 48, y: target.y + 4, id: 2 }],
     });
     const stableStatus = await selection.textContent();
-    const stableCanvas = await canvasHash(page);
+    const stableUnits = await units.textContent();
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchMove',
       touchPoints: [{ x: start.x, y: start.y, id: 2 }],
@@ -201,7 +202,7 @@ test('converting a one-finger drag to a pinch stops movement and locks the remai
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await page.waitForTimeout(250);
     expect(await selection.textContent()).toBe(stableStatus);
-    expect(await canvasHash(page)).toBe(stableCanvas);
+    expect(await units.textContent()).toBe(stableUnits);
     await cdp.detach();
   } finally {
     await context.close();

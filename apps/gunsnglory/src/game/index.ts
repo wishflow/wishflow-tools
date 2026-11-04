@@ -315,7 +315,7 @@ export interface ShotView {
 export type GameEvent =
   | { type: 'enemy-group-spawned'; enemyIds: readonly string[]; waveNumber: number; spawnPointId: number; requestType: number; groupSize: number }
   | { type: 'enemy-hit'; enemyId: string; damage: number; hitPoints: number }
-  | { type: 'enemy-defeated'; enemyId: string; cashReward: number }
+  | { type: 'enemy-defeated'; enemyId: string; enemyType?: CampaignEnemyType; cashReward: number }
   | { type: 'unit-fired'; unitId: string; targetId: string; specialReload: boolean }
   | {
     type: 'sound-requested';
@@ -2614,7 +2614,12 @@ export function createGame(options: {
                   wave.cash += hitEnemy.cashReward;
                   wave.cashMade += hitEnemy.cashReward;
                   wave.defeatedEnemies += 1;
-                  wave.events.push({ type: 'enemy-defeated', enemyId: hitEnemy.id, cashReward: hitEnemy.cashReward });
+                  wave.events.push({
+                    type: 'enemy-defeated',
+                    enemyId: hitEnemy.id,
+                    enemyType: hitEnemy.type,
+                    cashReward: hitEnemy.cashReward,
+                  });
                   if (hitEnemy.type === 4) {
                     for (const groupMember of wave.enemies) {
                       if (groupMember !== hitEnemy && groupMember.groupId === hitEnemy.groupId && groupMember.alive) {

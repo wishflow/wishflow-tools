@@ -85,3 +85,67 @@ test('plays Cow Gulch music, follows sound and visibility settings, and retries 
   await expect.poll(async () => (await musicCalls()).filter(({ action, file }) =>
     action === 'play' && file === activeTrack).length).toBeGreaterThan(playCountBeforeBackgrounding);
 });
+
+test('reloads a muted profile into active sound players after a settings conflict', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.assign(window, { __audioCalls: [] as Array<{ action: 'play' | 'pause'; path: string }> });
+    HTMLMediaElement.prototype.play = function () {
+      const calls = (window as unknown as Window & {
+        __audioCalls: Array<{ action: 'play' | 'pause'; path: string }>;
+      }).__audioCalls;
+      calls.push({ action: 'play', path: new URL(this.src).pathname });
+      return Promise.resolve();
+    };
+    HTMLMediaElement.prototype.pause = function () {
+      const calls = (window as unknown as Window & {
+        __audioCalls: Array<{ action: 'play' | 'pause'; path: string }>;
+      }).__audioCalls;
+      calls.push({ action: 'pause', path: new URL(this.src).pathname });
+    };
+  });
+
+  await page.goto('/');
+  await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
+  const audioCalls = () => page.evaluate(() =>
+    (window as unknown as Window & { __audioCalls: Array<{ action: string; path: string }> }).__audioCalls);
+  await expect.poll(async () => (await audioCalls()).some(({ action, path }) =>
+    action === 'play' && path.includes('/assets/sounds/sound_pedro.ogg'))).toBe(true);
+  await expect.poll(async () => (await audioCalls()).some(({ action, path }) =>
+    action === 'play' && path.includes('/assets/music/music_loop1.ogg'))).toBe(true);
+
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const request = indexedDB.open('gunsnglory-profile', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        const transaction = database.transaction('profiles', 'readwrite');
+        transaction.objectStore('profiles').put({
+          id: 'default',
+          schemaVersion: 2,
+          settings: { simulationSpeed: 1, difficulty: 'easy', soundEnabled: false },
+          completedScenarios: [],
+          highScores: {},
+          appliedSettlementIds: [],
+          revision: 1,
+          lastOperationId: 'external-settings-update',
+          lastRequestDigest: 'external-settings-update',
+        });
+        transaction.oncomplete = () => { database.close(); resolve(); };
+        transaction.onerror = () => reject(transaction.error);
+        transaction.onabort = () => reject(transaction.error);
+      };
+    });
+  });
+
+  const speed = page.getByRole('slider', { name: 'Simulation speed' });
+  await speed.focus();
+  await speed.press('ArrowRight');
+  await expect(page.getByTestId('settings-status')).toContainText('newer profile exists');
+  await page.getByRole('button', { name: 'Reload saved profile' }).click();
+  await expect(page.getByTestId('sound-toggle')).toHaveText('Sound: Off');
+  await expect.poll(async () => (await audioCalls()).some(({ action, path }) =>
+    action === 'pause' && path.includes('/assets/sounds/sound_pedro.ogg'))).toBe(true);
+  await expect.poll(async () => (await audioCalls()).some(({ action, path }) =>
+    action === 'pause' && path.includes('/assets/music/music_loop1.ogg'))).toBe(true);
+});
