@@ -478,6 +478,64 @@ test('the original Mexican hire slot wakes in place and moves at its researched 
   session.close();
 });
 
+test('official Cow Gulch hires the original map Gunslinger with earned campaign cash', async () => {
+  const session = await createGame({ scenarios: { [cowGulchLevelOneContent.id]: cowGulchLevelOneContent } }).open({
+    scenarioId: cowGulchLevelOneContent.id,
+    mode: 'formal',
+    difficulty: 'easy',
+    randomSeed: 17,
+  });
+  let view = session.observe();
+  assert.equal(view.wave?.cash, 65, 'the official opening balance remains unchanged');
+
+  for (let index = 0; index < 600 && (view.wave?.cash ?? 0) < 75; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  assert.equal(view.wave?.cash, 75, 'the real opening wave earns the first Gunslinger hire price');
+  const sleeping = view.units.find(({ id }) => id === 'gunslinger-hire-03');
+  assert.ok(sleeping);
+  assert.equal(sleeping.activity, 4);
+  assert.equal(sleeping.hirePrice, 75);
+  const positionBeforeHire = sleeping.positionFine;
+  const selectSleeping = () => session.submitIntent({
+    type: 'select-at',
+    x: sleeping.hitArea.x + (sleeping.hitArea.width / 2),
+    y: sleeping.hitArea.y + (sleeping.hitArea.height / 2),
+  });
+
+  assert.equal(selectSleeping(), true);
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.units.find(({ id }) => id === sleeping.id)?.selected, true);
+  assert.equal(session.submitIntent({ type: 'hire-map-unit', unitId: sleeping.id, commandId: 'official-hire-01' }), true);
+  view = session.advance({ deltaMs: 0 });
+  const hired = view.units.find(({ id }) => id === sleeping.id);
+  assert.ok(hired);
+  assert.equal(hired.activity, 5);
+  assert.ok(hired.weapon, 'the same map object becomes an armed active combatant');
+  assert.deepEqual(hired.positionFine, positionBeforeHire);
+  assert.equal(view.wave?.cash, 0);
+  assert.ok(view.events.some((event) => event.type === 'map-unit-hired' && event.unitId === sleeping.id));
+
+  let fired = false;
+  for (let index = 0; index < 10 && !fired; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+    fired = view.events.some((event) => event.type === 'unit-fired' && event.unitId === sleeping.id);
+  }
+  assert.equal(fired, true, 'the hired Gunslinger enters the real target scan and fires during the same wave');
+
+  session.submitIntent({ type: 'clear-selection' });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.units.find(({ id }) => id === sleeping.id)?.selected, false);
+  selectSleeping();
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.units.find(({ id }) => id === sleeping.id)?.selected, true,
+    'the same awakened object remains selectable');
+  session.submitIntent({ type: 'move-unit', targetX: 5.5, targetY: 6.75 });
+  view = session.advance({ deltaMs: 100 });
+  assert.notDeepEqual(view.units.find(({ id }) => id === sleeping.id)?.positionFine, positionBeforeHire,
+    'the same awakened object can move from its original map marker');
+});
+
 test('official Cow Gulch restores its shared spawn field after each successful group across waves', async () => {
   const session = await createGame({ scenarios: { [cowGulchLevelOneContent.id]: cowGulchLevelOneContent } }).open({
     scenarioId: cowGulchLevelOneContent.id,
@@ -688,12 +746,123 @@ test('publishes the exact read-only attack origin and exclusive radius used by t
   const attackRange = session.observe().units[0]?.attackRange;
 
   assert.deepEqual(attackRange, {
-    centerTenthTiles: { x: 85, y: 82 },
+    centerTenthTiles: { x: 85, y: 87 },
     maximumTenthTiles: 50,
     boundary: 'exclusive',
   });
   assert.equal(Object.isFrozen(attackRange), true);
   assert.equal(Object.isFrozen(attackRange?.centerTenthTiles), true);
+});
+
+test('does not fire while an active player unit is moving, then resumes after movement stops', async () => {
+  const session = await createGame({ scenarios: { fixture: combatScenario } }).open({ scenarioId: 'fixture' });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.advance({ deltaMs: 0 });
+  session.submitIntent({ type: 'move-unit', targetX: 12, targetY: 9.25 });
+
+  let view = session.advance({ deltaMs: 100 });
+  assert.equal(view.units[0]?.moving, true);
+  for (let index = 0; index < 4; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+    assert.equal(view.events.some((event) => event.type === 'unit-fired'), false,
+      'an in-range target cannot make an actively moving unit fire');
+  }
+
+  session.submitIntent({ type: 'stop-moving' });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.units[0]?.moving, false);
+  assert.ok(view.events.some((event) => event.type === 'unit-fired'),
+    'the ready unit fires again after the movement intent ends');
+});
+
+test('does not fire while movement remains blocked by original terrain', async () => {
+  const originalTileGrid = Array.from({ length: 17 }, () => Array.from({ length: 17 }, () => 0));
+  originalTileGrid[8]![9] = 32;
+  const blockedScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'blocked-player-fire-fixture',
+    originalTileGrid,
+    units: [{ ...combatScenario.units[0]!, cell: { x: 8, y: 8 } }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 12, y: 8 }, direction: 'west' },
+      exit: { x: 0, y: 8 },
+      redirects: [],
+      baseEnemySpeed: 0,
+    },
+  };
+  const session = await createGame({ scenarios: { [blockedScenario.id]: blockedScenario } }).open({
+    scenarioId: blockedScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  view = session.advance({ deltaMs: 0 });
+  const initialPosition = view.units[0]!.positionFine;
+  assert.ok(view.enemies[0], 'the route has a target inside the original weapon range');
+
+  session.submitIntent({ type: 'move-unit', targetX: 11, targetY: 9 });
+  view = session.advance({ deltaMs: 100 });
+  assert.equal(view.units[0]?.moving, true);
+  for (let index = 0; index < 5; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+    assert.equal(view.units[0]?.positionFine.x, initialPosition.x,
+      'the original canyon tile prevents the selected unit from crossing the wall');
+    assert.equal(view.events.some((event) => event.type === 'unit-fired'), false,
+      'an active movement command remains in the APK movement branch while terrain blocks its position');
+  }
+
+  session.submitIntent({ type: 'stop-moving' });
+  view = session.advance({ deltaMs: 0 });
+  assert.ok(view.events.some((event) => event.type === 'unit-fired'),
+    'the unit attacks again when the blocked movement command is stopped');
+});
+
+test('uses physical enemy coordinates at the strict weapon range boundary despite sprite offsets', async () => {
+  const originalWave = cowGulchLevelOneContent.campaignWaves![0]!;
+  const scenarioWithOffsetGroup: ScenarioContent = {
+    ...cowGulchLevelOneContent,
+    id: 'physical-range-group-offset-fixture',
+    previewWave: {
+      ...cowGulchLevelOneContent.previewWave!,
+      spawn: { cell: { x: 6, y: 10 }, direction: 'east' },
+      baseEnemySpeed: 0,
+    },
+    campaignWaveCount: 1,
+    campaignWaves: [{
+      ...originalWave,
+      spawnPools: [{ spawnPointId: 0, intervalMs: 100_000, requests: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] }],
+    }],
+    units: [{
+      ...cowGulchLevelOneContent.units[0]!,
+      cell: { x: 9, y: 10 },
+    }],
+  };
+  const session = await createGame({ scenarios: { [scenarioWithOffsetGroup.id]: scenarioWithOffsetGroup } }).open({
+    scenarioId: scenarioWithOffsetGroup.id,
+    mode: 'formal',
+    difficulty: 'easy',
+    randomSeed: 1,
+  });
+  let view = session.observe();
+  for (let index = 0; index < 10 && view.enemies.length < 4; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  const unit = view.units[0]!;
+  const target = view.enemies[0]!;
+  assert.deepEqual(target.drawingOffsetFine, { x: 2560, y: -2080 });
+  assert.equal(unit.positionFine.x - target.positionFine.x, 5 * 7680,
+    'the physical centers are exactly five tiles apart horizontally');
+  assert.ok(unit.weapon);
+
+  for (let index = 0; index < 5; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+    assert.equal(view.events.some((event) => event.type === 'unit-fired'), false,
+      'rendering the target toward the unit cannot move it inside the strict physical range');
+  }
 });
 
 test('selects a unit only inside its hit area and clears selection on empty ground', async () => {
@@ -1141,7 +1310,7 @@ test('special projectile arcs use the original Java float32 ratio for all four d
     { style: 3 as const, expectedHeightFine: 7681 },
     { style: 4 as const, expectedHeightFine: 6080 },
     { style: 5 as const, expectedHeightFine: 7681 },
-    { style: 6 as const, expectedHeightFine: 1088 },
+    { style: 6 as const, expectedHeightFine: 1122 },
   ];
   for (const { style, expectedHeightFine } of cases) {
     const precisionScenario: ScenarioContent = {
@@ -1177,7 +1346,7 @@ test('special projectile arcs use the original Java float32 ratio for all four d
     session.advance({ deltaMs: 100 });
     session.advance({ deltaMs: 51 });
     session.advance({ deltaMs: 100 });
-    let view = session.advance({ deltaMs: 99 });
+    let view = session.advance({ deltaMs: 89 });
     let shot = view.shots.find((candidate) => candidate.explosionRemainingMs === undefined);
     assert.ok(shot, `damage style ${style} produces an active projectile at the fixture boundary`);
     if (shot.remainingMs > 50) {
@@ -1189,6 +1358,117 @@ test('special projectile arcs use the original Java float32 ratio for all four d
     assert.equal(shot.heightFine, expectedHeightFine,
       `damage style ${style} must preserve Java float32 rounding before integer casts`);
   }
+});
+
+test('ordinary projectile AOE hits inside the radius but excludes the exact boundary and outside target', async () => {
+  const areaScenario: ScenarioContent = {
+    ...combatScenario,
+    id: 'ordinary-area-boundary-fixture',
+    units: [{
+      ...combatScenario.units[0]!,
+      weapon: {
+        ...combatScenario.units[0]!.weapon!,
+        damage: 1,
+        reloadTimeMs: 500,
+        areaDamageFine: 7680,
+      },
+    }],
+    previewWave: {
+      ...combatScenario.previewWave!,
+      spawn: { cell: { x: 13, y: 8 }, direction: 'east' },
+      additionalSpawns: [
+        { cell: { x: 13.4, y: 8 }, direction: 'east' },
+        { cell: { x: 14, y: 8 }, direction: 'east' },
+        { cell: { x: 14.1, y: 8 }, direction: 'east' },
+      ],
+      baseEnemySpeed: 0,
+      enemy: { ...combatScenario.previewWave!.enemy!, hitPoints: 1000 },
+    },
+  };
+  const session = await createGame({ scenarios: { [areaScenario.id]: areaScenario } }).open({
+    scenarioId: areaScenario.id,
+    randomSeed: 42,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  view = advanceFor(session, 300);
+  const shot = view.shots.find(({ id }) => id === 'preview-shot-1');
+  assert.ok(shot);
+
+  view = advanceFor(session, shot.remainingMs);
+  assert.deepEqual(view.events.filter((event) => event.type === 'shot-exploded'), [{
+    type: 'shot-exploded',
+    shotId: shot.id,
+    targetId: 'preview-pioneer-1',
+    affectedEnemyIds: ['preview-pioneer-1', 'preview-pioneer-2'],
+  }]);
+});
+
+test('ordinary projectile AOE uses physical impact coordinates, not group display offsets', async () => {
+  const originalWave = cowGulchLevelOneContent.campaignWaves![0]!;
+  const areaScenario: ScenarioContent = {
+    ...cowGulchLevelOneContent,
+    id: 'ordinary-area-drawing-offset-fixture',
+    previewWave: {
+      ...cowGulchLevelOneContent.previewWave!,
+      spawn: { cell: { x: 6, y: 10 }, direction: 'east' },
+      baseEnemySpeed: 0,
+    },
+    campaignWaveCount: 1,
+    campaignWaves: [{
+      ...originalWave,
+      spawnPools: [{ spawnPointId: 0, intervalMs: 100_000, requests: [0, 0, 0, 1, 0, 0, 0, 0, 0, 0] }],
+    }],
+    units: [{
+      ...cowGulchLevelOneContent.units[0]!,
+      cell: { x: 8, y: 10 },
+      weapon: {
+        ...cowGulchLevelOneContent.units[0]!.weapon!,
+        damage: 1,
+        damageStyle: 0,
+        reloadTimeMs: 500,
+        projectileSpeed: 600,
+        areaDamageFine: 3840,
+      },
+    }],
+  };
+  const session = await createGame({ scenarios: { [areaScenario.id]: areaScenario } }).open({
+    scenarioId: areaScenario.id,
+    mode: 'formal',
+    difficulty: 'easy',
+    randomSeed: 1,
+  });
+  let view = session.observe();
+  for (let index = 0; index < 10 && view.enemies.length < 4; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  assert.equal(view.enemies.length, 4);
+  assert.deepEqual(view.enemies.map(({ drawingOffsetFine }) => drawingOffsetFine), [
+    { x: 2560, y: -2080 },
+    { x: -2560, y: 4000 },
+    { x: -2560, y: -2080 },
+    { x: 2560, y: 4000 },
+  ]);
+
+  let impact;
+  for (let index = 0; index < 20; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+    if (view.events.some((event) => event.type === 'shot-exploded')) {
+      impact = view.events.find((event) => event.type === 'shot-exploded');
+      break;
+    }
+  }
+  assert.deepEqual(impact, {
+    type: 'shot-exploded',
+    shotId: 'preview-shot-1',
+    targetId: 'campaign-1-enemy-1',
+    affectedEnemyIds: [
+      'campaign-1-enemy-1',
+      'campaign-1-enemy-2',
+      'campaign-1-enemy-3',
+      'campaign-1-enemy-4',
+    ],
+  }, 'all four enemies share one physical position, so display offsets cannot split the blast');
 });
 
 test('the Mexican dynamite hits inside the strict one-tile radius and leaves boundary targets unharmed', async () => {
@@ -2320,8 +2600,8 @@ test('uses the APK projectile base-time percentage and integer divisions for sty
     { style: 0 as const, spawnX: 12, totalMs: 140 },
     { style: 0 as const, spawnX: 13, totalMs: 250 },
     { style: 0 as const, spawnX: 11.4, totalMs: 100 },
-    { style: 3 as const, spawnX: 11, totalMs: 1150 },
-    { style: 3 as const, spawnX: 12, totalMs: 1220 },
+    { style: 3 as const, spawnX: 11, totalMs: 1140 },
+    { style: 3 as const, spawnX: 12, totalMs: 1210 },
     { style: 3 as const, spawnX: 13, totalMs: 1330 },
     { style: 3 as const, spawnX: 11.4, totalMs: 1170 },
   ];

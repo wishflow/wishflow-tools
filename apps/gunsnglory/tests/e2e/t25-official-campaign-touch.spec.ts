@@ -21,7 +21,7 @@ function readCash(text: string): number {
   return cash;
 }
 
-test('touch can move an active unit and inspect a sleeping Gunslinger before earning its hire price', async ({ browser }) => {
+test('touch can move a unit and hire an original Cow Gulch Gunslinger with earned cash', async ({ browser }) => {
   test.setTimeout(120_000);
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -87,6 +87,15 @@ test('touch can move an active unit and inspect a sleeping Gunslinger before ear
     await expect(hire).toHaveText('Hire map Gunslinger · $75');
     await expect(hire).toBeDisabled();
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired · Cell (4, 7)');
+    await page.clock.runFor(10_000);
+    await expect(hire).toBeEnabled();
+    const cashBeforeHire = readCash(await waveStatus.innerText());
+    expect(cashBeforeHire).toBeGreaterThanOrEqual(75);
+    await hire.click();
+    await expect(page.getByTestId('map-hire-status')).toHaveText('Gunslinger hired from the map for $75.');
+    // The official wave keeps running and can award more cash while Playwright
+    // polls the status. The deterministic game test checks the exact $75 debit.
+    expect(readCash(await waveStatus.innerText())).toBeLessThan(cashBeforeHire);
     await cdp.detach();
   } finally {
     await context.close();
