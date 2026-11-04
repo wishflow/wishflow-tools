@@ -42,16 +42,7 @@ async function readProfile(page: import('@playwright/test').Page): Promise<Recor
   }));
 }
 
-test('touch completes the official Cow Gulch level through real movement and naturally earned recruitment', async ({ browser }) => {
-  test.setTimeout(180_000);
-  const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    deviceScaleFactor: 1,
-    hasTouch: true,
-    isMobile: true,
-  });
-  const page = await context.newPage();
-  await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
+async function installSeed42(page: import('@playwright/test').Page): Promise<void> {
   await page.addInitScript(() => {
     const originalGetRandomValues = crypto.getRandomValues.bind(crypto);
     let provideCampaignSeed = true;
@@ -64,6 +55,19 @@ test('touch completes the official Cow Gulch level through real movement and nat
       return originalGetRandomValues(array) as typeof array;
     }) as typeof crypto.getRandomValues;
   });
+}
+
+test('touch completes the official Cow Gulch level through real movement and naturally earned recruitment', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 1,
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await context.newPage();
+  await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
+  await installSeed42(page);
   try {
     await page.goto('/');
     await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
@@ -166,4 +170,37 @@ test('touch completes the official Cow Gulch level through real movement and nat
   } finally {
     await context.close();
   }
+});
+
+test('reloads an unfinished official Cow Gulch battle from wave one without saving progress', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
+  await installSeed42(page);
+  await page.goto('/');
+
+  const intro = page.getByTestId('campaign-wave-intro');
+  await expect(intro).toBeHidden();
+  const speed = page.getByRole('slider', { name: 'Simulation speed' });
+  await speed.focus();
+  await speed.press('End');
+  await expect(speed).toHaveValue('4');
+  await expect(page.getByTestId('settings-status')).toContainText('saved');
+
+  const waveStatus = page.getByTestId('wave-status');
+  await page.clock.runFor(5_000);
+  await expect(waveStatus).toContainText('Wave 1/8');
+  await expect(waveStatus).not.toContainText('ready');
+  expect(readCash(await waveStatus.innerText())).toBeGreaterThan(65);
+  await expect(page.getByTestId('settlement')).toBeHidden();
+
+  const profileBeforeReload = await readProfile(page);
+  expect(profileBeforeReload.completedScenarios).toEqual([]);
+  expect(profileBeforeReload.appliedSettlementIds).toEqual([]);
+
+  await page.reload();
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/1 stages complete');
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
+  await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
+  await expect(page.getByTestId('settlement')).toBeHidden();
+  expect(await readProfile(page)).toEqual(profileBeforeReload);
 });
