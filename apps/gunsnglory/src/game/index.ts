@@ -317,7 +317,12 @@ export type GameEvent =
   | { type: 'enemy-hit'; enemyId: string; damage: number; hitPoints: number }
   | { type: 'enemy-defeated'; enemyId: string; cashReward: number }
   | { type: 'unit-fired'; unitId: string; targetId: string; specialReload: boolean }
-  | { type: 'sound-requested'; sound: 'sound_revolver' | 'sound_dynamite' | 'sound_desperado_yihaa' | 'sound_mexican_arriba' | 'sound_wagon_explode' }
+  | {
+    type: 'sound-requested';
+    sound: 'sound_revolver' | 'sound_dynamite' | 'sound_wagon_explode';
+    positionFine: { x: number; y: number };
+  }
+  | { type: 'sound-requested'; sound: 'sound_desperado_yihaa' | 'sound_mexican_arriba' }
   | { type: 'shot-exploded'; shotId: string; targetId: string; affectedEnemyIds: readonly string[] }
   | { type: 'wave-cleared'; waveNumber: number; escapedEnemies: number; defeatedEnemies: number }
   | { type: 'unit-recruited'; unitType: string; price: number; count: number }
@@ -1418,18 +1423,10 @@ function recordCampaignKill(wave: MutableWave, priorityMap: RoutePriorityMap, en
 
 function unitEnemyDistanceSquare(unit: MutableUnit, enemy: MutableEnemy): number {
   const unitCenter = unitAttackCenterTenthTiles(unit);
-  const enemyX = tenthTileCoordinate(enemy.positionFine.x + enemy.drawingOffsetFine.x);
-  const enemyY = tenthTileCoordinate(enemy.positionFine.y + enemy.drawingOffsetFine.y);
+  const enemyX = tenthTileCoordinate(enemy.positionFine.x);
+  const enemyY = tenthTileCoordinate(enemy.positionFine.y);
   const dx = unitCenter.x - enemyX;
   const dy = unitCenter.y - enemyY;
-  return (dx * dx) + (dy * dy);
-}
-
-function enemyDistanceSquare(first: MutableEnemy, second: MutableEnemy): number {
-  const dx = tenthTileCoordinate(first.positionFine.x + first.drawingOffsetFine.x)
-    - tenthTileCoordinate(second.positionFine.x + second.drawingOffsetFine.x);
-  const dy = tenthTileCoordinate(first.positionFine.y + first.drawingOffsetFine.y)
-    - tenthTileCoordinate(second.positionFine.y + second.drawingOffsetFine.y);
   return (dx * dx) + (dy * dy);
 }
 
@@ -1442,16 +1439,16 @@ function enemyShotPosition(enemy: MutableEnemy): { x: number; y: number } {
 
 function shotTargetDistanceSquare(positionFine: { x: number; y: number }, enemy: MutableEnemy): number {
   const dx = tenthTileCoordinate(positionFine.x)
-    - tenthTileCoordinate(enemy.positionFine.x + enemy.drawingOffsetFine.x);
+    - tenthTileCoordinate(enemy.positionFine.x);
   const dy = tenthTileCoordinate(positionFine.y)
-    - tenthTileCoordinate(enemy.positionFine.y + enemy.drawingOffsetFine.y);
+    - tenthTileCoordinate(enemy.positionFine.y);
   return (dx * dx) + (dy * dy);
 }
 
 function unitAttackCenterTenthTiles(unit: MutableUnit): { x: number; y: number } {
   return {
     x: tenthTileCoordinate(unit.positionFine.x),
-    y: tenthTileCoordinate(unit.positionFine.y - FIELD_CENTER_HALF),
+    y: tenthTileCoordinate(unit.positionFine.y),
   };
 }
 
@@ -2516,6 +2513,7 @@ export function createGame(options: {
               const weapon = unit.weapon;
               if (!weapon) continue;
               if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
+              if (unit.movementTargetFine) continue;
               if (unit.weaponCooldownMs > 0) continue;
 
               const target = selectTarget(unit, wave.enemies, priorityMap, priorityTargetId);
@@ -2568,7 +2566,7 @@ export function createGame(options: {
               }
               wave.events.push({ type: 'unit-fired', unitId: unit.definition.id, targetId: target.id, specialReload });
               if (unit.definition.type === 'gunslinger' && weapon.damageStyle === 0) {
-                wave.events.push({ type: 'sound-requested', sound: 'sound_revolver' });
+                wave.events.push({ type: 'sound-requested', sound: 'sound_revolver', positionFine: { ...startFine } });
               }
             }
 
@@ -2599,9 +2597,7 @@ export function createGame(options: {
               const affected = shot.areaDamageFine > 0
                 ? wave.enemies.filter((enemy) => enemy.alive && enemy.damageable && (
                   enemy.id === shot.targetId
-                  || (target
-                    ? enemyDistanceSquare(target, enemy)
-                    : shotTargetDistanceSquare(targetPositionFine, enemy)) < areaSquare
+                  || shotTargetDistanceSquare(shot.positionFine, enemy) < areaSquare
                 ))
                 : target ? [target] : [];
               const affectedEnemyIds: string[] = [];
@@ -2626,12 +2622,16 @@ export function createGame(options: {
                         groupMember.deathRemainingMs = 799;
                       }
                     }
-                    wave.events.push({ type: 'sound-requested', sound: 'sound_wagon_explode' });
+                    wave.events.push({
+                      type: 'sound-requested',
+                      sound: 'sound_wagon_explode',
+                      positionFine: { ...hitEnemy.positionFine },
+                    });
                   }
                 }
               }
               if (shot.damageStyle === 3 || shot.damageStyle === 4) {
-                wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite' });
+                wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite', positionFine: { ...shot.positionFine } });
               }
               if (shot.damageStyle === 3 || shot.areaDamageFine > 0) {
                 shot.impactResolved = true;

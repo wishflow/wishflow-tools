@@ -20,6 +20,7 @@ import { cameraForAnchor, createMapCamera, panCameraByScreenDelta, screenToMapCe
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
+import { SoundEffectsManager } from './audio/sfx-manager';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
 import { createExperiments, type ExperimentComparisonReport } from './experiments';
 import type {
@@ -1845,6 +1846,7 @@ function stopGameLoop(): void {
 }
 
 const audioElements = new Map<string, HTMLAudioElement>();
+const gameSoundEffects = new SoundEffectsManager();
 let backgroundMusic: HTMLAudioElement | undefined;
 let backgroundMusicTrack: CowGulchMusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
@@ -1945,9 +1947,39 @@ function retryCampaignWaveIntroVoice(): void {
   if (intro && soundEnabled) playAudioAsset(intro.voiceSound);
 }
 
-function playRequestedSounds(events: readonly GameEvent[], eventWaveNumber = view.wave?.number): void {
+function playRequestedSounds(
+  events: readonly GameEvent[],
+  eventWaveNumber = view.wave?.number,
+  deltaMs = 0,
+): void {
+  gameSoundEffects.advance(deltaMs);
+  const mapViewport = getMapViewport(view, getDisplayPixelScale(), mapCamera);
+  const soundViewport = {
+    origin: mapViewport.origin,
+    tileSize: mapViewport.tileSize,
+    width: GAME_VIEWPORT.width,
+    height: GAME_VIEWPORT.height,
+  };
   for (const event of events) {
-    if (event.type === 'sound-requested') playAudioAsset(event.sound);
+    if (event.type === 'sound-requested') {
+      if (event.sound === 'sound_revolver') {
+        const asset = gameSoundEffects.request({
+          id: 0,
+          positionFine: event.positionFine,
+          assets: ['sound_revolver', 'sound_revolver2'],
+        }, soundViewport);
+        if (asset) playAudioAsset(asset);
+      } else if (event.sound === 'sound_dynamite' || event.sound === 'sound_wagon_explode') {
+        const asset = gameSoundEffects.request({
+          id: event.sound === 'sound_dynamite' ? 10 : 12,
+          positionFine: event.positionFine,
+          assets: [event.sound],
+        }, soundViewport);
+        if (asset) playAudioAsset(asset);
+      } else {
+        playAudioAsset(event.sound);
+      }
+    }
     if (!isOfficialCowGulchSession()) continue;
     if (event.type === 'unit-fired' && eventWaveNumber !== undefined && battleMusicWaveNumber !== eventWaveNumber) {
       battleMusicWaveNumber = eventWaveNumber;
@@ -2500,7 +2532,7 @@ function startGameLoop(): void {
       const previousWaveNumber = view.wave?.number;
       view = loopSession.advance({ deltaMs: stepMs, ...stepEnvironment });
       frameEvents.push(...view.events);
-      playRequestedSounds(view.events, previousWaveNumber);
+      playRequestedSounds(view.events, previousWaveNumber, stepMs);
       if (view.wave?.number !== previousWaveNumber && showCampaignWaveIntroForCurrentWave()) break;
       if (view.wave?.phase !== 'active') break;
     }
@@ -2522,7 +2554,7 @@ function dispatch(intent: GameIntent): void {
   if (!session.submitIntent(intent)) return;
   const eventWaveNumber = view.wave?.number;
   view = session.advance(currentGameStepEnvironment());
-  playRequestedSounds(view.events, eventWaveNumber);
+  playRequestedSounds(view.events, eventWaveNumber, 0);
   renderStatus();
   redraw();
   if (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)) startGameLoop();
@@ -2553,7 +2585,7 @@ singleStepControl.addEventListener('click', () => {
   if (!view.paused || singleStepControl.disabled) return;
   const eventWaveNumber = view.wave?.number;
   view = session.singleStep({ deltaMs: 16, ...currentGameStepEnvironment() });
-  playRequestedSounds(view.events, eventWaveNumber);
+  playRequestedSounds(view.events, eventWaveNumber, 16);
   renderStatus();
   redraw();
 });
