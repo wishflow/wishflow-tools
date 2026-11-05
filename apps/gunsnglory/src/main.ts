@@ -2348,7 +2348,7 @@ const assetNames = new Set([
   ...(view.map.decorations ?? []).map((decoration) => decoration.asset),
   ...view.units.map((unit) => unit.asset),
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
-  ...[cowGulchLevelOneContent, apacheValleyContent].flatMap((content) => [
+  ...[cowGulchLevelOneContent, apacheValleyContent, fortKaboomLevelThreeContent].flatMap((content) => [
     ...content.map.background.map((tile) => tile.asset),
     ...content.map.streets.map((tile) => tile.asset),
     ...(content.map.decorations ?? []).map((decoration) => decoration.asset),
