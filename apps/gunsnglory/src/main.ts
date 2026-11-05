@@ -2048,6 +2048,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     const recruitLabel = messages.recruitButton(recruitDefinition.name[language], recruitDefinition.price);
     if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
   }
+  recruitControl.hidden = session.startRecord.mode === 'formal' || !recruitDefinition;
   const upgradeScenario = view.scenarioId === 'cow-gulch-upgrade-sample';
   const originalWaveScenario = view.scenarioId === cowGulchP1cCampaignContent.id
     || view.scenarioId === cowGulchP1dCampaignContent.id;

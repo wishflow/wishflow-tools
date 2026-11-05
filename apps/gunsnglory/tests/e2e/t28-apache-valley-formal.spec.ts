@@ -173,12 +173,18 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await installSeed42(page);
-  await page.goto('/?testBattle=1');
+  await page.goto('/');
   await writeUnlockedProfile(page);
   await page.reload();
 
-  await expect(page.getByTestId('campaign-stage-button-2')).toBeEnabled();
-  await page.getByTestId('campaign-stage-button-2').click();
+  await page.getByTestId('menu-start').click();
+  await page.getByTestId('campaign-region-new-mexico').click();
+  await expect(page.getByTestId('campaign-level-02')).toBeEnabled();
+  await page.getByTestId('campaign-level-02').click();
+  await expect(page.getByRole('heading', { name: 'Death Valley' })).toBeVisible();
+  await page.getByTestId('campaign-stage-play').click();
+  await expect(page.getByRole('dialog')).toContainText('Choose difficulty:');
+  await page.getByTestId('campaign-difficulty-easy').click();
   await expect(page.locator('#scene-title')).toHaveText('Apache Valley · Level 2');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/6 · Lives 50');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $100');
@@ -250,10 +256,11 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   expect(hired.size).toBeGreaterThanOrEqual(17);
 
   await page.reload();
-  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('2/2 stages complete');
-  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
-  await expect(page.getByTestId('settlement')).toBeHidden();
+  await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
   expect(await readProfile(page)).toEqual(profile);
+  await page.getByTestId('menu-start').click();
+  await page.getByTestId('campaign-region-new-mexico').click();
+  await expect(page.getByTestId('campaign-level-01')).toBeEnabled();
+  await expect(page.getByTestId('campaign-level-02')).toBeEnabled();
   expect(currentWave).toBe(6);
 });
