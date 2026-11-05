@@ -1,10 +1,11 @@
 import map from './new-mexico-03.json';
 import { cowGulchDecorationCodes, createSleepingMapUnitsFromGrid } from './cow-gulch';
 import { fortKaboomUnitDesigns, type FortKaboomUnitType } from './fort-kaboom-unit-designs';
+import { fortKaboomUnitPool } from './fort-kaboom-unit-pool';
 import type { Direction, MapDecoration, ScenarioContent, ScenarioUnit, WaveRouteDefinition } from '../game';
 
 const decorationCollisionBox = Object.freeze({ x: 1920, y: 2612, width: 3840, height: 2534 });
-const fortCollisionBox = Object.freeze({ x: -5568, y: -5760, width: 18048, height: 7680 });
+const fortCollisionBox = Object.freeze({ x: -9408, y: -9600, width: 18048, height: 7680 });
 
 const fortKaboomDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
   ...cowGulchDecorationCodes,
@@ -149,9 +150,10 @@ export const fortKaboomRouteDefinitions: readonly WaveRouteDefinition[] = Object
 export const fortKaboomContent: ScenarioContent = {
   ...map,
   id: 'campaign-new-mexico-03',
-  contentVersion: 'gng-free-1.8.6-new-mexico-03-spatial-v1',
+  contentVersion: 'gng-free-1.8.6-new-mexico-03-fort-pool-v1',
   title: { en: 'Fort Kaboom · Level 3', zh: 'Fort Kaboom · 第 3 关' },
   maxUpgrades: 0,
+  campaignUnitPool: fortKaboomUnitPool,
   map: {
     ...map.map,
     decorations: createFortKaboomDecorations(),

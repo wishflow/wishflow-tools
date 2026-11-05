@@ -17,6 +17,13 @@ import {
   synchronizeDrawOrder,
   type DrawOrderEntry,
 } from './draw-order';
+import {
+  advanceCampaignUnitPool,
+  applyCampaignUnitPoolActions,
+  createCampaignUnitPoolRuntime,
+  queueCampaignUnitForSpawn,
+  type SpawnedCampaignUnit,
+} from './campaign-unit-pool';
 import { createRoutePriorityMap, normalizedRoutePriority, type RoutePriorityMap } from './route-priority';
 import type {
   GameReplayFrame,
@@ -84,8 +91,8 @@ export interface MapDecoration {
 
 export interface ScenarioUnit {
   id: string;
-  /** Original map-object activity: 4 is sleeping, 5 is active. */
-  activity?: 4 | 5;
+  /** Original map-object activity: 2 is pool-spawned, 4 is sleeping, and 5 is hired. */
+  activity?: 2 | 4 | 5;
   type: string;
   /** Price for activating this existing activity-4 map object. */
   hirePrice?: number;
@@ -116,12 +123,14 @@ export interface UnitUpgradeDefinition {
   weapon: UnitWeaponDefinition;
 }
 
+export type SpawnLocationType = 1 | 2 | 3;
+
 export interface RecruitableUnitDefinition {
   id: string;
   name: { en: string; zh: string };
   price: number;
   /** Original spawn-building kind: saloon, fort, or tipi. */
-  spawnLocationType: 1 | 2 | 3;
+  spawnLocationType: SpawnLocationType;
 }
 
 export type DamageType = 'light' | 'fire' | 'heavy' | 'poison';
@@ -238,6 +247,36 @@ export interface CampaignWaveDefinition {
   spawnPools: readonly CampaignSpawnPoolDefinition[];
 }
 
+export interface CampaignUnitPoolUnitDefinition {
+  /** Original SpawnPoolManager.units[] index, from 0 through 36. */
+  poolType: number;
+  unitType: string;
+  /** Original GameObjectSpawnLocation.unit kind that accepts this pool type. */
+  spawnLocationType: SpawnLocationType;
+}
+
+export interface CampaignUnitSpawnLocationDefinition {
+  id: string;
+  /** Original GameObjectSpawnLocation.unit kind; -1 accepts any pool type. */
+  spawnLocationType: SpawnLocationType | -1;
+  cell: { x: number; y: number };
+}
+
+export interface CampaignUnitPoolActionDefinition {
+  waveNumber: number;
+  poolType: number;
+  action: 'add' | 'set' | 'add-max' | 'set-max';
+  count: number;
+}
+
+export interface CampaignUnitPoolDefinition {
+  /** Global SpawnPoolManager interval; it starts when the scene is created. */
+  intervalMs: number;
+  units: readonly CampaignUnitPoolUnitDefinition[];
+  spawnLocations: readonly CampaignUnitSpawnLocationDefinition[];
+  actions: readonly CampaignUnitPoolActionDefinition[];
+}
+
 export interface ScenarioContent {
   id: string;
   contentVersion?: string;
@@ -263,6 +302,8 @@ export interface ScenarioContent {
   /** Available original campaign waves; the total may exceed this partial implementation. */
   campaignWaveCount?: number;
   campaignWaves?: readonly CampaignWaveDefinition[];
+  /** Optional original player-unit spawn pool, separate from enemy wave request pools. */
+  campaignUnitPool?: CampaignUnitPoolDefinition;
   /** Base type-1/type-2 settler data before level, wave, and dynamic-difficulty multipliers. */
   campaignEnemy?: PreviewEnemyDefinition;
   /** Type-specific campaign enemy designs; unset entries use the settler design. */
@@ -823,6 +864,10 @@ function initialUnitPosition(definition: ScenarioUnit): { x: number; y: number }
   };
 }
 
+function isActivePlayerUnit(unit: MutableUnit): boolean {
+  return unit.definition.activity !== 4;
+}
+
 function unitRenderOffsetAt(definition: ScenarioUnit, positionFine: { x: number; y: number }): { x: number; y: number } {
   const initialPosition = initialUnitPosition(definition);
   return {
@@ -869,6 +914,42 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
     upgradeLevel: unit.upgradeLevel,
     ...(shootingAnimation ? { shootingAnimation } : {}),
     ...(upgrade ? { nextUpgrade: clone(upgrade) } : {}),
+  };
+}
+
+function campaignSpawnedUnit(template: ScenarioUnit, spawn: SpawnedCampaignUnit): MutableUnit {
+  const offsetX = spawn.cell.x - template.cell.x;
+  const offsetY = spawn.cell.y - template.cell.y;
+  const relocate = (rectangle: Rectangle): Rectangle => ({
+    ...rectangle,
+    x: rectangle.x + offsetX,
+    y: rectangle.y + offsetY,
+  });
+  const render = relocate(template.awakeRender ?? template.render);
+  const hitArea = relocate(template.awakeHitArea ?? template.hitArea);
+  const definition: ScenarioUnit = {
+    ...clone(template),
+    id: spawn.id,
+    activity: 2,
+    cell: { ...spawn.cell },
+    asset: template.awakeAsset ?? template.asset,
+    frame: clone(template.awakeFrame ?? template.frame),
+    render,
+    hitArea,
+    ...(template.awakeRender ? { awakeRender: relocate(template.awakeRender) } : {}),
+    ...(template.awakeHitArea ? { awakeHitArea: relocate(template.awakeHitArea) } : {}),
+  };
+  const weapon = definition.weapon ? clone(definition.weapon) : undefined;
+  return {
+    definition,
+    selected: false,
+    positionFine: { ...spawn.positionFine },
+    upgradeLevel: 0,
+    movementSpeedFinePer100Ms: definition.movementSpeedFinePer100Ms,
+    walkingAnimationStep: 0,
+    ...(weapon ? { weapon } : {}),
+    weaponCooldownMs: weapon ? Math.trunc(weapon.reloadTimeMs / 2) : 0,
+    shotsUntilSpecialReload: weapon?.specialReloadFrequency ?? 0,
   };
 }
 
@@ -985,7 +1066,11 @@ function backgroundCollisionCode(rawTile: number, grid: ScenarioContent['origina
   return rawTile === 160 ? 160 : 0;
 }
 
-function mapBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: number): boolean {
+function mapBlocksUnit(
+  scenario: ScenarioContent,
+  fineX: number,
+  fineY: number,
+): boolean {
   const grid = scenario.originalTileGrid;
   const width = scenario.map.width;
   const height = scenario.map.height;
@@ -1022,6 +1107,25 @@ function mapBlocksUnit(scenario: ScenarioContent, fineX: number, fineY: number):
       && unitRight > decorationLeft
       && unitTop < decorationBottom
       && unitBottom > decorationTop;
+  });
+}
+
+function campaignUnitSpawnBlocked(
+  scenario: ScenarioContent,
+  units: readonly MutableUnit[],
+  spawn: { positionFine: { x: number; y: number }; cell: { x: number; y: number } },
+): boolean {
+  if (mapBlocksUnit(scenario, spawn.positionFine.x, spawn.positionFine.y)) return true;
+  const left = spawn.positionFine.x + UNIT_COLLIDER_START_X;
+  const top = spawn.positionFine.y + UNIT_COLLIDER_START_Y;
+  const right = left + UNIT_COLLIDER_WIDTH;
+  const bottom = top + UNIT_COLLIDER_HEIGHT;
+  return units.some(({ positionFine }) => {
+    const otherLeft = positionFine.x + UNIT_COLLIDER_START_X;
+    const otherTop = positionFine.y + UNIT_COLLIDER_START_Y;
+    const otherRight = otherLeft + UNIT_COLLIDER_WIDTH;
+    const otherBottom = otherTop + UNIT_COLLIDER_HEIGHT;
+    return left < otherRight && right > otherLeft && top < otherBottom && bottom > otherTop;
   });
 }
 
@@ -2121,6 +2225,40 @@ export function createGame(options: {
           throw new GameOpenError('scenario-unavailable', 'Campaign wave data is invalid');
         }
       }
+      const campaignUnitPool = scenario.campaignUnitPool;
+      if (campaignUnitPool) {
+        const poolTypes = new Set<number>();
+        const invalidPool = !Number.isSafeInteger(campaignUnitPool.intervalMs)
+          || campaignUnitPool.intervalMs < 1
+          || campaignUnitPool.units.some((entry) => {
+            if (!Number.isSafeInteger(entry.poolType) || entry.poolType < 0 || entry.poolType >= 37
+              || poolTypes.has(entry.poolType)
+              || !scenario.units.some((unit) => unit.type === entry.unitType)
+              || ![1, 2, 3].includes(entry.spawnLocationType)) return true;
+            poolTypes.add(entry.poolType);
+            return false;
+          })
+          || campaignUnitPool.spawnLocations.some((location, index) => (
+            !location.id || campaignUnitPool.spawnLocations.some((other, otherIndex) => otherIndex !== index && other.id === location.id)
+            || !Number.isSafeInteger(location.cell.x) || !Number.isSafeInteger(location.cell.y)
+            || location.cell.x < 0 || location.cell.x >= scenario.map.width
+            || location.cell.y < 0 || location.cell.y >= scenario.map.height
+            || ![-1, 1, 2, 3].includes(location.spawnLocationType)
+          ))
+          || campaignUnitPool.units.some((entry) => !campaignUnitPool.spawnLocations.some((location) => (
+            location.spawnLocationType === -1 || location.spawnLocationType === entry.spawnLocationType
+          )))
+          || campaignUnitPool.actions.some((action) => (
+            !Number.isSafeInteger(action.waveNumber) || action.waveNumber < 1
+            || (campaignWaveCount > 0 && action.waveNumber > campaignWaveCount)
+            || !poolTypes.has(action.poolType)
+            || !Number.isSafeInteger(action.count) || action.count < 0 || action.count > 127
+            || !['add', 'set', 'add-max', 'set-max'].includes(action.action)
+          ));
+        if (invalidPool) {
+          throw new GameOpenError('scenario-unavailable', 'Campaign unit pool data is invalid');
+        }
+      }
       if (mode === 'formal' && preparedSetup) {
         const baseline = await prepare({ scenarioId });
         if (baseline.digest !== resolved.setup.digest) {
@@ -2165,6 +2303,7 @@ export function createGame(options: {
       let nextWagonPartNumber = 1;
       const spawnFields = campaignSpawnFields(scenario);
       const priorityMap = createRoutePriorityMap(scenario);
+      const campaignUnitPoolRuntime = createCampaignUnitPoolRuntime(scenario.campaignUnitPool);
       let frame = 0;
       let elapsedMs = 0;
       let priorityTargetId: string | undefined;
@@ -2193,6 +2332,9 @@ export function createGame(options: {
           } : {}),
         }
         : undefined;
+      if (campaignMode && firstCampaignWave) {
+        applyCampaignUnitPoolActions(campaignUnitPoolRuntime, scenario.campaignUnitPool, firstCampaignWave.number);
+      }
       const drawOrderQueue = new DrawOrderQueue();
       for (const entry of drawOrderEntries(scenario, units, wave)) {
         drawOrderQueue.insert(entry.id, entry.depth);
@@ -2429,7 +2571,7 @@ export function createGame(options: {
 
           if (intent.type === 'move-unit') {
             if (!Number.isFinite(intent.targetX) || !Number.isFinite(intent.targetY)
-              || !units.some((unit) => unit.selected && (unit.definition.activity ?? 5) === 5
+              || !units.some((unit) => unit.selected && isActivePlayerUnit(unit)
                 && unit.movementSpeedFinePer100Ms > 0)) return false;
             pending.push({
               sequence: nextIntentSequence,
@@ -2546,6 +2688,9 @@ export function createGame(options: {
               }
               wave.cash -= hirePrice;
               unit.definition.activity = 5;
+              if (campaignMode) {
+                queueCampaignUnitForSpawn(campaignUnitPoolRuntime, scenario.campaignUnitPool, unit.definition.type);
+              }
               if (unit.definition.awakeAsset) unit.definition.asset = unit.definition.awakeAsset;
               if (unit.definition.awakeFrame) unit.definition.frame = clone(unit.definition.awakeFrame);
               if (unit.definition.awakeRender) unit.definition.render = clone(unit.definition.awakeRender);
@@ -2612,7 +2757,7 @@ export function createGame(options: {
             }
 
             if (command.intent.type === 'move-unit') {
-              const selectedUnit = units.find((unit) => unit.selected && (unit.definition.activity ?? 5) === 5);
+              const selectedUnit = units.find((unit) => unit.selected && isActivePlayerUnit(unit));
               if (selectedUnit) {
                 selectedUnit.movementTargetFine = {
                   x: Math.round(Math.max(-0.5, Math.min(scenario.map.width + 0.5, command.intent.targetX)) * FINE_UNITS_PER_CELL),
@@ -2742,7 +2887,7 @@ export function createGame(options: {
             updateWagonDebris(wave.wagonDebris, deltaMs);
 
             for (const unit of units) {
-              if ((unit.definition.activity ?? 5) !== 5) continue;
+              if (!isActivePlayerUnit(unit)) continue;
               const weapon = unit.weapon;
               if (!weapon) continue;
               if (unit.weaponCooldownMs > 0) unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs - deltaMs);
@@ -2961,6 +3106,23 @@ export function createGame(options: {
               }
             }
 
+            if (campaignMode && campaignUnitPoolRuntime && scenario.campaignUnitPool) {
+              const spawnedUnits = advanceCampaignUnitPool(
+                campaignUnitPoolRuntime,
+                scenario.campaignUnitPool,
+                deltaMs,
+                random,
+                (spawn) => campaignUnitSpawnBlocked(scenario, units, spawn),
+              );
+              for (const spawn of spawnedUnits) {
+                const template = scenario.units.find((unit) => unit.type === spawn.unitType);
+                if (!template) throw new Error('Campaign unit pool template disappeared: ' + spawn.unitType);
+                const spawnedUnit = campaignSpawnedUnit(template, spawn);
+                units.push(spawnedUnit);
+                drawOrderCreationOrder.push('unit:' + spawnedUnit.definition.id);
+              }
+            }
+
             wave.enemies = wave.enemies.filter((enemy) => enemy.alive || enemy.deathRemainingMs >= 0);
             const pendingCampaignRequests = campaignMode ? campaignPendingRequests(wave.campaignSpawnPools) : 0;
             const waveCleared = wave.enemies.length === 0
@@ -2996,6 +3158,11 @@ export function createGame(options: {
                 wave.difficultyValue = nextHitPointDifficulty;
                 wave.difficultyValueCounter = 1;
                 wave.campaignSpawnPools = campaignSpawnPools(nextCampaignWave, rawNextDifficulty, true);
+                applyCampaignUnitPoolActions(
+                  campaignUnitPoolRuntime,
+                  scenario.campaignUnitPool,
+                  nextCampaignWave.number,
+                );
                 wave.phase = 'active';
               } else if (wave.number >= campaignWaveCount && (campaignWaves?.length ?? 0) >= campaignWaveCount) {
                 wave.phase = 'complete';

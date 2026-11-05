@@ -234,7 +234,7 @@ test('matches every map decoration and sleeping unit marker to its TDM code and 
   assert.ok(fort);
   assert.deepEqual(fort.cell, { x: 10, y: 5 });
   assert.equal(fort.anchorOffsetY, -0.3);
-  assert.deepEqual(fort.collisionBoxFine, { x: -5568, y: -5760, width: 18048, height: 7680 });
+  assert.deepEqual(fort.collisionBoxFine, { x: -9408, y: -9600, width: 18048, height: 7680 });
 
   const unitTypesByTdmCode: Readonly<Record<number, string>> = {
     96: 'gunslinger',
@@ -341,5 +341,8 @@ test('resolves every spatial asset and anchors the Fort bitmap at its APK foot p
     collisionView = collisionSession.advance({ deltaMs: 100, tileSizePixels: 32 });
   }
   const stoppedAtCellY = collisionView.units[0]!.positionFine.y / 7680;
-  assert.ok(stoppedAtCellY > 3.75 && stoppedAtCellY < 4.35, 'Fort collision stops the unit at its original collision edge');
+  assert.ok(
+    stoppedAtCellY >= 3.75 && stoppedAtCellY < 3.95,
+    `Fort collision blocks the first movement step into its APK collision rectangle (y=${stoppedAtCellY})`,
+  );
 });
