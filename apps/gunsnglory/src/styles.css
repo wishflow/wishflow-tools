@@ -2228,8 +2228,9 @@ body {
     right: 0.25rem;
     top: 0.25rem;
     bottom: auto;
-    max-width: 7rem;
+    max-width: 4.75rem;
     overflow: hidden;
+    padding: 0.3rem 0.25rem;
     text-overflow: ellipsis;
   }
 
@@ -2239,12 +2240,14 @@ body {
   }
 
   .game-toolbar-actions {
-    padding-right: 7rem;
+    max-width: calc(100% - 4.75rem);
+    gap: 0.25rem;
+    padding-right: 0;
   }
 
   .game-toolbar button {
     min-height: 2rem;
-    padding: 0.24rem 0.38rem;
+    padding: 0.24rem 0.3rem;
     font-size: 0.66rem;
   }
 
