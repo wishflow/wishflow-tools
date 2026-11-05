@@ -700,6 +700,7 @@ const languageMessages = {
       sniper: 'Markswoman',
       grandpa: 'Scattergun Grandpa',
       pyromaniac: 'Pyromaniac',
+      salesman: 'Snake Oil Salesman',
     }[type] ?? 'Gunslinger'),
     selected: (name: string) => `${name} selected`,
     selectedCell: (x: number, y: number) => ` · Cell (${x}, ${y})`,
@@ -898,6 +899,7 @@ const languageMessages = {
       sniper: '女神枪手',
       grandpa: '散弹枪爷爷',
       pyromaniac: '纵火狂',
+      salesman: '蛇油推销员',
     }[type] ?? '枪手'),
     selected: (name: string) => `已选择${name}`,
     selectedCell: (x: number, y: number) => ` · 格子 (${x}, ${y})`,
@@ -2397,11 +2399,16 @@ const assetNames = new Set([
   'player_pyromaniac',
   'player_pyromaniac_sleep',
   'player_pyromaniac_shot',
+  'player_salesman',
+  'player_salesman_sleep',
+  'player_salesman_shot',
   'cursor',
   'hud_crosshair',
   'sfx_mexican_dynamite',
   'sfx_explosion',
   'sfx_pyromaniac_rocket',
+  'sfx_salesman_bottle',
+  'sfx_poison',
   'sfx_rocket_explosion',
   'sfx_rocket_sparkles',
   'gng_wave_arrow_a',
@@ -2422,6 +2429,7 @@ const assetNames = new Set([
   'portrait_settlers',
   'portrait_deserter',
   'portrait_pyromaniac',
+  'portrait_salesman',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
@@ -2814,6 +2822,7 @@ const positionalUnitShotSounds: Readonly<Record<UnitShotSound, { id: number; ass
 };
 const unitHireSoundVariations = {
   sound_pyromaniac: ['sound_pyromaniac_1', 'sound_pyromaniac_2'],
+  sound_snakeoilsalesman: ['sound_snakeoilsalesman_1', 'sound_snakeoilsalesman_2'],
 } as const;
 
 function playRequestedSounds(
@@ -2832,8 +2841,8 @@ function playRequestedSounds(
   for (const event of events) {
     if (event.type === 'sound-requested') {
       if (!('positionFine' in event)) {
-        const variations = event.sound === 'sound_pyromaniac'
-          ? unitHireSoundVariations.sound_pyromaniac
+        const variations = event.sound in unitHireSoundVariations
+          ? unitHireSoundVariations[event.sound as keyof typeof unitHireSoundVariations]
           : undefined;
         playAudioAsset(variations ? chooseSoundVariation(variations)! : event.sound);
         continue;

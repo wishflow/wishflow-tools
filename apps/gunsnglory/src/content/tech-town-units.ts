@@ -74,10 +74,43 @@ function createSleepingPyromaniac(cell: { x: number; y: number }): ScenarioUnit 
   };
 }
 
+function createSleepingSalesman(cell: { x: number; y: number }): ScenarioUnit {
+  const frame = { x: 0, y: 0, width: 32, height: 44 };
+  const render = createAnchoredMapRender(cell, frame);
+  return {
+    id: 'salesman-hire-01',
+    type: 'salesman',
+    activity: 4,
+    hirePrice: 110,
+    awakeAsset: 'player_salesman',
+    awakeFrame: frame,
+    awakeRender: { ...render },
+    awakeHitArea: { ...render },
+    hireSound: 'sound_snakeoilsalesman',
+    cell,
+    movementSpeedFinePer100Ms: 1500,
+    asset: 'player_salesman_sleep',
+    frame,
+    render,
+    hitArea: { ...render },
+    weapon: {
+      damage: 75,
+      damageType: 'poison',
+      poisonDamage: 40,
+      poisonDurationMs: 3000,
+      rangeFine: 30720,
+      reloadTimeMs: 5000,
+      projectileSpeed: 1500,
+      damageStyle: 5,
+      areaDamageFine: 15360,
+    },
+  };
+}
+
 /** Builds map04's fresh-game units using the original unlock decision. */
 export function createTechTownBaseUnits(isUnitUnlocked: (unitTypeId: TechTownUnitTypeId) => boolean): ScenarioUnit[] {
   const placements = createTechTownFreshGameUnitPlacements()
-    .filter(({ unitTypeId }) => (unitTypeId <= 6 || unitTypeId === 35) && isUnitUnlocked(unitTypeId));
+    .filter(({ unitTypeId }) => (unitTypeId <= 6 || unitTypeId === 35 || unitTypeId === 36) && isUnitUnlocked(unitTypeId));
   const units: ScenarioUnit[] = createSleepingMapUnitsFromGrid(map.originalTileGrid)
     .filter(({ type }) => {
       const unitTypeId = standardTypeIdForUnit(type);
@@ -92,6 +125,10 @@ export function createTechTownBaseUnits(isUnitUnlocked: (unitTypeId: TechTownUni
     }
     if (placement.activity === 4 && placement.unitTypeId === 35) {
       units.push(createSleepingPyromaniac(placement.cell));
+      continue;
+    }
+    if (placement.activity === 4 && placement.unitTypeId === 36) {
+      units.push(createSleepingSalesman(placement.cell));
       continue;
     }
     if (placement.activity !== 4 || !isFortKaboomUnitTypeId(placement.unitTypeId)) continue;

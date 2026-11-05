@@ -160,7 +160,8 @@ export type UnitHireSound =
   | 'sound_indian_hugh'
   | 'sound_sniper_laughing'
   | 'sound_grandpa_coughing'
-  | 'sound_pyromaniac';
+  | 'sound_pyromaniac'
+  | 'sound_snakeoilsalesman';
 
 export type UnitShotSound =
   | 'sound_cannon'
@@ -190,6 +191,9 @@ export interface UnitWeaponDefinition {
   /** APK GameDesignData UNIT_DATA_POST_DAMAGE and UNIT_DATA_POST_DAMAGE_DURATION. */
   postDamage?: number;
   postDamageDurationMs?: number;
+  /** APK GameDesignData UNIT_DATA_POISON_DAMAGE and UNIT_DATA_POISON_DURATION. */
+  poisonDamage?: number;
+  poisonDurationMs?: number;
   rangeFine: number;
   reloadTimeMs: number;
   projectileSpeed: number;
@@ -383,6 +387,10 @@ export interface EnemyView {
   turningAnimation?: { asset: 'horseman_turn' | 'wagon_turn' | 'stagecoach_turn' | 'horse_wagon_turn' | 'horse_wagon_turn_white'; frame: 0 | 1; mirrored: boolean };
   hitPoints: number;
   maxHitPoints: number;
+  /** Present while the original EnemyDirector poison flag is set. */
+  poisoned?: true;
+  /** Strongest active UNIT_DATA_POISON_DAMAGE value. */
+  poisonDamage?: number;
   alive: boolean;
   deathRemainingMs: number;
   animationFrame: number;
@@ -428,7 +436,7 @@ export interface ShotView {
   fineZ: 0 | 7680;
   /** Original vertical arc offset, in fine coordinates above the ground anchor. */
   heightFine: number;
-  imageAsset?: 'sfx_mexican_dynamite' | 'sfx_pyromaniac_rocket' | 'sfx_rocket_explosion';
+  imageAsset?: 'sfx_mexican_dynamite' | 'sfx_pyromaniac_rocket' | 'sfx_salesman_bottle' | 'sfx_poison' | 'sfx_rocket_explosion';
   animationFrame: number;
   explosionRemainingMs?: number;
 }
@@ -607,6 +615,8 @@ interface MutableEnemy {
   maxHitPoints: number;
   damageOverTime: number;
   damageOverTimeRemainingMs: number;
+  poisoned: boolean;
+  poisonDamage: number;
   cashReward: number;
   penetration: Readonly<Record<DamageType, number>>;
   alive: boolean;
@@ -624,6 +634,9 @@ interface MutableShot {
   damageType: DamageType;
   postDamage: number;
   postDamageDurationMs: number;
+  poisonDamage: number;
+  poisonDurationMs: number;
+  poisonRemainingMs: number;
   damageStyle: UnitWeaponDefinition['damageStyle'];
   areaDamageFine: number;
   imageAsset: ShotView['imageAsset'];
@@ -713,6 +726,9 @@ interface MutableWave {
   settlement?: WaveSettlement;
   enemies: MutableEnemy[];
   shots: MutableShot[];
+  /** UnitDirector and EnemyDirector keep independent original poison clocks. */
+  poisonApplicationTimerMs: number;
+  poisonDamageTimerMs: number;
   rocketSparkles: MutableRocketSparkle[];
   recruitPool: Record<string, number>;
   events: GameEvent[];
@@ -813,6 +829,7 @@ const PLAYER_SHOOTING_ANIMATIONS: Readonly<Record<string, {
   sniper: { asset: 'player_scout_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
   grandpa: { asset: 'player_geezer_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
   pyromaniac: { asset: 'player_pyromaniac_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
+  salesman: { asset: 'player_salesman_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
 };
 const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
 const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {
@@ -1476,6 +1493,8 @@ function createPreviewEnemy(
     maxHitPoints: hitPoints,
     damageOverTime: 0,
     damageOverTimeRemainingMs: 0,
+    poisoned: false,
+    poisonDamage: 0,
     cashReward: enemyDefinition?.cashReward ?? 0,
     penetration: enemyDefinition?.penetration ?? { light: 0, fire: 0, heavy: 0, poison: 0 },
     alive: true,
@@ -1616,6 +1635,8 @@ function createCampaignEnemy(
     maxHitPoints: hitPoints,
     damageOverTime: 0,
     damageOverTimeRemainingMs: 0,
+    poisoned: false,
+    poisonDamage: 0,
     cashReward: definition.cashReward,
     penetration: definition.penetration,
     alive: true,
@@ -2051,6 +2072,17 @@ function shotTargetDistanceSquare(positionFine: { x: number; y: number }, enemy:
   const dy = tenthTileCoordinate(positionFine.y)
     - tenthTileCoordinate(enemy.positionFine.y);
   return (dx * dx) + (dy * dy);
+}
+
+function poisonAreaRadiusSquare(shot: MutableShot): number {
+  const radiusTenthTiles = Math.trunc((shot.areaDamageFine * 10) / FINE_UNITS_PER_CELL);
+  return radiusTenthTiles * radiusTenthTiles;
+}
+
+function applyEnemyPoison(enemy: MutableEnemy, damage: number, durationMs: number): void {
+  if (!enemy.alive || enemy.hitPoints <= 0 || !enemy.damageable || enemy.type === 8 || durationMs <= 0) return;
+  enemy.poisoned = true;
+  enemy.poisonDamage = Math.max(enemy.poisonDamage, damage);
 }
 
 function unitAttackCenterTenthTiles(unit: MutableUnit): { x: number; y: number } {
@@ -2649,6 +2681,8 @@ export function createGame(options: {
           cashMade: 0,
           enemies: [],
           shots: [],
+          poisonApplicationTimerMs: 0,
+          poisonDamageTimerMs: 0,
           rocketSparkles: [],
           recruitPool: {},
           events: [],
@@ -2729,6 +2763,7 @@ export function createGame(options: {
             } : {}),
             hitPoints: enemy.hitPoints,
             maxHitPoints: enemy.maxHitPoints,
+            ...(enemy.poisoned ? { poisoned: true as const, poisonDamage: enemy.poisonDamage } : {}),
             alive: enemy.alive,
             deathRemainingMs: enemy.deathRemainingMs,
             animationFrame: enemy.animationFrame,
@@ -3203,6 +3238,9 @@ export function createGame(options: {
             }
             wave.rocketSparkles = wave.rocketSparkles.filter(({ remainingMs }) => remainingMs > 0);
             const movingEnemies = [...wave.enemies];
+            wave.poisonDamageTimerMs += deltaMs;
+            const poisonDamageTick = wave.poisonDamageTimerMs > 250;
+            if (poisonDamageTick) wave.poisonDamageTimerMs -= 250;
             let movementBlockedEnemyId: string | undefined;
             for (let enemyIndex = 0; enemyIndex < movingEnemies.length; enemyIndex += 1) {
               const enemy = movingEnemies[enemyIndex]!;
@@ -3248,6 +3286,15 @@ export function createGame(options: {
                   }
                 }
                 continue;
+              }
+              if (poisonDamageTick && enemy.poisoned) {
+                const poisonDamage = Math.trunc(
+                  (enemy.poisonDamage * damagePenetration(enemy, 'poison')) / 100,
+                );
+                if (poisonDamage > 0) applyEnemyDamage(wave, enemy, poisonDamage, priorityMap, campaignMode);
+                enemy.poisoned = false;
+                enemy.poisonDamage = 0;
+                if (!enemy.alive) continue;
               }
               const movementBlocked = movementBlockedEnemyId === enemy.id;
               movementBlockedEnemyId = undefined;
@@ -3318,10 +3365,14 @@ export function createGame(options: {
                 damageType: weapon.damageType,
                 postDamage: Math.trunc((weapon.postDamage ?? 0) * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
                 postDamageDurationMs: weapon.postDamageDurationMs ?? 0,
+                poisonDamage: Math.trunc((weapon.poisonDamage ?? 0) * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
+                poisonDurationMs: weapon.poisonDurationMs ?? 0,
+                poisonRemainingMs: 0,
                 damageStyle: weapon.damageStyle,
                 areaDamageFine: weapon.areaDamageFine ?? 0,
                 imageAsset: weapon.damageStyle === 6 ? 'sfx_pyromaniac_rocket'
-                  : weapon.damageStyle === 3 ? 'sfx_mexican_dynamite' : undefined,
+                  : weapon.damageStyle === 3 ? 'sfx_mexican_dynamite'
+                    : weapon.damageStyle === 5 ? 'sfx_salesman_bottle' : undefined,
                 animationFrame: 0,
                 startFine,
                 targetPositionFine,
@@ -3379,6 +3430,28 @@ export function createGame(options: {
 
             for (const shot of [...wave.shots]) {
               if (shot.impactResolved) {
+                if (shot.damageStyle === 5) {
+                  if (shot.poisonRemainingMs > 0) {
+                    wave.poisonApplicationTimerMs += deltaMs;
+                    if (wave.poisonApplicationTimerMs > 100) {
+                      wave.poisonApplicationTimerMs = 0;
+                      const areaSquare = poisonAreaRadiusSquare(shot);
+                      for (const enemy of wave.enemies) {
+                        if (!enemy.alive || enemy.hitPoints <= 0 || !enemy.damageable || enemy.type === 8) continue;
+                        if (enemy.id !== shot.targetId
+                          && shotTargetDistanceSquare(shot.positionFine, enemy) >= areaSquare) continue;
+                        applyEnemyPoison(enemy, shot.poisonDamage, shot.poisonDurationMs);
+                      }
+                    }
+                  }
+                  shot.poisonRemainingMs = Math.max(0, shot.poisonRemainingMs - deltaMs);
+                  shot.remainingMs = shot.poisonRemainingMs;
+                  shot.animationFrame = 5 - (Math.trunc(shot.poisonRemainingMs / 100) % 6);
+                  if (shot.poisonRemainingMs === 0) {
+                    wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+                  }
+                  continue;
+                }
                 shot.explosionRemainingMs = Math.max(0, shot.explosionRemainingMs - deltaMs);
                 shot.remainingMs = shot.explosionRemainingMs;
                 shot.animationFrame = Math.min(7, Math.floor((799 - shot.explosionRemainingMs) / 100));
@@ -3431,6 +3504,7 @@ export function createGame(options: {
                   : (!rocket.hasJumped && target?.alive && target.damageable ? [target] : []);
                 const affectedEnemyIds: string[] = [];
                 rocket.damageDone = true;
+                wave.poisonApplicationTimerMs = 0;
                 for (const hitEnemy of affected) {
                   affectedEnemyIds.push(hitEnemy.id);
                   const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
@@ -3470,11 +3544,14 @@ export function createGame(options: {
                 x: Math.trunc(((shot.startFine.x * shot.remainingMs) + (targetPositionFine.x * elapsedShotMs)) / shot.totalTravelTimeMs),
                 y: Math.trunc(((shot.startFine.y * shot.remainingMs) + (targetPositionFine.y * elapsedShotMs)) / shot.totalTravelTimeMs),
               };
-              shot.animationFrame = Math.floor(elapsedShotMs / 100) % (shot.damageStyle === 3 ? 3 : 10);
+              shot.animationFrame = Math.floor(elapsedShotMs / 100) % (
+                shot.damageStyle === 3 || shot.damageStyle === 5 ? 3 : 10
+              );
               if (shot.remainingMs > 0) continue;
 
               const areaRadiusTenthTiles = Math.trunc((shot.areaDamageFine * 10) / FINE_UNITS_PER_CELL);
               const areaSquare = areaRadiusTenthTiles * areaRadiusTenthTiles;
+              wave.poisonApplicationTimerMs = 0;
               const affected = shot.areaDamageFine > 0
                 ? wave.enemies.filter((enemy) => enemy.alive && enemy.damageable && (
                   enemy.id === shot.targetId
@@ -3499,6 +3576,20 @@ export function createGame(options: {
                 wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite', positionFine: { ...shot.positionFine } });
               } else if (shot.damageStyle === 4) {
                 wave.events.push({ type: 'sound-requested', sound: 'sound_cannon', positionFine: { ...shot.positionFine } });
+              } else if (shot.damageStyle === 5) {
+                wave.events.push({ type: 'sound-requested', sound: 'sound_poison_splash', positionFine: { ...shot.positionFine } });
+                shot.impactResolved = true;
+                shot.imageAsset = 'sfx_poison';
+                shot.poisonRemainingMs = Math.max(0, shot.poisonDurationMs - deltaMs);
+                shot.remainingMs = shot.poisonRemainingMs;
+                shot.animationFrame = 5 - (Math.trunc(shot.poisonRemainingMs / 100) % 6);
+                shot.positionFine = { ...targetPositionFine };
+                if (shot.poisonRemainingMs === 0) {
+                  wave.shots = wave.shots.filter((candidate) => candidate !== shot);
+                }
+              }
+              if (shot.damageStyle === 5) {
+                continue;
               }
               if (shot.damageStyle === 3 || shot.areaDamageFine > 0) {
                 shot.impactResolved = true;

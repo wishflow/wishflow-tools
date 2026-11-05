@@ -226,7 +226,7 @@ test('restores marker units after their campaign unlock callback allows them', (
   const grandpa = units.filter(({ type }) => type === 'grandpa');
   const pyromaniac = units.filter(({ type }) => type === 'pyromaniac');
 
-  assert.equal(units.length, 28);
+  assert.equal(units.length, 29);
   assert.deepEqual(sniper.map(({ cell, activity }) => ({ cell, activity })), expectedCellsByCode[100]!.map(([x, y]) => ({
     cell: { x, y }, activity: 4,
   })));

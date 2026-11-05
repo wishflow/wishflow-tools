@@ -17,6 +17,8 @@ export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
 const FINE_UNITS_PER_CELL = 7680;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
 const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
+const SALESMAN_BOTTLE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
+const POISON_CLOUD_FRAME = Object.freeze({ width: 32, height: 32, count: 6 });
 const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
 const ROCKET_FRAME = Object.freeze({ width: 16, height: 16, count: 16 });
 const ROCKET_EXPLOSION_FRAME = Object.freeze({ width: 56, height: 52, count: 8 });
@@ -646,6 +648,25 @@ function drawShot(
     );
     return;
   }
+  if (shot.imageAsset === 'sfx_poison') {
+    const image = images.sfx_poison;
+    if (!image) throw new Error('Missing game image: sfx_poison');
+    const frame = Math.min(POISON_CLOUD_FRAME.count - 1, Math.max(0, shot.animationFrame));
+    const width = POISON_CLOUD_FRAME.width * tileScale;
+    const height = POISON_CLOUD_FRAME.height * tileScale;
+    context.drawImage(
+      image,
+      frame * POISON_CLOUD_FRAME.width,
+      0,
+      POISON_CLOUD_FRAME.width,
+      POISON_CLOUD_FRAME.height,
+      x - width / 2,
+      y - height,
+      width,
+      height,
+    );
+    return;
+  }
   if (shot.imageAsset) {
     if (shot.explosionRemainingMs !== undefined) {
       const image = images.sfx_explosion;
@@ -669,8 +690,9 @@ function drawShot(
 
     const image = images[shot.imageAsset];
     if (!image) throw new Error('Missing game image: ' + shot.imageAsset);
-    const isRocket = shot.imageAsset === 'sfx_pyromaniac_rocket';
-    const frameSpec = isRocket ? ROCKET_FRAME : MEXICAN_DYNAMITE_FRAME;
+    const frameSpec = shot.imageAsset === 'sfx_pyromaniac_rocket'
+      ? ROCKET_FRAME
+      : shot.imageAsset === 'sfx_salesman_bottle' ? SALESMAN_BOTTLE_FRAME : MEXICAN_DYNAMITE_FRAME;
     const frame = Math.min(frameSpec.count - 1, Math.max(0, shot.animationFrame));
     const width = frameSpec.width * tileScale;
     const height = frameSpec.height * tileScale;

@@ -9,12 +9,12 @@
 - 正式关卡 **3/60**：Cow Gulch、Apache Valley、Fort Kaboom 已完成真实战役验收。
 - map03 与移动端工具栏修复已完成。本地完整检查通过：类型检查、285 项单测、生产构建和 91/91 E2E；当前没有因新代码变化而需要重跑。
 - 公开版本仍是 master 上的 e922c3f。当前开发分支另有尚未集成的已验收提交；整批完成前不将本地代码称为已发布。
-- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭与 Pyromaniac 地图单位已按 APK 实现并通过切片验证，下一项是 Salesman 毒瓶。
+- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭、Pyromaniac 地图单位与 Salesman 毒瓶已按 APK 实现并通过切片验证，下一项是 Gambler/Casino。
 - 原始 32×24 TDM、四条方向场路线、全部相关标记坐标，以及 768 个地形图块和 147 个道路/铁路绘制项已导入并通过定向测试。`tech-town-scene.ts` 按 APK 码位组装 52 个静态装饰/建筑，资源锚点与 hdpi 原图已核对；此场景尚未接入正式战役。
 - 本轮核对更正了地图单位码位：96–101 是 type 1–6 的休眠单位（activity 4）；104–109 是 type 1–6 的活动单位（activity 5），本图仅有 105，即 type 2 Mexican；130、131 分别是 type 35 Pyromaniac 与 type 36 Salesman 的休眠单位；132 是活动 Gambler（type 9）。这些对象仅在新局的 `fromLoadGame=false` 分支创建，并均受 `GameObjectUnit.create()` 的解锁检查。code 150 是仅在 type 9 解锁时创建的 Casino 生成点。JADX 对该方法的 Java `switch` 反编译存在控制流错误；此处以 APK 中对应 DEX 指令的 smali 分支为准，不照抄该方法的 Java 伪源码。
 - `GameObjectUnit.isUnlocked()` 按 `unlockUnitData[type]` 判断：当前关卡达到门槛或档案已完成对应后续关卡时解锁。APK 的门槛数组为 Grandpa/type 6：21 或完成 30；Sniper/type 5：31 或完成 40；Pyromaniac/type 35：41 或完成 50；Salesman/type 36：51 或完成 60；Gambler/type 9：41 或完成 50。`hasAllUnitsUnlock()` 是 IAP 全单位解锁，本网页不提供该付费旁路。首次进入 Tech Town（global level 4）时，code 100、101、130、131、132 和 Casino code 150 均因未解锁而不创建；原始网格有 26 个休眠标记，不等于当时实际生成 26 个单位。
 - 已实现 Tech Town 新局单位码位解析：逐行生成 source code、unit type、activity 和格坐标；原图含 26 个休眠标记、一个活动 Mexican、一个 Pyromaniac、一个 Salesman 和一个 Gambler。解析只记录原图对象，不应用档案解锁门槛，也尚未连接到可玩关卡。
-- 已扩展 Tech Town 新局单位工厂，按传入的解锁判定生成 type 1–6 和 code 130/type 35 Pyromaniac。使用首次进入 level 4 的原版解锁状态时会生成 22 个休眠单位及 1 个活动 Mexican；type 5/6 解锁后可生成全部 26 个普通休眠标记；type 35 仅在解锁回调允许时创建，APK 门槛为 level 41 或已完成 level 50。单位仍未接入正式战役。
+- 已扩展 Tech Town 新局单位工厂，按传入的解锁判定生成 type 1–6、code 130/type 35 Pyromaniac 和 code 131/type 36 Salesman。首次进入 level 4 时只生成原版已解锁对象；type 5/6、Pyromaniac、Salesman 均由各自门槛控制。Pyromaniac 和 Salesman 已有单独的资源、雇佣和战斗规则测试；单位仍未接入正式战役。
 
 ## Tech Town（map04）已确认基线
 
@@ -26,7 +26,7 @@
 | 铁路编组与寻路 | TDM 第 12 行包含连续 83、83、84、84、84。createTrainFromMap 将其转为横向列车单元 10、11、12、12、12；TrainHorizontal.getImage 指向两段机车和车厢，类型 12 声明有武器槽，列车移动只改横向分量。PriorityMap 按入口方向和 52–65 方向标记递归，不以地形码判断通行；map04 的四条路线会经过铁路图块。 | 还原列车编组、车厢槽位、移动、绘制顺序与轨道边界；路线必须按原版方向场复现，不得将铁路码一概视为阻挡。挂载/招募规则须继续沿调用链核实，不能只凭对白猜测。 |
 | 波次与动作 | GameDesignWaves.setWaves(..., 4) 定义 8 波。第 2 波前将敌方生成池计数数组设为 0，再将上限数组设为 5；SpawnPoolManager.performActionsForWave 已确认动作码 1/3 分别表示 set / set-max。 | 八波、生成池、难度参数和动作顺序逐项与 APK 对照，不能把敌方生成池动作误作玩家招募池。 |
 | 关卡参数 | GameDesignData.gameDesignData[3] 对应 map04；原始十二项为 [0x12c, 0x32, 0x3e7, 0x61a8, 0, 0x7530, 5, 0x20, 0x4b, 0x96, 0xbc, 0x48ff8]。 | 实现前通过字段常量和消费者确认每项语义，再映射到网页内容；不得按相邻关卡猜字段。 |
-| 文案和素材 | GameDesignWaves 引用 T_IA_CAMPAIGN_04_01 与 T_CAMPAIGN_04_02 至 _08，对白共 8 段，含 Engineer 肖像。APK 默认英文资源可读；其打包 locale 不含中文，中文对白需按站点语言补译。网页已迁入地图地形、路径、横向铁路、桥、静态装饰与 Saloon/Fort/Tipi/Casino 图像，以及 type 35 Pyromaniac 的休眠、活动、射击图集、肖像和两种雇佣语音；type 36 Salesman、Gambler、横向列车与 Gatling 图像/动画仍待实现步骤核对，波次对白的场景接入仍待后续步骤。 | 只迁入 map04 可达的原版资源；补齐中文文案和正式资源预加载，不提前搬运其他地图素材。 |
+| 文案和素材 | GameDesignWaves 引用 T_IA_CAMPAIGN_04_01 与 T_CAMPAIGN_04_02 至 _08，对白共 8 段，含 Engineer 肖像。APK 默认英文资源可读；其打包 locale 不含中文，中文对白需按站点语言补译。网页已迁入地图地形、路径、横向铁路、桥、静态装饰与 Saloon/Fort/Tipi/Casino 图像，以及 type 35 Pyromaniac、type 36 Salesman 的角色图集、肖像、投射物和相关音频；Gambler、横向列车与 Gatling 图像/动画仍待实现步骤核对，波次对白的场景接入仍待后续步骤。 | 只迁入 map04 可达的原版资源；补齐中文文案和正式资源预加载，不提前搬运其他地图素材。 |
 
 ### 本批后续实现步骤
 
@@ -34,7 +34,6 @@
 
 | 步骤 | 范围、依赖和预计改动 | 验收条件 | 针对性验证 |
 | --- | --- | --- | --- |
-| 3.3 Salesman 单位与毒瓶 | 依赖普通单位工厂。code131→type36/activity4/(30,14)，解锁为 level51 或已完成 level60。先将 `GameDesignData.unitDataSalesman[0]` 映射为 `[1500,110,3,75,30720,15360,0,0,5000,1500,0,1,5,0,3000,40]`，再核对 style5 的 `GameObjectShot.move()/draw()`、`UnitDirector` 命中路径、`GameObjectEnemy.getsPoisoned()` 和 `FxFactory.createAoePoison()`；加入休眠/活动/射击图集、肖像、`sfx_salesman_bottle` 与两种 `sound_snakeoilsalesman` 语音。 | 未解锁时不创建 code131；解锁后能按110雇佣，速度1500，style5 投射物和15360 AOE符合 APK；level0 毒伤75、持续3000ms、每次40、减速0，敌人抗性及效果终止时点正确。没有毒伤/减速字段的单位不受影响，现有燃烧和火箭回归测试继续通过。 | 新增 `tech-town-salesman.test.ts` 覆盖码位/解锁/价格、毒瓶运动与帧、AOE严格边界、毒抗/40点周期/3000ms终止/零减速、音效变体和素材尺寸；运行该测试、`tests/game.test.ts`、`tests/game-projectile-style6.test.ts`、`tests/fort-kaboom-units.test.ts`、`tests/sfx-manager.test.ts` 和 `tests/game-asset-path.test.ts`，再运行 typecheck。 |
 | 3.4 Gambler 与 Casino | 依赖正式档案解锁读取及角色资源加载。code132→type9/activity5/(29,3)，code150 在 (30,3) 建 Casino；两者由 level41 或已完成 level50 的同一解锁状态门控。按 `Gambler.deselect()/playCards()/selectCasino()`、`GameDesignData.unitDataGambler[0]`、`GamblerDialog` 和 `GamblerResults` 还原：底注50、每次已完成牌局后加5且最多加至75；牌权重 `[20,15,13,11,4,9,5,4,11,8]`，映射 type1–6/35/36、双倍赢钱和输钱；核对解锁过滤、`Randomizer` 共享随机消费、牌面动画、获奖单位通过 Casino `instantSpawn` 的路径。 | 未解锁时 Gambler 与 Casino 均不存在；解锁后每局一名 Gambler 配一座 Casino。资金不足不扣款/开局，开始一局只扣一次底注，牌局结果最多结算一次；随机种子决定抽牌与额外单位生成，奖项、资金、冷却、出牌动画和关闭行为符合 APK。不实现广告、支付或联网内容。 | 新增 `tech-town-gambler.test.ts` 覆盖锁定配对、底注递增/上限、全部权重结果、解锁牌过滤、固定随机源调用次数、奖励单位生成和资金边界；运行该测试与 `tests/tech-town-map.test.ts`，再运行 typecheck。正式地图接入后由步骤5战役 E2E覆盖窗口内交互。 |
 | 检查点 A：特殊单位 | 依赖 3.3–3.4。 | Pyromaniac、Salesman、Gambler 的解锁、资源和特殊战斗规则可分别核对；type 1–6 单位基线维持首次 level 4 的 23 个、全解锁后的 27 个，特殊单位另按各自门槛创建。 | 运行新增特殊单位/投射物、资源清单和 map04/campaign 定向测试；不跑全套。 |
 | 3.5 横向列车 | 依赖 Tech Town 地图/路线基线。按原图第 12 行的 83/84 标记生成 10、11、12、12、12 的列车编组；追踪 `GameObjectManager.createTrainFromMap()`、`TrainHorizontal` 及碰撞/输入调用者，接入现有场景、模拟和绘制层。 | 只生成一组、顺序和初始位置符合 APK；列车按 X 轴移动，碰撞/地图边界、车厢相对位置、动画与绘制层符合对应代码；禁止由铁路图块自动推导车辆。 | 新增 `tech-town-train.test.ts` 覆盖编组、移动边界、车厢间距、碰撞和绘制顺序；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-train.test.ts tests/tech-town-map.test.ts`，再运行 typecheck。 |
@@ -47,7 +46,7 @@
 
 依赖顺序：
 
-    Tech Town 网格/路线/图层/普通单位基线（已完成，含 Pyromaniac） → Salesman 毒瓶 → Gambler/Casino → 检查点 A → 横向列车 → Gatling → 检查点 B → 八波/单位池/经济 → 波次对白/音频 → 正式解锁与结算 → 完整检查和浏览器验收
+    Tech Town 网格/路线/图层/普通单位基线（已完成，含 Pyromaniac、Salesman） → Gambler/Casino → 检查点 A → 横向列车 → Gatling → 检查点 B → 八波/单位池/经济 → 波次对白/音频 → 正式解锁与结算 → 完整检查和浏览器验收
 
 单位码位解析已对照 APK 网格、`GameObjectManager.createGameObjectsFromBasicMap()` 的分支和 `GameObjectUnit.create()/isUnlocked()`。该方法的 JADX Java `switch` 输出存在控制流错误，不能作为码位依据；已以 DEX smali 指令复核。每个后续步骤开工前只追踪该步骤列出的方法和消费者；遇到静态证据缺口先记明缺失能力与判定标准，再做一次最小定点核对，不靠反复启动页面或模拟通关猜规则。步骤 5 的真实胜利只用于验证新地图的完整战役链；不重跑 map01–03 的已验收战役。
 
