@@ -296,14 +296,82 @@ export function deriveOriginalTdmMapDrawCommands(content: Pick<CowGulchSource, '
     }];
   }));
   const paths = deriveOriginalStreets(pathTiles, random);
-  const bridges: RenderTile[] = [];
-  const piers: RenderTile[] = [];
+  const pathByCell = new Map(paths.map((tile) => [`${tile.x},${tile.y}`, tile]));
+
+  const hasRailwayTracks = raw.some((row) => row.some((tile) => (
+    (tile >= 81 && tile <= 85) || (tile >= 89 && tile <= 93)
+  )));
+  if (!hasRailwayTracks) {
+    const bridges: RenderTile[] = [];
+    const piers: RenderTile[] = [];
+    for (let y = 0; y < streetCodes.length; y += 1) {
+      const row = streetCodes[y] ?? [];
+      for (let x = 0; x < row.length; x += 1) {
+        if (raw[y]?.[x] === 80) {
+          bridges.push({
+            asset: 'tiles_bridge_hori',
+            source: { x: 0, y: 0, width: 48, height: 32 },
+            x: x - 0.25,
+            y,
+            width: 1.5,
+            height: 1,
+          });
+        } else if (raw[y]?.[x] === 88) {
+          bridges.push({
+            asset: 'tiles_bridge_verti',
+            source: { x: 0, y: 0, width: 32, height: 48 },
+            x,
+            y: y - 0.25,
+            width: 1,
+            height: 1.5,
+          });
+        }
+      }
+
+      let bridgeStart: number | undefined;
+      for (let x = 0; x <= row.length; x += 1) {
+        if (row[x] === 64) {
+          bridgeStart ??= x;
+          continue;
+        }
+        if (bridgeStart === undefined) continue;
+        const bridgeEnd = x - 1;
+        piers.push(
+          {
+            asset: 'tiles_bridge_pier_left',
+            source: { x: 0, y: 0, width: 24, height: 24 },
+            x: bridgeStart - 0.25,
+            y: y + 0.75,
+            width: 0.75,
+            height: 0.75,
+          },
+          {
+            asset: 'tiles_bridge_pier_right',
+            source: { x: 0, y: 0, width: 24, height: 24 },
+            x: bridgeEnd + 0.5,
+            y: y + 0.75,
+            width: 0.75,
+            height: 0.75,
+          },
+        );
+        bridgeStart = undefined;
+      }
+    }
+    return { background, streets: [...paths, ...bridges, ...piers] };
+  }
+
+  const streets: RenderTile[] = [];
 
   for (let y = 0; y < streetCodes.length; y += 1) {
     const row = streetCodes[y] ?? [];
+    let horizontalBridgeStart: number | undefined;
     for (let x = 0; x < row.length; x += 1) {
-      if (raw[y]?.[x] === 80) {
-        bridges.push({
+      const streetCode = row[x] ?? 0;
+      const path = pathByCell.get(`${x},${y}`);
+      if (path) streets.push(path);
+
+      if (streetCode === 64) {
+        streets.push({
           asset: 'tiles_bridge_hori',
           source: { x: 0, y: 0, width: 48, height: 32 },
           x: x - 0.25,
@@ -311,8 +379,8 @@ export function deriveOriginalTdmMapDrawCommands(content: Pick<CowGulchSource, '
           width: 1.5,
           height: 1,
         });
-      } else if (raw[y]?.[x] === 88) {
-        bridges.push({
+      } else if (streetCode === 76) {
+        streets.push({
           asset: 'tiles_bridge_verti',
           source: { x: 0, y: 0, width: 32, height: 48 },
           x,
@@ -320,38 +388,51 @@ export function deriveOriginalTdmMapDrawCommands(content: Pick<CowGulchSource, '
           width: 1,
           height: 1.5,
         });
+      } else if (streetCode === 68 || streetCode === 72) {
+        streets.push({
+          asset: 'tiles_railway_hori',
+          source: { x: 0, y: 0, width: 32, height: 32 },
+          x,
+          y,
+          width: 1,
+          height: 1,
+        });
+      } else if (streetCode === 80 || streetCode === 84) {
+        streets.push({
+          asset: 'tiles_railway_verti',
+          source: { x: 0, y: 0, width: 32, height: 32 },
+          x,
+          y,
+          width: 1,
+          height: 1,
+        });
       }
-    }
 
-    let bridgeStart: number | undefined;
-    for (let x = 0; x <= row.length; x += 1) {
-      if (row[x] === 64) {
-        bridgeStart ??= x;
-        continue;
-      }
-      if (bridgeStart === undefined) continue;
-      const bridgeEnd = x - 1;
-      piers.push(
-        {
-          asset: 'tiles_bridge_pier_left',
-          source: { x: 0, y: 0, width: 24, height: 24 },
-          x: bridgeStart - 0.25,
-          y: y + 0.75,
-          width: 0.75,
-          height: 0.75,
-        },
-        {
+      if (streetCode === 64 || streetCode === 68) {
+        if (horizontalBridgeStart === undefined) {
+          horizontalBridgeStart = x;
+          streets.push({
+            asset: 'tiles_bridge_pier_left',
+            source: { x: 0, y: 0, width: 24, height: 24 },
+            x: x - 0.25,
+            y: y + 0.75,
+            width: 0.75,
+            height: 0.75,
+          });
+        }
+      } else if (horizontalBridgeStart !== undefined) {
+        streets.push({
           asset: 'tiles_bridge_pier_right',
           source: { x: 0, y: 0, width: 24, height: 24 },
-          x: bridgeEnd + 0.5,
+          x: x - 0.5,
           y: y + 0.75,
           width: 0.75,
           height: 0.75,
-        },
-      );
-      bridgeStart = undefined;
+        });
+        horizontalBridgeStart = undefined;
+      }
     }
   }
 
-  return { background, streets: [...paths, ...bridges, ...piers] };
+  return { background, streets };
 }

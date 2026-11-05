@@ -3,7 +3,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import map from '../src/content/new-mexico-04.json';
+import { createTechTownMapScene } from '../src/content/tech-town-scene';
 import { techTownRouteDefinitions } from '../src/content/tech-town-routes';
+import { deriveOriginalTdmMapDrawCommands } from './helpers/terrain-render-reference';
+import { gameAssetLogicalSize, gameAssetRelativePath, gameAssetSourceScale } from '../src/render/game-asset-path';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 
@@ -17,15 +20,43 @@ const expectedCellsByCode: Readonly<Record<number, readonly (readonly [number, n
   53: [[8, 3], [7, 4], [25, 9], [24, 10]],
   54: [[12, 20], [11, 21]],
   55: [[8, 9], [11, 9], [7, 10], [12, 10], [9, 15], [10, 16], [25, 17], [24, 18]],
+  68: [[2, 0], [13, 0], [29, 0], [23, 2], [30, 8], [1, 13], [20, 13], [19, 18], [2, 19], [4, 23]],
+  69: [[7, 1], [19, 6], [27, 10], [7, 13], [18, 16], [5, 21], [14, 21]],
+  70: [[24, 1], [27, 2], [30, 6], [21, 16], [7, 20]],
+  71: [[10, 1]],
+  72: [[6, 16]],
+  73: [[16, 1], [26, 6], [22, 18], [30, 20], [1, 22]],
+  74: [[5, 8]],
+  75: [[4, 11], [21, 11]],
+  76: [[22, 5], [1, 10], [15, 11], [14, 15], [3, 21], [14, 23]],
+  77: [[21, 2]],
+  79: [],
+  80: [[7, 6], [8, 6], [24, 14], [25, 14], [9, 18], [10, 18]],
+  81: [[11, 12], [12, 12], [24, 12], [25, 12]],
+  82: [[2, 12], [3, 12], [9, 12], [10, 12], [13, 12], [14, 12], [15, 12], [16, 12], [17, 12], [18, 12], [19, 12], [20, 12], [21, 12], [22, 12], [23, 12], [26, 12], [27, 12], [28, 12], [29, 12]],
+  83: [[4, 12], [5, 12]],
+  84: [[6, 12], [7, 12], [8, 12]],
+  86: [[1, 12]],
+  87: [[30, 12]],
+  88: [[3, 2], [3, 3], [3, 4], [16, 8], [16, 9], [16, 10]],
   96: [[24, 3], [15, 5], [20, 5], [29, 6], [11, 7], [27, 9], [29, 10]],
   97: [[17, 3], [27, 3], [10, 4], [13, 5], [24, 5]],
   98: [[15, 14], [21, 15], [15, 19], [18, 21]],
   99: [[2, 7], [4, 9], [1, 15], [6, 15], [6, 19], [3, 20]],
   100: [[18, 11]],
   101: [[22, 6], [27, 15], [26, 19]],
+  105: [[13, 11]],
   112: [[13, 3]],
   113: [[22, 20]],
   114: [[5, 17]],
+  116: [[18, 5], [2, 8], [19, 19]],
+  117: [[5, 14], [7, 16], [2, 18], [7, 22]],
+  124: [[26, 22], [28, 22], [25, 23], [26, 23], [27, 23], [28, 23], [29, 23], [30, 23], [31, 23]],
+  125: [[26, 21], [27, 21], [28, 21], [25, 22], [29, 22], [30, 22], [31, 22]],
+  126: [[27, 22]],
+  130: [[0, 20]],
+  131: [[30, 14]],
+  132: [[29, 3]],
   150: [[30, 3]],
 };
 
@@ -171,4 +202,97 @@ test('reconstructs all four APK routes, including their directed railway crossin
     [52, 53, 54, 55].flatMap((code) => coordinatesForCode(map.originalTileGrid, code).map(([x, y]) => `${x},${y}`)).sort(),
     'the four route graphs account for every raw direction field',
   );
+});
+
+test('restores APK-derived Tech Town terrain, path, rail and bridge layers', () => {
+  const scene = createTechTownMapScene();
+  const expected = deriveOriginalTdmMapDrawCommands(map);
+
+  assert.deepEqual(scene.background, expected.background);
+  assert.deepEqual(scene.streets, expected.streets);
+  assert.equal(scene.background.length, 32 * 24);
+  assert.equal(scene.streets.filter(({ asset }) => asset === 'tiles_railway_hori').length, 28);
+  assert.equal(scene.streets.filter(({ asset }) => asset === 'tiles_railway_verti').length, 0);
+  assert.equal(scene.streets.filter(({ asset }) => asset === 'tiles_bridge_hori').length, 6);
+  assert.equal(scene.streets.filter(({ asset }) => asset === 'tiles_bridge_verti').length, 6);
+  assert.ok(scene.streets.some(({ asset }) => asset === 'tiles_path_var'));
+});
+
+test('places every known Tech Town static object at its APK code and anchor', () => {
+  const scene = createTechTownMapScene();
+  const assetsByCode: Readonly<Record<number, string>> = {
+    68: 'e_1x1_cactus_a',
+    69: 'e_1x1_rocks_a',
+    70: 'e_1x1_rocks_b',
+    71: 'e_1x1_tree',
+    72: 'b_1x1_stake',
+    73: 'e_1x1_cactus_b',
+    74: 'b_1x1_windmill',
+    75: 'b_1x1_watertower',
+    76: 'e_1x1_bush',
+    77: 'e_1x2_bones',
+    86: 'tiles_railway_buffers_hori_left',
+    87: 'tiles_railway_buffers_hori_right',
+    112: 'b_3x2_saloon',
+    113: 'b_3x2_fort',
+    114: 'b_2x1_tipi',
+    116: 'b_2x1_shack',
+    117: 'b_1x1_tipi_small',
+    126: 'e_1x1_rocks_water',
+  };
+  const expected = map.originalTileGrid.flatMap((row, y) => row.flatMap((code, x) => (
+    assetsByCode[code] ? [{ asset: assetsByCode[code]!, cell: { x, y } }] : []
+  )));
+
+  assert.deepEqual(scene.decorations?.map(({ asset, cell }) => ({ asset, cell })), expected);
+  assert.equal(scene.decorations?.length, 52);
+  assert.equal(scene.decorations?.some(({ asset }) => asset === 'b_3x2_casino'), false);
+
+  const saloon = scene.decorations?.find(({ asset }) => asset === 'b_3x2_saloon');
+  const fort = scene.decorations?.find(({ asset }) => asset === 'b_3x2_fort');
+  const tipi = scene.decorations?.find(({ asset }) => asset === 'b_2x1_tipi');
+  const shack = scene.decorations?.find(({ asset }) => asset === 'b_2x1_shack');
+  assert.equal(saloon?.anchorOffsetY, -0.3);
+  assert.equal(fort?.anchorOffsetY, -0.3);
+  assert.deepEqual({ x: tipi?.anchorOffsetX, y: tipi?.anchorOffsetY }, { x: -0.5, y: -0.3 });
+  assert.equal(shack?.anchorOffsetX, -0.5);
+
+  const unlockedScene = createTechTownMapScene({ gamblerUnlocked: true });
+  const casino = unlockedScene.decorations?.find(({ asset }) => asset === 'b_3x2_casino');
+  assert.deepEqual(casino?.cell, { x: 30, y: 3 });
+  assert.equal(casino?.anchorOffsetY, -0.3);
+});
+
+test('bundles every Tech Town scene image from the APK at its original logical scale', () => {
+  const scene = createTechTownMapScene();
+  const unlockedScene = createTechTownMapScene({ gamblerUnlocked: true });
+  const assets = new Set([
+    ...scene.background.map(({ asset }) => asset),
+    ...scene.streets.map(({ asset }) => asset),
+    ...(scene.decorations ?? []).map(({ asset }) => asset),
+    ...(unlockedScene.decorations ?? []).map(({ asset }) => asset),
+  ]);
+  const decorationAssets = new Set([
+    ...(scene.decorations ?? []).map(({ asset }) => asset),
+    ...(unlockedScene.decorations ?? []).map(({ asset }) => asset),
+  ]);
+  for (const asset of assets) {
+    const relativePath = gameAssetRelativePath(asset);
+    const bytes = readFileSync(path.join(appRoot, 'public/assets', relativePath));
+    assert.equal(bytes.subarray(0, 8).toString('hex'), '89504e470d0a1a0a', `asset ${asset} is a PNG`);
+    assert.match(relativePath, /^hdpi\//, `asset ${asset} retains APK density`);
+    if (decorationAssets.has(asset)) {
+      const sourceSize = { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
+      assert.deepEqual(gameAssetLogicalSize(asset, sourceSize), {
+        width: sourceSize.width * (2 / 3),
+        height: sourceSize.height * (2 / 3),
+      }, `${asset} converts APK hdpi pixels to mdpi game dimensions`);
+    }
+  }
+
+  assert.deepEqual(gameAssetLogicalSize('b_3x2_saloon', { width: 120, height: 120 }), { width: 80, height: 80 });
+  assert.deepEqual(gameAssetLogicalSize('b_3x2_casino', { width: 120, height: 120 }), { width: 80, height: 80 });
+  assert.deepEqual(gameAssetLogicalSize('b_2x1_tipi', { width: 84, height: 108 }), { width: 56, height: 72 });
+  assert.deepEqual(gameAssetLogicalSize('tiles_railway_buffers_hori_left', { width: 48, height: 48 }), { width: 32, height: 32 });
+  assert.equal(gameAssetSourceScale('tiles_railway_hori'), 1.5);
 });
