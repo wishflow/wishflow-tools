@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import map from '../src/content/new-mexico-04.json';
 import { createTechTownMapScene } from '../src/content/tech-town-scene';
+import { createTechTownFreshGameUnitPlacements } from '../src/content/tech-town-map-units';
 import { techTownRouteDefinitions } from '../src/content/tech-town-routes';
 import { deriveOriginalTdmMapDrawCommands } from './helpers/terrain-render-reference';
 import { gameAssetLogicalSize, gameAssetRelativePath, gameAssetSourceScale } from '../src/render/game-asset-path';
@@ -136,6 +137,64 @@ test('preserves all Tech Town entrance, exit, direction-field and object coordin
       `TDM code ${code} retains every original coordinate`,
     );
   }
+});
+
+test('decodes every fresh-game unit marker into its APK type and activity', () => {
+  const unitMetadataByCode = {
+    96: { unitTypeId: 1, activity: 4 },
+    97: { unitTypeId: 2, activity: 4 },
+    98: { unitTypeId: 3, activity: 4 },
+    99: { unitTypeId: 4, activity: 4 },
+    100: { unitTypeId: 5, activity: 4 },
+    101: { unitTypeId: 6, activity: 4 },
+    104: { unitTypeId: 1, activity: 5 },
+    105: { unitTypeId: 2, activity: 5 },
+    106: { unitTypeId: 3, activity: 5 },
+    107: { unitTypeId: 4, activity: 5 },
+    108: { unitTypeId: 5, activity: 5 },
+    109: { unitTypeId: 6, activity: 5 },
+    130: { unitTypeId: 35, activity: 4 },
+    131: { unitTypeId: 36, activity: 4 },
+    132: { unitTypeId: 9, activity: 5 },
+  } as const;
+  const allUnitCodes = Object.keys(unitMetadataByCode).map(Number);
+  const decoded = createTechTownFreshGameUnitPlacements([[...allUnitCodes, 150]]);
+
+  assert.deepEqual(decoded.map(({ sourceCode, unitTypeId, activity, cell }) => ({
+    sourceCode,
+    unitTypeId,
+    activity,
+    cell,
+  })), Object.entries(unitMetadataByCode).map(([sourceCode, { unitTypeId, activity }], x) => ({
+    sourceCode: Number(sourceCode),
+    unitTypeId,
+    activity,
+    cell: { x, y: 0 },
+  })));
+});
+
+test('places Tech Town units at every original map coordinate without treating Casino as a unit', () => {
+  const expectedUnitMetadataByCode = {
+    96: { unitTypeId: 1, activity: 4 },
+    97: { unitTypeId: 2, activity: 4 },
+    98: { unitTypeId: 3, activity: 4 },
+    99: { unitTypeId: 4, activity: 4 },
+    100: { unitTypeId: 5, activity: 4 },
+    101: { unitTypeId: 6, activity: 4 },
+    105: { unitTypeId: 2, activity: 5 },
+    130: { unitTypeId: 35, activity: 4 },
+    131: { unitTypeId: 36, activity: 4 },
+    132: { unitTypeId: 9, activity: 5 },
+  } as const;
+  const expected = Object.entries(expectedUnitMetadataByCode).flatMap(([sourceCode, metadata]) => (
+    expectedCellsByCode[Number(sourceCode)]!.map(([x, y]) => ({
+      sourceCode: Number(sourceCode),
+      ...metadata,
+      cell: { x, y },
+    }))
+  )).sort((left, right) => left.cell.y - right.cell.y || left.cell.x - right.cell.x);
+
+  assert.deepEqual(createTechTownFreshGameUnitPlacements(), expected);
 });
 
 test('reconstructs all four APK routes, including their directed railway crossings', () => {

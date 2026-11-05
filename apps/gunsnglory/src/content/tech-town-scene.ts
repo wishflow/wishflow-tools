@@ -29,7 +29,7 @@ const casinoDecoration: Omit<MapDecoration, 'cell'> = Object.freeze({
 
 export function createTechTownMapScene(options: { gamblerUnlocked?: boolean } = {}) {
   // Code 132 is the conditional Gambler unit and belongs to the stage's unit model.
-  // Codes 105, 130 and 131 have no confirmed drawable mapping; the source grid retains them.
+  // Codes 105, 130 and 131 create units; they are not static scene decorations.
   const decorations = map.originalTileGrid.flatMap((row, y) => row.flatMap((code, x) => {
     const decoration = code === 150
       ? options.gamblerUnlocked ? casinoDecoration : undefined
