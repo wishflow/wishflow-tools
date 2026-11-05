@@ -1,4 +1,5 @@
-import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
+import type { BonusCrateView, BonusNoticeView, Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
+import { campaignBonusRewardAsset } from '../game/campaign-bonus-crates';
 import { GAME_DRAW_ORDER_ROAD_CUTOFF } from '../game/draw-order';
 import {
   calculateMapViewport,
@@ -107,6 +108,8 @@ function drawUnit(
   unit: UnitView,
   images: GameImages,
   viewport: MapViewport,
+  elapsedMs: number,
+  sessionFrame: number,
 ): void {
   const left = viewport.origin.x + unit.render.x * viewport.tileSize;
   const top = viewport.origin.y + unit.render.y * viewport.tileSize;
@@ -136,6 +139,29 @@ function drawUnit(
   context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
   context.restore();
 
+  if (unit.bonus && unit.bonus.remainingMs > 0) {
+    const bonusImage = images[campaignBonusRewardAsset(unit.bonus.type)];
+    if (!bonusImage) throw new Error('Missing game image: ' + campaignBonusRewardAsset(unit.bonus.type));
+    const sourceWidth = bonusImage.naturalWidth / 3;
+    const scale = viewport.scaleFactor;
+    const width = sourceWidth * scale;
+    const height = bonusImage.naturalHeight * scale;
+    let bonusFrame = (Math.floor(elapsedMs / 100) % 3) + 1;
+    if (bonusFrame === 3) bonusFrame = 1;
+    const verticalPulse = bonusPulseOffset(sessionFrame, scale);
+    context.drawImage(
+      bonusImage,
+      (bonusFrame - 1) * sourceWidth,
+      0,
+      sourceWidth,
+      bonusImage.naturalHeight,
+      Math.trunc(left + (unit.render.width * viewport.tileSize / 2) - (width / 2)),
+      Math.trunc(top - height - verticalPulse),
+      Math.trunc(width),
+      Math.trunc(height),
+    );
+  }
+
   if (unit.activity === 4) {
     const effectImage = images.sfx_sleeping;
     if (!effectImage) throw new Error('Missing game image: sfx_sleeping');
@@ -157,6 +183,117 @@ function drawUnit(
       effectHeight,
     );
   }
+}
+
+function drawBonusCrate(
+  context: CanvasRenderingContext2D,
+  crate: BonusCrateView,
+  elapsedMs: number,
+  sessionFrame: number,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const chestImage = images.bonus_box;
+  if (!chestImage) throw new Error('Missing game image: bonus_box');
+  const scale = viewport.scaleFactor;
+  const tileSize = viewport.tileSize;
+  const centerX = viewport.origin.x + (crate.positionFine.x / FINE_UNITS_PER_CELL) * tileSize;
+  const feetY = viewport.origin.y + (crate.positionFine.y / FINE_UNITS_PER_CELL) * tileSize;
+  const left = Math.trunc(centerX - tileSize / 2);
+  const top = Math.trunc(feetY - tileSize);
+  context.drawImage(chestImage, left, top, Math.trunc(tileSize), Math.trunc(tileSize));
+
+  if (crate.phase !== 'active') {
+    const effectImage = images.sfx_bonus_box;
+    if (!effectImage) throw new Error('Missing game image: sfx_bonus_box');
+    const frameWidth = effectImage.naturalWidth / 5;
+    const width = frameWidth * scale;
+    const height = effectImage.naturalHeight * scale;
+    context.drawImage(
+      effectImage,
+      crate.animationFrame * frameWidth,
+      0,
+      frameWidth,
+      effectImage.naturalHeight,
+      Math.trunc(centerX - width / 2),
+      Math.trunc(feetY - height),
+      Math.trunc(width),
+      Math.trunc(height),
+    );
+    return;
+  }
+
+  const icon = images[campaignBonusRewardAsset(crate.rewardType)];
+  if (!icon) throw new Error('Missing game image: ' + campaignBonusRewardAsset(crate.rewardType));
+  const frameWidth = icon.naturalWidth / 3;
+  const iconSize = 16 * scale;
+  let iconFrame = Math.floor(elapsedMs / 100) % 4;
+  if (iconFrame === 3) iconFrame = 1;
+  const verticalPulse = bonusPulseOffset(sessionFrame, scale);
+  context.drawImage(
+    icon,
+    iconFrame * frameWidth,
+    0,
+    frameWidth,
+    icon.naturalHeight,
+    Math.trunc(centerX - iconSize / 2),
+    Math.trunc(feetY - tileSize - iconSize - verticalPulse),
+    Math.trunc(iconSize),
+    Math.trunc(icon.naturalHeight * scale),
+  );
+}
+
+function bonusPulseOffset(frame: number, scale: number): number {
+  const step = Math.floor(Math.max(0, frame)) % 20;
+  const animationTime = step <= 10 ? step / 10 : (20 - step) / 10;
+  return Math.trunc(Math.sin(animationTime) * scale);
+}
+
+function bonusMessage(rewardType: BonusNoticeView['rewardType'], language: 'en' | 'zh'): string {
+  const messages: Record<BonusNoticeView['rewardType'], { en: string; zh: string }> = {
+    1: { en: '5 Sheriff points!', zh: '警长生命 +5' },
+    2: { en: '25 dollars!', zh: '获得 $25' },
+    3: { en: 'Quick shot!', zh: '快速射击！' },
+    4: { en: 'Damage boost!', zh: '伤害提升！' },
+  };
+  return messages[rewardType][language];
+}
+
+function drawBonusNotice(
+  context: CanvasRenderingContext2D,
+  notice: BonusNoticeView,
+  viewport: MapViewport,
+  language: 'en' | 'zh',
+  images: GameImages,
+): void {
+  const bubble = images.gng_speechbubble;
+  if (!bubble) throw new Error('Missing game image: gng_speechbubble');
+  const scale = viewport.scaleFactor;
+  const elapsedMs = Math.max(0, 1_200 - notice.remainingMs);
+  const inProgress = Math.min(1, elapsedMs / 600);
+  const outProgress = Math.min(1, notice.remainingMs / 600);
+  const animationScale = Math.sin((inProgress * Math.PI) / 2);
+  const alpha = elapsedMs < 600
+    ? animationScale
+    : Math.sin((outProgress * Math.PI) / 2);
+  const width = bubble.naturalWidth * scale;
+  const height = bubble.naturalHeight * scale;
+  const centerX = GAME_VIEWPORT.width / 2;
+  const centerY = GAME_VIEWPORT.height / 2;
+  const text = bonusMessage(notice.rewardType, language);
+  context.save();
+  context.globalAlpha *= alpha;
+  context.translate(centerX, centerY);
+  context.scale(animationScale, animationScale);
+  context.drawImage(bubble, -width / 2, -height / 2, width, height);
+  context.font = Math.trunc(20 * scale) + 'px Georgia, serif';
+  context.fillStyle = '#fff';
+  context.shadowColor = '#000';
+  context.shadowBlur = 2 * scale;
+  context.textAlign = 'center';
+  context.textBaseline = 'alphabetic';
+  context.fillText(text, 0, (height / 2) + (20 * scale / 3));
+  context.restore();
 }
 
 function drawSelectedUnitFeedback(
@@ -219,7 +356,7 @@ function drawSelectedUnitFeedback(
   context.restore();
 }
 
-type DrawObjectKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris';
+type DrawObjectKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris' | 'collectable';
 
 interface DrawObject {
   id: string;
@@ -247,7 +384,7 @@ function createDrawObjects(
     kind: 'unit',
     cell: unit.cell,
     depth: unit.positionFine.y + GAME_DRAW_ORDER_ROAD_CUTOFF,
-    draw: () => drawUnit(context, unit, images, viewport),
+    draw: () => drawUnit(context, unit, images, viewport, view.elapsedMs, view.frame),
   }));
   const enemies = view.enemies.map((enemy): DrawObject => ({
     id: `enemy:${enemy.id}`,
@@ -267,11 +404,17 @@ function createDrawObjects(
     depth: part.depthFineY + GAME_DRAW_ORDER_ROAD_CUTOFF,
     draw: () => drawWagonDebrisPart(context, part, images, viewport),
   }));
+  const collectables = (view.bonusCrates ?? []).map((crate): DrawObject => ({
+    id: `bonus-crate:${crate.id}`,
+    kind: 'collectable',
+    depth: crate.positionFine.y + (7_680 * 100),
+    draw: () => drawBonusCrate(context, crate, view.elapsedMs, view.frame, images, viewport),
+  }));
 
   const mapObjects = [...decorations, ...units].sort((left, right) => (
     left.cell!.y - right.cell!.y || left.cell!.x - right.cell!.x
   ));
-  return [...mapObjects, ...enemies, ...shots, ...wagonDebris];
+  return [...mapObjects, ...enemies, ...shots, ...wagonDebris, ...collectables];
 }
 
 function drawWorldObjects(
@@ -951,6 +1094,7 @@ export function drawGame(
   drawWorldObjects(orderedDrawObjects, drawObjects, false);
   drawPriorityTargetFeedback(context, view, images, viewport);
   drawSelectedUnitFeedback(context, view, images, viewport);
+  if (view.bonusNotice) drawBonusNotice(context, view.bonusNotice, viewport, language, images);
   drawWaveSpawnIndicators(context, view, images, viewport, displayPixelScale);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);

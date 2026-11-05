@@ -693,6 +693,101 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   }
 });
 
+test('draws original bonus-crate frames, reward icons, and the centered localized speech bubble', () => {
+  const calls: unknown[][] = [];
+  const texts: string[] = [];
+  const context = {
+    globalAlpha: 1,
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    translate() {},
+    scale() {},
+    drawImage(...args: unknown[]) { calls.push(args); },
+    fillText(text: string) { texts.push(text); },
+  } as unknown as CanvasRenderingContext2D;
+  const view = {
+    frame: 5,
+    elapsedMs: 0,
+    paused: false,
+    scenarioId: 'bonus-render-test',
+    map: { width: 17, height: 17, tileSize: 32, background: [], streets: [] },
+    units: [],
+    enemies: [],
+    shots: [],
+    recruitPool: [],
+    events: [],
+    bonusCrates: [{
+      id: 'bonus-crate-01',
+      cell: { x: 8, y: 8 },
+      positionFine: { x: (8 * 7_680) + 3_840, y: (8 * 7_680) + 5_760 },
+      rewardType: 2,
+      phase: 'spawning',
+      animationFrame: 2,
+    }],
+    bonusNotice: { rewardType: 4, remainingMs: 300 },
+    drawOrder: ['bonus-crate:bonus-crate-01'],
+  } as unknown as GameView;
+  const images = {
+    bonus_box: { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement,
+    sfx_bonus_box: { naturalWidth: 160, naturalHeight: 44 } as HTMLImageElement,
+    hud_bonus_cash: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    hud_bonus_damage: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    hud_bonus_speed: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    gng_speechbubble: { naturalWidth: 209, naturalHeight: 90 } as HTMLImageElement,
+    player_gunslinger: { naturalWidth: 96, naturalHeight: 132 } as HTMLImageElement,
+  };
+
+  drawGame(context, view, images);
+  const spawningFrame = calls.find((call) => call[0] === images.sfx_bonus_box);
+  assert.ok(spawningFrame);
+  assert.deepEqual(spawningFrame.slice(1, 5), [64, 0, 32, 44]);
+  const bubble = calls.find((call) => call[0] === images.gng_speechbubble);
+  assert.ok(bubble, 'the popup uses the APK speech bubble image');
+  assert.ok(texts.includes('Damage boost!'));
+
+  calls.length = 0;
+  texts.length = 0;
+  const activeCrateView: GameView = {
+    ...view,
+    elapsedMs: 200,
+    bonusCrates: [{ ...view.bonusCrates![0]!, phase: 'active', animationFrame: 0 }],
+    bonusNotice: { rewardType: 2, remainingMs: 600 },
+  };
+  drawGame(context, activeCrateView, images, 1, undefined, false, 'zh');
+  const activeIcon = calls.find((call) => call[0] === images.hud_bonus_cash);
+  assert.ok(activeIcon);
+  assert.deepEqual(activeIcon.slice(1, 5), [32, 0, 16, 16], 'the active reward icon uses the APK 0, 1, 2, 1 frame loop');
+  assert.ok(texts.includes('获得 $25'));
+
+  calls.length = 0;
+  const unitWithBonus: GameView = {
+    ...view,
+    elapsedMs: 100,
+    bonusCrates: [],
+    bonusNotice: undefined,
+    units: [{
+      id: 'player', type: 'gunslinger', cell: { x: 8, y: 8 }, movementSpeedFinePer100Ms: 1_500,
+      asset: 'player_gunslinger', frame: { x: 0, y: 0, width: 32, height: 44 },
+      render: { x: 8, y: 7.625, width: 1, height: 1.375 },
+      hitArea: { x: 8, y: 7.625, width: 1, height: 1.375 },
+      selected: false, moving: false,
+      positionFine: { x: (8 * 7_680) + 3_840, y: (8 * 7_680) + 5_760 },
+      upgradeLevel: 0,
+      bonus: { type: 3, remainingMs: 30_000 },
+    }],
+    drawOrder: ['unit:player'],
+  };
+  drawGame(context, unitWithBonus, images);
+  const unitBonusIcon = calls.find((call) => call[0] === images.hud_bonus_speed);
+  assert.ok(unitBonusIcon, 'active units show the matching bonus icon');
+  assert.deepEqual(unitBonusIcon.slice(1, 5), [16, 0, 16, 16], 'unit bonus icon follows the APK 0, 1, 0 loop');
+});
+
 test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {
   const mapImage = {} as HTMLImageElement;
   const sleepingImage = {} as HTMLImageElement;

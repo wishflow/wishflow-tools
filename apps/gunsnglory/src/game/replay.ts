@@ -1,7 +1,7 @@
 import type { GameDifficulty, GameIntent, GameMode, GameView, ShotView, UnitView, WaveSettlement } from './index';
 import { canonicalSha256Digest } from '../value-digest';
 
-export const GAME_RULES_VERSION = 'gng-rules-14';
+export const GAME_RULES_VERSION = 'gng-rules-15';
 export const GAME_REPLAY_FORMAT_VERSION = 2;
 export const GAME_REPLAY_CHECKPOINT_INTERVAL = 120;
 export const GAME_REPLAY_MAX_CHARACTERS = 10_000_000;
@@ -92,6 +92,9 @@ export function captureReplayState(view: GameView): ReplayState {
     enemies: view.enemies,
     shots: view.shots.map(({ fineZ: _fineZ, heightFine: _heightFine, ...shot }) => shot),
     recruitPool: view.recruitPool,
+    bonusCrates: view.bonusCrates ?? [],
+    bonusCratePool: view.bonusCratePool ?? null,
+    bonusNotice: view.bonusNotice ?? null,
     events: view.events,
     wave: view.wave ?? null,
   };
@@ -101,11 +104,13 @@ type ReplayShotState = Omit<ShotView, 'fineZ' | 'heightFine'>;
 type ReplayUnitState = Omit<UnitView, 'walkingAnimation'>;
 
 export type ReplayState = Omit<
-  Pick<GameView, 'frame' | 'elapsedMs' | 'priorityTargetId' | 'units' | 'enemies' | 'shots' | 'recruitPool' | 'events'>,
-  'shots' | 'units'
+  Pick<GameView, 'frame' | 'elapsedMs' | 'priorityTargetId' | 'units' | 'enemies' | 'shots' | 'recruitPool' | 'events' | 'bonusCrates' | 'bonusCratePool'>,
+  'shots' | 'units' | 'bonusCratePool'
 > & {
   units: readonly ReplayUnitState[];
   shots: readonly ReplayShotState[];
+  bonusNotice: NonNullable<GameView['bonusNotice']> | null;
+  bonusCratePool: NonNullable<GameView['bonusCratePool']> | null;
   wave: GameView['wave'] | null;
 };
 

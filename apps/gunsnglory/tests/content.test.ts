@@ -234,10 +234,15 @@ test('reconstructs the first map decorations from original TDM object codes', ()
     [73, { asset: 'e_1x1_cactus_b', collisionBoxFine: commonCollisionBox }],
     [74, { asset: 'b_1x1_windmill', collisionBoxFine: commonCollisionBox }],
     [76, { asset: 'e_1x1_bush', collisionBoxFine: commonCollisionBox }],
-    [77, { asset: 'e_1x2_bones', collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 } }],
+    [77, {
+      asset: 'e_1x2_bones',
+      collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 },
+      fieldBlockBounds: { left: 0, right: 0, top: -1, bottom: 0 },
+    }],
     [116, {
       asset: 'b_2x1_shack', anchorOffsetX: -0.5,
       collisionBoxFine: { x: -3840, y: -1228, width: 15360, height: 3840 },
+      fieldBlockBounds: { left: -1, right: 1, top: 0, bottom: 0 },
     }],
     [126, { asset: 'e_1x1_rocks_water', collisionBoxFine: commonCollisionBox }],
   ]);

@@ -150,10 +150,16 @@ export const fortKaboomRouteDefinitions: readonly WaveRouteDefinition[] = Object
 export const fortKaboomContent: ScenarioContent = {
   ...map,
   id: 'campaign-new-mexico-03',
-  contentVersion: 'gng-free-1.8.6-new-mexico-03-fort-pool-v1',
+  contentVersion: 'gng-free-1.8.6-new-mexico-03-fort-crates-v1',
   title: { en: 'Fort Kaboom · Level 3', zh: 'Fort Kaboom · 第 3 关' },
   maxUpgrades: 0,
   campaignUnitPool: fortKaboomUnitPool,
+  campaignBonusCratePool: {
+    totalCount: 10,
+    intervalMs: 10,
+    simultaneousLimit: 22,
+    rewardTypeCount: 4,
+  },
   map: {
     ...map.map,
     decorations: createFortKaboomDecorations(),

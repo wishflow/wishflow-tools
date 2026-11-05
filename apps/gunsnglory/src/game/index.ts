@@ -24,6 +24,21 @@ import {
   queueCampaignUnitForSpawn,
   type SpawnedCampaignUnit,
 } from './campaign-unit-pool';
+import {
+  advanceCampaignBonusCratePool,
+  beginCampaignBonusCrateDespawn,
+  campaignBonusLivesAfterPickup,
+  campaignBonusCrateAnimationFrame,
+  chooseCampaignBonusReward,
+  collisionBoundsOverlap,
+  createCampaignBonusCratePool,
+  isCampaignBonusCrateFieldBlocked,
+  isBonusCrateCandidateAllowed,
+  type CampaignBonusCrate,
+  type CampaignBonusCrateDefinition,
+  type CampaignBonusCratePool,
+  type CampaignBonusRewardType,
+} from './campaign-bonus-crates';
 import { createRoutePriorityMap, normalizedRoutePriority, type RoutePriorityMap } from './route-priority';
 import type {
   GameReplayFrame,
@@ -46,6 +61,7 @@ export type {
   NumericParameterValue,
   PreparedSetup,
 } from './replay';
+export type { CampaignBonusCrateDefinition, CampaignBonusRewardType } from './campaign-bonus-crates';
 
 export type GameOpenErrorCode =
   | 'scenario-unavailable'
@@ -87,6 +103,8 @@ export interface MapDecoration {
   anchorOffsetY?: number;
   /** Original static-object collision bounds relative to the cell origin, in fine units. */
   collisionBoxFine?: Rectangle;
+  /** Inclusive tile offsets blocked by GameObjectManager.fieldIsBlocked; defaults to this cell only. */
+  fieldBlockBounds?: { left: number; right: number; top: number; bottom: number };
 }
 
 export interface ScenarioUnit {
@@ -304,6 +322,8 @@ export interface ScenarioContent {
   campaignWaves?: readonly CampaignWaveDefinition[];
   /** Optional original player-unit spawn pool, separate from enemy wave request pools. */
   campaignUnitPool?: CampaignUnitPoolDefinition;
+  /** Optional scene-level pool of the original moving-unit bonus crates. */
+  campaignBonusCratePool?: CampaignBonusCrateDefinition;
   /** Base type-1/type-2 settler data before level, wave, and dynamic-difficulty multipliers. */
   campaignEnemy?: PreviewEnemyDefinition;
   /** Type-specific campaign enemy designs; unset entries use the settler design. */
@@ -323,6 +343,7 @@ export type GameIntent =
 export interface UnitView extends ScenarioUnit {
   sleepingAnimationFrame?: number;
   selected: boolean;
+  bonus?: { type: 3 | 4; remainingMs: number };
   moving: boolean;
   positionFine: { x: number; y: number };
   walkingAnimation?: {
@@ -375,6 +396,26 @@ export interface WagonDebrisView {
   frame: number;
 }
 
+export interface BonusCrateView {
+  id: string;
+  cell: { x: number; y: number };
+  positionFine: { x: number; y: number };
+  rewardType: CampaignBonusRewardType;
+  phase: CampaignBonusCrate['phase'];
+  animationFrame: number;
+}
+
+export interface BonusNoticeView {
+  rewardType: CampaignBonusRewardType;
+  remainingMs: number;
+}
+
+export interface BonusCratePoolView {
+  remainingMs: number;
+  remainingCount: number;
+  nextNumber: number;
+}
+
 export interface ShotView {
   id: string;
   shooterId: string;
@@ -401,7 +442,8 @@ export type GameEvent =
     sound: 'sound_revolver' | 'sound_dynamite' | 'sound_wagon_explode' | UnitShotSound;
     positionFine: { x: number; y: number };
   }
-  | { type: 'sound-requested'; sound: UnitHireSound }
+  | { type: 'sound-requested'; sound: UnitHireSound | 'sound_level_up' }
+  | { type: 'bonus-crate-collected'; crateId: string; unitId: string; rewardType: CampaignBonusRewardType }
   | { type: 'shot-exploded'; shotId: string; targetId: string; affectedEnemyIds: readonly string[] }
   | { type: 'wave-cleared'; waveNumber: number; escapedEnemies: number; defeatedEnemies: number }
   | { type: 'unit-recruited'; unitType: string; price: number; count: number }
@@ -482,6 +524,9 @@ export interface GameView {
   /** Live enemy chosen by the player as the preferred attack target. */
   priorityTargetId?: string;
   wagonDebris?: readonly WagonDebrisView[];
+  bonusCrates?: readonly BonusCrateView[];
+  bonusCratePool?: BonusCratePoolView;
+  bonusNotice?: BonusNoticeView;
   shots: readonly ShotView[];
   /** Stable object keys in the original shared depth queue order. */
   drawOrder: readonly string[];
@@ -619,6 +664,8 @@ interface MutableUnit {
   movementTargetFine?: { x: number; y: number };
   upgradeLevel: number;
   movementSpeedFinePer100Ms: number;
+  bonusAttribute?: 3 | 4;
+  bonusRemainingMs?: number;
   weapon?: UnitWeaponDefinition;
   weaponCooldownMs: number;
   shotsUntilSpecialReload: number;
@@ -649,10 +696,16 @@ interface MutableWave {
   difficultyValueCounter?: number;
 }
 
+interface MutableBonusNotice {
+  rewardType: CampaignBonusRewardType;
+  remainingMs: number;
+}
+
 function drawOrderEntries(
   scenario: ScenarioContent,
   units: readonly MutableUnit[],
   wave: MutableWave | undefined,
+  bonusCrates: readonly CampaignBonusCrate[],
 ): DrawOrderEntry[] {
   const decorations = (scenario.map.decorations ?? []).map((decoration, index): DrawOrderEntry => ({
     id: `decoration:${index}`,
@@ -688,8 +741,13 @@ function drawOrderEntries(
     kind: 'wagon-debris',
     depth: part.depthFineY + GAME_DRAW_ORDER_ROAD_CUTOFF,
   }));
+  const collectables = bonusCrates.map((crate): DrawOrderEntry => ({
+    id: `bonus-crate:${crate.id}`,
+    kind: 'collectable',
+    depth: crate.positionFine.y + (7_680 * 100),
+  }));
 
-  return [...mapObjects, ...enemies, ...shots, ...wagonDebris];
+  return [...mapObjects, ...enemies, ...shots, ...wagonDebris, ...collectables];
 }
 
 const FINE_UNITS_PER_CELL = 7680;
@@ -700,6 +758,10 @@ const UNIT_COLLIDER_START_X = -2534;
 const UNIT_COLLIDER_START_Y = -5376;
 const UNIT_COLLIDER_WIDTH = 5068;
 const UNIT_COLLIDER_HEIGHT = 4608;
+const BONUS_CRATE_COLLIDER_START_X = -2534;
+const BONUS_CRATE_COLLIDER_START_Y = -4608;
+const BONUS_CRATE_COLLIDER_WIDTH = 5068;
+const BONUS_CRATE_COLLIDER_HEIGHT = 4224;
 const UNIT_STOP_TOLERANCE_FINE = 2400;
 const MAX_DELTA_MS = 100;
 const REFERENCE_VIEWPORT_WIDTH = 1024;
@@ -894,6 +956,12 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
     ...(definition.activity === 4 ? { sleepingAnimationFrame: Math.floor(elapsedMs / 200) % 3 } : {}),
     movementSpeedFinePer100Ms: unit.movementSpeedFinePer100Ms,
     ...(unit.weapon ? { weapon: clone(unit.weapon) } : {}),
+    ...(unit.bonusAttribute !== undefined ? {
+      bonus: {
+        type: unit.bonusAttribute,
+        remainingMs: Math.max(0, unit.bonusRemainingMs ?? 0),
+      },
+    } : {}),
     cell: {
       x: Math.floor(positionFine.x / FINE_UNITS_PER_CELL),
       y: Math.floor((positionFine.y - FIELD_CENTER_HALF) / FINE_UNITS_PER_CELL),
@@ -907,7 +975,7 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
     ...(unit.weapon ? {
       attackRange: {
         centerTenthTiles: unitAttackCenterTenthTiles(unit),
-        maximumTenthTiles: weaponRangeTenthTiles(unit.weapon),
+        maximumTenthTiles: unitMaximumRangeTenthTiles(unit),
         boundary: 'exclusive' as const,
       },
     } : {}),
@@ -1129,6 +1197,71 @@ function campaignUnitSpawnBlocked(
   });
 }
 
+function campaignBonusCrateFieldBlocked(
+  scenario: ScenarioContent,
+  units: readonly MutableUnit[],
+  pool: CampaignBonusCratePool | undefined,
+  cell: { x: number; y: number },
+): boolean {
+  return isCampaignBonusCrateFieldBlocked(cell, {
+    decorations: scenario.map.decorations ?? [],
+    spawnLocations: scenario.campaignUnitPool?.spawnLocations ?? [],
+    units: units.map((unit) => ({
+      x: Math.floor(unit.positionFine.x / FINE_UNITS_PER_CELL),
+      y: Math.floor(unit.positionFine.y / FINE_UNITS_PER_CELL),
+    })),
+    crates: pool?.crates ?? [],
+  });
+}
+
+function campaignBonusCrateCandidateAllowed(
+  scenario: ScenarioContent,
+  units: readonly MutableUnit[],
+  pool: CampaignBonusCratePool | undefined,
+  cell: { x: number; y: number },
+): boolean {
+  const grid = scenario.originalTileGrid ?? scenario.map.originalTileGrid;
+  const objectCode = grid?.[cell.y]?.[cell.x];
+  if (objectCode === undefined) return false;
+  const backgroundCode = backgroundCollisionCode(objectCode, grid, cell.x, cell.y);
+  return isBonusCrateCandidateAllowed({
+    ...cell,
+    width: scenario.map.width,
+    height: scenario.map.height,
+    backgroundWalkable: backgroundCode === 0 || (backgroundCode >= 16 && backgroundCode < 20),
+    hasStreet: STREET_LAYER_TILES.has(objectCode),
+    objectCode,
+    fieldBlocked: campaignBonusCrateFieldBlocked(scenario, units, pool, cell),
+  });
+}
+
+function unitMovementCrossesBonusCrate(
+  previous: { x: number; y: number },
+  current: { x: number; y: number },
+  crate: CampaignBonusCrate,
+): boolean {
+  const crateBounds = {
+    x: crate.positionFine.x + BONUS_CRATE_COLLIDER_START_X,
+    y: crate.positionFine.y + BONUS_CRATE_COLLIDER_START_Y,
+    width: BONUS_CRATE_COLLIDER_WIDTH,
+    height: BONUS_CRATE_COLLIDER_HEIGHT,
+  };
+  const horizontalSweep = {
+    x: Math.min(previous.x, current.x) + UNIT_COLLIDER_START_X,
+    y: previous.y + UNIT_COLLIDER_START_Y,
+    width: Math.abs(current.x - previous.x) + UNIT_COLLIDER_WIDTH,
+    height: UNIT_COLLIDER_HEIGHT,
+  };
+  const verticalSweep = {
+    x: current.x + UNIT_COLLIDER_START_X,
+    y: Math.min(previous.y, current.y) + UNIT_COLLIDER_START_Y,
+    width: UNIT_COLLIDER_WIDTH,
+    height: Math.abs(current.y - previous.y) + UNIT_COLLIDER_HEIGHT,
+  };
+  return collisionBoundsOverlap(horizontalSweep, crateBounds)
+    || collisionBoundsOverlap(verticalSweep, crateBounds);
+}
+
 function playerAxisWithinOriginalMapBounds(
   scenario: ScenarioContent,
   axis: 'x' | 'y',
@@ -1156,7 +1289,7 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number,
   }
 
   const distance = Math.hypot(dx, dy);
-  const speed = unit.movementSpeedFinePer100Ms;
+  const speed = Math.trunc(unit.movementSpeedFinePer100Ms * (unit.bonusAttribute === 3 ? 150 : 100) / 100);
   const directionX = Math.round((dx / distance) * speed);
   const directionY = Math.round((dy / distance) * speed);
   const moveX = Math.trunc((directionX * deltaMs) / 100);
@@ -1767,6 +1900,16 @@ function maxWeaponSquareRange(weapon: UnitWeaponDefinition): number {
   return rangeInTenthTiles * rangeInTenthTiles;
 }
 
+function maxUnitWeaponSquareRange(unit: MutableUnit): number {
+  if (!unit.weapon) return 0;
+  const baseRange = maxWeaponSquareRange(unit.weapon);
+  return Math.trunc(baseRange * (unit.bonusAttribute === 4 ? 150 : 100) / 100);
+}
+
+function unitMaximumRangeTenthTiles(unit: MutableUnit): number {
+  return Math.trunc(Math.sqrt(maxUnitWeaponSquareRange(unit)));
+}
+
 function projectileBaseTimePercent(damageStyle: UnitWeaponDefinition['damageStyle']): number {
   switch (damageStyle) {
     case 0: return 10;
@@ -1826,7 +1969,7 @@ function selectTarget(
 ): MutableEnemy | undefined {
   const weapon = unit.weapon;
   if (!weapon) return undefined;
-  const maxSquareRange = maxWeaponSquareRange(weapon);
+  const maxSquareRange = maxUnitWeaponSquareRange(unit);
   let bestTarget: MutableEnemy | undefined;
   let bestScore = -1;
 
@@ -2259,6 +2402,19 @@ export function createGame(options: {
           throw new GameOpenError('scenario-unavailable', 'Campaign unit pool data is invalid');
         }
       }
+      const bonusCrateDefinition = scenario.campaignBonusCratePool;
+      if (bonusCrateDefinition && (!Number.isSafeInteger(bonusCrateDefinition.totalCount)
+        || bonusCrateDefinition.totalCount < 0
+        || !Number.isSafeInteger(bonusCrateDefinition.intervalMs)
+        || bonusCrateDefinition.intervalMs < 1
+        || !Number.isSafeInteger(bonusCrateDefinition.simultaneousLimit)
+        || bonusCrateDefinition.simultaneousLimit < 1
+        || !Number.isSafeInteger(bonusCrateDefinition.rewardTypeCount)
+        || bonusCrateDefinition.rewardTypeCount < 1
+        || bonusCrateDefinition.rewardTypeCount > 4
+        || !(scenario.originalTileGrid ?? scenario.map.originalTileGrid))) {
+        throw new GameOpenError('scenario-unavailable', 'Campaign bonus-crate data is invalid');
+      }
       if (mode === 'formal' && preparedSetup) {
         const baseline = await prepare({ scenarioId });
         if (baseline.digest !== resolved.setup.digest) {
@@ -2304,9 +2460,11 @@ export function createGame(options: {
       const spawnFields = campaignSpawnFields(scenario);
       const priorityMap = createRoutePriorityMap(scenario);
       const campaignUnitPoolRuntime = createCampaignUnitPoolRuntime(scenario.campaignUnitPool);
+      const campaignBonusCratePool = createCampaignBonusCratePool(bonusCrateDefinition);
       let frame = 0;
       let elapsedMs = 0;
       let priorityTargetId: string | undefined;
+      let bonusNotice: MutableBonusNotice | undefined;
       let closed = false;
       let paused = false;
       const firstCampaignWave = campaignWaves?.find(({ number }) => number === 1);
@@ -2336,7 +2494,7 @@ export function createGame(options: {
         applyCampaignUnitPoolActions(campaignUnitPoolRuntime, scenario.campaignUnitPool, firstCampaignWave.number);
       }
       const drawOrderQueue = new DrawOrderQueue();
-      for (const entry of drawOrderEntries(scenario, units, wave)) {
+      for (const entry of drawOrderEntries(scenario, units, wave, campaignBonusCratePool?.crates ?? [])) {
         drawOrderQueue.insert(entry.id, entry.depth);
       }
 
@@ -2412,6 +2570,22 @@ export function createGame(options: {
             heightFine,
             frame,
           })),
+          bonusCrates: (campaignBonusCratePool?.crates ?? []).map((crate) => ({
+            id: crate.id,
+            cell: { ...crate.cell },
+            positionFine: { ...crate.positionFine },
+            rewardType: crate.rewardType,
+            phase: crate.phase,
+            animationFrame: campaignBonusCrateAnimationFrame(crate),
+          })),
+          ...(campaignBonusCratePool ? {
+            bonusCratePool: {
+              remainingMs: campaignBonusCratePool.remainingMs,
+              remainingCount: campaignBonusCratePool.remainingCount,
+              nextNumber: campaignBonusCratePool.nextNumber,
+            },
+          } : {}),
+          ...(bonusNotice ? { bonusNotice: clone(bonusNotice) } : {}),
           shots: (wave?.shots ?? []).map((shot) => ({
             id: shot.id,
             shooterId: shot.shooterId,
@@ -2609,6 +2783,10 @@ export function createGame(options: {
           frame += 1;
           elapsedMs += deltaMs;
           if (wave) wave.events = [];
+          if (bonusNotice) {
+            bonusNotice.remainingMs -= deltaMs;
+            if (bonusNotice.remainingMs <= 0) bonusNotice = undefined;
+          }
           let waveStarted = false;
           const drawOrderCreationOrder: string[] = [];
           pending.sort((left, right) => left.sequence - right.sequence);
@@ -2792,6 +2970,14 @@ export function createGame(options: {
           }
 
           for (const unit of units) {
+            if (unit.bonusAttribute !== undefined) {
+              if ((unit.bonusRemainingMs ?? 0) > 0) {
+                unit.bonusRemainingMs = Math.trunc((unit.bonusRemainingMs ?? 0) - deltaMs);
+              } else {
+                unit.bonusAttribute = undefined;
+                unit.bonusRemainingMs = undefined;
+              }
+            }
             const previousPosition = { ...unit.positionFine };
             moveUnit(unit, scenario, deltaMs, tileSizePixels);
             const deltaX = unit.positionFine.x - previousPosition.x;
@@ -2799,6 +2985,34 @@ export function createGame(options: {
             const didMove = deltaX !== 0 || deltaY !== 0;
             if (didMove) advanceWalkingAnimation(unit, deltaX, deltaY);
             advanceShootingAnimation(unit, deltaMs, didMove);
+            if (!didMove || !wave || !campaignBonusCratePool || !isActivePlayerUnit(unit)) continue;
+            for (const crate of campaignBonusCratePool.crates) {
+              if (crate.phase !== 'active' || !unitMovementCrossesBonusCrate(previousPosition, unit.positionFine, crate)) continue;
+              if (!beginCampaignBonusCrateDespawn(crate)) continue;
+              if (crate.rewardType === 1) {
+                wave.lives = campaignBonusLivesAfterPickup(
+                  wave.lives,
+                  scenario.previewWave?.initialLives ?? wave.lives,
+                );
+              } else if (crate.rewardType === 2) {
+                wave.cash += 25;
+              } else {
+                unit.bonusAttribute = crate.rewardType;
+                unit.bonusRemainingMs = 60_000;
+              }
+              wave.events.push({
+                type: 'bonus-crate-collected',
+                crateId: crate.id,
+                unitId: unit.definition.id,
+                rewardType: crate.rewardType,
+              });
+              wave.events.push({ type: 'sound-requested', sound: 'sound_level_up' });
+              bonusNotice = {
+                rewardType: crate.rewardType,
+                remainingMs: 1_200,
+              };
+              break;
+            }
           }
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
@@ -2897,7 +3111,7 @@ export function createGame(options: {
               const target = selectTarget(unit, wave.enemies, priorityMap, priorityTargetId);
               if (!target) continue;
               const distanceSquare = unitEnemyDistanceSquare(unit, target);
-              const maxSquareRange = maxWeaponSquareRange(weapon);
+              const maxSquareRange = maxUnitWeaponSquareRange(unit);
               const startFine = {
                 x: unit.positionFine.x,
                 y: unit.positionFine.y - FIELD_CENTER_HALF,
@@ -2907,9 +3121,9 @@ export function createGame(options: {
                 id: 'preview-shot-' + nextShotNumber,
                 shooterId: unit.definition.id,
                 targetId: target.id,
-                damage: weapon.damage,
+                damage: Math.trunc(weapon.damage * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
                 damageType: weapon.damageType,
-                postDamage: weapon.postDamage ?? 0,
+                postDamage: Math.trunc((weapon.postDamage ?? 0) * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
                 postDamageDurationMs: weapon.postDamageDurationMs ?? 0,
                 damageStyle: weapon.damageStyle,
                 areaDamageFine: weapon.areaDamageFine ?? 0,
@@ -2943,6 +3157,9 @@ export function createGame(options: {
                   unit.shotsUntilSpecialReload = weapon.specialReloadFrequency;
                   specialReload = true;
                 }
+              }
+              if (unit.bonusAttribute === 3) {
+                unit.weaponCooldownMs = Math.trunc(unit.weaponCooldownMs * 100 / 150);
               }
               wave.events.push({ type: 'unit-fired', unitId: unit.definition.id, targetId: target.id, specialReload });
               const shotSound = unit.definition.shotSound
@@ -3184,10 +3401,26 @@ export function createGame(options: {
               wave.events.push({ type: 'wave-settled', settlement: clone(wave.settlement) });
             }
           }
+          const newlySpawnedBonusCrates = advanceCampaignBonusCratePool(
+            campaignBonusCratePool,
+            bonusCrateDefinition,
+            scenario.map.width,
+            scenario.map.height,
+            deltaMs,
+            wave?.lives ?? 0,
+            scenario.previewWave?.initialLives ?? 0,
+            random,
+            (cell) => campaignBonusCrateCandidateAllowed(scenario, units, campaignBonusCratePool, cell),
+          );
+          drawOrderCreationOrder.push(...newlySpawnedBonusCrates.map(({ id }) => `bonus-crate:${id}`));
           if (priorityTargetId && !wave?.enemies.some((enemy) => enemy.id === priorityTargetId && enemy.alive)) {
             priorityTargetId = undefined;
           }
-          synchronizeDrawOrder(drawOrderQueue, drawOrderEntries(scenario, units, wave), drawOrderCreationOrder);
+          synchronizeDrawOrder(
+            drawOrderQueue,
+            drawOrderEntries(scenario, units, wave, campaignBonusCratePool?.crates ?? []),
+            drawOrderCreationOrder,
+          );
           const nextView = observe();
           recordedFrames.push({
             frame,
