@@ -92,6 +92,10 @@ export interface ScenarioUnit {
   awakeFrame?: Rectangle;
   awakeRender?: Rectangle;
   awakeHitArea?: Rectangle;
+  /** Original SfxManager.playTypicalSound cue for hiring this unit. */
+  hireSound?: UnitHireSound;
+  /** Original positional SfxManager cue emitted when this unit fires. */
+  shotSound?: UnitShotSound;
   cell: { x: number; y: number };
   /** Recovered GameDesignData speed value, applied as fine units per 100 ms. */
   movementSpeedFinePer100Ms: number;
@@ -120,6 +124,24 @@ export interface RecruitableUnitDefinition {
 
 export type DamageType = 'light' | 'fire' | 'heavy' | 'poison';
 
+export type UnitHireSound =
+  | 'sound_desperado_yihaa'
+  | 'sound_mexican_arriba'
+  | 'sound_deserter_yes_sir'
+  | 'sound_indian_hugh'
+  | 'sound_sniper_laughing'
+  | 'sound_grandpa_coughing';
+
+export type UnitShotSound =
+  | 'sound_cannon'
+  | 'sound_fire_arrow'
+  | 'sound_gattling_gun'
+  | 'sound_shotgun'
+  | 'sound_rifle'
+  | 'sound_rocket_explosion'
+  | 'sound_rocket_launch'
+  | 'sound_poison_splash';
+
 export type GameDifficulty = 'easy' | 'medium' | 'hard';
 
 export const GAME_DIFFICULTY_SCORE_PERCENT: Readonly<Record<GameDifficulty, number>> = Object.freeze({
@@ -135,6 +157,9 @@ export function isGameDifficulty(value: unknown): value is GameDifficulty {
 export interface UnitWeaponDefinition {
   damage: number;
   damageType: DamageType;
+  /** APK GameDesignData UNIT_DATA_POST_DAMAGE and UNIT_DATA_POST_DAMAGE_DURATION. */
+  postDamage?: number;
+  postDamageDurationMs?: number;
   rangeFine: number;
   reloadTimeMs: number;
   projectileSpeed: number;
@@ -271,7 +296,7 @@ export interface UnitView extends ScenarioUnit {
   upgradeLevel: number;
   nextUpgrade?: UnitUpgradeDefinition;
   shootingAnimation?: {
-    asset: 'player_gunslinger_shot' | 'player_mexican_shot';
+    asset: string;
     frame: number;
     row: number;
     mirrored: boolean;
@@ -330,10 +355,10 @@ export type GameEvent =
   | { type: 'unit-fired'; unitId: string; targetId: string; specialReload: boolean }
   | {
     type: 'sound-requested';
-    sound: 'sound_revolver' | 'sound_dynamite' | 'sound_wagon_explode';
+    sound: 'sound_revolver' | 'sound_dynamite' | 'sound_wagon_explode' | UnitShotSound;
     positionFine: { x: number; y: number };
   }
-  | { type: 'sound-requested'; sound: 'sound_desperado_yihaa' | 'sound_mexican_arriba' }
+  | { type: 'sound-requested'; sound: UnitHireSound }
   | { type: 'shot-exploded'; shotId: string; targetId: string; affectedEnemyIds: readonly string[] }
   | { type: 'wave-cleared'; waveNumber: number; escapedEnemies: number; defeatedEnemies: number }
   | { type: 'unit-recruited'; unitType: string; price: number; count: number }
@@ -482,6 +507,8 @@ interface MutableEnemy {
   wagonPartsCreated: boolean;
   hitPoints: number;
   maxHitPoints: number;
+  damageOverTime: number;
+  damageOverTimeRemainingMs: number;
   cashReward: number;
   penetration: Readonly<Record<DamageType, number>>;
   alive: boolean;
@@ -497,6 +524,8 @@ interface MutableShot {
   targetId: string;
   damage: number;
   damageType: DamageType;
+  postDamage: number;
+  postDamageDurationMs: number;
   damageStyle: UnitWeaponDefinition['damageStyle'];
   areaDamageFine: number;
   imageAsset: ShotView['imageAsset'];
@@ -634,6 +663,18 @@ const REFERENCE_VIEWPORT_WIDTH = 1024;
 const PLAYER_WALK_ANIMATION_CYCLE_FINE = 6144;
 const PLAYER_WALK_ANIMATION_FRAME_THRESHOLDS = [1536, 3072, 4608] as const;
 const PLAYER_WALK_ANIMATION_FRAMES = [0, 1, 0, 2] as const;
+type ShootingAnimationFrame = readonly [frame: number, endMs: number];
+const PLAYER_SHOOTING_ANIMATIONS: Readonly<Record<string, {
+  asset: string;
+  frames: readonly ShootingAnimationFrame[];
+}>> = {
+  gunslinger: { asset: 'player_gunslinger_shot', frames: [[0, 100], [1, 200], [0, 1000]] },
+  mexican: { asset: 'player_mexican_shot', frames: [[0, 200], [1, 400]] },
+  cannon: { asset: 'player_cannon_shot', frames: [[0, 100], [1, 200]] },
+  indian: { asset: 'player_indian_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
+  sniper: { asset: 'player_scout_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
+  grandpa: { asset: 'player_geezer_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
+};
 const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
 const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {
   1: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
@@ -678,6 +719,8 @@ interface NumericParameterBinding {
 
 const WEAPON_NUMERIC_PARAMETERS = [
   'damage',
+  'postDamage',
+  'postDamageDurationMs',
   'rangeFine',
   'reloadTimeMs',
   'projectileSpeed',
@@ -829,11 +872,7 @@ function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation']
   const direction = unit.shootingDirection;
   if (unit.shootingAnimationElapsedMs === undefined || unit.shootingAnimationFrame === undefined || !direction) return undefined;
 
-  const animation = unit.definition.type === 'gunslinger'
-    ? { asset: 'player_gunslinger_shot' as const }
-    : unit.definition.type === 'mexican'
-      ? { asset: 'player_mexican_shot' as const }
-      : undefined;
+  const animation = PLAYER_SHOOTING_ANIMATIONS[unit.definition.type];
   if (!animation) return undefined;
 
   let row: number;
@@ -855,18 +894,15 @@ function advanceShootingAnimation(unit: MutableUnit, deltaMs: number, didMove: b
     return;
   }
 
-  const frames = unit.definition.type === 'gunslinger'
-    ? [[0, 100], [1, 200], [0, 1000]] as const
-    : unit.definition.type === 'mexican'
-      ? [[0, 200], [1, 400]] as const
-      : undefined;
-  if (!frames) {
+  const animation = PLAYER_SHOOTING_ANIMATIONS[unit.definition.type];
+  if (!animation) {
     unit.shootingAnimationElapsedMs = undefined;
     unit.shootingAnimationFrame = undefined;
     unit.shootingDirection = undefined;
     return;
   }
 
+  const frames = animation.frames;
   let frameIndex = 0;
   while (frameIndex < frames.length - 1 && unit.shootingAnimationElapsedMs > frames[frameIndex]![1]) {
     frameIndex += 1;
@@ -882,8 +918,7 @@ function advanceShootingAnimation(unit: MutableUnit, deltaMs: number, didMove: b
 }
 
 function advanceWalkingAnimation(unit: MutableUnit, deltaX: number, deltaY: number): void {
-  if ((unit.definition.type !== 'gunslinger' && unit.definition.type !== 'mexican')
-    || (deltaX === 0 && deltaY === 0)) return;
+  if (!PLAYER_SHOOTING_ANIMATIONS[unit.definition.type] || (deltaX === 0 && deltaY === 0)) return;
 
   const horizontalDistance = Math.abs(deltaX);
   const verticalDistance = Math.abs(deltaY);
@@ -1161,6 +1196,8 @@ function createPreviewEnemy(
     wagonPartsCreated: false,
     hitPoints,
     maxHitPoints: hitPoints,
+    damageOverTime: 0,
+    damageOverTimeRemainingMs: 0,
     cashReward: enemyDefinition?.cashReward ?? 0,
     penetration: enemyDefinition?.penetration ?? { light: 0, fire: 0, heavy: 0, poison: 0 },
     alive: true,
@@ -1293,6 +1330,8 @@ function createCampaignEnemy(
     wagonPartsCreated: false,
     hitPoints,
     maxHitPoints: hitPoints,
+    damageOverTime: 0,
+    damageOverTimeRemainingMs: 0,
     cashReward: definition.cashReward,
     penetration: definition.penetration,
     alive: true,
@@ -1499,6 +1538,45 @@ function recordCampaignKill(wave: MutableWave, priorityMap: RoutePriorityMap, en
   );
   wave.difficultyValue += (1500 - routeValue) * weight;
   wave.difficultyValueCounter += weight;
+}
+
+function applyEnemyDamage(
+  wave: MutableWave,
+  enemy: MutableEnemy,
+  damage: number,
+  priorityMap: RoutePriorityMap,
+  campaignMode: boolean,
+): void {
+  if (!enemy.alive || !enemy.damageable) return;
+  enemy.hitPoints -= damage;
+  wave.events.push({ type: 'enemy-hit', enemyId: enemy.id, damage, hitPoints: enemy.hitPoints });
+  if (enemy.hitPoints > 0) return;
+
+  enemy.alive = false;
+  enemy.deathRemainingMs = enemy.type === 4 || enemy.type === 8 ? 799 : campaignMode ? 599 : 799;
+  if (campaignMode) recordCampaignKill(wave, priorityMap, enemy);
+  wave.cash += enemy.cashReward;
+  wave.cashMade += enemy.cashReward;
+  wave.defeatedEnemies += 1;
+  wave.events.push({
+    type: 'enemy-defeated',
+    enemyId: enemy.id,
+    enemyType: enemy.type,
+    cashReward: enemy.cashReward,
+  });
+  if (enemy.type !== 4) return;
+
+  for (const groupMember of wave.enemies) {
+    if (groupMember !== enemy && groupMember.groupId === enemy.groupId && groupMember.alive) {
+      groupMember.alive = false;
+      groupMember.deathRemainingMs = 799;
+    }
+  }
+  wave.events.push({
+    type: 'sound-requested',
+    sound: 'sound_wagon_explode',
+    positionFine: { ...enemy.positionFine },
+  });
 }
 
 function unitEnemyDistanceSquare(unit: MutableUnit, enemy: MutableEnemy): number {
@@ -2435,10 +2513,13 @@ export function createGame(options: {
                 unitType: unit.definition.type,
                 price: hirePrice,
               });
-              if (unit.definition.type === 'gunslinger' || unit.definition.type === 'mexican') {
+              const hireSound = unit.definition.hireSound ?? (unit.definition.type === 'gunslinger'
+                ? 'sound_desperado_yihaa'
+                : unit.definition.type === 'mexican' ? 'sound_mexican_arriba' : undefined);
+              if (hireSound) {
                 wave.events.push({
                   type: 'sound-requested',
-                  sound: unit.definition.type === 'gunslinger' ? 'sound_desperado_yihaa' : 'sound_mexican_arriba',
+                  sound: hireSound,
                 });
               }
               continue;
@@ -2585,6 +2666,14 @@ export function createGame(options: {
                 const nextEnemy = movingEnemies[enemyIndex + 1];
                 if (nextEnemy?.groupId === enemy.groupId) movementBlockedEnemyId = nextEnemy.id;
               }
+              if (!result.escaped && enemy.damageOverTime > 0) {
+                // APK EnemyDirector.moveEnemys() applies post damage using fire penetration.
+                const postDamage = Math.trunc((enemy.damageOverTime * deltaMs) / 100);
+                const fireDamage = Math.trunc((postDamage * damagePenetration(enemy, 'fire')) / 100);
+                if (fireDamage > 0) applyEnemyDamage(wave, enemy, fireDamage, priorityMap, campaignMode);
+                enemy.damageOverTimeRemainingMs = Math.trunc(enemy.damageOverTimeRemainingMs - deltaMs);
+                if (enemy.damageOverTimeRemainingMs <= 0) enemy.damageOverTime = 0;
+              }
               if (!result.escaped) continue;
               for (const shot of wave.shots) {
                 if (!shot.impactResolved && shot.targetId === enemy.id) {
@@ -2629,6 +2718,8 @@ export function createGame(options: {
                 targetId: target.id,
                 damage: weapon.damage,
                 damageType: weapon.damageType,
+                postDamage: weapon.postDamage ?? 0,
+                postDamageDurationMs: weapon.postDamageDurationMs ?? 0,
                 damageStyle: weapon.damageStyle,
                 areaDamageFine: weapon.areaDamageFine ?? 0,
                 imageAsset: weapon.damageStyle === 3 ? 'sfx_mexican_dynamite' : undefined,
@@ -2663,8 +2754,10 @@ export function createGame(options: {
                 }
               }
               wave.events.push({ type: 'unit-fired', unitId: unit.definition.id, targetId: target.id, specialReload });
-              if (unit.definition.type === 'gunslinger' && weapon.damageStyle === 0) {
-                wave.events.push({ type: 'sound-requested', sound: 'sound_revolver', positionFine: { ...startFine } });
+              const shotSound = unit.definition.shotSound
+                ?? (unit.definition.type === 'gunslinger' && weapon.damageStyle === 0 ? 'sound_revolver' : undefined);
+              if (shotSound) {
+                wave.events.push({ type: 'sound-requested', sound: shotSound, positionFine: { ...startFine } });
               }
             }
 
@@ -2703,38 +2796,21 @@ export function createGame(options: {
                 if (!hitEnemy.alive || !hitEnemy.damageable) continue;
                 affectedEnemyIds.push(hitEnemy.id);
                 const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
-                hitEnemy.hitPoints -= damage;
-                wave.events.push({ type: 'enemy-hit', enemyId: hitEnemy.id, damage, hitPoints: hitEnemy.hitPoints });
-                if (hitEnemy.hitPoints <= 0) {
-                  hitEnemy.alive = false;
-                  hitEnemy.deathRemainingMs = hitEnemy.type === 4 || hitEnemy.type === 8 ? 799 : campaignMode ? 599 : 799;
-                  if (campaignMode) recordCampaignKill(wave, priorityMap, hitEnemy);
-                  wave.cash += hitEnemy.cashReward;
-                  wave.cashMade += hitEnemy.cashReward;
-                  wave.defeatedEnemies += 1;
-                  wave.events.push({
-                    type: 'enemy-defeated',
-                    enemyId: hitEnemy.id,
-                    enemyType: hitEnemy.type,
-                    cashReward: hitEnemy.cashReward,
-                  });
-                  if (hitEnemy.type === 4) {
-                    for (const groupMember of wave.enemies) {
-                      if (groupMember !== hitEnemy && groupMember.groupId === hitEnemy.groupId && groupMember.alive) {
-                        groupMember.alive = false;
-                        groupMember.deathRemainingMs = 799;
-                      }
-                    }
-                    wave.events.push({
-                      type: 'sound-requested',
-                      sound: 'sound_wagon_explode',
-                      positionFine: { ...hitEnemy.positionFine },
-                    });
-                  }
+                applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode);
+                if (shot.postDamage > 0) {
+                  hitEnemy.damageOverTime = shot.postDamage;
+                  hitEnemy.damageOverTimeRemainingMs = Math.max(
+                    hitEnemy.damageOverTimeRemainingMs,
+                    shot.postDamageDurationMs,
+                  );
                 }
               }
-              if (shot.damageStyle === 3 || shot.damageStyle === 4) {
+              if (shot.damageStyle === 3) {
                 wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite', positionFine: { ...shot.positionFine } });
+              } else if (shot.damageStyle === 4) {
+                wave.events.push({ type: 'sound-requested', sound: 'sound_cannon', positionFine: { ...shot.positionFine } });
+              } else if (shot.damageStyle === 6) {
+                wave.events.push({ type: 'sound-requested', sound: 'sound_rocket_launch', positionFine: { ...shot.positionFine } });
               }
               if (shot.damageStyle === 3 || shot.areaDamageFine > 0) {
                 shot.impactResolved = true;

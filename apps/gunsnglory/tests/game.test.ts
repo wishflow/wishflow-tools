@@ -1538,7 +1538,7 @@ test('the Mexican dynamite hits inside the strict one-tile radius and leaves bou
   assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
 });
 
-test('requests the dynamite impact sound for damage style 4', async () => {
+test('requests the cannon impact sound for damage style 4', async () => {
   const styleFourScenario: ScenarioContent = {
     ...combatScenario,
     id: 'style-four-impact-sound-fixture',
@@ -1573,7 +1573,7 @@ test('requests the dynamite impact sound for damage style 4', async () => {
   advanceFor(session, 300);
   const view = advanceFor(session, 1_040);
 
-  assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
+  assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_cannon'));
 });
 
 test('matches APK pre-increment attack frame thresholds for Gunslinger and Mexican', async () => {

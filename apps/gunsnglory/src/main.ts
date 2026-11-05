@@ -54,6 +54,7 @@ import type {
   GameSession,
   GameSettlementRecord,
   ScenarioContent,
+  UnitShotSound,
 } from './game';
 import { ProgressError, type CampaignProgressView, type ProfileView, type SettlementSaveResult } from './progress';
 import { messages } from './locales';
@@ -691,7 +692,13 @@ const languageMessages = {
     campaignOpened: (name: string) => `${name} opened.`,
     campaignOpenFailed: 'The stage could not be opened. The previous scene remains available.',
     none: 'No unit selected',
-    unitName: (type: string) => type === 'mexican' ? 'Mexican' : 'Gunslinger',
+    unitName: (type: string) => ({
+      mexican: 'Mexican',
+      cannon: 'Cannon',
+      indian: 'Native',
+      sniper: 'Markswoman',
+      grandpa: 'Scattergun Grandpa',
+    }[type] ?? 'Gunslinger'),
     selected: (name: string) => `${name} selected`,
     selectedCell: (x: number, y: number) => ` · Cell (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name} is waiting to be hired`,
@@ -881,7 +888,13 @@ const languageMessages = {
     campaignOpened: (name: string) => `已进入${name}。`,
     campaignOpenFailed: '无法打开该关卡，之前的场景仍可使用。',
     none: '尚未选择单位',
-    unitName: (type: string) => type === 'mexican' ? '墨西哥人' : '枪手',
+    unitName: (type: string) => ({
+      mexican: '墨西哥人',
+      cannon: '加农炮手',
+      indian: '原住民',
+      sniper: '女神枪手',
+      grandpa: '散弹枪爷爷',
+    }[type] ?? '枪手'),
     selected: (name: string) => `已选择${name}`,
     selectedCell: (x: number, y: number) => ` · 格子 (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name}待招募，尚未雇用`,
@@ -2355,6 +2368,18 @@ const assetNames = new Set([
   'player_gunslinger_shot',
   'player_mexican',
   'player_mexican_shot',
+  'player_cannon',
+  'player_cannon_sleep',
+  'player_cannon_shot',
+  'player_indian',
+  'player_indian_sleep',
+  'player_indian_shot',
+  'player_scout',
+  'player_scout_sleep',
+  'player_scout_shot',
+  'player_geezer',
+  'player_geezer_sleep',
+  'player_geezer_shot',
   'cursor',
   'hud_crosshair',
   'sfx_mexican_dynamite',
@@ -2751,6 +2776,17 @@ function retryCampaignWaveIntroVoice(): void {
   if (intro?.voiceSound && soundEnabled) playAudioAsset(intro.voiceSound);
 }
 
+const positionalUnitShotSounds: Readonly<Record<UnitShotSound, { id: number; assets: readonly string[] }>> = {
+  sound_cannon: { id: 1, assets: ['sound_cannon', 'sound_cannon2'] },
+  sound_fire_arrow: { id: 2, assets: ['sound_fire_arrow', 'sound_fire_arrow2'] },
+  sound_gattling_gun: { id: 3, assets: ['sound_gattling_gun', 'sound_gattling_gun2'] },
+  sound_shotgun: { id: 4, assets: ['sound_shotgun', 'sound_shotgun'] },
+  sound_rifle: { id: 5, assets: ['sound_rifle', 'sound_rifle'] },
+  sound_rocket_explosion: { id: 6, assets: ['sound_rocket_explosion_1', 'sound_rocket_explosion_2'] },
+  sound_rocket_launch: { id: 7, assets: ['sound_rocket_launch_1', 'sound_rocket_launch_2'] },
+  sound_poison_splash: { id: 8, assets: ['sound_poison_splash_1', 'sound_poison_splash_2'] },
+};
+
 function playRequestedSounds(
   events: readonly GameEvent[],
   eventWaveNumber = view.wave?.number,
@@ -2766,6 +2802,10 @@ function playRequestedSounds(
   };
   for (const event of events) {
     if (event.type === 'sound-requested') {
+      if (!('positionFine' in event)) {
+        playAudioAsset(event.sound);
+        continue;
+      }
       if (event.sound === 'sound_revolver') {
         const asset = gameSoundEffects.request({
           id: 0,
@@ -2781,7 +2821,14 @@ function playRequestedSounds(
         }, soundViewport);
         if (asset) playAudioAsset(asset);
       } else {
-        playAudioAsset(event.sound);
+        const request = positionalUnitShotSounds[event.sound as UnitShotSound];
+        if (request) {
+          const asset = gameSoundEffects.request({
+            ...request,
+            positionFine: event.positionFine,
+          }, soundViewport);
+          if (asset) playAudioAsset(asset);
+        }
       }
     }
     if (!isOfficialCowGulchSession()) continue;
