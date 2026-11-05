@@ -37,7 +37,7 @@ test('plays Cow Gulch music, follows sound and visibility settings, and retries 
       state.__musicCalls.push({ action: 'pause', file: path.split('/').pop() ?? '', loop: audio.loop });
     };
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
   const tracks = ['music_loop1', 'music_loop2', 'music_loop3', 'music_loop4', 'music_level_won'];
@@ -104,7 +104,7 @@ test('reloads a muted profile into active sound players after a settings conflic
     };
   });
 
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
   const audioCalls = () => page.evaluate(() =>
     (window as unknown as Window & { __audioCalls: Array<{ action: string; path: string }> }).__audioCalls);

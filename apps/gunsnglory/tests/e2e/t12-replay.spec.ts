@@ -3,7 +3,7 @@ import { openSingleWaveSample } from './helpers';
 
 test('exports a settled battle and verifies its replay without saving the replay result', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await speed.focus();

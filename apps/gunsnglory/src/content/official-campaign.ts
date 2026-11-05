@@ -1,5 +1,6 @@
 import type { CampaignStageDefinition } from '../progress';
 import { cowGulchP1dCampaignContent } from './cow-gulch';
+import { apacheValleyContent } from './apache-valley';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -10,10 +11,19 @@ export const cowGulchLevelOneContent = {
   formalSettlementSupported: true,
 };
 
+/** Stable production identity for the fully implemented original Apache Valley level. */
+export const apacheValleyLevelTwoContent = apacheValleyContent;
+
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
   contentVersion: cowGulchLevelOneContent.contentVersion,
   title: cowGulchLevelOneContent.title,
   globalLevel: 1,
   requiresCompletedScenarioIds: [],
+}, {
+  scenarioId: apacheValleyLevelTwoContent.id,
+  contentVersion: apacheValleyLevelTwoContent.contentVersion!,
+  title: apacheValleyLevelTwoContent.title,
+  globalLevel: 2,
+  requiresCompletedScenarioIds: [cowGulchLevelOneContent.id],
 }]);

@@ -7,8 +7,8 @@ export interface CampaignWaveIntro {
   waveNumber: number;
   speaker: LocalizedCampaignCopy;
   text: LocalizedCampaignCopy;
-  portraitAsset: 'portrait_pedro';
-  voiceSound: 'sound_pedro';
+  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers';
+  voiceSound?: 'sound_indian_hugh' | 'sound_pedro';
 }
 
 /** Cow Gulch wave dialogue transcribed from APK campaign strings and pointer controls. */
@@ -98,10 +98,74 @@ export const cowGulchWaveIntros: readonly CampaignWaveIntro[] = Object.freeze([
 export class CampaignWaveIntroCursor {
   private lastShownWave = 0;
 
+  constructor(private readonly intros: readonly CampaignWaveIntro[] = cowGulchWaveIntros) {}
+
   next(waveNumber: number): CampaignWaveIntro | undefined {
     if (!Number.isSafeInteger(waveNumber) || waveNumber <= this.lastShownWave) return undefined;
-    const intro = cowGulchWaveIntros.find((candidate) => candidate.waveNumber === waveNumber);
+    const intro = this.intros.find((candidate) => candidate.waveNumber === waveNumber);
     if (intro) this.lastShownWave = waveNumber;
     return intro;
   }
 }
+
+/** Apache Valley wave dialogue transcribed from the APK's campaign strings and speaker resources. */
+export const apacheValleyWaveIntros: readonly CampaignWaveIntro[] = Object.freeze([
+  {
+    waveNumber: 1,
+    speaker: { en: 'Pedro', zh: '佩德罗' },
+    text: {
+      en: 'Apache Valley is a good hunting ground... for settlers! You can also see on the bottom left how long it will be before the first convoy of settlers arrives. Press the Display key to speed up the start of the game! ',
+      zh: '阿帕奇山谷是个绝佳的狩猎场……对拓荒者来说！左下角会显示第一队拓荒者抵达前的剩余时间。按显示键可以加快游戏开始！',
+    },
+    portraitAsset: 'portrait_pedro',
+    voiceSound: 'sound_pedro',
+  },
+  {
+    waveNumber: 2,
+    speaker: { en: 'Pedro', zh: '佩德罗' },
+    text: {
+      en: 'We must wake all these slumbering warriors up and persuade as many of them as possible to join us!',
+      zh: '我们得把这些沉睡的战士都叫醒，尽可能说服他们加入我们！',
+    },
+    portraitAsset: 'portrait_pedro',
+    voiceSound: 'sound_pedro',
+  },
+  {
+    waveNumber: 3,
+    speaker: { en: 'Settlers', zh: '拓荒者' },
+    text: {
+      en: 'Darling, this gloomy canyon gives me the creeps. Can\'t we take the eastern route?',
+      zh: '亲爱的，这条阴森的峡谷让我毛骨悚然。我们不能走东边那条路吗？',
+    },
+    portraitAsset: 'portrait_settlers',
+  },
+  {
+    waveNumber: 4,
+    speaker: { en: 'Indian', zh: '印第安战士' },
+    text: {
+      en: 'Many settlers are approaching the land of our ancestors. Can you smell it, too? They are coming through both canyons at the same time!',
+      zh: '许多拓荒者正在逼近祖先的土地。你也闻到了吗？他们正同时穿过两条峡谷！',
+    },
+    portraitAsset: 'portrait_indian',
+    voiceSound: 'sound_indian_hugh',
+  },
+  {
+    waveNumber: 5,
+    speaker: { en: 'Settlers', zh: '拓荒者' },
+    text: {
+      en: 'Have you heard anything from Billy? Did he ever arrive in Cow Gulch?',
+      zh: '你听到比利的消息了吗？他到底有没有到牛溪谷？',
+    },
+    portraitAsset: 'portrait_settlers',
+  },
+  {
+    waveNumber: 6,
+    speaker: { en: 'Pedro', zh: '佩德罗' },
+    text: {
+      en: 'That should now be the last of the settlers. Then we can share the booty out and get dead drunk!',
+      zh: '这应该就是最后一批拓荒者了。之后我们就能分赃，再喝个酩酊大醉！',
+    },
+    portraitAsset: 'portrait_pedro',
+    voiceSound: 'sound_pedro',
+  },
+]);

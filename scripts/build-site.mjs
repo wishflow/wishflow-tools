@@ -1,11 +1,17 @@
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { configureSiteShellPages, readProjectCatalog, renderProjectCards, verifySiteOutput } from './project-catalog.mjs';
+import { resolveSourceSha } from './build-info.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const siteRoot = path.join(repoRoot, '_site');
+const githubSha = process.env.GITHUB_SHA;
+const localSha = githubSha?.trim()
+  ? undefined
+  : execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim();
+const sourceSha = resolveSourceSha({ githubSha, localSha });
 const projects = readProjectCatalog(repoRoot);
 const marker = '<!-- PROJECT_CARDS -->';
 const indexTemplate = await readFile(path.join(repoRoot, 'site', 'index.html'), 'utf8');
@@ -56,6 +62,12 @@ for (const project of projects) {
 
 await rm(siteRoot, { recursive: true, force: true });
 await mkdir(siteRoot, { recursive: true });
+const buildInfoPath = path.join(siteRoot, 'build-info.json');
+await writeFile(buildInfoPath, `${JSON.stringify({ sourceSha }, null, 2)}\n`);
+const generatedBuildInfo = JSON.parse(await readFile(buildInfoPath, 'utf8'));
+if (generatedBuildInfo.sourceSha !== sourceSha) {
+  throw new Error('Generated build-info.json does not match the source commit SHA.');
+}
 await cp(path.join(repoRoot, 'site'), siteRoot, { recursive: true });
 await cp(
   path.join(repoRoot, 'packages', 'site-shell', 'src', 'index.js'),

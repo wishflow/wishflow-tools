@@ -29,9 +29,17 @@ async function canvasHash(page: import('@playwright/test').Page): Promise<number
   });
 }
 
+async function expectCanvasHashChange(
+  page: import('@playwright/test').Page,
+  previousHash: number,
+  message: string,
+): Promise<void> {
+  await expect.poll(() => canvasHash(page), { message, timeout: 1000 }).not.toBe(previousHash);
+}
+
 async function openPausedOfficialBattle(page: import('@playwright/test').Page): Promise<void> {
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('game-canvas')).toBeVisible();
   const pause = page.getByTestId('pause-toggle');
   await expect(pause).toBeEnabled();
@@ -103,7 +111,7 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
       touchPoints: [{ ...worldEnd, id: 1 }],
     });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    expect(await canvasHash(page), 'touching and dragging empty playfield pans the map').not.toBe(beforeWorldDrag);
+    await expectCanvasHashChange(page, beforeWorldDrag, 'touching and dragging empty playfield pans the map');
 
     const beforeHorizontalDrag = await canvasHash(page);
     const horizontalStart = await canvasPoint(page, 80, 100);
@@ -117,8 +125,11 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
       touchPoints: [{ ...horizontalEnd, id: 3 }],
     });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    expect(await canvasHash(page), 'touching and dragging empty playfield pans Cow Gulch horizontally')
-      .not.toBe(beforeHorizontalDrag);
+    await expectCanvasHashChange(
+      page,
+      beforeHorizontalDrag,
+      'touching and dragging empty playfield pans Cow Gulch horizontally',
+    );
 
     const beforeMinimapDrag = await canvasHash(page);
     const start = await canvasPoint(page, 719, 15);
@@ -132,7 +143,7 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
       touchPoints: [{ ...end, id: 2 }],
     });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    expect(await canvasHash(page), 'touching and dragging the minimap updates the main view').not.toBe(beforeMinimapDrag);
+    await expectCanvasHashChange(page, beforeMinimapDrag, 'touching and dragging the minimap updates the main view');
 
     const beforeMinimapHorizontalDrag = await canvasHash(page);
     const minimapHorizontalStart = await canvasPoint(page, 719, 15);
@@ -146,8 +157,11 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
       touchPoints: [{ ...minimapHorizontalEnd, id: 4 }],
     });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    expect(await canvasHash(page), 'horizontal touch dragging the minimap pans Cow Gulch')
-      .not.toBe(beforeMinimapHorizontalDrag);
+    await expectCanvasHashChange(
+      page,
+      beforeMinimapHorizontalDrag,
+      'horizontal touch dragging the minimap pans Cow Gulch',
+    );
   } finally {
     await cdp.detach();
     await context.close();

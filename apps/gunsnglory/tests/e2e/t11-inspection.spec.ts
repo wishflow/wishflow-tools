@@ -3,7 +3,7 @@ import { openSingleWaveSample } from './helpers';
 
 test('single-step advances one frame and inspection overlays leave the paused battle unchanged', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
@@ -67,7 +67,7 @@ test('inspection and single-step controls remain usable on a phone-sized touch v
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page, 'tap');
     await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
     await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');

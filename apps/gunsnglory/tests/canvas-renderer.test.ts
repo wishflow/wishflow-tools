@@ -417,6 +417,51 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(overlayText.includes('Unit gunslinger · R < 5.0'));
   assert.ok(overlayText.includes('Pioneer HP 18/18'));
 
+  routeCommands.length = 0;
+  const secondRoute = [{ x: 3.5, y: -1.5 }, { x: 3.5, y: 4.5 }, { x: 8.5, y: 17.5 }];
+  drawGame(context, { ...view, routes: [view.route!, secondRoute] }, images, 1, undefined, true);
+  assert.equal(routeCommands.filter((command) => command === 'moveTo').length, 2,
+    'inspection draws each independent attack lane');
+  assert.equal(routeCommands.filter((command) => command === 'lineTo').length,
+    (view.route!.length - 1) + (secondRoute.length - 1),
+  'inspection preserves each route’s waypoint geometry');
+
+  const horsemanImage = { naturalWidth: 128, naturalHeight: 120 } as HTMLImageElement;
+  const horsemanTurnImage = { naturalWidth: 64, naturalHeight: 40 } as HTMLImageElement;
+  const horseman: EnemyView = {
+    ...sampleEnemy,
+    id: 'horseman-1',
+    type: 3,
+    asset: 'horseman',
+    direction: 'south',
+    animationFrame: 2,
+  };
+  drawCalls.length = 0;
+  drawGame(context, { ...view, units: [], enemies: [horseman], shots: [], wagonDebris: [], drawOrder: ['enemy:horseman-1'] }, {
+    ...images,
+    horseman: horsemanImage,
+  });
+  const horsemanDraw = drawCalls.find(([image]) => image === horsemanImage);
+  assert.ok(horsemanDraw);
+  assert.deepEqual(horsemanDraw.slice(1, 5), [64, 40, 32, 40], 'Horseman uses one original 32×40 frame from its 4×3 sheet');
+  assert.deepEqual(horsemanDraw.slice(7, 9), [60, 75], 'Horseman keeps its original logical sprite size');
+  assert.equal((horsemanDraw[6] as number) + (horsemanDraw[8] as number),
+    getMapViewport(view).origin.y + (horseman.positionFine.y / 240) * getMapViewport(view).scaleFactor,
+  'Horseman remains anchored to the route foot position');
+
+  drawCalls.length = 0;
+  drawGame(context, {
+    ...view,
+    units: [],
+    enemies: [{ ...horseman, turningAnimation: { asset: 'horseman_turn', frame: 1, mirrored: false } }],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:horseman-1'],
+  }, { ...images, horseman: horsemanImage, horseman_turn: horsemanTurnImage });
+  const horsemanTurnDraw = drawCalls.find(([image]) => image === horsemanTurnImage);
+  assert.ok(horsemanTurnDraw);
+  assert.deepEqual(horsemanTurnDraw.slice(1, 5), [32, 0, 32, 40], 'Horseman turns use the two-frame APK turn sheet');
+
   for (const [deathRemainingMs, frame] of [[599, 0], [500, 0], [499, 1], [100, 4], [99, 5], [0, 5]] as const) {
     pioneerDeathDraws.length = 0;
     drawGame(context, {

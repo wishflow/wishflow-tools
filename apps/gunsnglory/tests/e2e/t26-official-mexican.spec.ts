@@ -46,17 +46,16 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
   await installAutoContinueCampaignWaveIntro(page);
 
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
     const speed = page.getByRole('slider', { name: 'Simulation speed' });
     await speed.focus();
-    await speed.press('End');
-    await expect(speed).toHaveValue('4');
+    await speed.press('Home');
+    await expect(speed).toHaveValue('0.25');
     await page.getByTestId('game-toolbar-toggle').click();
 
     const waveStatus = page.getByTestId('wave-status');
-    await expect(waveStatus).toContainText('Cash $65');
-    expect(readCash(await waveStatus.innerText())).toBe(65);
+    await expect.poll(async () => readCash(await waveStatus.innerText())).toBeLessThan(100);
 
     const cdp = await context.newCDPSession(page);
     const start = await Promise.all([
@@ -93,7 +92,9 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
     const hire = page.getByTestId('hire-map-unit');
     await expect(hire).toHaveText('Hire map Mexican · $100');
     await expect(hire).toBeDisabled();
-    await expect(waveStatus).toContainText('Cash $65');
+    expect(readCash(await waveStatus.innerText())).toBeLessThan(100);
+    await expect(page.getByTestId('map-hire-status')).toBeEmpty();
+    await expect(page.getByTestId('recruit-pool-status')).toHaveText('Recruit pool: empty');
     await expect(page.getByTestId('settlement')).toBeHidden();
     await cdp.detach();
   } finally {

@@ -47,7 +47,7 @@ const commonDecorationCollisionBox = Object.freeze({ x: 1920, y: -1228, width: 3
 // TDM object codes emitted by GameObjectManager.createGameObjectsFromBasicMap for Cow Gulch.
 // Bounds are CollisionManager.createCollisionObject() rectangles translated from the source
 // object's cell-center anchor to this cell's top-left, in 7,680 fine units per map cell.
-const cowGulchDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
+export const cowGulchDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
   68: { asset: 'e_1x1_cactus_a', collisionBoxFine: commonDecorationCollisionBox },
   69: { asset: 'e_1x1_rocks_a', collisionBoxFine: commonDecorationCollisionBox },
   70: { asset: 'e_1x1_rocks_b', collisionBoxFine: { x: 1306, y: -1920, width: 5068, height: 3840 } },
@@ -74,10 +74,12 @@ function createCowGulchMapDecorations(): MapDecoration[] {
   return decorations;
 }
 
-function createSleepingMapUnits(): ScenarioUnit[] {
+export function createSleepingMapUnitsFromGrid(
+  tileGrid: readonly (readonly number[])[] = cowGulchMap.originalTileGrid ?? [],
+): ScenarioUnit[] {
   const counters = new Map<number, number>();
   const units: ScenarioUnit[] = [];
-  for (const [y, row] of (cowGulchMap.originalTileGrid ?? []).entries()) {
+  for (const [y, row] of tileGrid.entries()) {
     for (const [x, tile] of row.entries()) {
       if (tile !== 96 && tile !== 97) continue;
       const marker = sleepingUnitMarkers[tile];
@@ -144,7 +146,7 @@ export const cowGulchContent: ScenarioContent = {
         upgradeLevels: [firstMapGunslingerUpgradeLevelOne],
       } : {}),
     })),
-    ...createSleepingMapUnits(),
+    ...createSleepingMapUnitsFromGrid(),
   ],
   campaignWaveCount: 8,
   campaignWaves: cowGulchCampaignWaves,

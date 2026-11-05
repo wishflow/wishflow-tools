@@ -11,7 +11,7 @@ async function clickMapCenter(page: import('@playwright/test').Page): Promise<vo
 
 test('keeps the original level locked and upgrades the selected Gunslinger in the debug rules sample', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
 
   await expect(page.getByTestId('upgrade-sample-status')).toContainText('upgrade limit of 0');
@@ -63,7 +63,7 @@ test('keeps the original level locked and upgrades the selected Gunslinger in th
   await expect(page.getByTestId('upgrade-unit')).toBeHidden();
 
   await page.getByRole('button', { name: 'Return to Cow Gulch sample' }).click();
-  await expect(page.getByTestId('scene-context')).toHaveText('NEW MEXICO · 01');
+  await expect(page.getByTestId('scene-context')).toHaveText('PROGRESS SAMPLE');
   await expect(page.getByTestId('upgrade-sample-status')).toContainText('upgrade limit of 0');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
 });
@@ -78,7 +78,7 @@ test('upgrades a selected unit with touch on a phone-sized viewport', async ({ b
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page, 'tap');
     await page.getByRole('button', { name: 'Open upgrade rules sample' }).tap();
     const canvas = page.getByTestId('game-canvas');

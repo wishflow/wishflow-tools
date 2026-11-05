@@ -1,14 +1,14 @@
 export const messages = {
   'ORIGINAL CAMPAIGN': { en: 'ORIGINAL CAMPAIGN', zh: '原版战役' },
-  'Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.': {
-    en: 'Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.',
-    zh: '游玩牛溪谷原版战役；需要单独验证规则时可切换到样本场景。',
+  'Play Guns’n’Glory’s original campaign in your browser.': {
+    en: 'Play Guns’n’Glory’s original campaign in your browser.',
+    zh: '在浏览器中体验《Guns’n’Glory》原版战役。',
   },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
   'Campaign progress': { en: 'Campaign progress', zh: '战役进度' },
-  'Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.': {
-    en: 'Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.',
-    zh: '牛溪谷是正式战役第 1 关；之前的样本结果仍与战役进度隔离。',
+  'Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.': {
+    en: 'Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.',
+    zh: '牛溪谷和阿帕奇山谷是正式战役前两关；之前的样本结果仍与战役进度隔离。',
   },
   'Difficulty for the next battle': { en: 'Difficulty for the next battle', zh: '下一场战斗难度' },
   Easy: { en: 'Easy', zh: '简单' },
@@ -40,6 +40,7 @@ export const messages = {
   },
   'Simulation speed': { en: 'Simulation speed', zh: '模拟速度' },
   'Game controls': { en: 'Game controls', zh: '游戏操作' },
+  'Archive and testing tools': { en: 'Archive and testing tools', zh: '资料库与测试工具' },
   Controls: { en: 'Controls', zh: '操作说明' },
   'Click or tap a unit to select it; click empty ground to clear selection.': {
     en: 'Click or tap a unit to select it; click empty ground to clear selection.',
@@ -58,8 +59,8 @@ export const messages = {
     zh: '拖动空地可平移地图；拖动小地图视口框可移动主视口。',
   },
   'Pinch with two fingers to zoom the map.': {
-    en: 'Pinch with two fingers to zoom the map.',
-    zh: '双指捏合可缩放地图。',
+    en: 'Pinch with two fingers to zoom the map; use the zoom buttons or mouse wheel on desktop.',
+    zh: '双指捏合可缩放地图；桌面端可使用缩放按钮或鼠标滚轮。',
   },
   'Use the pause button or HUD pause icon to pause and resume.': {
     en: 'Use the pause button or HUD pause icon to pause and resume.',

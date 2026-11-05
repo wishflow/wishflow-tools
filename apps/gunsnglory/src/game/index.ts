@@ -145,7 +145,7 @@ export interface UnitWeaponDefinition {
   specialReloadFrequency?: number;
 }
 
-export type CampaignEnemyType = 1 | 2 | 4 | 8;
+export type CampaignEnemyType = 1 | 2 | 3 | 4 | 8;
 
 export interface PreviewEnemyDefinition {
   hitPoints: number;
@@ -166,6 +166,12 @@ export interface WaveRedirect {
   directions: readonly Direction[];
 }
 
+export interface WaveRouteDefinition {
+  spawn: WaveSpawn;
+  redirects: readonly WaveRedirect[];
+  exit: { x: number; y: number };
+}
+
 export interface PreviewWaveDefinition {
   number: number;
   initialLives: number;
@@ -175,6 +181,8 @@ export interface PreviewWaveDefinition {
   enemyHitPointMultiplierPercentByDifficulty?: Readonly<Record<GameDifficulty, number>>;
   spawn: WaveSpawn;
   additionalSpawns?: readonly WaveSpawn[];
+  /** Separate route chains for maps whose action-1 fields do not share one path. */
+  routes?: readonly WaveRouteDefinition[];
   enemy?: PreviewEnemyDefinition;
   baseEnemySpeed: number;
   speedMultiplierMin: number;
@@ -182,6 +190,7 @@ export interface PreviewWaveDefinition {
   escapePenalty: number;
   redirects: readonly WaveRedirect[];
   exit: { x: number; y: number };
+  additionalExits?: readonly { x: number; y: number }[];
 }
 
 export interface CampaignSpawnPoolDefinition {
@@ -195,6 +204,8 @@ export interface CampaignSpawnPoolDefinition {
 
 export interface CampaignWaveDefinition {
   number: number;
+  /** Original delay before this wave's first spawn; applied to every pool in the wave. */
+  delayMs?: number;
   hitPointMultiplierPercent: number;
   speedMultiplierPercent: number;
   spawnPools: readonly CampaignSpawnPoolDefinition[];
@@ -270,7 +281,7 @@ export interface UnitView extends ScenarioUnit {
 export interface EnemyView {
   id: string;
   type: CampaignEnemyType;
-  asset: 'pioneer_male' | 'pioneer_female' | 'wagon' | 'horse_wagon' | 'horse_wagon_white';
+  asset: 'pioneer_male' | 'pioneer_female' | 'horseman' | 'wagon' | 'horse_wagon' | 'horse_wagon_white';
   speed: number;
   direction: Direction;
   /** APK mirror state persists through vertical movement until a horizontal leg or turn changes it. */
@@ -279,7 +290,7 @@ export interface EnemyView {
   drawingOffsetFine?: { x: number; y: number };
   groupId?: string;
   damageable?: boolean;
-  turningAnimation?: { asset: 'wagon_turn' | 'horse_wagon_turn' | 'horse_wagon_turn_white'; frame: 0 | 1; mirrored: boolean };
+  turningAnimation?: { asset: 'horseman_turn' | 'wagon_turn' | 'horse_wagon_turn' | 'horse_wagon_turn_white'; frame: 0 | 1; mirrored: boolean };
   hitPoints: number;
   maxHitPoints: number;
   alive: boolean;
@@ -396,6 +407,8 @@ export interface GameView {
   map: ScenarioContent['map'];
   /** Read-only route centerline for learning and rendering overlays. */
   route?: readonly RoutePoint[];
+  /** Route centerlines for maps with independent attack lanes. */
+  routes?: readonly (readonly RoutePoint[])[];
   units: readonly UnitView[];
   enemies: readonly EnemyView[];
   /** Live enemy chosen by the player as the preferred attack target. */
@@ -505,6 +518,7 @@ interface MutableShot {
 interface MutableCampaignSpawnPool {
   spawnPointId: number;
   intervalMs: number;
+  intervalMultiplier?: number;
   delayMs: number;
   requests: number[];
 }
@@ -624,6 +638,7 @@ const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
 const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {
   1: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   2: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
+  3: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
   4: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   8: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
 };
@@ -1173,7 +1188,8 @@ function campaignSpawnPools(definition: CampaignWaveDefinition, dynamicDifficult
   return definition.spawnPools.map((pool) => ({
     spawnPointId: pool.spawnPointId,
     intervalMs: pool.intervalMs * (pool.intervalMultiplier ?? 1),
-    delayMs: 0,
+    ...(pool.intervalMultiplier !== undefined ? { intervalMultiplier: pool.intervalMultiplier } : {}),
+    delayMs: definition.delayMs ?? 0,
     requests: pool.requests.map((count) => {
       if (!scale || count <= 0) return count;
       return Math.max(1, Math.floor(((count * dynamicDifficulty) / 1000) + 0.5));
@@ -1212,6 +1228,9 @@ function campaignEnemyDefinition(scenario: ScenarioContent, type: CampaignEnemyT
   if (type === 4) {
     return { hitPoints: 200, cashReward: 10, penetration: { light: 50, fire: 100, heavy: 66, poison: 100 }, turningDurationMs: 200 };
   }
+  if (type === 3) {
+    return { hitPoints: 60, cashReward: 2, penetration: { light: 100, fire: 50, heavy: 25, poison: 75 }, turningDurationMs: 100 };
+  }
   if (type === 8) {
     return { hitPoints: 200, cashReward: 0, penetration: { light: 100, fire: 100, heavy: 100, poison: 100 }, turningDurationMs: 100 };
   }
@@ -1249,7 +1268,9 @@ function createCampaignEnemy(
     ? 'pioneer_male'
     : type === 2
       ? 'pioneer_female'
-      : type === 4
+      : type === 3
+        ? 'horseman'
+        : type === 4
         ? 'wagon'
         : colorVariant === 1 ? 'horse_wagon' : 'horse_wagon_white';
   return {
@@ -1341,6 +1362,33 @@ function spawnSettlerGroup(
     ));
   }
   return enemies;
+}
+
+function spawnHorseman(
+  scenario: ScenarioContent,
+  spawn: WaveSpawn,
+  spawnPositionFine: { x: number; y: number },
+  groupId: string,
+  dynamicDifficulty: number,
+  waveDefinition: CampaignWaveDefinition,
+  difficulty: GameDifficulty,
+  random: JavaRandom,
+  nextEnemyId: () => string,
+): MutableEnemy[] {
+  const speedPercent = 90 + random.nextInt(20);
+  const definition = campaignEnemyDefinition(scenario, 3);
+  return [createCampaignEnemy(
+    nextEnemyId(),
+    3,
+    spawn,
+    spawnPositionFine,
+    { x: 0, y: 0 },
+    campaignEnemySpeed(scenario, waveDefinition, speedPercent),
+    campaignEnemyHitPoints(scenario, waveDefinition, dynamicDifficulty, difficulty, 3),
+    definition,
+    groupId,
+    random.nextInt(2),
+  )];
 }
 
 function spawnCoveredWagonPair(
@@ -1730,7 +1778,8 @@ function moveEnemy(
       if (enemy.despawnOnNextFieldCounter === 0) return { escaped: true, collisionBlocked: false };
     } else {
       const cell = { x: fullCell(enemy.positionFine.x), y: fullCell(enemy.positionFine.y) };
-      if (cell.x === definition.exit.x && cell.y === definition.exit.y) {
+      const exits = [definition.exit, ...(definition.additionalExits ?? [])];
+      if (exits.some((exit) => cell.x === exit.x && cell.y === exit.y)) {
         enemy.despawnOnNextFieldCounter = 2;
       } else {
         const redirect = definition.redirects.find((candidate) =>
@@ -1929,8 +1978,13 @@ export function createGame(options: {
       const campaignMode = (mode === 'formal' || (mode === 'replay' && replaySourceMode === 'formal'))
         && Boolean(campaignWaves?.length);
       if (campaignWaves) {
+        const spawnCount = scenario.previewWave
+          ? 1 + (scenario.previewWave.additionalSpawns?.length ?? 0)
+          : 0;
         if (!Number.isSafeInteger(campaignWaveCount) || campaignWaveCount < campaignWaves.length
           || campaignWaves.some((campaignWave, index) => campaignWave.number !== index + 1
+            || (campaignWave.delayMs !== undefined
+              && (!Number.isSafeInteger(campaignWave.delayMs) || campaignWave.delayMs < 0))
             || !Number.isSafeInteger(campaignWave.hitPointMultiplierPercent)
             || campaignWave.hitPointMultiplierPercent < 1
             || !Number.isSafeInteger(campaignWave.speedMultiplierPercent)
@@ -1938,6 +1992,7 @@ export function createGame(options: {
             || campaignWave.spawnPools.some((pool) => !Number.isSafeInteger(pool.spawnPointId)
               || pool.spawnPointId < 0 || !Number.isSafeInteger(pool.intervalMs) || pool.intervalMs < 0
               || (pool.intervalMultiplier !== undefined && (!Number.isSafeInteger(pool.intervalMultiplier) || pool.intervalMultiplier < 1))
+              || pool.spawnPointId >= spawnCount
               || pool.requests.length !== 10
               || pool.requests.some((count) => !Number.isSafeInteger(count) || count < 0)))) {
           throw new GameOpenError('scenario-unavailable', 'Campaign wave data is invalid');
@@ -2024,14 +2079,22 @@ export function createGame(options: {
         if (closed) throw new Error('Game session is closed');
       };
 
-      const route: RoutePoint[] | undefined = scenario.previewWave ? [
+      const routeDefinitions = scenario.previewWave?.routes?.length
+        ? scenario.previewWave.routes
+        : scenario.previewWave ? [{
+          spawn: scenario.previewWave.spawn,
+          redirects: scenario.previewWave.redirects,
+          exit: scenario.previewWave.exit,
+        }] : [];
+      const routes: RoutePoint[][] = routeDefinitions.map((routeDefinition) => [
         {
-          x: scenario.previewWave.spawn.cell.x - 1.5,
-          y: scenario.previewWave.spawn.cell.y + 0.5,
+          x: routeDefinition.spawn.cell.x - 1.5,
+          y: routeDefinition.spawn.cell.y + 0.5,
         },
-        ...scenario.previewWave.redirects.map(({ cell }) => ({ x: cell.x + 0.5, y: cell.y + 0.5 })),
-        { x: scenario.previewWave.exit.x + 0.5, y: scenario.previewWave.exit.y + 0.5 },
-      ] : undefined;
+        ...routeDefinition.redirects.map(({ cell }) => ({ x: cell.x + 0.5, y: cell.y + 0.5 })),
+        { x: routeDefinition.exit.x + 0.5, y: routeDefinition.exit.y + 0.5 },
+      ]);
+      const route = routes[0];
 
       const observe = (): GameView => {
         assertOpen();
@@ -2047,6 +2110,7 @@ export function createGame(options: {
               : {}),
           },
           ...(route ? { route } : {}),
+          ...(routes.length > 1 ? { routes } : {}),
           units: units.map((unit) => unitView(unit, scenario.maxUpgrades ?? 0, elapsedMs)),
           enemies: (wave?.enemies ?? []).map((enemy) => ({
             id: enemy.id,
@@ -2059,10 +2123,11 @@ export function createGame(options: {
             drawingOffsetFine: { ...enemy.drawingOffsetFine },
             groupId: enemy.groupId,
             damageable: enemy.damageable,
-            ...(enemy.turningImageActive && (enemy.type === 4 || enemy.type === 8) ? {
+            ...(enemy.turningImageActive ? {
               turningAnimation: {
-                asset: enemy.type === 4 ? 'wagon_turn' as const
-                  : enemy.asset === 'horse_wagon' ? 'horse_wagon_turn' as const : 'horse_wagon_turn_white' as const,
+                asset: enemy.type === 3 ? 'horseman_turn' as const
+                  : enemy.type === 4 ? 'wagon_turn' as const
+                    : enemy.asset === 'horse_wagon' ? 'horse_wagon_turn' as const : 'horse_wagon_turn_white' as const,
                 frame: enemy.turningFrame,
                 mirrored: enemy.turningMirrored,
               },
@@ -2719,12 +2784,14 @@ export function createGame(options: {
                   y: spawnField.positionFine.y - (spawnVector.y * 2 * FINE_UNITS_PER_CELL),
                 };
                 const poolType = selectedRequestIndex + 2;
+                const requestIntervalMs = pool.intervalMs
+                  * (poolType === 7 && pool.intervalMultiplier === undefined ? 2 : 1);
                 const collisionProbePosition = {
                   x: candidatePosition.x + (spawnVector.x * FINE_UNITS_PER_CELL),
                   y: candidatePosition.y + (spawnVector.y * FINE_UNITS_PER_CELL),
                 };
                 if (poolType === 7 && campaignSpawnCollides(collisionProbePosition, wave.enemies)) {
-                  pool.delayMs = Math.trunc(pool.intervalMs / 2);
+                  pool.delayMs = Math.trunc(requestIntervalMs / 2);
                   continue;
                 }
 
@@ -2736,6 +2803,11 @@ export function createGame(options: {
                     scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
                     campaignDefinition, difficulty, random, nextEnemyId,
                   )
+                  : poolType === 6
+                    ? spawnHorseman(
+                      scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
+                      campaignDefinition, difficulty, random, nextEnemyId,
+                    )
                   : poolType >= 2 && poolType <= 5
                     ? spawnSettlerGroup(
                       scenario, spawn, candidatePosition, requestType, nextGroupId, wave.dynamicDifficulty,
@@ -2743,14 +2815,14 @@ export function createGame(options: {
                     )
                     : undefined;
                 if (!spawned) {
-                  pool.delayMs = Math.trunc(pool.intervalMs / 2);
+                  pool.delayMs = Math.trunc(requestIntervalMs / 2);
                   continue;
                 }
 
                 wave.enemies.push(...spawned);
                 drawOrderCreationOrder.push(...spawned.map(({ id }) => 'enemy:' + id));
                 pool.requests[selectedRequestIndex] = pool.requests[selectedRequestIndex]! - 1;
-                pool.delayMs = pool.intervalMs;
+                pool.delayMs = requestIntervalMs;
                 wave.events.push({
                   type: 'enemy-group-spawned',
                   enemyIds: spawned.map(({ id }) => id),

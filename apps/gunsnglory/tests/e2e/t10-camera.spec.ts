@@ -51,7 +51,7 @@ test('two-finger map zoom follows its focal point and preserves touch hit testin
   await installAutoContinueCampaignWaveIntro(page);
   const cdp = await context.newCDPSession(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page, 'tap');
     const canvas = page.getByTestId('game-canvas');
     const selection = page.getByTestId('selection-status');
@@ -99,7 +99,7 @@ test('a single-finger unit drag after zoom uses the same map coordinates for dra
   await installAutoContinueCampaignWaveIntro(page);
   const cdp = await context.newCDPSession(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page, 'tap');
     const canvas = page.getByTestId('game-canvas');
     const selection = page.getByTestId('selection-status');
@@ -159,7 +159,7 @@ test('converting a one-finger drag to a pinch stops movement and locks the remai
   await installAutoContinueCampaignWaveIntro(page);
   const cdp = await context.newCDPSession(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page, 'tap');
     const selection = page.getByTestId('selection-status');
     const units = page.getByTestId('inspection-units');
@@ -220,7 +220,7 @@ test('simulation replay records the zoomed map tile width after a touch pinch', 
   await installAutoContinueCampaignWaveIntro(page);
   const cdp = await context.newCDPSession(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page, 'tap');
     const canvas = page.getByTestId('game-canvas');
     const unitPoint = await mapPoint(page, 8.5, 8.25);
