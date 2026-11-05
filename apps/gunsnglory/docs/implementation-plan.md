@@ -40,14 +40,13 @@
 
 ## 当前活动任务：核心 UI/UX 批次收口
 
-主菜单与正式战斗操作、游戏全屏/移动横屏、桌面地图缩放三个切片均已分别通过针对性检查并完成本地提交。菜单交互迁移和资源恢复修复的 7 项针对性 E2E 均通过。最终完整 `pnpm run test:ci` 已通过：类型检查、238 项单测、生产构建及 89 项 E2E 全部通过；测试使用专用端口 `4187`。`pnpm run test:catalog` 的 15 项检查通过。共享站 `pnpm run build:site` 已构建全部六个登记应用并通过输出校验；3D Objects 构建有既存大 chunk 提示，但其 bundle 体积检查通过。
+主菜单与正式战斗操作、游戏全屏/移动横屏、桌面地图缩放三个切片均已分别通过针对性检查并完成本地提交。菜单交互迁移和资源恢复修复的 7 项针对性 E2E 均通过。来源 SHA 构建切片已完成：`scripts/build-site.mjs` 生成 `_site/build-info.json`，Actions 优先使用 `GITHUB_SHA`，本地回退至 `git rev-parse HEAD`；无效 SHA 会使构建失败。Actions 覆盖值及本地回退均经过测试。
 
-来源 SHA 构建切片已完成：`scripts/build-site.mjs` 生成 `_site/build-info.json`，Actions 优先使用 `GITHUB_SHA`，本地回退至 `git rev-parse HEAD`；无效 SHA 会使构建失败。`pnpm run test:catalog` 的 18 项检查通过，覆盖 CI 优先、本地回退和无效输入；完整 `pnpm run build:site` 成功，六个登记应用均构建通过。额外用 `GITHUB_SHA` 覆盖值构建，生成清单与输入完全一致。之前 89 项 E2E 全通过的完整应用检查早于此根构建脚本改动，因此仍须在提交该切片后重跑整批检查。
+最终完整检查已通过：`PLAYWRIGHT_PORT=4187 CI=1 pnpm run test:ci` 的类型检查、238 项单测、生产构建和 89 项 E2E 全部通过；`pnpm run test:catalog` 为 18/18；`pnpm run build:site` 构建全部六个登记应用并通过输出校验。本地构建清单 SHA 与当次已测提交 `d350c49` 一致。3D Objects 构建有既存大 chunk 提示，其 bundle 体积检查通过。
 
-1. **完成最终批次检查：** 以 `PLAYWRIGHT_PORT=4187 CI=1 pnpm run test:ci` 运行 Guns’n’Glory 全套检查；随后运行 `pnpm run test:catalog`、`pnpm run build:site`，并核对本地 `_site/build-info.json` 的 `sourceSha` 与当前已提交 `HEAD` 一致。任一失败时只修当前批次问题并重跑失败项与最终完整检查。
-2. **准备 squash 发布：** 重新获取 `origin/master` 与 `origin/gunsnglory`，核对工作树与远程头。以最新 `origin/master` 为发布基线，把已验收的 map02 和本批 UI/UX 变更作为一个 squash 集成；检查提交差异仅包含这批已验收代码、资源、测试和必要文档。
-3. **发布并核验：** 推送 `master` 后等待 Pages 工作流成功；通过公开的 `build-info.json` 核对 `sourceSha` 与 squash 发布提交完全一致，再用 Codex 内置浏览器验证线上战役入口、正式招募、全屏、桌面缩放和移动布局。
-4. **同步工作树：** 将发布提交合并回 `gunsnglory` 并推送，核对远程 `master`、远程 `gunsnglory` 均包含发布提交；更新相关工作树时保留现有未提交内容。本轮已发现 Guns’n’Glory 主工作树含未跟踪研究文档，必须原样保留。
+1. **复核并准备 squash：** 再次获取 `origin/master` 与 `origin/gunsnglory`；确认当前功能工作树干净、集成分支包含最新 `origin/master`。审查 `origin/master..` 当前已验收提交的文件清单，确认内容为 map02、本批 UI/UX、来源 SHA 门槛及其必要代码、资源、测试和文档。以最新 `origin/master` 为基线创建一个 squash 发布提交。
+2. **发布并核验：** 推送 `master` 后通过 GitHub CLI 检查该提交对应的 Pages 工作流成功；访问公开 `build-info.json`，要求 `sourceSha` 与 squash 发布提交完全一致。再用 Codex 内置浏览器验证战役入口、正式招募、全屏、桌面缩放和移动布局。
+3. **同步分支和工作树：** 将发布提交合并回 `gunsnglory` 并推送；核对远程 `master`、远程 `gunsnglory` 均包含发布提交，当前功能工作树含该提交。Guns’n’Glory 主工作树现有未跟踪文件 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 必须原样保留并在更新后确认仍存在。
 
 发布和工作树同步全部通过后才开始 New Mexico map03 调研；本批收口前不推进 map03。
 
