@@ -1322,6 +1322,35 @@ body {
   scrollbar-width: thin;
 }
 
+.map-zoom-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.25rem;
+  border-left: 1px solid rgba(237, 191, 117, 0.4);
+  padding-left: 0.4rem;
+}
+
+.map-zoom-controls[hidden] {
+  display: none;
+}
+
+.map-zoom-controls button[data-testid="map-zoom-in"],
+.map-zoom-controls button[data-testid="map-zoom-out"] {
+  min-width: 2.3rem;
+  padding: 0.35rem;
+  font-size: 1rem;
+}
+
+.map-zoom-controls output {
+  min-width: 2.8rem;
+  color: #ffe1a8;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  text-align: center;
+}
+
 .game-toolbar button {
   flex: 0 0 auto;
   min-height: 2.3rem;

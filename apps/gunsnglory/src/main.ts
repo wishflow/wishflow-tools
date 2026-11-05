@@ -25,7 +25,15 @@ import {
   cowGulchVictoryMusic,
   type CowGulchMusicTrack,
 } from './content/cow-gulch-music';
-import { cameraForAnchor, createMapCamera, panCameraByScreenDelta, screenToMapCell, type MapCamera } from './render/map-viewport';
+import {
+  cameraForAnchor,
+  createMapCamera,
+  MAX_MAP_ZOOM,
+  MIN_MAP_ZOOM,
+  panCameraByScreenDelta,
+  screenToMapCell,
+  type MapCamera,
+} from './render/map-viewport';
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
@@ -89,6 +97,12 @@ app.innerHTML = [
   '          <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
   '          <button type="button" data-testid="hire-map-unit" data-action="hire-map-unit" hidden>Hire selected map unit</button>',
   '          <button type="button" data-action="clear-selection">Clear selection</button>',
+  '          <div class="map-zoom-controls" data-testid="map-zoom-controls" role="group" aria-label="Map zoom" hidden>',
+  '            <button type="button" data-testid="map-zoom-out" data-action="map-zoom-out" aria-label="Zoom out">−</button>',
+  '            <output data-testid="map-zoom-level" aria-label="Map zoom level" aria-live="off">1×</output>',
+  '            <button type="button" data-testid="map-zoom-in" data-action="map-zoom-in" aria-label="Zoom in">+</button>',
+  '            <button type="button" data-testid="map-zoom-reset" data-action="map-zoom-reset">Reset zoom</button>',
+  '          </div>',
   '          </div>',
   '          <div class="game-toolbar-options">',
   '          <label class="simulation-speed-control" for="simulation-speed">',
@@ -276,6 +290,11 @@ const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
 const fullscreenToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="fullscreen-toggle"]');
 const fullscreenStatusElement = app.querySelector<HTMLElement>('[data-testid="fullscreen-status"]');
+const mapZoomControlsElement = app.querySelector<HTMLElement>('[data-testid="map-zoom-controls"]');
+const mapZoomOutButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="map-zoom-out"]');
+const mapZoomInButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="map-zoom-in"]');
+const mapZoomResetButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="map-zoom-reset"]');
+const mapZoomLevelElement = app.querySelector<HTMLOutputElement>('[data-testid="map-zoom-level"]');
 const sceneHeadingElement = app.querySelector<HTMLElement>('.scene-heading');
 const gameToolbarElement = app.querySelector<HTMLElement>('[data-testid="game-toolbar"]');
 const campaignExitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-exit-confirmation"]');
@@ -380,7 +399,9 @@ const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testi
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
 if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
-  || !fullscreenStatusElement || !sceneHeadingElement || !gameToolbarElement
+  || !fullscreenStatusElement || !mapZoomControlsElement || !mapZoomOutButtonElement
+  || !mapZoomInButtonElement || !mapZoomResetButtonElement || !mapZoomLevelElement
+  || !sceneHeadingElement || !gameToolbarElement
   || !campaignExitConfirmationElement || !campaignPanelElement
   || !archivePanelElement
   || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
@@ -424,6 +445,11 @@ const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
 const fullscreenToggleButton: HTMLButtonElement = fullscreenToggleButtonElement;
 const fullscreenStatus: HTMLElement = fullscreenStatusElement;
+const mapZoomControls: HTMLElement = mapZoomControlsElement;
+const mapZoomOutButton: HTMLButtonElement = mapZoomOutButtonElement;
+const mapZoomInButton: HTMLButtonElement = mapZoomInButtonElement;
+const mapZoomResetButton: HTMLButtonElement = mapZoomResetButtonElement;
+const mapZoomLevel: HTMLOutputElement = mapZoomLevelElement;
 const sceneHeading: HTMLElement = sceneHeadingElement;
 const gameToolbar: HTMLElement = gameToolbarElement;
 const campaignPanel: HTMLElement = campaignPanelElement;
@@ -616,6 +642,7 @@ let upgradeCommandNumber = 0;
 let settingsSaveSequence = 0;
 const simulationTime = new SimulationTimeAccumulator();
 let mapCamera: MapCamera = createMapCamera();
+const MAP_ZOOM_BUTTON_STEP = 0.25;
 function speedDisplay(finePer100Ms: number, language: 'en' | 'zh'): string {
   const cellsPerSecond = (finePer100Ms * 10 / 7680).toFixed(2);
   return language === 'en'
@@ -696,6 +723,11 @@ const languageMessages = {
     fullscreenExitFailed: 'Could not exit fullscreen. Use Escape or your browser’s fullscreen control.',
     fullscreenLandscapeLocked: 'Landscape orientation is enabled.',
     fullscreenLandscapeUnavailable: 'Fullscreen is active. Rotate your device to landscape for the best view.',
+    mapZoomGroup: 'Map zoom',
+    mapZoomLevel: 'Map zoom level',
+    mapZoomIn: 'Zoom in',
+    mapZoomOut: 'Zoom out',
+    mapZoomReset: 'Reset zoom',
     pauseBattle: 'Pause battle',
     resumeBattle: 'Resume battle',
     battlePaused: 'Battle paused.',
@@ -881,6 +913,11 @@ const languageMessages = {
     fullscreenExitFailed: '无法退出全屏，请按 Esc 键或使用浏览器的全屏控制。',
     fullscreenLandscapeLocked: '已锁定为横屏。',
     fullscreenLandscapeUnavailable: '已进入全屏，请手动将设备旋转至横屏以获得最佳显示效果。',
+    mapZoomGroup: '地图缩放',
+    mapZoomLevel: '地图缩放倍率',
+    mapZoomIn: '放大地图',
+    mapZoomOut: '缩小地图',
+    mapZoomReset: '重置缩放',
     pauseBattle: '暂停战斗',
     resumeBattle: '继续战斗',
     battlePaused: '战斗已暂停。',
@@ -1881,6 +1918,21 @@ async function retryFormalSettlement(): Promise<void> {
   renderStatus();
 }
 
+function renderMapZoomControls(language: keyof typeof languageMessages = getLanguage()): void {
+  const messages = languageMessages[language];
+  mapZoomControls.hidden = !view.wave || gameToolbar.hidden || campaignWaveIntroDialog.open || !settlementPanel.hidden;
+  mapZoomControls.setAttribute('aria-label', messages.mapZoomGroup);
+  mapZoomOutButton.setAttribute('aria-label', messages.mapZoomOut);
+  mapZoomInButton.setAttribute('aria-label', messages.mapZoomIn);
+  mapZoomResetButton.setAttribute('aria-label', messages.mapZoomReset);
+  mapZoomResetButton.textContent = messages.mapZoomReset;
+  mapZoomLevel.setAttribute('aria-label', messages.mapZoomLevel);
+  mapZoomLevel.textContent = `${Number(mapCamera.zoom.toFixed(2))}×`;
+  mapZoomOutButton.disabled = mapCamera.zoom <= MIN_MAP_ZOOM;
+  mapZoomInButton.disabled = mapCamera.zoom >= MAX_MAP_ZOOM;
+  mapZoomResetButton.disabled = mapCamera.zoom === 1 && mapCamera.offsetX === 0 && mapCamera.offsetY === 0;
+}
+
 function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
@@ -1888,6 +1940,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   renderCampaign();
   if (!campaignMenuScreen.hidden) renderCampaignMenu();
   renderCampaignWaveIntro();
+  renderMapZoomControls(language);
   const actionLocked = replaying || replacingSession;
   sceneOpenErrorPanel.hidden = sceneOpenFailure === undefined;
   retrySceneOpenControl.textContent = messages.retrySceneOpen;
@@ -3658,6 +3711,58 @@ function pointerMapPosition(event: PointerEvent): { x: number; y: number; mapX: 
   const mapCell = screenToMapCell(mapViewport, point.x, point.y);
   return { x: point.x, y: point.y, mapX: mapCell.x, mapY: mapCell.y };
 }
+
+function zoomMapAt(requestedZoom: number, screenAnchor: PointerPoint): void {
+  if (!view.wave) return;
+  const displayPixelScale = getDisplayPixelScale();
+  const baseViewport = getMapViewport(view, displayPixelScale);
+  const currentViewport = getMapViewport(view, displayPixelScale, mapCamera);
+  const mapAnchor = screenToMapCell(currentViewport, screenAnchor.x, screenAnchor.y);
+  mapCamera = cameraForAnchor(
+    baseViewport,
+    view.map.width,
+    view.map.height,
+    GAME_VIEWPORT.width,
+    GAME_VIEWPORT.height,
+    requestedZoom,
+    mapAnchor,
+    screenAnchor,
+    displayPixelScale,
+  );
+  redraw();
+  renderMapZoomControls();
+}
+
+function resetMapZoom(): void {
+  mapCamera = createMapCamera();
+  redraw();
+  renderMapZoomControls();
+}
+
+mapZoomInButton.addEventListener('click', () => zoomMapAt(
+  mapCamera.zoom + MAP_ZOOM_BUTTON_STEP,
+  { x: GAME_VIEWPORT.width / 2, y: GAME_VIEWPORT.height / 2 },
+));
+mapZoomOutButton.addEventListener('click', () => zoomMapAt(
+  mapCamera.zoom - MAP_ZOOM_BUTTON_STEP,
+  { x: GAME_VIEWPORT.width / 2, y: GAME_VIEWPORT.height / 2 },
+));
+mapZoomResetButton.addEventListener('click', resetMapZoom);
+
+canvas.addEventListener('wheel', (event: WheelEvent) => {
+  if (!view.wave) return;
+  const point = pointerLogicalPosition(event.clientX, event.clientY);
+  if (!point) return;
+  event.preventDefault();
+  if (event.deltaY === 0) return;
+  const deltaPixels = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+    ? event.deltaY * 16
+    : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+      ? event.deltaY * GAME_VIEWPORT.height
+      : event.deltaY;
+  const exponent = Math.max(-0.7, Math.min(0.7, -deltaPixels * 0.0015));
+  zoomMapAt(mapCamera.zoom * Math.exp(exponent), point);
+}, { passive: false });
 
 function midpoint(first: PointerPoint, second: PointerPoint): PointerPoint {
   return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };

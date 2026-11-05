@@ -59,8 +59,8 @@ export const messages = {
     zh: '拖动空地可平移地图；拖动小地图视口框可移动主视口。',
   },
   'Pinch with two fingers to zoom the map.': {
-    en: 'Pinch with two fingers to zoom the map.',
-    zh: '双指捏合可缩放地图。',
+    en: 'Pinch with two fingers to zoom the map; use the zoom buttons or mouse wheel on desktop.',
+    zh: '双指捏合可缩放地图；桌面端可使用缩放按钮或鼠标滚轮。',
   },
   'Use the pause button or HUD pause icon to pause and resume.': {
     en: 'Use the pause button or HUD pause icon to pause and resume.',
