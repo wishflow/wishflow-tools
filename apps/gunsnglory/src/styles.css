@@ -359,6 +359,76 @@ body {
   outline: none;
 }
 
+.game-frame-fullscreen-toggle {
+  position: absolute;
+  z-index: 12;
+  top: 0.5rem;
+  right: 0.5rem;
+  min-height: 2.3rem;
+  border: 1px solid rgba(255, 225, 168, 0.58);
+  border-radius: 0.4rem;
+  padding: 0.4rem 0.65rem;
+  color: #ffe1a8;
+  background: rgba(25, 20, 15, 0.92);
+  box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.35);
+  font: inherit;
+  font-size: clamp(0.65rem, 1.05cqw, 0.9rem);
+  font-weight: 750;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.game-frame-fullscreen-toggle:hover {
+  background: rgba(58, 43, 27, 0.96);
+}
+
+.game-frame-fullscreen-toggle:focus-visible {
+  outline: 2px solid #fff0a7;
+  outline-offset: 2px;
+}
+
+.game-frame-fullscreen-status {
+  position: absolute;
+  z-index: 12;
+  top: 3.25rem;
+  right: 0.5rem;
+  max-width: min(72%, 28rem);
+  margin: 0;
+  border: 1px solid rgba(255, 225, 168, 0.42);
+  border-radius: 0.35rem;
+  padding: 0.35rem 0.5rem;
+  color: #fff0d0;
+  background: rgba(25, 20, 15, 0.94);
+  box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.32);
+  font-size: clamp(0.62rem, 0.9cqw, 0.78rem);
+  line-height: 1.2;
+  text-align: right;
+}
+
+.game-frame-fullscreen-status[hidden] {
+  display: none;
+}
+
+.game-frame:fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  width: min(100vw, 177.7778vh);
+  height: min(100vh, 56.25vw);
+  width: min(100dvw, 177.7778dvh);
+  height: min(100dvh, 56.25dvw);
+  max-width: none;
+  aspect-ratio: 16 / 9;
+  margin: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.game-frame:fullscreen::backdrop {
+  background: #100d09;
+}
+
 .game-frame canvas:focus-visible {
   outline: 2px solid #ffe28a;
   outline-offset: -3px;

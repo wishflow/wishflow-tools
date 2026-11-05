@@ -73,6 +73,8 @@ app.innerHTML = [
   '    <div class="scene-heading" hidden><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
   '    <div class="game-frame">',
   '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
+  '      <button type="button" class="game-frame-fullscreen-toggle" data-testid="fullscreen-toggle" data-action="toggle-fullscreen" aria-pressed="false" aria-describedby="fullscreen-status">Enter fullscreen</button>',
+  '      <p class="game-frame-fullscreen-status" id="fullscreen-status" data-testid="fullscreen-status" role="status" aria-live="polite" hidden></p>',
   '      <section class="campaign-menu-screen" data-testid="campaign-menu-screen" aria-label="Campaign menu">',
   '        <div class="campaign-menu-view" data-testid="campaign-menu-view"></div>',
   '      </section>',
@@ -272,6 +274,8 @@ registerMessages('gunsnglory', messages);
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
+const fullscreenToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="fullscreen-toggle"]');
+const fullscreenStatusElement = app.querySelector<HTMLElement>('[data-testid="fullscreen-status"]');
 const sceneHeadingElement = app.querySelector<HTMLElement>('.scene-heading');
 const gameToolbarElement = app.querySelector<HTMLElement>('[data-testid="game-toolbar"]');
 const campaignExitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-exit-confirmation"]');
@@ -375,7 +379,8 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || !sceneHeadingElement || !gameToolbarElement
+if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
+  || !fullscreenStatusElement || !sceneHeadingElement || !gameToolbarElement
   || !campaignExitConfirmationElement || !campaignPanelElement
   || !archivePanelElement
   || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
@@ -417,6 +422,8 @@ if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || 
 const canvas: HTMLCanvasElement = canvasElement;
 const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
+const fullscreenToggleButton: HTMLButtonElement = fullscreenToggleButtonElement;
+const fullscreenStatus: HTMLElement = fullscreenStatusElement;
 const sceneHeading: HTMLElement = sceneHeadingElement;
 const gameToolbar: HTMLElement = gameToolbarElement;
 const campaignPanel: HTMLElement = campaignPanelElement;
@@ -682,6 +689,13 @@ const languageMessages = {
       'prepared-setup-mismatch': 'The requested game setup does not match this scenario.',
       unknown: 'The scene could not be opened. Your previous scene is still available.',
     } satisfies Record<GameOpenErrorCode | 'unknown', string>,
+    fullscreenEnter: 'Enter fullscreen',
+    fullscreenExit: 'Exit fullscreen',
+    fullscreenUnsupported: 'Fullscreen is not supported by this browser.',
+    fullscreenRequestFailed: 'Could not enter fullscreen. Use your browser’s fullscreen control instead.',
+    fullscreenExitFailed: 'Could not exit fullscreen. Use Escape or your browser’s fullscreen control.',
+    fullscreenLandscapeLocked: 'Landscape orientation is enabled.',
+    fullscreenLandscapeUnavailable: 'Fullscreen is active. Rotate your device to landscape for the best view.',
     pauseBattle: 'Pause battle',
     resumeBattle: 'Resume battle',
     battlePaused: 'Battle paused.',
@@ -860,6 +874,13 @@ const languageMessages = {
       'prepared-setup-mismatch': '请求的游戏配置与此场景不匹配。',
       unknown: '场景无法打开；之前的场景仍可使用。',
     } satisfies Record<GameOpenErrorCode | 'unknown', string>,
+    fullscreenEnter: '进入全屏',
+    fullscreenExit: '退出全屏',
+    fullscreenUnsupported: '此浏览器不支持全屏显示。',
+    fullscreenRequestFailed: '无法进入全屏，请使用浏览器的全屏控制。',
+    fullscreenExitFailed: '无法退出全屏，请按 Esc 键或使用浏览器的全屏控制。',
+    fullscreenLandscapeLocked: '已锁定为横屏。',
+    fullscreenLandscapeUnavailable: '已进入全屏，请手动将设备旋转至横屏以获得最佳显示效果。',
     pauseBattle: '暂停战斗',
     resumeBattle: '继续战斗',
     battlePaused: '战斗已暂停。',
@@ -2357,6 +2378,102 @@ redraw(true);
 renderStatus();
 
 const frame = app.querySelector<HTMLElement>('.game-frame');
+if (!frame) throw new Error('Game frame is missing');
+const gameFrame: HTMLElement = frame;
+type FullscreenStatusKey =
+  | 'fullscreenUnsupported'
+  | 'fullscreenRequestFailed'
+  | 'fullscreenExitFailed'
+  | 'fullscreenLandscapeLocked'
+  | 'fullscreenLandscapeUnavailable';
+let fullscreenStatusKey: FullscreenStatusKey | undefined;
+
+function renderFullscreenControl(): void {
+  const fullscreenActive = document.fullscreenElement === gameFrame;
+  fullscreenToggleButton.textContent = fullscreenActive
+    ? languageMessages[getLanguage()].fullscreenExit
+    : languageMessages[getLanguage()].fullscreenEnter;
+  fullscreenToggleButton.setAttribute('aria-pressed', String(fullscreenActive));
+}
+
+function renderFullscreenStatus(): void {
+  const message = fullscreenStatusKey ? languageMessages[getLanguage()][fullscreenStatusKey] : undefined;
+  fullscreenStatus.textContent = message ?? '';
+  fullscreenStatus.hidden = message === undefined;
+}
+
+function setFullscreenStatus(key?: FullscreenStatusKey): void {
+  fullscreenStatusKey = key;
+  renderFullscreenStatus();
+}
+
+function supportsTouchOrientationLock(): boolean {
+  return navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+}
+
+async function toggleGameFullscreen(): Promise<void> {
+  if (document.fullscreenElement === gameFrame) {
+    if (typeof document.exitFullscreen !== 'function') {
+      setFullscreenStatus('fullscreenExitFailed');
+      return;
+    }
+    try {
+      await document.exitFullscreen();
+    } catch {
+      setFullscreenStatus('fullscreenExitFailed');
+    }
+    return;
+  }
+
+  if (typeof gameFrame.requestFullscreen !== 'function') {
+    setFullscreenStatus('fullscreenUnsupported');
+    return;
+  }
+
+  try {
+    await gameFrame.requestFullscreen();
+  } catch {
+    setFullscreenStatus('fullscreenRequestFailed');
+    return;
+  }
+
+  renderFullscreenControl();
+  if (!supportsTouchOrientationLock()) {
+    setFullscreenStatus();
+    return;
+  }
+
+  try {
+    const orientation = screen.orientation;
+    if (!orientation || typeof orientation.lock !== 'function') {
+      setFullscreenStatus('fullscreenLandscapeUnavailable');
+      return;
+    }
+    await orientation.lock('landscape');
+    setFullscreenStatus('fullscreenLandscapeLocked');
+  } catch {
+    setFullscreenStatus('fullscreenLandscapeUnavailable');
+  }
+}
+
+fullscreenToggleButton.addEventListener('click', () => void toggleGameFullscreen());
+renderFullscreenControl();
+document.addEventListener('fullscreenchange', () => {
+  const fullscreenActive = document.fullscreenElement === gameFrame;
+  renderFullscreenControl();
+  if (!fullscreenActive) {
+    setFullscreenStatus();
+    try {
+      screen.orientation?.unlock();
+    } catch {
+      // Orientation unlock may be unavailable or rejected after a browser-controlled exit.
+    }
+  }
+  redraw(true);
+});
+window.addEventListener('orientationchange', () => redraw(true));
+screen.orientation?.addEventListener('change', () => redraw(true));
+
 if (frame && typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(() => redraw(true)).observe(frame);
 }
@@ -3800,6 +3917,8 @@ window.addEventListener('blur', cancelPointerGesture);
 subscribeLanguage(() => {
   renderStatus();
   renderCampaignMenu();
+  renderFullscreenControl();
+  renderFullscreenStatus();
   redraw();
   renderExperimentComparison();
   renderSavedComparisonOptions();
