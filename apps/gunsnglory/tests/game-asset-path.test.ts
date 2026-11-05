@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { gameAssetLogicalSize, gameAssetRelativePath, gameAssetSourceScale } from '../src/render/game-asset-path';
 
-test('uses the APK high-density atlases for all wagon and cart assets', () => {
+test('uses the APK high-density atlases for wagon, cart, and Post Coach assets', () => {
   for (const asset of [
     'b_2x1_shack',
     'wagon',
     'wagon_turn',
+    'stagecoach',
+    'stagecoach_turn',
     'horse_wagon',
     'horse_wagon_white',
     'horse_wagon_turn',

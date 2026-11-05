@@ -376,7 +376,7 @@ function drawEnemy(
   images: GameImages,
   viewport: MapViewport,
 ): void {
-  const vehicle = enemy.type === 4 || enemy.type === 8;
+  const vehicle = enemy.type === 4 || enemy.type === 5 || enemy.type === 8;
   const turn = enemy.turningAnimation;
   const deathFrame = !enemy.alive && (enemy.type === 1 || enemy.type === 2)
     ? Math.max(0, Math.min(5, 5 - Math.floor(enemy.deathRemainingMs / 100)))
@@ -386,9 +386,9 @@ function drawEnemy(
   if (!image) throw new Error('Missing game image: ' + asset);
 
   const sourceWidth = vehicle ? 48 : enemy.type === 3 ? 32 : 16;
-  const sourceHeight = vehicle ? 60 : enemy.type === 3 ? 40 : 24;
+  const sourceHeight = enemy.type === 5 ? 72 : vehicle ? 60 : enemy.type === 3 ? 40 : 24;
   const frameWidth = vehicle ? 32 : sourceWidth;
-  const frameHeight = vehicle ? 40 : sourceHeight;
+  const frameHeight = enemy.type === 5 ? 48 : vehicle ? 40 : sourceHeight;
   const tileScale = viewport.scaleFactor;
   const width = frameWidth * tileScale;
   const height = frameHeight * tileScale;
@@ -871,7 +871,7 @@ function drawPriorityTargetFeedback(
   const offset = target.drawingOffsetFine ?? { x: 0, y: 0 };
   const centerX = viewport.origin.x + ((target.positionFine.x + offset.x) / 240) * viewport.scaleFactor;
   const feetY = viewport.origin.y + ((target.positionFine.y + offset.y) / 240) * viewport.scaleFactor;
-  const targetFrameHeight = target.type === 4 || target.type === 8 ? 40 : 24;
+  const targetFrameHeight = target.type === 5 ? 48 : target.type === 4 || target.type === 8 ? 40 : 24;
   const centerY = Math.trunc(feetY - (targetFrameHeight * viewport.scaleFactor) / 2);
   const gap = priorityCrosshairGap(view.elapsedMs);
   const left = Math.trunc(centerX - size / 2);

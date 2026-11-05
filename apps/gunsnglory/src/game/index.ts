@@ -172,7 +172,7 @@ export interface UnitWeaponDefinition {
   specialReloadFrequency?: number;
 }
 
-export type CampaignEnemyType = 1 | 2 | 3 | 4 | 8;
+export type CampaignEnemyType = 1 | 2 | 3 | 4 | 5 | 8;
 
 export interface PreviewEnemyDefinition {
   hitPoints: number;
@@ -308,7 +308,7 @@ export interface UnitView extends ScenarioUnit {
 export interface EnemyView {
   id: string;
   type: CampaignEnemyType;
-  asset: 'pioneer_male' | 'pioneer_female' | 'horseman' | 'wagon' | 'horse_wagon' | 'horse_wagon_white';
+  asset: 'pioneer_male' | 'pioneer_female' | 'horseman' | 'wagon' | 'stagecoach' | 'horse_wagon' | 'horse_wagon_white';
   speed: number;
   direction: Direction;
   /** APK mirror state persists through vertical movement until a horizontal leg or turn changes it. */
@@ -317,7 +317,7 @@ export interface EnemyView {
   drawingOffsetFine?: { x: number; y: number };
   groupId?: string;
   damageable?: boolean;
-  turningAnimation?: { asset: 'horseman_turn' | 'wagon_turn' | 'horse_wagon_turn' | 'horse_wagon_turn_white'; frame: 0 | 1; mirrored: boolean };
+  turningAnimation?: { asset: 'horseman_turn' | 'wagon_turn' | 'stagecoach_turn' | 'horse_wagon_turn' | 'horse_wagon_turn_white'; frame: 0 | 1; mirrored: boolean };
   hitPoints: number;
   maxHitPoints: number;
   alive: boolean;
@@ -684,6 +684,7 @@ const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (
   2: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   3: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
   4: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
+  5: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   8: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
 };
 
@@ -1263,8 +1264,12 @@ function campaignSpawnIndicators(
 }
 
 function campaignEnemyDefinition(scenario: ScenarioContent, type: CampaignEnemyType): PreviewEnemyDefinition {
-  const fromScenario = scenario.campaignEnemyByType?.[type] ?? scenario.campaignEnemy;
-  if (fromScenario) return fromScenario;
+  const typeSpecific = scenario.campaignEnemyByType?.[type];
+  if (typeSpecific) return typeSpecific;
+  if (type === 5) {
+    return { hitPoints: 300, cashReward: 15, penetration: { light: 50, fire: 100, heavy: 66, poison: 100 }, turningDurationMs: 100 };
+  }
+  if (scenario.campaignEnemy) return scenario.campaignEnemy;
   if (type === 4) {
     return { hitPoints: 200, cashReward: 10, penetration: { light: 50, fire: 100, heavy: 66, poison: 100 }, turningDurationMs: 200 };
   }
@@ -1311,8 +1316,10 @@ function createCampaignEnemy(
       : type === 3
         ? 'horseman'
         : type === 4
-        ? 'wagon'
-        : colorVariant === 1 ? 'horse_wagon' : 'horse_wagon_white';
+          ? 'wagon'
+          : type === 5
+            ? 'stagecoach'
+            : colorVariant === 1 ? 'horse_wagon' : 'horse_wagon_white';
   return {
     id,
     type,
@@ -1321,7 +1328,7 @@ function createCampaignEnemy(
     direction: spawn.direction,
     mirrored: false,
     positionFine: { ...positionFine },
-    collisionStartOffsetFine: type === 4 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
+    collisionStartOffsetFine: type === 4 || type === 5 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
     drawingOffsetFine: { ...drawingOffsetFine },
     groupId,
     damageable: type !== 8,
@@ -1463,9 +1470,42 @@ function spawnCoveredWagonPair(
   return [tow, wagon];
 }
 
+function spawnPostCoachPair(
+  scenario: ScenarioContent,
+  spawn: WaveSpawn,
+  spawnPositionFine: { x: number; y: number },
+  groupId: string,
+  dynamicDifficulty: number,
+  waveDefinition: CampaignWaveDefinition,
+  difficulty: GameDifficulty,
+  random: JavaRandom,
+  nextEnemyId: () => string,
+): MutableEnemy[] {
+  const direction = directionVector(spawn.direction);
+  const speed = campaignEnemySpeed(scenario, waveDefinition);
+  const horseDefinition = campaignEnemyDefinition(scenario, 8);
+  const coachDefinition = campaignEnemyDefinition(scenario, 5);
+  const horse = createCampaignEnemy(
+    nextEnemyId(), 8, spawn, spawnPositionFine, { x: 0, y: 2880 }, speed,
+    campaignEnemyHitPoints(scenario, waveDefinition, dynamicDifficulty, difficulty, 8),
+    horseDefinition, groupId, random.nextInt(2),
+  );
+  const coach = createCampaignEnemy(
+    nextEnemyId(), 5, spawn,
+    {
+      x: spawnPositionFine.x - (direction.x * FINE_UNITS_PER_CELL),
+      y: spawnPositionFine.y - (direction.y * FINE_UNITS_PER_CELL),
+    },
+    { x: 0, y: 2880 }, speed,
+    campaignEnemyHitPoints(scenario, waveDefinition, dynamicDifficulty, difficulty, 5),
+    coachDefinition, groupId, random.nextInt(2),
+  );
+  return [horse, coach];
+}
+
 function campaignSpawnCollides(positionFine: { x: number; y: number }, enemies: readonly MutableEnemy[]): boolean {
   return enemies.some((enemy) => {
-    if (!enemy.alive || (enemy.type !== 4 && enemy.type !== 8)) return false;
+    if (!enemy.alive || (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 8)) return false;
     // Original vehicle collision objects follow fineX/fineY, never drawingOffsetX/Y.
     return Math.abs(enemy.positionFine.x - positionFine.x) < FINE_UNITS_PER_CELL
       && Math.abs(enemy.positionFine.y - positionFine.y) < FINE_UNITS_PER_CELL;
@@ -1532,7 +1572,7 @@ function recordCampaignEscape(wave: MutableWave, livesMax: number, penalty: numb
 function recordCampaignKill(wave: MutableWave, priorityMap: RoutePriorityMap, enemy: MutableEnemy): void {
   if (wave.dynamicDifficulty === undefined || wave.difficultyValue === undefined
     || wave.difficultyValueCounter === undefined) return;
-  const weight = enemy.type === 4 ? 6 : enemy.type === 8 ? 0 : 1;
+  const weight = enemy.type === 4 ? 6 : enemy.type === 5 ? 8 : enemy.type === 8 ? 0 : 1;
   if (weight === 0) return;
   const routeValue = normalizedRoutePriority(
     priorityMap,
@@ -1556,7 +1596,7 @@ function applyEnemyDamage(
   if (enemy.hitPoints > 0) return;
 
   enemy.alive = false;
-  enemy.deathRemainingMs = enemy.type === 4 || enemy.type === 8 ? 799 : campaignMode ? 599 : 799;
+  enemy.deathRemainingMs = enemy.type === 4 || enemy.type === 5 || enemy.type === 8 ? 799 : campaignMode ? 599 : 799;
   if (campaignMode) recordCampaignKill(wave, priorityMap, enemy);
   wave.cash += enemy.cashReward;
   wave.cashMade += enemy.cashReward;
@@ -1567,14 +1607,15 @@ function applyEnemyDamage(
     enemyType: enemy.type,
     cashReward: enemy.cashReward,
   });
-  if (enemy.type !== 4) return;
-
-  for (const groupMember of wave.enemies) {
-    if (groupMember !== enemy && groupMember.groupId === enemy.groupId && groupMember.alive) {
-      groupMember.alive = false;
-      groupMember.deathRemainingMs = 799;
+  if (enemy.type === 4) {
+    for (const groupMember of wave.enemies) {
+      if (groupMember !== enemy && groupMember.groupId === enemy.groupId && groupMember.alive) {
+        groupMember.alive = false;
+        groupMember.deathRemainingMs = 799;
+      }
     }
   }
+  if (enemy.type !== 4 && enemy.type !== 5) return;
   wave.events.push({
     type: 'sound-requested',
     sound: 'sound_wagon_explode',
@@ -1773,7 +1814,7 @@ function enemyCollisionBlocksMove(
   deltaX: number,
   deltaY: number,
 ): boolean {
-  if (enemy.type !== 4 && enemy.type !== 8) return false;
+  if (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 8) return false;
 
   const movingOffset = enemy.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
   const movingStartX = enemy.positionFine.x - movingOffset;
@@ -1787,7 +1828,8 @@ function enemyCollisionBlocksMove(
     for (const other of enemies) {
       // The APK enemy manager uses ignoreSameUnitGroup=false, which filters
       // candidates whose unitGroup matches the moving collision object.
-      if (other === enemy || other.groupId === enemy.groupId || (other.type !== 4 && other.type !== 8)) continue;
+      if (other === enemy || other.groupId === enemy.groupId
+        || (other.type !== 4 && other.type !== 5 && other.type !== 8)) continue;
       const otherOffset = other.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
       const otherStartX = other.positionFine.x - otherOffset;
       const otherStartY = other.positionFine.y - otherOffset;
@@ -1834,7 +1876,7 @@ function moveEnemy(
       x: Math.trunc(Math.fround(previous.x + vector.x * distance)),
       y: Math.trunc(Math.fround(previous.y + vector.y * distance)),
     };
-    if (enemy.type === 4 || enemy.type === 8) {
+    if (enemy.type === 4 || enemy.type === 5 || enemy.type === 8) {
       enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
     }
   }
@@ -2208,7 +2250,8 @@ export function createGame(options: {
               turningAnimation: {
                 asset: enemy.type === 3 ? 'horseman_turn' as const
                   : enemy.type === 4 ? 'wagon_turn' as const
-                    : enemy.asset === 'horse_wagon' ? 'horse_wagon_turn' as const : 'horse_wagon_turn_white' as const,
+                    : enemy.type === 5 ? 'stagecoach_turn' as const
+                      : enemy.asset === 'horse_wagon' ? 'horse_wagon_turn' as const : 'horse_wagon_turn_white' as const,
                 frame: enemy.turningFrame,
                 mirrored: enemy.turningMirrored,
               },
@@ -2869,12 +2912,12 @@ export function createGame(options: {
                   x: candidatePosition.x + (spawnVector.x * FINE_UNITS_PER_CELL),
                   y: candidatePosition.y + (spawnVector.y * FINE_UNITS_PER_CELL),
                 };
-                if (poolType === 7 && campaignSpawnCollides(collisionProbePosition, wave.enemies)) {
+                if ((poolType === 7 || poolType === 8) && campaignSpawnCollides(collisionProbePosition, wave.enemies)) {
                   pool.delayMs = Math.trunc(requestIntervalMs / 2);
                   continue;
                 }
 
-                const requestType = poolType === 7 ? 4 : poolType;
+                const requestType = poolType === 7 ? 4 : poolType === 8 ? 5 : poolType;
                 const nextGroupId = () => `campaign-${wave!.number}-group-${nextCampaignGroupNumber++}`;
                 const nextEnemyId = () => `campaign-${wave!.number}-enemy-${nextCampaignEnemyNumber++}`;
                 const spawned = poolType === 7
@@ -2882,7 +2925,12 @@ export function createGame(options: {
                     scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
                     campaignDefinition, difficulty, random, nextEnemyId,
                   )
-                  : poolType === 6
+                  : poolType === 8
+                    ? spawnPostCoachPair(
+                      scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
+                      campaignDefinition, difficulty, random, nextEnemyId,
+                    )
+                    : poolType === 6
                     ? spawnHorseman(
                       scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
                       campaignDefinition, difficulty, random, nextEnemyId,

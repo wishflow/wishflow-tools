@@ -37,6 +37,8 @@ const highDensityMapDecorations = new Set([
 const highDensityVehicleAssets = new Set([
   'wagon',
   'wagon_turn',
+  'stagecoach',
+  'stagecoach_turn',
   'horse_wagon',
   'horse_wagon_white',
   'horse_wagon_turn',

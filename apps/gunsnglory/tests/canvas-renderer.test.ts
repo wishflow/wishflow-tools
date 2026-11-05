@@ -14,6 +14,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const femaleEnemyImage = {} as HTMLImageElement;
   const pioneerDeathImage = { naturalWidth: 96, naturalHeight: 24 } as HTMLImageElement;
   const wagonImage = {} as HTMLImageElement;
+  const stagecoachImage = { naturalWidth: 144, naturalHeight: 216 } as HTMLImageElement;
+  const stagecoachTurnImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
   const horseWagonImage = {} as HTMLImageElement;
   const smokeImage = { naturalWidth: 384, naturalHeight: 64 } as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
@@ -57,6 +59,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     get globalAlpha() { return currentAlpha; },
     set globalAlpha(value: number) { currentAlpha = value; },
     clearRect() {},
+    translate() {},
+    scale() {},
     fillRect(...rect: number[]) { fillCalls.push({ color: currentFillStyle, rect }); },
     get fillStyle() { return currentFillStyle; },
     set fillStyle(value: string) { currentFillStyle = value; },
@@ -203,6 +207,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     pioneer_female: femaleEnemyImage,
     sfx_death_pioneers: pioneerDeathImage,
     wagon: wagonImage,
+    stagecoach: stagecoachImage,
     horse_wagon: horseWagonImage,
     sfx_smoke_explosion: smokeImage,
     unit: unitImage,
@@ -462,6 +467,38 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(horsemanTurnDraw);
   assert.deepEqual(horsemanTurnDraw.slice(1, 5), [32, 0, 32, 40], 'Horseman turns use the two-frame APK turn sheet');
 
+  const stagecoach: EnemyView = {
+    ...sampleEnemy,
+    id: 'stagecoach-1',
+    type: 5,
+    asset: 'stagecoach',
+    direction: 'east',
+    animationFrame: 2,
+  };
+  drawCalls.length = 0;
+  drawGame(context, { ...view, units: [], enemies: [stagecoach], shots: [], wagonDebris: [], drawOrder: ['enemy:stagecoach-1'] }, images);
+  const stagecoachDraw = drawCalls.find(([image]) => image === stagecoachImage);
+  assert.ok(stagecoachDraw);
+  assert.deepEqual(stagecoachDraw.slice(1, 5), [96, 0, 48, 72], 'Post Coach crops the APK 48×72 frame from its 3×3 atlas');
+  assert.deepEqual(stagecoachDraw.slice(7, 9), [60, 90], 'Post Coach uses its 32×48 logical footprint at the current map scale');
+  assert.equal((stagecoachDraw[6] as number) + (stagecoachDraw[8] as number),
+    getMapViewport(view).origin.y + (stagecoach.positionFine.y / 240) * getMapViewport(view).scaleFactor,
+    'Post Coach remains anchored to the route foot position');
+
+  drawCalls.length = 0;
+  drawGame(context, {
+    ...view,
+    units: [],
+    enemies: [{ ...stagecoach, turningAnimation: { asset: 'stagecoach_turn', frame: 1, mirrored: false } }],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:stagecoach-1'],
+  }, { ...images, stagecoach_turn: stagecoachTurnImage });
+  const stagecoachTurnDraw = drawCalls.find(([image]) => image === stagecoachTurnImage);
+  assert.ok(stagecoachTurnDraw);
+  assert.deepEqual(stagecoachTurnDraw.slice(1, 5), [48, 0, 48, 72], 'Post Coach uses the original two-frame turn atlas');
+  assert.deepEqual(stagecoachTurnDraw.slice(7, 9), [60, 90]);
+
   for (const [deathRemainingMs, frame] of [[599, 0], [500, 0], [499, 1], [100, 4], [99, 5], [0, 5]] as const) {
     pioneerDeathDraws.length = 0;
     drawGame(context, {
@@ -474,9 +511,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     assert.equal(deathDraw.alpha, 1, 'the original death animation stays fully opaque');
   }
 
-  for (const [type, asset, bodyImage] of [
-    [4, 'wagon', wagonImage],
-    [8, 'horse_wagon', horseWagonImage],
+  for (const [type, asset, bodyImage, frameHeight, drawHeight] of [
+    [4, 'wagon', wagonImage, 60, 75],
+    [5, 'stagecoach', stagecoachImage, 72, 90],
+    [8, 'horse_wagon', horseWagonImage, 60, 75],
   ] as const) {
     for (const [deathRemainingMs, smokeFrame, bodyVisible] of [
       [799, 0, true],
@@ -500,8 +538,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       assert.equal(bodyDraws.length, bodyVisible ? 1 : 0,
         'vehicle body visibility matches the original 350 ms cutoff at ' + deathRemainingMs + ' ms');
       if (bodyDraws[0]) {
-        assert.deepEqual(bodyDraws[0].slice(3, 5), [48, 60], 'vehicles crop one APK hdpi atlas frame');
-        assert.deepEqual(bodyDraws[0].slice(7, 9), [60, 75], 'hdpi frames retain their 32×40 logical draw size');
+        assert.deepEqual(bodyDraws[0].slice(3, 5), [48, frameHeight], 'vehicles crop one APK hdpi atlas frame');
+        assert.deepEqual(bodyDraws[0].slice(7, 9), [60, drawHeight], 'vehicle frames retain their original logical draw size');
       }
       const smokeDraw = drawCalls.find(([image]) => image === smokeImage);
       assert.ok(smokeDraw, 'death style for enemy type ' + type + ' keeps its smoke at ' + deathRemainingMs + ' ms');
@@ -1224,6 +1262,7 @@ test('ordinary horse-wagon and covered-wagon frames mirror eastward movement lik
   };
   const variants = [
     { type: 4 as const, asset: 'wagon' as const },
+    { type: 5 as const, asset: 'stagecoach' as const },
     { type: 8 as const, asset: 'horse_wagon' as const },
     { type: 8 as const, asset: 'horse_wagon_white' as const },
   ];
@@ -1247,7 +1286,7 @@ test('ordinary horse-wagon and covered-wagon frames mirror eastward movement lik
         positionFine: { x: 8 * 7680 + 3840, y: 8 * 7680 + 3840 },
         drawingOffsetFine: { x: 0, y: 0 },
         groupId: 'vehicle-group',
-        damageable: variant.type === 4,
+        damageable: variant.type === 4 || variant.type === 5,
         hitPoints: 200,
         maxHitPoints: 200,
         alive: true,
