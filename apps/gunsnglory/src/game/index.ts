@@ -76,6 +76,8 @@ export interface MapDecoration {
   cell: { x: number; y: number };
   /** Horizontal sprite-anchor offset from the cell center, in map cells. */
   anchorOffsetX?: number;
+  /** Vertical sprite foot-anchor offset from the cell bottom, in map cells. */
+  anchorOffsetY?: number;
   /** Original static-object collision bounds relative to the cell origin, in fine units. */
   collisionBoxFine?: Rectangle;
 }
@@ -615,7 +617,8 @@ function drawOrderEntries(
     id: `decoration:${index}`,
     kind: 'decoration',
     cell: decoration.cell,
-    depth: ((decoration.cell.y + 1) * FINE_UNITS_PER_CELL) + GAME_DRAW_ORDER_ROAD_CUTOFF,
+    depth: ((decoration.cell.y + 1 + (decoration.anchorOffsetY ?? 0)) * FINE_UNITS_PER_CELL)
+      + GAME_DRAW_ORDER_ROAD_CUTOFF,
   }));
   const unitEntries = units.map((unit): DrawOrderEntry => ({
     id: `unit:${unit.definition.id}`,

@@ -75,7 +75,7 @@ export function mapDecorationDestination(
   const width = logicalImageSize.width * viewport.scaleFactor;
   const height = logicalImageSize.height * viewport.scaleFactor;
   const centerX = viewport.origin.x + (decoration.cell.x + 0.5 + (decoration.anchorOffsetX ?? 0)) * viewport.tileSize;
-  const feetY = viewport.origin.y + (decoration.cell.y + 1) * viewport.tileSize;
+  const feetY = viewport.origin.y + (decoration.cell.y + 1 + (decoration.anchorOffsetY ?? 0)) * viewport.tileSize;
   const x = Math.trunc(centerX - width / 2);
   const y = Math.trunc(feetY - height);
   return {

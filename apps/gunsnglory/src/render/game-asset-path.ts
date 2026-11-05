@@ -19,6 +19,7 @@ const highDensityMapAtlases = new Set([
 ]);
 
 const highDensityMapDecorations = new Set([
+  'b_3x2_fort',
   'b_2x1_shack',
   'b_1x1_windmill',
   'b_1x1_stake',
