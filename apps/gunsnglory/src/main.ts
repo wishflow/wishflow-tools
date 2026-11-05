@@ -2481,9 +2481,12 @@ let fullscreenStatusKey: FullscreenStatusKey | undefined;
 
 function renderFullscreenControl(): void {
   const fullscreenActive = document.fullscreenElement === gameFrame;
-  fullscreenToggleButton.textContent = fullscreenActive
+  const label = fullscreenActive
     ? languageMessages[getLanguage()].fullscreenExit
     : languageMessages[getLanguage()].fullscreenEnter;
+  fullscreenToggleButton.textContent = '⛶';
+  fullscreenToggleButton.setAttribute('aria-label', label);
+  fullscreenToggleButton.title = label;
   fullscreenToggleButton.setAttribute('aria-pressed', String(fullscreenActive));
 }
 

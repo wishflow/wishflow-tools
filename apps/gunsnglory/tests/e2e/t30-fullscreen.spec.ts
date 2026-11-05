@@ -67,18 +67,18 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
   try {
     await page.goto('/');
     const toggle = page.getByTestId('fullscreen-toggle');
-    await expect(toggle).toHaveText('Enter fullscreen');
+    await expect(toggle).toHaveAccessibleName('Enter fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 
     await toggle.click();
-    await expect(toggle).toHaveText('Exit fullscreen');
+    await expect(toggle).toHaveAccessibleName('Exit fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByTestId('fullscreen-status')).toHaveText('Landscape orientation is enabled.');
     expect(await page.evaluate(() => document.fullscreenElement === document.querySelector('.game-frame'))).toBe(true);
     expect(await page.evaluate(() => (window as FullscreenTestWindow).__gngOrientationLockCalls)).toEqual(['landscape']);
 
     await toggle.click();
-    await expect(toggle).toHaveText('Enter fullscreen');
+    await expect(toggle).toHaveAccessibleName('Enter fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByTestId('fullscreen-status')).toBeHidden();
     expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
@@ -98,7 +98,7 @@ test('keeps fullscreen available when mobile orientation locking is rejected', a
   try {
     await page.goto('/');
     await page.getByTestId('fullscreen-toggle').click();
-    await expect(page.getByTestId('fullscreen-toggle')).toHaveText('Exit fullscreen');
+    await expect(page.getByTestId('fullscreen-toggle')).toHaveAccessibleName('Exit fullscreen');
     await expect(page.getByTestId('fullscreen-status')).toHaveText(
       'Fullscreen is active. Rotate your device to landscape for the best view.',
     );
@@ -113,14 +113,14 @@ test('reports a rejected fullscreen request and keeps the page usable', async ({
   await page.goto('/');
   const toggle = page.getByTestId('fullscreen-toggle');
   await toggle.click();
-  await expect(toggle).toHaveText('Enter fullscreen');
+  await expect(toggle).toHaveAccessibleName('Enter fullscreen');
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByTestId('fullscreen-status')).toHaveText(
     'Could not enter fullscreen. Use your browser’s fullscreen control instead.',
   );
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
-  await expect(toggle).toHaveText('进入全屏');
+  await expect(toggle).toHaveAccessibleName('进入全屏');
   await expect(page.getByTestId('fullscreen-status')).toHaveText('无法进入全屏，请使用浏览器的全屏控制。');
 });
 
@@ -129,6 +129,6 @@ test('explains when fullscreen is unsupported', async ({ page }) => {
   await page.goto('/');
   const toggle = page.getByTestId('fullscreen-toggle');
   await toggle.click();
-  await expect(toggle).toHaveText('Enter fullscreen');
+  await expect(toggle).toHaveAccessibleName('Enter fullscreen');
   await expect(page.getByTestId('fullscreen-status')).toHaveText('Fullscreen is not supported by this browser.');
 });

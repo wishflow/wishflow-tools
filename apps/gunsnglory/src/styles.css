@@ -364,18 +364,29 @@ body {
   z-index: 12;
   top: 0.5rem;
   right: 0.5rem;
-  min-height: 2.3rem;
+  display: grid;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
   border: 1px solid rgba(255, 225, 168, 0.58);
   border-radius: 0.4rem;
-  padding: 0.4rem 0.65rem;
+  padding: 0;
   color: #ffe1a8;
   background: rgba(25, 20, 15, 0.92);
   box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.35);
   font: inherit;
-  font-size: clamp(0.65rem, 1.05cqw, 0.9rem);
+  font-size: 0;
+  line-height: 1;
   font-weight: 750;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.game-frame-fullscreen-toggle::before {
+  content: "⛶";
+  font-size: 1.35rem;
 }
 
 .game-frame-fullscreen-toggle:hover {
