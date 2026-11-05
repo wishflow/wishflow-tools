@@ -5,6 +5,7 @@ import test from 'node:test';
 import map from '../src/content/new-mexico-04.json';
 import { createTechTownMapScene } from '../src/content/tech-town-scene';
 import { createTechTownFreshGameUnitPlacements } from '../src/content/tech-town-map-units';
+import { createTechTownBaseUnits } from '../src/content/tech-town-units';
 import { techTownRouteDefinitions } from '../src/content/tech-town-routes';
 import { deriveOriginalTdmMapDrawCommands } from './helpers/terrain-render-reference';
 import { gameAssetLogicalSize, gameAssetRelativePath, gameAssetSourceScale } from '../src/render/game-asset-path';
@@ -195,6 +196,42 @@ test('places Tech Town units at every original map coordinate without treating C
   )).sort((left, right) => left.cell.y - right.cell.y || left.cell.x - right.cell.x);
 
   assert.deepEqual(createTechTownFreshGameUnitPlacements(), expected);
+});
+
+test('creates only unlocked ordinary Tech Town units on the first level-four visit', () => {
+  const units = createTechTownBaseUnits((unitTypeId) => unitTypeId <= 4);
+  const sleepingByType = {
+    gunslinger: 96,
+    mexican: 97,
+    cannon: 98,
+    indian: 99,
+  } as const;
+
+  assert.equal(units.length, 23);
+  for (const [type, code] of Object.entries(sleepingByType)) {
+    const sleepingUnits = units.filter((unit) => unit.type === type && unit.activity === 4);
+    assert.deepEqual(sleepingUnits.map(({ cell }) => cell), expectedCellsByCode[code]!.map(([x, y]) => ({ x, y })));
+  }
+  assert.equal(units.some(({ type }) => type === 'sniper' || type === 'grandpa'), false);
+
+  const activeMexican = units.find(({ type, activity }) => type === 'mexican' && activity === 5);
+  assert.deepEqual(activeMexican?.cell, { x: 13, y: 11 });
+  assert.equal(activeMexican?.asset, 'player_mexican');
+  assert.equal(activeMexican?.weapon?.damage, 500);
+});
+
+test('restores marker units after their campaign unlock callback allows them', () => {
+  const units = createTechTownBaseUnits(() => true);
+  const sniper = units.filter(({ type }) => type === 'sniper');
+  const grandpa = units.filter(({ type }) => type === 'grandpa');
+
+  assert.equal(units.length, 27);
+  assert.deepEqual(sniper.map(({ cell, activity }) => ({ cell, activity })), expectedCellsByCode[100]!.map(([x, y]) => ({
+    cell: { x, y }, activity: 4,
+  })));
+  assert.deepEqual(grandpa.map(({ cell, activity }) => ({ cell, activity })), expectedCellsByCode[101]!.map(([x, y]) => ({
+    cell: { x, y }, activity: 4,
+  })));
 });
 
 test('reconstructs all four APK routes, including their directed railway crossings', () => {

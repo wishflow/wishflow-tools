@@ -16,6 +16,44 @@ export interface FortKaboomUnitDesign {
   weapon: UnitWeaponDefinition;
 }
 
+export function createAnchoredMapRender(
+  cell: { x: number; y: number },
+  frame: { width: number; height: number },
+) {
+  const width = frame.width / 32;
+  const height = frame.height / 32;
+  return { x: cell.x + 0.5 - (width / 2), y: cell.y + 0.75 - height, width, height };
+}
+
+export function createSleepingFortKaboomUnit(
+  type: FortKaboomUnitType,
+  cell: { x: number; y: number },
+  index: number,
+): ScenarioUnit {
+  const design = fortKaboomUnitDesigns[type];
+  const render = createAnchoredMapRender(cell, design.sleepFrame);
+  const awakeRender = createAnchoredMapRender(cell, design.awakeFrame);
+  return {
+    id: `${type}-hire-${String(index).padStart(2, '0')}`,
+    type,
+    activity: 4,
+    hirePrice: design.hirePrice,
+    awakeAsset: design.awakeAsset,
+    awakeFrame: design.awakeFrame,
+    awakeRender,
+    awakeHitArea: { ...awakeRender },
+    hireSound: design.hireSound,
+    shotSound: design.shotSound,
+    cell,
+    movementSpeedFinePer100Ms: design.movementSpeedFinePer100Ms,
+    asset: design.asset,
+    frame: design.sleepFrame,
+    render,
+    hitArea: { ...render },
+    weapon: { ...design.weapon },
+  };
+}
+
 /** Base unit rows from APK GameDesignData; frame and sound mappings use GameObjectUnit, GameDesignOptics, and SfxManager. */
 export const fortKaboomUnitDesigns: Readonly<Record<FortKaboomUnitType, FortKaboomUnitDesign>> = Object.freeze({
   cannon: Object.freeze({

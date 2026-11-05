@@ -1,6 +1,10 @@
 import map from './new-mexico-03.json';
 import { cowGulchDecorationCodes, createSleepingMapUnitsFromGrid } from './cow-gulch';
-import { fortKaboomUnitDesigns, type FortKaboomUnitType } from './fort-kaboom-unit-designs';
+import {
+  createAnchoredMapRender,
+  createSleepingFortKaboomUnit,
+  type FortKaboomUnitType,
+} from './fort-kaboom-unit-designs';
 import { fortKaboomUnitPool } from './fort-kaboom-unit-pool';
 import { fortKaboomCampaignWaves } from './fort-kaboom-waves';
 import type {
@@ -35,15 +39,9 @@ function createFortKaboomDecorations(): MapDecoration[] {
   }));
 }
 
-function anchoredRender(cell: { x: number; y: number }, frame: { width: number; height: number }) {
-  const width = frame.width / 32;
-  const height = frame.height / 32;
-  return { x: cell.x + 0.5 - (width / 2), y: cell.y + 0.75 - height, width, height };
-}
-
 function keepOriginalMapAnchor(unit: ScenarioUnit): ScenarioUnit {
-  const render = anchoredRender(unit.cell, unit.frame);
-  const awakeRender = unit.awakeFrame ? anchoredRender(unit.cell, unit.awakeFrame) : undefined;
+  const render = createAnchoredMapRender(unit.cell, unit.frame);
+  const awakeRender = unit.awakeFrame ? createAnchoredMapRender(unit.cell, unit.awakeFrame) : undefined;
   return {
     ...unit,
     render,
@@ -67,31 +65,10 @@ function createFortKaboomUnits(): ScenarioUnit[] {
             : undefined;
     if (!type) return [];
 
-    const design = fortKaboomUnitDesigns[type];
     const index = (counters.get(type) ?? 0) + 1;
     counters.set(type, index);
     const cell = { x, y };
-    const render = anchoredRender(cell, design.sleepFrame);
-    const awakeRender = anchoredRender(cell, design.awakeFrame);
-    return [{
-      id: `${type}-hire-${String(index).padStart(2, '0')}`,
-      type,
-      activity: 4 as const,
-      hirePrice: design.hirePrice,
-      awakeAsset: design.awakeAsset,
-      awakeFrame: design.awakeFrame,
-      awakeRender,
-      awakeHitArea: { ...awakeRender },
-      hireSound: design.hireSound,
-      shotSound: design.shotSound,
-      cell,
-      movementSpeedFinePer100Ms: design.movementSpeedFinePer100Ms,
-      asset: design.asset,
-      frame: design.sleepFrame,
-      render,
-      hitArea: { ...render },
-      weapon: { ...design.weapon },
-    }];
+    return [createSleepingFortKaboomUnit(type, cell, index)];
   }));
 
   return [...ordinaryUnits, ...specialUnits]

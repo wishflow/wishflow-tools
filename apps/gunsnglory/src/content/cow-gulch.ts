@@ -1,30 +1,8 @@
 import cowGulchMap from './cow-gulch.json';
 import { cowGulchCampaignWaves, cowGulchCampaignWavesP1c, cowGulchCampaignWavesP1d } from './cow-gulch-campaign-waves';
 import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
+import { gunslingerWeapon, mexicanWeapon } from './player-unit-weapons';
 import type { MapDecoration, ScenarioContent, ScenarioUnit } from '../game';
-
-const firstMapGunslingerWeapon = Object.freeze({
-  damage: 140,
-  damageType: 'light',
-  rangeFine: 38400,
-  reloadTimeMs: 500,
-  projectileSpeed: 600,
-  damageStyle: 0,
-  specialReloadTimeMs: 1500,
-  specialReloadFrequency: 6,
-} as const);
-
-const firstMapMexicanWeapon = Object.freeze({
-  damage: 500,
-  damageType: 'heavy',
-  rangeFine: 30720,
-  reloadTimeMs: 2500,
-  projectileSpeed: 1500,
-  damageStyle: 3,
-  areaDamageFine: 7680,
-  specialReloadTimeMs: 0,
-  specialReloadFrequency: 1,
-} as const);
 
 const firstMapGunslingerMovementSpeedFinePer100Ms = 1500;
 const firstMapMexicanMovementSpeedFinePer100Ms = 1500;
@@ -33,12 +11,12 @@ const sleepingUnitMarkers = {
   96: {
     prefix: 'gunslinger-hire', type: 'gunslinger', asset: 'player_gunslinger_sleep', awakeAsset: 'player_gunslinger',
     awakeFrame: { x: 0, y: 0, width: 32, height: 44 },
-    hirePrice: 75, speed: firstMapGunslingerMovementSpeedFinePer100Ms, weapon: firstMapGunslingerWeapon,
+    hirePrice: 75, speed: firstMapGunslingerMovementSpeedFinePer100Ms, weapon: gunslingerWeapon,
   },
   97: {
     prefix: 'mexican-hire', type: 'mexican', asset: 'player_mexican_sleep', awakeAsset: 'player_mexican',
     awakeFrame: { x: 0, y: 0, width: 32, height: 44 },
-    hirePrice: 100, speed: firstMapMexicanMovementSpeedFinePer100Ms, weapon: firstMapMexicanWeapon,
+    hirePrice: 100, speed: firstMapMexicanMovementSpeedFinePer100Ms, weapon: mexicanWeapon,
   },
 } as const;
 
@@ -147,7 +125,7 @@ export const cowGulchContent: ScenarioContent = {
       ...unit,
       movementSpeedFinePer100Ms: firstMapGunslingerMovementSpeedFinePer100Ms,
       ...(unit.id === 'gunslinger-1' ? {
-        weapon: firstMapGunslingerWeapon,
+        weapon: gunslingerWeapon,
         upgradeLevels: [firstMapGunslingerUpgradeLevelOne],
       } : {}),
     })),

@@ -1,30 +1,8 @@
 import map from './new-mexico-02.json';
 import { cowGulchDecorationCodes, createSleepingMapUnitsFromGrid } from './cow-gulch';
 import { apacheValleyCampaignWaves } from './apache-valley-waves';
+import { gunslingerWeapon, mexicanWeapon } from './player-unit-weapons';
 import type { Direction, MapDecoration, ScenarioContent, ScenarioUnit, WaveRouteDefinition } from '../game';
-
-const gunslingerWeapon = Object.freeze({
-  damage: 140,
-  damageType: 'light',
-  rangeFine: 38400,
-  reloadTimeMs: 500,
-  projectileSpeed: 600,
-  damageStyle: 0,
-  specialReloadTimeMs: 1500,
-  specialReloadFrequency: 6,
-} as const);
-
-const mexicanWeapon = Object.freeze({
-  damage: 500,
-  damageType: 'heavy',
-  rangeFine: 30720,
-  reloadTimeMs: 2500,
-  projectileSpeed: 1500,
-  damageStyle: 3,
-  areaDamageFine: 7680,
-  specialReloadTimeMs: 0,
-  specialReloadFrequency: 1,
-} as const);
 
 const directionsByRedirectCode: Readonly<Record<number, Direction>> = Object.freeze({ 53: 'south', 54: 'west', 55: 'east' });
 const apacheValleyDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
