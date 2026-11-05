@@ -40,10 +40,17 @@
 
 ## 当前活动任务：核心 UI/UX 批次收口
 
-主菜单与正式战斗操作、游戏全屏/移动横屏、桌面地图缩放三个切片均已分别通过针对性检查并完成本地提交。菜单交互迁移和资源恢复修复的 7 项针对性 E2E 均通过。完整 `test:ci` 的类型检查、238 项单测和生产构建通过；89 项 E2E 中 88 项通过，唯一失败为 t27 手机小地图水平拖动后的画布哈希未变化。单独重跑 t27 的桌面与手机用例通过；手机用例现通过有界轮询等待画布更新，两个 t27 用例再次针对性通过。尚未重跑最终完整批次检查。
+主菜单与正式战斗操作、游戏全屏/移动横屏、桌面地图缩放三个切片均已分别通过针对性检查并完成本地提交。菜单交互迁移和资源恢复修复的 7 项针对性 E2E 均通过。最终完整 `pnpm run test:ci` 已通过：类型检查、238 项单测、生产构建及 89 项 E2E 全部通过；测试使用专用端口 `4187`。`pnpm run test:catalog` 的 15 项检查通过。共享站 `pnpm run build:site` 已构建全部六个登记应用并通过输出校验；3D Objects 构建有既存大 chunk 提示，但其 bundle 体积检查通过。
 
-1. **完成批次检查：** 以 `PLAYWRIGHT_PORT=4187 CI=1`（单 worker、专用本地端口）运行完整 `pnpm run test:ci`，随后运行 `pnpm run test:catalog` 与共享站点构建。若失败，只修当前批次已发现的问题，并重跑失败项与最终完整检查。
-2. **集成与发布：** 全部本地检查通过后，按应用分支约定将完整 UI/UX 批次 squash 集成到 `master` 并发布，核对部署来源 SHA 与预期发布提交一致，再用内置浏览器验证线上菜单、招募入口、全屏、缩放及移动布局。发布完成后同步集成分支和工作树，再开始 New Mexico map03 调研；本批收口前不推进 map03。
+发布仍被来源 SHA 门槛阻塞：当前 `scripts/build-site.mjs` 没有在 `_site/` 输出可读取的构建来源 SHA。需先完成以下切片，再重跑整批检查：
+
+1. **暴露构建来源 SHA：** 共享站构建生成 `_site/build-info.json`，包含完整 `sourceSha`。GitHub Actions 构建优先使用 `GITHUB_SHA`；本地构建使用 `git rev-parse HEAD`。缺失或格式无效时构建失败。扩展现有 `pnpm run test:catalog` 自动验证 CI 值优先级、本地回退和无效输入；构建本身验证生成文件与输入 SHA 一致。验收为测试通过，且 `_site/build-info.json` 的 SHA 等于构建源码提交。
+2. **重跑批次检查：** 以 `PLAYWRIGHT_PORT=4187 CI=1 pnpm run test:ci` 运行 Guns’n’Glory 完整检查，再运行 `pnpm run test:catalog` 和 `pnpm run build:site`。任一失败时仅修复当前批次暴露的问题，并重跑失败项与最终完整检查。
+3. **准备 squash 发布：** 重新获取 `origin/master` 与 `origin/gunsnglory`，核对工作树与远程头。以最新 `origin/master` 为发布基线，把已验收的 map02 和本批 UI/UX 变更作为一个 squash 集成；检查提交差异仅包含这批已验收代码、资源、测试和必要文档。
+4. **发布并核验：** 推送 `master` 后等待 Pages 工作流成功；通过公开的 `build-info.json` 核对 `sourceSha` 与 squash 发布提交完全一致，再用 Codex 内置浏览器验证线上战役入口、正式招募、全屏、桌面缩放和移动布局。
+5. **同步工作树：** 将发布提交合并回 `gunsnglory` 并推送，核对远程 `master`、远程 `gunsnglory` 均包含发布提交；更新相关工作树时保留现有未提交内容。本轮已发现 Guns’n’Glory 主工作树含未跟踪研究文档，必须原样保留。
+
+发布和工作树同步全部通过后才开始 New Mexico map03 调研；本批收口前不推进 map03。
 
 ## 后续活动任务：New Mexico map03 调研与接入
 
