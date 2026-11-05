@@ -222,7 +222,16 @@ test('blocks Apache Valley until its missing horseman sprite is restored', async
   blockAsset = false;
   await page.getByTestId('retry-assets').click();
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
-  await expect(page.getByTestId('campaign-stage-button-2')).toBeEnabled();
-  await page.getByTestId('campaign-stage-button-2').click();
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+  await page.getByTestId('campaign-menu-toggle').click();
+  await page.getByTestId('campaign-exit-confirmation').getByRole('button', { name: 'Leave battle' }).click();
+  await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
+  await page.getByTestId('menu-start').click();
+  await page.getByTestId('campaign-region-new-mexico').click();
+  await expect(page.getByTestId('campaign-level-02')).toBeEnabled();
+  await page.getByTestId('campaign-level-02').click();
+  await expect(page.getByRole('heading', { name: 'Death Valley' })).toBeVisible();
+  await page.getByTestId('campaign-stage-play').click();
+  await page.getByTestId('campaign-difficulty-easy').click();
   await expect(page.locator('#scene-title')).toHaveText('Apache Valley · Level 2');
 });
