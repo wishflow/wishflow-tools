@@ -2,7 +2,17 @@ import map from './new-mexico-03.json';
 import { cowGulchDecorationCodes, createSleepingMapUnitsFromGrid } from './cow-gulch';
 import { fortKaboomUnitDesigns, type FortKaboomUnitType } from './fort-kaboom-unit-designs';
 import { fortKaboomUnitPool } from './fort-kaboom-unit-pool';
-import type { Direction, MapDecoration, ScenarioContent, ScenarioUnit, WaveRouteDefinition } from '../game';
+import { fortKaboomCampaignWaves } from './fort-kaboom-waves';
+import type {
+  Direction,
+  MapDecoration,
+  PreviewEnemyDefinition,
+  PreviewWaveDefinition,
+  ScenarioContent,
+  ScenarioUnit,
+  WaveRedirect,
+  WaveRouteDefinition,
+} from '../game';
 
 const decorationCollisionBox = Object.freeze({ x: 1920, y: 2612, width: 3840, height: 2534 });
 const fortCollisionBox = Object.freeze({ x: -9408, y: -9600, width: 18048, height: 7680 });
@@ -146,6 +156,87 @@ export const fortKaboomRouteDefinitions: readonly WaveRouteDefinition[] = Object
     [18, 9, 'south'], [18, 14, 'east'],
   ], { x: 21, y: 14 }),
 ]);
+
+const redirectDirectionsByCell = new Map<string, { cell: { x: number; y: number }; directions: Direction[] }>();
+for (const routeDefinition of fortKaboomRouteDefinitions) {
+  for (const redirect of routeDefinition.redirects) {
+    const key = `${redirect.cell.x},${redirect.cell.y}`;
+    const existing = redirectDirectionsByCell.get(key);
+    if (existing) {
+      for (const direction of redirect.directions) {
+        if (!existing.directions.includes(direction)) existing.directions.push(direction);
+      }
+    } else {
+      redirectDirectionsByCell.set(key, { cell: { ...redirect.cell }, directions: [...redirect.directions] });
+    }
+  }
+}
+
+/** Redirect choices merge every source route so a shared TDM cell retains all legal branches. */
+export const fortKaboomPreviewRedirects: readonly WaveRedirect[] = Object.freeze(
+  [...redirectDirectionsByCell.values()].map(({ cell, directions }) => Object.freeze({
+    cell: Object.freeze(cell),
+    directions: Object.freeze(directions),
+  })),
+);
+
+const fortKaboomBaseEnemy: PreviewEnemyDefinition = Object.freeze({
+  hitPoints: 18,
+  cashReward: 1,
+  penetration: Object.freeze({ light: 100, fire: 50, heavy: 25, poison: 75 }),
+});
+
+/** Type-specific values map to enemyDesignData rows 3, 4, 5, and 8 for map03 traffic. */
+export const fortKaboomCampaignEnemyByType: Partial<Readonly<Record<1 | 2 | 3 | 4 | 5 | 8, PreviewEnemyDefinition>>> = Object.freeze({
+  3: Object.freeze({
+    hitPoints: 60,
+    cashReward: 2,
+    penetration: Object.freeze({ light: 100, fire: 50, heavy: 25, poison: 75 }),
+    turningDurationMs: 100,
+  }),
+  4: Object.freeze({
+    hitPoints: 200,
+    cashReward: 10,
+    penetration: Object.freeze({ light: 50, fire: 100, heavy: 66, poison: 100 }),
+    turningDurationMs: 200,
+  }),
+  5: Object.freeze({
+    hitPoints: 300,
+    cashReward: 15,
+    penetration: Object.freeze({ light: 50, fire: 100, heavy: 66, poison: 100 }),
+    turningDurationMs: 100,
+  }),
+  8: Object.freeze({
+    hitPoints: 200,
+    cashReward: 0,
+    penetration: Object.freeze({ light: 100, fire: 100, heavy: 100, poison: 100 }),
+    turningDurationMs: 100,
+  }),
+});
+
+const uniqueExits = [...new Map(fortKaboomRouteDefinitions.map(({ exit }) => [`${exit.x},${exit.y}`, exit])).values()];
+
+/** Formal map03 wave context built from the seven verified TDM branches and four source entrances. */
+export const fortKaboomPreviewWave: PreviewWaveDefinition = Object.freeze({
+  number: 1,
+  initialLives: 50,
+  initialCash: 300,
+  enemyHitPointMultiplierPercentByDifficulty: Object.freeze({ easy: 75, medium: 150, hard: 188 }),
+  enemy: fortKaboomBaseEnemy,
+  spawn: fortKaboomSpawnPoints[0],
+  additionalSpawns: Object.freeze(fortKaboomSpawnPoints.slice(1)),
+  routes: fortKaboomRouteDefinitions,
+  baseEnemySpeed: 500,
+  speedMultiplierMin: 90,
+  speedMultiplierCount: 20,
+  escapePenalty: 1,
+  redirects: fortKaboomPreviewRedirects,
+  exit: uniqueExits[0]!,
+  additionalExits: Object.freeze(uniqueExits.slice(1)),
+});
+
+export const fortKaboomCampaignEnemy: PreviewEnemyDefinition = fortKaboomBaseEnemy;
+export { fortKaboomCampaignWaves };
 
 export const fortKaboomContent: ScenarioContent = {
   ...map,

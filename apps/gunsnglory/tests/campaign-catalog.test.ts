@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { campaignCatalog, campaignLevelState, campaignRegions } from '../src/content/campaign-catalog';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
+import {
+  apacheValleyLevelTwoContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+} from '../src/content/official-campaign';
 import { createProgress } from '../src/progress';
 import { createMemoryProfileRepository } from '../src/progress/memory-profile-repository';
 
@@ -31,7 +36,8 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
 
   assert.equal(campaignLevelState(1, initial), 'available');
   assert.equal(campaignLevelState(2, initial), 'locked');
-  assert.equal(campaignLevelState(3, initial), 'unimplemented');
+  assert.equal(campaignLevelState(3, initial), 'locked');
+  assert.equal(campaignLevelState(4, initial), 'unimplemented');
 
   await progress.applySettlement({
     settlementId: `catalog-test:${cowGulchLevelOneContent.id}:1`,
@@ -48,10 +54,27 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
 
   assert.equal(campaignLevelState(1, afterCowGulch), 'completed');
   assert.equal(campaignLevelState(2, afterCowGulch), 'available');
-  assert.equal(campaignLevelState(3, afterCowGulch), 'unimplemented');
+  assert.equal(campaignLevelState(3, afterCowGulch), 'locked');
+
+  await progress.applySettlement({
+    settlementId: `catalog-test:${apacheValleyLevelTwoContent.id}:6`,
+    sessionId: 'catalog-test',
+    scenarioId: apacheValleyLevelTwoContent.id,
+    mode: 'formal',
+    waveNumber: 6,
+    outcome: 'victory',
+    scoreBase: 200,
+    displayScore: 200,
+    highScoreCandidate: 200,
+  });
+  const afterApacheValley = await progress.loadCampaign();
+  assert.equal(campaignLevelState(2, afterApacheValley), 'completed');
+  assert.equal(campaignLevelState(3, afterApacheValley), 'available');
+  assert.equal(campaignLevelState(4, afterApacheValley), 'unimplemented');
   assert.equal(campaignLevelState(2, undefined), 'unimplemented');
   assert.equal(campaignLevelState(2, {
     ...afterCowGulch,
     stages: afterCowGulch.stages.filter(({ scenarioId }) => scenarioId !== apacheValleyLevelTwoContent.id),
   }), 'unimplemented');
+  assert.equal(fortKaboomLevelThreeContent.id, 'campaign-new-mexico-03');
 });

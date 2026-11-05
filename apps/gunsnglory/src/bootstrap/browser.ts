@@ -7,7 +7,12 @@ import {
   cowGulchUpgradeSampleContent,
 } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../content/official-campaign';
+import {
+  apacheValleyLevelTwoContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+} from '../content/official-campaign';
 import {
   campaignProgressSampleOne,
   campaignProgressSampleTwo,
@@ -31,6 +36,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchP1dCampaignContent.id]: cowGulchP1dCampaignContent,
   [cowGulchLevelOneContent.id]: cowGulchLevelOneContent,
   [apacheValleyLevelTwoContent.id]: apacheValleyLevelTwoContent,
+  [fortKaboomLevelThreeContent.id]: fortKaboomLevelThreeContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,

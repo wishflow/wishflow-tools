@@ -5,7 +5,12 @@ import test from 'node:test';
 import map from '../src/content/new-mexico-02.json';
 import { apacheValleyCampaignWaves } from '../src/content/apache-valley-waves';
 import { apacheValleyContent } from '../src/content/apache-valley';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
+import {
+  apacheValleyLevelTwoContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+} from '../src/content/official-campaign';
 import { apacheValleyWaveIntros } from '../src/content/cow-gulch-wave-intros';
 import { createGame, type CampaignWaveDefinition, type ScenarioContent } from '../src/game';
 import { createRoutePriorityMap } from '../src/game/route-priority';
@@ -140,6 +145,7 @@ test('official Apache Valley content exposes its six source wave schedules and u
   assert.deepEqual(officialCampaignStages.map(({ scenarioId, requiresCompletedScenarioIds }) => [scenarioId, requiresCompletedScenarioIds]), [
     [cowGulchLevelOneContent.id, []],
     [apacheValleyLevelTwoContent.id, [cowGulchLevelOneContent.id]],
+    [fortKaboomLevelThreeContent.id, [apacheValleyLevelTwoContent.id]],
   ]);
 });
 
