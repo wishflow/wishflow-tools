@@ -67,12 +67,25 @@ test('Apache Valley map content exactly matches the 20×18 raw TDM grid and thre
 });
 
 test('Apache Valley reconstructs fresh units, static objects, weapon stats and original sprite resources', () => {
-  assert.deepEqual(apacheValleyContent.units.map(({ type, cell, activity }) => ({ type, cell, activity })), [
+  const activeUnits = apacheValleyContent.units.filter(({ activity }) => activity === 5);
+  const sleepingUnits = apacheValleyContent.units.filter(({ activity }) => activity === 4);
+  assert.deepEqual(activeUnits.map(({ type, cell, activity }) => ({ type, cell, activity })), [
     { type: 'gunslinger', cell: { x: 9, y: 7 }, activity: 5 },
     { type: 'mexican', cell: { x: 4, y: 9 }, activity: 5 },
     { type: 'gunslinger', cell: { x: 5, y: 11 }, activity: 5 },
   ]);
-  assert.deepEqual(apacheValleyContent.units.map(({ weapon }) => weapon?.damage), [140, 500, 140]);
+  assert.deepEqual(activeUnits.map(({ weapon }) => weapon?.damage), [140, 500, 140]);
+  assert.equal(sleepingUnits.length, 18);
+  assert.deepEqual(sleepingUnits.filter(({ type }) => type === 'gunslinger').map(({ cell }) => [cell.x, cell.y]), [
+    [1, 3], [18, 5], [1, 9], [16, 9], [18, 9], [17, 11], [19, 12], [3, 13], [11, 14], [11, 17],
+  ]);
+  assert.deepEqual(sleepingUnits.filter(({ type }) => type === 'mexican').map(({ cell }) => [cell.x, cell.y]), [
+    [1, 5], [3, 7], [17, 7], [14, 8], [2, 12], [18, 15], [12, 16], [13, 17],
+  ]);
+  assert.ok(sleepingUnits.filter(({ type }) => type === 'gunslinger').every((unit) =>
+    unit.hirePrice === 75 && unit.asset === 'player_gunslinger_sleep' && unit.awakeAsset === 'player_gunslinger'));
+  assert.ok(sleepingUnits.filter(({ type }) => type === 'mexican').every((unit) =>
+    unit.hirePrice === 100 && unit.asset === 'player_mexican_sleep' && unit.awakeAsset === 'player_mexican'));
   assert.equal(apacheValleyContent.map.decorations?.find(({ cell }) => cell.x === 10 && cell.y === 4)?.asset, 'b_1x1_stake');
   assert.equal(apacheValleyContent.map.decorations?.find(({ cell }) => cell.x === 10 && cell.y === 1)?.asset, 'b_1x1_tipi_small');
   assert.equal(apacheValleyContent.maxUpgrades, 0);
@@ -86,7 +99,7 @@ test('Apache Valley reconstructs fresh units, static objects, weapon stats and o
     ...apacheValleyContent.map.background.map(({ asset }) => asset),
     ...apacheValleyContent.map.streets.map(({ asset }) => asset),
     ...(apacheValleyContent.map.decorations ?? []).map(({ asset }) => asset),
-    ...apacheValleyContent.units.map(({ asset }) => asset),
+    ...apacheValleyContent.units.flatMap(({ asset, awakeAsset }) => [asset, ...(awakeAsset ? [awakeAsset] : [])]),
     'horseman', 'horseman_turn', 'portrait_indian', 'portrait_settlers',
   ]);
   for (const asset of assets) {
@@ -154,7 +167,9 @@ test('official Apache Valley starts with three routes and delays the first spawn
   assert.equal(session.observe().wave?.number, 1);
   assert.equal(session.observe().wave?.totalWaves, 6);
   assert.equal(session.observe().wave?.cash, 100);
-  assert.equal(session.observe().units.length, 3);
+  assert.equal(session.observe().units.length, 21);
+  assert.equal(session.observe().units.filter(({ activity }) => activity === 5).length, 3);
+  assert.equal(session.observe().units.filter(({ activity }) => activity === 4).length, 18);
   assert.equal(session.observe().routes?.length, 3);
 
   let view = session.observe();
@@ -163,6 +178,32 @@ test('official Apache Valley starts with three routes and delays the first spawn
   assert.equal(view.enemies.length, 0);
   view = session.advance({ deltaMs: 100 });
   assert.ok(view.enemies.length > 0);
+});
+
+test('Apache Valley hires its original sleeping gunman from the $100 starting cash', async () => {
+  const session = await createGame({ scenarios: { [apacheValleyContent.id]: apacheValleyContent } }).open({
+    scenarioId: apacheValleyContent.id,
+    mode: 'formal',
+    randomSeed: 42,
+  });
+  const initial = session.observe();
+  const sleepingGunman = initial.units.find(({ id }) => id === 'gunslinger-hire-01');
+  assert.ok(sleepingGunman);
+  assert.equal(initial.wave?.cash, 100);
+  session.submitIntent({
+    type: 'select-at',
+    x: sleepingGunman.hitArea.x + sleepingGunman.hitArea.width / 2,
+    y: sleepingGunman.hitArea.y + sleepingGunman.hitArea.height / 2,
+  });
+  session.advance({ deltaMs: 0 });
+  session.submitIntent({ type: 'hire-map-unit', unitId: sleepingGunman.id, commandId: 'apache-hire-gunman-1' });
+  const hired = session.advance({ deltaMs: 0 });
+  const unit = hired.units.find(({ id }) => id === sleepingGunman.id);
+  assert.equal(hired.wave?.cash, 25);
+  assert.equal(hired.units.length, 21, 'hiring activates the original map object in place');
+  assert.equal(unit?.activity, 5);
+  assert.equal(unit?.asset, 'player_gunslinger');
+  assert.equal(hired.events.filter((event) => event.type === 'map-unit-hired').length, 1);
 });
 
 test('type-3 campaign requests spawn the four-frame horseman with its turn sheet', async () => {

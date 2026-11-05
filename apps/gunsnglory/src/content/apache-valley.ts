@@ -1,5 +1,5 @@
 import map from './new-mexico-02.json';
-import { cowGulchDecorationCodes } from './cow-gulch';
+import { cowGulchDecorationCodes, createSleepingMapUnitsFromGrid } from './cow-gulch';
 import { apacheValleyCampaignWaves } from './apache-valley-waves';
 import type { Direction, MapDecoration, ScenarioContent, ScenarioUnit, WaveRouteDefinition } from '../game';
 
@@ -147,10 +147,15 @@ export const apacheValleyContent: ScenarioContent = {
     ...map.map,
     decorations: createApacheValleyDecorations(),
   },
-  units: createApacheValleyUnits().map((unit) => ({
-    ...unit,
-    ...(unit.type === 'gunslinger' ? { weapon: gunslingerWeapon } : { weapon: mexicanWeapon }),
-  })),
+  units: [
+    ...createApacheValleyUnits(),
+    ...createSleepingMapUnitsFromGrid(map.originalTileGrid),
+  ]
+    .sort((a, b) => a.cell.y - b.cell.y || a.cell.x - b.cell.x)
+    .map((unit) => ({
+      ...unit,
+      ...(unit.type === 'gunslinger' ? { weapon: gunslingerWeapon } : { weapon: mexicanWeapon }),
+    })),
   campaignWaveCount: 6,
   campaignWaves: apacheValleyCampaignWaves,
   campaignEnemy: apacheValleyPreviewWave.enemy,

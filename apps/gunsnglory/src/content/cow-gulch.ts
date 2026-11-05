@@ -74,10 +74,12 @@ function createCowGulchMapDecorations(): MapDecoration[] {
   return decorations;
 }
 
-function createSleepingMapUnits(): ScenarioUnit[] {
+export function createSleepingMapUnitsFromGrid(
+  tileGrid: readonly (readonly number[])[] = cowGulchMap.originalTileGrid ?? [],
+): ScenarioUnit[] {
   const counters = new Map<number, number>();
   const units: ScenarioUnit[] = [];
-  for (const [y, row] of (cowGulchMap.originalTileGrid ?? []).entries()) {
+  for (const [y, row] of tileGrid.entries()) {
     for (const [x, tile] of row.entries()) {
       if (tile !== 96 && tile !== 97) continue;
       const marker = sleepingUnitMarkers[tile];
@@ -144,7 +146,7 @@ export const cowGulchContent: ScenarioContent = {
         upgradeLevels: [firstMapGunslingerUpgradeLevelOne],
       } : {}),
     })),
-    ...createSleepingMapUnits(),
+    ...createSleepingMapUnitsFromGrid(),
   ],
   campaignWaveCount: 8,
   campaignWaves: cowGulchCampaignWaves,
