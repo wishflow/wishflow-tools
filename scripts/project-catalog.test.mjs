@@ -5,11 +5,28 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveSourceSha } from './build-info.mjs';
 import { analyzeChanges, findWorkerConfigChanges, workerBuildInputsChanged } from './workflow-changes.mjs';
 import { configureSiteShellPages, readProjectCatalog, renderProjectCards, validateCatalog, verifySiteOutput } from './project-catalog.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const projects = readProjectCatalog(repoRoot);
+
+test('build metadata prefers the GitHub source SHA and accepts full Git SHA formats', () => {
+  const githubSha = 'a'.repeat(40);
+  assert.equal(resolveSourceSha({ githubSha, localSha: 'b'.repeat(40) }), githubSha);
+  assert.equal(resolveSourceSha({ githubSha: 'c'.repeat(64) }), 'c'.repeat(64));
+});
+
+test('build metadata falls back to the local commit SHA when GitHub SHA is absent', () => {
+  const localSha = 'd'.repeat(40);
+  assert.equal(resolveSourceSha({ githubSha: '', localSha }), localSha);
+});
+
+test('build metadata rejects a malformed authoritative or fallback SHA', () => {
+  assert.throws(() => resolveSourceSha({ githubSha: 'invalid', localSha: 'e'.repeat(40) }), /full .* Git commit SHA/);
+  assert.throws(() => resolveSourceSha({ localSha: 'short' }), /full .* Git commit SHA/);
+});
 
 test('catalog projects have valid local pnpm build and test contracts', () => {
   assert.ok(projects.length > 0);
