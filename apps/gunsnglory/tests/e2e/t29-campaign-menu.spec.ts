@@ -73,7 +73,7 @@ test('starts in the in-game menu and opens an implemented campaign level through
   await expect(page.getByTestId('campaign-level-01')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-02')).toBeDisabled();
   await expect(page.getByTestId('campaign-level-03')).toBeDisabled();
-  await expect(page.getByTestId('campaign-level-03')).toHaveAttribute('aria-label', /not implemented yet/i);
+  await expect(page.getByTestId('campaign-level-03')).toHaveAttribute('aria-label', /locked/i);
   await expectCampaignMenuImagesLoaded(page);
   await page.getByTestId('campaign-menu-back').click();
   await expect(page.getByTestId('campaign-region-new-mexico')).toBeVisible();
