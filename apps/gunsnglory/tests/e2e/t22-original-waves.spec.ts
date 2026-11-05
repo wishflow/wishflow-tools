@@ -25,7 +25,7 @@ test('official Cow Gulch advances through its waves without a premature defeat o
       return originalGetRandomValues(array) as typeof array;
     }) as typeof crypto.getRandomValues;
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const playedMusic = () => page.evaluate(() =>
     (window as unknown as Window & { __musicTracks: string[] }).__musicTracks);

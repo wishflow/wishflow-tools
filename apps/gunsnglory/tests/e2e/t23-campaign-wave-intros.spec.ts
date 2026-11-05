@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('pauses the official campaign for first and next-wave introductions until continuing', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const intro = page.getByTestId('campaign-wave-intro');
   const introText = page.getByTestId('campaign-wave-intro-text');
@@ -60,7 +60,7 @@ test('retries browser-blocked campaign music and Pedro voice on the first real u
         : Promise.reject(new DOMException('Playback requires a user gesture', 'NotAllowedError'));
     };
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const intro = page.getByTestId('campaign-wave-intro');
   const playbackStatus = page.getByTestId('sound-playback-status');
@@ -91,7 +91,7 @@ test('retries browser-blocked campaign music and Pedro voice on the first real u
 
 test('uses the original parchment, Pedro placement, and confirm icon inside the game frame', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const intro = page.getByTestId('campaign-wave-intro');
   const parchment = page.getByTestId('campaign-wave-intro-parchment');
@@ -152,7 +152,7 @@ test('uses the original parchment, Pedro placement, and confirm icon inside the 
 test('a paused single step that crosses into wave two opens its introduction once', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeVisible();
@@ -191,7 +191,7 @@ test('a paused single step that crosses into wave two opens its introduction onc
 });
 
 test('keeps a reusable bilingual controls guide inside the game window without advancing simulation', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeVisible();
   await expect.poll(() => intro.evaluate((dialog) => dialog.parentElement?.classList.contains('game-frame'))).toBe(true);
@@ -229,7 +229,7 @@ test('keeps campaign dialogue and its touch target inside the game frame without
       isMobile: viewport.width < viewport.height,
     });
     const page = await context.newPage();
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
 
     const intro = page.getByTestId('campaign-wave-intro');
     const frame = page.locator('.game-frame');
@@ -284,7 +284,7 @@ test('respects the saved mute setting when the campaign intro is reopened', asyn
       return Promise.resolve();
     };
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeVisible();
   await expect.poll(() => page.evaluate(() =>
@@ -315,7 +315,7 @@ test('offers an in-dialog retry when the browser blocks Pedro’s voice autoplay
         : Promise.reject(new Error('autoplay blocked'));
     };
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
   const retryVoice = page.getByRole('button', { name: 'Retry Pedro’s voice' });
   await expect(retryVoice).toBeVisible();

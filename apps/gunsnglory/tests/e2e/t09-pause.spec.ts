@@ -9,7 +9,7 @@ async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise
 }
 
 async function startLongWave(page: import('@playwright/test').Page): Promise<void> {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await setFourTimesSpeed(page);
   await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Open upgrade rules sample' }).click();
@@ -102,7 +102,7 @@ test('pause and resume controls remain usable with touch on a phone-sized viewpo
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await setFourTimesSpeed(page);
     await openSingleWaveSample(page, 'tap');
     await page.getByRole('button', { name: 'Open upgrade rules sample' }).tap();

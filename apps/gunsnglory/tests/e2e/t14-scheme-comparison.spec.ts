@@ -2,7 +2,7 @@ import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-conti
 
 test('compares immutable numeric schemes on matched runs without changing Progress', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const profileStatus = page.getByTestId('profile-status');
   await expect(profileStatus).not.toBeEmpty();
@@ -44,7 +44,7 @@ test('keeps the comparison controls and results usable in a narrow touch viewpor
   });
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const compareButton = page.getByTestId('compare-schemes');
   await compareButton.scrollIntoViewIfNeeded();

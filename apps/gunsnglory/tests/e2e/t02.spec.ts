@@ -3,7 +3,7 @@ import { openSingleWaveSample } from './helpers';
 
 test('scales the map by width and clips drawing at map and playfield edges', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const canvas = page.getByTestId('game-canvas');
   const waveStatus = page.getByTestId('wave-status');
@@ -47,7 +47,7 @@ test('scales the map by width and clips drawing at map and playfield edges', asy
 });
 
 test('loads legacy profile settings, saves the selected speed to IndexedDB, and restores it after reload', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   const soundToggle = page.getByTestId('sound-toggle');
   const settingsStatus = page.getByTestId('settings-status');
@@ -142,7 +142,7 @@ test('does not let a previous settings save overwrite a newer slider choice', as
       },
     });
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await expect(speed).toBeEnabled();
 
@@ -175,7 +175,7 @@ test('does not let a previous settings save overwrite a newer slider choice', as
 });
 
 test('preserves malformed IndexedDB settings when a user tries to save a new speed', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   const settingsStatus = page.getByTestId('settings-status');
 
@@ -221,7 +221,7 @@ test('preserves malformed IndexedDB settings when a user tries to save a new spe
 
 test('applies the selected speed to an active combat wave', async ({ page }) => {
   const startedAt = Date.now();
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const waveStatus = page.getByTestId('wave-status');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -244,7 +244,7 @@ test('starts the preview wave from a mobile touch control', async ({ browser }) 
   });
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page, 'tap');
   const waveStatus = page.getByTestId('wave-status');
   await expect(page.getByRole('slider', { name: 'Simulation speed' })).toBeVisible();
@@ -255,7 +255,7 @@ test('starts the preview wave from a mobile touch control', async ({ browser }) 
 });
 
 test('keeps defeat feedback when accelerated time is processed in multiple game steps', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const waveStatus = page.getByTestId('wave-status');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -285,7 +285,7 @@ test('the Cow Gulch gunslinger kills the pioneer and updates the cash display', 
       return Promise.resolve();
     };
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const waveStatus = page.getByTestId('wave-status');
   const combatStatus = page.getByTestId('combat-status');
@@ -329,7 +329,7 @@ test('reports real audio failures and retries from an accessible bilingual recov
         : Promise.reject(new DOMException('Audio source could not be decoded', 'NotSupportedError'));
     };
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
   await speed.focus();
@@ -376,7 +376,7 @@ test('does not play real combat sound events while the saved sound setting is mu
       return Promise.resolve();
     };
   });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const soundToggle = page.getByTestId('sound-toggle');
   await soundToggle.click();

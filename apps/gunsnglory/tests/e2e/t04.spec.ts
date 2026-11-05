@@ -11,7 +11,7 @@ async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise
 
 test('shows a victory settlement and restarts the same sample from clean state', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   await setFourTimesSpeed(page);
 
@@ -52,7 +52,7 @@ test('shows a victory settlement and restarts the same sample from clean state',
 test('shows a defeat settlement when the last life is lost and restarts without stale state', async ({ page }) => {
   test.setTimeout(60000);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   await setFourTimesSpeed(page);
   await page.getByRole('button', { name: 'Test defeat with one life' }).click();
@@ -81,7 +81,7 @@ test('keeps the settlement and restart usable with mobile touch input', async ({
   });
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page, 'tap');
   await setFourTimesSpeed(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
@@ -96,7 +96,7 @@ test('keeps the settlement and restart usable with mobile touch input', async ({
 test('stops the active session when the page is leaving', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1 · Lives 50 · Enemies 1');

@@ -34,7 +34,7 @@ async function readProfile(page: import('@playwright/test').Page): Promise<Recor
 
 test('defaults to the real Cow Gulch level and keeps historical sample records isolated', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/2 stages complete');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
@@ -93,7 +93,7 @@ test('unlocks Apache Valley after Cow Gulch progress and opens the second level 
   });
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).tap();
   await expect(page.locator('#campaign-title')).toHaveText('战役进度');
@@ -128,7 +128,7 @@ test('unlocks Apache Valley after Cow Gulch progress and opens the second level 
 });
 
 test('describes the official level, playable sample, and upgrade fixture accurately', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const caption = page.getByTestId('scene-caption');
   await expect(caption).toHaveText(
     'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.',
@@ -151,7 +151,7 @@ test('keeps a playable recovery scene and retries missing game assets before ope
   let blockAsset = true;
   await page.route('**/assets/pioneer_male.png', (route) =>
     blockAsset ? route.abort() : route.continue());
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   await expect(page.getByTestId('asset-load-error')).toBeVisible();
   await expect(page.getByTestId('game-canvas')).toBeVisible();
@@ -178,7 +178,7 @@ test('keeps the page initialized when an image used by the first map draw fails'
   page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.route('**/assets/hdpi/tiles_water.png', (route) =>
     blockAsset ? route.abort() : route.continue());
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   await expect(page.getByTestId('asset-load-error')).toBeVisible();
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch');
@@ -197,7 +197,7 @@ test('blocks Apache Valley until its missing horseman sprite is restored', async
   let blockAsset = true;
   await page.route('**/assets/horseman.png', (route) =>
     blockAsset ? route.abort() : route.continue());
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   await expect(page.getByTestId('asset-load-error')).toBeVisible();
   await writeProfile(page, {

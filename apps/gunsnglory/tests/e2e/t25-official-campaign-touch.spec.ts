@@ -69,7 +69,7 @@ test('touch completes the official Cow Gulch level through real movement and nat
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await installSeed42(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
     const intro = page.getByTestId('campaign-wave-intro');
     await expect(intro).toHaveAttribute('data-wave-number', '1');
@@ -177,7 +177,7 @@ test('touch completes the official Cow Gulch level through real movement and nat
 test('reloads an unfinished official Cow Gulch battle from wave one without saving progress', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await installSeed42(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeHidden();

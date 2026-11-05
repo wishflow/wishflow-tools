@@ -3,7 +3,7 @@ import { clickCanvasPoint, cowGulchMarkerPoint, tapCanvasPoint } from './helpers
 
 test('opens Cow Gulch, selects the gunslinger, clears selection, and survives resize', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const canvas = page.getByTestId('game-canvas');
   const status = page.getByTestId('selection-status');
 
@@ -79,7 +79,7 @@ test('selects and clears the unit with mobile touch input', async ({ browser }) 
   });
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const canvas = page.getByTestId('game-canvas');
   const status = page.getByTestId('selection-status');
   await expect(status).toContainText('No unit selected');
@@ -98,7 +98,7 @@ test('selects and clears the unit with mobile touch input', async ({ browser }) 
 
 test('renders the original battle HUD and routes its pause tap away from map selection', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const pauseStatus = page.getByTestId('pause-status');
   const selectionStatus = page.getByTestId('selection-status');
   const canvas = page.getByTestId('game-canvas');

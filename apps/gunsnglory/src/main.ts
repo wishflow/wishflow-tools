@@ -17,6 +17,7 @@ import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
 import { apacheValleyContent } from './content/apache-valley';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from './content/official-campaign';
+import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import {
   cowGulchAmbientMusic,
@@ -44,6 +45,7 @@ import type {
   GameReplayResult,
   GameSession,
   GameSettlementRecord,
+  ScenarioContent,
 } from './game';
 import { ProgressError, type CampaignProgressView, type ProfileView, type SettlementSaveResult } from './progress';
 import { messages } from './locales';
@@ -57,10 +59,10 @@ app.innerHTML = [
   '  <header class="game-heading">',
   '    <p class="eyebrow" data-locale="ORIGINAL CAMPAIGN">ORIGINAL CAMPAIGN</p>',
   '    <h1>Guns’n’Glory</h1>',
-  '    <p class="intro" data-locale="Play the original New Mexico campaign, then use the archive panel for isolated rule samples.">Play the original New Mexico campaign, then use the archive panel for isolated rule samples.</p>',
+  '    <p class="intro" data-locale="Play Guns’n’Glory’s original campaign in your browser.">Play Guns’n’Glory’s original campaign in your browser.</p>',
   '  </header>',
   '  <section class="game-panel" aria-labelledby="scene-title">',
-  '    <section class="campaign-panel" aria-labelledby="campaign-title">',
+  '    <section class="campaign-panel" aria-labelledby="campaign-title" hidden>',
   '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
   '      <p class="campaign-note" data-locale="Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.">Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.</p>',
   '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
@@ -68,14 +70,18 @@ app.innerHTML = [
   '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
   '      <section class="asset-load-error" data-testid="asset-load-error" role="alert" hidden><p data-testid="asset-load-error-message"></p><button type="button" data-testid="retry-assets" data-action="retry-assets">Retry loading game resources</button></section>',
   '    </section>',
-  '    <div class="scene-heading"><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
+  '    <div class="scene-heading" hidden><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
   '    <div class="game-frame">',
   '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
-  '      <details class="game-toolbar" data-testid="game-toolbar" aria-label="Game controls" open>',
+  '      <section class="campaign-menu-screen" data-testid="campaign-menu-screen" aria-label="Campaign menu">',
+  '        <div class="campaign-menu-view" data-testid="campaign-menu-view"></div>',
+  '      </section>',
+  '      <details class="game-toolbar" data-testid="game-toolbar" aria-label="Game controls" open hidden>',
   '        <summary data-testid="game-toolbar-toggle" data-locale="Game controls">Game controls</summary>',
   '        <div class="game-toolbar-panel">',
   '          <div class="game-toolbar-actions">',
   '          <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
+  '          <button type="button" data-testid="campaign-menu-toggle" data-action="show-campaign-menu">Campaign</button>',
   '          <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
   '          <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
   '          <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
@@ -114,7 +120,16 @@ app.innerHTML = [
   '        <p data-testid="settlement-save-status" role="status" aria-live="polite"></p>',
   '        <button type="button" data-action="retry-settlement-save" hidden>Retry saving result</button>',
   '        <button type="button" data-action="restart-sample">Restart this sample</button>',
+  '        <button type="button" data-testid="settlement-campaign-menu" data-action="return-campaign-from-settlement">Campaign map</button>',
   '      </section>',
+  '      <dialog class="campaign-exit-confirmation" data-testid="campaign-exit-confirmation" aria-labelledby="campaign-exit-title">',
+  '        <h2 id="campaign-exit-title" data-locale="Return to campaign">Return to campaign</h2>',
+  '        <p data-locale="The unfinished battle will not be saved and will restart from its first wave if you return.">The unfinished battle will not be saved and will restart from its first wave if you return.</p>',
+  '        <div class="recruit-confirmation-actions">',
+  '          <button type="button" data-action="cancel-campaign-exit" data-locale="Keep playing">Keep playing</button>',
+  '          <button type="button" data-action="confirm-campaign-exit" data-locale="Leave battle">Leave battle</button>',
+  '        </div>',
+  '      </dialog>',
   '      <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
   '        <h2 id="recruit-confirmation-title"></h2>',
   '        <div class="recruit-confirmation-actions">',
@@ -146,6 +161,9 @@ app.innerHTML = [
   '        </div>',
   '      </dialog>',
   '    </div>',
+  '    <details class="archive-panel" data-testid="archive-panel" hidden>',
+  '      <summary data-locale="Archive and testing tools">Archive and testing tools</summary>',
+  '      <div class="archive-panel-content">',
   '    <div class="game-controls">',
   '      <p data-testid="profile-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="pending-settlement-status" role="status" aria-live="polite" hidden></p>',
@@ -243,6 +261,8 @@ app.innerHTML = [
   '      <p data-testid="inspection-route"></p>',
   '    </details>',
   '    <p class="scene-caption" data-testid="scene-caption"></p>',
+  '      </div>',
+  '    </details>',
   '  </section>',
   '</section>',
 ].join('');
@@ -250,6 +270,13 @@ app.innerHTML = [
 registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
+const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
+const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
+const sceneHeadingElement = app.querySelector<HTMLElement>('.scene-heading');
+const gameToolbarElement = app.querySelector<HTMLElement>('[data-testid="game-toolbar"]');
+const campaignExitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-exit-confirmation"]');
+const campaignPanelElement = app.querySelector<HTMLElement>('.campaign-panel');
+const archivePanelElement = app.querySelector<HTMLDetailsElement>('[data-testid="archive-panel"]');
 const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
 const pendingSettlementStatusElement = app.querySelector<HTMLElement>('[data-testid="pending-settlement-status"]');
 const retryPendingSettlementButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-pending-settlement"]');
@@ -274,6 +301,8 @@ const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat
 const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
 const sceneContextElement = app.querySelector<HTMLElement>('[data-testid="scene-context"]');
 const sceneDifficultyElement = app.querySelector<HTMLElement>('[data-testid="scene-difficulty"]');
+const campaignMenuToggleElement = app.querySelector<HTMLButtonElement>('[data-action="show-campaign-menu"]');
+const settlementCampaignMenuButtonElement = app.querySelector<HTMLButtonElement>('[data-action="return-campaign-from-settlement"]');
 const sceneCaptionElement = app.querySelector<HTMLElement>('[data-testid="scene-caption"]');
 const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-sample-status"]');
 const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-status"]');
@@ -346,7 +375,10 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
+if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || !sceneHeadingElement || !gameToolbarElement
+  || !campaignExitConfirmationElement || !campaignPanelElement
+  || !archivePanelElement
+  || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
   || !retrySceneOpenButtonElement || !returnPreviousSceneButtonElement || !waveStatusElement || !combatStatusElement
@@ -354,6 +386,7 @@ if (!canvasElement || !profileStatusElement || !pendingSettlementStatusElement |
   || !campaignProgressSummaryElement || !campaignStageListElement || !campaignStatusElement
   || !campaignDifficultySelectElement || !campaignDifficultyStatusElement
   || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement || !sceneCaptionElement
+  || !campaignMenuToggleElement || !settlementCampaignMenuButtonElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !mapHireButtonElement || !mapHireStatusElement
   || !recruitButton || !recruitConfirmationElement
@@ -382,6 +415,13 @@ if (!canvasElement || !profileStatusElement || !pendingSettlementStatusElement |
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
+const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
+const campaignMenuView: HTMLElement = campaignMenuViewElement;
+const sceneHeading: HTMLElement = sceneHeadingElement;
+const gameToolbar: HTMLElement = gameToolbarElement;
+const campaignPanel: HTMLElement = campaignPanelElement;
+const campaignExitConfirmation: HTMLDialogElement = campaignExitConfirmationElement;
+const archivePanel: HTMLDetailsElement = archivePanelElement;
 const profileStatus: HTMLElement = profileStatusElement;
 const pendingSettlementStatus: HTMLElement = pendingSettlementStatusElement;
 const retryPendingSettlementControl: HTMLButtonElement = retryPendingSettlementButtonElement;
@@ -406,6 +446,8 @@ const campaignDifficultyStatus: HTMLElement = campaignDifficultyStatusElement;
 const sceneTitle: HTMLElement = sceneTitleElement;
 const sceneContext: HTMLElement = sceneContextElement;
 const sceneDifficulty: HTMLElement = sceneDifficultyElement;
+const campaignMenuToggle: HTMLButtonElement = campaignMenuToggleElement;
+const settlementCampaignMenuButton: HTMLButtonElement = settlementCampaignMenuButtonElement;
 const sceneCaption: HTMLElement = sceneCaptionElement;
 const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
 const upgradeStatus: HTMLElement = upgradeStatusElement;
@@ -495,7 +537,7 @@ const experiments = createExperiments({
 let session = await game.open({
   scenarioId: cowGulchP1aSampleContent.id,
   contentVersion: cowGulchP1aSampleContent.contentVersion ?? 'unversioned',
-  mode: 'formal',
+  mode: 'debug',
 });
 let view = session.observe();
 let profile: ProfileView = {
@@ -504,6 +546,11 @@ let profile: ProfileView = {
   highScores: {},
 };
 let campaignProgressView: CampaignProgressView | undefined;
+type CampaignMenuScreenState = 'home' | 'regions' | 'levels' | 'overview' | 'difficulty' | 'options' | 'help';
+let campaignMenuState: CampaignMenuScreenState = 'home';
+let selectedMenuRegionId: CampaignRegionId = 'new-mexico';
+let selectedMenuLevel = 1;
+let menuReturnWasPaused = false;
 let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'difficulty-locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
 let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
@@ -935,6 +982,75 @@ const languageMessages = {
   },
 };
 
+const campaignMenuCopy = {
+  en: {
+    start: 'START', help: 'HELP', options: 'OPTIONS', sound: 'SOUND',
+    chooseRegion: 'Choose a region', chooseLevel: 'Select a level',
+    regionHint: 'Choose a region to view its ten campaign levels.',
+    levelHint: 'Select an unlocked level. Unimplemented levels are shown with a lock.',
+    back: 'BACK', home: 'MAIN MENU', startLevel: 'PLAY',
+    overview: 'LEVEL OVERVIEW', difficulty: 'DIFFICULTY', chooseDifficulty: 'Choose difficulty:',
+    easy: 'EASY', medium: 'MEDIUM', hard: 'HARD', hardLocked: 'Complete a tenth level to unlock Hard.',
+    available: 'Available', completed: 'Completed', locked: 'Locked',
+    unimplemented: 'Not implemented yet', unavailableLevels: 'Levels 3–10 are not implemented yet.',
+    noHighScore: 'Your highscore for this level will be shown here as soon as you have played it for the first time.',
+    highScoreLabel: 'Best score',
+    bestScore: (score: number) => `$ ${score}`,
+    levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
+    levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
+    regionProgress: (completed: number) => `${completed}/10 levels complete`,
+    helpTitle: 'HOW TO PLAY',
+    helpLines: [
+      'Select a unit, then tap or click a reachable map cell to move it.',
+      'Select a sleeping unit on the map and use Hire to recruit it.',
+      'Select an enemy to set or clear a priority target.',
+      'Drag empty ground to pan the map; use the minimap to move the viewport.',
+      'Pause the battle before using single-step or inspection tools.',
+    ],
+    optionsTitle: 'OPTIONS', speed: 'Simulation speed',
+    speedHelp: 'Adjust the test speed from 0.25× to 4×.',
+    selectRegion: (name: string) => `Select ${name}`,
+    selectLevel: (number: number, title: string, state: string) => `Level ${number}: ${title}. ${state}`,
+    levelNumber: (number: number) => `LEVEL ${String(number).padStart(2, '0')}`,
+    levelUnavailable: 'This campaign level is not implemented yet.',
+    levelLocked: 'Complete the previous level to unlock this level.',
+    campaign: 'Campaign',
+  },
+  zh: {
+    start: '开始', help: '帮助', options: '选项', sound: '音效',
+    chooseRegion: '选择区域', chooseLevel: '选择关卡',
+    regionHint: '选择一个区域，查看其中的十个战役关卡。',
+    levelHint: '选择已开放的关卡。尚未实现的关卡会显示锁定标记。',
+    back: '返回', home: '主菜单', startLevel: '开始游戏',
+    overview: '关卡说明', difficulty: '难度', chooseDifficulty: '选择难度：',
+    easy: '简单', medium: '中等', hard: '困难', hardLocked: '完成任意区域第十关后解锁困难难度。',
+    available: '可进入', completed: '已完成', locked: '未解锁',
+    unimplemented: '尚未实现', unavailableLevels: '第 3–10 关尚未实现。',
+    noHighScore: '玩过本关后，最高分将在此显示。',
+    highScoreLabel: '最高分',
+    bestScore: (score: number) => `$ ${score}`,
+    levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
+    levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
+    regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
+    helpTitle: '游戏说明',
+    helpLines: [
+      '选择单位，再点击或轻触可到达的地图格移动。',
+      '选择地图上的休息单位，然后使用雇佣操作招募。',
+      '选择敌人可设置或取消优先目标。',
+      '拖动空地平移地图；拖动小地图视口框移动视野。',
+      '暂停战斗后再使用单步或状态检查工具。',
+    ],
+    optionsTitle: '选项', speed: '模拟速度',
+    speedHelp: '测试速度可在 0.25× 到 4× 之间调整。',
+    selectRegion: (name: string) => `选择${name}`,
+    selectLevel: (number: number, title: string, state: string) => `第 ${number} 关：${title}。${state}`,
+    levelNumber: (number: number) => `第 ${String(number).padStart(2, '0')} 关`,
+    levelUnavailable: '此战役关卡尚未实现。',
+    levelLocked: '完成上一关后即可解锁。',
+    campaign: '战役地图',
+  },
+};
+
 function profileMessage(language: keyof typeof languageMessages): string {
   const messages = languageMessages[language];
   if (profileLoadFailed) {
@@ -1055,6 +1171,276 @@ function renderCampaign(): void {
     case 'open-failed': feedbackText = copy.campaignOpenFailed; break;
   }
   if (campaignStatus.textContent !== feedbackText) campaignStatus.textContent = feedbackText;
+}
+
+const campaignRegionPositions: Record<CampaignRegionId, { x: number; y: number }> = {
+  'new-mexico': { x: 182, y: 188 },
+  mississippi: { x: 302, y: 215 },
+  oregon: { x: 80, y: 80 },
+  dakota: { x: 210, y: 90 },
+  nevada: { x: 105, y: 150 },
+  alaska: { x: 95, y: 250 },
+};
+
+const campaignLevelPositions = [
+  { x: 25, y: 25 }, { x: 117, y: 54 }, { x: 34, y: 126 }, { x: 84, y: 208 }, { x: 157, y: 137 },
+  { x: 239, y: 60 }, { x: 341, y: 23 }, { x: 352, y: 118 }, { x: 264, y: 167 }, { x: 362, y: 208 },
+] as const;
+
+function escapeMenuText(value: string): string {
+  return value.replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[character] ?? character);
+}
+
+function campaignMenuAssetUrl(filename: string): string {
+  return new URL(`${import.meta.env.BASE_URL}assets/menu/${filename}`, window.location.href).toString();
+}
+
+function campaignPortraitAssetUrl(filename: string): string {
+  return new URL(`${import.meta.env.BASE_URL}assets/${filename}`, window.location.href).toString();
+}
+
+function campaignMenuRegionScreen(): string {
+  const language = getLanguage();
+  const copy = campaignMenuCopy[language];
+  const nodes = campaignRegions.map((region, index) => {
+    const position = campaignRegionPositions[region.id];
+    const title = region.title[language];
+    return `<button type="button" class="campaign-region-node" data-action="choose-campaign-region" data-region="${region.id}" data-testid="campaign-region-${region.id}" style="left:${(position.x / 480) * 100}%;top:${(position.y / 320) * 100}%" aria-label="${escapeMenuText(copy.selectRegion(title))}">
+      <img src="${campaignMenuAssetUrl('gng_usmap_cross.png')}" alt="" aria-hidden="true"><span class="campaign-region-number">${index + 1}</span><span class="campaign-region-name">${escapeMenuText(title)}</span>
+    </button>`;
+  }).join('');
+  return `<section class="campaign-region-screen" aria-labelledby="campaign-menu-heading">
+    <h2 class="campaign-menu-visually-hidden" id="campaign-menu-heading">${copy.chooseRegion}</h2>
+    <div class="campaign-menu-map campaign-world-map">
+      <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_usmap_00_box.png')}" alt="" aria-hidden="true">${nodes}
+    </div>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${copy.regionHint}</p>
+    <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
+  </section>`;
+}
+
+function campaignMenuLevelScreen(): string {
+  const language = getLanguage();
+  const copy = campaignMenuCopy[language];
+  const region = campaignRegions.find((candidate) => candidate.id === selectedMenuRegionId) ?? campaignRegions[0];
+  const levels = campaignCatalog.filter((level) => level.regionId === region.id);
+  const completed = levels.filter((level) => campaignLevelState(level.level, campaignProgressView) === 'completed').length;
+  const nodes = levels.map((level, index) => {
+    const status = campaignLevelState(level.level, campaignProgressView);
+    const disabled = status === 'locked' || status === 'unimplemented';
+    const statusLabel = status === 'completed' ? copy.completed
+      : status === 'available' ? copy.available
+        : status === 'locked' ? copy.locked : copy.unimplemented;
+    const title = copy.selectLevel(level.level, level.title, statusLabel);
+    const artName = `gng_levelmap_${String(level.level).padStart(2, '0')}.png`;
+    const position = campaignLevelPositions[index];
+    const lock = disabled
+      ? `<img class="campaign-level-lock" src="${campaignMenuAssetUrl('lvl_locked.png')}" alt="" aria-hidden="true">`
+      : '';
+    return `<button type="button" class="campaign-level-node${disabled ? ' is-locked' : ''}${status === 'unimplemented' ? ' is-unimplemented' : ''}" data-action="choose-campaign-level" data-level="${level.level}" data-testid="campaign-level-${String(level.level).padStart(2, '0')}" title="${escapeMenuText(title)}" aria-label="${escapeMenuText(title)}" ${disabled ? 'disabled' : ''} style="left:${(position.x / 480) * 100}%;top:${(position.y / 320) * 100}%">
+      <img class="campaign-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">${lock}
+    </button>`;
+  }).join('');
+  return `<section class="campaign-level-screen" aria-labelledby="campaign-menu-heading">
+    <h2 class="campaign-menu-visually-hidden" id="campaign-menu-heading">${escapeMenuText(region.title[language])}</h2>
+    <div class="campaign-menu-map campaign-level-map">
+      <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_levelmap_box_00.png')}" alt="" aria-hidden="true">${nodes}
+    </div>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(copy.regionProgress(completed))}. ${escapeMenuText(copy.levelHint)} ${escapeMenuText(copy.unavailableLevels)}</p>
+    <button type="button" class="campaign-menu-back" data-action="menu-back-regions" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
+  </section>`;
+}
+
+function campaignMenuMinimapDataUrl(content: ScenarioContent): string {
+  const pixelsPerCell = 6;
+  const preview = document.createElement('canvas');
+  preview.width = content.map.width * pixelsPerCell;
+  preview.height = content.map.height * pixelsPerCell;
+  const previewContext = preview.getContext('2d');
+  if (!previewContext) return '';
+  previewContext.imageSmoothingEnabled = false;
+  for (const layer of [content.map.background, content.map.streets]) {
+    for (const tile of layer) {
+      const image = images[tile.asset];
+      if (!image) continue;
+      previewContext.drawImage(
+        image,
+        tile.source.x,
+        tile.source.y,
+        tile.source.width,
+        tile.source.height,
+        tile.x * pixelsPerCell,
+        tile.y * pixelsPerCell,
+        tile.width * pixelsPerCell,
+        tile.height * pixelsPerCell,
+      );
+    }
+  }
+  for (const unit of content.units) {
+    previewContext.fillStyle = '#24180f';
+    previewContext.fillRect((unit.cell.x + 0.25) * pixelsPerCell, (unit.cell.y + 0.25) * pixelsPerCell, 2, 2);
+  }
+  return preview.toDataURL('image/png');
+}
+
+function campaignMenuOverviewScreen(): string {
+  const language = getLanguage();
+  const copy = campaignMenuCopy[language];
+  const entry = campaignCatalog.find((candidate) => candidate.level === selectedMenuLevel);
+  if (!entry) return campaignMenuLevelScreen();
+  const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === entry.level);
+  if (!stage || (stage.status !== 'available' && stage.status !== 'completed')) return campaignMenuLevelScreen();
+  const content = entry.level === 1 ? cowGulchLevelOneContent : apacheValleyLevelTwoContent;
+  const description = entry.level === 1 ? copy.levelOneInfo : copy.levelTwoInfo;
+  const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
+  const score = stage.highScore === undefined
+    ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.noHighScore)}</p>`
+    : `<img class="campaign-overview-wanted" src="${campaignMenuAssetUrl('gng_highscore_1_wanted.png')}" alt="" aria-hidden="true"><p class="campaign-overview-score-label">${copy.highScoreLabel}</p><p class="campaign-overview-score">${escapeMenuText(copy.bestScore(stage.highScore))}</p>`;
+  const campaignFeedbackText = campaignFeedback?.type === 'open-failed' || assetLoadFailureNames.length > 0
+    ? languageMessages[language].campaignOpenFailed : '';
+  const unavailable = assetLoadFailureNames.length > 0 || campaignSelectionBusy || settingsSaveBusy || profileLoadFailed;
+  return `<section class="campaign-overview-screen" aria-labelledby="campaign-menu-heading">
+    <button type="button" class="campaign-menu-back" data-action="menu-back-levels" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
+    <article class="campaign-overview-card">
+      <h2 id="campaign-menu-heading" class="campaign-overview-title">${escapeMenuText(entry.title)}</h2>
+      <div class="campaign-overview-images">
+        <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
+        <img class="campaign-overview-minimap" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
+      </div>
+      <p class="campaign-level-description">${escapeMenuText(description)}</p>
+      <div class="campaign-overview-highscore">${score}</div>
+      <p class="campaign-menu-error" role="status" data-testid="campaign-menu-error">${escapeMenuText(campaignFeedbackText)}</p>
+      <button type="button" class="campaign-overview-play" data-action="open-campaign-difficulty" data-scenario-id="${escapeMenuText(stage.scenarioId)}" data-testid="campaign-stage-play" aria-label="${copy.startLevel}" ${unavailable ? 'disabled' : ''}>
+        <img src="${campaignMenuAssetUrl('gng_highscore_2_button.png')}" alt="" aria-hidden="true"><span>${copy.startLevel}</span>
+      </button>
+      <button type="button" class="campaign-overview-cancel" data-action="menu-back-levels" aria-label="${copy.back}" title="${copy.back}"><img src="${campaignMenuAssetUrl('gng_hud_2_no.png')}" alt="" aria-hidden="true"></button>
+    </article>
+  </section>`;
+}
+
+function campaignMenuDifficultyScreen(): string {
+  const language = getLanguage();
+  const copy = campaignMenuCopy[language];
+  const entry = campaignCatalog.find((candidate) => candidate.level === selectedMenuLevel);
+  const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === selectedMenuLevel);
+  const region = campaignRegions.find((candidate) => candidate.id === selectedMenuRegionId) ?? campaignRegions[0];
+  if (!entry || !stage || (stage.status !== 'available' && stage.status !== 'completed')) return campaignMenuLevelScreen();
+  const levels = campaignCatalog.filter((level) => level.regionId === region.id);
+  const backdropNodes = levels.map((level, index) => {
+    const status = campaignLevelState(level.level, campaignProgressView);
+    const locked = status === 'locked' || status === 'unimplemented';
+    const position = campaignLevelPositions[index];
+    return `<div class="campaign-difficulty-map-node${locked ? ' is-locked' : ''}" style="left:${(position.x / 480) * 100}%;top:${(position.y / 320) * 100}%">
+      <img src="${campaignMenuAssetUrl(`gng_levelmap_${String(level.level).padStart(2, '0')}.png`)}" alt="" aria-hidden="true">${locked ? `<img class="campaign-difficulty-map-lock" src="${campaignMenuAssetUrl('lvl_locked.png')}" alt="" aria-hidden="true">` : ''}
+    </div>`;
+  }).join('');
+  const difficulties: readonly GameDifficulty[] = ['easy', 'medium', 'hard'];
+  const choices = difficulties.map((difficulty) => {
+    const isLocked = difficulty === 'hard' && campaignProgressView?.hardModeUnlocked !== true;
+    const isBusy = campaignSelectionBusy || settingsSaveBusy || assetLoadFailureNames.length > 0 || profileLoadFailed;
+    const selected = selectedDifficulty === difficulty;
+    const labels = { easy: copy.easy, medium: copy.medium, hard: copy.hard };
+    const portrait = difficulty === 'easy' ? 'portrait_settlers.png'
+      : difficulty === 'medium' ? 'portrait_pedro.png' : 'oregon_dakota_portrait_boss.png';
+    return `<button type="button" class="campaign-difficulty-choice${selected ? ' is-selected' : ''}" data-action="choose-campaign-difficulty" data-difficulty="${difficulty}" data-scenario-id="${escapeMenuText(stage.scenarioId)}" data-testid="campaign-difficulty-${difficulty}" aria-pressed="${selected}" ${isLocked || isBusy ? 'disabled' : ''}>
+      <img src="${campaignPortraitAssetUrl(portrait)}" alt="" aria-hidden="true"><span>${labels[difficulty]}</span>
+    </button>`;
+  }).join('');
+  const campaignFeedbackText = campaignFeedback?.type === 'open-failed' || assetLoadFailureNames.length > 0
+    ? languageMessages[language].campaignOpenFailed : '';
+  return `<section class="campaign-difficulty-screen" aria-labelledby="campaign-menu-heading">
+    <div class="campaign-difficulty-map" aria-hidden="true"><img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_levelmap_box_00.png')}" alt="">${backdropNodes}</div>
+    <button type="button" class="campaign-menu-back" data-action="menu-back-overview" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
+    <article class="campaign-difficulty-dialog" role="dialog" aria-modal="true">
+      <h2 id="campaign-menu-heading">${copy.chooseDifficulty}</h2>
+      <div class="campaign-difficulty-choices">${choices}</div>
+      <p class="campaign-menu-notice" data-testid="campaign-menu-notice">${campaignProgressView?.hardModeUnlocked ? '' : copy.hardLocked}</p>
+      <p class="campaign-menu-error" role="status" data-testid="campaign-menu-error">${escapeMenuText(campaignFeedbackText)}</p>
+    </article>
+  </section>`;
+}
+
+function renderCampaignMenu(): void {
+  const language = getLanguage();
+  const copy = campaignMenuCopy[language];
+  campaignMenuScreen.setAttribute('aria-label', language === 'en' ? 'Campaign menu' : '战役菜单');
+  campaignMenuScreen.style.setProperty('--campaign-menu-background', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_0_sky.png')}")`);
+  campaignMenuScreen.style.setProperty('--campaign-menu-cloud-left', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_1.png')}")`);
+  campaignMenuScreen.style.setProperty('--campaign-menu-cloud-right', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_2.png')}")`);
+  campaignMenuScreen.style.setProperty('--campaign-menu-button-background', `url("${campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png')}")`);
+  campaignMenuScreen.style.setProperty('--campaign-menu-card-background', `url("${campaignMenuAssetUrl('gng_highscore_0_box.png')}")`);
+  campaignMenuScreen.style.setProperty('--campaign-difficulty-background', `url("${campaignPortraitAssetUrl('gng_hud_2_textbox_large.png')}")`);
+  switch (campaignMenuState) {
+    case 'home': {
+      campaignMenuView.innerHTML = `<section class="campaign-menu-home" aria-label="Guns’n’Glory">
+        <div class="campaign-menu-home-brand">
+          <img class="campaign-menu-logo" src="${campaignMenuAssetUrl('gng_startmenu_1_logo.png')}" alt="Guns’n’Glory">
+          <div class="campaign-menu-wanted">
+            <img class="campaign-wanted-frame" src="${campaignMenuAssetUrl('gng_startmenu_3_bandit_0_box.png')}" alt="" aria-hidden="true">
+            <img class="campaign-wanted-paper" src="${campaignMenuAssetUrl('gng_startmenu_3_bandit_1_wanted_1.png')}" alt="" aria-hidden="true">
+            <img class="campaign-wanted-body" src="${campaignMenuAssetUrl('gng_startmenu_3_bandit_3_body.png')}" alt="" aria-hidden="true">
+            <img class="campaign-wanted-head" src="${campaignMenuAssetUrl('gng_startmenu_3_bandit_4_head_0.png')}" alt="" aria-hidden="true">
+          </div>
+        </div>
+        <div class="campaign-menu-home-board">
+          <img class="campaign-menu-board-frame" src="${campaignMenuAssetUrl('gng_startmenu_2_menu_0_box.png')}" alt="" aria-hidden="true">
+          <nav class="campaign-menu-home-actions" aria-label="${copy.home}">
+            <button type="button" class="campaign-wood-button" data-action="menu-start" data-testid="menu-start">${copy.start}</button>
+            <button type="button" class="campaign-wood-button" data-action="menu-help" data-testid="menu-help">${copy.help}</button>
+            <button type="button" class="campaign-wood-button" data-action="menu-options" data-testid="menu-options">${copy.options}</button>
+          </nav>
+          <button type="button" class="campaign-menu-sound" data-action="menu-toggle-sound" data-testid="menu-sound" aria-pressed="${soundEnabled}"><img src="${campaignMenuAssetUrl(soundEnabled ? 'gng_startmenu_2_menu_2_sound_on.png' : 'gng_startmenu_2_menu_2_sound_off.png')}" alt="${copy.sound}"></button>
+        </div>
+      </section>`;
+      break;
+    }
+    case 'regions': campaignMenuView.innerHTML = campaignMenuRegionScreen(); break;
+    case 'levels': campaignMenuView.innerHTML = campaignMenuLevelScreen(); break;
+    case 'overview': campaignMenuView.innerHTML = campaignMenuOverviewScreen(); break;
+    case 'difficulty': campaignMenuView.innerHTML = campaignMenuDifficultyScreen(); break;
+    case 'options':
+      campaignMenuView.innerHTML = `<section class="campaign-menu-card-screen" aria-labelledby="campaign-menu-heading">
+        <article class="campaign-menu-card campaign-options-card">
+          <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
+          <h2 id="campaign-menu-heading">${copy.optionsTitle}</h2>
+          <button type="button" class="campaign-setting-toggle" data-action="menu-toggle-sound" data-testid="menu-sound" aria-pressed="${soundEnabled}">${copy.sound}: ${soundEnabled ? language === 'en' ? 'On' : '开' : language === 'en' ? 'Off' : '关'}</button>
+          <label class="campaign-speed-setting"><span>${copy.speed}</span><output data-testid="menu-simulation-speed-value">${simulationSpeed}×</output><input type="range" min="0.25" max="4" step="0.25" value="${simulationSpeed}" data-testid="menu-simulation-speed" aria-label="${copy.speed}"></label>
+          <p class="campaign-menu-subtle">${copy.speedHelp}</p>
+          <p class="campaign-menu-status" data-testid="menu-settings-status" role="status"></p>
+        </article>
+      </section>`;
+      break;
+    case 'help':
+      campaignMenuView.innerHTML = `<section class="campaign-menu-card-screen" aria-labelledby="campaign-menu-heading">
+        <article class="campaign-menu-card campaign-help-card">
+          <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
+          <h2 id="campaign-menu-heading">${copy.helpTitle}</h2>
+          <ol>${copy.helpLines.map((line) => `<li>${escapeMenuText(line)}</li>`).join('')}</ol>
+        </article>
+      </section>`;
+      break;
+  }
+}
+
+function showBattleScene(): void {
+  campaignMenuScreen.hidden = true;
+  campaignPanel.hidden = true;
+  sceneHeading.hidden = false;
+  gameToolbar.hidden = false;
+}
+
+function showCampaignMenu(screen: CampaignMenuScreenState = 'home'): void {
+  campaignMenuState = screen;
+  campaignMenuScreen.hidden = false;
+  campaignPanel.hidden = true;
+  sceneHeading.hidden = true;
+  gameToolbar.hidden = true;
+  renderCampaignMenu();
+  if (screen === 'difficulty') {
+    requestAnimationFrame(() => campaignMenuView.querySelector<HTMLButtonElement>('[data-testid="campaign-difficulty-easy"]')?.focus());
+  }
 }
 
 function profileRecoveryMessage(language: keyof typeof languageMessages): string {
@@ -1479,6 +1865,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
   renderCampaign();
+  if (!campaignMenuScreen.hidden) renderCampaignMenu();
   renderCampaignWaveIntro();
   const actionLocked = replaying || replacingSession;
   sceneOpenErrorPanel.hidden = sceneOpenFailure === undefined;
@@ -1587,6 +1974,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.noRoute);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
+  const campaignMenuSettingsStatus = campaignMenuView.querySelector<HTMLElement>('[data-testid="menu-settings-status"]');
+  if (campaignMenuSettingsStatus) campaignMenuSettingsStatus.textContent = settingsText;
   simulationSpeedInput.disabled = !campaignProgressView && !profileLoadFailed;
   soundToggleButton.disabled = !campaignProgressView && !profileLoadFailed;
   retrySettingsButton.hidden = settingsStatusKey !== 'save-failed' || profileLoadFailed;
@@ -2368,8 +2757,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
   }
 }
 
-async function openCampaignStage(scenarioId: string): Promise<void> {
-  if (assetLoadFailureNames.length > 0 || campaignSelectionBusy || settingsSaveBusy) return;
+async function openCampaignStage(scenarioId: string): Promise<boolean> {
+  if (assetLoadFailureNames.length > 0 || campaignSelectionBusy || settingsSaveBusy) return false;
   const requestedDifficulty = selectedDifficulty;
   campaignSelectionBusy = true;
   campaignFeedback = { type: 'loading' };
@@ -2382,17 +2771,17 @@ async function openCampaignStage(scenarioId: string): Promise<void> {
     const stage = campaignProgressView.stages.find((candidate) => candidate.scenarioId === scenarioId);
     if (!stage) {
       campaignFeedback = { type: 'load-failed' };
-      return;
+      return false;
     }
     if (stage.status === 'locked') {
       campaignFeedback = { type: 'locked', scenarioId };
-      return;
+      return false;
     }
     if (requestedDifficulty === 'hard' && !campaignProgressView.hardModeUnlocked) {
       selectedDifficulty = profile.settings.difficulty === 'hard' ? 'easy' : profile.settings.difficulty;
       campaignDifficultySelect.value = selectedDifficulty;
       campaignFeedback = { type: 'difficulty-locked' };
-      return;
+      return false;
     }
     campaignFeedback = { type: 'opening', scenarioId };
     renderCampaign();
@@ -2404,13 +2793,26 @@ async function openCampaignStage(scenarioId: string): Promise<void> {
       mode: 'formal',
     });
     campaignFeedback = { type: opened ? 'opened' : 'open-failed', scenarioId };
+    if (opened) showBattleScene();
+    return opened;
   } catch {
     campaignProgressView = undefined;
     campaignFeedback = { type: 'load-failed' };
+    return false;
   } finally {
     campaignSelectionBusy = false;
     renderStatus();
   }
+}
+
+async function selectCampaignDifficultyAndOpen(scenarioId: string, difficulty: GameDifficulty): Promise<void> {
+  if (campaignSelectionBusy || settingsSaveBusy || (difficulty === 'hard' && !campaignProgressView?.hardModeUnlocked)) return;
+  selectedDifficulty = difficulty;
+  campaignDifficultySelect.value = difficulty;
+  campaignFeedback = undefined;
+  await saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
+  const opened = await openCampaignStage(scenarioId);
+  if (!opened && !campaignMenuScreen.hidden) renderCampaignMenu();
 }
 
 function requestScenarioOpen(
@@ -2489,12 +2891,12 @@ async function importReplayFile(file: File | undefined): Promise<void> {
   }
 }
 
-function saveSettings(settings: ProfileView['settings'], onFailure?: () => void): void {
+function saveSettings(settings: ProfileView['settings'], onFailure?: () => void): Promise<void> {
   const sequence = ++settingsSaveSequence;
   settingsSaveBusy = true;
   settingsStatusKey = undefined;
   renderStatus();
-  void progress.saveSettings(settings).then((saved) => {
+  return progress.saveSettings(settings).then((saved) => {
     if (sequence !== settingsSaveSequence) return;
     settingsSaveBusy = false;
     updateProfileSettings(saved);
@@ -2857,6 +3259,112 @@ campaignStageList.addEventListener('click', (event: MouseEvent) => {
   if (!scenarioId) return;
   void openCampaignStage(scenarioId);
 });
+
+campaignMenuView.addEventListener('click', (event: MouseEvent) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest<HTMLButtonElement>('button[data-action]');
+  if (!button || button.disabled) return;
+  switch (button.dataset.action) {
+    case 'menu-start': showCampaignMenu('regions'); break;
+    case 'menu-help': showCampaignMenu('help'); break;
+    case 'menu-options': showCampaignMenu('options'); break;
+    case 'menu-back-home': showCampaignMenu('home'); break;
+    case 'menu-back-regions': showCampaignMenu('regions'); break;
+    case 'menu-back-levels': showCampaignMenu('levels'); break;
+    case 'menu-back-overview': showCampaignMenu('overview'); break;
+    case 'choose-campaign-region': {
+      const region = campaignRegions.find((candidate) => candidate.id === button.dataset.region);
+      if (!region) return;
+      selectedMenuRegionId = region.id;
+      showCampaignMenu('levels');
+      break;
+    }
+    case 'choose-campaign-level': {
+      const level = Number(button.dataset.level);
+      const entry = campaignCatalog.find((candidate) => candidate.level === level);
+      if (!entry || campaignLevelState(level, campaignProgressView) === 'locked'
+        || campaignLevelState(level, campaignProgressView) === 'unimplemented') return;
+      selectedMenuLevel = level;
+      showCampaignMenu('overview');
+      break;
+    }
+    case 'choose-campaign-difficulty': {
+      const difficulty = button.dataset.difficulty;
+      const scenarioId = button.dataset.scenarioId;
+      if (!isGameDifficulty(difficulty) || !scenarioId) return;
+      void selectCampaignDifficultyAndOpen(scenarioId, difficulty);
+      break;
+    }
+    case 'open-campaign-difficulty': {
+      const scenarioId = button.dataset.scenarioId;
+      if (scenarioId) showCampaignMenu('difficulty');
+      break;
+    }
+    case 'menu-toggle-sound':
+      setSoundEnabled(!soundEnabled);
+      saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
+      renderCampaignMenu();
+      break;
+    default: break;
+  }
+});
+
+campaignMenuView.addEventListener('input', (event: Event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || target.dataset.testid !== 'menu-simulation-speed') return;
+  simulationSpeed = normalizeSimulationSpeed(Number(target.value));
+  simulationSpeedInput.value = String(simulationSpeed);
+  simulationSpeedValue.textContent = `${simulationSpeed}×`;
+  const output = campaignMenuView.querySelector<HTMLOutputElement>('[data-testid="menu-simulation-speed-value"]');
+  if (output) output.textContent = `${simulationSpeed}×`;
+  settingsStatusKey = undefined;
+});
+
+campaignMenuView.addEventListener('change', (event: Event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement) || target.dataset.testid !== 'menu-simulation-speed') return;
+  saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
+});
+
+function enterCampaignMenu(): void {
+  campaignExitConfirmation.close();
+  stopGameLoop();
+  previousTimestamp = undefined;
+  simulationTime.reset();
+  pauseBackgroundMusic();
+  cancelPointerGesture();
+  showCampaignMenu('home');
+  renderStatus();
+}
+
+campaignMenuToggle.addEventListener('click', () => {
+  if (campaignExitConfirmation.open) return;
+  menuReturnWasPaused = view.paused;
+  if (!view.paused) {
+    cancelPointerGesture();
+    stopGameLoop();
+    pauseReason = 'manual';
+    view = session.pause();
+    renderStatus();
+    redraw();
+  }
+  campaignExitConfirmation.showModal();
+});
+
+campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="cancel-campaign-exit"]')?.addEventListener('click', () => {
+  campaignExitConfirmation.close();
+  if (!menuReturnWasPaused) {
+    pauseReason = undefined;
+    view = session.resume();
+    renderStatus();
+    redraw();
+    startGameLoop();
+  }
+});
+
+campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="confirm-campaign-exit"]')?.addEventListener('click', enterCampaignMenu);
+settlementCampaignMenuButton.addEventListener('click', enterCampaignMenu);
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
 mapHireControl.addEventListener('click', () => {
@@ -3290,14 +3798,23 @@ window.addEventListener('blur', cancelPointerGesture);
 
 subscribeLanguage(() => {
   renderStatus();
+  renderCampaignMenu();
   redraw();
   renderExperimentComparison();
   renderSavedComparisonOptions();
   renderSavedComparisonStatus();
 });
 
-if (assetLoadFailureNames.length === 0 && campaignProgressView) {
-  await openCampaignStage(cowGulchLevelOneContent.id);
+const testBattleStart = import.meta.env.DEV && new URLSearchParams(window.location.search).get('testBattle') === '1';
+if (testBattleStart) {
+  archivePanel.hidden = false;
+  archivePanel.open = true;
+  campaignPanel.hidden = false;
+  showBattleScene();
+  if (assetLoadFailureNames.length === 0 && campaignProgressView) {
+    await openCampaignStage(cowGulchLevelOneContent.id);
+  }
 } else {
+  showCampaignMenu('home');
   renderStatus();
 }

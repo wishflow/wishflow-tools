@@ -46,7 +46,7 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
   await installAutoContinueCampaignWaveIntro(page);
 
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
     const speed = page.getByRole('slider', { name: 'Simulation speed' });
     await speed.focus();

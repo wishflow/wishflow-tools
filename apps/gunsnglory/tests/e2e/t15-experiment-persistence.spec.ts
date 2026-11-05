@@ -39,7 +39,7 @@ test('saves a comparison to IndexedDB and reopens the same report after reload w
     if (response.status() >= 400) consoleIssues.push(`HTTP ${response.status()}: ${response.url()}`);
   });
   page.on('pageerror', (error) => consoleIssues.push(error.message));
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('profile-status')).not.toBeEmpty();
   const profileBefore = await readProfileRecord(page);
 
@@ -90,7 +90,7 @@ test('keeps experiment save and reopen controls usable on a narrow touch viewpor
     if (response.status() >= 400) consoleIssues.push(`HTTP ${response.status()}: ${response.url()}`);
   });
   page.on('pageerror', (error) => consoleIssues.push(error.message));
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await page.getByTestId('compare-schemes').tap();
   await expect(page.getByTestId('experiment-report-summary')).toContainText('3/3 paired samples', { timeout: 30_000 });
   await page.getByTestId('save-comparison').tap();

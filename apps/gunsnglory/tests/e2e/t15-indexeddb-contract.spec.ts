@@ -1,7 +1,7 @@
 import { expect, test } from './auto-continue-fixtures';
 
 test('IndexedDB experiment records use stable pagination and reject a missing result artifact', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const result = await page.evaluate(async () => {
     const contentPath: string = '/src/content/cow-gulch.ts';
     const gamePath: string = '/src/game/index.ts';
@@ -106,7 +106,7 @@ test('IndexedDB experiment records use stable pagination and reject a missing re
 });
 
 test('IndexedDB adapter passes the same repository contract as the memory adapter', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const result = await page.evaluate(async () => {
     const repositoryPath: string = '/src/experiments/indexeddb-experiment-repository.ts';
     const contractPath: string = '/tests/experiment-repository-contract.ts';

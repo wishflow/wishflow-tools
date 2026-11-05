@@ -31,7 +31,7 @@ async function canvasHash(page: import('@playwright/test').Page): Promise<number
 
 async function openPausedOfficialBattle(page: import('@playwright/test').Page): Promise<void> {
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('game-canvas')).toBeVisible();
   const pause = page.getByTestId('pause-toggle');
   await expect(pause).toBeEnabled();

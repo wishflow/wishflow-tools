@@ -2,7 +2,7 @@ import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-conti
 
 test('shows the original price and refuses a Gunslinger hire without charging Cow Gulch cash', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   const recruit = page.getByRole('button', { name: 'Hire Gunslinger · $75' });
@@ -32,7 +32,7 @@ test('the recruitment control can be operated by touch on a phone-sized viewport
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     const recruit = page.getByRole('button', { name: 'Hire Gunslinger · $75' });
     await expect(recruit).toBeEnabled();
     await recruit.tap();

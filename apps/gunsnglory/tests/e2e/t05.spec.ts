@@ -12,7 +12,7 @@ async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise
 }
 
 test('saves a formal result across reload and discards an unfinished wave', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
   await setFourTimesSpeed(page);
 
@@ -56,7 +56,7 @@ test('saves a formal result across reload and discards an unfinished wave', asyn
 });
 
 test('IndexedDB profile adapter enforces conditional writes and idempotent operation IDs', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const result = await page.evaluate(async () => {
     const adapterModulePath: string = '/src/progress/indexeddb-profile-repository.ts';
     const { createIndexedDbProfileRepository } = await import(/* @vite-ignore */ adapterModulePath);
@@ -76,7 +76,7 @@ test('IndexedDB profile adapter enforces conditional writes and idempotent opera
 });
 
 test('reports a real IndexedDB transaction abort and retries the pending settlement', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await setFourTimesSpeed(page);
   await openSingleWaveSample(page);
   await page.evaluate(() => {
@@ -142,7 +142,7 @@ test('a stale tab sees a settings conflict and can reload the newer saved value'
 });
 
 test('retries a failed settings transaction with the original operation', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await page.evaluate(() => {
     const state = window as Window & { __abortSettingsWrite?: boolean };
     state.__abortSettingsWrite = true;
@@ -184,7 +184,7 @@ test('exports a damaged profile before allowing its replacement', async ({ page 
     lastOperationId: 'damaged-record',
     lastRequestDigest: 'damaged-record',
   };
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await page.evaluate(async (record) => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('gunsnglory-profile', 1);
     request.onerror = () => reject(request.error);
@@ -220,7 +220,7 @@ test('exports a damaged profile before allowing its replacement', async ({ page 
 
 test('preserves a profile from a newer schema and offers backup without reset', async ({ page }) => {
   const newerRecord = { id: 'default', schemaVersion: 99, note: 'keep-me' };
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await page.evaluate(async (record) => new Promise<void>((resolve, reject) => {
     const request = indexedDB.open('gunsnglory-profile', 1);
     request.onerror = () => reject(request.error);
@@ -256,7 +256,7 @@ test('preserves a profile from a newer schema and offers backup without reset', 
 });
 
 test('the IndexedDB adapter refuses to reset a damaged record changed after backup', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   const result = await page.evaluate(async () => {
     const damagedRecord = {
       id: 'default',

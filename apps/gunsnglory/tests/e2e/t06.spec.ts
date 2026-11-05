@@ -28,7 +28,7 @@ async function canvasPixels(page: import('@playwright/test').Page): Promise<stri
 
 test('blocks a drag at original map scenery, then stops when the pointer is released', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
   const status = page.getByTestId('selection-status');
   const start = await mapPoint(page, 8.5, 8.25);
@@ -51,7 +51,7 @@ test('stops a drag on pointer cancellation or lost capture', async ({ page }) =>
   await page.setViewportSize({ width: 1280, height: 720 });
 
   for (const eventType of ['pointercancel', 'lostpointercapture']) {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page);
     await page.evaluate(() => {
       const state = window as Window & { __gngPointerId?: number };
@@ -95,7 +95,7 @@ test('moves and releases a unit through a real mobile touch drag', async ({ brow
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
   try {
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await openSingleWaveSample(page, 'tap');
     const status = page.getByTestId('selection-status');
     const start = await mapPoint(page, 8.5, 8.25);

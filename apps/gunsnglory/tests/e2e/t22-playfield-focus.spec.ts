@@ -13,7 +13,7 @@ for (const profile of viewports) {
       ...(profile.hasTouch ? { hasTouch: true, isMobile: true } : {}),
     });
     const page = await context.newPage();
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
 
     const elementIsFullyVisible = async (selector: string) => {
       const box = await page.locator(selector).boundingBox();

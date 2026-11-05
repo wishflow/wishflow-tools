@@ -48,7 +48,7 @@ async function installPriorityCrosshairCounter(page: import('@playwright/test').
 }
 
 async function pointAtVisibleSettler(page: import('@playwright/test').Page): Promise<TargetPoint> {
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
   const speed = page.getByTestId('simulation-speed');
   await expect(speed).toBeEnabled();
@@ -135,7 +135,7 @@ test('dragging from an enemy does not move the previously selected unit', async 
   try {
     await installAutoContinueCampaignWaveIntro(page);
     await installPriorityCrosshairCounter(page);
-    await page.goto('/');
+    await page.goto('/?testBattle=1');
     await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
     await page.getByTestId('inspection-panel').locator('summary').tap();
 

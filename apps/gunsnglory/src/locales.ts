@@ -1,8 +1,8 @@
 export const messages = {
   'ORIGINAL CAMPAIGN': { en: 'ORIGINAL CAMPAIGN', zh: '原版战役' },
-  'Play the original New Mexico campaign, then use the archive panel for isolated rule samples.': {
-    en: 'Play the original New Mexico campaign, then use the archive panel for isolated rule samples.',
-    zh: '游玩新墨西哥州原版战役；需要单独验证规则时可切换到样本场景。',
+  'Play Guns’n’Glory’s original campaign in your browser.': {
+    en: 'Play Guns’n’Glory’s original campaign in your browser.',
+    zh: '在浏览器中体验《Guns’n’Glory》原版战役。',
   },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
   'Campaign progress': { en: 'Campaign progress', zh: '战役进度' },
@@ -40,6 +40,7 @@ export const messages = {
   },
   'Simulation speed': { en: 'Simulation speed', zh: '模拟速度' },
   'Game controls': { en: 'Game controls', zh: '游戏操作' },
+  'Archive and testing tools': { en: 'Archive and testing tools', zh: '资料库与测试工具' },
   Controls: { en: 'Controls', zh: '操作说明' },
   'Click or tap a unit to select it; click empty ground to clear selection.': {
     en: 'Click or tap a unit to select it; click empty ground to clear selection.',

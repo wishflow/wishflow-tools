@@ -2,7 +2,7 @@ import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-conti
 
 test('persists the next-battle difficulty, applies it to a scene, and keeps Hard locked', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
 
   const difficulty = page.getByTestId('difficulty-select');
   await expect(difficulty).toHaveValue('easy');
@@ -69,7 +69,7 @@ test('difficulty selection and lock feedback fit the mobile campaign panel', asy
   });
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await expect(page.getByTestId('difficulty-select')).toBeEnabled();
   await expect(page.getByTestId('difficulty-select').locator('option[value="hard"]')).toHaveAttribute('disabled', '');
   await page.getByTestId('difficulty-select').selectOption('medium');

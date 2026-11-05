@@ -173,7 +173,7 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await installSeed42(page);
-  await page.goto('/');
+  await page.goto('/?testBattle=1');
   await writeUnlockedProfile(page);
   await page.reload();
 
