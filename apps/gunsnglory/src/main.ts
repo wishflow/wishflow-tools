@@ -16,9 +16,10 @@ import {
 import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
 import { apacheValleyContent } from './content/apache-valley';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from './content/official-campaign';
+import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages } from './content/official-campaign';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
+import { fortKaboomWaveIntros } from './content/fort-kaboom-wave-intros';
 import {
   cowGulchAmbientMusic,
   cowGulchBattleMusicForWave,
@@ -2411,6 +2412,7 @@ const assetNames = new Set([
   'portrait_pedro',
   'portrait_indian',
   'portrait_settlers',
+  'portrait_deserter',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
@@ -2609,6 +2611,7 @@ function isOfficialCowGulchSession(): boolean {
 function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[] {
   if (scenarioId === cowGulchLevelOneContent.id) return cowGulchWaveIntros;
   if (scenarioId === apacheValleyLevelTwoContent.id) return apacheValleyWaveIntros;
+  if (scenarioId === fortKaboomLevelThreeContent.id) return fortKaboomWaveIntros;
   return [];
 }
 

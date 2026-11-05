@@ -111,6 +111,7 @@ test('Apache Valley reconstructs fresh units, static objects, weapon stats and o
     assert.ok(existsSync(path.join(appRoot, 'public/assets', gameAssetRelativePath(asset))), `${asset} resolves to a bundled asset`);
   }
   assert.ok(existsSync(path.join(appRoot, 'public/assets/sounds/sound_indian_hugh.ogg')));
+  assert.ok(existsSync(path.join(appRoot, 'public/assets/sounds/sound_siedler.ogg')));
 });
 
 test('Apache Valley route priority keeps independent paths and converges on each matching exit', () => {
@@ -156,9 +157,9 @@ test('Apache Valley dialogue keeps the APK text order and uses only bundled spea
   assert.deepEqual(apacheValleyWaveIntros.map(({ portraitAsset, voiceSound }) => [portraitAsset, voiceSound]), [
     ['portrait_pedro', 'sound_pedro'],
     ['portrait_pedro', 'sound_pedro'],
-    ['portrait_settlers', undefined],
+    ['portrait_settlers', 'sound_siedler'],
     ['portrait_indian', 'sound_indian_hugh'],
-    ['portrait_settlers', undefined],
+    ['portrait_settlers', 'sound_siedler'],
     ['portrait_pedro', 'sound_pedro'],
   ]);
   assert.ok(apacheValleyWaveIntros.every(({ text }) => text.en.length > 0 && text.zh.length > 0));
