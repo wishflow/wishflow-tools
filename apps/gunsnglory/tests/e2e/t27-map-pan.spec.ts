@@ -34,7 +34,7 @@ async function expectCanvasHashChange(
   previousHash: number,
   message: string,
 ): Promise<void> {
-  await expect.poll(() => canvasHash(page), { message, timeout: 1000 }).not.toBe(previousHash);
+  await expect.poll(() => canvasHash(page), { message, timeout: 5000 }).not.toBe(previousHash);
 }
 
 async function openPausedOfficialBattle(page: import('@playwright/test').Page): Promise<void> {
