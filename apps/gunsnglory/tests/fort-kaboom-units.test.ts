@@ -13,6 +13,7 @@ const shotSoundAssets: Readonly<Record<string, readonly string[]>> = {
   sound_cannon: ['sound_cannon', 'sound_cannon2'],
   sound_fire_arrow: ['sound_fire_arrow', 'sound_fire_arrow2'],
   sound_rifle: ['sound_rifle'],
+  sound_rocket_launch: ['sound_rocket_launch_1', 'sound_rocket_launch_2'],
   sound_rocket_explosion: ['sound_rocket_explosion_1', 'sound_rocket_explosion_2'],
 };
 
@@ -54,7 +55,7 @@ const expected: Readonly<Record<FortKaboomUnitType, {
   grandpa: {
     speed: 2000, price: 130, damage: 300, damageType: 'heavy', range: 46080,
     reload: 4000, projectileSpeed: 1000, area: 7680, postDamage: 12, postDamageDurationMs: 500,
-    damageStyle: 6, hireSound: 'sound_grandpa_coughing', shotSound: 'sound_rocket_explosion',
+    damageStyle: 6, hireSound: 'sound_grandpa_coughing', shotSound: 'sound_rocket_launch',
     awakeHeight: 44, sleepingHeight: 44,
   },
 };

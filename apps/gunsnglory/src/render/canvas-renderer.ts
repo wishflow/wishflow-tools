@@ -18,6 +18,9 @@ const FINE_UNITS_PER_CELL = 7680;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
 const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
 const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
+const ROCKET_FRAME = Object.freeze({ width: 16, height: 16, count: 16 });
+const ROCKET_EXPLOSION_FRAME = Object.freeze({ width: 56, height: 52, count: 8 });
+const ROCKET_SPARKLES_FRAME = Object.freeze({ width: 28, height: 28, count: 3 });
 const SELECTION_RANGE_CIRCLE_COLOR = 'rgba(255, 255, 255, 0.1568627450980392)';
 const SELECTION_CURSOR_FRAMES = 4;
 
@@ -398,6 +401,12 @@ function createDrawObjects(
     depth: shot.positionFine.y + (shot.fineZ * 100),
     draw: () => drawShot(context, shot, images, viewport),
   }));
+  const rocketSparkles = (view.rocketSparkles ?? []).map((sparkle): DrawObject => ({
+    id: `rocket-sparkle:${sparkle.id}`,
+    kind: 'shot',
+    depth: sparkle.positionFine.y + (sparkle.fineZ * 100),
+    draw: () => drawRocketSparkle(context, sparkle, images, viewport),
+  }));
   const wagonDebris = (view.wagonDebris ?? []).map((part): DrawObject => ({
     id: `wagon-debris:${part.id}`,
     kind: 'wagon-debris',
@@ -414,7 +423,7 @@ function createDrawObjects(
   const mapObjects = [...decorations, ...units].sort((left, right) => (
     left.cell!.y - right.cell!.y || left.cell!.x - right.cell!.x
   ));
-  return [...mapObjects, ...enemies, ...shots, ...wagonDebris, ...collectables];
+  return [...mapObjects, ...enemies, ...shots, ...rocketSparkles, ...wagonDebris, ...collectables];
 }
 
 function drawWorldObjects(
@@ -618,6 +627,25 @@ function drawShot(
   const tileScale = viewport.scaleFactor;
   const x = viewport.origin.x + (shot.positionFine.x / 240) * tileScale;
   const y = viewport.origin.y + ((shot.positionFine.y - shot.heightFine) / 240) * tileScale;
+  if (shot.imageAsset === 'sfx_rocket_explosion') {
+    const image = images.sfx_rocket_explosion;
+    if (!image) throw new Error('Missing game image: sfx_rocket_explosion');
+    const frame = Math.min(ROCKET_EXPLOSION_FRAME.count - 1, Math.max(0, shot.animationFrame));
+    const width = ROCKET_EXPLOSION_FRAME.width * tileScale;
+    const height = ROCKET_EXPLOSION_FRAME.height * tileScale;
+    context.drawImage(
+      image,
+      frame * ROCKET_EXPLOSION_FRAME.width,
+      0,
+      ROCKET_EXPLOSION_FRAME.width,
+      ROCKET_EXPLOSION_FRAME.height,
+      x - width / 2,
+      y - height,
+      width,
+      height,
+    );
+    return;
+  }
   if (shot.imageAsset) {
     if (shot.explosionRemainingMs !== undefined) {
       const image = images.sfx_explosion;
@@ -641,15 +669,17 @@ function drawShot(
 
     const image = images[shot.imageAsset];
     if (!image) throw new Error('Missing game image: ' + shot.imageAsset);
-    const frame = Math.min(MEXICAN_DYNAMITE_FRAME.count - 1, Math.max(0, shot.animationFrame));
-    const width = MEXICAN_DYNAMITE_FRAME.width * tileScale;
-    const height = MEXICAN_DYNAMITE_FRAME.height * tileScale;
+    const isRocket = shot.imageAsset === 'sfx_pyromaniac_rocket';
+    const frameSpec = isRocket ? ROCKET_FRAME : MEXICAN_DYNAMITE_FRAME;
+    const frame = Math.min(frameSpec.count - 1, Math.max(0, shot.animationFrame));
+    const width = frameSpec.width * tileScale;
+    const height = frameSpec.height * tileScale;
     context.drawImage(
       image,
-      frame * MEXICAN_DYNAMITE_FRAME.width,
+      frame * frameSpec.width,
       0,
-      MEXICAN_DYNAMITE_FRAME.width,
-      MEXICAN_DYNAMITE_FRAME.height,
+      frameSpec.width,
+      frameSpec.height,
       x - width / 2,
       y - height,
       width,
@@ -661,6 +691,33 @@ function drawShot(
   const bulletSize = Math.max(1, 3 * tileScale);
   context.fillStyle = '#7f0000';
   context.fillRect(x - bulletSize / 2, y - bulletSize / 2, bulletSize, bulletSize);
+}
+
+function drawRocketSparkle(
+  context: CanvasRenderingContext2D,
+  sparkle: NonNullable<GameView['rocketSparkles']>[number],
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const image = images.sfx_rocket_sparkles;
+  if (!image) throw new Error('Missing game image: sfx_rocket_sparkles');
+  const tileScale = viewport.scaleFactor;
+  const width = ROCKET_SPARKLES_FRAME.width * tileScale;
+  const height = ROCKET_SPARKLES_FRAME.height * tileScale;
+  const x = viewport.origin.x + (sparkle.positionFine.x / 240) * tileScale;
+  const y = viewport.origin.y + (sparkle.positionFine.y / 240) * tileScale;
+  const frame = Math.min(ROCKET_SPARKLES_FRAME.count - 1, Math.max(0, sparkle.animationFrame));
+  context.drawImage(
+    image,
+    frame * ROCKET_SPARKLES_FRAME.width,
+    0,
+    ROCKET_SPARKLES_FRAME.width,
+    ROCKET_SPARKLES_FRAME.height,
+    x - width / 2,
+    y - height,
+    width,
+    height,
+  );
 }
 
 function drawInspectionLabel(

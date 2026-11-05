@@ -1194,6 +1194,68 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
   assert.deepEqual(transforms.at(-1), ['scale', -1, 1], 'the walking atlas mirrors only when its direction row requests it');
 });
 
+test('draws Damage Style 6 flight, impact, and sparkle atlas frames', () => {
+  const ground = {} as HTMLImageElement;
+  const rocket = {} as HTMLImageElement;
+  const explosion = {} as HTMLImageElement;
+  const sparkles = {} as HTMLImageElement;
+  const drawCalls: unknown[][] = [];
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+  } as unknown as CanvasRenderingContext2D;
+  const view: GameView = {
+    frame: 1,
+    elapsedMs: 100,
+    paused: false,
+    scenarioId: 'style6-render',
+    map: { width: 1, height: 1, tileSize: 32, background: [], streets: [] },
+    units: [],
+    enemies: [],
+    shots: [{
+      id: 'flight', shooterId: 'grandpa', targetId: 'enemy',
+      positionFine: { x: 3_840, y: 3_840 }, remainingMs: 100,
+      damageStyle: 6, imageAsset: 'sfx_pyromaniac_rocket', animationFrame: 11,
+      fineZ: 0, heightFine: 0,
+    }, {
+      id: 'impact', shooterId: 'grandpa', targetId: 'enemy',
+      positionFine: { x: 7_680, y: 7_680 }, remainingMs: 599,
+      damageStyle: 6, imageAsset: 'sfx_rocket_explosion', animationFrame: 3,
+      explosionRemainingMs: 599, fineZ: 7680, heightFine: 0,
+    }],
+    rocketSparkles: [{
+      id: 'sparkle', positionFine: { x: 11_520, y: 11_520 },
+      remainingMs: 99, animationFrame: 2, fineZ: 7680,
+    }],
+    drawOrder: ['shot:flight', 'shot:impact', 'rocket-sparkle:sparkle'],
+    recruitPool: [],
+    events: [],
+  };
+
+  drawGame(context, view, {
+    ground,
+    sfx_pyromaniac_rocket: rocket,
+    sfx_rocket_explosion: explosion,
+    sfx_rocket_sparkles: sparkles,
+  });
+
+  const rocketDraw = drawCalls.find(([image]) => image === rocket);
+  assert.ok(rocketDraw);
+  assert.deepEqual(rocketDraw.slice(1, 5), [176, 0, 16, 16], 'flight orientation selects the original 16th atlas frame');
+  const explosionDraw = drawCalls.find(([image]) => image === explosion);
+  assert.ok(explosionDraw);
+  assert.deepEqual(explosionDraw.slice(1, 5), [168, 0, 56, 52], 'impact uses the 56×52 rocket explosion atlas');
+  const sparkleDraw = drawCalls.find(([image]) => image === sparkles);
+  assert.ok(sparkleDraw);
+  assert.deepEqual(sparkleDraw.slice(1, 5), [56, 0, 28, 28], 'sparkles use the final 28×28 atlas frame');
+});
+
 test('draws ordinary bullets as small dark-red rectangles without an outline', () => {
   const ground = {} as HTMLImageElement;
   const fillCalls: Array<{ color: string; rect: number[] }> = [];

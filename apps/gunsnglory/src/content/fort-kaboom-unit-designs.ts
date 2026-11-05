@@ -135,7 +135,7 @@ export const fortKaboomUnitDesigns: Readonly<Record<FortKaboomUnitType, FortKabo
     awakeAsset: 'player_geezer',
     awakeFrame: { x: 0, y: 0, width: 32, height: 44 },
     hireSound: 'sound_grandpa_coughing',
-    shotSound: 'sound_rocket_explosion',
+    shotSound: 'sound_rocket_launch',
     weapon: Object.freeze({
       damage: 300,
       damageType: 'heavy',

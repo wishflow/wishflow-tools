@@ -1310,7 +1310,7 @@ test('special projectile arcs use the original Java float32 ratio for all four d
     { style: 3 as const, expectedHeightFine: 7681 },
     { style: 4 as const, expectedHeightFine: 6080 },
     { style: 5 as const, expectedHeightFine: 7681 },
-    { style: 6 as const, expectedHeightFine: 1122 },
+    { style: 6 as const, expectedHeightFine: 754 },
   ];
   for (const { style, expectedHeightFine } of cases) {
     const precisionScenario: ScenarioContent = {
@@ -2902,7 +2902,7 @@ test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async 
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-15');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-16');
 
   session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });

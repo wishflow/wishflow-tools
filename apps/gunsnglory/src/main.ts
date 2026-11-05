@@ -2396,6 +2396,9 @@ const assetNames = new Set([
   'hud_crosshair',
   'sfx_mexican_dynamite',
   'sfx_explosion',
+  'sfx_pyromaniac_rocket',
+  'sfx_rocket_explosion',
+  'sfx_rocket_sparkles',
   'gng_wave_arrow_a',
   'gng_wave_arrow_b',
   'gng_wave_arrow_c',
@@ -2799,8 +2802,8 @@ const positionalUnitShotSounds: Readonly<Record<UnitShotSound, { id: number; ass
   sound_gattling_gun: { id: 3, assets: ['sound_gattling_gun', 'sound_gattling_gun2'] },
   sound_shotgun: { id: 4, assets: ['sound_shotgun', 'sound_shotgun'] },
   sound_rifle: { id: 5, assets: ['sound_rifle', 'sound_rifle'] },
-  sound_rocket_explosion: { id: 6, assets: ['sound_rocket_explosion_1', 'sound_rocket_explosion_2'] },
-  sound_rocket_launch: { id: 7, assets: ['sound_rocket_launch_1', 'sound_rocket_launch_2'] },
+  sound_rocket_launch: { id: 6, assets: ['sound_rocket_launch_1', 'sound_rocket_launch_2'] },
+  sound_rocket_explosion: { id: 7, assets: ['sound_rocket_explosion_1', 'sound_rocket_explosion_2'] },
   sound_poison_splash: { id: 8, assets: ['sound_poison_splash_1', 'sound_poison_splash_2'] },
 };
 

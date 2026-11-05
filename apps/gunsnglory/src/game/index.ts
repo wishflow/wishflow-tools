@@ -427,9 +427,17 @@ export interface ShotView {
   fineZ: 0 | 7680;
   /** Original vertical arc offset, in fine coordinates above the ground anchor. */
   heightFine: number;
-  imageAsset?: 'sfx_mexican_dynamite';
+  imageAsset?: 'sfx_mexican_dynamite' | 'sfx_pyromaniac_rocket' | 'sfx_rocket_explosion';
   animationFrame: number;
   explosionRemainingMs?: number;
+}
+
+export interface RocketSparkleView {
+  id: string;
+  positionFine: { x: number; y: number };
+  remainingMs: number;
+  animationFrame: number;
+  fineZ: 0 | 7680;
 }
 
 export type GameEvent =
@@ -528,6 +536,7 @@ export interface GameView {
   bonusCratePool?: BonusCratePoolView;
   bonusNotice?: BonusNoticeView;
   shots: readonly ShotView[];
+  rocketSparkles?: readonly RocketSparkleView[];
   /** Stable object keys in the original shared depth queue order. */
   drawOrder: readonly string[];
   recruitPool: readonly RecruitPoolEntry[];
@@ -630,6 +639,22 @@ interface MutableShot {
   remainingMs: number;
   impactResolved: boolean;
   explosionRemainingMs: number;
+  rocket?: MutableRocketFlight;
+}
+
+interface MutableRocketFlight {
+  hasJumped: boolean;
+  speedMs: number;
+  endFine: { x: number; y: number };
+  maxRangeTenthTiles: number;
+  normal: { x: number; y: number };
+  zigZagFactor: number;
+  lastBurstFine: { x: number; y: number };
+  damageDone: boolean;
+}
+
+interface MutableRocketSparkle extends RocketSparkleView {
+  id: string;
 }
 
 interface MutableCampaignSpawnPool {
@@ -687,6 +712,7 @@ interface MutableWave {
   settlement?: WaveSettlement;
   enemies: MutableEnemy[];
   shots: MutableShot[];
+  rocketSparkles: MutableRocketSparkle[];
   recruitPool: Record<string, number>;
   events: GameEvent[];
   campaignSpawnPools?: MutableCampaignSpawnPool[];
@@ -736,6 +762,11 @@ function drawOrderEntries(
     kind: 'shot',
     depth: shot.positionFine.y + (shot.fineZ * 100),
   }));
+  const rocketSparkles = (wave?.rocketSparkles ?? []).map((sparkle): DrawOrderEntry => ({
+    id: `rocket-sparkle:${sparkle.id}`,
+    kind: 'shot',
+    depth: sparkle.positionFine.y + (sparkle.fineZ * 100),
+  }));
   const wagonDebris = (wave?.wagonDebris ?? []).map((part): DrawOrderEntry => ({
     id: `wagon-debris:${part.id}`,
     kind: 'wagon-debris',
@@ -747,7 +778,7 @@ function drawOrderEntries(
     depth: crate.positionFine.y + (7_680 * 100),
   }));
 
-  return [...mapObjects, ...enemies, ...shots, ...wagonDebris, ...collectables];
+  return [...mapObjects, ...enemies, ...shots, ...rocketSparkles, ...wagonDebris, ...collectables];
 }
 
 const FINE_UNITS_PER_CELL = 7680;
@@ -1357,6 +1388,10 @@ class JavaRandom {
     } while (bits - value + (bound - 1) >= 0x8000_0000);
     return value;
   }
+
+  nextDouble(): number {
+    return ((this.next(26) * 0x800_0000) + this.next(27)) / 0x20_0000_0000_0000;
+  }
 }
 
 function directionVector(direction: Direction): { x: -1 | 0 | 1; y: -1 | 0 | 1 } {
@@ -1867,6 +1902,138 @@ function unitEnemyDistanceSquare(unit: MutableUnit, enemy: MutableEnemy): number
   const dx = unitCenter.x - enemyX;
   const dy = unitCenter.y - enemyY;
   return (dx * dx) + (dy * dy);
+}
+
+function rocketLaunchPosition(unit: MutableUnit, target: MutableEnemy): { x: number; y: number } {
+  const start = {
+    x: unit.positionFine.x,
+    y: unit.positionFine.y - FIELD_CENTER_HALF,
+  };
+  const deltaX = target.positionFine.x - unit.positionFine.x;
+  const deltaY = target.positionFine.y - start.y;
+  let directionX = 0;
+  let directionY = 0;
+  if (Math.abs(deltaX) > Math.abs(deltaY)) {
+    directionX = Math.sign(deltaX);
+    if (Math.abs(deltaY) > Math.trunc(Math.abs(deltaX) / 2)) directionY = Math.sign(deltaY);
+  } else {
+    directionY = Math.sign(deltaY);
+    if (Math.abs(deltaX) > Math.trunc(Math.abs(deltaY) / 2)) directionX = Math.sign(deltaX);
+  }
+
+  const offsetPercent = directionX !== 0 && directionY !== 0 ? 40 : 56;
+  const offsetX = Math.trunc((directionX * FINE_UNITS_PER_CELL * offsetPercent) / 100);
+  const offsetY = Math.trunc((directionY * FINE_UNITS_PER_CELL * offsetPercent) / 100);
+  return { x: start.x + offsetX, y: start.y + offsetY };
+}
+
+function rocketFirstLegDurationMs(
+  distanceSquare: number,
+  maxSquareRange: number,
+  projectileSpeed: number,
+): { durationMs: number; maxRangeTenthTiles: number; zigZagFactor: number } {
+  const maxRangeTenthTiles = Math.trunc(Math.sqrt(Math.max(distanceSquare, maxSquareRange)));
+  const baseSteps = Math.trunc(projectileSpeed / 10);
+  const distanceSteps = maxRangeTenthTiles > 0
+    ? Math.trunc((100 * baseSteps * Math.sqrt(distanceSquare)) / maxRangeTenthTiles)
+    : 0;
+  const durationMs = Math.trunc(distanceSteps / 100) * 10;
+  const rangeStep = Math.trunc(maxRangeTenthTiles / 10);
+  const stepsPerRangeStep = rangeStep > 0 ? Math.trunc(projectileSpeed / rangeStep) : 0;
+  const zigZagProgress = stepsPerRangeStep > 0 ? Math.trunc(durationMs / stepsPerRangeStep) : 0;
+  const zigZagFactor = zigZagProgress > 0
+    ? Math.ceil(durationMs / (zigZagProgress * Math.PI))
+    : 0;
+  return { durationMs, maxRangeTenthTiles, zigZagFactor };
+}
+
+function rocketDistanceSquareFromStart(shot: MutableShot): number {
+  const dx = Math.trunc(((shot.positionFine.x - shot.startFine.x) * 10) / FINE_UNITS_PER_CELL);
+  const dy = Math.trunc(((shot.positionFine.y - shot.startFine.y) * 10) / FINE_UNITS_PER_CELL);
+  return (dx * dx) + (dy * dy);
+}
+
+function rocketIsInCanyon(scenario: ScenarioContent, positionFine: { x: number; y: number }): boolean {
+  const x = Math.trunc(positionFine.x / FINE_UNITS_PER_CELL);
+  const y = Math.trunc(positionFine.y / FINE_UNITS_PER_CELL);
+  const backgroundCode = scenario.originalTileGrid?.[y]?.[x] ?? 0;
+  return backgroundCode >= 48 && backgroundCode < 96;
+}
+
+function rocketOrientationFrame(shot: MutableShot): number {
+  const end = shot.rocket?.endFine ?? shot.targetPositionFine;
+  const angle = Math.atan2(shot.positionFine.y - end.y, shot.positionFine.x - end.x);
+  const normalizedAngle = angle < 0 ? angle + (Math.PI * 2) : angle;
+  return Math.trunc((normalizedAngle * 8) / Math.PI) % 16;
+}
+
+function advanceRocketShot(
+  shot: MutableShot,
+  target: MutableEnemy | undefined,
+  deltaMs: number,
+  scenario: ScenarioContent,
+  random: JavaRandom,
+): { pathBurst: boolean; finished: boolean } {
+  const rocket = shot.rocket;
+  if (!rocket) throw new Error('Damage Style 6 shot is missing rocket state');
+
+  if (!rocket.hasJumped && target) shot.targetPositionFine = enemyShotPosition(target);
+  const endFine = rocket.hasJumped ? rocket.endFine : shot.targetPositionFine;
+  shot.remainingMs = Math.max(0, shot.remainingMs - deltaMs);
+  const elapsedMs = shot.totalTravelTimeMs - shot.remainingMs;
+  const totalMs = Math.max(1, shot.totalTravelTimeMs);
+  const baseX = Math.trunc(((shot.startFine.x * shot.remainingMs) + (endFine.x * elapsedMs)) / totalMs);
+  const baseY = Math.trunc(((shot.startFine.y * shot.remainingMs) + (endFine.y * elapsedMs)) / totalMs);
+  const curvePhase = rocket.zigZagFactor > 0 ? Math.sin(shot.remainingMs / rocket.zigZagFactor) : 0;
+  const curveOffsetX = rocket.normal.x * curvePhase * FINE_UNITS_PER_CELL / 5;
+  const curveOffsetY = rocket.normal.y * curvePhase * FINE_UNITS_PER_CELL / 5;
+  shot.positionFine = {
+    x: baseX + (Number.isFinite(curveOffsetX) ? Math.trunc(curveOffsetX) : 0),
+    y: baseY + (Number.isFinite(curveOffsetY) ? Math.trunc(curveOffsetY) : 0),
+  };
+
+  if (rocket.hasJumped && !rocketIsInCanyon(scenario, shot.positionFine)) {
+    rocket.endFine = { ...shot.positionFine };
+    shot.targetPositionFine = { ...rocket.endFine };
+    shot.remainingMs = 0;
+  }
+
+  let finished = false;
+  if (shot.remainingMs <= 0) {
+    const traveledSquare = rocketDistanceSquareFromStart(shot);
+    const maxSquareRange = rocket.maxRangeTenthTiles * rocket.maxRangeTenthTiles;
+    if (!rocket.hasJumped && traveledSquare < maxSquareRange && rocket.maxRangeTenthTiles > 0) {
+      rocket.hasJumped = true;
+      const distance = Math.sqrt(traveledSquare);
+      const rangeFine = (rocket.maxRangeTenthTiles * FINE_UNITS_PER_CELL) / 10;
+      if (traveledSquare < 10) {
+        const angle = random.nextDouble() * Math.PI * 2;
+        rocket.endFine = {
+          x: Math.trunc(shot.startFine.x + (Math.cos(angle) * rangeFine)),
+          y: Math.trunc(shot.startFine.y + (Math.sin(angle) * rangeFine)),
+        };
+      } else {
+        const scale = rocket.maxRangeTenthTiles / distance;
+        rocket.endFine = {
+          x: shot.startFine.x + Math.trunc((shot.positionFine.x - shot.startFine.x) * scale),
+          y: shot.startFine.y + Math.trunc((shot.positionFine.y - shot.startFine.y) * scale),
+        };
+      }
+      shot.targetPositionFine = { ...rocket.endFine };
+      shot.totalTravelTimeMs = rocket.speedMs;
+      shot.remainingMs = Math.max(0, Math.trunc(rocket.speedMs * (1 - (distance / rocket.maxRangeTenthTiles))));
+    } else {
+      finished = true;
+    }
+  }
+
+  const burstX = shot.positionFine.x - rocket.lastBurstFine.x;
+  const burstY = shot.positionFine.y - rocket.lastBurstFine.y;
+  let pathBurst = (burstX * burstX) + (burstY * burstY) > 0x3840000;
+  if (pathBurst) rocket.lastBurstFine = { ...shot.positionFine };
+  if (finished) pathBurst = true;
+  shot.animationFrame = rocketOrientationFrame(shot);
+  return { pathBurst, finished };
 }
 
 function enemyShotPosition(enemy: MutableEnemy): { x: number; y: number } {
@@ -2454,6 +2621,7 @@ export function createGame(options: {
       const pending: PendingIntent[] = [];
       let nextIntentSequence = 1;
       let nextShotNumber = 1;
+      let nextRocketSparkleNumber = 1;
       let nextCampaignEnemyNumber = 1;
       let nextCampaignGroupNumber = 1;
       let nextWagonPartNumber = 1;
@@ -2479,6 +2647,7 @@ export function createGame(options: {
           cashMade: 0,
           enemies: [],
           shots: [],
+          rocketSparkles: [],
           recruitPool: {},
           events: [],
           wagonDebris: [],
@@ -2601,6 +2770,15 @@ export function createGame(options: {
             animationFrame: shot.animationFrame,
             ...(shot.explosionRemainingMs > 0 ? { explosionRemainingMs: shot.explosionRemainingMs } : {}),
           })),
+          ...(wave?.rocketSparkles.length ? {
+            rocketSparkles: wave.rocketSparkles.map(({ id, positionFine, remainingMs, animationFrame, fineZ }) => ({
+              id,
+              positionFine: { ...positionFine },
+              remainingMs,
+              animationFrame,
+              fineZ,
+            })),
+          } : {}),
           drawOrder: drawOrderQueue.items(),
           recruitPool: (scenario.recruitableUnits ?? []).map((definition) => ({
             unitType: definition.id,
@@ -3017,6 +3195,11 @@ export function createGame(options: {
 
           if (wave?.phase === 'active' && !waveStarted && scenario.previewWave) {
             const campaignDefinition = campaignWaves?.find(({ number }) => number === wave!.number);
+            for (const sparkle of wave.rocketSparkles) {
+              sparkle.remainingMs = Math.max(0, sparkle.remainingMs - deltaMs);
+              sparkle.animationFrame = Math.min(2, Math.floor((299 - sparkle.remainingMs) / 100));
+            }
+            wave.rocketSparkles = wave.rocketSparkles.filter(({ remainingMs }) => remainingMs > 0);
             const movingEnemies = [...wave.enemies];
             let movementBlockedEnemyId: string | undefined;
             for (let enemyIndex = 0; enemyIndex < movingEnemies.length; enemyIndex += 1) {
@@ -3112,11 +3295,19 @@ export function createGame(options: {
               if (!target) continue;
               const distanceSquare = unitEnemyDistanceSquare(unit, target);
               const maxSquareRange = maxUnitWeaponSquareRange(unit);
-              const startFine = {
+              const genericStartFine = {
                 x: unit.positionFine.x,
                 y: unit.positionFine.y - FIELD_CENTER_HALF,
               };
-              const travelMs = projectileTravelTime(distanceSquare, maxSquareRange, weapon);
+              const startFine = weapon.damageStyle === 6 ? rocketLaunchPosition(unit, target) : genericStartFine;
+              const rocketTiming = weapon.damageStyle === 6
+                ? rocketFirstLegDurationMs(distanceSquare, maxSquareRange, weapon.projectileSpeed)
+                : undefined;
+              const targetPositionFine = enemyShotPosition(target);
+              const rocketDeltaX = targetPositionFine.x - startFine.x;
+              const rocketDeltaY = targetPositionFine.y - startFine.y;
+              const rocketDistanceFine = Math.hypot(rocketDeltaX, rocketDeltaY);
+              const travelMs = rocketTiming?.durationMs ?? projectileTravelTime(distanceSquare, maxSquareRange, weapon);
               const shot: MutableShot = {
                 id: 'preview-shot-' + nextShotNumber,
                 shooterId: unit.definition.id,
@@ -3127,10 +3318,11 @@ export function createGame(options: {
                 postDamageDurationMs: weapon.postDamageDurationMs ?? 0,
                 damageStyle: weapon.damageStyle,
                 areaDamageFine: weapon.areaDamageFine ?? 0,
-                imageAsset: weapon.damageStyle === 3 ? 'sfx_mexican_dynamite' : undefined,
+                imageAsset: weapon.damageStyle === 6 ? 'sfx_pyromaniac_rocket'
+                  : weapon.damageStyle === 3 ? 'sfx_mexican_dynamite' : undefined,
                 animationFrame: 0,
                 startFine,
-                targetPositionFine: enemyShotPosition(target),
+                targetPositionFine,
                 positionFine: { ...startFine },
                 fineZ: 7680,
                 fineZTransitionPending: false,
@@ -3138,6 +3330,20 @@ export function createGame(options: {
                 remainingMs: travelMs,
                 impactResolved: false,
                 explosionRemainingMs: 0,
+                ...(rocketTiming ? {
+                  rocket: {
+                    hasJumped: false,
+                    speedMs: weapon.projectileSpeed,
+                    endFine: { ...targetPositionFine },
+                    maxRangeTenthTiles: rocketTiming.maxRangeTenthTiles,
+                    normal: rocketDistanceFine > 0
+                      ? { x: -rocketDeltaY / rocketDistanceFine, y: rocketDeltaX / rocketDistanceFine }
+                      : { x: 0, y: 0 },
+                    zigZagFactor: rocketTiming.zigZagFactor,
+                    lastBurstFine: { ...startFine },
+                    damageDone: false,
+                  },
+                } : {}),
               };
               wave.shots.push(shot);
               drawOrderCreationOrder.push('shot:' + shot.id);
@@ -3146,7 +3352,7 @@ export function createGame(options: {
               unit.shootingAnimationFrame = 0;
               unit.shootingDirection = {
                 x: Math.sign(target.positionFine.x - unit.positionFine.x) as -1 | 0 | 1,
-                y: Math.sign(target.positionFine.y - (unit.positionFine.y - FIELD_CENTER_HALF)) as -1 | 0 | 1,
+                y: Math.sign(target.positionFine.y - genericStartFine.y) as -1 | 0 | 1,
               };
               unit.weaponCooldownMs = weapon.reloadTimeMs;
               let specialReload = false;
@@ -3180,6 +3386,80 @@ export function createGame(options: {
                 continue;
               }
               const target = wave.enemies.find((enemy) => enemy.id === shot.targetId);
+              if (shot.rocket) {
+                const rocket = shot.rocket;
+                const motion = advanceRocketShot(shot, target, deltaMs, scenario, random);
+                const areaRadiusTenthTiles = Math.trunc((shot.areaDamageFine * 10) / FINE_UNITS_PER_CELL);
+                const areaSquare = areaRadiusTenthTiles * areaRadiusTenthTiles;
+                if (motion.pathBurst) {
+                  const sparkle: MutableRocketSparkle = {
+                    id: 'rocket-sparkle-' + nextRocketSparkleNumber++,
+                    positionFine: { ...shot.positionFine },
+                    remainingMs: 299,
+                    animationFrame: 0,
+                    fineZ: shot.fineZ,
+                  };
+                  wave.rocketSparkles.push(sparkle);
+                  drawOrderCreationOrder.push('rocket-sparkle:' + sparkle.id);
+                  if (shot.areaDamageFine > 0 || rocket.hasJumped) {
+                    for (const enemy of wave.enemies) {
+                      if (!enemy.alive || !enemy.damageable
+                        || shotTargetDistanceSquare(shot.positionFine, enemy) >= areaSquare) continue;
+                      const damage = Math.trunc((shot.damage * damagePenetration(enemy, shot.damageType)) / 100);
+                      applyEnemyDamage(wave, enemy, damage, priorityMap, campaignMode);
+                      if (shot.postDamage > 0) {
+                        enemy.damageOverTime = shot.postDamage;
+                        enemy.damageOverTimeRemainingMs = Math.max(
+                          enemy.damageOverTimeRemainingMs,
+                          shot.postDamageDurationMs,
+                        );
+                      }
+                    }
+                  }
+                }
+
+                shot.animationFrame = rocketOrientationFrame(shot);
+                if (!motion.finished || rocket.damageDone) continue;
+
+                const affected = shot.areaDamageFine > 0
+                  ? wave.enemies.filter((enemy) => enemy.alive && enemy.damageable && (
+                    (!rocket.hasJumped && enemy.id === shot.targetId)
+                    || shotTargetDistanceSquare(shot.positionFine, enemy) < areaSquare
+                  ))
+                  : (!rocket.hasJumped && target?.alive && target.damageable ? [target] : []);
+                const affectedEnemyIds: string[] = [];
+                rocket.damageDone = true;
+                for (const hitEnemy of affected) {
+                  affectedEnemyIds.push(hitEnemy.id);
+                  const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
+                  applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode);
+                  if (shot.postDamage > 0) {
+                    hitEnemy.damageOverTime = shot.postDamage;
+                    hitEnemy.damageOverTimeRemainingMs = Math.max(
+                      hitEnemy.damageOverTimeRemainingMs,
+                      shot.postDamageDurationMs,
+                    );
+                  }
+                }
+                wave.events.push({
+                  type: 'sound-requested',
+                  sound: 'sound_rocket_explosion',
+                  positionFine: { ...shot.positionFine },
+                });
+                shot.impactResolved = true;
+                shot.imageAsset = 'sfx_rocket_explosion';
+                shot.explosionRemainingMs = 799;
+                shot.remainingMs = 799;
+                shot.animationFrame = 0;
+                shot.targetPositionFine = { ...shot.positionFine };
+                wave.events.push({
+                  type: 'shot-exploded',
+                  shotId: shot.id,
+                  targetId: shot.targetId,
+                  affectedEnemyIds,
+                });
+                continue;
+              }
               if (target) shot.targetPositionFine = enemyShotPosition(target);
               const targetPositionFine = shot.targetPositionFine;
               shot.remainingMs = Math.max(0, shot.remainingMs - deltaMs);
@@ -3217,8 +3497,6 @@ export function createGame(options: {
                 wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite', positionFine: { ...shot.positionFine } });
               } else if (shot.damageStyle === 4) {
                 wave.events.push({ type: 'sound-requested', sound: 'sound_cannon', positionFine: { ...shot.positionFine } });
-              } else if (shot.damageStyle === 6) {
-                wave.events.push({ type: 'sound-requested', sound: 'sound_rocket_launch', positionFine: { ...shot.positionFine } });
               }
               if (shot.damageStyle === 3 || shot.areaDamageFine > 0) {
                 shot.impactResolved = true;
