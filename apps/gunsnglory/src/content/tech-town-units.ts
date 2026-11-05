@@ -1,6 +1,6 @@
 import map from './new-mexico-04.json';
 import { createSleepingMapUnitsFromGrid } from './cow-gulch';
-import { createSleepingFortKaboomUnit, type FortKaboomUnitType } from './fort-kaboom-unit-designs';
+import { createAnchoredMapRender, createSleepingFortKaboomUnit, type FortKaboomUnitType } from './fort-kaboom-unit-designs';
 import { createTechTownFreshGameUnitPlacements, type TechTownUnitTypeId } from './tech-town-map-units';
 import { mexicanWeapon } from './player-unit-weapons';
 import type { ScenarioUnit } from '../game';
@@ -38,10 +38,46 @@ function createActiveMexican(cell: { x: number; y: number }): ScenarioUnit {
   };
 }
 
-/** Builds map04's ordinary fresh-game units using the original unlock decision. */
+function createSleepingPyromaniac(cell: { x: number; y: number }): ScenarioUnit {
+  const frame = { x: 0, y: 0, width: 32, height: 44 };
+  const render = createAnchoredMapRender(cell, frame);
+  return {
+    id: 'pyromaniac-hire-01',
+    type: 'pyromaniac',
+    activity: 4,
+    hirePrice: 130,
+    awakeAsset: 'player_pyromaniac',
+    awakeFrame: frame,
+    awakeRender: { ...render },
+    awakeHitArea: { ...render },
+    hireSound: 'sound_pyromaniac',
+    shotSound: 'sound_rocket_launch',
+    cell,
+    movementSpeedFinePer100Ms: 2000,
+    asset: 'player_pyromaniac_sleep',
+    frame,
+    render,
+    hitArea: { ...render },
+    weapon: {
+      damage: 300,
+      damageType: 'heavy',
+      postDamage: 12,
+      postDamageDurationMs: 500,
+      rangeFine: 46080,
+      reloadTimeMs: 4000,
+      projectileSpeed: 1000,
+      damageStyle: 6,
+      areaDamageFine: 7680,
+      specialReloadTimeMs: 0,
+      specialReloadFrequency: 1,
+    },
+  };
+}
+
+/** Builds map04's fresh-game units using the original unlock decision. */
 export function createTechTownBaseUnits(isUnitUnlocked: (unitTypeId: TechTownUnitTypeId) => boolean): ScenarioUnit[] {
   const placements = createTechTownFreshGameUnitPlacements()
-    .filter(({ unitTypeId }) => unitTypeId <= 6 && isUnitUnlocked(unitTypeId));
+    .filter(({ unitTypeId }) => (unitTypeId <= 6 || unitTypeId === 35) && isUnitUnlocked(unitTypeId));
   const units: ScenarioUnit[] = createSleepingMapUnitsFromGrid(map.originalTileGrid)
     .filter(({ type }) => {
       const unitTypeId = standardTypeIdForUnit(type);
@@ -52,6 +88,10 @@ export function createTechTownBaseUnits(isUnitUnlocked: (unitTypeId: TechTownUni
   for (const placement of placements) {
     if (placement.activity === 5 && placement.unitTypeId === 2) {
       units.push(createActiveMexican(placement.cell));
+      continue;
+    }
+    if (placement.activity === 4 && placement.unitTypeId === 35) {
+      units.push(createSleepingPyromaniac(placement.cell));
       continue;
     }
     if (placement.activity !== 4 || !isFortKaboomUnitTypeId(placement.unitTypeId)) continue;

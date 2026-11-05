@@ -38,7 +38,7 @@ import {
 import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
-import { SoundEffectsManager } from './audio/sfx-manager';
+import { chooseSoundVariation, SoundEffectsManager } from './audio/sfx-manager';
 import { acquireAudioPlayer, silenceAudioPlayers } from './audio/audio-playback';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
 import { summarizeEnemyDefeats, type EnemyDefeatSummary } from './ui/combat-feedback';
@@ -699,6 +699,7 @@ const languageMessages = {
       indian: 'Native',
       sniper: 'Markswoman',
       grandpa: 'Scattergun Grandpa',
+      pyromaniac: 'Pyromaniac',
     }[type] ?? 'Gunslinger'),
     selected: (name: string) => `${name} selected`,
     selectedCell: (x: number, y: number) => ` · Cell (${x}, ${y})`,
@@ -896,6 +897,7 @@ const languageMessages = {
       indian: '原住民',
       sniper: '女神枪手',
       grandpa: '散弹枪爷爷',
+      pyromaniac: '纵火狂',
     }[type] ?? '枪手'),
     selected: (name: string) => `已选择${name}`,
     selectedCell: (x: number, y: number) => ` · 格子 (${x}, ${y})`,
@@ -2392,6 +2394,9 @@ const assetNames = new Set([
   'player_geezer',
   'player_geezer_sleep',
   'player_geezer_shot',
+  'player_pyromaniac',
+  'player_pyromaniac_sleep',
+  'player_pyromaniac_shot',
   'cursor',
   'hud_crosshair',
   'sfx_mexican_dynamite',
@@ -2416,6 +2421,7 @@ const assetNames = new Set([
   'portrait_indian',
   'portrait_settlers',
   'portrait_deserter',
+  'portrait_pyromaniac',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
@@ -2806,6 +2812,9 @@ const positionalUnitShotSounds: Readonly<Record<UnitShotSound, { id: number; ass
   sound_rocket_explosion: { id: 7, assets: ['sound_rocket_explosion_1', 'sound_rocket_explosion_2'] },
   sound_poison_splash: { id: 8, assets: ['sound_poison_splash_1', 'sound_poison_splash_2'] },
 };
+const unitHireSoundVariations = {
+  sound_pyromaniac: ['sound_pyromaniac_1', 'sound_pyromaniac_2'],
+} as const;
 
 function playRequestedSounds(
   events: readonly GameEvent[],
@@ -2823,7 +2832,10 @@ function playRequestedSounds(
   for (const event of events) {
     if (event.type === 'sound-requested') {
       if (!('positionFine' in event)) {
-        playAudioAsset(event.sound);
+        const variations = event.sound === 'sound_pyromaniac'
+          ? unitHireSoundVariations.sound_pyromaniac
+          : undefined;
+        playAudioAsset(variations ? chooseSoundVariation(variations)! : event.sound);
         continue;
       }
       if (event.sound === 'sound_revolver') {

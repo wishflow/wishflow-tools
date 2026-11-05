@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { SoundEffectsManager, type SoundEffectRequest, type SoundEffectViewport } from '../src/audio/sfx-manager';
+import { chooseSoundVariation, SoundEffectsManager, type SoundEffectRequest, type SoundEffectViewport } from '../src/audio/sfx-manager';
 
 const viewport: SoundEffectViewport = {
   origin: { x: 0, y: 0 },
@@ -13,6 +13,20 @@ const revolver = (id: 0 | 1): SoundEffectRequest => ({
   id,
   positionFine: point,
   assets: ['sound_revolver', 'sound_revolver2'],
+});
+
+test('chooses one independent sound variation without consuming randomness for fixed or empty assets', () => {
+  let randomCalls = 0;
+  const random = () => {
+    randomCalls += 1;
+    return randomCalls === 1 ? 0 : 0.999;
+  };
+
+  assert.equal(chooseSoundVariation(['sound_pyromaniac_1', 'sound_pyromaniac_2'], random), 'sound_pyromaniac_1');
+  assert.equal(chooseSoundVariation(['sound_pyromaniac_1', 'sound_pyromaniac_2'], random), 'sound_pyromaniac_2');
+  assert.equal(chooseSoundVariation(['sound_fixed'], random), 'sound_fixed');
+  assert.equal(chooseSoundVariation([], random), undefined);
+  assert.equal(randomCalls, 2);
 });
 
 test('filters off-screen requests before consuming a variation or starting cooldown', () => {

@@ -20,6 +20,16 @@ const FINE_UNITS_PER_TILE = 7680;
 const VARIATION_COOLDOWN_MS = 200;
 const FIXED_COOLDOWN_MS = 300;
 
+export function chooseSoundVariation(
+  assets: readonly string[],
+  random: () => number = Math.random,
+): string | undefined {
+  if (assets.length === 0) return undefined;
+  if (assets.length === 1) return assets[0];
+  const variation = Math.max(0, Math.min(assets.length - 1, Math.trunc(random() * assets.length)));
+  return assets[variation];
+}
+
 function isOnScreen(positionFine: FinePoint, viewport: SoundEffectViewport): boolean {
   const x = viewport.origin.x + (positionFine.x / FINE_UNITS_PER_TILE) * viewport.tileSize;
   const y = viewport.origin.y + (positionFine.y / FINE_UNITS_PER_TILE) * viewport.tileSize;
@@ -52,9 +62,9 @@ export class SoundEffectsManager {
       if (request.assets.length < 2) return undefined;
       const pairStart = Math.trunc(request.id / 2) * 2;
       if (this.cooldowns[pairStart]! > 0 || this.cooldowns[pairStart + 1]! > 0) return undefined;
-      const variation = Math.max(0, Math.min(request.assets.length - 1, Math.trunc(this.random() * request.assets.length)));
+      const variation = chooseSoundVariation(request.assets, this.random);
       this.cooldowns[request.id] = VARIATION_COOLDOWN_MS;
-      return request.assets[variation];
+      return variation;
     }
 
     if (this.cooldowns[request.id]! > 0) return undefined;

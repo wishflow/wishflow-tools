@@ -159,7 +159,8 @@ export type UnitHireSound =
   | 'sound_deserter_yes_sir'
   | 'sound_indian_hugh'
   | 'sound_sniper_laughing'
-  | 'sound_grandpa_coughing';
+  | 'sound_grandpa_coughing'
+  | 'sound_pyromaniac';
 
 export type UnitShotSound =
   | 'sound_cannon'
@@ -811,6 +812,7 @@ const PLAYER_SHOOTING_ANIMATIONS: Readonly<Record<string, {
   indian: { asset: 'player_indian_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
   sniper: { asset: 'player_scout_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
   grandpa: { asset: 'player_geezer_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
+  pyromaniac: { asset: 'player_pyromaniac_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
 };
 const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
 const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {

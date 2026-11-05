@@ -224,12 +224,16 @@ test('restores marker units after their campaign unlock callback allows them', (
   const units = createTechTownBaseUnits(() => true);
   const sniper = units.filter(({ type }) => type === 'sniper');
   const grandpa = units.filter(({ type }) => type === 'grandpa');
+  const pyromaniac = units.filter(({ type }) => type === 'pyromaniac');
 
-  assert.equal(units.length, 27);
+  assert.equal(units.length, 28);
   assert.deepEqual(sniper.map(({ cell, activity }) => ({ cell, activity })), expectedCellsByCode[100]!.map(([x, y]) => ({
     cell: { x, y }, activity: 4,
   })));
   assert.deepEqual(grandpa.map(({ cell, activity }) => ({ cell, activity })), expectedCellsByCode[101]!.map(([x, y]) => ({
+    cell: { x, y }, activity: 4,
+  })));
+  assert.deepEqual(pyromaniac.map(({ cell, activity }) => ({ cell, activity })), expectedCellsByCode[130]!.map(([x, y]) => ({
     cell: { x, y }, activity: 4,
   })));
 });
