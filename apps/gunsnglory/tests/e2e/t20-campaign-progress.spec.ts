@@ -93,15 +93,12 @@ test('unlocks Apache Valley after Cow Gulch progress and opens the second level 
   });
   const page = await context.newPage();
   await installAutoContinueCampaignWaveIntro(page);
-  await page.goto('/?testBattle=1');
-  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+  await page.goto('/');
+  await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).tap();
-  await expect(page.locator('#campaign-title')).toHaveText('战役进度');
-  await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
-  await expect(page.getByTestId('campaign-stage-list')).toContainText('未解锁');
-  await page.getByTestId('campaign-stage-button-1').tap();
-  await expect(page.locator('#scene-title')).toHaveText('牛溪谷 · 第 1 关');
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('已完成 0/2 个关卡');
+  await page.getByTestId('menu-start').tap();
+  await page.getByTestId('campaign-region-new-mexico').tap();
+  await expect(page.getByTestId('campaign-level-02')).toBeDisabled();
 
   await writeProfile(page, {
     id: 'default',
@@ -115,8 +112,14 @@ test('unlocks Apache Valley after Cow Gulch progress and opens the second level 
     lastRequestDigest: 'seed-apache-valley-unlock',
   });
   await page.reload();
-  await expect(page.getByTestId('campaign-stage-button-2')).toBeEnabled();
-  await page.getByTestId('campaign-stage-button-2').tap();
+  await page.getByTestId('menu-start').tap();
+  await page.getByTestId('campaign-region-new-mexico').tap();
+  await expect(page.getByTestId('campaign-level-02')).toBeEnabled();
+  await page.getByTestId('campaign-level-02').tap();
+  await expect(page.getByRole('heading', { name: 'Death Valley' })).toBeVisible();
+  await page.getByTestId('campaign-stage-play').tap();
+  await expect(page.getByTestId('campaign-difficulty-easy')).toBeVisible();
+  await page.getByTestId('campaign-difficulty-easy').tap();
   await expect(page.locator('#scene-title')).toHaveText('阿帕奇山谷 · 第 2 关');
   await expect(page.getByTestId('scene-context')).toHaveText('NEW MEXICO · 02');
   await expect(page.getByTestId('wave-status')).toContainText('第 1/6 波');

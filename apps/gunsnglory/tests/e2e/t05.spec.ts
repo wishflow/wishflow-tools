@@ -123,22 +123,23 @@ test('a stale tab sees a settings conflict and can reload the newer saved value'
   await expect(first.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
   await expect(second.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
-  const firstSpeed = first.getByRole('slider', { name: 'Simulation speed' });
+  await first.getByTestId('menu-options').click();
+  const firstSpeed = first.getByTestId('menu-simulation-speed');
   await firstSpeed.focus();
   await firstSpeed.press('End');
-  await expect(first.getByTestId('settings-status')).toHaveText('Settings saved.');
+  await expect(first.getByTestId('menu-settings-status')).toHaveText('Settings saved.');
 
-  const staleSpeed = second.getByRole('slider', { name: 'Simulation speed' });
+  await second.getByTestId('menu-options').click();
+  const staleSpeed = second.getByTestId('menu-simulation-speed');
   await staleSpeed.focus();
   await staleSpeed.press('Home');
-  await expect(second.getByTestId('settings-status'))
+  await expect(second.getByTestId('menu-settings-status'))
     .toHaveText('A newer profile exists. Reload it before saving another setting.');
-  await expect(second.getByRole('button', { name: 'Reload saved profile' })).toBeVisible();
   await expect(staleSpeed).toHaveValue('0.25');
 
-  await second.getByRole('button', { name: 'Reload saved profile' }).click();
-  await expect(staleSpeed).toHaveValue('4');
-  await expect(second.getByTestId('settings-status')).toHaveText('Settings saved.');
+  await second.reload();
+  await second.getByTestId('menu-options').click();
+  await expect(second.getByTestId('menu-simulation-speed')).toHaveValue('4');
 });
 
 test('retries a failed settings transaction with the original operation', async ({ page }) => {
