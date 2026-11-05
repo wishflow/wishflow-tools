@@ -74,6 +74,17 @@ test('starts in the in-game menu and opens an implemented campaign level through
   await expect(page.getByTestId('campaign-level-02')).toBeDisabled();
   await expect(page.getByTestId('campaign-level-03')).toBeDisabled();
   await expect(page.getByTestId('campaign-level-03')).toHaveAttribute('aria-label', /locked/i);
+  const campaignProgress = page.getByTestId('campaign-menu-progress');
+  await expect(campaignProgress).toContainText('0/10 levels complete');
+  await expect(campaignProgress).toContainText('Unimplemented levels are shown with a lock.');
+  await expect(campaignProgress).not.toContainText('Levels 3–10 are not implemented yet.');
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(campaignProgress).toContainText('已完成 0/10 关');
+  await expect(campaignProgress).toContainText('尚未实现的关卡会显示锁定标记。');
+  await expect(campaignProgress).not.toContainText('第 3–10 关尚未实现。');
+  await expect(page.getByTestId('campaign-level-03')).toHaveAttribute('aria-label', /未解锁/);
+  await expect(page.getByTestId('campaign-level-04')).toHaveAttribute('aria-label', /尚未实现/);
+  await page.getByRole('button', { name: '切换界面语言为英文' }).click();
   await expectCampaignMenuImagesLoaded(page);
   await page.getByTestId('campaign-menu-back').click();
   await expect(page.getByTestId('campaign-region-new-mexico')).toBeVisible();

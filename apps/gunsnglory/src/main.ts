@@ -1066,7 +1066,7 @@ const campaignMenuCopy = {
     overview: 'LEVEL OVERVIEW', difficulty: 'DIFFICULTY', chooseDifficulty: 'Choose difficulty:',
     easy: 'EASY', medium: 'MEDIUM', hard: 'HARD', hardLocked: 'Complete a tenth level to unlock Hard.',
     available: 'Available', completed: 'Completed', locked: 'Locked',
-    unimplemented: 'Not implemented yet', unavailableLevels: 'Levels 3–10 are not implemented yet.',
+    unimplemented: 'Not implemented yet',
     noHighScore: 'Your highscore for this level will be shown here as soon as you have played it for the first time.',
     highScoreLabel: 'Best score',
     bestScore: (score: number) => `$ ${score}`,
@@ -1099,7 +1099,7 @@ const campaignMenuCopy = {
     overview: '关卡说明', difficulty: '难度', chooseDifficulty: '选择难度：',
     easy: '简单', medium: '中等', hard: '困难', hardLocked: '完成任意区域第十关后解锁困难难度。',
     available: '可进入', completed: '已完成', locked: '未解锁',
-    unimplemented: '尚未实现', unavailableLevels: '第 3–10 关尚未实现。',
+    unimplemented: '尚未实现',
     noHighScore: '玩过本关后，最高分将在此显示。',
     highScoreLabel: '最高分',
     bestScore: (score: number) => `$ ${score}`,
@@ -1322,7 +1322,7 @@ function campaignMenuLevelScreen(): string {
     <div class="campaign-menu-map campaign-level-map">
       <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_levelmap_box_00.png')}" alt="" aria-hidden="true">${nodes}
     </div>
-    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(copy.regionProgress(completed))}. ${escapeMenuText(copy.levelHint)} ${escapeMenuText(copy.unavailableLevels)}</p>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(copy.regionProgress(completed))}. ${escapeMenuText(copy.levelHint)}</p>
     <button type="button" class="campaign-menu-back" data-action="menu-back-regions" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
   </section>`;
 }
