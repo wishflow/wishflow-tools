@@ -107,10 +107,27 @@ function createSleepingSalesman(cell: { x: number; y: number }): ScenarioUnit {
   };
 }
 
+function createGambler(cell: { x: number; y: number }): ScenarioUnit {
+  const frame = { x: 0, y: 0, width: 32, height: 44 };
+  const render = createAnchoredMapRender(cell, frame);
+  return {
+    id: 'gambler-01',
+    type: 'gambler',
+    activity: 5,
+    cell,
+    movementSpeedFinePer100Ms: 0,
+    asset: 'player_gambler',
+    frame,
+    render,
+    hitArea: { ...render },
+  };
+}
+
 /** Builds map04's fresh-game units using the original unlock decision. */
 export function createTechTownBaseUnits(isUnitUnlocked: (unitTypeId: TechTownUnitTypeId) => boolean): ScenarioUnit[] {
   const placements = createTechTownFreshGameUnitPlacements()
-    .filter(({ unitTypeId }) => (unitTypeId <= 6 || unitTypeId === 35 || unitTypeId === 36) && isUnitUnlocked(unitTypeId));
+    .filter(({ unitTypeId }) => (unitTypeId <= 6 || unitTypeId === 9 || unitTypeId === 35 || unitTypeId === 36)
+      && isUnitUnlocked(unitTypeId));
   const units: ScenarioUnit[] = createSleepingMapUnitsFromGrid(map.originalTileGrid)
     .filter(({ type }) => {
       const unitTypeId = standardTypeIdForUnit(type);
@@ -121,6 +138,10 @@ export function createTechTownBaseUnits(isUnitUnlocked: (unitTypeId: TechTownUni
   for (const placement of placements) {
     if (placement.activity === 5 && placement.unitTypeId === 2) {
       units.push(createActiveMexican(placement.cell));
+      continue;
+    }
+    if (placement.activity === 5 && placement.unitTypeId === 9) {
+      units.push(createGambler(placement.cell));
       continue;
     }
     if (placement.activity === 4 && placement.unitTypeId === 35) {

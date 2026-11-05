@@ -7,15 +7,15 @@
 ## 当前状态
 
 - 正式关卡 **3/60**：Cow Gulch、Apache Valley、Fort Kaboom 已完成真实战役验收。
-- map03 与移动端工具栏修复已完成。本地完整检查通过：类型检查、285 项单测、生产构建和 91/91 E2E；当前没有因新代码变化而需要重跑。
+- map03 与移动端工具栏修复已完成。最近一次完整检查通过：类型检查、285 项单测、生产构建和 91/91 E2E；该结果早于当前 map04 开发批次，本批收口时再运行全套检查，不逐切片重复运行。
 - 公开版本仍是 master 上的 e922c3f。当前开发分支另有尚未集成的已验收提交；整批完成前不将本地代码称为已发布。
-- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭、Pyromaniac 地图单位与 Salesman 毒瓶已按 APK 实现并通过切片验证。Gambler 下注/抽奖纯规则内核已完成定向测试；其地图实体、Game 会话结算和窗口交互仍未接入，当前下一项为 3.4b。
-- 原始 32×24 TDM、四条方向场路线、全部相关标记坐标，以及 768 个地形图块和 147 个道路/铁路绘制项已导入并通过定向测试。`tech-town-scene.ts` 按 APK 码位组装 52 个静态装饰/建筑，资源锚点与 hdpi 原图已核对；此场景尚未接入正式战役。
+- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭、Pyromaniac 地图单位、Salesman 毒瓶，以及 Gambler/Casino 地图实体已按 APK 完成切片验证。Gambler 下注/抽奖纯规则内核也已完成；共享随机兼容、Game 会话结算和窗口交互仍未接入，当前下一项为 3.4c。
+- 原始 32×24 TDM、四条方向场路线、全部相关标记坐标，以及 768 个地形图块和 147 个道路/铁路绘制项已导入并通过定向测试。`tech-town-scene.ts` 按 APK 码位组装 52 个非赌场静态装饰/建筑；解锁时再加入 Casino。资源锚点与 hdpi 原图已核对；此场景尚未接入正式战役。
 - 本轮核对更正了地图单位码位：96–101 是 type 1–6 的休眠单位（activity 4）；104–109 是 type 1–6 的活动单位（activity 5），本图仅有 105，即 type 2 Mexican；130、131 分别是 type 35 Pyromaniac 与 type 36 Salesman 的休眠单位；132 是活动 Gambler（type 9）。这些对象仅在新局的 `fromLoadGame=false` 分支创建，并均受 `GameObjectUnit.create()` 的解锁检查。code 150 是仅在 type 9 解锁时创建的 Casino 生成点。JADX 对该方法的 Java `switch` 反编译存在控制流错误；此处以 APK 中对应 DEX 指令的 smali 分支为准，不照抄该方法的 Java 伪源码。
 - 随机数兼容待修：APK 的 `game/Randomizer.nextInt()` 在 `java.util.Random.nextInt(bound)` 后再调用 `nextLong()`、将其用于 `setSeed()`，并将 `firstRandom` 置为 false；`reset()` 将其置为 true。当前 `src/game/index.ts` 的 `JavaRandom` 只实现普通 Java 48-bit LCG，没有该重设行为或首次调用状态。Gambler 纯规则内核使用注入的抽取器，不受影响；正式会话接入前必须统一共享随机流，不能为 Gambler 单独建随机流。
 - `GameObjectUnit.isUnlocked()` 按 `unlockUnitData[type]` 判断：当前关卡达到门槛或档案已完成对应后续关卡时解锁。APK 的门槛数组为 Grandpa/type 6：21 或完成 30；Sniper/type 5：31 或完成 40；Pyromaniac/type 35：41 或完成 50；Salesman/type 36：51 或完成 60；Gambler/type 9：41 或完成 50。`hasAllUnitsUnlock()` 是 IAP 全单位解锁，本网页不提供该付费旁路。首次进入 Tech Town（global level 4）时，code 100、101、130、131、132 和 Casino code 150 均因未解锁而不创建；原始网格有 26 个休眠标记，不等于当时实际生成 26 个单位。
 - 已实现 Tech Town 新局单位码位解析：逐行生成 source code、unit type、activity 和格坐标；原图含 26 个休眠标记、一个活动 Mexican、一个 Pyromaniac、一个 Salesman 和一个 Gambler。解析只记录原图对象，不应用档案解锁门槛，也尚未连接到可玩关卡。
-- 已扩展 Tech Town 新局单位工厂，按传入的解锁判定生成 type 1–6、code 130/type 35 Pyromaniac 和 code 131/type 36 Salesman。首次进入 level 4 时只生成原版已解锁对象；type 5/6、Pyromaniac、Salesman 均由各自门槛控制。Pyromaniac 和 Salesman 已有单独的资源、雇佣和战斗规则测试；单位仍未接入正式战役。
+- 已扩展 Tech Town 新局单位工厂，按传入的解锁判定生成 type 1–6、code 130/type 35 Pyromaniac、code 131/type 36 Salesman 和 code 132/type 9 Gambler。地图内容构造器用同一解锁结果控制 Gambler 与 Casino code 150，并在数量不一致时抛出内容错误。Gambler 使用原版 32×44 单帧图集和 96×96 肖像；其速度为 0、没有武器或升级，不能进入普通移动、攻击、升级流程。首次进入 level 4 时仍只生成原版已解锁对象；以上 map04 内容尚未接入正式战役。
 
 ## Tech Town（map04）已确认基线
 
@@ -27,7 +27,7 @@
 | 铁路编组与寻路 | TDM 第 12 行包含连续 83、83、84、84、84。createTrainFromMap 将其转为横向列车单元 10、11、12、12、12；TrainHorizontal.getImage 指向两段机车和车厢，类型 12 声明有武器槽，列车移动只改横向分量。PriorityMap 按入口方向和 52–65 方向标记递归，不以地形码判断通行；map04 的四条路线会经过铁路图块。 | 还原列车编组、车厢槽位、移动、绘制顺序与轨道边界；路线必须按原版方向场复现，不得将铁路码一概视为阻挡。挂载/招募规则须继续沿调用链核实，不能只凭对白猜测。 |
 | 波次与动作 | GameDesignWaves.setWaves(..., 4) 定义 8 波。第 2 波前将敌方生成池计数数组设为 0，再将上限数组设为 5；SpawnPoolManager.performActionsForWave 已确认动作码 1/3 分别表示 set / set-max。 | 八波、生成池、难度参数和动作顺序逐项与 APK 对照，不能把敌方生成池动作误作玩家招募池。 |
 | 关卡参数 | GameDesignData.gameDesignData[3] 对应 map04；原始十二项为 [0x12c, 0x32, 0x3e7, 0x61a8, 0, 0x7530, 5, 0x20, 0x4b, 0x96, 0xbc, 0x48ff8]。 | 实现前通过字段常量和消费者确认每项语义，再映射到网页内容；不得按相邻关卡猜字段。 |
-| 文案和素材 | GameDesignWaves 引用 T_IA_CAMPAIGN_04_01 与 T_CAMPAIGN_04_02 至 _08，对白共 8 段，含 Engineer 肖像。APK 默认英文资源可读；其打包 locale 不含中文，中文对白需按站点语言补译。网页已迁入地图地形、路径、横向铁路、桥、静态装饰与 Saloon/Fort/Tipi/Casino 图像，以及 type 35 Pyromaniac、type 36 Salesman 的角色图集、肖像、投射物和相关音频；Gambler、横向列车与 Gatling 图像/动画仍待实现步骤核对，波次对白的场景接入仍待后续步骤。 | 只迁入 map04 可达的原版资源；补齐中文文案和正式资源预加载，不提前搬运其他地图素材。 |
+| 文案和素材 | GameDesignWaves 引用 T_IA_CAMPAIGN_04_01 与 T_CAMPAIGN_04_02 至 _08，对白共 8 段，含 Engineer 肖像。APK 默认英文资源可读；其打包 locale 不含中文，中文对白需按站点语言补译。网页已迁入地图地形、路径、横向铁路、桥、静态装饰与 Saloon/Fort/Tipi/Casino 图像，以及 type 35 Pyromaniac、type 36 Salesman 的角色图集、肖像、投射物和相关音频；Gambler 图集与肖像已迁入并纳入预加载。横向列车和 Gatling 图像/动画、波次对白的场景接入仍待后续步骤。 | 只迁入 map04 可达的原版资源；补齐中文文案和正式资源预加载，不提前搬运其他地图素材。 |
 
 ### 本批后续实现步骤
 
@@ -35,7 +35,6 @@
 
 | 步骤 | 范围、依赖和预计改动 | 验收条件 | 针对性验证 |
 | --- | --- | --- | --- |
-| 3.4b Gambler 与 Casino 地图实体 | 依赖已完成的3.4a和现有码位解析/解锁查询。实现 code132→type9/activity5/(29,3) 的 Gambler 与 code150/(30,3) Casino 配对；两者使用同一 level41 或已完成 level50 的档案解锁状态。按 APK 注册的 Gambler 图集、肖像与活动帧迁入资源；保持 Gambler 静止、无攻击/生成能力，Casino 只作地图对象。 | 锁定时单位与 Casino 同时不存在；解锁时恰好各一个且坐标、资源锚点准确；任意数量不相等时显式暴露内容错误，不静默错配；Gambler 不被普通部队移动、攻击或升级流程误处理。 | 新增 `tests/tech-town-gambler.test.ts` 的地图构造和资源清单覆盖；运行该测试与 `tests/tech-town-map.test.ts`，再运行 typecheck。 |
 | 3.4c 共享 Randomizer 与回放兼容 | 依赖3.4a（已完成）并影响现有全部 `GameSession` 随机调用。按 smali 精确复现每次 `nextInt(bound)`：先取 Java 有界整数，再取 `nextLong()`，以该值重设内部 Java Random 种子并清除 `firstRandom`；开局状态 `firstRandom=true`。继续使用单一会话随机源，令波次、路线、奖励箱和后续 Gambler 共用同一序列。若现有回放元数据仍充分表达该实现，保持格式版本2；将规则版本提升到 `gng-rules-19`，使旧随机规则录制显式不兼容。 | 多个固定 seed 和混合 bound 的输出/状态与独立 Java `Randomizer` 参考向量一致；首次随机标记仅在第一次 `nextInt` 后变 false；所有现有随机消费者仍共享单流；同一回放稳定重放，旧 `gng-rules-18` 文档被拒绝。 | 新增 `tests/randomizer.test.ts` 覆盖独立 Java 参考向量、种子重设和首次标记；运行 `tests/randomizer.test.ts`、`tests/game.test.ts`、`tests/replay.test.ts`、`tests/campaign-unit-pool.test.ts`、`tests/campaign-bonus-crates.test.ts` 与 typecheck；只按 APK 证据调整受随机序列影响的固定 seed 期望。 |
 | 3.4d Game 会话牌局结算 | 依赖已完成的3.4a–3.4c。增加正式规则 intent、回放记录和状态：开始时核查余额并扣一次底注，设置 `GameDesignData` 对应冷却，成功牌局计数只在成功开局时递增；按规则内核结果返还双倍底注或经 Casino `instantSpawn` 发放单位奖项。随机顺序按 APK 核对：`playCards()` 先抽奖项，随后 `GamblerDialog.animateRevealingCards()` 抽手牌组合并从牌堆不放回地抽5张，再由揭示动画消费其随机参数，最后调用 Casino `instantSpawn`；所有调用继续使用步骤3.4c建立的共享随机状态。 | 余额不足不改变现金、局数、冷却和随机状态；重复命令不重复扣款/领奖；赢钱加回二倍底注，输钱仅损失已扣底注；奖励单位经过该 Casino 对应的原版单位生成路径并受牌池解锁过滤；回放可重现现金、奖励单位、冷却与局数及下一次共享随机结果。 | 在 `tech-town-gambler.test.ts` 增加 GameSession 级固定 seed、余额与重复 intent 测试；运行该测试、`tests/game.test.ts` 与 `tests/replay.test.ts`，再运行 typecheck。 |
 | 3.4e 窗口内赌场交互与牌面揭示 | 依赖3.4d。按 `GunsAndGloryThread` 点击 Gambler 后由 `deselect()` 弹窗的路径，在游戏窗口内接入开始/取消、缺钱提示、五张牌及结果揭示；按 `GamblerDialog`、`GamblerCardView`、`GamblerResults` 复现牌面组合、揭示动画/声音和关闭状态，不新增页面级常驻招募按钮。 | 点击 Gambler 打开其下注交互而不将其当作普通可移动单位；取消不扣款；确认开局后只结算一次并显示同一结果；五张牌无重复，结果手牌来自对应原版结果集合；对话框、牌和触控目标保持在游戏窗口内，语言跟随站点语言。 | 新增 Gambler DOM/交互测试与 `tests/e2e/t34-tech-town-gambler.spec.ts`，覆盖桌面鼠标、390px 触屏布局、取消、缺钱、确认和防重复结算；运行 Gambler 单测及对应 E2E，再运行 typecheck。 |

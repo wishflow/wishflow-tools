@@ -15,6 +15,7 @@ import {
 } from './content/cow-gulch';
 import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
 import { apacheValleyContent } from './content/apache-valley';
+import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages } from './content/official-campaign';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
@@ -2347,6 +2348,7 @@ function currentGameStepEnvironment(): { tileSizePixels: number } {
 }
 
 const assetNames = new Set([
+  ...techTownMapEntityAssets,
   ...view.map.background.map((tile) => tile.asset),
   ...view.map.streets.map((tile) => tile.asset),
   ...(view.map.decorations ?? []).map((decoration) => decoration.asset),
