@@ -28,21 +28,28 @@
 | 关卡参数 | GameDesignData.gameDesignData[3] 对应 map04；原始十二项为 [0x12c, 0x32, 0x3e7, 0x61a8, 0, 0x7530, 5, 0x20, 0x4b, 0x96, 0xbc, 0x48ff8]。 | 实现前通过字段常量和消费者确认每项语义，再映射到网页内容；不得按相邻关卡猜字段。 |
 | 文案和素材 | GameDesignWaves 引用 T_IA_CAMPAIGN_04_01 与 T_CAMPAIGN_04_02 至 _08，对白共 8 段，含 Engineer 肖像。APK 默认英文资源可读；其打包 locale 不含中文，中文对白需按站点语言补译。网页已迁入地图地形、路径、横向铁路、桥、静态装饰与 Saloon/Fort/Tipi/Casino 图像；type 35/36 的休眠与活动图集、Gambler 图像、横向列车与 Gatling 图像/动画仍待实现步骤核对，波次对白的场景接入仍待后续步骤。 | 只迁入 map04 可达的原版资源；补齐中文文案和正式资源预加载，不提前搬运其他地图素材。 |
 
-### 本批实现步骤
+### 本批后续实现步骤
+
+每个切片只实现一项可独立测试的 map04 能力；APK 静态分析先于代码。凡表中标明“追踪”的行为，先核对列出的方法和调用者，再把确切数值、输入与随机消费顺序写入实现及测试，不从相似单位推测。
 
 | 步骤 | 范围、依赖和预计改动 | 验收条件 | 针对性验证 |
 | --- | --- | --- | --- |
-| 3.1. 实现 Pyromaniac、Salesman 与 Gambler/Casino | 依赖已完成的单位码位解析。分析并实现 types 35/36 Pyromaniac、Salesman 与 type 9 Gambler；补迁入可达图像/音频资源、单位数据及特殊交互；将 code150 Casino 与 Gambler 的解锁条件接入同一逻辑。 | 休眠/活动图像和锚点、数值、输入、射击与特殊效果有 APK 证据；首次到达 global level 4 时不生成上述单位或 Casino；解锁 type 9 后 Gambler/Casino 成对创建；地图重建不重复生成或占槽。 | 单位数据、解锁边界、Gambler/Casino 配对和特殊交互测试；新增资源尺寸检查。 |
-| 3.2. 实现横向列车与 Gatling 车厢 | 依赖已完成地图/路线基线。追完列车的选择、移动边界、碰撞、绘制图层、武器挂载/卸载、攻击与成本链，再实现实际存在的功能。 | 编组只按 APK 中的车序生成；横向移动和碰撞边界匹配轨道；只有可操作的车厢响应输入；Gatling 槽位的合法性、费用、装卸、攻击与动画不靠推测补齐。 | 列车坐标与 movement/selection、slot、renderer 测试；静态证据不足时才做一次针对性浏览器或原版核对。 |
-| 4. 接入八波规则、经济与对白 | 依赖 3.1–3.2。新增 map04 波次、关卡单位池和所需音频/肖像映射，复用现有战役会话。 | 8 波的提示、肖像、延迟、生命倍率、速度倍率、spawn pool 与第 2 波 set/set-max 动作逐项符合 APK；单位价格、自然收入、结算和音画触发有独立预期；中英两种语言均完整。 | 新增 map04 波次/单位池/音画测试，并针对性运行现有 campaign 规则测试。 |
-| 5. 注册正式第 4 关 | 依赖 3.1–4。把 Tech Town 接入 `officialCampaignStages`，依赖 map03 完成；加入正式内容预加载和真实 UI E2E。 | 目录仍列出 60 关；完成 map03 后 map04 可进入、未完成 map04 前 map05 锁定；真实 map04 八波胜利只写一个 settlement，刷新保留进度且未结算战局刷新后重开第一波；不得以 fixture 替代 map04 正式战役。 | 新增固定 seed 的 map04 正式战役 E2E；仅用已有档案 fixture 满足 map01–03 前置条件。 |
-| 6. 批次收口 | 依赖步骤 1–5。停止占用 Vite 预览的进程后运行一次完整检查，再启动本地预览做内置浏览器验收。 | `CI=1 pnpm --dir apps/gunsnglory run test:ci` 全部通过；内置浏览器桌面、390px 竖屏与 844×390 横屏中无空白/错图、截断、水平溢出或交互遮挡；画面比例、地图拖动、列车与八波 UI 正确。 | 完整 CI 一次；Codex 内置浏览器三个视口实测并查看 console error。 |
+| 3.1 Pyromaniac 与 Salesman | 依赖普通单位工厂。迁入 map04 两个角色实际可达的休眠、活动、射击、特效、肖像和音频资源（如 `player_pyromaniac*`、`player_salesman*`、`sfx_pyromaniac_rocket`、`sfx_salesman_bottle` 及对应 `sound_*`）；依据 `GameDesignData`、`GameObjectUnit`、`GameDesignOptics`、`SfxManager` 追出单价、武器、帧、锚点、触发时机和伤害，再加入 Tech Town 单位工厂。对应码位 130/131，位置分别为 (0,20)、(30,14)。 | type 35/36 仅按 APK 解锁条件创建（41/完成50、51/完成60）；休眠角色可按原价雇佣，活动角色的射击、动画、特效和音效与证据一致；第一次进入 level 4 不生成两者。资源不超出这两种角色在 map04 中实际可达的部分。 | 新增 `tech-town-special-units.test.ts` 覆盖锁定边界、位置/锚点、雇佣与战斗；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-special-units.test.ts tests/game-asset-path.test.ts`，再运行 `pnpm --dir apps/gunsnglory run typecheck`。 |
+| 3.2 Gambler 与 Casino | 依赖正式档案解锁读取及角色资源加载。追踪 `Gambler.playCards()`、`GameScreenActivity` 的 Gambler 事件、`GamblerDialog`/`GamblerResults` 和 `GameObjectUnit`；还原 type 9 的角色状态、Casino 开闭外观、下注约束、牌局结果、收入/扣款与随机调用。将 code132 (29,3) 与 code150 (30,3) 作为同一解锁门控对象接入。 | type 9 未解锁时两对象都不存在；解锁后只创建一个 Gambler 和一座 Casino。牌局金额、结果、动画/音画和随机消费顺序与 APK 一致，重复输入、退出及资金不足不会重复结算；不加入广告、支付或联网行为。 | 新增 `tech-town-gambler.test.ts` 覆盖固定随机源、牌型、金额、结果和消费次数；正式地图接入后由步骤 5 的战役 E2E 验证牌局流程。先运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-gambler.test.ts tests/tech-town-map.test.ts`，再运行 typecheck。 |
+| 检查点 A：特殊角色 | 依赖 3.1–3.2。 | 三种 map04 特殊单位（Pyromaniac、Salesman、Gambler）及锁定/解锁边界和角色资源可独立核对；普通单位的 23/27 数量基线不变。 | 仅跑特殊角色、资源清单及受影响的 map04/campaign 测试；不跑全套。 |
+| 3.3 横向列车 | 依赖 Tech Town 地图/路线基线。按原图第 12 行的 83/84 标记生成 10、11、12、12、12 的列车编组；追踪 `GameObjectManager.createTrainFromMap()`、`TrainHorizontal` 及碰撞/输入调用者，接入现有场景、模拟和绘制层。 | 只生成一组、顺序和初始位置符合 APK；列车按 X 轴移动，碰撞/地图边界、车厢相对位置、动画与绘制层符合对应代码；禁止由铁路图块自动推导车辆。 | 新增 `tech-town-train.test.ts` 覆盖编组、移动边界、车厢间距、碰撞和绘制顺序；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-train.test.ts tests/tech-town-map.test.ts`，再运行 typecheck。 |
+| 3.4 Gatling 车厢 | 依赖 3.3。追踪 `TrainHorizontal` 的武器槽、选择/输入调用者、Gatling 资源与 `GameDesignData` 数值；按 APK 能力实现安装/移除、价格、射击、动画和音效。若代码证据表明某路径不存在，就明确保持不可用，不补造交互。 | 只有 APK 指定车厢可接受 Gatling；安装、移除、价格、目标选择、射速/伤害和射击资源均与证据一致；地图重建、资金不足、重复点击不产生重复武器或扣款。 | 新增 `tech-town-gatling.test.ts` 覆盖合法车厢、资金边界、攻击及重复输入；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-gatling.test.ts tests/tech-town-train.test.ts tests/game.test.ts`，再运行 typecheck。 |
+| 检查点 B：列车能力 | 依赖 3.3–3.4。 | 列车与 Gatling 在 map04 真实地图中可被选择、操作、绘制和模拟，普通单位不回归。 | 运行列车、Gatling、地图交互、绘制和相关 combat 定向测试；一次本地浏览器检查地图上的位置及点击区域。 |
+| 4.1 八波、单位池与经济 | 依赖 3.1–3.4。根据 `GameDesignWaves`、`SpawnPoolManager.performActionsForWave()`、`GameDesignData.gameDesignData[3]` 及实际消费者实现波次、生成池、自然收入、商店/雇佣价格和结算参数；先逐项确定十二个关卡字段语义。 | 8 波的延迟、提示索引、生命/速度倍率、单位池和第 2 波 set/set-max 顺序逐项匹配 APK；所有影响经济的字段都追到消费者后再映射；不以其他关卡值填充未知字段。 | 新增 `tech-town-waves.test.ts` 和 `tech-town-unit-pool.test.ts`；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-waves.test.ts tests/tech-town-unit-pool.test.ts tests/campaign-unit-pool.test.ts tests/difficulty.test.ts`，再运行 typecheck。 |
+| 4.2 波次对白、肖像与音频 | 依赖 4.1 的波次索引。迁入 8 段对白实际引用的中英文文本、Engineer 肖像与可达音频，接入现有窗口内对白/暂停流程和正式预加载。 | 第 1 段 `T_IA_CAMPAIGN_04_01` 与第 2–8 段 `T_CAMPAIGN_04_02` 至 `_08` 的波次、文本、肖像、播放和关闭行为逐项吻合；中英完整，静音及自动播放限制遵循现有共享音频契约。 | 新增 `tech-town-wave-intros.test.ts`；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-wave-intros.test.ts tests/fort-kaboom-wave-intros.test.ts tests/audio-playback.test.ts tests/game-asset-path.test.ts`，并运行 wave-intro E2E。 |
+| 5 注册正式第 4 关 | 依赖 3.1–4.2。把 Tech Town 接入 `officialCampaignStages`、关卡解锁、正式资源预加载与真实 UI。 | 目录仍列 60 关；完成 map03 后 map04 可进入、未完成 map04 前 map05 锁定；真实 map04 八波胜利只写一个 settlement，刷新保留进度且未结算战局刷新后重开第一波；不得以 fixture 替代 map04 正式战役。 | 新增固定 seed 的 map04 正式战役 E2E；仅用已有档案 fixture 满足 map01–03 前置条件。 |
+| 6 批次收口 | 依赖步骤 3.1–5。停止占用 Vite 预览的进程后运行一次完整检查，再启动本地预览做内置浏览器验收。 | `CI=1 pnpm --dir apps/gunsnglory run test:ci` 全部通过；内置浏览器桌面、390px 竖屏与 844×390 横屏中无空白/错图、截断、水平溢出或交互遮挡；画面比例、地图拖动、列车与八波 UI 正确。 | 完整 CI 一次；Codex 内置浏览器三个视口实测并查看 console error。 |
 
 依赖顺序：
 
-    网格与方向场路径（完成） → 场景贴图和图层（完成） → 单位码解析（完成） → 普通单位（完成） → 特殊单位与 Gambler/Casino → 列车与 Gatling → 八波规则 → 正式解锁与结算 → 完整检查和浏览器验收
+    网格与方向场路径（完成） → 场景贴图和图层（完成） → 单位码解析（完成） → 普通单位（完成） → Pyromaniac/Salesman → Gambler/Casino → 检查点 A → 横向列车 → Gatling → 检查点 B → 八波/单位池/经济 → 波次对白/音频 → 正式解锁与结算 → 完整检查和浏览器验收
 
-单位码位解析已对照 APK 网格、`GameObjectManager.createGameObjectsFromBasicMap()` 的分支和 `GameObjectUnit.create()/isUnlocked()`。该方法的 JADX Java `switch` 输出存在控制流错误，不能作为码位依据；已以 DEX smali 指令复核。3.1 与 3.2 开工前若特殊单位交互、列车移动、费用或槽位状态仍有关键未知，先完成对应静态方法追踪并更新本计划；不靠反复启动页面或模拟通关猜规则。步骤 5 的真实胜利只用于验证新地图的完整战役链；不重跑 map01–03 的已验收战役。
+单位码位解析已对照 APK 网格、`GameObjectManager.createGameObjectsFromBasicMap()` 的分支和 `GameObjectUnit.create()/isUnlocked()`。该方法的 JADX Java `switch` 输出存在控制流错误，不能作为码位依据；已以 DEX smali 指令复核。每个后续步骤开工前只追踪该步骤列出的方法和消费者；遇到静态证据缺口先记明缺失能力与判定标准，再做一次最小定点核对，不靠反复启动页面或模拟通关猜规则。步骤 5 的真实胜利只用于验证新地图的完整战役链；不重跑 map01–03 的已验收战役。
 
 ### 本批完成门槛
 
