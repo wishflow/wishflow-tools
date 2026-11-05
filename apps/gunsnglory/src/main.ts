@@ -14,9 +14,10 @@ import {
   cowGulchUpgradeSampleContent,
 } from './content/cow-gulch';
 import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
+import { apacheValleyContent } from './content/apache-valley';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
-import { cowGulchLevelOneContent } from './content/official-campaign';
-import { CampaignWaveIntroCursor, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
+import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from './content/official-campaign';
+import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import {
   cowGulchAmbientMusic,
   cowGulchBattleMusicForWave,
@@ -56,12 +57,12 @@ app.innerHTML = [
   '  <header class="game-heading">',
   '    <p class="eyebrow" data-locale="ORIGINAL CAMPAIGN">ORIGINAL CAMPAIGN</p>',
   '    <h1>Guns’n’Glory</h1>',
-  '    <p class="intro" data-locale="Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.">Play the original Cow Gulch campaign, then use the archive panel for isolated rule samples.</p>',
+  '    <p class="intro" data-locale="Play the original New Mexico campaign, then use the archive panel for isolated rule samples.">Play the original New Mexico campaign, then use the archive panel for isolated rule samples.</p>',
   '  </header>',
   '  <section class="game-panel" aria-labelledby="scene-title">',
   '    <section class="campaign-panel" aria-labelledby="campaign-title">',
   '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
-  '      <p class="campaign-note" data-locale="Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.">Cow Gulch is the official first level. Earlier sample results remain separate from campaign progress.</p>',
+  '      <p class="campaign-note" data-locale="Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.">Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.</p>',
   '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
   '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
   '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
@@ -585,9 +586,6 @@ const languageMessages = {
     campaignStageLocked: 'Locked',
     campaignStageCompleted: 'Completed',
     campaignStageScore: (score: number) => `Best $${score}`,
-    nextLevelTitle: 'New Mexico · Level 2',
-    nextLevelLockedUnavailable: 'Locked · content is not implemented yet.',
-    nextLevelUnlockedUnavailable: 'Unlocked · content is not implemented yet.',
     retryAssets: 'Retry loading game resources',
     assetLoadFailed: (count: number) => `${count} required game image${count === 1 ? '' : 's'} could not load. The recovery scene remains available; retry before starting a battle.`,
     canvasAssetFallback: 'Map display is paused until required images load.',
@@ -597,6 +595,7 @@ const languageMessages = {
     sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
     sceneCaption: (scenarioId: string) => {
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
+      if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
       if (scenarioId === cowGulchP1bCampaignContent.id) return 'Archived original-waves sample: waves 1–2 only. It stops before campaign settlement.';
       if (scenarioId === cowGulchP1cCampaignContent.id) return 'Archived original-waves sample: waves 1–3 only. It does not settle the campaign.';
@@ -622,6 +621,7 @@ const languageMessages = {
     originalWaveContext: 'ORIGINAL CAMPAIGN · 1–8',
     originalWaveNotice: 'This archived slice stops after wave 3 of 8 and does not settle the campaign.',
     originalCampaignNotice: 'All eight original waves are active. Clear Wave 8 to settle the battle.',
+    apacheValleyNotice: 'All six original waves are active across three routes. Clear Wave 6 to settle the battle.',
     returnCowGulchSample: 'Return to Cow Gulch sample',
     failed: 'Game scene failed to load',
     retrySceneOpen: 'Retry loading requested scene',
@@ -661,6 +661,7 @@ const languageMessages = {
       const names: Record<CampaignEnemyType, readonly [string, string]> = {
         1: ['Pioneer', 'Pioneers'],
         2: ['Female pioneer', 'Female pioneers'],
+        3: ['Horseman', 'Horsemen'],
         4: ['Wagon', 'Wagons'],
         8: ['Covered wagon', 'Covered wagons'],
       };
@@ -763,9 +764,6 @@ const languageMessages = {
     campaignStageLocked: '未解锁',
     campaignStageCompleted: '已完成',
     campaignStageScore: (score: number) => `最高分 $${score}`,
-    nextLevelTitle: '新墨西哥州 · 第 2 关',
-    nextLevelLockedUnavailable: '尚未解锁 · 关卡内容尚未实现。',
-    nextLevelUnlockedUnavailable: '已解锁 · 关卡内容尚未实现。',
     retryAssets: '重试加载游戏资源',
     assetLoadFailed: (count: number) => `${count} 项必需游戏图片未能加载。恢复场景仍可查看；请重试加载后再开始战斗。`,
     canvasAssetFallback: '必需图片加载完成前，地图暂不可显示。',
@@ -775,6 +773,7 @@ const languageMessages = {
     sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
     sceneCaption: (scenarioId: string) => {
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
+      if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
       if (scenarioId === cowGulchP1bCampaignContent.id) return '原版波次归档样本：仅包含第 1–2 波，不会进行战役结算。';
       if (scenarioId === cowGulchP1cCampaignContent.id) return '原版波次归档样本：仅包含第 1–3 波，不会进行战役结算。';
@@ -800,6 +799,7 @@ const languageMessages = {
     originalWaveContext: '原版战役 · 第 1–8 波',
     originalWaveNotice: '该历史切片在第 3/8 波后停止，不结算战役。',
     originalCampaignNotice: '原版八波内容已启用；完成第 8 波后结算战局。',
+    apacheValleyNotice: '三条路线上的原版六波均已启用；完成第 6 波后结算战局。',
     returnCowGulchSample: '返回牛溪谷样本',
     failed: '游戏场景加载失败',
     retrySceneOpen: '重试加载请求的场景',
@@ -839,6 +839,7 @@ const languageMessages = {
       const names: Record<CampaignEnemyType, string> = {
         1: '拓荒者',
         2: '女拓荒者',
+        3: '骑马战士',
         4: '马车',
         8: '篷车',
       };
@@ -983,10 +984,8 @@ function renderCampaign(): void {
     campaignDifficultyStatus.textContent = difficultyStatusText;
   }
   const rows = Array.from(campaignStageList.children) as HTMLLIElement[];
-  const unavailableNextLevelRowId = 'unavailable:campaign-new-mexico-02';
-  const rowsMatch = rows.length === stages.length + 1
-    && stages.every((stage, index) => rows[index]?.dataset.scenarioId === stage.scenarioId)
-    && rows[stages.length]?.dataset.scenarioId === unavailableNextLevelRowId;
+  const rowsMatch = rows.length === stages.length
+    && stages.every((stage, index) => rows[index]?.dataset.scenarioId === stage.scenarioId);
 
   if (!rowsMatch) {
     const fragment = document.createDocumentFragment();
@@ -1011,27 +1010,6 @@ function renderCampaign(): void {
       row.append(details, button);
       fragment.append(row);
     });
-    const nextRow = document.createElement('li');
-    nextRow.className = 'campaign-stage';
-    nextRow.dataset.scenarioId = unavailableNextLevelRowId;
-    const nextDetails = document.createElement('div');
-    nextDetails.className = 'campaign-stage-details';
-    const nextName = document.createElement('span');
-    nextName.className = 'campaign-stage-name';
-    nextName.dataset.role = 'stage-name';
-    const nextState = document.createElement('span');
-    nextState.className = 'campaign-stage-state';
-    nextState.dataset.role = 'stage-state';
-    nextState.dataset.testid = 'campaign-next-level-status';
-    nextDetails.append(nextName, nextState);
-    const nextButton = document.createElement('button');
-    nextButton.type = 'button';
-    nextButton.dataset.action = 'open-campaign-stage';
-    nextButton.dataset.scenarioId = 'campaign-new-mexico-02';
-    nextButton.setAttribute('data-testid', `campaign-stage-button-${stages.length + 1}`);
-    nextButton.disabled = true;
-    nextRow.append(nextDetails, nextButton);
-    fragment.append(nextRow);
     campaignStageList.replaceChildren(fragment);
   }
 
@@ -1057,22 +1035,6 @@ function renderCampaign(): void {
       || stage.status === 'locked';
     if (button.disabled !== disabled) button.disabled = disabled;
   });
-
-  const nextLevelRow = campaignStageList.children[stages.length] as HTMLLIElement | undefined;
-  const nextLevelName = nextLevelRow?.querySelector<HTMLElement>('[data-role="stage-name"]');
-  const nextLevelState = nextLevelRow?.querySelector<HTMLElement>('[data-role="stage-state"]');
-  const nextLevelButton = nextLevelRow?.querySelector<HTMLButtonElement>('[data-action="open-campaign-stage"]');
-  if (nextLevelName && nextLevelState && nextLevelButton) {
-    const completedFirstLevel = profile.completedScenarios.includes(cowGulchLevelOneContent.id);
-    const nextStatus = completedFirstLevel
-      ? copy.nextLevelUnlockedUnavailable
-      : copy.nextLevelLockedUnavailable;
-    if (nextLevelName.textContent !== copy.nextLevelTitle) nextLevelName.textContent = copy.nextLevelTitle;
-    if (nextLevelState.textContent !== nextStatus) nextLevelState.textContent = nextStatus;
-    const buttonText = copy.openCampaignStage(copy.nextLevelTitle);
-    if (nextLevelButton.textContent !== buttonText) nextLevelButton.textContent = buttonText;
-    nextLevelButton.disabled = true;
-  }
 
   const summaryText = campaignProgressView
     ? copy.campaignSummary(campaignProgressView.completedCount, campaignProgressView.stages.length)
@@ -1619,8 +1581,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       const y = (enemy.positionFine.y / 7680).toFixed(2);
       return `${enemy.id} ${messages.position(x, y)}${messages.enemyHealth(enemy.hitPoints, enemy.maxHitPoints)}`;
     }).join(' · '));
-  inspectionRoute.textContent = messages.inspectionRoute(view.route?.length
-    ? view.route.map((point) => `(${point.x.toFixed(1)}, ${point.y.toFixed(1)})`).join(' → ')
+  const inspectionRoutes = view.routes ?? (view.route ? [view.route] : []);
+  inspectionRoute.textContent = messages.inspectionRoute(inspectionRoutes.length
+    ? inspectionRoutes.map((route, index) => `${inspectionRoutes.length > 1 ? `${index + 1}: ` : ''}${route.map((point) => `(${point.x.toFixed(1)}, ${point.y.toFixed(1)})`).join(' → ')}`).join(' · ')
     : messages.noRoute);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
@@ -1705,7 +1668,6 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const originalWaveNotice = originalWaveContent.id === cowGulchP1dCampaignContent.id
     ? messages.originalCampaignNotice
     : messages.originalWaveNotice;
-  const officialCampaignScenario = view.scenarioId === cowGulchLevelOneContent.id;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
@@ -1716,13 +1678,15 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? messages.upgradeSceneContext
     : originalWaveScenario
       ? messages.originalWaveContext
-    : officialCampaignScenario ? 'NEW MEXICO · 01'
-      : activeCampaignStage ? language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE' : 'NEW MEXICO · 01';
+    : activeCampaignStage ? `NEW MEXICO · ${String(activeCampaignStage.globalLevel).padStart(2, '0')}`
+      : language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE';
   sceneCaption.textContent = messages.sceneCaption(view.scenarioId);
   upgradeSampleStatus.textContent = upgradeScenario
     ? messages.debugUpgradeFixture
     : originalWaveScenario ? originalWaveNotice
-      : officialCampaignScenario ? messages.originalCampaignNotice : messages.originalUpgradeLimit;
+      : activeCampaignStage?.scenarioId === apacheValleyLevelTwoContent.id
+        ? messages.apacheValleyNotice
+        : activeCampaignStage ? messages.originalCampaignNotice : messages.originalUpgradeLimit;
   const selectedUnit = unit;
   const nextUpgrade = selectedUnit?.nextUpgrade;
   let upgradeText = '';
@@ -1813,10 +1777,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   recruitControl.disabled = actionLocked || Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
   upgradeControl.disabled = actionLocked || Boolean(settlement) || !nextUpgrade || view.paused;
-  startUpgradeSampleControl.hidden = upgradeScenario || originalWaveScenario || officialCampaignScenario;
-  returnCowGulchControl.hidden = !upgradeScenario && !originalWaveScenario && !officialCampaignScenario;
+  startUpgradeSampleControl.hidden = upgradeScenario || originalWaveScenario || Boolean(activeCampaignStage);
+  returnCowGulchControl.hidden = !upgradeScenario && !originalWaveScenario && !activeCampaignStage;
   returnCowGulchControl.textContent = messages.returnCowGulchSample;
-  restartControl.textContent = officialCampaignScenario ? messages.restartLevel : messages.restartSample;
+  restartControl.textContent = activeCampaignStage ? messages.restartLevel : messages.restartSample;
   startDefeatControl.disabled = actionLocked || !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
   clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
   const canvasLabel = upgradeScenario
@@ -1904,8 +1868,16 @@ const assetNames = new Set([
   ...(view.map.decorations ?? []).map((decoration) => decoration.asset),
   ...view.units.map((unit) => unit.asset),
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
+  ...[cowGulchLevelOneContent, apacheValleyContent].flatMap((content) => [
+    ...content.map.background.map((tile) => tile.asset),
+    ...content.map.streets.map((tile) => tile.asset),
+    ...(content.map.decorations ?? []).map((decoration) => decoration.asset),
+    ...content.units.map((unit) => unit.asset),
+  ]),
   'pioneer_male',
   'pioneer_female',
+  'horseman',
+  'horseman_turn',
   'wagon',
   'wagon_turn',
   'horse_wagon',
@@ -1937,6 +1909,8 @@ const assetNames = new Set([
   'gng_hud_1_top_star_0',
   'hud_font_numbers_scaled',
   'portrait_pedro',
+  'portrait_indian',
+  'portrait_settlers',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
@@ -2034,6 +2008,17 @@ function stopGameLoop(): void {
 function isOfficialCowGulchSession(): boolean {
   return session.startRecord.mode === 'formal'
     && session.startRecord.scenarioId === cowGulchLevelOneContent.id;
+}
+
+function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[] {
+  if (scenarioId === cowGulchLevelOneContent.id) return cowGulchWaveIntros;
+  if (scenarioId === apacheValleyLevelTwoContent.id) return apacheValleyWaveIntros;
+  return [];
+}
+
+function isOfficialCampaignSession(): boolean {
+  return session.startRecord.mode === 'formal'
+    && officialCampaignStages.some(({ scenarioId }) => scenarioId === session.startRecord.scenarioId);
 }
 
 function removeAudioPlayer(
@@ -2203,7 +2188,7 @@ function stopCowGulchBackgroundMusic(): void {
 
 function retryCampaignWaveIntroVoice(): void {
   const intro = pendingCampaignWaveIntro;
-  if (intro && soundEnabled) playAudioAsset(intro.voiceSound);
+  if (intro?.voiceSound && soundEnabled) playAudioAsset(intro.voiceSound);
 }
 
 function playRequestedSounds(
@@ -2280,20 +2265,18 @@ function renderCampaignWaveIntro(): void {
   ).toString();
   if (campaignWaveIntroConfirmIcon.src !== confirmIconUrl) campaignWaveIntroConfirmIcon.src = confirmIconUrl;
   retryCampaignWaveIntroVoiceControl.textContent = languageMessages[language].retryWaveIntroVoice;
-  retryCampaignWaveIntroVoiceControl.hidden = !soundEnabled || !failedSoundElements.has(intro.voiceSound);
+  retryCampaignWaveIntroVoiceControl.hidden = !soundEnabled || !intro.voiceSound || !failedSoundElements.has(intro.voiceSound);
   campaignWaveIntroContinueLabel.textContent = language === 'en' ? 'Continue' : '继续';
   retryCampaignWaveIntroVoiceControl.setAttribute('aria-label', languageMessages[language].retryWaveIntroVoice);
   campaignWaveIntroDialog.dataset.waveNumber = String(intro.waveNumber);
 }
 
 function showCampaignWaveIntroForCurrentWave(): boolean {
-  if (session.startRecord.mode !== 'formal'
-    || session.startRecord.scenarioId !== cowGulchLevelOneContent.id
-    || !view.wave) return false;
+  if (!isOfficialCampaignSession() || !view.wave) return false;
   const intro = campaignWaveIntroCursor.next(view.wave.number);
   if (!intro) return false;
   battleMusicWaveNumber = undefined;
-  setCowGulchBackgroundMusic(cowGulchAmbientMusic);
+  if (isOfficialCowGulchSession()) setCowGulchBackgroundMusic(cowGulchAmbientMusic);
   pendingCampaignWaveIntro = intro;
   stopGameLoop();
   pauseReason = 'wave-intro';
@@ -2302,7 +2285,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   renderCampaignWaveIntro();
   if (!campaignWaveIntroDialog.open) campaignWaveIntroDialog.show();
   continueCampaignWaveIntroControl.focus({ preventScroll: true });
-  playAudioAsset(intro.voiceSound);
+  if (intro.voiceSound) playAudioAsset(intro.voiceSound);
   return true;
 }
 
@@ -2332,9 +2315,9 @@ function activateSession(
   stopGameLoop();
   if (campaignWaveIntroDialog.open) campaignWaveIntroDialog.close();
   pendingCampaignWaveIntro = undefined;
-  campaignWaveIntroCursor = new CampaignWaveIntroCursor();
   const previousSession = session;
   session = nextSession;
+  campaignWaveIntroCursor = new CampaignWaveIntroCursor(waveIntrosForScenario(session.startRecord.scenarioId));
   if (!isOfficialCowGulchSession()) stopCowGulchBackgroundMusic();
   view = session.observe();
   pauseReason = undefined;

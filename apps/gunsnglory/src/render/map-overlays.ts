@@ -91,31 +91,36 @@ export function drawMapFrame(
 
 export function drawRouteInspectionOverlay(
   context: CanvasRenderingContext2D,
-  route: GameView['route'],
+  routes: GameView['routes'],
   viewport: MapViewport,
 ): void {
-  if (!route || route.length < 2) return;
+  if (!routes?.some((route) => route.length >= 2)) return;
   const toScreen = (x: number, y: number) => ({
     x: viewport.origin.x + x * viewport.tileSize,
     y: viewport.origin.y + y * viewport.tileSize,
   });
-  context.beginPath();
-  route.forEach((point, index) => {
-    const screen = toScreen(point.x, point.y);
-    if (index === 0) context.moveTo(screen.x, screen.y);
-    else context.lineTo(screen.x, screen.y);
-  });
-  context.strokeStyle = '#45e0d2';
-  context.lineWidth = Math.max(1.5, 2 * viewport.scaleFactor);
-  context.lineCap = 'round';
-  context.setLineDash([5 * viewport.scaleFactor, 3 * viewport.scaleFactor]);
-  context.stroke();
-  context.setLineDash([]);
-  for (const [index, point] of route.entries()) {
-    const screen = toScreen(point.x, point.y);
+  const colors = ['#45e0d2', '#f3c75b', '#e88aca', '#9bcb69'];
+  routes.forEach((route, routeIndex) => {
+    if (route.length < 2) return;
+    const color = colors[routeIndex % colors.length]!;
     context.beginPath();
-    context.arc(screen.x, screen.y, Math.max(2, 2.5 * viewport.scaleFactor), 0, Math.PI * 2);
-    context.fillStyle = index === route.length - 1 ? '#f17b56' : '#45e0d2';
-    context.fill();
-  }
+    route.forEach((point, index) => {
+      const screen = toScreen(point.x, point.y);
+      if (index === 0) context.moveTo(screen.x, screen.y);
+      else context.lineTo(screen.x, screen.y);
+    });
+    context.strokeStyle = color;
+    context.lineWidth = Math.max(1.5, 2 * viewport.scaleFactor);
+    context.lineCap = 'round';
+    context.setLineDash([5 * viewport.scaleFactor, 3 * viewport.scaleFactor]);
+    context.stroke();
+    context.setLineDash([]);
+    for (const [index, point] of route.entries()) {
+      const screen = toScreen(point.x, point.y);
+      context.beginPath();
+      context.arc(screen.x, screen.y, Math.max(2, 2.5 * viewport.scaleFactor), 0, Math.PI * 2);
+      context.fillStyle = index === route.length - 1 ? '#f17b56' : color;
+      context.fill();
+    }
+  });
 }

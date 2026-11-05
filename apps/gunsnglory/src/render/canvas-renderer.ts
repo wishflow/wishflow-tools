@@ -385,8 +385,8 @@ function drawEnemy(
   const image = images[asset];
   if (!image) throw new Error('Missing game image: ' + asset);
 
-  const sourceWidth = vehicle ? 48 : 16;
-  const sourceHeight = vehicle ? 60 : 24;
+  const sourceWidth = vehicle ? 48 : enemy.type === 3 ? 32 : 16;
+  const sourceHeight = vehicle ? 60 : enemy.type === 3 ? 40 : 24;
   const frameWidth = vehicle ? 32 : sourceWidth;
   const frameHeight = vehicle ? 40 : sourceHeight;
   const tileScale = viewport.scaleFactor;
@@ -402,7 +402,7 @@ function drawEnemy(
   const destinationWidth = right - left;
   const destinationHeight = bottom - top;
   const spriteIntersectsMap = intersectsMapPlayfield(left, top, right, bottom, viewport);
-  const frameCount = enemy.type === 8 ? 4 : 3;
+  const frameCount = enemy.type === 8 || enemy.type === 3 ? 4 : 3;
   const sourceX = deathFrame !== undefined
     ? deathFrame * sourceWidth
     : turn ? turn.frame * sourceWidth : (enemy.animationFrame % frameCount) * sourceWidth;
@@ -944,7 +944,7 @@ export function drawGame(
   context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
   context.clip();
   drawTiles(context, view.map.background, images, viewport);
-  if (showInspectionOverlay) drawRouteInspectionOverlay(context, view.route, viewport);
+  if (showInspectionOverlay) drawRouteInspectionOverlay(context, view.routes ?? (view.route ? [view.route] : undefined), viewport);
   drawWorldObjects(orderedDrawObjects, drawObjects, true);
   drawTiles(context, view.map.streets, images, viewport);
   context.restore();

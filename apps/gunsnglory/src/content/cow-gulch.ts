@@ -47,7 +47,7 @@ const commonDecorationCollisionBox = Object.freeze({ x: 1920, y: -1228, width: 3
 // TDM object codes emitted by GameObjectManager.createGameObjectsFromBasicMap for Cow Gulch.
 // Bounds are CollisionManager.createCollisionObject() rectangles translated from the source
 // object's cell-center anchor to this cell's top-left, in 7,680 fine units per map cell.
-const cowGulchDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
+export const cowGulchDecorationCodes: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
   68: { asset: 'e_1x1_cactus_a', collisionBoxFine: commonDecorationCollisionBox },
   69: { asset: 'e_1x1_rocks_a', collisionBoxFine: commonDecorationCollisionBox },
   70: { asset: 'e_1x1_rocks_b', collisionBoxFine: { x: 1306, y: -1920, width: 5068, height: 3840 } },

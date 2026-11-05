@@ -37,7 +37,7 @@ test('official Cow Gulch advances through its waves without a premature defeat o
   await expect(speed).toHaveValue('4');
   await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
   await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
-  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/locked/i);
+  await expect(page.getByTestId('campaign-stage-list')).toContainText(/locked/i);
   const waveStatus = page.getByTestId('wave-status');
   await expect(waveStatus).toContainText('Wave 1/8');
   await expect(waveStatus).toContainText('Cash $65');
@@ -57,10 +57,10 @@ test('official Cow Gulch advances through its waves without a premature defeat o
 
   await expect(waveStatus).toContainText(/Wave [2-8]\/8/);
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/1 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/2 stages complete');
   await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
   await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
-  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/locked/i);
+  await expect(page.getByTestId('campaign-stage-list')).toContainText(/locked/i);
 
   const profile = await page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {
     const request = indexedDB.open('gunsnglory-profile', 1);
@@ -83,6 +83,6 @@ test('official Cow Gulch advances through its waves without a premature defeat o
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50 ·');
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/1 stages complete');
-  await expect(page.getByTestId('campaign-next-level-status')).toContainText(/locked/i);
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/2 stages complete');
+  await expect(page.getByTestId('campaign-stage-list')).toContainText(/locked/i);
 });

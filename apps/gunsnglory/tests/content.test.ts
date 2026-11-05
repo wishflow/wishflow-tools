@@ -11,7 +11,7 @@ import {
   cowGulchUpgradeSampleContent,
 } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
-import { cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
+import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
 import { calculateMapViewport } from '../src/render/map-viewport';
 import { mapDecorationDestination } from '../src/render/canvas-renderer';
 import { createRoutePriorityMap } from '../src/game/route-priority';
@@ -113,6 +113,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: cowGulchLevelOneContent.title,
     globalLevel: 1,
     requiresCompletedScenarioIds: [],
+  }, {
+    scenarioId: apacheValleyLevelTwoContent.id,
+    contentVersion: apacheValleyLevelTwoContent.contentVersion,
+    title: apacheValleyLevelTwoContent.title,
+    globalLevel: 2,
+    requiresCompletedScenarioIds: [cowGulchLevelOneContent.id],
   }]);
 });
 

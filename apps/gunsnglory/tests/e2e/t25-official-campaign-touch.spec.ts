@@ -153,7 +153,8 @@ test('touch completes the official Cow Gulch level through real movement and nat
     await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
     await expect(waveStatus).toContainText('Wave 8/8');
     expect(readLives(await waveStatus.innerText())).toBeGreaterThan(0);
-    await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
+    await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/2 stages complete');
+    await expect(page.getByTestId('campaign-stage-button-2')).toBeEnabled();
     await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
 
     const profile = await readProfile(page);
@@ -163,7 +164,8 @@ test('touch completes the official Cow Gulch level through real movement and nat
 
     await page.reload();
     await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
-    await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/1 stages complete');
+    await expect(page.getByTestId('campaign-progress-summary')).toHaveText('1/2 stages complete');
+    await expect(page.getByTestId('campaign-stage-button-2')).toBeEnabled();
     await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
     await expect(page.getByTestId('settlement')).toBeHidden();
     expect(await readProfile(page)).toEqual(profile);
@@ -198,7 +200,7 @@ test('reloads an unfinished official Cow Gulch battle from wave one without savi
 
   await page.reload();
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/1 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/2 stages complete');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   await expect(page.getByTestId('settlement')).toBeHidden();

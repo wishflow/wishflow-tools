@@ -63,7 +63,7 @@ test('keeps the original level locked and upgrades the selected Gunslinger in th
   await expect(page.getByTestId('upgrade-unit')).toBeHidden();
 
   await page.getByRole('button', { name: 'Return to Cow Gulch sample' }).click();
-  await expect(page.getByTestId('scene-context')).toHaveText('NEW MEXICO · 01');
+  await expect(page.getByTestId('scene-context')).toHaveText('PROGRESS SAMPLE');
   await expect(page.getByTestId('upgrade-sample-status')).toContainText('upgrade limit of 0');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
 });
