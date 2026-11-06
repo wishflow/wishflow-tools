@@ -27,6 +27,7 @@ export const messages = {
   'Start one pioneer sample': { en: 'Start one pioneer sample', zh: '开始单个拓荒者样本' },
   'Test defeat with one life': { en: 'Test defeat with one life', zh: '测试一条生命耗尽败北' },
   'Open upgrade rules sample': { en: 'Open upgrade rules sample', zh: '打开升级规则测试样本' },
+  'Open Tech Town train sample': { en: 'Open Tech Town train sample', zh: '打开 Tech Town 列车测试样本' },
   'Return to Cow Gulch sample': { en: 'Return to Cow Gulch sample', zh: '返回牛溪谷原始样本' },
   'Upgrade selected Gunslinger': { en: 'Upgrade selected Gunslinger', zh: '升级已选枪手' },
   'Confirm upgrade': { en: 'Confirm upgrade', zh: '确认升级' },

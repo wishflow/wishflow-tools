@@ -8,6 +8,7 @@ import {
 } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
 import { gamblerUiLowCashSampleContent, gamblerUiSampleContent } from '../content/gambler-ui-sample';
+import { techTownTrainTestContent } from '../content/tech-town-train-sample';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -42,6 +43,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
   [gamblerUiLowCashSampleContent.id]: gamblerUiLowCashSampleContent,
+  [techTownTrainTestContent.id]: techTownTrainTestContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
   [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,
 };

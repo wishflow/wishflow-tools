@@ -128,6 +128,14 @@ export interface ScenarioUnit {
   id: string;
   /** Original map-object activity: 2 is pool-spawned, 4 is sleeping, and 5 is hired. */
   activity?: 2 | 4 | 5;
+  /** Units with the same group ID share one drag target and move as a rigid row. */
+  movementGroupId?: string;
+  /** Restricts a movement group to its original horizontal rail axis. */
+  movementAxis?: 'horizontal';
+  /** Original collision bounds relative to this unit's fine position. */
+  collisionBoxFine?: Rectangle;
+  /** Hides the default sleeping bubble for map objects that use activity 4 for another purpose. */
+  showSleepingEffect?: boolean;
   type: string;
   /** Price for activating this existing activity-4 map object. */
   hirePrice?: number;
@@ -1119,7 +1127,9 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
 
   return {
     ...clone(definition),
-    ...(definition.activity === 4 ? { sleepingAnimationFrame: Math.floor(elapsedMs / 200) % 3 } : {}),
+    ...(definition.activity === 4 && definition.showSleepingEffect !== false
+      ? { sleepingAnimationFrame: Math.floor(elapsedMs / 200) % 3 }
+      : {}),
     movementSpeedFinePer100Ms: unit.movementSpeedFinePer100Ms,
     ...(unit.weapon ? { weapon: clone(unit.weapon) } : {}),
     ...(unit.bonusAttribute !== undefined ? {
@@ -1336,15 +1346,22 @@ function mapBlocksUnit(
   scenario: ScenarioContent,
   fineX: number,
   fineY: number,
+  collisionBoxFine?: Rectangle,
 ): boolean {
   const grid = scenario.originalTileGrid;
   const width = scenario.map.width;
   const height = scenario.map.height;
+  const collider = collisionBoxFine ?? {
+    x: UNIT_COLLIDER_START_X,
+    y: UNIT_COLLIDER_START_Y,
+    width: UNIT_COLLIDER_WIDTH,
+    height: UNIT_COLLIDER_HEIGHT,
+  };
   const corners = [
-    { x: fineX + UNIT_COLLIDER_START_X, y: fineY + UNIT_COLLIDER_START_Y },
-    { x: fineX + UNIT_COLLIDER_START_X + UNIT_COLLIDER_WIDTH, y: fineY + UNIT_COLLIDER_START_Y + UNIT_COLLIDER_HEIGHT },
-    { x: fineX + UNIT_COLLIDER_START_X, y: fineY + UNIT_COLLIDER_START_Y + UNIT_COLLIDER_HEIGHT },
-    { x: fineX + UNIT_COLLIDER_START_X + UNIT_COLLIDER_WIDTH, y: fineY + UNIT_COLLIDER_START_Y },
+    { x: fineX + collider.x, y: fineY + collider.y },
+    { x: fineX + collider.x + collider.width, y: fineY + collider.y + collider.height },
+    { x: fineX + collider.x, y: fineY + collider.y + collider.height },
+    { x: fineX + collider.x + collider.width, y: fineY + collider.y },
   ];
 
   for (const corner of corners) {
@@ -1359,10 +1376,10 @@ function mapBlocksUnit(
     if (isBackgroundCollisionCode(backgroundCollisionCode(rawTile, grid, x, y)) && streetLayerCode === 0) return true;
   }
 
-  const unitLeft = fineX + UNIT_COLLIDER_START_X;
-  const unitTop = fineY + UNIT_COLLIDER_START_Y;
-  const unitRight = unitLeft + UNIT_COLLIDER_WIDTH;
-  const unitBottom = unitTop + UNIT_COLLIDER_HEIGHT;
+  const unitLeft = fineX + collider.x;
+  const unitTop = fineY + collider.y;
+  const unitRight = unitLeft + collider.width;
+  const unitBottom = unitTop + collider.height;
   return (scenario.map.decorations ?? []).some(({ cell, collisionBoxFine }) => {
     if (!collisionBoxFine) return false;
     const decorationLeft = (cell.x * FINE_UNITS_PER_CELL) + collisionBoxFine.x;
@@ -1504,6 +1521,52 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number,
     && playerAxisWithinOriginalMapBounds(scenario, 'y', nextY, tileSizePixels)
     && !mapBlocksUnit(scenario, unit.positionFine.x, nextY)) {
     unit.positionFine.y = nextY;
+  }
+}
+
+function clearGroupMovementTarget(group: readonly MutableUnit[]): void {
+  for (const unit of group) unit.movementTargetFine = undefined;
+}
+
+function moveUnitGroup(
+  group: readonly MutableUnit[],
+  leader: MutableUnit,
+  scenario: ScenarioContent,
+  deltaMs: number,
+  tileSizePixels: number,
+): void {
+  const target = leader.movementTargetFine;
+  if (!target || deltaMs === 0) return;
+  if (group.some(({ definition }) => definition.movementAxis !== 'horizontal')) {
+    clearGroupMovementTarget(group);
+    return;
+  }
+
+  const dx = target.x - leader.positionFine.x;
+  if (Math.abs(dx) < UNIT_STOP_TOLERANCE_FINE) {
+    clearGroupMovementTarget(group);
+    return;
+  }
+
+  const speed = Math.trunc(leader.movementSpeedFinePer100Ms
+    * (leader.bonusAttribute === 3 ? 150 : 100) / 100);
+  const requestedDelta = Math.trunc((Math.sign(dx) * speed * deltaMs) / 100);
+  const deltaX = Math.sign(requestedDelta) * Math.min(Math.abs(dx), Math.abs(requestedDelta));
+  if (deltaX === 0) return;
+
+  const blocked = group.some((unit) => {
+    const nextX = unit.positionFine.x + deltaX;
+    return !playerAxisWithinOriginalMapBounds(scenario, 'x', nextX, tileSizePixels)
+      || mapBlocksUnit(scenario, nextX, unit.positionFine.y, unit.definition.collisionBoxFine);
+  });
+  if (blocked) {
+    clearGroupMovementTarget(group);
+    return;
+  }
+
+  for (const unit of group) unit.positionFine.x += deltaX;
+  if (Math.abs(target.x - leader.positionFine.x) < UNIT_STOP_TOLERANCE_FINE) {
+    clearGroupMovementTarget(group);
   }
 }
 
@@ -3372,10 +3435,22 @@ export function createGame(options: {
             if (command.intent.type === 'move-unit') {
               const selectedUnit = units.find((unit) => unit.selected && isActivePlayerUnit(unit));
               if (selectedUnit) {
-                selectedUnit.movementTargetFine = {
-                  x: Math.round(Math.max(-0.5, Math.min(scenario.map.width + 0.5, command.intent.targetX)) * FINE_UNITS_PER_CELL),
-                  y: Math.round(Math.max(-0.5, Math.min(scenario.map.height + 0.5, command.intent.targetY)) * FINE_UNITS_PER_CELL),
-                };
+                const targetX = Math.round(Math.max(-0.5, Math.min(scenario.map.width + 0.5, command.intent.targetX)) * FINE_UNITS_PER_CELL);
+                const targetY = Math.round(Math.max(-0.5, Math.min(scenario.map.height + 0.5, command.intent.targetY)) * FINE_UNITS_PER_CELL);
+                if (selectedUnit.definition.movementGroupId) {
+                  const group = units.filter(({ definition }) => (
+                    definition.movementGroupId === selectedUnit.definition.movementGroupId
+                  ));
+                  const deltaX = targetX - selectedUnit.positionFine.x;
+                  for (const member of group) {
+                    member.movementTargetFine = {
+                      x: member.positionFine.x + deltaX,
+                      y: member.positionFine.y,
+                    };
+                  }
+                } else {
+                  selectedUnit.movementTargetFine = { x: targetX, y: targetY };
+                }
               }
               continue;
             }
@@ -3428,6 +3503,22 @@ export function createGame(options: {
           }
           units.push(...spawnedGamblerPrizes);
 
+          const previousPositions = new Map(units.map((unit) => [unit, { ...unit.positionFine }]));
+          const movedGroupIds = new Set<string>();
+          for (const unit of units) {
+            const groupId = unit.definition.movementGroupId;
+            if (groupId) {
+              if (movedGroupIds.has(groupId)) continue;
+              movedGroupIds.add(groupId);
+              const group = units.filter(({ definition }) => definition.movementGroupId === groupId);
+              const leader = group.find((member) => member.selected && member.movementTargetFine)
+                ?? group.find((member) => member.movementTargetFine);
+              if (leader) moveUnitGroup(group, leader, scenario, deltaMs, tileSizePixels);
+              continue;
+            }
+            moveUnit(unit, scenario, deltaMs, tileSizePixels);
+          }
+
           for (const unit of units) {
             if (unit.bonusAttribute !== undefined) {
               if ((unit.bonusRemainingMs ?? 0) > 0) {
@@ -3437,12 +3528,11 @@ export function createGame(options: {
                 unit.bonusRemainingMs = undefined;
               }
             }
-            const previousPosition = { ...unit.positionFine };
-            moveUnit(unit, scenario, deltaMs, tileSizePixels);
+            const previousPosition = previousPositions.get(unit) ?? { ...unit.positionFine };
             const deltaX = unit.positionFine.x - previousPosition.x;
             const deltaY = unit.positionFine.y - previousPosition.y;
             const didMove = deltaX !== 0 || deltaY !== 0;
-            if (didMove) advanceWalkingAnimation(unit, deltaX, deltaY);
+            if (didMove && !unit.definition.movementGroupId) advanceWalkingAnimation(unit, deltaX, deltaY);
             advanceShootingAnimation(unit, deltaMs, didMove);
             if (!didMove || !wave || !campaignBonusCratePool || !isActivePlayerUnit(unit)) continue;
             for (const crate of campaignBonusCratePool.crates) {

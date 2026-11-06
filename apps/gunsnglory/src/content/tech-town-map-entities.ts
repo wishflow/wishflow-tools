@@ -1,6 +1,6 @@
 import type { MapDecoration, ScenarioUnit } from '../game';
 import { createTechTownMapScene } from './tech-town-scene';
-import { createTechTownBaseUnits } from './tech-town-units';
+import { createTechTownBaseUnits, createTechTownTrainUnits } from './tech-town-units';
 import type { TechTownUnitTypeId } from './tech-town-map-units';
 
 type TechTownScene = ReturnType<typeof createTechTownMapScene>;
@@ -22,9 +22,12 @@ export function createTechTownMapContent(
   isUnitUnlocked: (unitTypeId: TechTownUnitTypeId) => boolean,
 ): { units: ScenarioUnit[]; scene: TechTownScene } {
   const gamblerUnlocked = isUnitUnlocked(9);
-  const units = createTechTownBaseUnits((unitTypeId) => (
-    unitTypeId === 9 ? gamblerUnlocked : isUnitUnlocked(unitTypeId)
-  ));
+  const units = [
+    ...createTechTownBaseUnits((unitTypeId) => (
+      unitTypeId === 9 ? gamblerUnlocked : isUnitUnlocked(unitTypeId)
+    )),
+    ...createTechTownTrainUnits(),
+  ];
   const scene = createTechTownMapScene({ gamblerUnlocked });
   assertTechTownGamblerCasinoPair(units, scene.decorations ?? []);
   return { units, scene };

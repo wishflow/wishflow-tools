@@ -16,6 +16,7 @@ import {
 import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
 import { apacheValleyContent } from './content/apache-valley';
 import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
+import { techTownTrainTestContent } from './content/tech-town-train-sample';
 import { gamblerDialogAssets } from './content/gambler-dialog-assets';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages } from './content/official-campaign';
@@ -227,6 +228,7 @@ app.innerHTML = [
   '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
   '      <button type="button" data-action="start-gambler-sample">Open Gambler UI sample</button>',
   '      <button type="button" data-action="start-gambler-low-cash-sample">Open low-cash Gambler sample</button>',
+  '      <button type="button" data-testid="open-tech-town-train-sample" data-action="start-tech-town-train-sample" data-locale="Open Tech Town train sample">Open Tech Town train sample</button>',
   '      <button type="button" data-testid="open-single-wave-sample" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
@@ -396,6 +398,7 @@ const playGamblerButton = app.querySelector<HTMLButtonElement>('[data-testid="pl
 const closeGamblerButton = app.querySelector<HTMLButtonElement>('[data-testid="close-gambler"]');
 const startGamblerSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-gambler-sample"]');
 const startGamblerLowCashSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-gambler-low-cash-sample"]');
+const startTechTownTrainSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-tech-town-train-sample"]');
 const campaignWaveIntroDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-wave-intro"]');
 const campaignWaveIntroParchmentElement = app.querySelector<HTMLImageElement>('[data-testid="campaign-wave-intro-parchment"]');
 const campaignWaveIntroWaveElement = app.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-wave"]');
@@ -452,7 +455,7 @@ if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || 
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
   || !gamblerDialogElement || !gamblerDialogTitleElement || !gamblerDialogMessageElement || !gamblerPortraitElement
   || !gamblerCashElement || !gamblerCardsElement || !gamblerResultElement || !playGamblerButton || !closeGamblerButton
-  || !startGamblerSampleButton || !startGamblerLowCashSampleButton
+  || !startGamblerSampleButton || !startGamblerLowCashSampleButton || !startTechTownTrainSampleButton
   || !campaignWaveIntroDialogElement || !campaignWaveIntroParchmentElement || !campaignWaveIntroWaveElement || !campaignWaveIntroTitleElement
   || !campaignWaveIntroTextElement || !campaignWaveIntroPortraitElement || !campaignWaveIntroConfirmIconElement
   || !campaignWaveIntroContinueLabelElement || !retryCampaignWaveIntroVoiceButtonElement
@@ -564,6 +567,7 @@ const playGamblerControl: HTMLButtonElement = playGamblerButton;
 const closeGamblerControl: HTMLButtonElement = closeGamblerButton;
 const startGamblerSampleControl: HTMLButtonElement = startGamblerSampleButton;
 const startGamblerLowCashSampleControl: HTMLButtonElement = startGamblerLowCashSampleButton;
+const startTechTownTrainSampleControl: HTMLButtonElement = startTechTownTrainSampleButton;
 const campaignWaveIntroDialog: HTMLDialogElement = campaignWaveIntroDialogElement;
 const campaignWaveIntroParchment: HTMLImageElement = campaignWaveIntroParchmentElement;
 const campaignWaveIntroWave: HTMLElement = campaignWaveIntroWaveElement;
@@ -728,6 +732,7 @@ const languageMessages = {
     campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
     sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
     sceneCaption: (scenarioId: string) => {
+      if (scenarioId === techTownTrainTestContent.id) return 'Developer-only Tech Town train sample: move the original five-part train; it does not start a battle or change campaign progress.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -750,6 +755,9 @@ const languageMessages = {
       indian: 'Native',
       sniper: 'Markswoman',
       grandpa: 'Scattergun Grandpa',
+      'train-10': 'Train locomotive',
+      'train-11': 'Train locomotive',
+      'train-12': 'Train wagon',
       pyromaniac: 'Pyromaniac',
       salesman: 'Snake Oil Salesman',
       gambler: 'Card Gambler',
@@ -928,6 +936,7 @@ const languageMessages = {
     campaignDifficultyUnlocked: '困难模式已解锁。',
     sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
     sceneCaption: (scenarioId: string) => {
+      if (scenarioId === techTownTrainTestContent.id) return '仅供开发测试的 Tech Town 列车样例：移动原版五节列车，不开启战斗，也不修改正式进度。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -950,6 +959,9 @@ const languageMessages = {
       indian: '原住民',
       sniper: '女神枪手',
       grandpa: '散弹枪爷爷',
+      'train-10': '列车机车',
+      'train-11': '列车机车',
+      'train-12': '列车车厢',
       pyromaniac: '纵火狂',
       salesman: '蛇油推销员',
       gambler: '纸牌赌徒',
@@ -2237,6 +2249,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       : wave.totalWaves
         ? messages.startCampaignWave(wave.number, wave.totalWaves)
         : messages.startSample;
+  } else {
+    waveStatus.textContent = '';
+    startWaveControl.textContent = messages.startSample;
   }
   const combatText = lastDefeatFeedback
     .map(({ enemyType, count, cashReward }) => messages.defeated(enemyType, count, cashReward))
@@ -2297,19 +2312,26 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? messages.originalCampaignNotice
     : messages.originalWaveNotice;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
+  const techTownTrainSample = view.scenarioId === techTownTrainTestContent.id;
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
+    : techTownTrainSample
+      ? techTownTrainTestContent.title[language]
     : originalWaveScenario
       ? originalWaveContent.title[language]
     : activeCampaignStage?.title[language] ?? 'Cow Gulch';
   sceneContext.textContent = upgradeScenario
     ? messages.upgradeSceneContext
+    : techTownTrainSample
+      ? language === 'zh' ? '开发测试 · 列车' : 'DEVELOPER TEST · TRAIN'
     : originalWaveScenario
       ? messages.originalWaveContext
     : activeCampaignStage ? `NEW MEXICO · ${String(activeCampaignStage.globalLevel).padStart(2, '0')}`
       : language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE';
   sceneCaption.textContent = messages.sceneCaption(view.scenarioId);
-  upgradeSampleStatus.textContent = upgradeScenario
+  upgradeSampleStatus.textContent = techTownTrainSample
+    ? ''
+    : upgradeScenario
     ? messages.debugUpgradeFixture
     : originalWaveScenario ? originalWaveNotice
       : activeCampaignStage?.scenarioId === apacheValleyLevelTwoContent.id
@@ -2400,7 +2422,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   }
   const waveNotStarted = view.wave?.phase === 'not-started';
   const campaignExhausted = view.wave?.phase === 'complete' && view.wave.totalWaves !== undefined && !view.wave.settlement;
-  startWaveControl.hidden = Boolean(view.wave?.totalWaves && !campaignExhausted);
+  startWaveControl.hidden = !view.wave || Boolean(view.wave.totalWaves && !campaignExhausted);
   startWaveControl.disabled = assetLoadFailureNames.length > 0 || actionLocked || !waveNotStarted || view.paused;
   recruitControl.disabled = actionLocked || Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
@@ -2411,7 +2433,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   restartControl.textContent = activeCampaignStage ? messages.restartLevel : messages.restartSample;
   startDefeatControl.disabled = actionLocked || !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
   clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
-  const canvasLabel = upgradeScenario
+  const canvasLabel = techTownTrainSample
+    ? language === 'zh' ? 'Tech Town 列车测试地图' : 'Tech Town train test map'
+    : upgradeScenario
     ? language === 'zh' ? '牛溪谷升级规则测试地图' : 'Cow Gulch upgrade rules test map'
     : activeCampaignStage
       ? language === 'zh' ? `${activeCampaignStage.title[language]}游戏地图` : `${activeCampaignStage.title[language]} game map`
@@ -2685,6 +2709,10 @@ function currentGameStepEnvironment(): { tileSizePixels: number } {
 
 const assetNames = new Set([
   ...techTownMapEntityAssets,
+  ...techTownTrainTestContent.map.background.map(({ asset }) => asset),
+  ...techTownTrainTestContent.map.streets.map(({ asset }) => asset),
+  ...(techTownTrainTestContent.map.decorations ?? []).map(({ asset }) => asset),
+  ...techTownTrainTestContent.units.map(({ asset }) => asset),
   ...gamblerDialogAssets,
   ...view.map.background.map((tile) => tile.asset),
   ...view.map.streets.map((tile) => tile.asset),
@@ -4038,6 +4066,9 @@ startGamblerSampleControl.addEventListener('click', () => {
 });
 startGamblerLowCashSampleControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen('gambler-ui-low-cash-sample', 'debug'));
+});
+startTechTownTrainSampleControl.addEventListener('click', () => {
+  void replaceSession(requestScenarioOpen(techTownTrainTestContent.id, 'debug'));
 });
 returnCowGulchControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen(cowGulchP1aSampleContent.id, 'formal'));

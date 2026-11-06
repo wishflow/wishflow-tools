@@ -1,7 +1,11 @@
 import map from './new-mexico-04.json';
 import { createSleepingMapUnitsFromGrid } from './cow-gulch';
 import { createAnchoredMapRender, createSleepingFortKaboomUnit, type FortKaboomUnitType } from './fort-kaboom-unit-designs';
-import { createTechTownFreshGameUnitPlacements, type TechTownUnitTypeId } from './tech-town-map-units';
+import {
+  createTechTownFreshGameUnitPlacements,
+  createTechTownTrainPlacements,
+  type TechTownUnitTypeId,
+} from './tech-town-map-units';
 import { mexicanWeapon } from './player-unit-weapons';
 import type { ScenarioUnit } from '../game';
 
@@ -161,4 +165,33 @@ export function createTechTownBaseUnits(isUnitUnlocked: (unitTypeId: TechTownUni
   }
 
   return units.sort((left, right) => left.cell.y - right.cell.y || left.cell.x - right.cell.x);
+}
+
+/** Builds the original five-piece horizontal train as a shared movement group. */
+export function createTechTownTrainUnits(): ScenarioUnit[] {
+  return createTechTownTrainPlacements().map(({ unitTypeId, activity, asset, cell }) => {
+    const renderHeight = asset === 'lok_wagon_hori' ? 1 : 1.5;
+    const frame = { x: 0, y: 0, width: 48, height: renderHeight === 1 ? 48 : 72 };
+    const render = {
+      x: cell.x,
+      y: cell.y + 1 - renderHeight,
+      width: 1,
+      height: renderHeight,
+    };
+    return {
+      id: `tech-town-train-${unitTypeId}-${cell.x}`,
+      type: `train-${unitTypeId}`,
+      activity,
+      movementGroupId: 'tech-town-train',
+      movementAxis: 'horizontal',
+      collisionBoxFine: { x: -3840, y: -4608, width: 7680, height: 4608 },
+      showSleepingEffect: false,
+      cell,
+      movementSpeedFinePer100Ms: 3000,
+      asset,
+      frame,
+      render,
+      hitArea: { ...render },
+    };
+  });
 }

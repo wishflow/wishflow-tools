@@ -167,10 +167,10 @@ function drawUnit(
     );
   }
 
-  if (unit.activity === 4) {
+  if (unit.sleepingAnimationFrame !== undefined) {
     const effectImage = images.sfx_sleeping;
     if (!effectImage) throw new Error('Missing game image: sfx_sleeping');
-    const animationFrame = Math.max(0, Math.trunc(unit.sleepingAnimationFrame ?? 0)) % SLEEPING_EFFECT_FRAME.count;
+    const animationFrame = Math.max(0, Math.trunc(unit.sleepingAnimationFrame)) % SLEEPING_EFFECT_FRAME.count;
     const feetX = viewport.origin.x + (unit.positionFine.x / 240) * viewport.scaleFactor;
     const feetY = viewport.origin.y + (unit.positionFine.y / 240) * viewport.scaleFactor;
     const effectScale = viewport.scaleFactor;
