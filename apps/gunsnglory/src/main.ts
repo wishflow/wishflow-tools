@@ -18,7 +18,7 @@ import { apacheValleyContent } from './content/apache-valley';
 import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
 import { techTownTrainTestContent } from './content/tech-town-train-sample';
 import { gamblerDialogAssets } from './content/gambler-dialog-assets';
-import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
+import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas, setGameViewport } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages } from './content/official-campaign';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
@@ -38,7 +38,7 @@ import {
   screenToMapCell,
   type MapCamera,
 } from './render/map-viewport';
-import { fitAspectViewport, toLogicalPoint } from './render/viewport';
+import { fitAspectViewport, fitLogicalViewportToScreen, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import { chooseSoundVariation, SoundEffectsManager } from './audio/sfx-manager';
@@ -317,6 +317,7 @@ app.innerHTML = [
 registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
+const gameFrameElement = app.querySelector<HTMLElement>('.game-frame');
 const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
 const fullscreenToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="fullscreen-toggle"]');
@@ -445,7 +446,7 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
+if (!canvasElement || !gameFrameElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
   || !fullscreenStatusElement || !mapZoomControlsElement || !mapZoomOutButtonElement
   || !mapZoomInButtonElement || !mapZoomResetButtonElement || !mapZoomLevelElement
   || !sceneHeadingElement || !gameToolbarElement
@@ -493,6 +494,7 @@ if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || 
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
+const gameFrame: HTMLElement = gameFrameElement;
 const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
 const fullscreenToggleButton: HTMLButtonElement = fullscreenToggleButtonElement;
@@ -2741,8 +2743,9 @@ function openMapHireConfirmation(unitId: string): void {
 }
 
 function redraw(resize = false): void {
+  const viewportChanged = syncGameViewportToCanvas();
   const displayPixelScale = getDisplayPixelScale();
-  if (resize || !context) context = resizeCanvas(canvas, displayPixelScale);
+  if (resize || viewportChanged || !context) context = resizeCanvas(canvas, displayPixelScale);
   try {
     drawGame(context, view, images, displayPixelScale, mapCamera, showInspectionOverlay, getLanguage());
   } catch (error) {
@@ -2760,6 +2763,21 @@ function redraw(resize = false): void {
     context.fillText(languageMessages[getLanguage()].canvasAssetFallback, GAME_VIEWPORT.width / 2, GAME_VIEWPORT.height / 2);
     context.restore();
   }
+}
+
+function syncGameViewportToCanvas(): boolean {
+  const logicalViewport = document.fullscreenElement === gameFrame
+    ? fitLogicalViewportToScreen(
+      canvas.clientWidth,
+      canvas.clientHeight,
+      BASE_GAME_VIEWPORT.width,
+      BASE_GAME_VIEWPORT.height,
+    )
+    : BASE_GAME_VIEWPORT;
+  const changed = Math.abs(GAME_VIEWPORT.width - logicalViewport.width) >= 0.01
+    || Math.abs(GAME_VIEWPORT.height - logicalViewport.height) >= 0.01;
+  if (changed) setGameViewport(logicalViewport.width, logicalViewport.height);
+  return changed;
 }
 
 function getDisplayPixelScale(): number {
@@ -2923,9 +2941,6 @@ assetLoadFailureNames = failedAssets;
 redraw(true);
 renderStatus();
 
-const frame = app.querySelector<HTMLElement>('.game-frame');
-if (!frame) throw new Error('Game frame is missing');
-const gameFrame: HTMLElement = frame;
 type FullscreenStatusKey =
   | 'fullscreenUnsupported'
   | 'fullscreenRequestFailed'
@@ -2936,6 +2951,8 @@ let fullscreenStatusKey: FullscreenStatusKey | undefined;
 
 function renderFullscreenControl(): void {
   const fullscreenActive = document.fullscreenElement === gameFrame;
+  gameFrame.classList.toggle('is-fullscreen', fullscreenActive);
+  document.body.classList.toggle('gng-game-fullscreen', fullscreenActive);
   const label = fullscreenActive
     ? languageMessages[getLanguage()].fullscreenExit
     : languageMessages[getLanguage()].fullscreenEnter;
@@ -3023,8 +3040,8 @@ document.addEventListener('fullscreenchange', () => {
 window.addEventListener('orientationchange', () => redraw(true));
 screen.orientation?.addEventListener('change', () => redraw(true));
 
-if (frame && typeof ResizeObserver !== 'undefined') {
-  new ResizeObserver(() => redraw(true)).observe(frame);
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => redraw(true)).observe(gameFrame);
 }
 window.addEventListener('resize', () => redraw(true));
 
@@ -3367,7 +3384,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   stopGameLoop();
   pauseReason = 'wave-intro';
   view = session.pause();
-  frame?.scrollIntoView({ block: 'center', behavior: 'instant' });
+  gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
   renderCampaignWaveIntro();
   if (!campaignWaveIntroDialog.open) campaignWaveIntroDialog.show();
   continueCampaignWaveIntroControl.focus({ preventScroll: true });
@@ -3385,7 +3402,7 @@ function continueCampaignWaveIntro(): void {
   campaignWaveIntroDialog.close();
   playBackgroundMusic();
   if (pauseReason !== 'wave-intro' || !view.paused || document.hidden) return;
-  frame?.scrollIntoView({ block: 'center', behavior: 'instant' });
+  gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
   pauseReason = undefined;
   view = session.resume();
   renderStatus();

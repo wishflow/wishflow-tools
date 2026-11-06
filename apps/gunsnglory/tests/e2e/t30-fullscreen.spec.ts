@@ -1,4 +1,7 @@
 import { expect, test } from './auto-continue-fixtures';
+import { readFile } from 'node:fs/promises';
+
+const sharedWidgetStyles = await readFile(new URL('../../../../site/usagi-widget.css', import.meta.url), 'utf8');
 
 type FullscreenTestWindow = Window & {
   __gngFullscreenElement?: Element | null;
@@ -82,6 +85,64 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByTestId('fullscreen-status')).toBeHidden();
     expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  } finally {
+    await context.close();
+  }
+});
+
+test('fills the fullscreen viewport and keeps the shared Usagi widget above the game only in window mode', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await context.newPage();
+  await installFullscreenMock(page);
+  try {
+    await page.goto('/');
+    await page.addStyleTag({ content: sharedWidgetStyles });
+    await page.evaluate(() => {
+      const widget = document.createElement('button');
+      widget.id = 'usagi-layer-test';
+      widget.className = 'usagi-widget';
+      widget.setAttribute('aria-label', 'Usagi test widget');
+      widget.style.left = '0';
+      widget.style.top = '0';
+      widget.textContent = 'Usagi';
+      widget.addEventListener('click', () => { widget.dataset.clicked = 'true'; });
+      document.body.append(widget);
+    });
+
+    const widget = page.locator('#usagi-layer-test');
+    await expect(widget).toBeVisible();
+    expect(await page.evaluate(() => {
+      const pet = document.querySelector<HTMLElement>('#usagi-layer-test');
+      if (!pet) return false;
+      const bounds = pet.getBoundingClientRect();
+      return document.elementFromPoint(bounds.x + 8, bounds.y + 8) === pet;
+    })).toBe(true);
+    await widget.click();
+    await expect(widget).toHaveAttribute('data-clicked', 'true');
+
+    await page.getByTestId('fullscreen-toggle').click();
+    const frame = await page.locator('.game-frame').boundingBox();
+    expect(frame).toBeTruthy();
+    expect(Math.abs(frame!.x)).toBeLessThan(1);
+    expect(Math.abs(frame!.y)).toBeLessThan(1);
+    expect(Math.abs(frame!.width - 844)).toBeLessThan(1);
+    expect(Math.abs(frame!.height - 390)).toBeLessThan(1);
+    await expect(widget).toBeHidden();
+    expect(await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.width / canvas.height))
+      .toBeCloseTo(844 / 390, 2);
+
+    await page.getByTestId('fullscreen-toggle').click();
+    await expect(widget).toBeVisible();
+    expect(await page.evaluate(() => {
+      const pet = document.querySelector<HTMLElement>('#usagi-layer-test');
+      if (!pet) return false;
+      const bounds = pet.getBoundingClientRect();
+      return document.elementFromPoint(bounds.x + 8, bounds.y + 8) === pet;
+    })).toBe(true);
   } finally {
     await context.close();
   }

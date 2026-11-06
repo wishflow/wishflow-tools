@@ -338,7 +338,7 @@ body {
 
 .game-frame {
   position: relative;
-  z-index: 81;
+  z-index: 79;
   width: min(100%, 1024px);
   aspect-ratio: 16 / 9;
   container-type: inline-size;
@@ -420,24 +420,30 @@ body {
   display: none;
 }
 
-.game-frame:fullscreen {
+.game-frame:fullscreen,
+.game-frame.is-fullscreen {
   position: fixed;
   inset: 0;
   z-index: 2147483647;
-  width: min(100vw, 177.7778vh);
-  height: min(100vh, 56.25vw);
-  width: min(100dvw, 177.7778dvh);
-  height: min(100dvh, 56.25dvw);
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
   max-width: none;
-  aspect-ratio: 16 / 9;
-  margin: auto;
+  aspect-ratio: auto;
+  margin: 0;
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
-.game-frame:fullscreen::backdrop {
+.game-frame:fullscreen::backdrop,
+.game-frame.is-fullscreen::backdrop {
   background: #100d09;
+}
+
+body.gng-game-fullscreen .usagi-widget {
+  display: none;
 }
 
 .game-frame canvas:focus-visible {
