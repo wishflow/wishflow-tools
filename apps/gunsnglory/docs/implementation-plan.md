@@ -9,7 +9,7 @@
 - 正式关卡 **3/60**：Cow Gulch、Apache Valley、Fort Kaboom 已完成真实战役验收。
 - map03 与移动端工具栏修复已完成。最近一次完整检查通过：类型检查、285 项单测、生产构建和 91/91 E2E；该结果早于当前 map04 开发批次，本批收口时再运行全套检查，不逐切片重复运行。
 - 公开版本仍是 master 上的 e922c3f。当前开发分支另有尚未集成的已验收提交；整批完成前不将本地代码称为已发布。
-- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭、Pyromaniac 地图单位、Salesman 毒瓶，以及 Gambler/Casino 地图实体已按 APK 完成切片验证。Gambler 纯规则、共享随机和 Game 会话结算均已接入并通过定向测试；窗口内赌场交互仍未接入，当前下一项为 3.4e。
+- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭、Pyromaniac 地图单位、Salesman 毒瓶，以及 Gambler/Casino 地图实体已按 APK 完成切片验证。Gambler 规则、共享随机、Game 会话结算和窗口内赌场交互均已接入并通过定向验证；交互使用独立调试样例，尚不代表正式 Tech Town 战役。下一步为检查点 A：特殊单位整合核对。
 - 原始 32×24 TDM、四条方向场路线、全部相关标记坐标，以及 768 个地形图块和 147 个道路/铁路绘制项已导入并通过定向测试。`tech-town-scene.ts` 按 APK 码位组装 52 个非赌场静态装饰/建筑；解锁时再加入 Casino。资源锚点与 hdpi 原图已核对；此场景尚未接入正式战役。
 - 本轮核对更正了地图单位码位：96–101 是 type 1–6 的休眠单位（activity 4）；104–109 是 type 1–6 的活动单位（activity 5），本图仅有 105，即 type 2 Mexican；130、131 分别是 type 35 Pyromaniac 与 type 36 Salesman 的休眠单位；132 是活动 Gambler（type 9）。这些对象仅在新局的 `fromLoadGame=false` 分支创建，并均受 `GameObjectUnit.create()` 的解锁检查。code 150 是仅在 type 9 解锁时创建的 Casino 生成点。JADX 对该方法的 Java `switch` 反编译存在控制流错误；此处以 APK 中对应 DEX 指令的 smali 分支为准，不照抄该方法的 Java 伪源码。
 - `GameObjectUnit.isUnlocked()` 按 `unlockUnitData[type]` 判断：当前关卡达到门槛或档案已完成对应后续关卡时解锁。APK 的门槛数组为 Grandpa/type 6：21 或完成 30；Sniper/type 5：31 或完成 40；Pyromaniac/type 35：41 或完成 50；Salesman/type 36：51 或完成 60；Gambler/type 9：41 或完成 50。`hasAllUnitsUnlock()` 是 IAP 全单位解锁，本网页不提供该付费旁路。首次进入 Tech Town（global level 4）时，code 100、101、130、131、132 和 Casino code 150 均因未解锁而不创建；原始网格有 26 个休眠标记，不等于当时实际生成 26 个单位。
@@ -34,7 +34,6 @@
 
 | 步骤 | 范围、依赖和预计改动 | 验收条件 | 针对性验证 |
 | --- | --- | --- | --- |
-| 3.4e 窗口内赌场交互与牌面揭示 | 依赖3.4d。输入仍只通过 GameSession intent 结算；选中 Gambler 后在游戏窗口内打开下注/缺钱/冷却提示，取消不发 intent，确认发唯一 `play-gambler` intent。结果弹窗直接读取 3.4d 已记录的奖项和五张牌，不引入 UI 随机；按 `GamblerDialog`、`GamblerCardView`、`GamblerResults` 对齐牌面、结果标签、揭示顺序、按钮和关闭行为，并只播放原版可达音频。 | ① 点 Gambler 打开赌场交互，不移动、不雇佣、不升级；取消完全不影响战局。② 确认后一次结算并展示与 replay state 一致的牌和结果；快速双击/重开弹窗不重复下注。③ 缺钱与冷却提示、关闭状态、五张牌布局、桌面/触屏目标和中英文均正确，弹窗始终限制在游戏窗口内。 | 新增 Gambler DOM/交互测试及 `tests/e2e/t34-tech-town-gambler.spec.ts`；覆盖鼠标、390 px 触屏、取消、缺钱、冷却、确认和防重复；运行该 E2E、Gambler 单测和 typecheck。 |
 | 检查点 A：特殊单位 | 依赖3.3和3.4b–3.4e。整合检查，不再补做已通过的 Pyromaniac/Salesman 投射物切片；只复核其代码与当前规则版本兼容。 | type 1–6 地图对象仍满足首次 level 4 的23个、全解锁的27个基线；Pyromaniac、Salesman、Gambler 的独立解锁门槛正确；Gambler/Casino 成对出现，牌池只含档案已解锁单位，奖品生成不会改变招募池、地图装饰或现存单位。 | 运行已有特殊单位/投射物、Gambler、Tech Town 地图及正式战役解锁定向测试和资源清单；不跑完整 CI。 |
 | 3.5 横向列车 | 依赖 Tech Town 地图/路线基线。按原图第 12 行的 83/84 标记生成 10、11、12、12、12 的列车编组；追踪 `GameObjectManager.createTrainFromMap()`、`TrainHorizontal` 及碰撞/输入调用者，接入现有场景、模拟和绘制层。 | 只生成一组、顺序和初始位置符合 APK；列车按 X 轴移动，碰撞/地图边界、车厢相对位置、动画与绘制层符合对应代码；禁止由铁路图块自动推导车辆。 | 新增 `tech-town-train.test.ts` 覆盖编组、移动边界、车厢间距、碰撞和绘制顺序；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-train.test.ts tests/tech-town-map.test.ts`，再运行 typecheck。 |
 | 3.6 Gatling 车厢 | 依赖 3.5。追踪 `TrainHorizontal` 的武器槽、选择/输入调用者、Gatling 资源与 `GameDesignData` 数值；按 APK 能力实现安装/移除、价格、射击、动画和音效。若代码证据表明某路径不存在，就明确保持不可用，不补造交互。 | 只有 APK 指定车厢可接受 Gatling；安装、移除、价格、目标选择、射速/伤害和射击资源均与证据一致；地图重建、资金不足、重复点击不产生重复武器或扣款。 | 新增 `tech-town-gatling.test.ts` 覆盖合法车厢、资金边界、攻击及重复输入；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-gatling.test.ts tests/tech-town-train.test.ts tests/game.test.ts`，再运行 typecheck。 |
@@ -46,7 +45,7 @@
 
 依赖顺序：
 
-    Tech Town 网格/路线/图层/普通单位基线（已完成，含 Pyromaniac、Salesman） → Gambler 规则内核（已完成） → Gambler/Casino 地图实体 → APK Randomizer 共享序列与回放兼容（已完成） → Gambler GameSession 结算（已完成） → 窗口内赌场交互 → 检查点 A → 横向列车 → Gatling → 检查点 B → 八波/单位池/经济 → 波次对白/音频 → 正式解锁与结算 → 完整检查和浏览器验收
+    Tech Town 网格/路线/图层/普通单位基线（已完成，含 Pyromaniac、Salesman） → Gambler 规则内核（已完成） → Gambler/Casino 地图实体 → APK Randomizer 共享序列与回放兼容（已完成） → Gambler GameSession 结算（已完成） → 窗口内赌场交互（已完成） → 检查点 A → 横向列车 → Gatling → 检查点 B → 八波/单位池/经济 → 波次对白/音频 → 正式解锁与结算 → 完整检查和浏览器验收
 
 单位码位解析已对照 APK 网格、`GameObjectManager.createGameObjectsFromBasicMap()` 的分支和 `GameObjectUnit.create()/isUnlocked()`。该方法的 JADX Java `switch` 输出存在控制流错误，不能作为码位依据；已以 DEX smali 指令复核。每个后续步骤开工前只追踪该步骤列出的方法和消费者；遇到静态证据缺口先记明缺失能力与判定标准，再做一次最小定点核对，不靠反复启动页面或模拟通关猜规则。步骤 5 的真实胜利只用于验证新地图的完整战役链；不重跑 map01–03 的已验收战役。
 

@@ -16,6 +16,7 @@ import {
 import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
 import { apacheValleyContent } from './content/apache-valley';
 import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
+import { gamblerDialogAssets } from './content/gambler-dialog-assets';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages } from './content/official-campaign';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
@@ -55,6 +56,8 @@ import type {
   GameReplayResult,
   GameSession,
   GameSettlementRecord,
+  GamblerCardView,
+  GamblerOutcome,
   ScenarioContent,
   UnitShotSound,
 } from './game';
@@ -164,6 +167,19 @@ app.innerHTML = [
   '          <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
   '        </div>',
   '      </dialog>',
+  '      <dialog class="recruit-confirmation gambler-confirmation" data-testid="gambler-dialog" aria-modal="false" aria-labelledby="gambler-dialog-title" aria-describedby="gambler-dialog-message">',
+  '        <div class="gambler-dialog-heading">',
+  '          <img data-testid="gambler-portrait" alt="" width="64" height="64">',
+  '          <div><h2 id="gambler-dialog-title" data-testid="gambler-dialog-title"></h2><p id="gambler-dialog-message" data-testid="gambler-message" aria-live="polite"></p></div>',
+  '        </div>',
+  '        <p class="gambler-cash" data-testid="gambler-cash"></p>',
+  '        <ol class="gambler-cards" data-testid="gambler-cards" aria-label="Gambler hand"></ol>',
+  '        <p class="gambler-result" data-testid="gambler-result" aria-live="polite"></p>',
+  '        <div class="recruit-confirmation-actions gambler-actions">',
+  '          <button type="button" data-action="play-gambler" data-testid="play-gambler">Play</button>',
+  '          <button type="button" data-action="close-gambler" data-testid="close-gambler">Cancel</button>',
+  '        </div>',
+  '      </dialog>',
   '      <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
   '        <div class="campaign-wave-intro-card">',
   '          <img class="campaign-wave-intro-parchment" data-testid="campaign-wave-intro-parchment" alt="" width="384" height="192">',
@@ -209,6 +225,8 @@ app.innerHTML = [
   '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="map-hire-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
+  '      <button type="button" data-action="start-gambler-sample">Open Gambler UI sample</button>',
+  '      <button type="button" data-action="start-gambler-low-cash-sample">Open low-cash Gambler sample</button>',
   '      <button type="button" data-testid="open-single-wave-sample" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
@@ -367,6 +385,17 @@ const upgradeConfirmationTitleElement = app.querySelector<HTMLElement>('#upgrade
 const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="upgrade-confirmation-details"]');
 const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
 const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
+const gamblerDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="gambler-dialog"]');
+const gamblerDialogTitleElement = app.querySelector<HTMLElement>('#gambler-dialog-title');
+const gamblerDialogMessageElement = app.querySelector<HTMLElement>('[data-testid="gambler-message"]');
+const gamblerPortraitElement = app.querySelector<HTMLImageElement>('[data-testid="gambler-portrait"]');
+const gamblerCashElement = app.querySelector<HTMLElement>('[data-testid="gambler-cash"]');
+const gamblerCardsElement = app.querySelector<HTMLOListElement>('[data-testid="gambler-cards"]');
+const gamblerResultElement = app.querySelector<HTMLElement>('[data-testid="gambler-result"]');
+const playGamblerButton = app.querySelector<HTMLButtonElement>('[data-testid="play-gambler"]');
+const closeGamblerButton = app.querySelector<HTMLButtonElement>('[data-testid="close-gambler"]');
+const startGamblerSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-gambler-sample"]');
+const startGamblerLowCashSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-gambler-low-cash-sample"]');
 const campaignWaveIntroDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-wave-intro"]');
 const campaignWaveIntroParchmentElement = app.querySelector<HTMLImageElement>('[data-testid="campaign-wave-intro-parchment"]');
 const campaignWaveIntroWaveElement = app.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-wave"]');
@@ -421,6 +450,9 @@ if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || 
   || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
+  || !gamblerDialogElement || !gamblerDialogTitleElement || !gamblerDialogMessageElement || !gamblerPortraitElement
+  || !gamblerCashElement || !gamblerCardsElement || !gamblerResultElement || !playGamblerButton || !closeGamblerButton
+  || !startGamblerSampleButton || !startGamblerLowCashSampleButton
   || !campaignWaveIntroDialogElement || !campaignWaveIntroParchmentElement || !campaignWaveIntroWaveElement || !campaignWaveIntroTitleElement
   || !campaignWaveIntroTextElement || !campaignWaveIntroPortraitElement || !campaignWaveIntroConfirmIconElement
   || !campaignWaveIntroContinueLabelElement || !retryCampaignWaveIntroVoiceButtonElement
@@ -521,6 +553,17 @@ const upgradeConfirmationTitle: HTMLElement = upgradeConfirmationTitleElement;
 const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElement;
 const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
 const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
+const gamblerDialog: HTMLDialogElement = gamblerDialogElement;
+const gamblerDialogTitle: HTMLElement = gamblerDialogTitleElement;
+const gamblerDialogMessage: HTMLElement = gamblerDialogMessageElement;
+const gamblerPortrait: HTMLImageElement = gamblerPortraitElement;
+const gamblerCash: HTMLElement = gamblerCashElement;
+const gamblerCards: HTMLOListElement = gamblerCardsElement;
+const gamblerResult: HTMLElement = gamblerResultElement;
+const playGamblerControl: HTMLButtonElement = playGamblerButton;
+const closeGamblerControl: HTMLButtonElement = closeGamblerButton;
+const startGamblerSampleControl: HTMLButtonElement = startGamblerSampleButton;
+const startGamblerLowCashSampleControl: HTMLButtonElement = startGamblerLowCashSampleButton;
 const campaignWaveIntroDialog: HTMLDialogElement = campaignWaveIntroDialogElement;
 const campaignWaveIntroParchment: HTMLImageElement = campaignWaveIntroParchmentElement;
 const campaignWaveIntroWave: HTMLElement = campaignWaveIntroWaveElement;
@@ -576,6 +619,13 @@ let session = await game.open({
   mode: 'debug',
 });
 let view = session.observe();
+type GamblerDialogMode = 'closed' | 'prompt' | 'revealing' | 'result';
+type GamblerRoundState = NonNullable<ReturnType<GameSession['observe']>['units'][number]['gambler']>['lastRound'];
+let gamblerDialogMode: GamblerDialogMode = 'closed';
+let gamblerDialogUnitId: string | undefined;
+let gamblerDialogRoundId: string | undefined;
+let gamblerDialogTimers: number[] = [];
+let gamblerCommandNumber = 0;
 let profile: ProfileView = {
   settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy', soundEnabled: true },
   completedScenarios: [],
@@ -702,6 +752,7 @@ const languageMessages = {
       grandpa: 'Scattergun Grandpa',
       pyromaniac: 'Pyromaniac',
       salesman: 'Snake Oil Salesman',
+      gambler: 'Card Gambler',
     }[type] ?? 'Gunslinger'),
     selected: (name: string) => `${name} selected`,
     selectedCell: (x: number, y: number) => ` · Cell (${x}, ${y})`,
@@ -901,6 +952,7 @@ const languageMessages = {
       grandpa: '散弹枪爷爷',
       pyromaniac: '纵火狂',
       salesman: '蛇油推销员',
+      gambler: '纸牌赌徒',
     }[type] ?? '枪手'),
     selected: (name: string) => `已选择${name}`,
     selectedCell: (x: number, y: number) => ` · 格子 (${x}, ${y})`,
@@ -1060,6 +1112,95 @@ const languageMessages = {
     displayScore: (score: number) => `画面分数：$${score}`,
   },
 };
+
+const gamblerDialogCopy = {
+  en: {
+    title: 'Card Gambler',
+    prompt: 'Show what you’ve got!',
+    cashAndStake: (cash: number, stake: number) => `Cash: $${cash} · Wager: $${stake}`,
+    insufficientCash: (stake: number, cash: number) => `Not enough cash. You need $${stake}, but have $${cash}.`,
+    cooldown: (remainingMs: number) => `Come back in ${formatGamblerCooldown(remainingMs)}.`,
+    paused: 'Resume the battle before placing a wager.',
+    play: (stake: number) => `Play · $${stake}`,
+    cancel: 'Cancel',
+    done: 'Done',
+    dealing: 'Dealing cards…',
+    cashPrize: (payout: number) => `You Win: $${payout}`,
+    prize: (name: string) => `Prize: ${name}`,
+    cards: 'Gambler hand',
+    suits: ['hearts', 'diamonds', 'clubs', 'spades'],
+    ranks: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace'],
+    result: {
+      lost: 'LOST! With such a bad hand you should better try your luck with robbing settlers!',
+      'one-pair': 'PAIR! When 2 knaves are fighting, the desperado wins the duel!',
+      'two-pair': 'TWO PAIR! A bandit is rarely alone!',
+      'three-of-a-kind': 'THREE OF A KIND! With this hand, Gringo, you deserve three gun salute shots from the cannon!',
+      'full-house': 'FULL HOUSE! When the tent is full, the native gladly joins your cause!',
+      'four-of-a-kind': 'POKER! Since you hit 4 Aces, this accurate lady seems to be a perfect match for you!',
+      flush: 'FLUSH! Someone playing as well as you must be as experienced as the old Grandpa!',
+      'royal-flush': 'ROYAL FLUSH! An incredible hand like this should be celebrated with the fireworks of a Pyromaniac!',
+      straight: 'STRAIGHT! Your hand is as straight as the Snake Oil Salesman is bent!',
+      'high-card': 'HIGH CARD! Since your opponents are playing so badly you win some extra money!',
+    },
+  },
+  zh: {
+    title: '纸牌赌徒',
+    prompt: '亮出你的牌吧！',
+    cashAndStake: (cash: number, stake: number) => `现金：$${cash} · 押注：$${stake}`,
+    insufficientCash: (stake: number, cash: number) => `现金不足：需要 $${stake}，当前只有 $${cash}。`,
+    cooldown: (remainingMs: number) => `请等待 ${formatGamblerCooldown(remainingMs)} 后再来。`,
+    paused: '请先恢复战局，再下注。',
+    play: (stake: number) => `下注 · $${stake}`,
+    cancel: '取消',
+    done: '完成',
+    dealing: '正在发牌…',
+    cashPrize: (payout: number) => `你赢得：$${payout}`,
+    prize: (name: string) => `奖品：${name}`,
+    cards: '赌徒手牌',
+    suits: ['红桃', '方块', '梅花', '黑桃'],
+    ranks: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'],
+    result: {
+      lost: '输啦！牌太差了，不如去抢劫定居者碰碰运气！',
+      'one-pair': '一对！两个恶棍打起来，亡命徒赢下了决斗！',
+      'two-pair': '两对！土匪很少单独行动！',
+      'three-of-a-kind': '三条！这手牌值得加农炮为你鸣放三响礼炮！',
+      'full-house': '葫芦！帐篷里人满为患时，原住民也会加入你的队伍！',
+      'four-of-a-kind': '四条！你抽中了四张 A，这位神枪手女士正适合加入你！',
+      flush: '同花！牌打得这么好，想必你和老爷爷一样经验丰富！',
+      'royal-flush': '皇家同花顺！如此惊人的牌局，值得让纵火狂放烟花庆祝！',
+      straight: '顺子！你的牌和卖蛇油商人一样“正直”！',
+      'high-card': '高牌！对手打得太差，你赢得了一些额外现金！',
+    },
+  },
+} as const;
+
+function formatGamblerCooldown(remainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+function gamblerPrizeMessage(outcome: GamblerOutcome, language: keyof typeof gamblerDialogCopy): string {
+  const copy = gamblerDialogCopy[language];
+  if (outcome.type === 'cash' && outcome.payout > 0) return copy.cashPrize(outcome.payout);
+  if (outcome.type === 'unit') {
+    const prizeNames = language === 'en'
+      ? { 1: 'Gunslinger', 2: 'Mexican', 3: 'Cannon', 4: 'Native', 5: 'Markswoman', 6: 'Scattergun Grandpa', 35: 'Pyromaniac', 36: 'Snake Oil Salesman' }
+      : { 1: '枪手', 2: '墨西哥人', 3: '加农炮', 4: '原住民', 5: '女神枪手', 6: '老爷爷', 35: '纵火狂', 36: '蛇油商人' };
+    return copy.prize(prizeNames[outcome.unitType]);
+  }
+  return '';
+}
+
+function gamblerCardLabel(card: GamblerCardView, language: keyof typeof gamblerDialogCopy): string {
+  const copy = gamblerDialogCopy[language];
+  const rank = copy.ranks[card.rank] ?? String(card.rank);
+  const suit = copy.suits[(card.suitCode >>> 8) & 0x3] ?? '';
+  const important = card.important
+    ? language === 'en' ? ', important card' : '，关键牌'
+    : '';
+  return language === 'en' ? `${rank} of ${suit}${important}` : `${suit}${rank}${important}`;
+}
 
 const campaignMenuCopy = {
   en: {
@@ -1963,6 +2104,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   renderCampaignWaveIntro();
   renderMapZoomControls(language);
   const actionLocked = replaying || replacingSession;
+  if (view.wave?.settlement && gamblerDialog.open) closeGamblerDialog();
+  renderGamblerDialog(language, actionLocked);
   sceneOpenErrorPanel.hidden = sceneOpenFailure === undefined;
   retrySceneOpenControl.textContent = messages.retrySceneOpen;
   retrySceneOpenControl.disabled = actionLocked;
@@ -2276,6 +2419,199 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (canvas.getAttribute('aria-label') !== canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
 }
 
+function clearGamblerDialogTimers(): void {
+  for (const timer of gamblerDialogTimers) window.clearTimeout(timer);
+  gamblerDialogTimers = [];
+}
+
+function cardAssetUrl(assetName: string): string {
+  return images[assetName]?.src
+    ?? new URL(import.meta.env.BASE_URL + 'assets/' + gameAssetRelativePath(assetName), window.location.href).toString();
+}
+
+function updateGamblerCardLabels(round: GamblerRoundState, language: keyof typeof gamblerDialogCopy): void {
+  if (!round) return;
+  [...gamblerCards.children].forEach((element, index) => {
+    const card = round.cards[index];
+    if (!card || !(element instanceof HTMLLIElement)) return;
+    element.setAttribute('aria-label', gamblerCardLabel(card, language));
+    const front = element.querySelector<HTMLElement>('.gambler-card-front');
+    front?.setAttribute('aria-label', gamblerCardLabel(card, language));
+  });
+}
+
+function renderGamblerCards(round: GamblerRoundState, language: keyof typeof gamblerDialogCopy): void {
+  if (!round) return;
+  if (gamblerDialogRoundId !== round.id) {
+    gamblerDialogRoundId = round.id;
+    const nodes = round.cards.map((card, index) => {
+      const item = document.createElement('li');
+      item.className = card.important ? 'gambler-card is-important' : 'gambler-card';
+      item.style.setProperty('--card-index', String(index));
+      const scale = gameFrame.getBoundingClientRect().width / GAME_VIEWPORT.width;
+      item.style.setProperty('--collect-offset', `${(60 + 8 * index) * scale}px`);
+      item.style.setProperty('--final-offset', `${(card.important ? 0 : 16 + index) * scale}px`);
+      item.style.setProperty('--card-duration', `${350 + 15 * index}ms`);
+      item.dataset.suit = String((card.suitCode >>> 8) & 0x3);
+      item.setAttribute('aria-label', gamblerCardLabel(card, language));
+
+      const back = document.createElement('img');
+      back.className = 'gambler-card-back';
+      back.src = cardAssetUrl('card_back');
+      back.alt = '';
+      back.draggable = false;
+
+      const front = document.createElement('div');
+      front.className = 'gambler-card-front';
+      front.setAttribute('role', 'img');
+      front.setAttribute('aria-label', gamblerCardLabel(card, language));
+      front.style.backgroundImage = `url("${cardAssetUrl('card_front')}")`;
+
+      const rank = document.createElement('span');
+      rank.className = 'gambler-card-rank';
+      rank.dataset.rank = String(card.rank);
+      rank.style.backgroundImage = `url("${cardAssetUrl('card_numbers')}")`;
+      rank.style.backgroundSize = '208px 16px';
+      rank.style.backgroundPosition = `${-card.rank * 16}px 0`;
+      rank.setAttribute('aria-hidden', 'true');
+
+      const suit = document.createElement('span');
+      suit.className = 'gambler-card-suit';
+      suit.dataset.suit = String((card.suitCode >>> 8) & 0x3);
+      suit.style.backgroundImage = `url("${cardAssetUrl('card_symbols')}")`;
+      suit.style.backgroundSize = '64px 16px';
+      suit.style.backgroundPosition = `${-(((card.suitCode >>> 8) & 0x3) * 16)}px 0`;
+      suit.setAttribute('aria-hidden', 'true');
+      front.append(rank, suit);
+      item.append(back, front);
+      return item;
+    });
+    gamblerCards.replaceChildren(...nodes);
+    gamblerCards.dataset.phase = 'hidden';
+    if (gamblerDialogMode === 'revealing') {
+      window.requestAnimationFrame(() => {
+        if (gamblerDialog.open && gamblerDialogMode === 'revealing') gamblerCards.dataset.phase = 'collecting';
+      });
+    }
+  }
+  updateGamblerCardLabels(round, language);
+}
+
+function renderGamblerDialog(language: keyof typeof languageMessages, actionLocked = replaying || replacingSession): void {
+  if (!gamblerDialog.open || !gamblerDialogUnitId) return;
+  const unit = view.units.find(({ id, type }) => id === gamblerDialogUnitId && type === 'gambler');
+  const gambler = unit?.gambler;
+  if (!unit || !gambler) {
+    closeGamblerDialog();
+    return;
+  }
+
+  const copy = gamblerDialogCopy[language];
+  const cash = view.wave?.cash ?? 0;
+  const stake = gambler.nextStake;
+  const round = gambler.lastRound?.id === gamblerDialogRoundId ? gambler.lastRound : undefined;
+  gamblerDialogTitle.textContent = copy.title;
+  gamblerPortrait.src = cardAssetUrl('portrait_gambler');
+  gamblerCash.textContent = copy.cashAndStake(cash, stake);
+  gamblerCards.setAttribute('aria-label', copy.cards);
+  playGamblerControl.textContent = copy.play(stake);
+  closeGamblerControl.textContent = gamblerDialogMode === 'result' ? copy.done : copy.cancel;
+  closeGamblerControl.hidden = gamblerDialogMode === 'revealing';
+  playGamblerControl.hidden = gamblerDialogMode !== 'prompt';
+  playGamblerControl.disabled = actionLocked || view.paused || !unit.selected || !view.wave
+    || cash < stake || gambler.cooldownRemainingMs > 0;
+
+  if (gamblerDialogMode === 'revealing') {
+    gamblerDialogMessage.textContent = copy.dealing;
+    gamblerResult.textContent = '';
+    if (round) renderGamblerCards(round, language);
+    return;
+  }
+
+  if (gamblerDialogMode === 'result' && round) {
+    gamblerDialogMessage.textContent = copy.result[round.outcome.hand];
+    gamblerResult.textContent = gamblerPrizeMessage(round.outcome, language);
+    gamblerCards.dataset.phase = 'result';
+    renderGamblerCards(round, language);
+    return;
+  }
+
+  gamblerCards.replaceChildren();
+  delete gamblerCards.dataset.phase;
+  gamblerDialogRoundId = undefined;
+  gamblerResult.textContent = '';
+  if (view.paused) gamblerDialogMessage.textContent = copy.paused;
+  else if (gambler.cooldownRemainingMs > 0) gamblerDialogMessage.textContent = copy.cooldown(gambler.cooldownRemainingMs);
+  else if (cash < stake) gamblerDialogMessage.textContent = copy.insufficientCash(stake, cash);
+  else gamblerDialogMessage.textContent = copy.prompt;
+}
+
+function closeGamblerDialog(): void {
+  clearGamblerDialogTimers();
+  gamblerDialogMode = 'closed';
+  gamblerDialogUnitId = undefined;
+  gamblerDialogRoundId = undefined;
+  if (gamblerDialog.open) gamblerDialog.close();
+  gamblerCards.replaceChildren();
+  canvas.focus({ preventScroll: true });
+}
+
+function openGamblerDialog(unitId: string): void {
+  if (gamblerDialog.open || replaying || replacingSession || view.wave?.settlement) return;
+  const unit = view.units.find(({ id, type }) => id === unitId && type === 'gambler');
+  if (!unit?.gambler) return;
+  clearGamblerDialogTimers();
+  gamblerDialogMode = 'prompt';
+  gamblerDialogUnitId = unitId;
+  gamblerDialogRoundId = undefined;
+  gamblerCards.replaceChildren();
+  gamblerDialog.show();
+  renderGamblerDialog(getLanguage());
+  (playGamblerControl.disabled ? closeGamblerControl : playGamblerControl).focus({ preventScroll: true });
+}
+
+function playGamblerRound(): void {
+  if (!gamblerDialog.open || gamblerDialogMode !== 'prompt' || !gamblerDialogUnitId || playGamblerControl.disabled) return;
+  const unitId = gamblerDialogUnitId;
+  const previousRoundId = view.units.find(({ id }) => id === unitId)?.gambler?.lastRound?.id;
+  gamblerDialogMode = 'revealing';
+  gamblerDialogMessage.textContent = gamblerDialogCopy[getLanguage()].dealing;
+  gamblerResult.textContent = '';
+  dispatch({ type: 'play-gambler', unitId, commandId: `${session.id}:gambler:${++gamblerCommandNumber}` });
+
+  const round = view.units.find(({ id }) => id === unitId)?.gambler?.lastRound;
+  if (!round || round.id === previousRoundId) {
+    gamblerDialogMode = 'prompt';
+    renderGamblerDialog(getLanguage());
+    return;
+  }
+
+  renderGamblerCards(round, getLanguage());
+  playAudioAsset('sound_cards_collect');
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    gamblerCards.dataset.phase = 'dealing';
+    playAudioAsset('sound_cards_deal');
+    gamblerCards.dataset.phase = 'result';
+    gamblerDialogMode = 'result';
+    renderStatus();
+    return;
+  }
+
+  gamblerCards.dataset.phase = 'collecting';
+  gamblerDialogTimers.push(window.setTimeout(() => {
+    if (!gamblerDialog.open || gamblerDialogMode !== 'revealing') return;
+    playAudioAsset('sound_cards_deal');
+    gamblerCards.dataset.phase = 'dealing';
+    gamblerDialogTimers.push(window.setTimeout(() => {
+      if (!gamblerDialog.open || gamblerDialogMode !== 'revealing') return;
+      gamblerCards.dataset.phase = 'result';
+      gamblerDialogMode = 'result';
+      renderStatus();
+      closeGamblerControl.focus({ preventScroll: true });
+    }, 410));
+  }, 410));
+}
+
 function renderUpgradeConfirmation(language: keyof typeof languageMessages): void {
   const unit = view.units.find((candidate) => candidate.id === pendingUpgradeUnitId);
   const nextUpgrade = unit?.nextUpgrade;
@@ -2349,6 +2685,7 @@ function currentGameStepEnvironment(): { tileSizePixels: number } {
 
 const assetNames = new Set([
   ...techTownMapEntityAssets,
+  ...gamblerDialogAssets,
   ...view.map.background.map((tile) => tile.asset),
   ...view.map.streets.map((tile) => tile.asset),
   ...(view.map.decorations ?? []).map((decoration) => decoration.asset),
@@ -2964,6 +3301,7 @@ function activateSession(
 ): void {
   stopGameLoop();
   if (campaignWaveIntroDialog.open) campaignWaveIntroDialog.close();
+  if (gamblerDialog.open) closeGamblerDialog();
   pendingCampaignWaveIntro = undefined;
   const previousSession = session;
   session = nextSession;
@@ -2981,6 +3319,7 @@ function activateSession(
   lastUpgradeEvent = undefined;
   pendingUpgradeUnitId = undefined;
   upgradeCommandNumber = 0;
+  gamblerCommandNumber = 0;
   if (recruitConfirmation.open) recruitConfirmation.close();
   if (upgradeConfirmation.open) upgradeConfirmation.close();
   confirmUpgradeControl.hidden = false;
@@ -3694,6 +4033,12 @@ campaignWaveIntroDialog.addEventListener('keydown', (event: KeyboardEvent) => {
 startUpgradeSampleControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen('cow-gulch-upgrade-sample', 'debug'));
 });
+startGamblerSampleControl.addEventListener('click', () => {
+  void replaceSession(requestScenarioOpen('gambler-ui-sample', 'debug'));
+});
+startGamblerLowCashSampleControl.addEventListener('click', () => {
+  void replaceSession(requestScenarioOpen('gambler-ui-low-cash-sample', 'debug'));
+});
 returnCowGulchControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen(cowGulchP1aSampleContent.id, 'formal'));
 });
@@ -3704,6 +4049,31 @@ upgradeControl.addEventListener('click', () => {
   renderUpgradeConfirmation(getLanguage());
   upgradeConfirmation.show();
   (confirmUpgradeControl.hidden ? cancelUpgradeControl : confirmUpgradeControl).focus();
+});
+playGamblerControl.addEventListener('click', playGamblerRound);
+closeGamblerControl.addEventListener('click', closeGamblerDialog);
+gamblerDialog.addEventListener('cancel', (event: Event) => {
+  event.preventDefault();
+  closeGamblerDialog();
+});
+gamblerDialog.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeGamblerDialog();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusable = [...gamblerDialog.querySelectorAll<HTMLButtonElement>('button:not([disabled]):not([hidden])')];
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (!first || !last) return;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 });
 confirmUpgradeControl.addEventListener('click', () => {
   const unitId = pendingUpgradeUnitId;
@@ -4101,6 +4471,13 @@ canvas.addEventListener('pointerup', (event: PointerEvent) => {
   if (pointer.pointerType === 'touch' && !pointerMovedBeyondTolerance && activeMapPan?.kind !== 'minimap') {
     const point = pointerMapPosition(event);
     if (point) dispatch({ type: 'select-at', x: point.mapX, y: point.mapY });
+  }
+  if (!pointerMovedBeyondTolerance && activeMapPan?.kind !== 'minimap') {
+    const point = pointerMapPosition(event);
+    const tappedGambler = point && view.units.find((unit) => unit.type === 'gambler' && unit.selected
+      && point.mapX >= unit.hitArea.x && point.mapX < unit.hitArea.x + unit.hitArea.width
+      && point.mapY >= unit.hitArea.y && point.mapY < unit.hitArea.y + unit.hitArea.height);
+    if (tappedGambler) openGamblerDialog(tappedGambler.id);
   }
   finishPointerMovement(event.pointerId);
 });

@@ -53,12 +53,14 @@ const highDensityVehicleAssets = new Set([
 ]);
 
 const highDensityMapFrameAssets = new Set(['gng_frame']);
+const highDensityGamblerAssets = new Set(['card_back', 'card_front', 'card_symbols', 'card_numbers']);
 
 export function gameAssetRelativePath(assetName: string): string {
   const densityDirectory = highDensityMapAtlases.has(assetName)
     || highDensityMapDecorations.has(assetName)
     || highDensityVehicleAssets.has(assetName)
     || highDensityMapFrameAssets.has(assetName)
+    || highDensityGamblerAssets.has(assetName)
     ? 'hdpi/'
     : '';
   return `${densityDirectory}${assetName}.png`;

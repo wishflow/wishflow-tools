@@ -7,6 +7,7 @@ import {
   cowGulchUpgradeSampleContent,
 } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
+import { gamblerUiLowCashSampleContent, gamblerUiSampleContent } from '../content/gambler-ui-sample';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -39,6 +40,8 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [fortKaboomLevelThreeContent.id]: fortKaboomLevelThreeContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
+  [gamblerUiSampleContent.id]: gamblerUiSampleContent,
+  [gamblerUiLowCashSampleContent.id]: gamblerUiLowCashSampleContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
   [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,
 };
