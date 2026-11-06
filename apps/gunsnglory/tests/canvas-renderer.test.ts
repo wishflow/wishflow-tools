@@ -16,6 +16,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const wagonImage = {} as HTMLImageElement;
   const stagecoachImage = { naturalWidth: 144, naturalHeight: 216 } as HTMLImageElement;
   const stagecoachTurnImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
+  const goldTransportImage = { naturalWidth: 144, naturalHeight: 216 } as HTMLImageElement;
+  const goldTransportTurnImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
   const horseWagonImage = {} as HTMLImageElement;
   const smokeImage = { naturalWidth: 384, naturalHeight: 64 } as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
@@ -208,6 +210,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     sfx_death_pioneers: pioneerDeathImage,
     wagon: wagonImage,
     stagecoach: stagecoachImage,
+    goldtransport: goldTransportImage,
     horse_wagon: horseWagonImage,
     sfx_smoke_explosion: smokeImage,
     unit: unitImage,
@@ -498,6 +501,38 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(stagecoachTurnDraw);
   assert.deepEqual(stagecoachTurnDraw.slice(1, 5), [48, 0, 48, 72], 'Post Coach uses the original two-frame turn atlas');
   assert.deepEqual(stagecoachTurnDraw.slice(7, 9), [60, 90]);
+
+  const goldTransport: EnemyView = {
+    ...sampleEnemy,
+    id: 'gold-transport-1',
+    type: 6,
+    asset: 'goldtransport',
+    direction: 'east',
+    animationFrame: 2,
+  };
+  drawCalls.length = 0;
+  drawGame(context, { ...view, units: [], enemies: [goldTransport], shots: [], wagonDebris: [], drawOrder: ['enemy:gold-transport-1'] }, images);
+  const goldTransportDraw = drawCalls.find(([image]) => image === goldTransportImage);
+  assert.ok(goldTransportDraw);
+  assert.deepEqual(goldTransportDraw.slice(1, 5), [96, 0, 48, 72], 'Gold Transport crops one 48×72 frame from the APK 3×3 atlas');
+  assert.deepEqual(goldTransportDraw.slice(7, 9), [60, 90], 'Gold Transport uses its 32×48 logical footprint');
+  assert.equal((goldTransportDraw[6] as number) + (goldTransportDraw[8] as number),
+    getMapViewport(view).origin.y + (goldTransport.positionFine.y / 240) * getMapViewport(view).scaleFactor,
+    'Gold Transport remains anchored to the route foot position');
+
+  drawCalls.length = 0;
+  drawGame(context, {
+    ...view,
+    units: [],
+    enemies: [{ ...goldTransport, turningAnimation: { asset: 'goldtransport_turn', frame: 1, mirrored: false } }],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:gold-transport-1'],
+  }, { ...images, goldtransport_turn: goldTransportTurnImage });
+  const goldTransportTurnDraw = drawCalls.find(([image]) => image === goldTransportTurnImage);
+  assert.ok(goldTransportTurnDraw);
+  assert.deepEqual(goldTransportTurnDraw.slice(1, 5), [48, 0, 48, 72], 'Gold Transport turn uses the two-frame APK atlas');
+  assert.deepEqual(goldTransportTurnDraw.slice(7, 9), [60, 90]);
 
   for (const [deathRemainingMs, frame] of [[599, 0], [500, 0], [499, 1], [100, 4], [99, 5], [0, 5]] as const) {
     pioneerDeathDraws.length = 0;

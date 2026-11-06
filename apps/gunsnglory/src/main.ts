@@ -852,6 +852,7 @@ const languageMessages = {
         3: ['Horseman', 'Horsemen'],
         4: ['Wagon', 'Wagons'],
         5: ['Stagecoach', 'Stagecoaches'],
+        6: ['Gold Transport', 'Gold Transports'],
         8: ['Covered wagon', 'Covered wagons'],
       };
       const [singular, plural] = enemyType ? names[enemyType] : ['Enemy', 'Enemies'];
@@ -1060,6 +1061,7 @@ const languageMessages = {
         3: '骑马战士',
         4: '马车',
         5: '驿站马车',
+        6: '运金车',
         8: '篷车',
       };
       const name = enemyType ? names[enemyType] : '敌人';
@@ -2818,6 +2820,8 @@ const assetNames = new Set([
   'wagon_turn',
   'stagecoach',
   'stagecoach_turn',
+  'goldtransport',
+  'goldtransport_turn',
   'horse_wagon',
   'horse_wagon_white',
   'horse_wagon_turn',

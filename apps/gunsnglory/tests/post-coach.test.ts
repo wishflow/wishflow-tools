@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { deriveSessionRandomSeed, JavaUtilRandom } from '../src/game/java-random';
 import {
   createGame,
   type CampaignSpawnPoolDefinition,
@@ -184,6 +185,53 @@ test('a lethal hit rewards the Post Coach once and leaves its non-damageable lea
   assert.equal(view.enemies.find(({ id }) => id === coach.id)?.alive, false);
   assert.equal(view.enemies.find(({ id }) => id === horse.id)?.alive, true,
     'destroying the Post Coach does not destroy its lead horse');
+  session.close();
+});
+
+test('a destroyed Post Coach uses its four-passenger APK wreck average and shared debris random stream', async () => {
+  const sourceGunslinger = cowGulchP1cCampaignContent.units.find(({ type }) => type === 'gunslinger')!;
+  const shooter = {
+    ...sourceGunslinger,
+    id: 'post-coach-wreck-gunslinger',
+    cell: { x: 8, y: 8 },
+    weapon: {
+      ...sourceGunslinger.weapon!,
+      damage: 100_000,
+      rangeFine: 153_600,
+      reloadTimeMs: 1,
+      projectileSpeed: 1000,
+    },
+  };
+  const seed = 17;
+  const { session, view: initial } = await startPostCoachWave(postCoachScenario([shooter]), seed);
+  let view = initial;
+  for (let frame = 0; frame < 20 && !view.events.some((event) =>
+    event.type === 'enemy-defeated' && event.enemyType === 5); frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+  assert.ok(view.events.some((event) => event.type === 'enemy-defeated' && event.enemyType === 5));
+  for (let frame = 0; frame < 5 && (view.wagonDebris?.length ?? 0) === 0; frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+  }
+
+  assert.equal(view.wagonDebris?.length, 20);
+  const passengers = view.enemies.filter(({ id }) => id.startsWith('wagon-passenger-'));
+  const expectedRandom = new JavaUtilRandom(deriveSessionRandomSeed(seed, 'game-util'));
+  expectedRandom.nextInt(1);
+  expectedRandom.nextInt(1);
+  expectedRandom.nextInt(2);
+  expectedRandom.nextInt(2);
+  for (let index = 0; index < 20; index += 1) {
+    expectedRandom.nextInt(2000);
+    expectedRandom.nextInt(200);
+    expectedRandom.nextInt(4000);
+    expectedRandom.nextInt(6);
+  }
+  const passengerCount = Math.min(4, Math.trunc(expectedRandom.nextInt(60) / 10));
+  const passengerSpeed = 90 + expectedRandom.nextInt(20);
+  assert.equal(passengers.length, passengerCount,
+    'Post Coach uses the APK average passenger count 4 in addition to dynamic difficulty');
+  assert.ok(passengers.every(({ speed }) => speed === Math.trunc((500 * passengerSpeed) / 100)));
   session.close();
 });
 

@@ -5,6 +5,7 @@ import { createGame, type CampaignWaveDefinition, type GameSession, type Scenari
 
 const transportRequests = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
 const settlerRequests = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const goldTransportRequests = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0];
 const emptyRequests = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 async function advanceToWave(session: GameSession, number: number) {
@@ -129,4 +130,44 @@ test('settler units are not registered with the APK enemy collision manager', as
   const second = view.enemies.find(({ groupId }) => groupId === groups[1]);
   assert.equal(overlapped, true);
   assert.ok(first && second && first.positionFine.x > second.positionFine.x, 'settlers continue past each other');
+});
+
+test('opposing Gold Transports collide using their physical vehicle boxes', async () => {
+  const scenario = makeOpposingEnemyFixture(goldTransportRequests, 'p1f-opposing-gold-transport-collision-fixture');
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    mode: 'formal',
+    randomSeed: 7,
+  });
+  await advanceToWave(session, 3);
+  let view = session.advance({ deltaMs: 0 });
+  assert.equal(view.enemies.length, 2);
+  assert.ok(view.enemies.every(({ type, asset }) => type === 6 && asset === 'goldtransport'));
+  const startingPositions = view.enemies.map(({ id, positionFine }) => [id, positionFine.x, positionFine.y]);
+
+  let previousPositions = startingPositions;
+  let stableFrames = 0;
+  let moved = false;
+  for (let frame = 0; frame < 100 && stableFrames < 5; frame += 1) {
+    view = session.advance({ deltaMs: 100 });
+    const [left, right] = view.enemies;
+    assert.ok(left && right);
+    assert.ok(Math.abs(left.positionFine.x - right.positionFine.x) > 7678
+      || Math.abs(left.positionFine.y - right.positionFine.y) > 7678,
+    `the opposing Gold Transports do not overlap at frame ${frame + 1}`);
+    const positions = view.enemies.map(({ id, positionFine }) => [id, positionFine.x, positionFine.y]);
+    moved ||= JSON.stringify(positions) !== JSON.stringify(startingPositions);
+    stableFrames = JSON.stringify(positions) === JSON.stringify(previousPositions) ? stableFrames + 1 : 0;
+    previousPositions = positions;
+  }
+  assert.equal(stableFrames >= 5, true, 'both Gold Transports settle at the head-on collision');
+  assert.equal(moved, true);
+  const stopped = previousPositions;
+  assert.deepEqual(
+    view.enemies.map(({ id, positionFine }) => [id, positionFine.x, positionFine.y]),
+    stopped,
+    'both vehicles remain stopped at the head-on collision',
+  );
+  assert.notDeepEqual(stopped, startingPositions);
+  session.close();
 });

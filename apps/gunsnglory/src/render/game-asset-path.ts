@@ -49,6 +49,8 @@ const highDensityVehicleAssets = new Set([
   'wagon_turn',
   'stagecoach',
   'stagecoach_turn',
+  'goldtransport',
+  'goldtransport_turn',
   'horse_wagon',
   'horse_wagon_white',
   'horse_wagon_turn',

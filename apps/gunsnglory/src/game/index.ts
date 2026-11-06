@@ -236,7 +236,7 @@ export interface UnitWeaponDefinition {
   specialReloadFrequency?: number;
 }
 
-export type CampaignEnemyType = 1 | 2 | 3 | 4 | 5 | 8;
+export type CampaignEnemyType = 1 | 2 | 3 | 4 | 5 | 6 | 8;
 
 export interface PreviewEnemyDefinition {
   hitPoints: number;
@@ -443,7 +443,7 @@ export interface SteamCloudView {
 export interface EnemyView {
   id: string;
   type: CampaignEnemyType;
-  asset: 'pioneer_male' | 'pioneer_female' | 'horseman' | 'wagon' | 'stagecoach' | 'horse_wagon' | 'horse_wagon_white';
+  asset: 'pioneer_male' | 'pioneer_female' | 'horseman' | 'wagon' | 'stagecoach' | 'goldtransport' | 'horse_wagon' | 'horse_wagon_white';
   speed: number;
   direction: Direction;
   /** APK mirror state persists through vertical movement until a horizontal leg or turn changes it. */
@@ -452,7 +452,7 @@ export interface EnemyView {
   drawingOffsetFine?: { x: number; y: number };
   groupId?: string;
   damageable?: boolean;
-  turningAnimation?: { asset: 'horseman_turn' | 'wagon_turn' | 'stagecoach_turn' | 'horse_wagon_turn' | 'horse_wagon_turn_white'; frame: 0 | 1; mirrored: boolean };
+  turningAnimation?: { asset: 'horseman_turn' | 'wagon_turn' | 'stagecoach_turn' | 'goldtransport_turn' | 'horse_wagon_turn' | 'horse_wagon_turn_white'; frame: 0 | 1; mirrored: boolean };
   hitPoints: number;
   maxHitPoints: number;
   /** Present while the original EnemyDirector poison flag is set. */
@@ -952,6 +952,7 @@ const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (
   3: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
   4: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   5: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
+  6: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   8: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
 };
 
@@ -1825,6 +1826,9 @@ function campaignEnemyDefinition(scenario: ScenarioContent, type: CampaignEnemyT
   if (type === 5) {
     return { hitPoints: 300, cashReward: 15, penetration: { light: 50, fire: 100, heavy: 66, poison: 100 }, turningDurationMs: 100 };
   }
+  if (type === 6) {
+    return { hitPoints: 500, cashReward: 25, penetration: { light: 33, fire: 25, heavy: 100, poison: 100 }, turningDurationMs: 200 };
+  }
   if (scenario.campaignEnemy) return scenario.campaignEnemy;
   if (type === 4) {
     return { hitPoints: 200, cashReward: 10, penetration: { light: 50, fire: 100, heavy: 66, poison: 100 }, turningDurationMs: 200 };
@@ -1875,7 +1879,9 @@ function createCampaignEnemy(
           ? 'wagon'
           : type === 5
             ? 'stagecoach'
-            : colorVariant === 1 ? 'horse_wagon' : 'horse_wagon_white';
+            : type === 6
+              ? 'goldtransport'
+              : colorVariant === 1 ? 'horse_wagon' : 'horse_wagon_white';
   return {
     id,
     type,
@@ -1884,7 +1890,7 @@ function createCampaignEnemy(
     direction: spawn.direction,
     mirrored: false,
     positionFine: { ...positionFine },
-    collisionStartOffsetFine: type === 4 || type === 5 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
+    collisionStartOffsetFine: type === 4 || type === 5 || type === 6 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
     drawingOffsetFine: { ...drawingOffsetFine },
     groupId,
     damageable: type !== 8,
@@ -1924,9 +1930,13 @@ const WAGON_PASSENGER_DRAWING_OFFSETS = Object.freeze([
   Object.freeze({ x: 1280, y: 800 }),
 ]);
 
-function campaignEnemySpeed(scenario: ScenarioContent, wave: CampaignWaveDefinition, speedPercent = 100): number {
+function campaignEnemySpeedFromBase(baseSpeed: number, wave: CampaignWaveDefinition, speedPercent = 100): number {
   const waveSpeed = Math.trunc((wave.speedMultiplierPercent * speedPercent) / 100);
-  return Math.trunc(((scenario.previewWave?.baseEnemySpeed ?? 0) * waveSpeed) / 100);
+  return Math.trunc((baseSpeed * waveSpeed) / 100);
+}
+
+function campaignEnemySpeed(scenario: ScenarioContent, wave: CampaignWaveDefinition, speedPercent = 100): number {
+  return campaignEnemySpeedFromBase(scenario.previewWave?.baseEnemySpeed ?? 0, wave, speedPercent);
 }
 
 function spawnSettlerGroup(
@@ -2061,9 +2071,36 @@ function spawnPostCoachPair(
   return [horse, coach];
 }
 
+function spawnGoldTransport(
+  scenario: ScenarioContent,
+  spawn: WaveSpawn,
+  spawnPositionFine: { x: number; y: number },
+  groupId: string,
+  dynamicDifficulty: number,
+  waveDefinition: CampaignWaveDefinition,
+  difficulty: GameDifficulty,
+  random: JavaUtilRandom,
+  nextEnemyId: () => string,
+): MutableEnemy[] {
+  const type = 6;
+  const definition = campaignEnemyDefinition(scenario, type);
+  return [createCampaignEnemy(
+    nextEnemyId(),
+    type,
+    spawn,
+    spawnPositionFine,
+    { x: 0, y: 0 },
+    campaignEnemySpeedFromBase(500, waveDefinition),
+    campaignEnemyHitPoints(scenario, waveDefinition, dynamicDifficulty, difficulty, type),
+    definition,
+    groupId,
+    random.nextInt(2),
+  )];
+}
+
 function campaignSpawnCollides(positionFine: { x: number; y: number }, enemies: readonly MutableEnemy[]): boolean {
   return enemies.some((enemy) => {
-    if (!enemy.alive || (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 8)) return false;
+    if (!enemy.alive || (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 6 && enemy.type !== 8)) return false;
     // Original vehicle collision objects follow fineX/fineY, never drawingOffsetX/Y.
     return Math.abs(enemy.positionFine.x - positionFine.x) < FINE_UNITS_PER_CELL
       && Math.abs(enemy.positionFine.y - positionFine.y) < FINE_UNITS_PER_CELL;
@@ -2130,7 +2167,7 @@ function recordCampaignEscape(wave: MutableWave, livesMax: number, penalty: numb
 function recordCampaignKill(wave: MutableWave, priorityMap: RoutePriorityMap, enemy: MutableEnemy): void {
   if (wave.dynamicDifficulty === undefined || wave.difficultyValue === undefined
     || wave.difficultyValueCounter === undefined) return;
-  const weight = enemy.type === 4 ? 6 : enemy.type === 5 ? 8 : enemy.type === 8 ? 0 : 1;
+  const weight = enemy.type === 4 ? 6 : enemy.type === 5 ? 8 : enemy.type === 6 ? 10 : enemy.type === 8 ? 0 : 1;
   if (weight === 0) return;
   const routeValue = normalizedRoutePriority(
     priorityMap,
@@ -2154,7 +2191,9 @@ function applyEnemyDamage(
   if (enemy.hitPoints > 0) return;
 
   enemy.alive = false;
-  enemy.deathRemainingMs = enemy.type === 4 || enemy.type === 5 || enemy.type === 8 ? 799 : campaignMode ? 599 : 799;
+  enemy.deathRemainingMs = enemy.type === 4 || enemy.type === 5 || enemy.type === 6 || enemy.type === 8
+    ? 799
+    : campaignMode ? 599 : 799;
   if (campaignMode) recordCampaignKill(wave, priorityMap, enemy);
   wave.cash += enemy.cashReward;
   wave.cashMade += enemy.cashReward;
@@ -2173,7 +2212,7 @@ function applyEnemyDamage(
       }
     }
   }
-  if (enemy.type !== 4 && enemy.type !== 5) return;
+  if (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 6) return;
   wave.events.push({
     type: 'sound-requested',
     sound: 'sound_wagon_explode',
@@ -2525,7 +2564,7 @@ function enemyCollisionBlocksMove(
   deltaX: number,
   deltaY: number,
 ): boolean {
-  if (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 8) return false;
+  if (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 6 && enemy.type !== 8) return false;
 
   const movingOffset = enemy.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
   const movingStartX = enemy.positionFine.x - movingOffset;
@@ -2540,7 +2579,7 @@ function enemyCollisionBlocksMove(
       // The APK enemy manager uses ignoreSameUnitGroup=false, which filters
       // candidates whose unitGroup matches the moving collision object.
       if (other === enemy || other.groupId === enemy.groupId
-        || (other.type !== 4 && other.type !== 5 && other.type !== 8)) continue;
+        || (other.type !== 4 && other.type !== 5 && other.type !== 6 && other.type !== 8)) continue;
       const otherOffset = other.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
       const otherStartX = other.positionFine.x - otherOffset;
       const otherStartY = other.positionFine.y - otherOffset;
@@ -2587,7 +2626,7 @@ function moveEnemy(
       x: Math.trunc(Math.fround(previous.x + vector.x * distance)),
       y: Math.trunc(Math.fround(previous.y + vector.y * distance)),
     };
-    if (enemy.type === 4 || enemy.type === 5 || enemy.type === 8) {
+    if (enemy.type === 4 || enemy.type === 5 || enemy.type === 6 || enemy.type === 8) {
       enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
     }
   }
@@ -3040,6 +3079,7 @@ export function createGame(options: {
                 asset: enemy.type === 3 ? 'horseman_turn' as const
                   : enemy.type === 4 ? 'wagon_turn' as const
                     : enemy.type === 5 ? 'stagecoach_turn' as const
+                      : enemy.type === 6 ? 'goldtransport_turn' as const
                       : enemy.asset === 'horse_wagon' ? 'horse_wagon_turn' as const : 'horse_wagon_turn_white' as const,
                 frame: enemy.turningFrame,
                 mirrored: enemy.turningMirrored,
@@ -3681,7 +3721,8 @@ export function createGame(options: {
               const enemy = movingEnemies[enemyIndex]!;
               if (!enemy.alive) {
                 enemy.deathRemainingMs -= deltaMs;
-                if (campaignMode && enemy.type === 4 && enemy.deathRemainingMs < 500 && !enemy.wagonPartsCreated
+                if (campaignMode && (enemy.type === 4 || enemy.type === 5 || enemy.type === 6)
+                  && enemy.deathRemainingMs < 500 && !enemy.wagonPartsCreated
                   && campaignDefinition && wave.dynamicDifficulty !== undefined) {
                   enemy.wagonPartsCreated = true;
                   const debris = createWagonDebris(
@@ -3689,8 +3730,9 @@ export function createGame(options: {
                   );
                   wave.wagonDebris.push(...debris);
                   drawOrderCreationOrder.push(...debris.map(({ id }) => 'wagon-debris:' + id));
+                  const averagePassengerCount = enemy.type === 4 ? 2 : enemy.type === 5 ? 4 : 0;
                   const passengerCount = Math.trunc(utilRandom.nextInt(
-                    Math.trunc(wave.dynamicDifficulty / 50) + 20,
+                    Math.trunc(wave.dynamicDifficulty / 50) + (averagePassengerCount * 10),
                   ) / 10);
                   const passengerSpeedPercent = 90 + utilRandom.nextInt(20);
                   const spawn: WaveSpawn = {
@@ -4083,12 +4125,13 @@ export function createGame(options: {
                   x: candidatePosition.x + (spawnVector.x * FINE_UNITS_PER_CELL),
                   y: candidatePosition.y + (spawnVector.y * FINE_UNITS_PER_CELL),
                 };
-                if ((poolType === 7 || poolType === 8) && campaignSpawnCollides(collisionProbePosition, wave.enemies)) {
+                if ((poolType === 7 || poolType === 8 || poolType === 9)
+                  && campaignSpawnCollides(collisionProbePosition, wave.enemies)) {
                   pool.delayMs = Math.trunc(requestIntervalMs / 2);
                   continue;
                 }
 
-                const requestType = poolType === 7 ? 4 : poolType === 8 ? 5 : poolType;
+                const requestType = poolType === 7 ? 4 : poolType === 8 ? 5 : poolType === 9 ? 6 : poolType;
                 const nextGroupId = () => `campaign-${wave!.number}-group-${nextCampaignGroupNumber++}`;
                 const nextEnemyId = () => `campaign-${wave!.number}-enemy-${nextCampaignEnemyNumber++}`;
                 const spawned = poolType === 7
@@ -4101,6 +4144,11 @@ export function createGame(options: {
                       scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
                       campaignDefinition, difficulty, utilRandom, nextEnemyId,
                     )
+                    : poolType === 9
+                      ? spawnGoldTransport(
+                        scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
+                        campaignDefinition, difficulty, utilRandom, nextEnemyId,
+                      )
                     : poolType === 6
                     ? spawnHorseman(
                       scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
