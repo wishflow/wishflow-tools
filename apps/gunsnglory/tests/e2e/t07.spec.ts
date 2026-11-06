@@ -12,22 +12,27 @@ test('formal Cow Gulch only offers map hires for selected sleeping units', async
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   await expect(page.locator('[data-action="recruit-unit"]')).toBeHidden();
   await expect(page.locator('[data-action="upgrade-unit"]')).toBeHidden();
-  const hire = page.getByTestId('hire-map-unit');
-  await expect(hire).toBeHidden();
+  const hireDialog = page.getByTestId('map-hire-confirmation');
+  await expect(hireDialog).toBeHidden();
 
   await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired');
-  await expect(hire).toHaveText('Hire map Gunslinger · $75');
-  await expect(hire).toBeDisabled();
+  await expect(hireDialog).toBeVisible();
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
+  await expect(page.getByTestId('map-hire-confirmation-details')).toHaveText('Not enough cash: need $75, have $65.');
+  await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
   await expect(page.getByTestId('map-hire-status')).toBeEmpty();
   await expect(page.getByTestId('recruit-pool-status')).toHaveText('Recruit pool: empty');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
+  await page.getByTestId('cancel-map-hire').click();
 
   await clickCanvasPoint(page, cowGulchMarkerPoint(6, 5));
-  await expect(hire).toHaveText('Hire map Mexican · $100');
-  await expect(hire).toBeDisabled();
+  await expect(hireDialog).toBeVisible();
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Mexican for $100?');
+  await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
+  await page.getByTestId('cancel-map-hire').click();
   await clickCanvasPoint(page, { x: 272, y: 80 });
-  await expect(hire).toBeHidden();
+  await expect(hireDialog).toBeHidden();
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
   await expect(page.locator('[data-action="recruit-unit"]')).toBeHidden();
@@ -52,14 +57,16 @@ test('formal map-hire state is available through touch on a phone-sized viewport
     await expect(speed).toHaveValue('0.25');
     await expect(page.locator('[data-action="recruit-unit"]')).toBeHidden();
     await expect(page.locator('[data-action="upgrade-unit"]')).toBeHidden();
-    const hire = page.getByTestId('hire-map-unit');
-    await expect(hire).toBeHidden();
+    const hireDialog = page.getByTestId('map-hire-confirmation');
+    await expect(hireDialog).toBeHidden();
     await tapCanvasPoint(page, cowGulchMarkerPoint(3, 6));
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired');
-    await expect(hire).toHaveText('Hire map Gunslinger · $75');
-    await expect(hire).toBeDisabled();
+    await expect(hireDialog).toBeVisible();
+    await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
+    await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
+    await page.getByTestId('cancel-map-hire').click();
     await tapCanvasPoint(page, { x: 272, y: 80 });
-    await expect(hire).toBeHidden();
+    await expect(hireDialog).toBeHidden();
     await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   } finally {
     await context.close();

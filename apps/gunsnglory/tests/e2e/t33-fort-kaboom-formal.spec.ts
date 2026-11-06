@@ -168,10 +168,11 @@ async function hireThroughMapUi(
       + `at logical point (${point.x.toFixed(1)}, ${point.y.toFixed(1)})`,
     );
   }
-  const hireButton = page.getByTestId('hire-map-unit');
-  await expect(hireButton).toHaveText(`Hire map ${hireLabel(slot.type)} · $${slot.price}`);
-  await expect(hireButton).toBeEnabled();
-  await hireButton.click();
+  await expect(page.getByTestId('map-hire-confirmation')).toBeVisible();
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText(`Hire ${hireLabel(slot.type)} for $${slot.price}?`);
+  const confirmHire = page.getByTestId('confirm-map-hire');
+  await expect(confirmHire).toBeEnabled();
+  await confirmHire.click();
   await expect(page.getByTestId('map-hire-status')).toHaveText(
     `${hireLabel(slot.type)} hired from the map for $${slot.price}.`,
   );

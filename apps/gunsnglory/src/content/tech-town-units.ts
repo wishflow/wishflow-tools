@@ -9,6 +9,28 @@ import {
 import { mexicanWeapon } from './player-unit-weapons';
 import type { ScenarioUnit } from '../game';
 
+const gatlingWeapon = (damage: number, reloadTimeMs: number) => Object.freeze({
+  damage,
+  damageType: 'light' as const,
+  rangeFine: 38_400,
+  reloadTimeMs,
+  projectileSpeed: 750,
+  damageStyle: 0,
+  areaDamageFine: 0,
+  postDamage: 0,
+  postDamageDurationMs: 0,
+  poisonDamage: 0,
+  poisonDurationMs: 0,
+  specialReloadTimeMs: 0,
+  specialReloadFrequency: 1,
+});
+
+const gatlingUpgradeLevels = Object.freeze([
+  Object.freeze({ price: 75, movementSpeedFinePer100Ms: 3000, weapon: gatlingWeapon(150, 250) }),
+  Object.freeze({ price: 75, movementSpeedFinePer100Ms: 3000, weapon: gatlingWeapon(175, 200) }),
+  Object.freeze({ price: 75, movementSpeedFinePer100Ms: 3000, weapon: gatlingWeapon(200, 150) }),
+]);
+
 const fortUnitTypeById: Readonly<Record<3 | 4 | 5 | 6, FortKaboomUnitType>> = Object.freeze({
   3: 'cannon',
   4: 'indian',
@@ -188,6 +210,13 @@ export function createTechTownTrainUnits(): ScenarioUnit[] {
       showSleepingEffect: false,
       ...(unitTypeId === 10 ? { steamEmitter: true as const } : {}),
       selectionSound: 'sound_train',
+      ...(unitTypeId === 12 ? {
+        hirePrice: 125,
+        hireSound: 'sound_train' as const,
+        shotSound: 'sound_gattling_gun' as const,
+        weapon: gatlingWeapon(125, 300),
+        upgradeLevels: gatlingUpgradeLevels,
+      } : {}),
       cell,
       movementSpeedFinePer100Ms: 3000,
       asset,

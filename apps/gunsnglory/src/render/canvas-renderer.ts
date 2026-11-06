@@ -121,7 +121,8 @@ function drawUnit(
   const width = unit.render.width * viewport.tileSize;
   const height = unit.render.height * viewport.tileSize;
 
-  const firing = unit.shootingAnimation;
+  const gatlingWagon = unit.type === 'train-12';
+  const firing = gatlingWagon ? undefined : unit.shootingAnimation;
   const walking = unit.walkingAnimation;
   const asset = firing?.asset ?? unit.asset;
   const image = images[asset];
@@ -143,6 +144,36 @@ function drawUnit(
   }
   context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
   context.restore();
+
+  if (gatlingWagon && unit.activity === 5 && unit.weapon) {
+    const firingWeapon = unit.shootingAnimation;
+    const weaponAsset = firingWeapon?.asset ?? 'player_gatling';
+    const weaponImage = images[weaponAsset];
+    if (!weaponImage) throw new Error('Missing game image: ' + weaponAsset);
+    const weaponFrame = firingWeapon?.frame ?? 0;
+    const weaponRow = firingWeapon?.row ?? unit.weaponFacing?.row ?? 1;
+    const weaponMirrored = firingWeapon?.mirrored ?? unit.weaponFacing?.mirrored ?? false;
+    const weaponSize = viewport.tileSize;
+    const weaponCenterX = left + (width / 2);
+    const weaponCenterY = top + height - ((6912 / FINE_UNITS_PER_CELL) * viewport.tileSize);
+    context.save();
+    if (weaponMirrored) {
+      context.translate(weaponCenterX * 2, 0);
+      context.scale(-1, 1);
+    }
+    context.drawImage(
+      weaponImage,
+      weaponFrame * 32,
+      weaponRow * 32,
+      32,
+      32,
+      Math.trunc(weaponCenterX - weaponSize / 2),
+      Math.trunc(weaponCenterY - weaponSize / 2),
+      Math.trunc(weaponSize),
+      Math.trunc(weaponSize),
+    );
+    context.restore();
+  }
 
   if (unit.steamClouds?.length) {
     const steamImage = images.sfx_lok_steam;

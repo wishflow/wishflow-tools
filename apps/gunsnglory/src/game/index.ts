@@ -190,7 +190,8 @@ export type UnitHireSound =
   | 'sound_sniper_laughing'
   | 'sound_grandpa_coughing'
   | 'sound_pyromaniac'
-  | 'sound_snakeoilsalesman';
+  | 'sound_snakeoilsalesman'
+  | 'sound_train';
 
 export type UnitSelectionSound = 'sound_train';
 
@@ -427,6 +428,8 @@ export interface UnitView extends ScenarioUnit {
     row: number;
     mirrored: boolean;
   };
+  /** Persistent facing used by the Tech Town Gatling overlay between shots. */
+  weaponFacing?: { row: number; mirrored: boolean };
   steamClouds?: readonly SteamCloudView[];
 }
 
@@ -786,6 +789,7 @@ interface MutableUnit {
   shootingAnimationElapsedMs?: number;
   shootingAnimationFrame?: number;
   shootingDirection?: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
+  weaponFacingDirection?: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
   walkingAnimationStep: number;
   walkingAnimation?: NonNullable<UnitView['walkingAnimation']>;
   steamEmitter?: MutableSteamEmitter;
@@ -939,6 +943,7 @@ const PLAYER_SHOOTING_ANIMATIONS: Readonly<Record<string, {
   grandpa: { asset: 'player_geezer_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
   pyromaniac: { asset: 'player_pyromaniac_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
   salesman: { asset: 'player_salesman_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
+  'train-12': { asset: 'player_gatling_shot', frames: [[0, 50], [1, 100]] },
 };
 const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
 const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {
@@ -1235,6 +1240,11 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
       },
     } : {}),
     ...(shootingAnimation ? { shootingAnimation } : {}),
+    ...(definition.type === 'train-12' ? {
+      weaponFacing: unit.weaponFacingDirection
+        ? weaponFacingView(unit.weaponFacingDirection)
+        : { row: 1, mirrored: false },
+    } : {}),
     ...(upgrade ? { nextUpgrade: clone(upgrade) } : {}),
   };
 }
@@ -1293,6 +1303,16 @@ function gamblerPrizeUnit(
   return spawned;
 }
 
+function weaponFacingView(direction: { x: -1 | 0 | 1; y: -1 | 0 | 1 }): { row: number; mirrored: boolean } {
+  let row: number;
+  if (direction.y < 0 && direction.x === 0) row = 4;
+  else if (direction.y > 0 && direction.x === 0) row = 3;
+  else if (direction.y < 0) row = 2;
+  else if (direction.y > 0) row = 0;
+  else row = 1;
+  return { row, mirrored: direction.x > 0 };
+}
+
 function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation'] {
   const direction = unit.shootingDirection;
   if (unit.shootingAnimationElapsedMs === undefined || unit.shootingAnimationFrame === undefined || !direction) return undefined;
@@ -1300,14 +1320,11 @@ function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation']
   const animation = PLAYER_SHOOTING_ANIMATIONS[unit.definition.type];
   if (!animation) return undefined;
 
-  let row: number;
-  if (direction.y < 0 && direction.x === 0) row = 4;
-  else if (direction.y > 0 && direction.x === 0) row = 3;
-  else if (direction.y < 0) row = 2;
-  else if (direction.y > 0) row = 0;
-  else row = 1;
-
-  return { asset: animation.asset, frame: unit.shootingAnimationFrame, row, mirrored: direction.x > 0 };
+  return {
+    asset: animation.asset,
+    frame: unit.shootingAnimationFrame,
+    ...weaponFacingView(direction),
+  };
 }
 
 function advanceShootingAnimation(unit: MutableUnit, deltaMs: number, didMove: boolean): void {
@@ -3819,10 +3836,12 @@ export function createGame(options: {
               nextShotNumber += 1;
               unit.shootingAnimationElapsedMs = 0;
               unit.shootingAnimationFrame = 0;
-              unit.shootingDirection = {
+              const firingDirection = {
                 x: Math.sign(target.positionFine.x - unit.positionFine.x) as -1 | 0 | 1,
                 y: Math.sign(target.positionFine.y - genericStartFine.y) as -1 | 0 | 1,
               };
+              unit.shootingDirection = firingDirection;
+              if (unit.definition.type === 'train-12') unit.weaponFacingDirection = firingDirection;
               unit.weaponCooldownMs = weapon.reloadTimeMs;
               let specialReload = false;
               if (weapon.specialReloadFrequency !== undefined && weapon.specialReloadFrequency > 0) {

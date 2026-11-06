@@ -102,7 +102,6 @@ app.innerHTML = [
   '          <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
   '          <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
   '          <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
-  '          <button type="button" data-testid="hire-map-unit" data-action="hire-map-unit" hidden>Hire selected map unit</button>',
   '          <button type="button" data-action="clear-selection">Clear selection</button>',
   '          <div class="map-zoom-controls" data-testid="map-zoom-controls" role="group" aria-label="Map zoom" hidden>',
   '            <button type="button" data-testid="map-zoom-out" data-action="map-zoom-out" aria-label="Zoom out">−</button>',
@@ -158,6 +157,14 @@ app.innerHTML = [
   '        <div class="recruit-confirmation-actions">',
   '          <button type="button" data-action="confirm-recruit">Recruit</button>',
   '          <button type="button" data-action="cancel-recruit">Cancel</button>',
+  '        </div>',
+  '      </dialog>',
+  '      <dialog class="recruit-confirmation map-hire-confirmation" data-testid="map-hire-confirmation" aria-modal="false" aria-labelledby="map-hire-confirmation-title">',
+  '        <h2 id="map-hire-confirmation-title" data-testid="map-hire-confirmation-title"></h2>',
+  '        <p data-testid="map-hire-confirmation-details" aria-live="polite"></p>',
+  '        <div class="recruit-confirmation-actions">',
+  '          <button type="button" data-testid="confirm-map-hire" data-action="confirm-map-hire">Hire</button>',
+  '          <button type="button" data-testid="cancel-map-hire" data-action="cancel-map-hire">Cancel</button>',
   '        </div>',
   '      </dialog>',
   '      <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
@@ -228,7 +235,7 @@ app.innerHTML = [
   '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
   '      <button type="button" data-action="start-gambler-sample">Open Gambler UI sample</button>',
   '      <button type="button" data-action="start-gambler-low-cash-sample">Open low-cash Gambler sample</button>',
-  '      <button type="button" data-testid="open-tech-town-train-sample" data-action="start-tech-town-train-sample" data-locale="Open Tech Town train sample">Open Tech Town train sample</button>',
+  '      <button type="button" data-testid="open-tech-town-train-sample" data-action="start-tech-town-train-sample" data-locale="Open Tech Town train and Gatling sample">Open Tech Town train and Gatling sample</button>',
   '      <button type="button" data-testid="open-single-wave-sample" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
@@ -354,7 +361,6 @@ const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid=
 const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-status"]');
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
 const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-status"]');
-const mapHireButtonElement = app.querySelector<HTMLButtonElement>('[data-action="hire-map-unit"]');
 const mapHireStatusElement = app.querySelector<HTMLElement>('[data-testid="map-hire-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
 const retrySettingsButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-settings-save"]');
@@ -387,6 +393,11 @@ const upgradeConfirmationTitleElement = app.querySelector<HTMLElement>('#upgrade
 const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="upgrade-confirmation-details"]');
 const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
 const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
+const mapHireConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="map-hire-confirmation"]');
+const mapHireConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-title"]');
+const mapHireConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-details"]');
+const confirmMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-map-hire"]');
+const cancelMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-map-hire"]');
 const gamblerDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="gambler-dialog"]');
 const gamblerDialogTitleElement = app.querySelector<HTMLElement>('#gambler-dialog-title');
 const gamblerDialogMessageElement = app.querySelector<HTMLElement>('[data-testid="gambler-message"]');
@@ -449,10 +460,12 @@ if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || 
   || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement || !sceneCaptionElement
   || !campaignMenuToggleElement || !settlementCampaignMenuButtonElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
-  || !recruitPoolStatusElement || !recruitStatusElement || !mapHireButtonElement || !mapHireStatusElement
+  || !recruitPoolStatusElement || !recruitStatusElement || !mapHireStatusElement
   || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
+  || !mapHireConfirmationElement || !mapHireConfirmationTitleElement || !mapHireConfirmationDetailsElement
+  || !confirmMapHireButton || !cancelMapHireButton
   || !gamblerDialogElement || !gamblerDialogTitleElement || !gamblerDialogMessageElement || !gamblerPortraitElement
   || !gamblerCashElement || !gamblerCardsElement || !gamblerResultElement || !playGamblerButton || !closeGamblerButton
   || !startGamblerSampleButton || !startGamblerLowCashSampleButton || !startTechTownTrainSampleButton
@@ -524,7 +537,6 @@ const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
 const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
 const recruitStatus: HTMLElement = recruitStatusElement;
-const mapHireControl: HTMLButtonElement = mapHireButtonElement;
 const mapHireStatus: HTMLElement = mapHireStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
 const retrySettingsButton: HTMLButtonElement = retrySettingsButtonElement;
@@ -556,6 +568,11 @@ const upgradeConfirmationTitle: HTMLElement = upgradeConfirmationTitleElement;
 const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElement;
 const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
 const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
+const mapHireConfirmation: HTMLDialogElement = mapHireConfirmationElement;
+const mapHireConfirmationTitle: HTMLElement = mapHireConfirmationTitleElement;
+const mapHireConfirmationDetails: HTMLElement = mapHireConfirmationDetailsElement;
+const confirmMapHireControl: HTMLButtonElement = confirmMapHireButton;
+const cancelMapHireControl: HTMLButtonElement = cancelMapHireButton;
 const gamblerDialog: HTMLDialogElement = gamblerDialogElement;
 const gamblerDialogTitle: HTMLElement = gamblerDialogTitleElement;
 const gamblerDialogMessage: HTMLElement = gamblerDialogMessageElement;
@@ -693,6 +710,7 @@ let lastMapHireEvent: Extract<GameEvent, { type: 'map-unit-hired' | 'map-unit-hi
 let pendingRecruitmentType: string | undefined;
 let recruitmentCommandNumber = 0;
 let mapHireCommandNumber = 0;
+let pendingMapHireUnitId: string | undefined;
 let lastUpgradeEvent: Extract<GameEvent, { type: 'unit-upgraded' | 'unit-upgrade-rejected' }> | undefined;
 let pendingUpgradeUnitId: string | undefined;
 let upgradeCommandNumber = 0;
@@ -732,7 +750,7 @@ const languageMessages = {
     campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
     sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
     sceneCaption: (scenarioId: string) => {
-      if (scenarioId === techTownTrainTestContent.id) return 'Developer-only Tech Town train sample: move the original five-part train; it does not start a battle or change campaign progress.';
+      if (scenarioId === techTownTrainTestContent.id) return 'Developer-only Tech Town train and Gatling test: move the original five-part train, hire and upgrade Gatling wagons, and fight one slow pioneer on route three. Debug results do not affect campaign progress.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -757,7 +775,7 @@ const languageMessages = {
       grandpa: 'Scattergun Grandpa',
       'train-10': 'Train locomotive',
       'train-11': 'Train locomotive',
-      'train-12': 'Train wagon',
+      'train-12': 'Gatling wagon',
       pyromaniac: 'Pyromaniac',
       salesman: 'Snake Oil Salesman',
       gambler: 'Card Gambler',
@@ -765,7 +783,11 @@ const languageMessages = {
     selected: (name: string) => `${name} selected`,
     selectedCell: (x: number, y: number) => ` · Cell (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name} is waiting to be hired`,
-    mapHireButton: (name: string, price: number) => `Hire map ${name} · $${price}`,
+    mapHirePrompt: (name: string, price: number) => `Hire ${name} for $${price}?`,
+    confirmMapHire: 'Hire',
+    cancelMapHire: 'Cancel',
+    closeMapHire: 'OK',
+    mapHireInsufficientCash: (price: number, cash: number) => `Not enough cash: need $${price}, have $${cash}.`,
     mapHired: (name: string, price: number) => `${name} hired from the map for $${price}.`,
     mapHireRejected: (name: string, price: number, cash: number) => `Not enough cash to hire ${name}: need $${price}, have $${cash}.`,
     startSample: 'Start one pioneer sample',
@@ -844,13 +866,13 @@ const languageMessages = {
     upgradeSceneContext: 'DEBUG RULE TEST',
     originalUpgradeLimit: 'Original Cow Gulch has an upgrade limit of 0. This separate debug fixture sets the limit to 1 and starts with $25; it never saves progress.',
     debugUpgradeFixture: 'Debug-only fixture · upgrade limit 1 · $25 starting cash · no profile writes.',
-    upgradeButton: (price: number) => `Upgrade Gunslinger · $${price}`,
+    upgradeButton: (name: string, price: number) => `Upgrade ${name} · $${price}`,
     upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
       `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Reload ${reload} → ${nextReload} ms`,
     upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
       range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
       nextSpecialReload: number, price: number, cash: number) =>
-      `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Damage ${damage} → ${nextDamage} base damage/shot · Cow Gulch light multiplier: pioneers 100%, wagons 50% · HP loss = trunc(base × target multiplier / 100) · Range ${rangeDisplay(range, 'en')} → ${rangeDisplay(nextRange, 'en')} · Reload ${reload} → ${nextReload} ms · Special reload ${specialReload} → ${nextSpecialReload} ms · Price $${price} · Cash $${cash}`,
+      `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Damage ${damage} → ${nextDamage} base damage/shot · HP loss = trunc(base × target-type modifier / 100) · Range ${rangeDisplay(range, 'en')} → ${rangeDisplay(nextRange, 'en')} · Reload ${reload} → ${nextReload} ms · Special reload ${specialReload} → ${nextSpecialReload} ms · Price $${price} · Cash $${cash}`,
     confirmUpgrade: (name: string, price: number) => `Upgrade ${name} for $${price}?`,
     confirmUpgradeButton: 'Confirm upgrade',
     cancelUpgradeButton: 'Cancel upgrade',
@@ -936,7 +958,7 @@ const languageMessages = {
     campaignDifficultyUnlocked: '困难模式已解锁。',
     sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
     sceneCaption: (scenarioId: string) => {
-      if (scenarioId === techTownTrainTestContent.id) return '仅供开发测试的 Tech Town 列车样例：移动原版五节列车，不开启战斗，也不修改正式进度。';
+      if (scenarioId === techTownTrainTestContent.id) return '仅供开发测试的 Tech Town 列车与加特林样例：移动原版五节列车，雇佣并升级加特林车厢，在第三条路线对付一名慢速拓荒者；不会修改正式战役进度。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -961,7 +983,7 @@ const languageMessages = {
       grandpa: '散弹枪爷爷',
       'train-10': '列车机车',
       'train-11': '列车机车',
-      'train-12': '列车车厢',
+      'train-12': '加特林车厢',
       pyromaniac: '纵火狂',
       salesman: '蛇油推销员',
       gambler: '纸牌赌徒',
@@ -969,7 +991,11 @@ const languageMessages = {
     selected: (name: string) => `已选择${name}`,
     selectedCell: (x: number, y: number) => ` · 格子 (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name}待招募，尚未雇用`,
-    mapHireButton: (name: string, price: number) => `雇佣地图上的${name} · $${price}`,
+    mapHirePrompt: (name: string, price: number) => `花费 $${price} 雇佣${name}？`,
+    confirmMapHire: '雇佣',
+    cancelMapHire: '取消',
+    closeMapHire: '确定',
+    mapHireInsufficientCash: (price: number, cash: number) => `现金不足：需要 $${price}，当前 $${cash}。`,
     mapHired: (name: string, price: number) => `已花费 $${price} 雇佣地图上的${name}。`,
     mapHireRejected: (name: string, price: number, cash: number) => `现金不足，无法雇佣${name}：需要 $${price}，当前 $${cash}。`,
     startSample: '开始单个拓荒者样本',
@@ -1048,13 +1074,13 @@ const languageMessages = {
     upgradeSceneContext: '规则测试 · 调试场景',
     originalUpgradeLimit: '原版牛溪谷的升级上限为 0。此独立调试样本将上限设为 1、初始现金设为 $25；不会写入存档。',
     debugUpgradeFixture: '仅供规则测试 · 升级上限 1 · 初始现金 $25 · 不写入档案。',
-    upgradeButton: (price: number) => `升级枪手 · $${price}`,
+    upgradeButton: (name: string, price: number) => `升级${name} · $${price}`,
     upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
       `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒`,
     upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
       range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
       nextSpecialReload: number, price: number, cash: number) =>
-      `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 伤害 ${damage} → ${nextDamage} 点/发（目标倍率前基础伤害）· 牛溪谷轻型伤害倍率：拓荒者 100%，马车 50% · 实际扣血 = trunc(基础伤害 × 目标倍率 / 100) · 射程 ${rangeDisplay(range, 'zh')} → ${rangeDisplay(nextRange, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒 · 特殊装填 ${specialReload} → ${nextSpecialReload} 毫秒 · 价格 $${price} · 当前现金 $${cash}`,
+      `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 伤害 ${damage} → ${nextDamage} 点/发（目标类型倍率前基础伤害）· 实际扣血 = trunc(基础伤害 × 目标类型倍率 / 100) · 射程 ${rangeDisplay(range, 'zh')} → ${rangeDisplay(nextRange, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒 · 特殊装填 ${specialReload} → ${nextSpecialReload} 毫秒 · 价格 $${price} · 当前现金 $${cash}`,
     confirmUpgrade: (name: string, price: number) => `花费 $${price} 升级${name}？`,
     confirmUpgradeButton: '确认升级',
     cancelUpgradeButton: '取消升级',
@@ -2277,16 +2303,6 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     );
   }
   if (recruitStatus.textContent !== recruitText) recruitStatus.textContent = recruitText;
-  const selectedSleepingMapUnit = unit?.activity === 4 && unit.hirePrice !== undefined ? unit : undefined;
-  mapHireControl.hidden = !selectedSleepingMapUnit;
-  if (selectedSleepingMapUnit) {
-    mapHireControl.textContent = messages.mapHireButton(
-      messages.unitName(selectedSleepingMapUnit.type),
-      selectedSleepingMapUnit.hirePrice!,
-    );
-    mapHireControl.disabled = actionLocked || view.paused || Boolean(view.wave?.settlement)
-      || (view.wave?.cash ?? 0) < selectedSleepingMapUnit.hirePrice!;
-  }
   const mapHireText = lastMapHireEvent?.type === 'map-unit-hired'
     ? messages.mapHired(messages.unitName(lastMapHireEvent.unitType), lastMapHireEvent.price)
     : lastMapHireEvent?.type === 'map-unit-hire-rejected'
@@ -2338,10 +2354,14 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
         ? messages.apacheValleyNotice
         : activeCampaignStage ? messages.originalCampaignNotice : messages.originalUpgradeLimit;
   const selectedUnit = unit;
+  const upgradeUnitName = selectedUnit
+    ? messages.unitName(selectedUnit.type)
+    : messages.unitName('gunslinger');
   const nextUpgrade = selectedUnit?.nextUpgrade;
   let upgradeText = '';
   if (lastUpgradeEvent?.type === 'unit-upgraded') {
-    const unitName = language === 'zh' ? '枪手' : 'Gunslinger';
+    const upgradedUnitId = lastUpgradeEvent.unitId;
+    const unitName = messages.unitName(view.units.find(({ id }) => id === upgradedUnitId)?.type ?? 'gunslinger');
     upgradeText = messages.upgraded(unitName, lastUpgradeEvent.level, lastUpgradeEvent.price);
   } else if (lastUpgradeEvent?.type === 'unit-upgrade-rejected') {
     upgradeText = lastUpgradeEvent.reason === 'insufficient-funds'
@@ -2360,9 +2380,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   }
   if (upgradeStatus.textContent !== upgradeText) upgradeStatus.textContent = upgradeText;
   if (nextUpgrade) {
-    upgradeControl.textContent = messages.upgradeButton(nextUpgrade.price);
+    upgradeControl.textContent = messages.upgradeButton(upgradeUnitName, nextUpgrade.price);
   } else {
-    upgradeControl.textContent = messages.upgradeButton(0);
+    upgradeControl.textContent = messages.upgradeButton(upgradeUnitName, 0);
   }
   confirmRecruitControl.textContent = messages.confirmRecruitButton;
   cancelRecruitControl.textContent = messages.cancelRecruitButton;
@@ -2375,6 +2395,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     );
   }
   if (pendingUpgradeUnitId) renderUpgradeConfirmation(language);
+  if (pendingMapHireUnitId) renderMapHireConfirmation(language);
   const settlement = view.wave?.settlement;
   const newSettlement = Boolean(settlement) && settlementPanel.hidden;
   settlementPanel.hidden = !settlement;
@@ -2387,6 +2408,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     upgradeConfirmation.close();
     confirmUpgradeControl.hidden = false;
   }
+  if (settlement && mapHireConfirmation.open) closeMapHireConfirmation();
   if (settlement && view.wave) {
     if (newSettlement) {
       activeSettlementRecord = session.terminalRecord();
@@ -2434,7 +2456,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   startDefeatControl.disabled = actionLocked || !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
   clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
   const canvasLabel = techTownTrainSample
-    ? language === 'zh' ? 'Tech Town 列车测试地图' : 'Tech Town train test map'
+    ? language === 'zh' ? 'Tech Town 列车与加特林测试地图' : 'Tech Town train and Gatling test map'
     : upgradeScenario
     ? language === 'zh' ? '牛溪谷升级规则测试地图' : 'Cow Gulch upgrade rules test map'
     : activeCampaignStage
@@ -2648,7 +2670,7 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
   }
 
   const messages = languageMessages[language];
-  const unitName = language === 'zh' ? '枪手' : 'Gunslinger';
+  const unitName = messages.unitName(unit.type);
   upgradeConfirmationTitle.textContent = messages.confirmUpgrade(unitName, nextUpgrade.price);
   const details = messages.upgradeDetails(
     unit.upgradeLevel,
@@ -2671,6 +2693,50 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
     : `${details} · ${messages.insufficientUpgradeCash(nextUpgrade.price, cash)}`;
   confirmUpgradeControl.hidden = !affordable;
   confirmUpgradeControl.disabled = !affordable;
+}
+
+function renderMapHireConfirmation(language: keyof typeof languageMessages): void {
+  const unit = view.units.find((candidate) => candidate.id === pendingMapHireUnitId);
+  if (!unit || !unit.selected || unit.activity !== 4 || unit.hirePrice === undefined || !view.wave) {
+    closeMapHireConfirmation();
+    return;
+  }
+
+  const price = unit.hirePrice;
+  const cash = view.wave.cash;
+  const affordable = cash >= price;
+  mapHireConfirmationTitle.textContent = languageMessages[language].mapHirePrompt(
+    languageMessages[language].unitName(unit.type),
+    price,
+  );
+  mapHireConfirmationDetails.textContent = affordable
+    ? ''
+    : languageMessages[language].mapHireInsufficientCash(price, cash);
+  confirmMapHireControl.textContent = languageMessages[language].confirmMapHire;
+  confirmMapHireControl.hidden = !affordable;
+  confirmMapHireControl.disabled = !affordable;
+  cancelMapHireControl.textContent = affordable
+    ? languageMessages[language].cancelMapHire
+    : languageMessages[language].closeMapHire;
+}
+
+function closeMapHireConfirmation(): void {
+  pendingMapHireUnitId = undefined;
+  if (mapHireConfirmation.open) mapHireConfirmation.close();
+  confirmMapHireControl.hidden = false;
+  confirmMapHireControl.disabled = false;
+}
+
+function openMapHireConfirmation(unitId: string): void {
+  if (mapHireConfirmation.open || replaying || replacingSession || view.paused
+    || Boolean(view.wave?.settlement)) return;
+  const unit = view.units.find((candidate) => candidate.id === unitId && candidate.selected
+    && candidate.activity === 4 && candidate.hirePrice !== undefined);
+  if (!unit || !view.wave) return;
+  pendingMapHireUnitId = unit.id;
+  renderMapHireConfirmation(getLanguage());
+  mapHireConfirmation.show();
+  (confirmMapHireControl.hidden ? cancelMapHireControl : confirmMapHireControl).focus({ preventScroll: true });
 }
 
 function redraw(resize = false): void {
@@ -2749,6 +2815,8 @@ const assetNames = new Set([
   'hud_bonus_cash',
   'hud_bonus_speed',
   'hud_bonus_damage',
+  'player_gatling',
+  'player_gatling_shot',
   'player_gunslinger_shot',
   'player_mexican',
   'player_mexican_shot',
@@ -3996,14 +4064,31 @@ campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="confirm
 settlementCampaignMenuButton.addEventListener('click', enterCampaignMenu);
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
-mapHireControl.addEventListener('click', () => {
-  const unit = view.units.find((candidate) => candidate.selected && candidate.activity === 4);
-  if (!unit) return;
+confirmMapHireControl.addEventListener('click', () => {
+  const unitId = pendingMapHireUnitId;
+  closeMapHireConfirmation();
+  if (!unitId) return;
   dispatch({
     type: 'hire-map-unit',
-    unitId: unit.id,
+    unitId,
     commandId: `${session.id}:map-hire:${++mapHireCommandNumber}`,
   });
+  canvas.focus({ preventScroll: true });
+});
+cancelMapHireControl.addEventListener('click', () => {
+  closeMapHireConfirmation();
+  canvas.focus({ preventScroll: true });
+});
+mapHireConfirmation.addEventListener('cancel', (event: Event) => {
+  event.preventDefault();
+  closeMapHireConfirmation();
+  canvas.focus({ preventScroll: true });
+});
+mapHireConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  closeMapHireConfirmation();
+  canvas.focus({ preventScroll: true });
 });
 recruitControl.addEventListener('click', () => {
   const recruit = view.recruitPool[0];
@@ -4506,10 +4591,19 @@ canvas.addEventListener('pointerup', (event: PointerEvent) => {
   }
   if (!pointerMovedBeyondTolerance && activeMapPan?.kind !== 'minimap') {
     const point = pointerMapPosition(event);
+    const tappedMapHireUnit = point && view.units.find((unit) => unit.selected && unit.activity === 4
+      && unit.hirePrice !== undefined
+      && point.mapX >= unit.hitArea.x && point.mapX < unit.hitArea.x + unit.hitArea.width
+      && point.mapY >= unit.hitArea.y && point.mapY < unit.hitArea.y + unit.hitArea.height);
     const tappedGambler = point && view.units.find((unit) => unit.type === 'gambler' && unit.selected
       && point.mapX >= unit.hitArea.x && point.mapX < unit.hitArea.x + unit.hitArea.width
       && point.mapY >= unit.hitArea.y && point.mapY < unit.hitArea.y + unit.hitArea.height);
-    if (tappedGambler) openGamblerDialog(tappedGambler.id);
+    if (tappedMapHireUnit) {
+      const unitId = tappedMapHireUnit.id;
+      // Let the browser dispatch the touch-generated click before focusing the dialog button.
+      window.setTimeout(() => openMapHireConfirmation(unitId), 0);
+    }
+    else if (tappedGambler) openGamblerDialog(tappedGambler.id);
   }
   finishPointerMovement(event.pointerId);
 });

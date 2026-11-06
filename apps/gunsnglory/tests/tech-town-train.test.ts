@@ -30,10 +30,17 @@ test('builds the five original train units on the Tech Town track without duplic
     { type: 'train-12', activity: 4, asset: 'lok_wagon_hori' },
   ]);
   assert.ok(units.every(({ movementSpeedFinePer100Ms }) => movementSpeedFinePer100Ms === 3000));
-  assert.ok(units.every(({ sleepingAnimationFrame, weapon, hirePrice }) => (
-    sleepingAnimationFrame === undefined && weapon === undefined && hirePrice === undefined
+  assert.ok(units.every(({ sleepingAnimationFrame }) => sleepingAnimationFrame === undefined));
+  assert.ok(units.filter(({ type }) => type !== 'train-12').every(({ weapon, hirePrice }) => (
+    weapon === undefined && hirePrice === undefined
   )));
-  assert.equal(scenario.previewWave, undefined);
+  assert.ok(units.filter(({ type }) => type === 'train-12').every(({ weapon, hirePrice }) => (
+    weapon?.damage === 125 && hirePrice === 125
+  )));
+  assert.equal(scenario.previewWave?.initialCash, 350);
+  assert.equal(scenario.previewWave?.routes?.length, 1);
+  assert.equal(scenario.previewWave?.enemy?.hitPoints, 1_000_000);
+  assert.equal(scenario.maxUpgrades, 3);
   assert.equal(scenario.formalSettlementSupported, undefined);
   assert.equal(scenario.map.decorations?.some(({ asset }) => trainAssets.has(asset)), false);
   const mapContent = createTechTownMapContent(() => true);

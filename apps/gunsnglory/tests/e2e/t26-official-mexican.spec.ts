@@ -81,6 +81,10 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
       x: -49 + (4.5 * 66),
       y: -546 + (15.25 * 66),
     };
+    await expect(page.getByTestId('campaign-wave-intro')).toBeHidden();
+    await expect(page.getByTestId('pause-status')).toBeHidden();
+    await expect(page.getByTestId('pause-toggle')).toHaveText('Pause battle');
+    await expect(page.getByTestId('pause-toggle')).toHaveText('Pause battle');
     const mexicanPoint = await screenPointForCanvasPoint(page, mexicanMarker);
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart',
@@ -89,9 +93,11 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await expect(page.getByTestId('selection-status')).toContainText('Mexican is waiting to be hired · Cell (5, 16)');
 
-    const hire = page.getByTestId('hire-map-unit');
-    await expect(hire).toHaveText('Hire map Mexican · $100');
-    await expect(hire).toBeDisabled();
+    const hireDialog = page.getByTestId('map-hire-confirmation');
+    await expect(hireDialog).toBeVisible();
+    await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Mexican for $100?');
+    await expect(page.getByTestId('map-hire-confirmation-details')).toContainText('Not enough cash');
+    await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
     expect(readCash(await waveStatus.innerText())).toBeLessThan(100);
     await expect(page.getByTestId('map-hire-status')).toBeEmpty();
     await expect(page.getByTestId('recruit-pool-status')).toHaveText('Recruit pool: empty');

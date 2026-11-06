@@ -112,9 +112,11 @@ test('touch completes the official Cow Gulch level through real movement and nat
     await cdp.detach();
 
     await tapCanvasPoint(page, cowGulchMarkerPoint(3, 6));
-    const hire = page.getByTestId('hire-map-unit');
-    await expect(hire).toHaveText('Hire map Gunslinger · $75');
-    await expect(hire).toBeDisabled();
+    const hireDialog = page.getByTestId('map-hire-confirmation');
+    const confirmHire = page.getByTestId('confirm-map-hire');
+    await expect(hireDialog).toBeVisible();
+    await expect(confirmHire).toBeHidden();
+    await expect(page.getByTestId('map-hire-confirmation-details')).toContainText('Not enough cash');
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired · Cell (4, 7)');
 
     let lastIntroWave = 1;
@@ -127,10 +129,11 @@ test('touch completes the official Cow Gulch level through real movement and nat
         await intro.getByRole('button', { name: 'Continue', exact: true }).click();
       }
     }
-    await expect(hire).toBeEnabled();
+    await expect(confirmHire).toBeVisible();
+    await expect(confirmHire).toBeEnabled();
     const cashBeforeHire = readCash(await waveStatus.innerText());
     expect(cashBeforeHire).toBeGreaterThanOrEqual(75);
-    await hire.click();
+    await confirmHire.click();
     await expect(page.getByTestId('map-hire-status')).toHaveText('Gunslinger hired from the map for $75.');
     // Combat can award a $1 bounty while the click is committed; the game test
     // checks the exact $75 debit without concurrent simulation steps.

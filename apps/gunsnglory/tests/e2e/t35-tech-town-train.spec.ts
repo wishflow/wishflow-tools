@@ -19,15 +19,15 @@ async function trainPositions(page: Page): Promise<Array<{ x: number; y: number 
     .map((match) => ({ x: Number(match[1]), y: Number(match[2]) }));
 }
 
-test('Tech Town train test sample renders on its track, moves as a row, and stops on release', async ({ page }) => {
+test('Tech Town train and Gatling sample renders the train on its track and supports shared movement', async ({ page }) => {
   await page.goto('/?testBattle=1');
   await expect(page.getByTestId('open-tech-town-train-sample')).toBeVisible();
   await page.getByTestId('open-tech-town-train-sample').click();
   await expect(page.getByTestId('scene-open-error')).toBeHidden();
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
-  await expect(page.getByTestId('wave-status')).toHaveText('');
-  await expect(page.getByTestId('start-wave')).toBeHidden();
-  await expect(page.getByTestId('game-canvas')).toHaveAttribute('aria-label', 'Tech Town train test map');
+  await expect(page.getByTestId('wave-status')).toContainText('Cash $350');
+  await expect(page.getByTestId('start-wave')).toBeVisible();
+  await expect(page.getByTestId('game-canvas')).toHaveAttribute('aria-label', 'Tech Town train and Gatling test map');
   await page.getByTestId('inspection-panel').locator('summary').click();
 
   const initial = await trainPositions(page);
