@@ -1,7 +1,7 @@
 import type { GameDifficulty, GameIntent, GameMode, GameView, ShotView, UnitView, WaveSettlement } from './index';
 import { canonicalSha256Digest } from '../value-digest';
 
-export const GAME_RULES_VERSION = 'gng-rules-19';
+export const GAME_RULES_VERSION = 'gng-rules-20';
 export const GAME_REPLAY_FORMAT_VERSION = 2;
 export const GAME_REPLAY_CHECKPOINT_INTERVAL = 120;
 export const GAME_REPLAY_MAX_CHARACTERS = 10_000_000;
@@ -306,6 +306,9 @@ function isGameIntent(value: unknown): value is GameIntent {
       && typeof value.unitType === 'string' && value.unitType.length > 0 && value.unitType.length <= 128
       && typeof value.commandId === 'string' && value.commandId.trim().length > 0 && value.commandId.length <= 128;
     case 'upgrade-unit': return hasOnlyKeys(value, ['type', 'unitId', 'commandId'])
+      && typeof value.unitId === 'string' && value.unitId.length > 0 && value.unitId.length <= 128
+      && typeof value.commandId === 'string' && value.commandId.trim().length > 0 && value.commandId.length <= 128;
+    case 'play-gambler': return hasOnlyKeys(value, ['type', 'unitId', 'commandId'])
       && typeof value.unitId === 'string' && value.unitId.length > 0 && value.unitId.length <= 128
       && typeof value.commandId === 'string' && value.commandId.trim().length > 0 && value.commandId.length <= 128;
     default: return false;

@@ -1,16 +1,21 @@
+import { GAMBLER_HAND_PATTERNS } from './gambler-hand-patterns';
+
 export type GamblerUnitType = 1 | 2 | 3 | 4 | 5 | 6 | 35 | 36;
 
-export type GamblerHand =
-  | 'one-pair'
-  | 'two-pair'
-  | 'three-of-a-kind'
-  | 'full-house'
-  | 'four-of-a-kind'
-  | 'flush'
-  | 'royal-flush'
-  | 'straight'
-  | 'high-card'
-  | 'lost';
+export type GamblerHand = keyof typeof GAMBLER_HAND_PATTERNS;
+
+export type GamblerSuitCode = 0 | 0x100 | 0x200 | 0x300;
+
+export interface GamblerCardView {
+  rank: number;
+  suitCode: GamblerSuitCode;
+  important: boolean;
+}
+
+export interface GamblerHandDeal {
+  templateIndex: number;
+  cards: readonly GamblerCardView[];
+}
 
 export type GamblerOutcome =
   | { type: 'unit'; hand: GamblerHand; unitType: GamblerUnitType }
@@ -19,6 +24,45 @@ export type GamblerOutcome =
 
 export interface GamblerRandomSource {
   nextInt(bound: number): number;
+}
+
+/** Selects the APK's result card layout and applies its randomized four-suit permutation. */
+export function dealGamblerHand(hand: GamblerHand, random: GamblerRandomSource): GamblerHandDeal {
+  const templates = GAMBLER_HAND_PATTERNS[hand] as readonly (readonly number[])[];
+  const templateIndex = drawRandomIndex(random, templates.length);
+  const template = templates[templateIndex];
+  if (!template || template.length !== 5) throw new Error(`Gambler ${hand} template must contain five cards`);
+
+  const remainingSuits: GamblerSuitCode[] = [0, 0x100, 0x200, 0x300];
+  const suitOrder: GamblerSuitCode[] = [];
+  for (let index = 0; index < 4; index += 1) {
+    const suitIndex = drawRandomIndex(random, remainingSuits.length);
+    const [suitCode] = remainingSuits.splice(suitIndex, 1);
+    if (suitCode === undefined) throw new Error('Gambler suit shuffle ran out of suits');
+    suitOrder.push(suitCode);
+  }
+
+  return {
+    templateIndex,
+    cards: template.map((encodedCard) => {
+      const suitIndex = (encodedCard & 0x0f00) >>> 8;
+      const suitCode = suitOrder[suitIndex];
+      if (suitCode === undefined) throw new Error(`Gambler card references unknown suit ${suitIndex}`);
+      return {
+        rank: encodedCard & 0x00ff,
+        suitCode,
+        important: (encodedCard & 0x1000) !== 0,
+      };
+    }),
+  };
+}
+
+function drawRandomIndex(random: GamblerRandomSource, bound: number): number {
+  const value = random.nextInt(bound);
+  if (!Number.isSafeInteger(value) || value < 0 || value >= bound) {
+    throw new RangeError(`Random result must be an integer in [0, ${bound})`);
+  }
+  return value;
 }
 
 export type GamblerRoundResult =

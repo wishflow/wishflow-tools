@@ -23,7 +23,7 @@
 
 ## 随机、环境和视图
 
-同一战局拥有原版共享随机源，保留调用次序。APK 的 `Randomizer.nextInt(bound)` 先调用 Java `Random.nextInt(bound)`，随后调用 `nextLong()` 并以所得 long 重新 `setSeed()`，再将 `firstRandom` 设为 false；重置时重新置为 true。网页以固定 seed 实现该包装器，回放规则版本为 `gng-rules-19`，仍使用格式版本2。Gambler 规则内核接收 `isFirstRandom`：共享流尚未抽取整数时奖池排除输钱项；Game 会话接线属于实施计划中的下一切片。APK 火箭近距离跳跃角度调用 `Math.random()`；网页用独立的、从会话 seed 初始化的确定性适配流，避免改变 APK 共享 `Randomizer` 的消费次序，不把该适配记入 APK `Randomizer.nextInt()` 证据。
+同一战局拥有原版共享随机源，保留调用次序。APK 的 `Randomizer.nextInt(bound)` 先调用 Java `Random.nextInt(bound)`，随后调用 `nextLong()` 并以所得 long 重新 `setSeed()`，再将 `firstRandom` 设为 false；重置时重新置为 true。网页以固定 seed 实现该包装器，回放规则版本为 `gng-rules-20`，仍使用格式版本2。Gambler 规则先按共享随机源抽奖，再抽 `GamblerResults` 手牌模板，最后以 `[4,3,2,1]` 的边界不放回洗牌花色；结果牌面、奖项、冷却与待生成奖品均进入 GameView 和 replay checkpoint，UI 不另抽随机。共享流尚未抽取整数时奖池排除输钱项；失败和冷却拒绝不消费随机值。APK 火箭近距离跳跃角度调用 `Math.random()`；网页用独立的、从会话 seed 初始化的确定性适配流，避免改变 APK 共享 `Randomizer` 的消费次序，不把该适配记入 APK `Randomizer.nextInt()` 证据。
 
 装饰、气泡、音效变体等表现请求若消耗共享随机，关闭绘制或实际播放也不能跳过该确定性消费。任何会影响规则随机调用的视口、声音或页面状态必须固定并记录；统计采样不调用玩法随机源。浏览器环境 Adapter 提供明确的虚拟视口/声音配置；仅禁用实际解码、绘制和播放。
 

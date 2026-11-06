@@ -13,6 +13,14 @@ import {
 } from './replay';
 import { JavaRandom } from './java-random';
 import {
+  dealGamblerHand,
+  getGamblerStake,
+  resolveGamblerRound,
+  type GamblerCardView,
+  type GamblerOutcome,
+  type GamblerUnitType,
+} from './gambler-rules';
+import {
   DrawOrderQueue,
   GAME_DRAW_ORDER_ROAD_CUTOFF,
   synchronizeDrawOrder,
@@ -63,6 +71,14 @@ export type {
   PreparedSetup,
 } from './replay';
 export type { CampaignBonusCrateDefinition, CampaignBonusRewardType } from './campaign-bonus-crates';
+export type {
+  GamblerCardView,
+  GamblerHand,
+  GamblerHandDeal,
+  GamblerOutcome,
+  GamblerSuitCode,
+  GamblerUnitType,
+} from './gambler-rules';
 
 export type GameOpenErrorCode =
   | 'scenario-unavailable'
@@ -301,6 +317,13 @@ export interface CampaignUnitPoolDefinition {
   actions: readonly CampaignUnitPoolActionDefinition[];
 }
 
+export interface GamblerScenarioDefinition {
+  /** Prize unit types unlocked in this level/profile snapshot. */
+  unlockedPrizeUnitTypes: readonly GamblerUnitType[];
+  /** GameDesignData.LEVEL_DATA_GAMBLER_TIME, in simulation milliseconds. */
+  cooldownMs: number;
+}
+
 export interface ScenarioContent {
   id: string;
   contentVersion?: string;
@@ -330,6 +353,7 @@ export interface ScenarioContent {
   campaignUnitPool?: CampaignUnitPoolDefinition;
   /** Optional scene-level pool of the original moving-unit bonus crates. */
   campaignBonusCratePool?: CampaignBonusCrateDefinition;
+  gambler?: GamblerScenarioDefinition;
   /** Base type-1/type-2 settler data before level, wave, and dynamic-difficulty multipliers. */
   campaignEnemy?: PreviewEnemyDefinition;
   /** Type-specific campaign enemy designs; unset entries use the settler design. */
@@ -344,7 +368,24 @@ export type GameIntent =
   | { type: 'start-wave' }
   | { type: 'recruit-unit'; unitType: string; commandId: string }
   | { type: 'hire-map-unit'; unitId: string; commandId: string }
-  | { type: 'upgrade-unit'; unitId: string; commandId: string };
+  | { type: 'upgrade-unit'; unitId: string; commandId: string }
+  | { type: 'play-gambler'; unitId: string; commandId: string };
+
+export interface GamblerRoundView {
+  id: string;
+  stake: number;
+  outcome: GamblerOutcome;
+  templateIndex: number;
+  cards: readonly GamblerCardView[];
+}
+
+export interface GamblerStateView {
+  completedGames: number;
+  nextStake: number;
+  cooldownRemainingMs: number;
+  lastRound?: GamblerRoundView;
+  pendingPrize?: { unitType: GamblerUnitType; remainingMs: number };
+}
 
 export interface UnitView extends ScenarioUnit {
   sleepingAnimationFrame?: number;
@@ -365,6 +406,7 @@ export interface UnitView extends ScenarioUnit {
   };
   upgradeLevel: number;
   nextUpgrade?: UnitUpgradeDefinition;
+  gambler?: GamblerStateView;
   shootingAnimation?: {
     asset: string;
     frame: number;
@@ -468,6 +510,16 @@ export type GameEvent =
   | { type: 'unit-recruitment-rejected'; unitType: string; reason: 'insufficient-funds'; price: number; availableCash: number }
   | { type: 'map-unit-hired'; unitId: string; unitType: string; price: number }
   | { type: 'map-unit-hire-rejected'; unitId: string; unitType: string; reason: 'insufficient-funds'; price: number; availableCash: number }
+  | { type: 'gambler-round-played'; unitId: string; round: GamblerRoundView; cashAfterRound: number }
+  | {
+    type: 'gambler-round-rejected';
+    unitId: string;
+    reason: 'insufficient-funds' | 'cooldown';
+    stake: number;
+    availableCash: number;
+    cooldownRemainingMs: number;
+  }
+  | { type: 'gambler-prize-spawned'; gamblerId: string; unitId: string; unitType: GamblerUnitType; cell: { x: number; y: number } }
   | { type: 'unit-upgraded'; unitId: string; level: number; price: number }
   | { type: 'unit-upgrade-rejected'; unitId: string; reason: 'insufficient-funds' | 'upgrade-limit'; price: number; availableCash: number }
   | { type: 'wave-settled'; settlement: WaveSettlement };
@@ -714,6 +766,19 @@ interface MutableUnit {
   shootingDirection?: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
   walkingAnimationStep: number;
   walkingAnimation?: NonNullable<UnitView['walkingAnimation']>;
+  gambler?: MutableGamblerState;
+}
+
+interface MutableGamblerState {
+  completedGames: number;
+  cooldownRemainingMs: number;
+  casinoCell: { x: number; y: number };
+  lastRound?: GamblerRoundView;
+  pendingPrize?: {
+    unitType: GamblerUnitType;
+    remainingMs: number;
+    unitId: string;
+  };
 }
 
 interface MutableWave {
@@ -803,6 +868,16 @@ const FINE_UNITS_PER_CELL = 7680;
 const FIELD_CENTER_OFFSET = 15360;
 const FIELD_CENTER_HALF = 3840;
 const UNIT_PLACEMENT_OFFSET_Y = 1920;
+const GAMBLER_UNIT_TYPE_NAMES: Readonly<Record<GamblerUnitType, string>> = Object.freeze({
+  1: 'gunslinger',
+  2: 'mexican',
+  3: 'cannon',
+  4: 'indian',
+  5: 'sniper',
+  6: 'grandpa',
+  35: 'pyromaniac',
+  36: 'salesman',
+});
 const UNIT_COLLIDER_START_X = -2534;
 const UNIT_COLLIDER_START_Y = -5376;
 const UNIT_COLLIDER_WIDTH = 5068;
@@ -977,6 +1052,46 @@ function initialUnitPosition(definition: ScenarioUnit): { x: number; y: number }
   };
 }
 
+function resolveGamblerCasinoCells(scenario: ScenarioContent): Map<string, { x: number; y: number }> {
+  const gamblers = scenario.units.filter(({ type }) => type === 'gambler')
+    .sort((left, right) => left.cell.y - right.cell.y || left.cell.x - right.cell.x);
+  const casinos = (scenario.map.decorations ?? []).filter(({ asset }) => asset === 'b_3x2_casino')
+    .sort((left, right) => left.cell.y - right.cell.y || left.cell.x - right.cell.x);
+
+  if (!scenario.gambler) {
+    if (gamblers.length > 0 || casinos.length > 0) {
+      throw new GameOpenError('scenario-unavailable', 'Gambler and Casino content requires explicit wager rules');
+    }
+    return new Map();
+  }
+
+  const { unlockedPrizeUnitTypes, cooldownMs } = scenario.gambler;
+  const validPrizeTypes = new Set<number>(Object.keys(GAMBLER_UNIT_TYPE_NAMES).map(Number));
+  const isValidPrizeType = (value: unknown): value is GamblerUnitType => (
+    typeof value === 'number' && validPrizeTypes.has(value)
+  );
+  const prizeTypes: readonly unknown[] = unlockedPrizeUnitTypes;
+  if (!Array.isArray(unlockedPrizeUnitTypes)
+    || !Number.isSafeInteger(cooldownMs) || cooldownMs < 0
+    || prizeTypes.some((unitType, index) => (
+      !isValidPrizeType(unitType)
+      || prizeTypes.indexOf(unitType) !== index
+      || !scenario.units.some((unit) => unit.type === GAMBLER_UNIT_TYPE_NAMES[unitType])
+    ))
+    || gamblers.length === 0
+    || casinos.length !== gamblers.length
+    || gamblers.some(({ activity }) => activity !== 5)
+    || casinos.some(({ cell }) => (
+      !Number.isSafeInteger(cell.x) || !Number.isSafeInteger(cell.y)
+      || cell.x < 0 || cell.x >= scenario.map.width
+      || cell.y < 0 || cell.y >= scenario.map.height
+    ))) {
+    throw new GameOpenError('scenario-unavailable', 'Gambler prize, cooldown, or Casino pair data is invalid');
+  }
+
+  return new Map(gamblers.map((unit, index) => [unit.id, { ...casinos[index]!.cell }]));
+}
+
 function isActivePlayerUnit(unit: MutableUnit): boolean {
   return unit.definition.activity !== 4;
 }
@@ -1031,6 +1146,20 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
       },
     } : {}),
     upgradeLevel: unit.upgradeLevel,
+    ...(unit.gambler ? {
+      gambler: {
+        completedGames: unit.gambler.completedGames,
+        nextStake: getGamblerStake(unit.gambler.completedGames),
+        cooldownRemainingMs: Math.max(0, unit.gambler.cooldownRemainingMs),
+        ...(unit.gambler.lastRound ? { lastRound: clone(unit.gambler.lastRound) } : {}),
+        ...(unit.gambler.pendingPrize ? {
+          pendingPrize: {
+            unitType: unit.gambler.pendingPrize.unitType,
+            remainingMs: Math.max(0, unit.gambler.pendingPrize.remainingMs),
+          },
+        } : {}),
+      },
+    } : {}),
     ...(shootingAnimation ? { shootingAnimation } : {}),
     ...(upgrade ? { nextUpgrade: clone(upgrade) } : {}),
   };
@@ -1070,6 +1199,24 @@ function campaignSpawnedUnit(template: ScenarioUnit, spawn: SpawnedCampaignUnit)
     weaponCooldownMs: weapon ? Math.trunc(weapon.reloadTimeMs / 2) : 0,
     shotsUntilSpecialReload: weapon?.specialReloadFrequency ?? 0,
   };
+}
+
+function gamblerPrizeUnit(
+  template: ScenarioUnit,
+  unitType: GamblerUnitType,
+  unitId: string,
+  cell: { x: number; y: number },
+): MutableUnit {
+  const spawned = campaignSpawnedUnit(template, {
+    poolType: unitType,
+    unitType: GAMBLER_UNIT_TYPE_NAMES[unitType],
+    id: unitId,
+    cell,
+    positionFine: initialUnitPosition({ ...template, cell }),
+  });
+  spawned.definition.activity = 5;
+  delete spawned.definition.hirePrice;
+  return spawned;
 }
 
 function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation'] {
@@ -2491,6 +2638,8 @@ export function createGame(options: {
       const setup = preparedSetup ?? await prepare({ scenarioId });
       const resolved = await resolvePreparedSetup(sourceScenario, setup);
       const scenario = resolved.scenario;
+      const gamblerCasinoCells = resolveGamblerCasinoCells(scenario);
+      const gamblerPrizeUnitTypes = new Set(scenario.gambler?.unlockedPrizeUnitTypes ?? []);
       const difficulty = requestedDifficulty ?? 'easy';
       if (!isGameDifficulty(difficulty)) {
         throw new GameOpenError('difficulty-unavailable', 'Requested game difficulty is invalid');
@@ -2617,11 +2766,19 @@ export function createGame(options: {
         ...(definition.weapon ? { weapon: clone(definition.weapon) } : {}),
         weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
         shotsUntilSpecialReload: definition.weapon?.specialReloadFrequency ?? 0,
+        ...(gamblerCasinoCells.has(definition.id) ? {
+          gambler: {
+            completedGames: 0,
+            cooldownRemainingMs: 0,
+            casinoCell: { ...gamblerCasinoCells.get(definition.id)! },
+          },
+        } : {}),
       }));
       const recruitableUnits = new Map((scenario.recruitableUnits ?? []).map((definition) => [definition.id, definition]));
       const recruitmentCommands = new Map<string, string>();
       const mapHireCommands = new Map<string, string>();
       const upgradeCommands = new Map<string, string>();
+      const gamblerCommands = new Map<string, string>();
       const recordedFrames: GameReplayFrame[] = [];
       const replayStates = new Map<number, ReplayState>();
       const pending: PendingIntent[] = [];
@@ -2930,6 +3087,26 @@ export function createGame(options: {
             return true;
           }
 
+          if (intent.type === 'play-gambler') {
+            if (!wave || !scenario.gambler || typeof intent.unitId !== 'string'
+              || typeof intent.commandId !== 'string' || !intent.commandId.trim() || intent.commandId.length > 128) {
+              return false;
+            }
+            const existingUnitId = gamblerCommands.get(intent.commandId);
+            if (existingUnitId !== undefined) return existingUnitId === intent.unitId;
+            const unit = units.find((candidate) => candidate.definition.id === intent.unitId);
+            if (!unit?.selected || !unit.gambler || unit.definition.type !== 'gambler'
+              || unit.gambler.cooldownRemainingMs > 0
+              || wave.cash < getGamblerStake(unit.gambler.completedGames)) return false;
+            gamblerCommands.set(intent.commandId, intent.unitId);
+            pending.push({
+              sequence: nextIntentSequence,
+              intent: { type: 'play-gambler', unitId: intent.unitId, commandId: intent.commandId },
+            });
+            nextIntentSequence += 1;
+            return true;
+          }
+
           if (intent.type === 'move-unit') {
             if (!Number.isFinite(intent.targetX) || !Number.isFinite(intent.targetY)
               || !units.some((unit) => unit.selected && isActivePlayerUnit(unit)
@@ -2969,6 +3146,11 @@ export function createGame(options: {
           const tileSizePixels = normalizedTileSizePixels(input.tileSizePixels, scenario);
           frame += 1;
           elapsedMs += deltaMs;
+          for (const unit of units) {
+            if (unit.gambler) {
+              unit.gambler.cooldownRemainingMs = Math.max(0, unit.gambler.cooldownRemainingMs - deltaMs);
+            }
+          }
           if (wave) wave.events = [];
           if (bonusNotice) {
             bonusNotice.remainingMs -= deltaMs;
@@ -3121,6 +3303,72 @@ export function createGame(options: {
               continue;
             }
 
+            if (command.intent.type === 'play-gambler') {
+              const intent = command.intent;
+              const unit = units.find((candidate) => candidate.definition.id === intent.unitId);
+              const gambler = unit?.gambler;
+              if (!wave || !scenario.gambler || !unit?.selected || !gambler) continue;
+
+              const stake = getGamblerStake(gambler.completedGames);
+              if (gambler.cooldownRemainingMs > 0) {
+                wave.events.push({
+                  type: 'gambler-round-rejected',
+                  unitId: unit.definition.id,
+                  reason: 'cooldown',
+                  stake,
+                  availableCash: wave.cash,
+                  cooldownRemainingMs: gambler.cooldownRemainingMs,
+                });
+                continue;
+              }
+
+              const result = resolveGamblerRound({
+                cash: wave.cash,
+                completedGames: gambler.completedGames,
+                unlockedUnitTypes: gamblerPrizeUnitTypes,
+                isFirstRandom: random.isFirstRandom(),
+                random,
+              });
+              if (result.status === 'insufficient-funds') {
+                wave.events.push({
+                  type: 'gambler-round-rejected',
+                  unitId: unit.definition.id,
+                  reason: 'insufficient-funds',
+                  stake: result.stake,
+                  availableCash: result.availableCash,
+                  cooldownRemainingMs: gambler.cooldownRemainingMs,
+                });
+                continue;
+              }
+
+              const handDeal = dealGamblerHand(result.outcome.hand, random);
+              const round: GamblerRoundView = {
+                id: `${unit.definition.id}-round-${result.completedGamesAfter}`,
+                stake: result.stake,
+                outcome: clone(result.outcome),
+                templateIndex: handDeal.templateIndex,
+                cards: clone(handDeal.cards),
+              };
+              wave.cash = result.cashAfterRound;
+              gambler.completedGames = result.completedGamesAfter;
+              gambler.cooldownRemainingMs = scenario.gambler.cooldownMs;
+              gambler.lastRound = round;
+              if (result.outcome.type === 'unit') {
+                gambler.pendingPrize = {
+                  unitType: result.outcome.unitType,
+                  remainingMs: 500,
+                  unitId: `${unit.definition.id}-prize-${result.completedGamesAfter}`,
+                };
+              }
+              wave.events.push({
+                type: 'gambler-round-played',
+                unitId: unit.definition.id,
+                round: clone(round),
+                cashAfterRound: wave.cash,
+              });
+              continue;
+            }
+
             if (command.intent.type === 'move-unit') {
               const selectedUnit = units.find((unit) => unit.selected && isActivePlayerUnit(unit));
               if (selectedUnit) {
@@ -3155,6 +3403,30 @@ export function createGame(options: {
               unit.movementTargetFine = undefined;
             }
           }
+
+          const spawnedGamblerPrizes: MutableUnit[] = [];
+          for (const unit of units) {
+            const gambler = unit.gambler;
+            const pendingPrize = gambler?.pendingPrize;
+            if (!gambler || !pendingPrize || deltaMs <= 0) continue;
+            pendingPrize.remainingMs = Math.trunc(pendingPrize.remainingMs - deltaMs);
+            if (pendingPrize.remainingMs >= 500) continue;
+
+            const template = scenario.units.find(({ type }) => type === GAMBLER_UNIT_TYPE_NAMES[pendingPrize.unitType]);
+            if (!template) throw new Error(`Gambler prize template is missing for unit type ${pendingPrize.unitType}`);
+            const spawned = gamblerPrizeUnit(template, pendingPrize.unitType, pendingPrize.unitId, gambler.casinoCell);
+            spawnedGamblerPrizes.push(spawned);
+            gambler.pendingPrize = undefined;
+            wave?.events.push({
+              type: 'gambler-prize-spawned',
+              gamblerId: unit.definition.id,
+              unitId: spawned.definition.id,
+              unitType: pendingPrize.unitType,
+              cell: { ...gambler.casinoCell },
+            });
+            drawOrderCreationOrder.push('unit:' + spawned.definition.id);
+          }
+          units.push(...spawnedGamblerPrizes);
 
           for (const unit of units) {
             if (unit.bonusAttribute !== undefined) {

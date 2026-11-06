@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getGamblerStake, resolveGamblerRound, type GamblerOutcome } from '../src/game/gambler-rules';
+import { GAMBLER_HAND_PATTERNS } from '../src/game/gambler-hand-patterns';
+import { dealGamblerHand, getGamblerStake, resolveGamblerRound, type GamblerOutcome } from '../src/game/gambler-rules';
 
 const allUnitCards = new Set([1, 2, 3, 4, 5, 6, 35, 36] as const);
 
@@ -147,4 +148,46 @@ test('invalid counters and random values fail explicitly instead of changing the
     isFirstRandom: true,
     random: { nextInt: (bound) => bound },
   }), RangeError);
+});
+
+test('APK hand template counts and four-suit shuffle consume the recorded random bounds', () => {
+  assert.deepEqual(Object.fromEntries(Object.entries(GAMBLER_HAND_PATTERNS).map(([hand, patterns]) => [hand, patterns.length])), {
+    lost: 7,
+    'high-card': 11,
+    'one-pair': 10,
+    'two-pair': 10,
+    'three-of-a-kind': 10,
+    straight: 10,
+    flush: 10,
+    'full-house': 10,
+    'four-of-a-kind': 11,
+    'royal-flush': 4,
+  });
+
+  const bounds: number[] = [];
+  const results = [0, 3, 2, 1, 0];
+  const deal = dealGamblerHand('one-pair', {
+    nextInt(bound) {
+      bounds.push(bound);
+      const value = results.shift();
+      assert.notEqual(value, undefined);
+      assert.ok(value! >= 0 && value! < bound);
+      return value!;
+    },
+  });
+
+  assert.deepEqual(bounds, [10, 4, 3, 2, 1]);
+  assert.equal(deal.templateIndex, 0);
+  assert.deepEqual(deal.cards, [
+    { rank: 9, suitCode: 0x300, important: true },
+    { rank: 9, suitCode: 0x100, important: true },
+    { rank: 8, suitCode: 0, important: false },
+    { rank: 11, suitCode: 0x300, important: false },
+    { rank: 3, suitCode: 0, important: false },
+  ]);
+});
+
+test('APK important-card flag and rank are preserved for the high-card result', () => {
+  const deal = dealGamblerHand('high-card', { nextInt: () => 0 });
+  assert.deepEqual(deal.cards[0], { rank: 12, suitCode: 0, important: true });
 });
