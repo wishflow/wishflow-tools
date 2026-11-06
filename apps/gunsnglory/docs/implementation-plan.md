@@ -8,7 +8,7 @@
 
 - 正式战役已完成 **3/60** 关：Cow Gulch、Apache Valley、Fort Kaboom。
 - 当前工作在 `codex/gng-spawn-field-restore`；该分支包含 `gunsnglory` 集成分支，尚未集成到公开 `master`。公开版本为 `e922c3f`，本地代码不等于已发布版本。
-- Tech Town 的地图、路线、静态对象、普通与特殊单位、Gambler/Casino、列车、Gatling、随机流及会话结算底层均已实现。Gold Transport 的 type9 生成、车辆行为、HDPI 贴图与4–6型车辆残骸规则已实现并通过定向检查；正式关卡数据尚未接入。接下来先补玩家单位池整表动作，再接入 map04 内容；不要人工通关整关。
+- Tech Town 的地图、路线、静态对象、普通与特殊单位、Gambler/Casino、列车、Gatling、随机流及会话结算底层均已实现。Gold Transport 的 type9 生成、车辆行为、HDPI 贴图与4–6型车辆残骸规则已实现；玩家单位池现支持整表 `set` / `set-max` 并已将 Fort Kaboom 迁移到新契约。上述定向测试和类型检查通过。正式关卡数据尚未接入；下一步是注册 map04 内容，不要人工通关整关。
 - 全屏画面现按可用视口保持比例适配，窗口模式下 Usagi 位于游戏上层并可交互，全屏状态隐藏、退出后恢复。定向视口测试、5 项全屏 E2E 及本批完整 `test:ci` 均通过；内置浏览器拒绝网页的原生全屏请求，因此原生全屏覆盖屏幕这一项仍没有浏览器实测证据。后续一般保持窗口模式，不重复进入全屏；若专门回归全屏，再记录真实浏览器能力和结果。
 - 发布比例基线为 5 次成功发布 / 27 个已验收实现切片（18.5%）；完成新的发布批次后再按规则更新计数。
 
@@ -23,7 +23,7 @@
 | 请求向量 | `Wave.setContentForSpawnPoint()` 把 10 个请求数写入池 type 2–11；短重载的缺省尾项为 0。映射：2–5=1–4 人拓荒者组，6=骑手，7=Covered Wagon，8=Post Coach，9=Gold Transport，10=Boss，11=Doc。证据入口：`WaveManager.updateWave/addToWave`、`Wave.setContentForSpawnPoint`。 | 每个表格向量固定按 `[type2,type3,type4,type5,type6,type7,type8,type9,type10,type11]` 解读；不得把池 type 直接当成敌人 type。 |
 | 8 波数据 | 下表的 `P入口@间隔:请求` 直接对应 APK 的每个入口池；短重载未提供的 type10/11 均为 0。 | 整表作为独立测试期望值；不得从被测关卡内容本身生成预期值。 |
 | 关卡参数 | `GameDesignData.gameDesignData[3]`（关卡 4）原始值为 `[300,50,999,25000,0,30000,5,32,75,150,188,299000]`，下表已逐列对照 APK 常量和读取点。 | 只把有消费者的值接入：经济、生命、升级上限、奖励箱、难度倍率和赌徒冷却；索引 5 无读取点，不生成网页行为。 |
-| 玩家单位池 | `SpawnPoolManager` 初始全局间隔 15,000ms；type1/2 使用 Saloon，type3 使用 Fort，type4 使用 Tipi。地图码 112/113/114 位于 `(13,3)/(22,20)/(5,17)`。第 2 波前动作 `set` 将池 1–4 清零，`set-max` 将 1–4 全设为 5。证据入口：`SpawnPoolManager.<init>/addActionForSpawnPool/performActionsForWave/update`。 | `set` 与 `set-max` 都是对完整 37 槽数组的整体替换；数据接口必须能一次表达多槽值，不能串成多个会彼此清除的标量动作。 |
+| 玩家单位池 | `SpawnPoolManager` 初始全局间隔 15,000ms；type1/2 使用 Saloon，type3 使用 Fort，type4 使用 Tipi。地图码 112/113/114 位于 `(13,3)/(22,20)/(5,17)`。第 2 波前动作 `set` 将池 1–4 清零，`set-max` 将 1–4 全设为 5。证据入口：`SpawnPoolManager.<init>/addActionForSpawnPool/performActionsForWave/update`。 | 网页契约支持一次性替换完整 37 槽数组；未列入 `values` 的槽清零，`add` / `add-max` 保持单槽增量语义。Fort Kaboom 已迁移并通过行为回归。 |
 | Gold Transport | APK 敌人 type6，速度 500、生命 500、奖励 25、穿透 `[light=33,fire=25,heavy=100,poison=100]`、转向 200ms、逃脱扣 4 命、击杀动态难度权重 10。普通/转向图为 `goldtransport` / `goldtransport_turn`；原图在 HDPI 下分别为 144×216 与 96×72。type6 残骸在死亡计时低于 500ms 时产生碎片，并按原版“动态难度 + 平均乘客数 0”公式抽取乘客数。证据入口：`GameObjectEnemy.<init>/getPenaltyForSurviving/getAverageSpawningAmmountAfterDestruction/startDying/setImageForTurningUnit`、`EnemyDirector.updateDifficultyForEnemyKilled/moveEnemys`。 | 网页已支持 type9→type6、车辆碰撞、转向/绘制、结算和4–6型车辆残骸公式；Gold Transport HDPI 图片直接从 APK 资源导入。定向测试覆盖生成、数值、逃脱、动态难度、碰撞、贴图锚点与残骸随机流。 |
 | 对白资源 | 实际使用键为 `T_IA_CAMPAIGN_04_01` 与 `T_CAMPAIGN_04_02` 至 `_08`；同名但未被 `setWaves()` 引用的 `T_CAMPAIGN_04_01` 不使用。对白按波次依次为 Pedro、Pedro、Engineer、Settlers、Pedro、Settlers、Pedro、Pedro；肖像分别为 `portrait_pedro`、`portrait_pedro`、`portrait_engineer`、`portrait_settlers`、`portrait_pedro`、`portrait_settlers`、`portrait_pedro`、`portrait_pedro`。APK 原文及中译见下表。 | 使用现有窗口内波次对白；英文与 APK 字符串逐字核对，中文明确作为项目译文；静音验收。 |
 | 进度解锁 | `GameObjectUnit.isUnlocked()` 通过当前关卡阈值或已完成关卡判断单位解锁；关卡 4 的普通生成池包含 type1–4。Sniper、Grandpa、Gambler、Pyromaniac、Salesman 的 APK 解锁关卡均晚于 4；应用不接入已移除的平台购买解锁。 | map03 完成后 map04 可进入；map04 未完成时 map05 保持锁定，完成 map04 后进度门槛开放 map05，但该关仍因内容未实现而禁用。使用同一档案完成记录构造 Tech Town 的单位与 Casino 快照。 |
@@ -75,13 +75,7 @@
 
 ## 下一步
 
-### 1. 让玩家生成池支持原版整表动作
-
-- `SpawnPoolManager.setSpawnPool()` 和 `setSpawnPoolMax()` 都替换完整 37 槽数组。当前网页动作类型只接收单个池槽；连续四个 `set-max` 会互相清空，不可表达 map04 的 `pool1..4=5`。
-- 将 `CampaignUnitPoolActionDefinition` 最小扩展为整表 `set`/`set-max` 与标量 `add`/`add-max` 两种表达；迁移 Fort Kaboom 单槽动作并保留其结果。为同一动作数组配置多个非零槽，验证一次 set-max 后四槽均为 5，其他槽为 0。
-- **关闭条件：**新增规则测试覆盖完整数组替换、遗漏槽清零及 Fort Kaboom 现有池行为；针对性测试通过后本地提交。
-
-### 2. 注册 Tech Town 正式关卡内容
+### 1. 注册 Tech Town 正式关卡内容
 
 - 在正式内容文件中接入上方八波矩阵、四个入口、wave2 玩家池动作、15秒玩家池间隔，以及 map04 的现金、生命、升级上限、奖励箱、难度倍率和 Gambler 冷却。
 - 玩家池 type1–4 对应 Gunslinger、Mexican、Cannon、Indian；仅放入在关卡4可用的单位。Special units 的 APK 解锁门槛晚于关卡4，仍按同一档案快照判断，不把它们默认全部开放。Gambler 与 Casino 必须同时出现或同时隐藏。
