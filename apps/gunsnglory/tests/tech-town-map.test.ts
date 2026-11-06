@@ -63,6 +63,7 @@ const expectedCellsByCode: Readonly<Record<number, readonly (readonly [number, n
 };
 
 const directionByCode = { 52: 'north', 53: 'south', 54: 'west', 55: 'east' } as const;
+const ordinaryUnitTypes = new Set(['gunslinger', 'mexican', 'cannon', 'indian', 'sniper', 'grandpa']);
 const directionVector = {
   east: { x: 1, y: 0 },
   south: { x: 0, y: 1 },
@@ -208,6 +209,8 @@ test('creates only unlocked ordinary Tech Town units on the first level-four vis
   } as const;
 
   assert.equal(units.length, 23);
+  assert.equal(units.filter(({ type }) => ordinaryUnitTypes.has(type)).length, 23);
+  assert.equal(units.some(({ type }) => type === 'pyromaniac' || type === 'salesman' || type === 'gambler'), false);
   for (const [type, code] of Object.entries(sleepingByType)) {
     const sleepingUnits = units.filter((unit) => unit.type === type && unit.activity === 4);
     assert.deepEqual(sleepingUnits.map(({ cell }) => cell), expectedCellsByCode[code]!.map(([x, y]) => ({ x, y })));
@@ -225,8 +228,12 @@ test('restores marker units after their campaign unlock callback allows them', (
   const sniper = units.filter(({ type }) => type === 'sniper');
   const grandpa = units.filter(({ type }) => type === 'grandpa');
   const pyromaniac = units.filter(({ type }) => type === 'pyromaniac');
+  const salesman = units.filter(({ type }) => type === 'salesman');
+  const gambler = units.filter(({ type }) => type === 'gambler');
 
   assert.equal(units.length, 30);
+  assert.equal(units.filter(({ type }) => ordinaryUnitTypes.has(type)).length, 27);
+  assert.deepEqual([pyromaniac.length, salesman.length, gambler.length], [1, 1, 1]);
   assert.deepEqual(sniper.map(({ cell, activity }) => ({ cell, activity })), expectedCellsByCode[100]!.map(([x, y]) => ({
     cell: { x, y }, activity: 4,
   })));

@@ -343,6 +343,52 @@ test('every unlocked unit card creates the matching active unit at the Casino', 
   }
 });
 
+test('spawning a unit prize leaves recruitment stock, map decorations and existing units unchanged', async () => {
+  const scenario = createGamblerScenario();
+  scenario.recruitableUnits = [{
+    id: 'test-gunslinger-stock',
+    name: { en: 'Gunslinger', zh: '枪手' },
+    price: 75,
+    spawnLocationType: 1,
+  }];
+  const { session, gambler } = await openSelectedGambler(scenario, 21);
+
+  try {
+    assert.equal(session.submitIntent({
+      type: 'recruit-unit', unitType: 'test-gunslinger-stock', commandId: 'stock-before-prize',
+    }), true);
+    const before = session.advance({ deltaMs: 0 });
+    assert.equal(before.recruitPool[0]?.count, 1);
+    const beforeRecruitPool = structuredClone(before.recruitPool);
+    const beforeDecorations = structuredClone(before.map.decorations ?? []);
+    const beforeTemplates = structuredClone(scenario.units);
+    const beforeUnits = before.units.map(({ id, type, activity, selected, cell, asset, frame, render, hitArea, positionFine }) => ({
+      id, type, activity, selected, cell, asset, frame, render, hitArea, positionFine,
+    }));
+
+    assert.equal(session.submitIntent({
+      type: 'play-gambler', unitId: gambler.id, commandId: 'spawn-prize-with-stock',
+    }), true);
+    const roundView = session.advance({ deltaMs: 0 });
+    const round = roundView.units.find(({ id }) => id === gambler.id)?.gambler?.lastRound;
+    assert.deepEqual(round?.outcome, { type: 'unit', hand: 'two-pair', unitType: 2 });
+
+    const after = session.advance({ deltaMs: 1 });
+    const prize = after.units.find(({ id }) => id === `${gambler.id}-prize-1`);
+    assert.ok(prize);
+    assert.equal(prize.type, 'mexican');
+    assert.equal(after.units.length, before.units.length + 1);
+    assert.deepEqual(after.recruitPool, beforeRecruitPool);
+    assert.deepEqual(after.map.decorations ?? [], beforeDecorations);
+    assert.deepEqual(scenario.units, beforeTemplates);
+    assert.deepEqual(after.units.map(({ id, type, activity, selected, cell, asset, frame, render, hitArea, positionFine }) => ({
+      id, type, activity, selected, cell, asset, frame, render, hitArea, positionFine,
+    })).filter(({ id }) => beforeUnits.some((unit) => unit.id === id)), beforeUnits);
+  } finally {
+    session.close();
+  }
+});
+
 test('insufficient funds reject before state or shared random changes', async () => {
   const scenario = createGamblerScenario({ initialCash: 49, speedMultiplierCount: 20 });
   const rejected = await openSelectedGambler(scenario, 42);
