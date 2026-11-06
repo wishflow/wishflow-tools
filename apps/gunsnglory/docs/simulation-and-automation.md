@@ -23,11 +23,11 @@
 
 ## 随机、环境和视图
 
-同一战局拥有原版共享随机源，保留调用次序。APK 的 `Randomizer.nextInt(bound)` 先调用 Java `Random.nextInt(bound)`，随后调用 `nextLong()` 并以所得 long 重新 `setSeed()`，再将 `firstRandom` 设为 false；重置时重新置为 true。网页以固定 seed 实现该包装器，回放规则版本为 `gng-rules-20`，仍使用格式版本2。Gambler 规则先按共享随机源抽奖，再抽 `GamblerResults` 手牌模板，最后以 `[4,3,2,1]` 的边界不放回洗牌花色；结果牌面、奖项、冷却与待生成奖品均进入 GameView 和 replay checkpoint，UI 不另抽随机。共享流尚未抽取整数时奖池排除输钱项；失败和冷却拒绝不消费随机值。APK 火箭近距离跳跃角度调用 `Math.random()`；网页用独立的、从会话 seed 初始化的确定性适配流，避免改变 APK 共享 `Randomizer` 的消费次序，不把该适配记入 APK `Randomizer.nextInt()` 证据。
+APK 的 `Game.Randomizer.nextInt(bound)` 先调用 Java `Random.nextInt(bound)`，随后调用 `nextLong()` 并以所得 long 重新 `setSeed()`，再将 `firstRandom` 设为 false；重置时重新置为 true。REA 静态调用图中该包装器只有 Gambler 抽奖和手牌动画的两个调用类。网页按 `StartRecord.randomSeed` 初始化规则流，回放规则版本为 `gng-rules-21`，格式版本仍为2。Gambler 规则先按规则流抽奖，再抽 `GamblerResults` 手牌模板，最后以 `[4,3,2,1]` 的边界不放回洗牌花色；结果牌面、奖项、冷却与待生成奖品均进入 GameView 和 replay checkpoint，UI 不另抽随机。规则流尚未抽取整数时奖池排除输钱项；失败和冷却拒绝不消费规则随机值。
 
-APK 另有 `Util.random(bound)`：它调用单独的 `java.util.Random`，并在 `Util` 类初始化时用系统毫秒时钟设 seed；它与 `Game.Randomizer` 不是同一随机源。`LokSteam` 烟雾间隔调用此 API，`BackgroundMap`、`EnemyDirector`、`SfxManager` 等也有各自调用。网页当前已把部分敌军生成和移动随机映射到 `GameSession` 的规则 RNG，因此 RNG 所有权与 APK 仍存在已知差异；在计划步骤 3.7 前，不宣称敌军随机流逐项复现 APK。列车烟雾切片使用从 StartRecord seed 派生的独立 Java Random 兼容流，避免进一步改变现有规则 RNG；固定输入下可确定重放。原 APK 不保存 `Util` 的时钟 seed，故网页不能复现原设备的同一随机数列。后续步骤 3.7 将逐一核对当前可达 `Util.random` 消费者并拆分两种流，调用顺序及偏差记录在实施计划中。
+APK 另有 `Util.random(bound)`：它调用单独的 `java.util.Random`，并在 `Util` 类初始化时以系统毫秒时钟设 seed；它与 `Game.Randomizer` 不是同一随机源。网页通过 `deriveSessionRandomSeed(StartRecord.randomSeed, 'game-util')` 派生标准 Java `Random` 兼容流，当前已接入预览敌军速度、战役波次/生成池抽取、敌军出生点与编队/颜色、路线转向、马车残骸与乘客、战役单位池、补给箱和列车烟雾。Gambler 仍只使用规则流。地图 `BackgroundMap.createVariationMap` 在 APK 会消费 `Util.random` 选择图块；网页 Tech Town 场景当前用固定内容资源组装，未按每局 seed 重抽地面/道路变体。未实现的友军随机移动尚未接入；实现对应行为时须复用会话 Util 流。
 
-装饰、气泡、音效变体等表现请求若消耗共享随机，关闭绘制或实际播放也不能跳过该确定性消费。任何会影响规则随机调用的视口、声音或页面状态必须固定并记录；统计采样不调用玩法随机源。浏览器环境 Adapter 提供明确的虚拟视口/声音配置；仅禁用实际解码、绘制和播放。
+为了让视口和音频冷却不改写 `GameSession` 模拟序列，网页将 APK `SfxManager` 及单位雇用语音放在从同一 StartRecord seed 经 `'presentation'` 域派生的表现流中。位置音效在可见范围与配对冷却检查通过后才抽取变体；单位雇用语音用表现流的 double 值选变体。静音仍按相同事件处理和消费已接受的表现随机，只跳过实际播放；相机裁切可能改变表现流消费，但不得改变规则流或会话 Util 流。APK 火箭近距离跳跃角度使用 `Math.random()`；网页用独立、从会话 seed 初始化的确定性适配流，避免改变规则流调用次序。APK 的 `Util` 时钟 seed 不落盘，网页无法复现原设备的同一随机数列；域分离也意味着网页表现音效不会复现 APK 全局 Util 流与音效间逐个随机数的交错顺序。
 
 玩家/AI的策略观察只能暴露对应能力，如公开 HUD、玩家所见目标或更宽的分析视图；隐藏的全局状态只供受控调试。控制频率、可见信息、超时、无效动作处理和动作日志属于策略版本。策略计算不得直接修改 Game 状态；脚本动作仍经过同一 Game 命令校验。
 

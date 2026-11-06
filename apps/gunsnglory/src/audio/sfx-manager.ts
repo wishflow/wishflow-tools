@@ -22,11 +22,21 @@ const FIXED_COOLDOWN_MS = 300;
 
 export function chooseSoundVariation(
   assets: readonly string[],
-  random: () => number = Math.random,
+  random: () => number,
 ): string | undefined {
   if (assets.length === 0) return undefined;
   if (assets.length === 1) return assets[0];
   const variation = Math.max(0, Math.min(assets.length - 1, Math.trunc(random() * assets.length)));
+  return assets[variation];
+}
+
+function chooseUtilSoundVariation(assets: readonly string[], nextInt: (bound: number) => number): string | undefined {
+  if (assets.length === 0) return undefined;
+  if (assets.length === 1) return assets[0];
+  const variation = nextInt(assets.length);
+  if (!Number.isInteger(variation) || variation < 0 || variation >= assets.length) {
+    throw new RangeError('Sound variation random result is outside its bound');
+  }
   return assets[variation];
 }
 
@@ -43,7 +53,11 @@ function isOnScreen(positionFine: FinePoint, viewport: SoundEffectViewport): boo
 export class SoundEffectsManager {
   private readonly cooldowns = Array.from({ length: 20 }, () => 0);
 
-  constructor(private readonly random: () => number = Math.random) {}
+  constructor(private readonly nextInt: (bound: number) => number) {}
+
+  reset(): void {
+    this.cooldowns.fill(0);
+  }
 
   advance(deltaMs: number): void {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) {
@@ -62,7 +76,7 @@ export class SoundEffectsManager {
       if (request.assets.length < 2) return undefined;
       const pairStart = Math.trunc(request.id / 2) * 2;
       if (this.cooldowns[pairStart]! > 0 || this.cooldowns[pairStart + 1]! > 0) return undefined;
-      const variation = chooseSoundVariation(request.assets, this.random);
+      const variation = chooseUtilSoundVariation(request.assets, this.nextInt);
       this.cooldowns[request.id] = VARIATION_COOLDOWN_MS;
       return variation;
     }

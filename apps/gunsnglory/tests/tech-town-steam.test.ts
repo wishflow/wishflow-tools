@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createGamblerUiSample } from '../src/content/gambler-ui-sample';
 import { createTechTownTrainTestContent } from '../src/content/tech-town-train-sample';
 import { createTechTownTrainUnits } from '../src/content/tech-town-units';
 import { createGame, type ScenarioContent } from '../src/game';
@@ -110,30 +111,38 @@ test('same seed and inputs replay the same steam clouds', async () => {
   );
 });
 
-test('steam countdown randomness does not consume the Game.Randomizer stream', async () => {
-  const train = createTechTownTrainTestContent();
-  const withWave = (id: string, removeSteam: boolean): ScenarioContent => ({
-    ...train,
+test('steam and enemy Util draws do not consume the Gambler Randomizer stream', async () => {
+  const gambler = createGamblerUiSample(1_000);
+  const withTrain = (id: string, removeSteam: boolean): ScenarioContent => ({
+    ...gambler,
     id,
-    contentVersion: `${train.contentVersion}-${id}`,
-    units: train.units.map((unit) => {
-      if (!removeSteam) return unit;
-      const { steamEmitter: _steamEmitter, ...withoutSteam } = unit;
-      return withoutSteam;
-    }),
-    previewWave,
+    contentVersion: `${gambler.contentVersion}-${id}`,
+    units: [
+      ...gambler.units,
+      ...createTechTownTrainUnits().map((unit) => {
+        if (!removeSteam) return unit;
+        const { steamEmitter: _steamEmitter, ...withoutSteam } = unit;
+        return withoutSteam;
+      }),
+    ],
   });
-  const steam = await openTrainSample(77, withWave('steam-wave-sample', false));
-  const control = await openTrainSample(77, withWave('plain-wave-sample', true));
+  const steam = await openTrainSample(77, withTrain('steam-gambler-sample', false));
+  const control = await openTrainSample(77, withTrain('plain-gambler-sample', true));
 
-  steam.session.advance({ deltaMs: 100 });
-  control.session.advance({ deltaMs: 100 });
-  steam.session.submitIntent({ type: 'start-wave' });
-  control.session.submitIntent({ type: 'start-wave' });
-  const steamEnemy = steam.session.advance({ deltaMs: 0 }).enemies[0]!;
-  const controlEnemy = control.session.advance({ deltaMs: 0 }).enemies[0]!;
+  for (const session of [steam.session, control.session]) {
+    session.advance({ deltaMs: 100 });
+    session.submitIntent({ type: 'select-at', x: 6.5, y: 6.5 });
+    session.advance({ deltaMs: 0 });
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+    session.submitIntent({ type: 'play-gambler', unitId: 'gambler-ui-sample-unit', commandId: 'stream-check' });
+  }
 
-  assert.equal(steamEnemy.speed, controlEnemy.speed);
+  const steamRound = steam.session.advance({ deltaMs: 0 }).units
+    .find(({ id }) => id === 'gambler-ui-sample-unit')?.gambler?.lastRound;
+  const controlRound = control.session.advance({ deltaMs: 0 }).units
+    .find(({ id }) => id === 'gambler-ui-sample-unit')?.gambler?.lastRound;
+  assert.deepEqual(steamRound, controlRound);
 });
 
 test('expired clouds are removed from the unit view', async () => {

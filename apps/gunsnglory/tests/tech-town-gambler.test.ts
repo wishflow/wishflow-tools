@@ -270,7 +270,7 @@ test('a Gambler session records one round, rejects same-frame cooldown play, and
   }
 });
 
-test('Gambler cash and loss outcomes settle the correct balance using the shared Randomizer', async () => {
+test('Gambler first-round eligibility is independent of wave Util draws', async () => {
   const scenario = createGamblerScenario();
 
   const cashSession = await openSelectedGambler(scenario, 4);
@@ -288,20 +288,20 @@ test('Gambler cash and loss outcomes settle the correct balance using the shared
     cashSession.session.close();
   }
 
-  const lossSession = await openSelectedGambler(scenario, 5);
+  const firstRoundSession = await openSelectedGambler(scenario, 5);
   try {
-    assert.equal(lossSession.session.submitIntent({ type: 'start-wave' }), true);
-    lossSession.session.advance({ deltaMs: 0 });
-    assert.equal(lossSession.session.submitIntent({
-      type: 'play-gambler', unitId: lossSession.gambler.id, commandId: 'loss-round',
+    assert.equal(firstRoundSession.session.submitIntent({ type: 'start-wave' }), true);
+    firstRoundSession.session.advance({ deltaMs: 0 });
+    assert.equal(firstRoundSession.session.submitIntent({
+      type: 'play-gambler', unitId: firstRoundSession.gambler.id, commandId: 'first-round',
     }), true);
-    const view = lossSession.session.advance({ deltaMs: 0 });
-    const round = view.units.find(({ id }) => id === lossSession.gambler.id)?.gambler?.lastRound;
-    assert.equal(round?.outcome.type, 'loss', 'the first start-wave draw makes loss eligible');
-    assert.equal(view.wave?.cash, 950);
-    assert.equal(view.units.find(({ id }) => id === lossSession.gambler.id)?.gambler?.completedGames, 1);
+    const view = firstRoundSession.session.advance({ deltaMs: 0 });
+    const round = view.units.find(({ id }) => id === firstRoundSession.gambler.id)?.gambler?.lastRound;
+    assert.equal(round?.outcome.type, 'cash');
+    assert.equal(view.wave?.cash, 1_050, 'wave Util draws do not make the Gambler loss card eligible');
+    assert.equal(view.units.find(({ id }) => id === firstRoundSession.gambler.id)?.gambler?.completedGames, 1);
   } finally {
-    lossSession.session.close();
+    firstRoundSession.session.close();
   }
 });
 

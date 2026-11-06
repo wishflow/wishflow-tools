@@ -853,7 +853,7 @@ test('uses physical enemy coordinates at the strict weapon range boundary despit
   }
   const unit = view.units[0]!;
   const target = view.enemies[0]!;
-  assert.deepEqual(target.drawingOffsetFine, { x: -2560, y: 4000 });
+  assert.deepEqual(target.drawingOffsetFine, { x: -2560, y: -2080 });
   assert.equal(unit.positionFine.x - target.positionFine.x, 5 * 7680,
     'the physical centers are exactly five tiles apart horizontally');
   assert.ok(unit.weapon);
@@ -1180,7 +1180,7 @@ test('does not create the controlled wave until the start intent advances', asyn
   assert.equal(started.wave?.phase, 'active');
   assert.equal(started.enemies.length, 1);
   assert.deepEqual(started.enemies[0]?.positionFine, { x: -11520, y: 80640 });
-  assert.equal(started.enemies[0]?.speed, 490, 'seed 1234 uses Java Random nextInt(20) = 8');
+  assert.equal(started.enemies[0]?.speed, 500, 'enemy speed uses the session Util stream');
   assert.equal(started.wave?.lives, 50);
   assert.equal(session.startRecord.randomSeed, 1234);
 
@@ -1444,10 +1444,10 @@ test('ordinary projectile AOE uses physical impact coordinates, not group displa
   }
   assert.equal(view.enemies.length, 4);
   assert.deepEqual(view.enemies.map(({ drawingOffsetFine }) => drawingOffsetFine), [
-    { x: 2560, y: -2080 },
-    { x: 2560, y: 4000 },
-    { x: -2560, y: 4000 },
     { x: -2560, y: -2080 },
+    { x: 2560, y: -2080 },
+    { x: -2560, y: 4000 },
+    { x: 2560, y: 4000 },
   ]);
 
   let impact;
@@ -2041,7 +2041,7 @@ test('follows the first Cow Gulch redirect and clamps variable time to the origi
   ));
   const after100 = variableSession.advance({ deltaMs: 63 });
   assert.equal(after100.enemies[0]!.positionFine.x, expectedAfter100);
-  assert.equal(after100.enemies[0]!.positionFine.x - variableStartX, 491);
+  assert.equal(after100.enemies[0]!.positionFine.x - variableStartX, 500);
 
   let steps = 0;
   while (view.enemies[0]?.direction === 'east' && steps < 1000) {
@@ -2908,7 +2908,7 @@ test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async 
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-20');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-21');
 
   session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });

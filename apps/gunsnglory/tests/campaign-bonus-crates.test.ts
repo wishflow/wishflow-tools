@@ -267,7 +267,7 @@ test('GameSession adds the original $25 cash reward when collecting type 2', asy
   const scenario = createBonusCrateScenario('bonus-crate-cash-fixture', { x: 14, y: 8 });
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
     scenarioId: scenario.id,
-    randomSeed: 12,
+    randomSeed: 21,
   });
   session.submitIntent({ type: 'start-wave' });
   session.advance({ deltaMs: 0 });
@@ -295,7 +295,7 @@ test('GameSession applies the speed bonus and follows the APK timer boundary at 
   const scenario = createBonusCrateScenario('bonus-crate-speed-fixture', { x: 14, y: 8 });
   const open = async () => createGame({ scenarios: { [scenario.id]: scenario } }).open({
     scenarioId: scenario.id,
-    randomSeed: 84,
+    randomSeed: 65,
   });
   const session = await open();
   const duplicate = await open();
@@ -312,7 +312,7 @@ test('GameSession applies the speed bonus and follows the APK timer boundary at 
   assert.deepEqual(captureReplayState(view), captureReplayState(duplicateSpawn));
   const crate = view.bonusCrates![0]!;
   assert.equal(crate.rewardType, 3);
-  assert.deepEqual(crate.cell, { x: 8, y: 9 });
+  assert.deepEqual(crate.cell, { x: 7, y: 9 });
   assert.equal(crate.phase, 'spawning');
   for (let index = 0; index < 5; index += 1) view = session.advance({ deltaMs: 100 });
   assert.equal(view.bonusCrates?.[0]?.phase, 'active');
@@ -382,7 +382,7 @@ test('speed bonus shortens the actual firing interval by one third', async () =>
   const scenario = createBonusCrateScenario('bonus-crate-cooldown-fixture', { x: 10, y: 8 }, true);
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
     scenarioId: scenario.id,
-    randomSeed: 84,
+    randomSeed: 65,
   });
   session.submitIntent({ type: 'start-wave' });
   session.advance({ deltaMs: 0 });
@@ -417,16 +417,17 @@ test('speed bonus shortens the actual firing interval by one third', async () =>
 });
 
 test('damage bonus extends actual attack range and increases the resulting hit', async () => {
-  const scenario = createBonusCrateScenario('bonus-crate-damage-fixture', { x: 12, y: 4 }, true);
+  const scenario = createBonusCrateScenario('bonus-crate-damage-fixture', { x: 14, y: 4 }, true);
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
     scenarioId: scenario.id,
-    randomSeed: 55,
+    randomSeed: 228,
   });
   session.submitIntent({ type: 'start-wave' });
   session.advance({ deltaMs: 0 });
   let view = session.advance({ deltaMs: 11 });
   const crate = view.bonusCrates![0]!;
   assert.equal(crate.rewardType, 4);
+  assert.deepEqual(crate.cell, { x: 9, y: 9 });
   for (let index = 0; index < 5; index += 1) view = session.advance({ deltaMs: 100 });
   session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
   session.advance({ deltaMs: 0 });

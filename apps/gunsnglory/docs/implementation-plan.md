@@ -9,7 +9,7 @@
 - 正式关卡 **3/60**：Cow Gulch、Apache Valley、Fort Kaboom 已完成真实战役验收。
 - map03 与移动端工具栏修复已完成。最近一次完整检查通过：类型检查、285 项单测、生产构建和 91/91 E2E；该结果早于当前 map04 开发批次，本批收口时再运行全套检查，不逐切片重复运行。
 - 公开版本仍是 master 上的 e922c3f。当前开发分支另有尚未集成的已验收提交；整批完成前不将本地代码称为已发布。
-- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭、Pyromaniac 地图单位、Salesman 毒瓶、Gambler/Casino 实体及特殊单位整合检查点 A 均已完成定向验证。Gambler 规则、共享随机、Game 会话结算和窗口内交互使用独立调试样例，尚不代表正式 Tech Town 战役。地图工厂已验证接收独立解锁回调；档案等级门槛尚未接入，留待正式关卡注册步骤处理。列车原图/图层、五节编组横向移动、机车蒸汽与车厢选择音效（3.5a–c），以及 Gatling 雇佣、升级、射击叠层、普通弹道和原声（3.6）均已通过定向验证、类型检查与内置浏览器核对；3.6 的 120 项相关单测、9 条受影响 E2E 和生产构建已通过。下一步为 3.7 Util.random 流分离。
+- New Mexico 第 4 关 Tech Town 已在目录中列名，但尚未加入正式关卡或解锁链；当前应继续显示为未实现。map04 是当前唯一开发目标；Damage Style 6 火箭、Pyromaniac 地图单位、Salesman 毒瓶、Gambler/Casino 实体及特殊单位整合检查点 A 均已完成定向验证。Gambler 规则、共享随机、Game 会话结算和窗口内交互使用独立调试样例，尚不代表正式 Tech Town 战役。地图工厂已验证接收独立解锁回调；档案等级门槛尚未接入，留待正式关卡注册步骤处理。列车原图/图层、五节编组横向移动、机车蒸汽与车厢选择音效（3.5a–c），以及 Gatling 雇佣、升级、射击叠层、普通弹道和原声（3.6）均已通过定向验证、类型检查与内置浏览器核对；3.6 的 120 项相关单测、9 条受影响 E2E 和生产构建已通过。3.7 随机流分离与相关物理边界修正已完成，144 项定向单测和类型检查通过；下一步为检查点 B 的整批验证。
 - 原始 32×24 TDM、四条方向场路线、全部相关标记坐标，以及 768 个地形图块和 147 个道路/铁路绘制项已导入并通过定向测试。`tech-town-scene.ts` 按 APK 码位组装 52 个非赌场静态装饰/建筑；解锁时再加入 Casino。资源锚点与 hdpi 原图已核对；此场景尚未接入正式战役。
 - 本轮核对更正了地图单位码位：96–101 是 type 1–6 的休眠单位（activity 4）；104–109 是 type 1–6 的活动单位（activity 5），本图仅有 105，即 type 2 Mexican；130、131 分别是 type 35 Pyromaniac 与 type 36 Salesman 的休眠单位；132 是活动 Gambler（type 9）。这些对象仅在新局的 `fromLoadGame=false` 分支创建，并均受 `GameObjectUnit.create()` 的解锁检查。code 150 是仅在 type 9 解锁时创建的 Casino 生成点。JADX 对该方法的 Java `switch` 反编译存在控制流错误；此处以 APK 中对应 DEX 指令的 smali 分支为准，不照抄该方法的 Java 伪源码。
 - `GameObjectUnit.isUnlocked()` 按 `unlockUnitData[type]` 判断：当前关卡达到门槛或档案已完成对应后续关卡时解锁。APK 的门槛数组为 Grandpa/type 6：21 或完成 30；Sniper/type 5：31 或完成 40；Pyromaniac/type 35：41 或完成 50；Salesman/type 36：51 或完成 60；Gambler/type 9：41 或完成 50。`hasAllUnitsUnlock()` 是 IAP 全单位解锁，本网页不提供该付费旁路。首次进入 Tech Town（global level 4）时，code 100、101、130、131、132 和 Casino code 150 均因未解锁而不创建；原始网格有 26 个休眠标记，不等于当时实际生成 26 个单位。
@@ -34,7 +34,6 @@
 
 | 步骤 | 范围、依赖和预计改动 | 验收条件 | 针对性验证 |
 | --- | --- | --- | --- |
-| 3.7 `Util.random` 流分离 | 依赖 3.5c、3.6（已完成），因为列车烟雾与 Gatling 两变体音效此时均可达。开工时重查代码，列出 map04 当前实际消费者及调用时序：敌军生成/移动、列车烟雾、`SfxManager` 音效变体，以及地图实际调用的随机绘制变体；将规则 `Game.Randomizer` 与 APK `Util.random` 映射分开。当前烟雾使用会话内独立 `JavaUtilRandom`，而 `SoundEffectsManager` 默认使用 `Math.random` 并在页面层消费，需设计由同一 StartRecord seed 派生且可回放的 Util 流入口，不再各自创建互不相关的随机源。Gambler 仍映射到规则流。 | 每个可达随机调用都注明 APK 来源、网页所有者和调用次序；同 seed、同输入的 smoke/audio/enemy 回放一致；Util 抽样不会改变规则 RNG 序列，规则抽样也不会改变 Util 序列；无 `Math.random` 泄漏到确定性游戏音画路径。明确原 APK 使用系统时钟初始化 Util seed，网页无法复现原设备随机序列，不声称逐个随机数相同。 | 新增 RNG 所有权/调用顺序测试；覆盖敌军生成与转向、列车烟雾、Gatling 音效变体和 Gambler，并运行相关战斗、回放、列车及音效测试与 typecheck。 |
 | 检查点 B：列车与 Gatling | 依赖 3.5a–c、3.6 和 3.7。使用真实 Tech Town 地图、实际列车、已验证路线和独立调试波构造一个可观测场景；不登记正式战役。 | 车辆数量、位置、移动、休眠/雇佣状态、Gatling 槽位和武器叠层、自动目标、开火/音效、蒸汽、随机流边界、图层与路线在同一场景连通吻合 APK；地图外布局及普通玩家单位寻路、招募、攻击不回归。 | 列车、Gatling、地图、路径、碰撞、绘制、随机、音频及 combat 定向检查通过；内置浏览器实测移动列车、点选雇佣/取消/确认、升级、敌人进入射程后的开火和声音请求。 |
 | 4.1 八波、单位池与经济 | 依赖 3.3–3.7。根据 `GameDesignWaves`、`SpawnPoolManager.performActionsForWave()`、`GameDesignData.gameDesignData[3]` 及实际消费者实现波次、生成池、自然收入、商店/雇佣价格和结算参数；先逐项确定十二个关卡字段语义。 | 8 波的延迟、提示索引、生命/速度倍率、单位池和第 2 波 set/set-max 顺序逐项匹配 APK；所有影响经济的字段都追到消费者后再映射；不以其他关卡值填充未知字段。 | 新增 `tech-town-waves.test.ts` 和 `tech-town-unit-pool.test.ts`；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-waves.test.ts tests/tech-town-unit-pool.test.ts tests/campaign-unit-pool.test.ts tests/difficulty.test.ts`，再运行 typecheck。 |
 | 4.2 波次对白、肖像与音频 | 依赖 4.1 的波次索引。迁入 8 段对白实际引用的中英文文本、Engineer 肖像与可达音频，接入现有窗口内对白/暂停流程和正式预加载。 | 第 1 段 `T_IA_CAMPAIGN_04_01` 与第 2–8 段 `T_CAMPAIGN_04_02` 至 `_08` 的波次、文本、肖像、播放和关闭行为逐项吻合；中英完整，静音及自动播放限制遵循现有共享音频契约。 | 新增 `tech-town-wave-intros.test.ts`；运行 `pnpm --dir apps/gunsnglory exec node --import tsx --test tests/tech-town-wave-intros.test.ts tests/fort-kaboom-wave-intros.test.ts tests/audio-playback.test.ts tests/game-asset-path.test.ts`，并运行 wave-intro E2E。 |
@@ -43,7 +42,7 @@
 
 依赖顺序：
 
-    Tech Town 网格/路线/图层/普通单位基线（已完成，含 Pyromaniac、Salesman） → Gambler 规则内核（已完成） → Gambler/Casino 地图实体 → APK Randomizer 共享序列与回放兼容（已完成） → Gambler GameSession 结算（已完成） → 窗口内赌场交互（已完成） → 检查点 A（已完成） → 列车原图与图层（3.5a，已完成） → 编组横向控制（3.5b，已完成） → 蒸汽与选择音效（3.5c，已完成） → Gatling 原版雇佣交互与车厢自动开火（3.6，已完成） → Util.random 流分离（3.7，下一步） → 检查点 B → 八波/单位池/经济 → 波次对白/音频 → 正式解锁与结算 → 完整检查和浏览器验收
+    Tech Town 网格/路线/图层/普通单位基线（已完成，含 Pyromaniac、Salesman） → Gambler 规则内核（已完成） → Gambler/Casino 地图实体 → APK Randomizer 共享序列与回放兼容（已完成） → Gambler GameSession 结算（已完成） → 窗口内赌场交互（已完成） → 检查点 A（已完成） → 列车原图与图层（3.5a，已完成） → 编组横向控制（3.5b，已完成） → 蒸汽与选择音效（3.5c，已完成） → Gatling 原版雇佣交互与车厢自动开火（3.6，已完成） → Util.random 流与回放规则版本（3.7，已完成） → 检查点 B（当前） → 八波/单位池/经济 → 波次对白/音频 → 正式解锁与结算 → 完整检查和浏览器验收
 
 单位码位解析已对照 APK 网格、`GameObjectManager.createGameObjectsFromBasicMap()` 的分支和 `GameObjectUnit.create()/isUnlocked()`。该方法的 JADX Java `switch` 输出存在控制流错误，不能作为码位依据；已以 DEX smali 指令复核。每个后续步骤开工前只追踪该步骤列出的方法和消费者；遇到静态证据缺口先记明缺失能力与判定标准，再做一次最小定点核对，不靠反复启动页面或模拟通关猜规则。步骤 5 的真实胜利只用于验证新地图的完整战役链；不重跑 map01–03 的已验收战役。
 

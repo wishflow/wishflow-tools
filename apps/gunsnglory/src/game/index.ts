@@ -11,7 +11,7 @@ import {
   replayStateDigest,
   serializeReplay,
 } from './replay';
-import { JavaRandom, JavaUtilRandom } from './java-random';
+import { deriveSessionRandomSeed, JavaRandom, JavaUtilRandom } from './java-random';
 import {
   dealGamblerHand,
   getGamblerStake,
@@ -1585,7 +1585,8 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number,
   }
 
   const distance = Math.hypot(dx, dy);
-  const speed = Math.trunc(unit.movementSpeedFinePer100Ms * (unit.bonusAttribute === 3 ? 150 : 100) / 100);
+  const speedBonusActive = unit.bonusAttribute === 3 && (unit.bonusRemainingMs ?? 0) > 0;
+  const speed = Math.trunc(unit.movementSpeedFinePer100Ms * (speedBonusActive ? 150 : 100) / 100);
   const directionX = Math.round((dx / distance) * speed);
   const directionY = Math.round((dy / distance) * speed);
   const moveX = Math.trunc((directionX * deltaMs) / 100);
@@ -1629,8 +1630,9 @@ function moveUnitGroup(
     return;
   }
 
+  const speedBonusActive = leader.bonusAttribute === 3 && (leader.bonusRemainingMs ?? 0) > 0;
   const speed = Math.trunc(leader.movementSpeedFinePer100Ms
-    * (leader.bonusAttribute === 3 ? 150 : 100) / 100);
+    * (speedBonusActive ? 150 : 100) / 100);
   const requestedDelta = Math.trunc((Math.sign(dx) * speed * deltaMs) / 100);
   const deltaX = Math.sign(requestedDelta) * Math.min(Math.abs(dx), Math.abs(requestedDelta));
   if (deltaX === 0) return;
@@ -1936,7 +1938,7 @@ function spawnSettlerGroup(
   dynamicDifficulty: number,
   waveDefinition: CampaignWaveDefinition,
   difficulty: GameDifficulty,
-  random: JavaRandom,
+  random: JavaUtilRandom,
   nextEnemyId: () => string,
 ): MutableEnemy[] | undefined {
   const groupSize = requestType - 1;
@@ -1977,7 +1979,7 @@ function spawnHorseman(
   dynamicDifficulty: number,
   waveDefinition: CampaignWaveDefinition,
   difficulty: GameDifficulty,
-  random: JavaRandom,
+  random: JavaUtilRandom,
   nextEnemyId: () => string,
 ): MutableEnemy[] {
   const speedPercent = 90 + random.nextInt(20);
@@ -2004,7 +2006,7 @@ function spawnCoveredWagonPair(
   dynamicDifficulty: number,
   waveDefinition: CampaignWaveDefinition,
   difficulty: GameDifficulty,
-  random: JavaRandom,
+  random: JavaUtilRandom,
   nextEnemyId: () => string,
 ): MutableEnemy[] {
   const direction = directionVector(spawn.direction);
@@ -2034,7 +2036,7 @@ function spawnPostCoachPair(
   dynamicDifficulty: number,
   waveDefinition: CampaignWaveDefinition,
   difficulty: GameDifficulty,
-  random: JavaRandom,
+  random: JavaUtilRandom,
   nextEnemyId: () => string,
 ): MutableEnemy[] {
   const direction = directionVector(spawn.direction);
@@ -2070,7 +2072,7 @@ function campaignSpawnCollides(positionFine: { x: number; y: number }, enemies: 
 
 function createWagonDebris(
   enemy: MutableEnemy,
-  random: JavaRandom,
+  random: JavaUtilRandom,
   nextPartId: () => string,
 ): MutableWagonPart[] {
   return Array.from({ length: 20 }, (_, index) => {
@@ -2567,7 +2569,7 @@ function moveEnemy(
   enemy: MutableEnemy,
   deltaMs: number,
   scenario: ScenarioContent,
-  random: JavaRandom,
+  random: JavaUtilRandom,
   enemies: readonly MutableEnemy[],
   movementBlocked = false,
 ): EnemyMoveResult {
@@ -2894,8 +2896,8 @@ export function createGame(options: {
 
       const resolvedSeed = randomSeed ?? options.randomSeedSource?.() ?? 1;
       if (!validSeed(resolvedSeed)) throw new RangeError('Random seed must be an unsigned 32-bit integer');
-      const random = new JavaRandom(resolvedSeed);
-      const utilRandom = new JavaUtilRandom((resolvedSeed ^ 0x5354_4541) >>> 0);
+      const rulesRandom = new JavaRandom(resolvedSeed);
+      const utilRandom = new JavaUtilRandom(deriveSessionRandomSeed(resolvedSeed, 'game-util'));
       // APK Math.random() is separate from Game's Randomizer; keep its deterministic adapter isolated.
       const rocketAngleRandom = new JavaRandom(resolvedSeed);
       const sessionId = options.sessionIdSource?.() ?? 'game-session-' + nextSessionNumber;
@@ -3335,7 +3337,7 @@ export function createGame(options: {
                 const spawns = [scenario.previewWave.spawn, ...(scenario.previewWave.additionalSpawns ?? [])];
                 for (const [index, spawn] of spawns.entries()) {
                   const speedMultiplier = scenario.previewWave.speedMultiplierMin
-                    + random.nextInt(scenario.previewWave.speedMultiplierCount);
+                    + utilRandom.nextInt(scenario.previewWave.speedMultiplierCount);
                   const speed = Math.trunc((scenario.previewWave.baseEnemySpeed * speedMultiplier) / 100);
                   const enemy = createPreviewEnemy('preview-pioneer-' + (index + 1), spawn, scenario.previewWave, speed);
                   wave.enemies.push(enemy);
@@ -3481,8 +3483,8 @@ export function createGame(options: {
                 cash: wave.cash,
                 completedGames: gambler.completedGames,
                 unlockedUnitTypes: gamblerPrizeUnitTypes,
-                isFirstRandom: random.isFirstRandom(),
-                random,
+                isFirstRandom: rulesRandom.isFirstRandom(),
+                random: rulesRandom,
               });
               if (result.status === 'insufficient-funds') {
                 wave.events.push({
@@ -3496,7 +3498,7 @@ export function createGame(options: {
                 continue;
               }
 
-              const handDeal = dealGamblerHand(result.outcome.hand, random);
+              const handDeal = dealGamblerHand(result.outcome.hand, rulesRandom);
               const round: GamblerRoundView = {
                 id: `${unit.definition.id}-round-${result.completedGamesAfter}`,
                 stake: result.stake,
@@ -3683,21 +3685,21 @@ export function createGame(options: {
                   && campaignDefinition && wave.dynamicDifficulty !== undefined) {
                   enemy.wagonPartsCreated = true;
                   const debris = createWagonDebris(
-                    enemy, random, () => `wagon-part-${nextWagonPartNumber++}`,
+                    enemy, utilRandom, () => `wagon-part-${nextWagonPartNumber++}`,
                   );
                   wave.wagonDebris.push(...debris);
                   drawOrderCreationOrder.push(...debris.map(({ id }) => 'wagon-debris:' + id));
-                  const passengerCount = Math.trunc(random.nextInt(
+                  const passengerCount = Math.trunc(utilRandom.nextInt(
                     Math.trunc(wave.dynamicDifficulty / 50) + 20,
                   ) / 10);
-                  const passengerSpeedPercent = 90 + random.nextInt(20);
+                  const passengerSpeedPercent = 90 + utilRandom.nextInt(20);
                   const spawn: WaveSpawn = {
                     cell: { x: fullCell(enemy.positionFine.x), y: fullCell(enemy.positionFine.y) },
                     direction: enemy.direction,
                   };
                   for (let slot = 0; slot < Math.min(4, passengerCount); slot += 1) {
-                    const type = (random.nextInt(2) + 1) as 1 | 2;
-                    const colorVariant = random.nextInt(2);
+                    const type = (utilRandom.nextInt(2) + 1) as 1 | 2;
+                    const colorVariant = utilRandom.nextInt(2);
                     const passengerGroupId = `wagon-passenger-group-${enemy.id}-${slot + 1}`;
                     const enemyDefinition = campaignEnemyDefinition(scenario, type);
                     const passenger = createCampaignEnemy(
@@ -3731,7 +3733,7 @@ export function createGame(options: {
               }
               const movementBlocked = movementBlockedEnemyId === enemy.id;
               movementBlockedEnemyId = undefined;
-              const result = moveEnemy(enemy, deltaMs, scenario, random, wave.enemies, movementBlocked);
+              const result = moveEnemy(enemy, deltaMs, scenario, utilRandom, wave.enemies, movementBlocked);
               if (result.collisionBlocked) {
                 const nextEnemy = movingEnemies[enemyIndex + 1];
                 if (nextEnemy?.groupId === enemy.groupId) movementBlockedEnemyId = nextEnemy.id;
@@ -3987,10 +3989,11 @@ export function createGame(options: {
               const areaRadiusTenthTiles = Math.trunc((shot.areaDamageFine * 10) / FINE_UNITS_PER_CELL);
               const areaSquare = areaRadiusTenthTiles * areaRadiusTenthTiles;
               wave.poisonApplicationTimerMs = 0;
+              const areaCenterFine = target?.positionFine ?? shot.positionFine;
               const affected = shot.areaDamageFine > 0
                 ? wave.enemies.filter((enemy) => enemy.alive && enemy.damageable && (
                   enemy.id === shot.targetId
-                  || shotTargetDistanceSquare(shot.positionFine, enemy) < areaSquare
+                  || shotTargetDistanceSquare(areaCenterFine, enemy) < areaSquare
                 ))
                 : target ? [target] : [];
               const affectedEnemyIds: string[] = [];
@@ -4053,7 +4056,7 @@ export function createGame(options: {
                 }
                 const totalRequests = pool.requests.reduce((sum, count) => sum + count, 0);
                 if (totalRequests <= 0) continue;
-                let selection = random.nextInt(totalRequests);
+                let selection = utilRandom.nextInt(totalRequests);
                 let selectedRequestIndex = -1;
                 for (let index = 0; index < pool.requests.length; index += 1) {
                   selection -= pool.requests[index]!;
@@ -4067,7 +4070,7 @@ export function createGame(options: {
                 if (selectedRequestIndex < 0 || !campaignDefinition || wave.dynamicDifficulty === undefined
                   || !spawn || !spawnField) continue;
 
-                random.nextInt(1);
+                utilRandom.nextInt(1);
                 const spawnVector = directionVector(spawnField.direction);
                 const candidatePosition = {
                   x: spawnField.positionFine.x - (spawnVector.x * 2 * FINE_UNITS_PER_CELL),
@@ -4091,22 +4094,22 @@ export function createGame(options: {
                 const spawned = poolType === 7
                   ? spawnCoveredWagonPair(
                     scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
-                    campaignDefinition, difficulty, random, nextEnemyId,
+                    campaignDefinition, difficulty, utilRandom, nextEnemyId,
                   )
                   : poolType === 8
                     ? spawnPostCoachPair(
                       scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
-                      campaignDefinition, difficulty, random, nextEnemyId,
+                      campaignDefinition, difficulty, utilRandom, nextEnemyId,
                     )
                     : poolType === 6
                     ? spawnHorseman(
                       scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
-                      campaignDefinition, difficulty, random, nextEnemyId,
+                      campaignDefinition, difficulty, utilRandom, nextEnemyId,
                     )
                   : poolType >= 2 && poolType <= 5
                     ? spawnSettlerGroup(
                       scenario, spawn, candidatePosition, requestType, nextGroupId, wave.dynamicDifficulty,
-                      campaignDefinition, difficulty, random, nextEnemyId,
+                      campaignDefinition, difficulty, utilRandom, nextEnemyId,
                     )
                     : undefined;
                 if (!spawned) {
@@ -4134,7 +4137,7 @@ export function createGame(options: {
                 campaignUnitPoolRuntime,
                 scenario.campaignUnitPool,
                 deltaMs,
-                random,
+                utilRandom,
                 (spawn) => campaignUnitSpawnBlocked(scenario, units, spawn),
               );
               for (const spawn of spawnedUnits) {
@@ -4215,7 +4218,7 @@ export function createGame(options: {
             deltaMs,
             wave?.lives ?? 0,
             scenario.previewWave?.initialLives ?? 0,
-            random,
+            utilRandom,
             (cell) => campaignBonusCrateCandidateAllowed(scenario, units, campaignBonusCratePool, cell),
           );
           drawOrderCreationOrder.push(...newlySpawnedBonusCrates.map(({ id }) => `bonus-crate:${id}`));

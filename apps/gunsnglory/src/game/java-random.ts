@@ -2,6 +2,21 @@ const JAVA_RANDOM_MULTIPLIER = 0x5deece66dn;
 const JAVA_RANDOM_MASK = (1n << 48n) - 1n;
 const JAVA_INT_MAX = 0x7fff_ffff;
 
+export type SessionRandomStream = 'game-util' | 'presentation';
+
+const SESSION_RANDOM_STREAM_SALTS: Readonly<Record<SessionRandomStream, number>> = {
+  'game-util': 0x5354_4541,
+  presentation: 0x5346_5801,
+};
+
+/** Derives stable, role-specific Java Random seeds from a replay's StartRecord seed. */
+export function deriveSessionRandomSeed(seed: number, stream: SessionRandomStream): number {
+  if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffff_ffff) {
+    throw new RangeError('Random seed must be an unsigned 32-bit integer');
+  }
+  return (seed ^ SESSION_RANDOM_STREAM_SALTS[stream]) >>> 0;
+}
+
 /**
  * The APK Randomizer wrapper around java.util.Random. Each bounded draw is
  * followed by nextLong() and setSeed(), matching Randomizer.nextInt().
@@ -106,5 +121,9 @@ export class JavaUtilRandom {
       value = bits % bound;
     } while (bits - value + (bound - 1) >= 0x8000_0000);
     return value;
+  }
+
+  nextDouble(): number {
+    return ((this.next(26) * 0x800_0000) + this.next(27)) / 0x20_0000_0000_0000;
   }
 }

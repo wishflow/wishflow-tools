@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { JavaRandom, JavaUtilRandom } from '../src/game/java-random';
+import { deriveSessionRandomSeed, JavaRandom, JavaUtilRandom } from '../src/game/java-random';
 
 const bounds = [1, 2, 3, 7, 20, 100, 65_535, 0x4000_0000, 0x7fff_ffff] as const;
 
@@ -55,6 +55,19 @@ test('matches standard java.util.Random vectors without the Game.Randomizer rese
     const random = new JavaUtilRandom(vector.seed);
     assert.deepEqual(standardBounds.map((bound) => random.nextInt(bound)), vector.values, `seed ${vector.seed}`);
   }
+});
+
+test('matches Java Random nextDouble for the deterministic Math.random adapter', () => {
+  assert.equal(new JavaUtilRandom(42).nextDouble(), 0.7275636800328681);
+});
+
+test('derives repeatable, domain-separated simulation and presentation seeds', () => {
+  const gameUtilSeed = deriveSessionRandomSeed(42, 'game-util');
+  const presentationSeed = deriveSessionRandomSeed(42, 'presentation');
+  assert.equal(gameUtilSeed, deriveSessionRandomSeed(42, 'game-util'));
+  assert.equal(presentationSeed, deriveSessionRandomSeed(42, 'presentation'));
+  assert.notEqual(gameUtilSeed, presentationSeed);
+  assert.throws(() => deriveSessionRandomSeed(-1, 'game-util'), RangeError);
 });
 
 test('standard Util random draws do not advance the APK Game.Randomizer stream', () => {

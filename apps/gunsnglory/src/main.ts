@@ -42,6 +42,7 @@ import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import { chooseSoundVariation, SoundEffectsManager } from './audio/sfx-manager';
+import { deriveSessionRandomSeed, JavaUtilRandom } from './game/java-random';
 import { acquireAudioPlayer, silenceAudioPlayers } from './audio/audio-playback';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
 import { summarizeEnemyDefeats, type EnemyDefeatSummary } from './ui/combat-feedback';
@@ -2869,7 +2870,8 @@ const assetNames = new Set([
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
-const gameSoundEffects = new SoundEffectsManager();
+let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
+const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
 let backgroundMusicTrack: CowGulchMusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
@@ -3280,7 +3282,7 @@ function playRequestedSounds(
         const variations = event.sound in unitHireSoundVariations
           ? unitHireSoundVariations[event.sound as keyof typeof unitHireSoundVariations]
           : undefined;
-        playAudioAsset(variations ? chooseSoundVariation(variations)! : event.sound);
+        playAudioAsset(variations ? chooseSoundVariation(variations, () => presentationRandom.nextDouble())! : event.sound);
         continue;
       }
       if (event.sound === 'sound_revolver') {
@@ -3402,6 +3404,8 @@ function activateSession(
   pendingCampaignWaveIntro = undefined;
   const previousSession = session;
   session = nextSession;
+  presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
+  gameSoundEffects.reset();
   campaignWaveIntroCursor = new CampaignWaveIntroCursor(waveIntrosForScenario(session.startRecord.scenarioId));
   if (!isOfficialCowGulchSession()) stopCowGulchBackgroundMusic();
   view = session.observe();
