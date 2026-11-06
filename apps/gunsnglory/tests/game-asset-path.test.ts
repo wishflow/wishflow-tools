@@ -5,6 +5,9 @@ import { gameAssetLogicalSize, gameAssetRelativePath, gameAssetSourceScale } fro
 test('uses the APK high-density atlases for wagon, cart, and Post Coach assets', () => {
   for (const asset of [
     'b_2x1_shack',
+    'lok_hori_1of2',
+    'lok_hori_2of2',
+    'lok_wagon_hori',
     'wagon',
     'wagon_turn',
     'stagecoach',
@@ -50,4 +53,10 @@ test('maps hdpi Cow Gulch scenery back to the APK mdpi logical dimensions', () =
   assert.deepEqual(gameAssetLogicalSize('b_1x1_windmill', { width: 48, height: 96 }), { width: 32, height: 64 });
   assert.equal(gameAssetSourceScale('tiles_desert_var'), 1.5, 'tile source coordinates scale to hdpi atlas pixels');
   assert.equal(gameAssetSourceScale('pioneer_male'), 1, 'non-map sprite crop coordinates remain unchanged');
+});
+
+test('maps APK horizontal train hdpi sprites to their mdpi logical dimensions', () => {
+  assert.deepEqual(gameAssetLogicalSize('lok_hori_1of2', { width: 48, height: 72 }), { width: 32, height: 48 });
+  assert.deepEqual(gameAssetLogicalSize('lok_hori_2of2', { width: 48, height: 72 }), { width: 32, height: 48 });
+  assert.deepEqual(gameAssetLogicalSize('lok_wagon_hori', { width: 48, height: 48 }), { width: 32, height: 32 });
 });

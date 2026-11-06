@@ -27,13 +27,46 @@ const casinoDecoration: Omit<MapDecoration, 'cell'> = Object.freeze({
   anchorOffsetY: -0.3,
 });
 
+const trainMarkerCodes = [83, 83, 84, 84, 84] as const;
+const trainAssets = [
+  'lok_hori_1of2',
+  'lok_hori_2of2',
+  'lok_wagon_hori',
+  'lok_wagon_hori',
+  'lok_wagon_hori',
+] as const;
+
+function techTownTrainDecorationsByCell(): ReadonlyMap<string, Omit<MapDecoration, 'cell'>> {
+  const starts = map.originalTileGrid.flatMap((row, y) => row.flatMap((code, x) => (
+    code === trainMarkerCodes[0]
+      && row.slice(x, x + trainMarkerCodes.length).every((marker, offset) => marker === trainMarkerCodes[offset])
+      ? [{ x, y }]
+      : []
+  )));
+  const markerCount = map.originalTileGrid.reduce(
+    (count, row) => count + row.filter((code) => trainMarkerCodes.includes(code as typeof trainMarkerCodes[number])).length,
+    0,
+  );
+  if (starts.length !== 1 || markerCount !== trainMarkerCodes.length) {
+    throw new Error('Tech Town horizontal train TDM markers do not match the original five-part sequence');
+  }
+
+  const { x: startX, y } = starts[0]!;
+  return new Map(trainAssets.map((asset, index) => [
+    `${startX + index},${y}`,
+    { asset },
+  ]));
+}
+
 export function createTechTownMapScene(options: { gamblerUnlocked?: boolean } = {}) {
+  const trainDecorations = techTownTrainDecorationsByCell();
   // Code 132 is the conditional Gambler unit and belongs to the stage's unit model.
   // Codes 105, 130 and 131 create units; they are not static scene decorations.
   const decorations = map.originalTileGrid.flatMap((row, y) => row.flatMap((code, x) => {
-    const decoration = code === 150
-      ? options.gamblerUnlocked ? casinoDecoration : undefined
-      : techTownDecorationCodes[code];
+    const decoration = trainDecorations.get(`${x},${y}`)
+      ?? (code === 150
+        ? options.gamblerUnlocked ? casinoDecoration : undefined
+        : techTownDecorationCodes[code]);
     return decoration ? [{ ...decoration, cell: { x, y } }] : [];
   }));
 

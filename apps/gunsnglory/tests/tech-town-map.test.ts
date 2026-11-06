@@ -325,7 +325,7 @@ test('restores APK-derived Tech Town terrain, path, rail and bridge layers', () 
   assert.ok(scene.streets.some(({ asset }) => asset === 'tiles_path_var'));
 });
 
-test('places every known Tech Town static object at its APK code and anchor', () => {
+test('places Tech Town scenery and the original five-part train at their APK cells', () => {
   const scene = createTechTownMapScene();
   const assetsByCode: Readonly<Record<number, string>> = {
     68: 'e_1x1_cactus_a',
@@ -350,9 +350,20 @@ test('places every known Tech Town static object at its APK code and anchor', ()
   const expected = map.originalTileGrid.flatMap((row, y) => row.flatMap((code, x) => (
     assetsByCode[code] ? [{ asset: assetsByCode[code]!, cell: { x, y } }] : []
   )));
+  const trainAssets = new Set(['lok_hori_1of2', 'lok_hori_2of2', 'lok_wagon_hori']);
+  const expectedTrain = [
+    { asset: 'lok_hori_1of2', cell: { x: 4, y: 12 } },
+    { asset: 'lok_hori_2of2', cell: { x: 5, y: 12 } },
+    { asset: 'lok_wagon_hori', cell: { x: 6, y: 12 } },
+    { asset: 'lok_wagon_hori', cell: { x: 7, y: 12 } },
+    { asset: 'lok_wagon_hori', cell: { x: 8, y: 12 } },
+  ];
 
-  assert.deepEqual(scene.decorations?.map(({ asset, cell }) => ({ asset, cell })), expected);
-  assert.equal(scene.decorations?.length, 52);
+  assert.deepEqual(scene.decorations?.filter(({ asset }) => !trainAssets.has(asset))
+    .map(({ asset, cell }) => ({ asset, cell })), expected);
+  assert.deepEqual(scene.decorations?.filter(({ asset }) => trainAssets.has(asset))
+    .map(({ asset, cell }) => ({ asset, cell })), expectedTrain);
+  assert.equal(scene.decorations?.length, 57);
   assert.equal(scene.decorations?.some(({ asset }) => asset === 'b_3x2_casino'), false);
 
   const saloon = scene.decorations?.find(({ asset }) => asset === 'b_3x2_saloon');
@@ -368,6 +379,8 @@ test('places every known Tech Town static object at its APK code and anchor', ()
   const casino = unlockedScene.decorations?.find(({ asset }) => asset === 'b_3x2_casino');
   assert.deepEqual(casino?.cell, { x: 30, y: 3 });
   assert.equal(casino?.anchorOffsetY, -0.3);
+  assert.deepEqual(unlockedScene.decorations?.filter(({ asset }) => trainAssets.has(asset))
+    .map(({ asset, cell }) => ({ asset, cell })), expectedTrain);
 });
 
 test('bundles every Tech Town scene image from the APK at its original logical scale', () => {
