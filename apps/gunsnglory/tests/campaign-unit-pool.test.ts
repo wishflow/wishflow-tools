@@ -6,7 +6,13 @@ import {
   fortKaboomRouteDefinitions,
   fortKaboomSpawnPoints,
 } from '../src/content/fort-kaboom';
-import { createGame, type CampaignWaveDefinition, type GameSession, type ScenarioContent } from '../src/game';
+import {
+  createGame,
+  type CampaignUnitPoolDefinition,
+  type CampaignWaveDefinition,
+  type GameSession,
+  type ScenarioContent,
+} from '../src/game';
 import {
   advanceCampaignUnitPool,
   applyCampaignUnitPoolActions,
@@ -106,6 +112,50 @@ test('wave 4 applies SET then SET_MAX, and later hires add to the pending Cannon
   queueCampaignUnitForSpawn(runtime, poolDefinition, 'cannon');
   assert.equal(runtime.pending[3], 2);
   assert.deepEqual(random.bounds, []);
+});
+
+test('one SET and SET_MAX action can replace multiple player-pool slots at once', () => {
+  const multiSlotPool: CampaignUnitPoolDefinition = {
+    ...poolDefinition,
+    actions: [
+      { waveNumber: 4, action: 'set', values: [{ poolType: 1, count: 2 }, { poolType: 3, count: 4 }] },
+      { waveNumber: 4, action: 'set-max', values: [1, 2, 3, 4].map((poolType) => ({ poolType, count: 5 })) },
+    ],
+  };
+  const runtime = createCampaignUnitPoolRuntime(multiSlotPool)!;
+
+  runtime.pending.fill(9);
+  runtime.maximum.fill(7);
+  applyCampaignUnitPoolActions(runtime, multiSlotPool, 4);
+
+  assert.equal(runtime.pending[1], 2);
+  assert.equal(runtime.pending[3], 4);
+  assert.equal(runtime.pending.filter((count) => count !== 0).length, 2,
+    'SET clears every omitted slot and then writes all configured values');
+  assert.deepEqual(runtime.maximum.slice(1, 5), [5, 5, 5, 5],
+    'SET_MAX keeps all four configured pool caps at once');
+  assert.equal(runtime.maximum.filter((count) => count !== 0).length, 4,
+    'SET_MAX clears every omitted cap slot');
+});
+
+test('scenario validation rejects duplicate or unconfigured slots in whole-table actions', async () => {
+  for (const [index, values] of [
+    [{ poolType: 3, count: 1 }, { poolType: 3, count: 2 }],
+    [{ poolType: 2, count: 1 }],
+  ].entries()) {
+    const scenario = {
+      ...fortCampaignFixture(),
+      id: `fort-kaboom-invalid-pool-table-${index}`,
+      campaignUnitPool: {
+        ...poolDefinition,
+        actions: [{ waveNumber: 4, action: 'set' as const, values }],
+      },
+    };
+    await assert.rejects(
+      createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id }),
+      /Campaign unit pool data is invalid/,
+    );
+  }
 });
 
 test('default zero lifetime cap prevents hired Cannons from dispatching before wave 4', () => {

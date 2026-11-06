@@ -317,12 +317,9 @@ export interface CampaignUnitSpawnLocationDefinition {
   cell: { x: number; y: number };
 }
 
-export interface CampaignUnitPoolActionDefinition {
-  waveNumber: number;
-  poolType: number;
-  action: 'add' | 'set' | 'add-max' | 'set-max';
-  count: number;
-}
+export type CampaignUnitPoolActionDefinition =
+  | { waveNumber: number; action: 'add' | 'add-max'; poolType: number; count: number }
+  | { waveNumber: number; action: 'set' | 'set-max'; values: readonly { poolType: number; count: number }[] };
 
 export interface CampaignUnitPoolDefinition {
   /** Global SpawnPoolManager interval; it starts when the scene is created. */
@@ -2896,13 +2893,26 @@ export function createGame(options: {
           || campaignUnitPool.units.some((entry) => !campaignUnitPool.spawnLocations.some((location) => (
             location.spawnLocationType === -1 || location.spawnLocationType === entry.spawnLocationType
           )))
-          || campaignUnitPool.actions.some((action) => (
-            !Number.isSafeInteger(action.waveNumber) || action.waveNumber < 1
-            || (campaignWaveCount > 0 && action.waveNumber > campaignWaveCount)
-            || !poolTypes.has(action.poolType)
-            || !Number.isSafeInteger(action.count) || action.count < 0 || action.count > 127
-            || !['add', 'set', 'add-max', 'set-max'].includes(action.action)
-          ));
+          || campaignUnitPool.actions.some((action) => {
+            if (!Number.isSafeInteger(action.waveNumber) || action.waveNumber < 1
+              || (campaignWaveCount > 0 && action.waveNumber > campaignWaveCount)) return true;
+            if (action.action === 'add' || action.action === 'add-max') {
+              return !poolTypes.has(action.poolType)
+                || !Number.isSafeInteger(action.count) || action.count < 0 || action.count > 127;
+            }
+            if (action.action === 'set' || action.action === 'set-max') {
+              if (!Array.isArray(action.values)) return true;
+              const valuePoolTypes = new Set<number>();
+              return action.values.some((value) => {
+                if (!Number.isSafeInteger(value.poolType) || !poolTypes.has(value.poolType)
+                  || valuePoolTypes.has(value.poolType)
+                  || !Number.isSafeInteger(value.count) || value.count < 0 || value.count > 127) return true;
+                valuePoolTypes.add(value.poolType);
+                return false;
+              });
+            }
+            return true;
+          });
         if (invalidPool) {
           throw new GameOpenError('scenario-unavailable', 'Campaign unit pool data is invalid');
         }

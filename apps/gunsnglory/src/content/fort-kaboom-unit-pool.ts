@@ -19,7 +19,11 @@ export const fortKaboomUnitPool: CampaignUnitPoolDefinition = Object.freeze({
   ]),
   spawnLocations: fortSpawnLocations,
   actions: Object.freeze([
-    Object.freeze({ waveNumber: 4, action: 'set' as const, poolType: 3, count: 1 }),
-    Object.freeze({ waveNumber: 4, action: 'set-max' as const, poolType: 3, count: 5 }),
+    Object.freeze({ waveNumber: 4, action: 'set' as const, values: Object.freeze([
+      Object.freeze({ poolType: 3, count: 1 }),
+    ]) }),
+    Object.freeze({ waveNumber: 4, action: 'set-max' as const, values: Object.freeze([
+      Object.freeze({ poolType: 3, count: 5 }),
+    ]) }),
   ]),
 });

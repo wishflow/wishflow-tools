@@ -69,14 +69,14 @@ export function applyCampaignUnitPoolActions(
         break;
       case 'set':
         runtime.pending.fill(0);
-        runtime.pending[action.poolType] = action.count;
+        for (const value of action.values) runtime.pending[value.poolType] = value.count;
         break;
       case 'add-max':
         runtime.maximum[action.poolType] = runtime.maximum[action.poolType]! + action.count;
         break;
       case 'set-max':
         runtime.maximum.fill(0);
-        runtime.maximum[action.poolType] = action.count;
+        for (const value of action.values) runtime.maximum[value.poolType] = value.count;
         break;
     }
   }
