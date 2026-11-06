@@ -11,6 +11,7 @@ import {
   replayStateDigest,
   serializeReplay,
 } from './replay';
+import { JavaRandom } from './java-random';
 import {
   DrawOrderQueue,
   GAME_DRAW_ORDER_ROAD_CUTOFF,
@@ -1382,37 +1383,6 @@ function calculateSettlement(
   };
 }
 
-/** Java's 48-bit LCG and bounded nextInt, used by the recovered game. */
-class JavaRandom {
-  private seed: bigint;
-
-  constructor(seed: number) {
-    this.seed = (BigInt(seed) ^ 0x5deece66dn) & ((1n << 48n) - 1n);
-  }
-
-  private next(bits: number): number {
-    this.seed = (this.seed * 0x5deece66dn + 0xbn) & ((1n << 48n) - 1n);
-    return Number(this.seed >> BigInt(48 - bits));
-  }
-
-  nextInt(bound: number): number {
-    if (!Number.isInteger(bound) || bound <= 0) throw new RangeError('Random bound must be a positive integer');
-    if ((bound & (bound - 1)) === 0) return Math.floor((bound * this.next(31)) / 0x8000_0000);
-
-    let bits: number;
-    let value: number;
-    do {
-      bits = this.next(31);
-      value = bits % bound;
-    } while (bits - value + (bound - 1) >= 0x8000_0000);
-    return value;
-  }
-
-  nextDouble(): number {
-    return ((this.next(26) * 0x800_0000) + this.next(27)) / 0x20_0000_0000_0000;
-  }
-}
-
 function directionVector(direction: Direction): { x: -1 | 0 | 1; y: -1 | 0 | 1 } {
   switch (direction) {
     case 'east': return { x: 1, y: 0 };
@@ -2632,6 +2602,8 @@ export function createGame(options: {
       const resolvedSeed = randomSeed ?? options.randomSeedSource?.() ?? 1;
       if (!validSeed(resolvedSeed)) throw new RangeError('Random seed must be an unsigned 32-bit integer');
       const random = new JavaRandom(resolvedSeed);
+      // APK Math.random() is separate from Game's Randomizer; keep its deterministic adapter isolated.
+      const rocketAngleRandom = new JavaRandom(resolvedSeed);
       const sessionId = options.sessionIdSource?.() ?? 'game-session-' + nextSessionNumber;
       if (!sessionId || typeof sessionId !== 'string') throw new Error('Game session ID is invalid');
       nextSessionNumber += 1;
@@ -3463,7 +3435,7 @@ export function createGame(options: {
               const target = wave.enemies.find((enemy) => enemy.id === shot.targetId);
               if (shot.rocket) {
                 const rocket = shot.rocket;
-                const motion = advanceRocketShot(shot, target, deltaMs, scenario, random);
+                const motion = advanceRocketShot(shot, target, deltaMs, scenario, rocketAngleRandom);
                 const areaRadiusTenthTiles = Math.trunc((shot.areaDamageFine * 10) / FINE_UNITS_PER_CELL);
                 const areaSquare = areaRadiusTenthTiles * areaRadiusTenthTiles;
                 if (motion.pathBurst) {

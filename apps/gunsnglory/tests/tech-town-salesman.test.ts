@@ -207,7 +207,7 @@ test('throws the style-5 bottle, deals strict-area poison damage, and ticks pois
     'an enemy exactly 2 tiles from the impact center is excluded by the strict boundary');
   assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_poison_splash'),
     'the impact requests the positional poison splash sound');
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-18');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-19');
 
   view = session.advance({ deltaMs: 100 });
   assert.equal(view.enemies.some(({ poisoned }) => poisoned), false, 'exactly 100 ms does not mark enemies');

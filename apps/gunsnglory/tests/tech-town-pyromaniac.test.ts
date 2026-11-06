@@ -171,6 +171,6 @@ test('hires Pyromaniac for 130, keeps level zero non-upgradeable, and fires the 
   view = session.advance({ deltaMs: 100 });
   assert.equal(view.units[0]?.positionFine.x, 8.5 * 7680 + 2000);
   assert.deepEqual(view.units[0]?.walkingAnimation, { frame: 1, row: 1, mirrored: true });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-18');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-19');
   session.close();
 });

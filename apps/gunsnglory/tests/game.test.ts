@@ -853,7 +853,7 @@ test('uses physical enemy coordinates at the strict weapon range boundary despit
   }
   const unit = view.units[0]!;
   const target = view.enemies[0]!;
-  assert.deepEqual(target.drawingOffsetFine, { x: 2560, y: -2080 });
+  assert.deepEqual(target.drawingOffsetFine, { x: -2560, y: 4000 });
   assert.equal(unit.positionFine.x - target.positionFine.x, 5 * 7680,
     'the physical centers are exactly five tiles apart horizontally');
   assert.ok(unit.weapon);
@@ -1436,7 +1436,7 @@ test('ordinary projectile AOE uses physical impact coordinates, not group displa
     scenarioId: areaScenario.id,
     mode: 'formal',
     difficulty: 'easy',
-    randomSeed: 1,
+    randomSeed: 8,
   });
   let view = session.observe();
   for (let index = 0; index < 10 && view.enemies.length < 4; index += 1) {
@@ -1445,9 +1445,9 @@ test('ordinary projectile AOE uses physical impact coordinates, not group displa
   assert.equal(view.enemies.length, 4);
   assert.deepEqual(view.enemies.map(({ drawingOffsetFine }) => drawingOffsetFine), [
     { x: 2560, y: -2080 },
+    { x: 2560, y: 4000 },
     { x: -2560, y: 4000 },
     { x: -2560, y: -2080 },
-    { x: 2560, y: 4000 },
   ]);
 
   let impact;
@@ -2315,7 +2315,7 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
   const record = JSON.parse(serialized) as {
     formatVersion: number;
     rulesVersion: string;
-    startRecord: { contentVersion: string; mode: string };
+    startRecord: { contentVersion: string; mode: string; rulesVersion: string };
     frames: Array<{ frame: number; deltaMs: number; tileSizePixels: number; intents: unknown[] }>;
     checkpoints: Array<{ frame: number; stateDigest: string }>;
     terminal: { frame: number; settlement: unknown; stateDigest: string };
@@ -2353,6 +2353,12 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
   const unsupportedFormatVersion = structuredClone(record);
   unsupportedFormatVersion.formatVersion = 3;
   await assert.rejects(game.replay(JSON.stringify(unsupportedFormatVersion)), (error: unknown) =>
+    (error as { code?: string }).code === 'unsupported-version');
+
+  const unsupportedRulesVersion = structuredClone(record);
+  unsupportedRulesVersion.rulesVersion = 'gng-rules-18';
+  unsupportedRulesVersion.startRecord.rulesVersion = 'gng-rules-18';
+  await assert.rejects(game.replay(JSON.stringify(unsupportedRulesVersion)), (error: unknown) =>
     (error as { code?: string }).code === 'unsupported-version');
 
   const unsupportedRandomAlgorithm = structuredClone(record) as typeof record & {
@@ -2902,7 +2908,7 @@ test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async 
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-18');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-19');
 
   session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });
