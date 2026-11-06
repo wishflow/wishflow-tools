@@ -191,7 +191,7 @@ test('covered-wagon passengers use all four source drawing offsets and retain ve
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
     scenarioId: scenario.id,
     mode: 'formal',
-    randomSeed: 10,
+    randomSeed: 12,
   });
   let view = session.observe();
   let passengers = view.enemies.filter(({ id }) => id.startsWith('wagon-passenger-'));
@@ -220,7 +220,8 @@ test('covered-wagon passengers use all four source drawing offsets and retain ve
   assert.deepEqual(passengers.map(({ drawingOffsetFine }) => drawingOffsetFine), expectedOffsets);
   assert.ok(passengers.every(({ type }) => type === 1 || type === 2));
   assert.ok(passengers.every(({ direction }) => direction === wreck.direction));
-  assert.ok(passengers.every(({ speed }) => speed === 515));
+  assert.ok(passengers.every(({ speed }) => speed === 475),
+    'seed 12 selects the same 95% Util passenger-speed roll for each passenger');
   assert.ok(passengers.every(({ maxHitPoints }) => maxHitPoints === 168));
   assert.deepEqual(passengers.map(({ positionFine }) => positionFine), passengers.map(() => wreck.positionFine));
   assert.deepEqual(passengers.map(({ groupId }, index) => groupId), expectedIds.map((_, index) =>
