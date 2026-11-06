@@ -7,7 +7,7 @@ import type { ScenarioContent } from '../game';
 export function createTechTownTrainTestContent(): ScenarioContent {
   return {
     id: 'tech-town-train-sample',
-    contentVersion: 'gng-free-1.8.6-tech-town-train-test-v1',
+    contentVersion: 'gng-free-1.8.6-tech-town-train-test-v2',
     title: { en: 'Tech Town · Train test', zh: 'Tech Town · 列车测试' },
     map: createTechTownMapScene(),
     originalTileGrid: map.originalTileGrid,

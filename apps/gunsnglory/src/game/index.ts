@@ -11,7 +11,7 @@ import {
   replayStateDigest,
   serializeReplay,
 } from './replay';
-import { JavaRandom } from './java-random';
+import { JavaRandom, JavaUtilRandom } from './java-random';
 import {
   dealGamblerHand,
   getGamblerStake,
@@ -136,6 +136,10 @@ export interface ScenarioUnit {
   collisionBoxFine?: Rectangle;
   /** Hides the default sleeping bubble for map objects that use activity 4 for another purpose. */
   showSleepingEffect?: boolean;
+  /** Original LokSteam emitter, present only on Tech Town's lead locomotive. */
+  steamEmitter?: true;
+  /** Original greeting sound played when selecting this map unit. */
+  selectionSound?: UnitSelectionSound;
   type: string;
   /** Price for activating this existing activity-4 map object. */
   hirePrice?: number;
@@ -187,6 +191,8 @@ export type UnitHireSound =
   | 'sound_grandpa_coughing'
   | 'sound_pyromaniac'
   | 'sound_snakeoilsalesman';
+
+export type UnitSelectionSound = 'sound_train';
 
 export type UnitShotSound =
   | 'sound_cannon'
@@ -421,6 +427,14 @@ export interface UnitView extends ScenarioUnit {
     row: number;
     mirrored: boolean;
   };
+  steamClouds?: readonly SteamCloudView[];
+}
+
+export interface SteamCloudView {
+  id: string;
+  positionFine: { x: number; y: number };
+  remainingMs: number;
+  animationFrame: number;
 }
 
 export interface EnemyView {
@@ -510,7 +524,7 @@ export type GameEvent =
     sound: 'sound_revolver' | 'sound_dynamite' | 'sound_wagon_explode' | UnitShotSound;
     positionFine: { x: number; y: number };
   }
-  | { type: 'sound-requested'; sound: UnitHireSound | 'sound_level_up' }
+  | { type: 'sound-requested'; sound: UnitHireSound | UnitSelectionSound | 'sound_level_up' }
   | { type: 'bonus-crate-collected'; crateId: string; unitId: string; rewardType: CampaignBonusRewardType }
   | { type: 'shot-exploded'; shotId: string; targetId: string; affectedEnemyIds: readonly string[] }
   | { type: 'wave-cleared'; waveNumber: number; escapedEnemies: number; defeatedEnemies: number }
@@ -774,7 +788,14 @@ interface MutableUnit {
   shootingDirection?: { x: -1 | 0 | 1; y: -1 | 0 | 1 };
   walkingAnimationStep: number;
   walkingAnimation?: NonNullable<UnitView['walkingAnimation']>;
+  steamEmitter?: MutableSteamEmitter;
   gambler?: MutableGamblerState;
+}
+
+interface MutableSteamEmitter {
+  nextCloudCounterMs: number;
+  nextCloudNumber: number;
+  clouds: SteamCloudView[];
 }
 
 interface MutableGamblerState {
@@ -876,6 +897,10 @@ const FINE_UNITS_PER_CELL = 7680;
 const FIELD_CENTER_OFFSET = 15360;
 const FIELD_CENTER_HALF = 3840;
 const UNIT_PLACEMENT_OFFSET_Y = 1920;
+const TRAIN_STEAM_CLOUD_OFFSET_X_FINE = 103;
+const TRAIN_STEAM_CLOUD_OFFSET_Y_FINE = -7584;
+const TRAIN_STEAM_CLOUD_SPEED_FINE_PER_100_MS = 600;
+const TRAIN_STEAM_CLOUD_LIFETIME_MS = 1499;
 const GAMBLER_UNIT_TYPE_NAMES: Readonly<Record<GamblerUnitType, string>> = Object.freeze({
   1: 'gunslinger',
   2: 'mexican',
@@ -1117,6 +1142,37 @@ function nextUpgrade(unit: MutableUnit, maxUpgrades: number): UnitUpgradeDefinit
   return unit.definition.upgradeLevels?.[unit.upgradeLevel];
 }
 
+function updateSteamEmitter(unit: MutableUnit, deltaMs: number, utilRandom: JavaUtilRandom): void {
+  const emitter = unit.steamEmitter;
+  if (!emitter || deltaMs <= 0) return;
+
+  emitter.nextCloudCounterMs = Math.trunc(
+    emitter.nextCloudCounterMs - (deltaMs * (unit.movementTargetFine ? 2 : 1)),
+  );
+  if (emitter.nextCloudCounterMs <= 0) {
+    emitter.clouds.push({
+      id: `${unit.definition.id}-steam-${emitter.nextCloudNumber}`,
+      positionFine: {
+        x: unit.positionFine.x + TRAIN_STEAM_CLOUD_OFFSET_X_FINE,
+        y: unit.positionFine.y + TRAIN_STEAM_CLOUD_OFFSET_Y_FINE,
+      },
+      remainingMs: TRAIN_STEAM_CLOUD_LIFETIME_MS,
+      animationFrame: 0,
+    });
+    emitter.nextCloudNumber += 1;
+    emitter.nextCloudCounterMs = 500 + utilRandom.nextInt(250);
+  }
+
+  for (const cloud of emitter.clouds) {
+    cloud.remainingMs = Math.trunc(cloud.remainingMs - deltaMs);
+    cloud.positionFine.y = Math.trunc(
+      cloud.positionFine.y - ((deltaMs * TRAIN_STEAM_CLOUD_SPEED_FINE_PER_100_MS) / 100),
+    );
+    cloud.animationFrame = Math.max(0, Math.min(4, 4 - Math.trunc(cloud.remainingMs / 300)));
+  }
+  emitter.clouds = emitter.clouds.filter(({ remainingMs }) => remainingMs > 0);
+}
+
 function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): UnitView {
   const { definition, positionFine } = unit;
   const upgrade = nextUpgrade(unit, maxUpgrades);
@@ -1147,6 +1203,14 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
     selected: unit.selected,
     moving: unit.movementTargetFine !== undefined,
     positionFine: { ...positionFine },
+    ...(unit.steamEmitter ? {
+      steamClouds: unit.steamEmitter.clouds.map(({ id, positionFine: cloudPosition, remainingMs, animationFrame }) => ({
+        id,
+        positionFine: { ...cloudPosition },
+        remainingMs,
+        animationFrame,
+      })),
+    } : {}),
     ...(unit.walkingAnimation ? { walkingAnimation: { ...unit.walkingAnimation } } : {}),
     ...(unit.weapon ? {
       attackRange: {
@@ -2814,6 +2878,7 @@ export function createGame(options: {
       const resolvedSeed = randomSeed ?? options.randomSeedSource?.() ?? 1;
       if (!validSeed(resolvedSeed)) throw new RangeError('Random seed must be an unsigned 32-bit integer');
       const random = new JavaRandom(resolvedSeed);
+      const utilRandom = new JavaUtilRandom((resolvedSeed ^ 0x5354_4541) >>> 0);
       // APK Math.random() is separate from Game's Randomizer; keep its deterministic adapter isolated.
       const rocketAngleRandom = new JavaRandom(resolvedSeed);
       const sessionId = options.sessionIdSource?.() ?? 'game-session-' + nextSessionNumber;
@@ -2826,6 +2891,13 @@ export function createGame(options: {
         upgradeLevel: 0,
         movementSpeedFinePer100Ms: definition.movementSpeedFinePer100Ms,
         walkingAnimationStep: 0,
+        ...(definition.steamEmitter ? {
+          steamEmitter: {
+            nextCloudCounterMs: 0,
+            nextCloudNumber: 1,
+            clouds: [],
+          },
+        } : {}),
         ...(definition.weapon ? { weapon: clone(definition.weapon) } : {}),
         weaponCooldownMs: definition.weapon ? Math.trunc(definition.weapon.reloadTimeMs / 2) : 0,
         shotsUntilSpecialReload: definition.weapon?.specialReloadFrequency ?? 0,
@@ -2845,6 +2917,7 @@ export function createGame(options: {
       const recordedFrames: GameReplayFrame[] = [];
       const replayStates = new Map<number, ReplayState>();
       const pending: PendingIntent[] = [];
+      const sessionEvents: GameEvent[] = [];
       let nextIntentSequence = 1;
       let nextShotNumber = 1;
       let nextRocketSparkleNumber = 1;
@@ -3016,7 +3089,7 @@ export function createGame(options: {
             spawnLocationType: definition.spawnLocationType,
             count: wave?.recruitPool[definition.id] ?? 0,
           })),
-          events: clone(wave?.events ?? []),
+          events: clone([...sessionEvents, ...(wave?.events ?? [])]),
           ...(wave && scenario.previewWave ? {
             wave: {
               number: wave.number,
@@ -3198,6 +3271,7 @@ export function createGame(options: {
           if (paused) return observe();
           if (wave?.settlement) {
             wave.events = [];
+            sessionEvents.length = 0;
             return observe();
           }
           for (const shot of wave?.shots ?? []) {
@@ -3215,6 +3289,7 @@ export function createGame(options: {
             }
           }
           if (wave) wave.events = [];
+          sessionEvents.length = 0;
           if (bonusNotice) {
             bonusNotice.remainingMs -= deltaMs;
             if (bonusNotice.remainingMs <= 0) bonusNotice = undefined;
@@ -3466,6 +3541,11 @@ export function createGame(options: {
                 unit.selected = unit === target;
                 unit.movementTargetFine = undefined;
               }
+              if (target.definition.selectionSound) {
+                const event: GameEvent = { type: 'sound-requested', sound: target.definition.selectionSound };
+                if (wave) wave.events.push(event);
+                else sessionEvents.push(event);
+              }
               continue;
             }
             const priorityTarget = nearestPriorityTargetAt(selection.x, selection.y, wave?.enemies ?? []);
@@ -3502,6 +3582,8 @@ export function createGame(options: {
             drawOrderCreationOrder.push('unit:' + spawned.definition.id);
           }
           units.push(...spawnedGamblerPrizes);
+
+          for (const unit of units) updateSteamEmitter(unit, deltaMs, utilRandom);
 
           const previousPositions = new Map(units.map((unit) => [unit, { ...unit.positionFine }]));
           const movedGroupIds = new Set<string>();

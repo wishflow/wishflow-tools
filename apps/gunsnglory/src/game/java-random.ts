@@ -70,3 +70,41 @@ export class JavaRandom {
     return ((this.next(26) * 0x800_0000) + this.next(27)) / 0x20_0000_0000_0000;
   }
 }
+
+/** Standard java.util.Random stream used by APK Util.random(), without Game.Randomizer reseeding. */
+export class JavaUtilRandom {
+  private seed = 0n;
+
+  constructor(seed: number) {
+    this.reset(seed);
+  }
+
+  reset(seed: number): void {
+    if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffff_ffff) {
+      throw new RangeError('Random seed must be an unsigned 32-bit integer');
+    }
+    this.seed = (BigInt(seed) ^ JAVA_RANDOM_MULTIPLIER) & JAVA_RANDOM_MASK;
+  }
+
+  private next(bits: number): number {
+    this.seed = (this.seed * JAVA_RANDOM_MULTIPLIER + 0xbn) & JAVA_RANDOM_MASK;
+    return Number(this.seed >> BigInt(48 - bits));
+  }
+
+  nextInt(bound: number): number {
+    if (!Number.isInteger(bound) || bound <= 0 || bound > JAVA_INT_MAX) {
+      throw new RangeError('Random bound must be a positive Java integer');
+    }
+    if ((bound & (bound - 1)) === 0) {
+      return Number((BigInt(bound) * BigInt(this.next(31))) >> 31n);
+    }
+
+    let bits: number;
+    let value: number;
+    do {
+      bits = this.next(31);
+      value = bits % bound;
+    } while (bits - value + (bound - 1) >= 0x8000_0000);
+    return value;
+  }
+}

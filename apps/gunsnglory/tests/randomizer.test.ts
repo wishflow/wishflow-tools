@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { JavaRandom } from '../src/game/java-random';
+import { JavaRandom, JavaUtilRandom } from '../src/game/java-random';
 
 const bounds = [1, 2, 3, 7, 20, 100, 65_535, 0x4000_0000, 0x7fff_ffff] as const;
 
@@ -40,6 +40,30 @@ test('rocket-angle adapter uses an independent deterministic Java double stream'
   assert.equal(rocketAngleRandom.nextDouble(), 0.7275636800328681);
   assert.equal(gameRandom.nextInt(100), expectedGameDraw,
     'consuming a rocket-angle value must not advance the APK Randomizer stream');
+});
+
+test('matches standard java.util.Random vectors without the Game.Randomizer reseed wrapper', () => {
+  const standardBounds = [1, 2, 3, 7, 20, 100, 250, 65_535, 0x4000_0000, 0x7fff_ffff] as const;
+  const vectors = [
+    { seed: 0, values: [0, 1, 1, 2, 15, 53, 241, 8_571, 641_609_359, 1_678_332_854] },
+    { seed: 1, values: [0, 0, 1, 0, 14, 4, 184, 5_956, 1_039_119_989, 1_526_301_748] },
+    { seed: 42, values: [0, 0, 0, 3, 10, 25, 5, 40_268, 714_627_759, 196_118_093] },
+    { seed: 123_456_789, values: [0, 1, 2, 3, 10, 54, 33, 43_837, 804_921_648, 925_572_887] },
+  ] as const;
+
+  for (const vector of vectors) {
+    const random = new JavaUtilRandom(vector.seed);
+    assert.deepEqual(standardBounds.map((bound) => random.nextInt(bound)), vector.values, `seed ${vector.seed}`);
+  }
+});
+
+test('standard Util random draws do not advance the APK Game.Randomizer stream', () => {
+  const gameRandom = new JavaRandom(42);
+  const utilRandom = new JavaUtilRandom(42);
+  const expectedGameDraw = new JavaRandom(42).nextInt(100);
+
+  assert.equal(utilRandom.nextInt(250), 130);
+  assert.equal(gameRandom.nextInt(100), expectedGameDraw);
 });
 
 test('rejects bounds and seeds outside the Java/web session range', () => {

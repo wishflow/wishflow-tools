@@ -39,7 +39,9 @@ test('Tech Town train test sample renders on its track, moves as a row, and stop
 
   const start = await canvasPoint(page, 4.5, 12.5);
   const target = await canvasPoint(page, 7.5, 12.5);
+  const greetingRequest = page.waitForRequest((request) => request.url().endsWith('/assets/sounds/sound_train.ogg'));
   await page.mouse.click(start.x, start.y);
+  await greetingRequest;
   await expect(page.getByTestId('selection-status')).toContainText('Train locomotive');
   await page.mouse.move(start.x, start.y);
   await page.mouse.down();

@@ -144,6 +144,32 @@ function drawUnit(
   context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
   context.restore();
 
+  if (unit.steamClouds?.length) {
+    const steamImage = images.sfx_lok_steam;
+    if (!steamImage) throw new Error('Missing game image: sfx_lok_steam');
+    const frameWidth = steamImage.naturalWidth / 5;
+    const frameHeight = steamImage.naturalHeight;
+    const scale = viewport.scaleFactor;
+    for (const cloud of unit.steamClouds) {
+      const centerX = viewport.origin.x + (cloud.positionFine.x / FINE_UNITS_PER_CELL) * viewport.tileSize;
+      const centerY = viewport.origin.y + (cloud.positionFine.y / FINE_UNITS_PER_CELL) * viewport.tileSize;
+      const cloudWidth = frameWidth * scale;
+      const cloudHeight = frameHeight * scale;
+      const animationFrame = Math.max(0, Math.min(4, Math.trunc(cloud.animationFrame)));
+      context.drawImage(
+        steamImage,
+        animationFrame * frameWidth,
+        0,
+        frameWidth,
+        frameHeight,
+        Math.trunc(centerX - cloudWidth / 2),
+        Math.trunc(centerY - cloudHeight / 2),
+        Math.trunc(cloudWidth),
+        Math.trunc(cloudHeight),
+      );
+    }
+  }
+
   if (unit.bonus && unit.bonus.remainingMs > 0) {
     const bonusImage = images[campaignBonusRewardAsset(unit.bonus.type)];
     if (!bonusImage) throw new Error('Missing game image: ' + campaignBonusRewardAsset(unit.bonus.type));

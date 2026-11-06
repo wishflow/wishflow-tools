@@ -28,6 +28,7 @@ test('keeps unrelated resources on their existing asset paths', () => {
   for (const asset of ['gng_wave_arrow_a', 'gng_wave_arrow_b', 'gng_wave_arrow_c', 'gng_wave_arrow_d', 'boss_hat']) {
     assert.equal(gameAssetRelativePath(asset), `${asset}.png`);
   }
+  assert.equal(gameAssetRelativePath('sfx_lok_steam'), 'sfx_lok_steam.png');
 });
 
 test('uses APK hdpi atlases for Cow Gulch terrain, road, bridge, and scenery', () => {

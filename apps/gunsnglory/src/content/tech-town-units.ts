@@ -186,6 +186,8 @@ export function createTechTownTrainUnits(): ScenarioUnit[] {
       movementAxis: 'horizontal',
       collisionBoxFine: { x: -3840, y: -4608, width: 7680, height: 4608 },
       showSleepingEffect: false,
+      ...(unitTypeId === 10 ? { steamEmitter: true as const } : {}),
+      selectionSound: 'sound_train',
       cell,
       movementSpeedFinePer100Ms: 3000,
       asset,

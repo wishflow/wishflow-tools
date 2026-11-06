@@ -2744,6 +2744,7 @@ const assetNames = new Set([
   'bonus_box',
   'sfx_bonus_box',
   'gng_speechbubble',
+  'sfx_lok_steam',
   'hud_bonus_sheriff',
   'hud_bonus_cash',
   'hud_bonus_speed',
