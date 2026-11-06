@@ -442,7 +442,7 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
   await expect(status).toContainText('Wave 10/10');
   expect(await readLives(page)).toBeGreaterThan(0);
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('3/3 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('3/4 stages complete');
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
 
   const profile = await readProfile(page);
@@ -459,8 +459,9 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
   await page.getByTestId('menu-start').click();
   await page.getByTestId('campaign-region-new-mexico').click();
   await expect(page.getByTestId('campaign-level-03')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-04')).toBeDisabled();
-  await expect(page.getByTestId('campaign-level-04')).toHaveAttribute('aria-label', /not implemented yet/i);
+  await expect(page.getByTestId('campaign-level-04')).toBeEnabled();
+  await expect(page.getByTestId('campaign-level-05')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-05')).toHaveAttribute('aria-label', /not implemented yet/i);
   await page.getByTestId('campaign-level-03').click();
   await page.getByTestId('campaign-stage-play').click();
   await page.getByTestId('campaign-difficulty-easy').click();

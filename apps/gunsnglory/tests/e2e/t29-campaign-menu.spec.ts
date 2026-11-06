@@ -83,7 +83,7 @@ test('starts in the in-game menu and opens an implemented campaign level through
   await expect(campaignProgress).toContainText('尚未实现的关卡会显示锁定标记。');
   await expect(campaignProgress).not.toContainText('第 3–10 关尚未实现。');
   await expect(page.getByTestId('campaign-level-03')).toHaveAttribute('aria-label', /未解锁/);
-  await expect(page.getByTestId('campaign-level-04')).toHaveAttribute('aria-label', /尚未实现/);
+  await expect(page.getByTestId('campaign-level-04')).toHaveAttribute('aria-label', /未解锁/);
   await page.getByRole('button', { name: '切换界面语言为英文' }).click();
   await expectCampaignMenuImagesLoaded(page);
   await page.getByTestId('campaign-menu-back').click();

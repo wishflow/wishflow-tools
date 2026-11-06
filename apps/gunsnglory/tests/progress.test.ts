@@ -163,6 +163,10 @@ test('keeps legacy samples isolated while official Cow Gulch progress preserves 
     scenarioId: 'campaign-new-mexico-03',
     status: 'locked',
     highScore: undefined,
+  }, {
+    scenarioId: 'campaign-new-mexico-04',
+    status: 'locked',
+    highScore: undefined,
   }]);
   assert.equal(before.completedCount, 0);
   assert.deepEqual(before.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium', soundEnabled: true });
@@ -185,7 +189,7 @@ test('keeps legacy samples isolated while official Cow Gulch progress preserves 
   ]);
 
   const reloaded = await createProgress(repository, officialCampaignStages).loadCampaign();
-  assert.deepEqual(reloaded.stages.map(({ status }) => status), ['completed', 'available', 'locked']);
+  assert.deepEqual(reloaded.stages.map(({ status }) => status), ['completed', 'available', 'locked', 'locked']);
   assert.equal(reloaded.completedCount, 1);
   assert.deepEqual(reloaded.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium', soundEnabled: true });
 });

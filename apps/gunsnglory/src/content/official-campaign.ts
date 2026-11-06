@@ -8,6 +8,7 @@ import {
   fortKaboomContent,
   fortKaboomPreviewWave,
 } from './fort-kaboom';
+import { techTownLevelFourContent } from './tech-town-campaign';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -33,6 +34,9 @@ export const fortKaboomLevelThreeContent = {
   campaignEnemyByType: fortKaboomCampaignEnemyByType,
 };
 
+/** Formal New Mexico level four assembled from the researched Tech Town content. */
+export const techTownLevelFourCampaignContent = techTownLevelFourContent;
+
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
   contentVersion: cowGulchLevelOneContent.contentVersion,
@@ -51,4 +55,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: fortKaboomLevelThreeContent.title,
   globalLevel: 3,
   requiresCompletedScenarioIds: [apacheValleyLevelTwoContent.id],
+}, {
+  scenarioId: techTownLevelFourCampaignContent.id,
+  contentVersion: techTownLevelFourCampaignContent.contentVersion!,
+  title: techTownLevelFourCampaignContent.title,
+  globalLevel: 4,
+  requiresCompletedScenarioIds: [fortKaboomLevelThreeContent.id],
 }]);

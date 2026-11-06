@@ -7,7 +7,7 @@ export interface CampaignWaveIntro {
   waveNumber: number;
   speaker: LocalizedCampaignCopy;
   text: LocalizedCampaignCopy;
-  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers' | 'portrait_deserter';
+  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers' | 'portrait_deserter' | 'portrait_engineer';
   voiceSound?: 'sound_deserter_yes_sir' | 'sound_indian_hugh' | 'sound_pedro' | 'sound_siedler';
 }
 

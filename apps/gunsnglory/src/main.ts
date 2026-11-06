@@ -19,7 +19,8 @@ import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
 import { techTownTrainTestContent } from './content/tech-town-train-sample';
 import { gamblerDialogAssets } from './content/gambler-dialog-assets';
 import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas, setGameViewport } from './render/canvas-renderer';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages } from './content/official-campaign';
+import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages, techTownLevelFourCampaignContent } from './content/official-campaign';
+import { techTownWaveIntros } from './content/tech-town-wave-intros';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import { fortKaboomWaveIntros } from './content/fort-kaboom-wave-intros';
@@ -1261,6 +1262,8 @@ const campaignMenuCopy = {
     bestScore: (score: number) => `$ ${score}`,
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
+    levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
+    levelFourInfo: "The railroad could be our most powerful weapon, if we mount deadly Gatling guns on empty cars! Unfortunately that isn't free.",
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpTitle: 'HOW TO PLAY',
     helpLines: [
@@ -1294,6 +1297,8 @@ const campaignMenuCopy = {
     bestScore: (score: number) => `$ ${score}`,
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
+    levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
+    levelFourInfo: '如果能在空车厢上装上致命的加特林机枪，铁路就会成为我们最强大的武器！可惜，这可不便宜。',
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpTitle: '游戏说明',
     helpLines: [
@@ -1555,8 +1560,12 @@ function campaignMenuOverviewScreen(): string {
   if (!entry) return campaignMenuLevelScreen();
   const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === entry.level);
   if (!stage || (stage.status !== 'available' && stage.status !== 'completed')) return campaignMenuLevelScreen();
-  const content = entry.level === 1 ? cowGulchLevelOneContent : apacheValleyLevelTwoContent;
-  const description = entry.level === 1 ? copy.levelOneInfo : copy.levelTwoInfo;
+  const content = entry.level === 1 ? cowGulchLevelOneContent
+    : entry.level === 2 ? apacheValleyLevelTwoContent
+      : entry.level === 3 ? fortKaboomLevelThreeContent : techTownLevelFourCampaignContent;
+  const description = entry.level === 1 ? copy.levelOneInfo
+    : entry.level === 2 ? copy.levelTwoInfo
+      : entry.level === 3 ? copy.levelThreeInfo : copy.levelFourInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
   const score = stage.highScore === undefined
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.noHighScore)}</p>`
@@ -2806,7 +2815,7 @@ const assetNames = new Set([
   ...(view.map.decorations ?? []).map((decoration) => decoration.asset),
   ...view.units.map((unit) => unit.asset),
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
-  ...[cowGulchLevelOneContent, apacheValleyContent, fortKaboomLevelThreeContent].flatMap((content) => [
+  ...[cowGulchLevelOneContent, apacheValleyContent, fortKaboomLevelThreeContent, techTownLevelFourCampaignContent].flatMap((content) => [
     ...content.map.background.map((tile) => tile.asset),
     ...content.map.streets.map((tile) => tile.asset),
     ...(content.map.decorations ?? []).map((decoration) => decoration.asset),
@@ -2887,6 +2896,7 @@ const assetNames = new Set([
   'portrait_indian',
   'portrait_settlers',
   'portrait_deserter',
+  'portrait_engineer',
   'portrait_pyromaniac',
   'portrait_salesman',
 ]);
@@ -3091,6 +3101,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === cowGulchLevelOneContent.id) return cowGulchWaveIntros;
   if (scenarioId === apacheValleyLevelTwoContent.id) return apacheValleyWaveIntros;
   if (scenarioId === fortKaboomLevelThreeContent.id) return fortKaboomWaveIntros;
+  if (scenarioId === techTownLevelFourCampaignContent.id) return techTownWaveIntros;
   return [];
 }
 
@@ -3462,7 +3473,10 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
     && (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving));
   stopGameLoop();
   try {
-    const nextSession = await game.open(request);
+    const sessionGame = request.scenarioId === techTownLevelFourCampaignContent.id && campaignProgressView
+      ? createBrowserGame(campaignProgressView.profile.completedScenarios)
+      : game;
+    const nextSession = await sessionGame.open(request);
     sceneOpenFailure = undefined;
     activateSession(nextSession);
     return true;

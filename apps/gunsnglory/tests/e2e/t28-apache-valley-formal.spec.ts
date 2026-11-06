@@ -247,7 +247,7 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   const finalStatus = await status.innerText();
   const lives = Number(finalStatus.match(/Lives (\d+)/)?.[1]);
   expect(lives).toBeGreaterThan(0);
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('2/3 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('2/4 stages complete');
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
 
   const profile = await readProfile(page);

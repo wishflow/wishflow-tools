@@ -147,6 +147,7 @@ test('official Apache Valley content exposes its six source wave schedules and u
     [cowGulchLevelOneContent.id, []],
     [apacheValleyLevelTwoContent.id, [cowGulchLevelOneContent.id]],
     [fortKaboomLevelThreeContent.id, [apacheValleyLevelTwoContent.id]],
+    ['campaign-new-mexico-04', ['campaign-new-mexico-03']],
   ]);
 });
 

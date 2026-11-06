@@ -57,7 +57,7 @@ test('official Cow Gulch advances through its waves without a premature defeat o
 
   await expect(waveStatus).toContainText(/Wave [2-8]\/8/);
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/3 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/4 stages complete');
   await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
   await expect(page.getByTestId('campaign-stage-button-2')).toBeDisabled();
   await expect(page.getByTestId('campaign-stage-list')).toContainText(/locked/i);
@@ -83,6 +83,6 @@ test('official Cow Gulch advances through its waves without a premature defeat o
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50 ·');
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/3 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/4 stages complete');
   await expect(page.getByTestId('campaign-stage-list')).toContainText(/locked/i);
 });

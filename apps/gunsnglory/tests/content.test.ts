@@ -16,6 +16,7 @@ import {
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
+  techTownLevelFourCampaignContent,
 } from '../src/content/official-campaign';
 import { calculateMapViewport } from '../src/render/map-viewport';
 import { mapDecorationDestination } from '../src/render/canvas-renderer';
@@ -130,6 +131,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: fortKaboomLevelThreeContent.title,
     globalLevel: 3,
     requiresCompletedScenarioIds: [apacheValleyLevelTwoContent.id],
+  }, {
+    scenarioId: techTownLevelFourCampaignContent.id,
+    contentVersion: techTownLevelFourCampaignContent.contentVersion,
+    title: techTownLevelFourCampaignContent.title,
+    globalLevel: 4,
+    requiresCompletedScenarioIds: [fortKaboomLevelThreeContent.id],
   }]);
 });
 
