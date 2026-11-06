@@ -9,7 +9,7 @@
 - 显示修复代码已完成：游戏窗口按可用视口适配并保持画面比例，普通页面中的 Usagi 覆盖游戏窗口，全屏时隐藏。内置浏览器拒绝原生全屏请求；原生全屏覆盖屏幕仍无实测证据。除专门验收全屏外，保持窗口模式。
 - 浏览器测试默认静音；除专门验收音效外，不开启声音。REA/APK 静态材料优先；仅当具体问题无法从静态证据判断时，才安排一次 Android 定点观察，不重复启动或检查已证实行为。
 - 显示修复、Gold Transport、玩家池多槽动作和 Tech Town 共 4 个实现切片均已完成针对性检查。本批最终验证通过：`pnpm run typecheck`、391 项单测、`pnpm run build`、97 项 Playwright E2E；E2E 需允许本地服务绑定 `127.0.0.1:4173`。构建仍提示主 JS chunk 超过 500KB，但不影响构建或测试通过。当前基线更新为 5 次成功发布 / 31 个已验收实现切片（16.1%）；若本批发布，则为 6/31（19.4%）。
-- 代码位于 `codex/gng-spawn-field-restore`，远端 `gunsnglory` 集成分支尚未包含当前本地批次；公开 `master` 为 `e922c3f`。发布前必须按应用协作约束同步 worktree、集成分支并核对部署来源 SHA。
+- 本批已通过本地完整检查，包含 4 个实现切片。按应用发布流程以一个 squash commit 集成到 `master`；本批发布后计为 6 次成功发布 / 31 个已验收切片（19.4%）。发布收尾需确认 CI 成功、核对 `/_site/build-info.json` 的 `sourceSha` 与发布 commit 一致，再用内置浏览器验收，并将发布 commit 并回 `gunsnglory`。
 
 ## 下一批：New Mexico 第 5 关 Billy Hills
 
