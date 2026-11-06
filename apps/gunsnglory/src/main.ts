@@ -15,10 +15,15 @@ import {
 } from './content/cow-gulch';
 import { cowGulchDefeatContent } from './content/cow-gulch-defeat';
 import { apacheValleyContent } from './content/apache-valley';
-import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from './content/official-campaign';
+import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
+import { techTownTrainTestContent } from './content/tech-town-train-sample';
+import { gamblerDialogAssets } from './content/gambler-dialog-assets';
+import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas, setGameViewport } from './render/canvas-renderer';
+import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages, techTownLevelFourCampaignContent } from './content/official-campaign';
+import { techTownWaveIntros } from './content/tech-town-wave-intros';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
+import { fortKaboomWaveIntros } from './content/fort-kaboom-wave-intros';
 import {
   cowGulchAmbientMusic,
   cowGulchBattleMusicForWave,
@@ -34,10 +39,11 @@ import {
   screenToMapCell,
   type MapCamera,
 } from './render/map-viewport';
-import { fitAspectViewport, toLogicalPoint } from './render/viewport';
+import { fitAspectViewport, fitLogicalViewportToScreen, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
-import { SoundEffectsManager } from './audio/sfx-manager';
+import { chooseSoundVariation, SoundEffectsManager } from './audio/sfx-manager';
+import { deriveSessionRandomSeed, JavaUtilRandom } from './game/java-random';
 import { acquireAudioPlayer, silenceAudioPlayers } from './audio/audio-playback';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
 import { summarizeEnemyDefeats, type EnemyDefeatSummary } from './ui/combat-feedback';
@@ -53,7 +59,10 @@ import type {
   GameReplayResult,
   GameSession,
   GameSettlementRecord,
+  GamblerCardView,
+  GamblerOutcome,
   ScenarioContent,
+  UnitShotSound,
 } from './game';
 import { ProgressError, type CampaignProgressView, type ProfileView, type SettlementSaveResult } from './progress';
 import { messages } from './locales';
@@ -95,7 +104,6 @@ app.innerHTML = [
   '          <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
   '          <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
   '          <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
-  '          <button type="button" data-testid="hire-map-unit" data-action="hire-map-unit" hidden>Hire selected map unit</button>',
   '          <button type="button" data-action="clear-selection">Clear selection</button>',
   '          <div class="map-zoom-controls" data-testid="map-zoom-controls" role="group" aria-label="Map zoom" hidden>',
   '            <button type="button" data-testid="map-zoom-out" data-action="map-zoom-out" aria-label="Zoom out">−</button>',
@@ -153,12 +161,33 @@ app.innerHTML = [
   '          <button type="button" data-action="cancel-recruit">Cancel</button>',
   '        </div>',
   '      </dialog>',
+  '      <dialog class="recruit-confirmation map-hire-confirmation" data-testid="map-hire-confirmation" aria-modal="false" aria-labelledby="map-hire-confirmation-title">',
+  '        <h2 id="map-hire-confirmation-title" data-testid="map-hire-confirmation-title"></h2>',
+  '        <p data-testid="map-hire-confirmation-details" aria-live="polite"></p>',
+  '        <div class="recruit-confirmation-actions">',
+  '          <button type="button" data-testid="confirm-map-hire" data-action="confirm-map-hire">Hire</button>',
+  '          <button type="button" data-testid="cancel-map-hire" data-action="cancel-map-hire">Cancel</button>',
+  '        </div>',
+  '      </dialog>',
   '      <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
   '        <h2 id="upgrade-confirmation-title"></h2>',
   '        <p data-testid="upgrade-confirmation-details"></p>',
   '        <div class="recruit-confirmation-actions">',
   '          <button type="button" data-action="confirm-upgrade">Confirm upgrade</button>',
   '          <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
+  '        </div>',
+  '      </dialog>',
+  '      <dialog class="recruit-confirmation gambler-confirmation" data-testid="gambler-dialog" aria-modal="false" aria-labelledby="gambler-dialog-title" aria-describedby="gambler-dialog-message">',
+  '        <div class="gambler-dialog-heading">',
+  '          <img data-testid="gambler-portrait" alt="" width="64" height="64">',
+  '          <div><h2 id="gambler-dialog-title" data-testid="gambler-dialog-title"></h2><p id="gambler-dialog-message" data-testid="gambler-message" aria-live="polite"></p></div>',
+  '        </div>',
+  '        <p class="gambler-cash" data-testid="gambler-cash"></p>',
+  '        <ol class="gambler-cards" data-testid="gambler-cards" aria-label="Gambler hand"></ol>',
+  '        <p class="gambler-result" data-testid="gambler-result" aria-live="polite"></p>',
+  '        <div class="recruit-confirmation-actions gambler-actions">',
+  '          <button type="button" data-action="play-gambler" data-testid="play-gambler">Play</button>',
+  '          <button type="button" data-action="close-gambler" data-testid="close-gambler">Cancel</button>',
   '        </div>',
   '      </dialog>',
   '      <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
@@ -206,6 +235,9 @@ app.innerHTML = [
   '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
   '      <p data-testid="map-hire-status" role="status" aria-live="polite"></p>',
   '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
+  '      <button type="button" data-action="start-gambler-sample">Open Gambler UI sample</button>',
+  '      <button type="button" data-action="start-gambler-low-cash-sample">Open low-cash Gambler sample</button>',
+  '      <button type="button" data-testid="open-tech-town-train-sample" data-action="start-tech-town-train-sample" data-locale="Open Tech Town train and Gatling sample">Open Tech Town train and Gatling sample</button>',
   '      <button type="button" data-testid="open-single-wave-sample" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
   '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
   '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
@@ -286,6 +318,7 @@ app.innerHTML = [
 registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
+const gameFrameElement = app.querySelector<HTMLElement>('.game-frame');
 const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
 const fullscreenToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="fullscreen-toggle"]');
@@ -331,7 +364,6 @@ const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid=
 const upgradeStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-status"]');
 const recruitPoolStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-pool-status"]');
 const recruitStatusElement = app.querySelector<HTMLElement>('[data-testid="recruit-status"]');
-const mapHireButtonElement = app.querySelector<HTMLButtonElement>('[data-action="hire-map-unit"]');
 const mapHireStatusElement = app.querySelector<HTMLElement>('[data-testid="map-hire-status"]');
 const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="settings-status"]');
 const retrySettingsButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-settings-save"]');
@@ -364,6 +396,23 @@ const upgradeConfirmationTitleElement = app.querySelector<HTMLElement>('#upgrade
 const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="upgrade-confirmation-details"]');
 const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
 const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
+const mapHireConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="map-hire-confirmation"]');
+const mapHireConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-title"]');
+const mapHireConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-details"]');
+const confirmMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-map-hire"]');
+const cancelMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-map-hire"]');
+const gamblerDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="gambler-dialog"]');
+const gamblerDialogTitleElement = app.querySelector<HTMLElement>('#gambler-dialog-title');
+const gamblerDialogMessageElement = app.querySelector<HTMLElement>('[data-testid="gambler-message"]');
+const gamblerPortraitElement = app.querySelector<HTMLImageElement>('[data-testid="gambler-portrait"]');
+const gamblerCashElement = app.querySelector<HTMLElement>('[data-testid="gambler-cash"]');
+const gamblerCardsElement = app.querySelector<HTMLOListElement>('[data-testid="gambler-cards"]');
+const gamblerResultElement = app.querySelector<HTMLElement>('[data-testid="gambler-result"]');
+const playGamblerButton = app.querySelector<HTMLButtonElement>('[data-testid="play-gambler"]');
+const closeGamblerButton = app.querySelector<HTMLButtonElement>('[data-testid="close-gambler"]');
+const startGamblerSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-gambler-sample"]');
+const startGamblerLowCashSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-gambler-low-cash-sample"]');
+const startTechTownTrainSampleButton = app.querySelector<HTMLButtonElement>('[data-action="start-tech-town-train-sample"]');
 const campaignWaveIntroDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-wave-intro"]');
 const campaignWaveIntroParchmentElement = app.querySelector<HTMLImageElement>('[data-testid="campaign-wave-intro-parchment"]');
 const campaignWaveIntroWaveElement = app.querySelector<HTMLElement>('[data-testid="campaign-wave-intro-wave"]');
@@ -398,7 +447,7 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
+if (!canvasElement || !gameFrameElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
   || !fullscreenStatusElement || !mapZoomControlsElement || !mapZoomOutButtonElement
   || !mapZoomInButtonElement || !mapZoomResetButtonElement || !mapZoomLevelElement
   || !sceneHeadingElement || !gameToolbarElement
@@ -414,10 +463,15 @@ if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || 
   || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement || !sceneCaptionElement
   || !campaignMenuToggleElement || !settlementCampaignMenuButtonElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
-  || !recruitPoolStatusElement || !recruitStatusElement || !mapHireButtonElement || !mapHireStatusElement
+  || !recruitPoolStatusElement || !recruitStatusElement || !mapHireStatusElement
   || !recruitButton || !recruitConfirmationElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
+  || !mapHireConfirmationElement || !mapHireConfirmationTitleElement || !mapHireConfirmationDetailsElement
+  || !confirmMapHireButton || !cancelMapHireButton
+  || !gamblerDialogElement || !gamblerDialogTitleElement || !gamblerDialogMessageElement || !gamblerPortraitElement
+  || !gamblerCashElement || !gamblerCardsElement || !gamblerResultElement || !playGamblerButton || !closeGamblerButton
+  || !startGamblerSampleButton || !startGamblerLowCashSampleButton || !startTechTownTrainSampleButton
   || !campaignWaveIntroDialogElement || !campaignWaveIntroParchmentElement || !campaignWaveIntroWaveElement || !campaignWaveIntroTitleElement
   || !campaignWaveIntroTextElement || !campaignWaveIntroPortraitElement || !campaignWaveIntroConfirmIconElement
   || !campaignWaveIntroContinueLabelElement || !retryCampaignWaveIntroVoiceButtonElement
@@ -441,6 +495,7 @@ if (!canvasElement || !campaignMenuScreenElement || !campaignMenuViewElement || 
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
+const gameFrame: HTMLElement = gameFrameElement;
 const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
 const fullscreenToggleButton: HTMLButtonElement = fullscreenToggleButtonElement;
@@ -486,7 +541,6 @@ const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
 const upgradeStatus: HTMLElement = upgradeStatusElement;
 const recruitPoolStatus: HTMLElement = recruitPoolStatusElement;
 const recruitStatus: HTMLElement = recruitStatusElement;
-const mapHireControl: HTMLButtonElement = mapHireButtonElement;
 const mapHireStatus: HTMLElement = mapHireStatusElement;
 const settingsStatus: HTMLElement = settingsStatusElement;
 const retrySettingsButton: HTMLButtonElement = retrySettingsButtonElement;
@@ -518,6 +572,23 @@ const upgradeConfirmationTitle: HTMLElement = upgradeConfirmationTitleElement;
 const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElement;
 const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
 const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
+const mapHireConfirmation: HTMLDialogElement = mapHireConfirmationElement;
+const mapHireConfirmationTitle: HTMLElement = mapHireConfirmationTitleElement;
+const mapHireConfirmationDetails: HTMLElement = mapHireConfirmationDetailsElement;
+const confirmMapHireControl: HTMLButtonElement = confirmMapHireButton;
+const cancelMapHireControl: HTMLButtonElement = cancelMapHireButton;
+const gamblerDialog: HTMLDialogElement = gamblerDialogElement;
+const gamblerDialogTitle: HTMLElement = gamblerDialogTitleElement;
+const gamblerDialogMessage: HTMLElement = gamblerDialogMessageElement;
+const gamblerPortrait: HTMLImageElement = gamblerPortraitElement;
+const gamblerCash: HTMLElement = gamblerCashElement;
+const gamblerCards: HTMLOListElement = gamblerCardsElement;
+const gamblerResult: HTMLElement = gamblerResultElement;
+const playGamblerControl: HTMLButtonElement = playGamblerButton;
+const closeGamblerControl: HTMLButtonElement = closeGamblerButton;
+const startGamblerSampleControl: HTMLButtonElement = startGamblerSampleButton;
+const startGamblerLowCashSampleControl: HTMLButtonElement = startGamblerLowCashSampleButton;
+const startTechTownTrainSampleControl: HTMLButtonElement = startTechTownTrainSampleButton;
 const campaignWaveIntroDialog: HTMLDialogElement = campaignWaveIntroDialogElement;
 const campaignWaveIntroParchment: HTMLImageElement = campaignWaveIntroParchmentElement;
 const campaignWaveIntroWave: HTMLElement = campaignWaveIntroWaveElement;
@@ -573,6 +644,13 @@ let session = await game.open({
   mode: 'debug',
 });
 let view = session.observe();
+type GamblerDialogMode = 'closed' | 'prompt' | 'revealing' | 'result';
+type GamblerRoundState = NonNullable<ReturnType<GameSession['observe']>['units'][number]['gambler']>['lastRound'];
+let gamblerDialogMode: GamblerDialogMode = 'closed';
+let gamblerDialogUnitId: string | undefined;
+let gamblerDialogRoundId: string | undefined;
+let gamblerDialogTimers: number[] = [];
+let gamblerCommandNumber = 0;
 let profile: ProfileView = {
   settings: { simulationSpeed: DEFAULT_SIMULATION_SPEED, difficulty: 'easy', soundEnabled: true },
   completedScenarios: [],
@@ -636,6 +714,7 @@ let lastMapHireEvent: Extract<GameEvent, { type: 'map-unit-hired' | 'map-unit-hi
 let pendingRecruitmentType: string | undefined;
 let recruitmentCommandNumber = 0;
 let mapHireCommandNumber = 0;
+let pendingMapHireUnitId: string | undefined;
 let lastUpgradeEvent: Extract<GameEvent, { type: 'unit-upgraded' | 'unit-upgrade-rejected' }> | undefined;
 let pendingUpgradeUnitId: string | undefined;
 let upgradeCommandNumber = 0;
@@ -675,6 +754,7 @@ const languageMessages = {
     campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
     sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
     sceneCaption: (scenarioId: string) => {
+      if (scenarioId === techTownTrainTestContent.id) return 'Developer-only Tech Town train and Gatling test: move the original five-part train, hire and upgrade Gatling wagons, and fight one slow pioneer on route three. Debug results do not affect campaign progress.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -691,11 +771,27 @@ const languageMessages = {
     campaignOpened: (name: string) => `${name} opened.`,
     campaignOpenFailed: 'The stage could not be opened. The previous scene remains available.',
     none: 'No unit selected',
-    unitName: (type: string) => type === 'mexican' ? 'Mexican' : 'Gunslinger',
+    unitName: (type: string) => ({
+      mexican: 'Mexican',
+      cannon: 'Cannon',
+      indian: 'Native',
+      sniper: 'Markswoman',
+      grandpa: 'Scattergun Grandpa',
+      'train-10': 'Train locomotive',
+      'train-11': 'Train locomotive',
+      'train-12': 'Gatling wagon',
+      pyromaniac: 'Pyromaniac',
+      salesman: 'Snake Oil Salesman',
+      gambler: 'Card Gambler',
+    }[type] ?? 'Gunslinger'),
     selected: (name: string) => `${name} selected`,
     selectedCell: (x: number, y: number) => ` · Cell (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name} is waiting to be hired`,
-    mapHireButton: (name: string, price: number) => `Hire map ${name} · $${price}`,
+    mapHirePrompt: (name: string, price: number) => `Hire ${name} for $${price}?`,
+    confirmMapHire: 'Hire',
+    cancelMapHire: 'Cancel',
+    closeMapHire: 'OK',
+    mapHireInsufficientCash: (price: number, cash: number) => `Not enough cash: need $${price}, have $${cash}.`,
     mapHired: (name: string, price: number) => `${name} hired from the map for $${price}.`,
     mapHireRejected: (name: string, price: number, cash: number) => `Not enough cash to hire ${name}: need $${price}, have $${cash}.`,
     startSample: 'Start one pioneer sample',
@@ -756,6 +852,8 @@ const languageMessages = {
         2: ['Female pioneer', 'Female pioneers'],
         3: ['Horseman', 'Horsemen'],
         4: ['Wagon', 'Wagons'],
+        5: ['Stagecoach', 'Stagecoaches'],
+        6: ['Gold Transport', 'Gold Transports'],
         8: ['Covered wagon', 'Covered wagons'],
       };
       const [singular, plural] = enemyType ? names[enemyType] : ['Enemy', 'Enemies'];
@@ -773,13 +871,13 @@ const languageMessages = {
     upgradeSceneContext: 'DEBUG RULE TEST',
     originalUpgradeLimit: 'Original Cow Gulch has an upgrade limit of 0. This separate debug fixture sets the limit to 1 and starts with $25; it never saves progress.',
     debugUpgradeFixture: 'Debug-only fixture · upgrade limit 1 · $25 starting cash · no profile writes.',
-    upgradeButton: (price: number) => `Upgrade Gunslinger · $${price}`,
+    upgradeButton: (name: string, price: number) => `Upgrade ${name} · $${price}`,
     upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
       `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Reload ${reload} → ${nextReload} ms`,
     upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
       range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
       nextSpecialReload: number, price: number, cash: number) =>
-      `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Damage ${damage} → ${nextDamage} base damage/shot · Cow Gulch light multiplier: pioneers 100%, wagons 50% · HP loss = trunc(base × target multiplier / 100) · Range ${rangeDisplay(range, 'en')} → ${rangeDisplay(nextRange, 'en')} · Reload ${reload} → ${nextReload} ms · Special reload ${specialReload} → ${nextSpecialReload} ms · Price $${price} · Cash $${cash}`,
+      `Level ${level} → ${level + 1} · Speed ${speedDisplay(speed, 'en')} → ${speedDisplay(nextSpeed, 'en')} · Damage ${damage} → ${nextDamage} base damage/shot · HP loss = trunc(base × target-type modifier / 100) · Range ${rangeDisplay(range, 'en')} → ${rangeDisplay(nextRange, 'en')} · Reload ${reload} → ${nextReload} ms · Special reload ${specialReload} → ${nextSpecialReload} ms · Price $${price} · Cash $${cash}`,
     confirmUpgrade: (name: string, price: number) => `Upgrade ${name} for $${price}?`,
     confirmUpgradeButton: 'Confirm upgrade',
     cancelUpgradeButton: 'Cancel upgrade',
@@ -865,6 +963,7 @@ const languageMessages = {
     campaignDifficultyUnlocked: '困难模式已解锁。',
     sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
     sceneCaption: (scenarioId: string) => {
+      if (scenarioId === techTownTrainTestContent.id) return '仅供开发测试的 Tech Town 列车与加特林样例：移动原版五节列车，雇佣并升级加特林车厢，在第三条路线对付一名慢速拓荒者；不会修改正式战役进度。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -881,11 +980,27 @@ const languageMessages = {
     campaignOpened: (name: string) => `已进入${name}。`,
     campaignOpenFailed: '无法打开该关卡，之前的场景仍可使用。',
     none: '尚未选择单位',
-    unitName: (type: string) => type === 'mexican' ? '墨西哥人' : '枪手',
+    unitName: (type: string) => ({
+      mexican: '墨西哥人',
+      cannon: '加农炮手',
+      indian: '原住民',
+      sniper: '女神枪手',
+      grandpa: '散弹枪爷爷',
+      'train-10': '列车机车',
+      'train-11': '列车机车',
+      'train-12': '加特林车厢',
+      pyromaniac: '纵火狂',
+      salesman: '蛇油推销员',
+      gambler: '纸牌赌徒',
+    }[type] ?? '枪手'),
     selected: (name: string) => `已选择${name}`,
     selectedCell: (x: number, y: number) => ` · 格子 (${x}, ${y})`,
     selectedSleeping: (name: string) => `${name}待招募，尚未雇用`,
-    mapHireButton: (name: string, price: number) => `雇佣地图上的${name} · $${price}`,
+    mapHirePrompt: (name: string, price: number) => `花费 $${price} 雇佣${name}？`,
+    confirmMapHire: '雇佣',
+    cancelMapHire: '取消',
+    closeMapHire: '确定',
+    mapHireInsufficientCash: (price: number, cash: number) => `现金不足：需要 $${price}，当前 $${cash}。`,
     mapHired: (name: string, price: number) => `已花费 $${price} 雇佣地图上的${name}。`,
     mapHireRejected: (name: string, price: number, cash: number) => `现金不足，无法雇佣${name}：需要 $${price}，当前 $${cash}。`,
     startSample: '开始单个拓荒者样本',
@@ -946,6 +1061,8 @@ const languageMessages = {
         2: '女拓荒者',
         3: '骑马战士',
         4: '马车',
+        5: '驿站马车',
+        6: '运金车',
         8: '篷车',
       };
       const name = enemyType ? names[enemyType] : '敌人';
@@ -963,13 +1080,13 @@ const languageMessages = {
     upgradeSceneContext: '规则测试 · 调试场景',
     originalUpgradeLimit: '原版牛溪谷的升级上限为 0。此独立调试样本将上限设为 1、初始现金设为 $25；不会写入存档。',
     debugUpgradeFixture: '仅供规则测试 · 升级上限 1 · 初始现金 $25 · 不写入档案。',
-    upgradeButton: (price: number) => `升级枪手 · $${price}`,
+    upgradeButton: (name: string, price: number) => `升级${name} · $${price}`,
     upgradeSummary: (level: number, speed: number, nextSpeed: number, reload: number, nextReload: number) =>
       `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒`,
     upgradeDetails: (level: number, speed: number, nextSpeed: number, damage: number, nextDamage: number,
       range: number, nextRange: number, reload: number, nextReload: number, specialReload: number,
       nextSpecialReload: number, price: number, cash: number) =>
-      `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 伤害 ${damage} → ${nextDamage} 点/发（目标倍率前基础伤害）· 牛溪谷轻型伤害倍率：拓荒者 100%，马车 50% · 实际扣血 = trunc(基础伤害 × 目标倍率 / 100) · 射程 ${rangeDisplay(range, 'zh')} → ${rangeDisplay(nextRange, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒 · 特殊装填 ${specialReload} → ${nextSpecialReload} 毫秒 · 价格 $${price} · 当前现金 $${cash}`,
+      `等级 ${level} → ${level + 1} · 移动速度 ${speedDisplay(speed, 'zh')} → ${speedDisplay(nextSpeed, 'zh')} · 伤害 ${damage} → ${nextDamage} 点/发（目标类型倍率前基础伤害）· 实际扣血 = trunc(基础伤害 × 目标类型倍率 / 100) · 射程 ${rangeDisplay(range, 'zh')} → ${rangeDisplay(nextRange, 'zh')} · 装填 ${reload} → ${nextReload} 毫秒 · 特殊装填 ${specialReload} → ${nextSpecialReload} 毫秒 · 价格 $${price} · 当前现金 $${cash}`,
     confirmUpgrade: (name: string, price: number) => `花费 $${price} 升级${name}？`,
     confirmUpgradeButton: '确认升级',
     cancelUpgradeButton: '取消升级',
@@ -1040,6 +1157,95 @@ const languageMessages = {
   },
 };
 
+const gamblerDialogCopy = {
+  en: {
+    title: 'Card Gambler',
+    prompt: 'Show what you’ve got!',
+    cashAndStake: (cash: number, stake: number) => `Cash: $${cash} · Wager: $${stake}`,
+    insufficientCash: (stake: number, cash: number) => `Not enough cash. You need $${stake}, but have $${cash}.`,
+    cooldown: (remainingMs: number) => `Come back in ${formatGamblerCooldown(remainingMs)}.`,
+    paused: 'Resume the battle before placing a wager.',
+    play: (stake: number) => `Play · $${stake}`,
+    cancel: 'Cancel',
+    done: 'Done',
+    dealing: 'Dealing cards…',
+    cashPrize: (payout: number) => `You Win: $${payout}`,
+    prize: (name: string) => `Prize: ${name}`,
+    cards: 'Gambler hand',
+    suits: ['hearts', 'diamonds', 'clubs', 'spades'],
+    ranks: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace'],
+    result: {
+      lost: 'LOST! With such a bad hand you should better try your luck with robbing settlers!',
+      'one-pair': 'PAIR! When 2 knaves are fighting, the desperado wins the duel!',
+      'two-pair': 'TWO PAIR! A bandit is rarely alone!',
+      'three-of-a-kind': 'THREE OF A KIND! With this hand, Gringo, you deserve three gun salute shots from the cannon!',
+      'full-house': 'FULL HOUSE! When the tent is full, the native gladly joins your cause!',
+      'four-of-a-kind': 'POKER! Since you hit 4 Aces, this accurate lady seems to be a perfect match for you!',
+      flush: 'FLUSH! Someone playing as well as you must be as experienced as the old Grandpa!',
+      'royal-flush': 'ROYAL FLUSH! An incredible hand like this should be celebrated with the fireworks of a Pyromaniac!',
+      straight: 'STRAIGHT! Your hand is as straight as the Snake Oil Salesman is bent!',
+      'high-card': 'HIGH CARD! Since your opponents are playing so badly you win some extra money!',
+    },
+  },
+  zh: {
+    title: '纸牌赌徒',
+    prompt: '亮出你的牌吧！',
+    cashAndStake: (cash: number, stake: number) => `现金：$${cash} · 押注：$${stake}`,
+    insufficientCash: (stake: number, cash: number) => `现金不足：需要 $${stake}，当前只有 $${cash}。`,
+    cooldown: (remainingMs: number) => `请等待 ${formatGamblerCooldown(remainingMs)} 后再来。`,
+    paused: '请先恢复战局，再下注。',
+    play: (stake: number) => `下注 · $${stake}`,
+    cancel: '取消',
+    done: '完成',
+    dealing: '正在发牌…',
+    cashPrize: (payout: number) => `你赢得：$${payout}`,
+    prize: (name: string) => `奖品：${name}`,
+    cards: '赌徒手牌',
+    suits: ['红桃', '方块', '梅花', '黑桃'],
+    ranks: ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'],
+    result: {
+      lost: '输啦！牌太差了，不如去抢劫定居者碰碰运气！',
+      'one-pair': '一对！两个恶棍打起来，亡命徒赢下了决斗！',
+      'two-pair': '两对！土匪很少单独行动！',
+      'three-of-a-kind': '三条！这手牌值得加农炮为你鸣放三响礼炮！',
+      'full-house': '葫芦！帐篷里人满为患时，原住民也会加入你的队伍！',
+      'four-of-a-kind': '四条！你抽中了四张 A，这位神枪手女士正适合加入你！',
+      flush: '同花！牌打得这么好，想必你和老爷爷一样经验丰富！',
+      'royal-flush': '皇家同花顺！如此惊人的牌局，值得让纵火狂放烟花庆祝！',
+      straight: '顺子！你的牌和卖蛇油商人一样“正直”！',
+      'high-card': '高牌！对手打得太差，你赢得了一些额外现金！',
+    },
+  },
+} as const;
+
+function formatGamblerCooldown(remainingMs: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1_000));
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${String(totalSeconds % 60).padStart(2, '0')}`;
+}
+
+function gamblerPrizeMessage(outcome: GamblerOutcome, language: keyof typeof gamblerDialogCopy): string {
+  const copy = gamblerDialogCopy[language];
+  if (outcome.type === 'cash' && outcome.payout > 0) return copy.cashPrize(outcome.payout);
+  if (outcome.type === 'unit') {
+    const prizeNames = language === 'en'
+      ? { 1: 'Gunslinger', 2: 'Mexican', 3: 'Cannon', 4: 'Native', 5: 'Markswoman', 6: 'Scattergun Grandpa', 35: 'Pyromaniac', 36: 'Snake Oil Salesman' }
+      : { 1: '枪手', 2: '墨西哥人', 3: '加农炮', 4: '原住民', 5: '女神枪手', 6: '老爷爷', 35: '纵火狂', 36: '蛇油商人' };
+    return copy.prize(prizeNames[outcome.unitType]);
+  }
+  return '';
+}
+
+function gamblerCardLabel(card: GamblerCardView, language: keyof typeof gamblerDialogCopy): string {
+  const copy = gamblerDialogCopy[language];
+  const rank = copy.ranks[card.rank] ?? String(card.rank);
+  const suit = copy.suits[(card.suitCode >>> 8) & 0x3] ?? '';
+  const important = card.important
+    ? language === 'en' ? ', important card' : '，关键牌'
+    : '';
+  return language === 'en' ? `${rank} of ${suit}${important}` : `${suit}${rank}${important}`;
+}
+
 const campaignMenuCopy = {
   en: {
     start: 'START', help: 'HELP', options: 'OPTIONS', sound: 'SOUND',
@@ -1050,12 +1256,14 @@ const campaignMenuCopy = {
     overview: 'LEVEL OVERVIEW', difficulty: 'DIFFICULTY', chooseDifficulty: 'Choose difficulty:',
     easy: 'EASY', medium: 'MEDIUM', hard: 'HARD', hardLocked: 'Complete a tenth level to unlock Hard.',
     available: 'Available', completed: 'Completed', locked: 'Locked',
-    unimplemented: 'Not implemented yet', unavailableLevels: 'Levels 3–10 are not implemented yet.',
+    unimplemented: 'Not implemented yet',
     noHighScore: 'Your highscore for this level will be shown here as soon as you have played it for the first time.',
     highScoreLabel: 'Best score',
     bestScore: (score: number) => `$ ${score}`,
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
+    levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
+    levelFourInfo: "The railroad could be our most powerful weapon, if we mount deadly Gatling guns on empty cars! Unfortunately that isn't free.",
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpTitle: 'HOW TO PLAY',
     helpLines: [
@@ -1083,12 +1291,14 @@ const campaignMenuCopy = {
     overview: '关卡说明', difficulty: '难度', chooseDifficulty: '选择难度：',
     easy: '简单', medium: '中等', hard: '困难', hardLocked: '完成任意区域第十关后解锁困难难度。',
     available: '可进入', completed: '已完成', locked: '未解锁',
-    unimplemented: '尚未实现', unavailableLevels: '第 3–10 关尚未实现。',
+    unimplemented: '尚未实现',
     noHighScore: '玩过本关后，最高分将在此显示。',
     highScoreLabel: '最高分',
     bestScore: (score: number) => `$ ${score}`,
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
+    levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
+    levelFourInfo: '如果能在空车厢上装上致命的加特林机枪，铁路就会成为我们最强大的武器！可惜，这可不便宜。',
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpTitle: '游戏说明',
     helpLines: [
@@ -1306,7 +1516,7 @@ function campaignMenuLevelScreen(): string {
     <div class="campaign-menu-map campaign-level-map">
       <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_levelmap_box_00.png')}" alt="" aria-hidden="true">${nodes}
     </div>
-    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(copy.regionProgress(completed))}. ${escapeMenuText(copy.levelHint)} ${escapeMenuText(copy.unavailableLevels)}</p>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(copy.regionProgress(completed))}. ${escapeMenuText(copy.levelHint)}</p>
     <button type="button" class="campaign-menu-back" data-action="menu-back-regions" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
   </section>`;
 }
@@ -1350,8 +1560,12 @@ function campaignMenuOverviewScreen(): string {
   if (!entry) return campaignMenuLevelScreen();
   const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === entry.level);
   if (!stage || (stage.status !== 'available' && stage.status !== 'completed')) return campaignMenuLevelScreen();
-  const content = entry.level === 1 ? cowGulchLevelOneContent : apacheValleyLevelTwoContent;
-  const description = entry.level === 1 ? copy.levelOneInfo : copy.levelTwoInfo;
+  const content = entry.level === 1 ? cowGulchLevelOneContent
+    : entry.level === 2 ? apacheValleyLevelTwoContent
+      : entry.level === 3 ? fortKaboomLevelThreeContent : techTownLevelFourCampaignContent;
+  const description = entry.level === 1 ? copy.levelOneInfo
+    : entry.level === 2 ? copy.levelTwoInfo
+      : entry.level === 3 ? copy.levelThreeInfo : copy.levelFourInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
   const score = stage.highScore === undefined
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.noHighScore)}</p>`
@@ -1942,6 +2156,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   renderCampaignWaveIntro();
   renderMapZoomControls(language);
   const actionLocked = replaying || replacingSession;
+  if (view.wave?.settlement && gamblerDialog.open) closeGamblerDialog();
+  renderGamblerDialog(language, actionLocked);
   sceneOpenErrorPanel.hidden = sceneOpenFailure === undefined;
   retrySceneOpenControl.textContent = messages.retrySceneOpen;
   retrySceneOpenControl.disabled = actionLocked;
@@ -2073,6 +2289,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       : wave.totalWaves
         ? messages.startCampaignWave(wave.number, wave.totalWaves)
         : messages.startSample;
+  } else {
+    waveStatus.textContent = '';
+    startWaveControl.textContent = messages.startSample;
   }
   const combatText = lastDefeatFeedback
     .map(({ enemyType, count, cashReward }) => messages.defeated(enemyType, count, cashReward))
@@ -2098,16 +2317,6 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     );
   }
   if (recruitStatus.textContent !== recruitText) recruitStatus.textContent = recruitText;
-  const selectedSleepingMapUnit = unit?.activity === 4 && unit.hirePrice !== undefined ? unit : undefined;
-  mapHireControl.hidden = !selectedSleepingMapUnit;
-  if (selectedSleepingMapUnit) {
-    mapHireControl.textContent = messages.mapHireButton(
-      messages.unitName(selectedSleepingMapUnit.type),
-      selectedSleepingMapUnit.hirePrice!,
-    );
-    mapHireControl.disabled = actionLocked || view.paused || Boolean(view.wave?.settlement)
-      || (view.wave?.cash ?? 0) < selectedSleepingMapUnit.hirePrice!;
-  }
   const mapHireText = lastMapHireEvent?.type === 'map-unit-hired'
     ? messages.mapHired(messages.unitName(lastMapHireEvent.unitType), lastMapHireEvent.price)
     : lastMapHireEvent?.type === 'map-unit-hire-rejected'
@@ -2133,29 +2342,40 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? messages.originalCampaignNotice
     : messages.originalWaveNotice;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
+  const techTownTrainSample = view.scenarioId === techTownTrainTestContent.id;
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
+    : techTownTrainSample
+      ? techTownTrainTestContent.title[language]
     : originalWaveScenario
       ? originalWaveContent.title[language]
     : activeCampaignStage?.title[language] ?? 'Cow Gulch';
   sceneContext.textContent = upgradeScenario
     ? messages.upgradeSceneContext
+    : techTownTrainSample
+      ? language === 'zh' ? '开发测试 · 列车' : 'DEVELOPER TEST · TRAIN'
     : originalWaveScenario
       ? messages.originalWaveContext
     : activeCampaignStage ? `NEW MEXICO · ${String(activeCampaignStage.globalLevel).padStart(2, '0')}`
       : language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE';
   sceneCaption.textContent = messages.sceneCaption(view.scenarioId);
-  upgradeSampleStatus.textContent = upgradeScenario
+  upgradeSampleStatus.textContent = techTownTrainSample
+    ? ''
+    : upgradeScenario
     ? messages.debugUpgradeFixture
     : originalWaveScenario ? originalWaveNotice
       : activeCampaignStage?.scenarioId === apacheValleyLevelTwoContent.id
         ? messages.apacheValleyNotice
         : activeCampaignStage ? messages.originalCampaignNotice : messages.originalUpgradeLimit;
   const selectedUnit = unit;
+  const upgradeUnitName = selectedUnit
+    ? messages.unitName(selectedUnit.type)
+    : messages.unitName('gunslinger');
   const nextUpgrade = selectedUnit?.nextUpgrade;
   let upgradeText = '';
   if (lastUpgradeEvent?.type === 'unit-upgraded') {
-    const unitName = language === 'zh' ? '枪手' : 'Gunslinger';
+    const upgradedUnitId = lastUpgradeEvent.unitId;
+    const unitName = messages.unitName(view.units.find(({ id }) => id === upgradedUnitId)?.type ?? 'gunslinger');
     upgradeText = messages.upgraded(unitName, lastUpgradeEvent.level, lastUpgradeEvent.price);
   } else if (lastUpgradeEvent?.type === 'unit-upgrade-rejected') {
     upgradeText = lastUpgradeEvent.reason === 'insufficient-funds'
@@ -2174,9 +2394,9 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   }
   if (upgradeStatus.textContent !== upgradeText) upgradeStatus.textContent = upgradeText;
   if (nextUpgrade) {
-    upgradeControl.textContent = messages.upgradeButton(nextUpgrade.price);
+    upgradeControl.textContent = messages.upgradeButton(upgradeUnitName, nextUpgrade.price);
   } else {
-    upgradeControl.textContent = messages.upgradeButton(0);
+    upgradeControl.textContent = messages.upgradeButton(upgradeUnitName, 0);
   }
   confirmRecruitControl.textContent = messages.confirmRecruitButton;
   cancelRecruitControl.textContent = messages.cancelRecruitButton;
@@ -2189,6 +2409,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     );
   }
   if (pendingUpgradeUnitId) renderUpgradeConfirmation(language);
+  if (pendingMapHireUnitId) renderMapHireConfirmation(language);
   const settlement = view.wave?.settlement;
   const newSettlement = Boolean(settlement) && settlementPanel.hidden;
   settlementPanel.hidden = !settlement;
@@ -2201,6 +2422,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     upgradeConfirmation.close();
     confirmUpgradeControl.hidden = false;
   }
+  if (settlement && mapHireConfirmation.open) closeMapHireConfirmation();
   if (settlement && view.wave) {
     if (newSettlement) {
       activeSettlementRecord = session.terminalRecord();
@@ -2236,7 +2458,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   }
   const waveNotStarted = view.wave?.phase === 'not-started';
   const campaignExhausted = view.wave?.phase === 'complete' && view.wave.totalWaves !== undefined && !view.wave.settlement;
-  startWaveControl.hidden = Boolean(view.wave?.totalWaves && !campaignExhausted);
+  startWaveControl.hidden = !view.wave || Boolean(view.wave.totalWaves && !campaignExhausted);
   startWaveControl.disabled = assetLoadFailureNames.length > 0 || actionLocked || !waveNotStarted || view.paused;
   recruitControl.disabled = actionLocked || Boolean(settlement) || !recruitDefinition || view.paused;
   upgradeControl.hidden = !nextUpgrade;
@@ -2247,12 +2469,207 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   restartControl.textContent = activeCampaignStage ? messages.restartLevel : messages.restartSample;
   startDefeatControl.disabled = actionLocked || !waveNotStarted || view.scenarioId !== 'cow-gulch' || view.paused;
   clearSelectionControl.disabled = actionLocked || Boolean(settlement) || view.paused;
-  const canvasLabel = upgradeScenario
+  const canvasLabel = techTownTrainSample
+    ? language === 'zh' ? 'Tech Town 列车与加特林测试地图' : 'Tech Town train and Gatling test map'
+    : upgradeScenario
     ? language === 'zh' ? '牛溪谷升级规则测试地图' : 'Cow Gulch upgrade rules test map'
     : activeCampaignStage
       ? language === 'zh' ? `${activeCampaignStage.title[language]}游戏地图` : `${activeCampaignStage.title[language]} game map`
       : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
   if (canvas.getAttribute('aria-label') !== canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
+}
+
+function clearGamblerDialogTimers(): void {
+  for (const timer of gamblerDialogTimers) window.clearTimeout(timer);
+  gamblerDialogTimers = [];
+}
+
+function cardAssetUrl(assetName: string): string {
+  return images[assetName]?.src
+    ?? new URL(import.meta.env.BASE_URL + 'assets/' + gameAssetRelativePath(assetName), window.location.href).toString();
+}
+
+function updateGamblerCardLabels(round: GamblerRoundState, language: keyof typeof gamblerDialogCopy): void {
+  if (!round) return;
+  [...gamblerCards.children].forEach((element, index) => {
+    const card = round.cards[index];
+    if (!card || !(element instanceof HTMLLIElement)) return;
+    element.setAttribute('aria-label', gamblerCardLabel(card, language));
+    const front = element.querySelector<HTMLElement>('.gambler-card-front');
+    front?.setAttribute('aria-label', gamblerCardLabel(card, language));
+  });
+}
+
+function renderGamblerCards(round: GamblerRoundState, language: keyof typeof gamblerDialogCopy): void {
+  if (!round) return;
+  if (gamblerDialogRoundId !== round.id) {
+    gamblerDialogRoundId = round.id;
+    const nodes = round.cards.map((card, index) => {
+      const item = document.createElement('li');
+      item.className = card.important ? 'gambler-card is-important' : 'gambler-card';
+      item.style.setProperty('--card-index', String(index));
+      const scale = gameFrame.getBoundingClientRect().width / GAME_VIEWPORT.width;
+      item.style.setProperty('--collect-offset', `${(60 + 8 * index) * scale}px`);
+      item.style.setProperty('--final-offset', `${(card.important ? 0 : 16 + index) * scale}px`);
+      item.style.setProperty('--card-duration', `${350 + 15 * index}ms`);
+      item.dataset.suit = String((card.suitCode >>> 8) & 0x3);
+      item.setAttribute('aria-label', gamblerCardLabel(card, language));
+
+      const back = document.createElement('img');
+      back.className = 'gambler-card-back';
+      back.src = cardAssetUrl('card_back');
+      back.alt = '';
+      back.draggable = false;
+
+      const front = document.createElement('div');
+      front.className = 'gambler-card-front';
+      front.setAttribute('role', 'img');
+      front.setAttribute('aria-label', gamblerCardLabel(card, language));
+      front.style.backgroundImage = `url("${cardAssetUrl('card_front')}")`;
+
+      const rank = document.createElement('span');
+      rank.className = 'gambler-card-rank';
+      rank.dataset.rank = String(card.rank);
+      rank.style.backgroundImage = `url("${cardAssetUrl('card_numbers')}")`;
+      rank.style.backgroundSize = '208px 16px';
+      rank.style.backgroundPosition = `${-card.rank * 16}px 0`;
+      rank.setAttribute('aria-hidden', 'true');
+
+      const suit = document.createElement('span');
+      suit.className = 'gambler-card-suit';
+      suit.dataset.suit = String((card.suitCode >>> 8) & 0x3);
+      suit.style.backgroundImage = `url("${cardAssetUrl('card_symbols')}")`;
+      suit.style.backgroundSize = '64px 16px';
+      suit.style.backgroundPosition = `${-(((card.suitCode >>> 8) & 0x3) * 16)}px 0`;
+      suit.setAttribute('aria-hidden', 'true');
+      front.append(rank, suit);
+      item.append(back, front);
+      return item;
+    });
+    gamblerCards.replaceChildren(...nodes);
+    gamblerCards.dataset.phase = 'hidden';
+    if (gamblerDialogMode === 'revealing') {
+      window.requestAnimationFrame(() => {
+        if (gamblerDialog.open && gamblerDialogMode === 'revealing') gamblerCards.dataset.phase = 'collecting';
+      });
+    }
+  }
+  updateGamblerCardLabels(round, language);
+}
+
+function renderGamblerDialog(language: keyof typeof languageMessages, actionLocked = replaying || replacingSession): void {
+  if (!gamblerDialog.open || !gamblerDialogUnitId) return;
+  const unit = view.units.find(({ id, type }) => id === gamblerDialogUnitId && type === 'gambler');
+  const gambler = unit?.gambler;
+  if (!unit || !gambler) {
+    closeGamblerDialog();
+    return;
+  }
+
+  const copy = gamblerDialogCopy[language];
+  const cash = view.wave?.cash ?? 0;
+  const stake = gambler.nextStake;
+  const round = gambler.lastRound?.id === gamblerDialogRoundId ? gambler.lastRound : undefined;
+  gamblerDialogTitle.textContent = copy.title;
+  gamblerPortrait.src = cardAssetUrl('portrait_gambler');
+  gamblerCash.textContent = copy.cashAndStake(cash, stake);
+  gamblerCards.setAttribute('aria-label', copy.cards);
+  playGamblerControl.textContent = copy.play(stake);
+  closeGamblerControl.textContent = gamblerDialogMode === 'result' ? copy.done : copy.cancel;
+  closeGamblerControl.hidden = gamblerDialogMode === 'revealing';
+  playGamblerControl.hidden = gamblerDialogMode !== 'prompt';
+  playGamblerControl.disabled = actionLocked || view.paused || !unit.selected || !view.wave
+    || cash < stake || gambler.cooldownRemainingMs > 0;
+
+  if (gamblerDialogMode === 'revealing') {
+    gamblerDialogMessage.textContent = copy.dealing;
+    gamblerResult.textContent = '';
+    if (round) renderGamblerCards(round, language);
+    return;
+  }
+
+  if (gamblerDialogMode === 'result' && round) {
+    gamblerDialogMessage.textContent = copy.result[round.outcome.hand];
+    gamblerResult.textContent = gamblerPrizeMessage(round.outcome, language);
+    gamblerCards.dataset.phase = 'result';
+    renderGamblerCards(round, language);
+    return;
+  }
+
+  gamblerCards.replaceChildren();
+  delete gamblerCards.dataset.phase;
+  gamblerDialogRoundId = undefined;
+  gamblerResult.textContent = '';
+  if (view.paused) gamblerDialogMessage.textContent = copy.paused;
+  else if (gambler.cooldownRemainingMs > 0) gamblerDialogMessage.textContent = copy.cooldown(gambler.cooldownRemainingMs);
+  else if (cash < stake) gamblerDialogMessage.textContent = copy.insufficientCash(stake, cash);
+  else gamblerDialogMessage.textContent = copy.prompt;
+}
+
+function closeGamblerDialog(): void {
+  clearGamblerDialogTimers();
+  gamblerDialogMode = 'closed';
+  gamblerDialogUnitId = undefined;
+  gamblerDialogRoundId = undefined;
+  if (gamblerDialog.open) gamblerDialog.close();
+  gamblerCards.replaceChildren();
+  canvas.focus({ preventScroll: true });
+}
+
+function openGamblerDialog(unitId: string): void {
+  if (gamblerDialog.open || replaying || replacingSession || view.wave?.settlement) return;
+  const unit = view.units.find(({ id, type }) => id === unitId && type === 'gambler');
+  if (!unit?.gambler) return;
+  clearGamblerDialogTimers();
+  gamblerDialogMode = 'prompt';
+  gamblerDialogUnitId = unitId;
+  gamblerDialogRoundId = undefined;
+  gamblerCards.replaceChildren();
+  gamblerDialog.show();
+  renderGamblerDialog(getLanguage());
+  (playGamblerControl.disabled ? closeGamblerControl : playGamblerControl).focus({ preventScroll: true });
+}
+
+function playGamblerRound(): void {
+  if (!gamblerDialog.open || gamblerDialogMode !== 'prompt' || !gamblerDialogUnitId || playGamblerControl.disabled) return;
+  const unitId = gamblerDialogUnitId;
+  const previousRoundId = view.units.find(({ id }) => id === unitId)?.gambler?.lastRound?.id;
+  gamblerDialogMode = 'revealing';
+  gamblerDialogMessage.textContent = gamblerDialogCopy[getLanguage()].dealing;
+  gamblerResult.textContent = '';
+  dispatch({ type: 'play-gambler', unitId, commandId: `${session.id}:gambler:${++gamblerCommandNumber}` });
+
+  const round = view.units.find(({ id }) => id === unitId)?.gambler?.lastRound;
+  if (!round || round.id === previousRoundId) {
+    gamblerDialogMode = 'prompt';
+    renderGamblerDialog(getLanguage());
+    return;
+  }
+
+  renderGamblerCards(round, getLanguage());
+  playAudioAsset('sound_cards_collect');
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    gamblerCards.dataset.phase = 'dealing';
+    playAudioAsset('sound_cards_deal');
+    gamblerCards.dataset.phase = 'result';
+    gamblerDialogMode = 'result';
+    renderStatus();
+    return;
+  }
+
+  gamblerCards.dataset.phase = 'collecting';
+  gamblerDialogTimers.push(window.setTimeout(() => {
+    if (!gamblerDialog.open || gamblerDialogMode !== 'revealing') return;
+    playAudioAsset('sound_cards_deal');
+    gamblerCards.dataset.phase = 'dealing';
+    gamblerDialogTimers.push(window.setTimeout(() => {
+      if (!gamblerDialog.open || gamblerDialogMode !== 'revealing') return;
+      gamblerCards.dataset.phase = 'result';
+      gamblerDialogMode = 'result';
+      renderStatus();
+      closeGamblerControl.focus({ preventScroll: true });
+    }, 410));
+  }, 410));
 }
 
 function renderUpgradeConfirmation(language: keyof typeof languageMessages): void {
@@ -2267,7 +2684,7 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
   }
 
   const messages = languageMessages[language];
-  const unitName = language === 'zh' ? '枪手' : 'Gunslinger';
+  const unitName = messages.unitName(unit.type);
   upgradeConfirmationTitle.textContent = messages.confirmUpgrade(unitName, nextUpgrade.price);
   const details = messages.upgradeDetails(
     unit.upgradeLevel,
@@ -2292,9 +2709,54 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
   confirmUpgradeControl.disabled = !affordable;
 }
 
+function renderMapHireConfirmation(language: keyof typeof languageMessages): void {
+  const unit = view.units.find((candidate) => candidate.id === pendingMapHireUnitId);
+  if (!unit || !unit.selected || unit.activity !== 4 || unit.hirePrice === undefined || !view.wave) {
+    closeMapHireConfirmation();
+    return;
+  }
+
+  const price = unit.hirePrice;
+  const cash = view.wave.cash;
+  const affordable = cash >= price;
+  mapHireConfirmationTitle.textContent = languageMessages[language].mapHirePrompt(
+    languageMessages[language].unitName(unit.type),
+    price,
+  );
+  mapHireConfirmationDetails.textContent = affordable
+    ? ''
+    : languageMessages[language].mapHireInsufficientCash(price, cash);
+  confirmMapHireControl.textContent = languageMessages[language].confirmMapHire;
+  confirmMapHireControl.hidden = !affordable;
+  confirmMapHireControl.disabled = !affordable;
+  cancelMapHireControl.textContent = affordable
+    ? languageMessages[language].cancelMapHire
+    : languageMessages[language].closeMapHire;
+}
+
+function closeMapHireConfirmation(): void {
+  pendingMapHireUnitId = undefined;
+  if (mapHireConfirmation.open) mapHireConfirmation.close();
+  confirmMapHireControl.hidden = false;
+  confirmMapHireControl.disabled = false;
+}
+
+function openMapHireConfirmation(unitId: string): void {
+  if (mapHireConfirmation.open || replaying || replacingSession || view.paused
+    || Boolean(view.wave?.settlement)) return;
+  const unit = view.units.find((candidate) => candidate.id === unitId && candidate.selected
+    && candidate.activity === 4 && candidate.hirePrice !== undefined);
+  if (!unit || !view.wave) return;
+  pendingMapHireUnitId = unit.id;
+  renderMapHireConfirmation(getLanguage());
+  mapHireConfirmation.show();
+  (confirmMapHireControl.hidden ? cancelMapHireControl : confirmMapHireControl).focus({ preventScroll: true });
+}
+
 function redraw(resize = false): void {
+  const viewportChanged = syncGameViewportToCanvas();
   const displayPixelScale = getDisplayPixelScale();
-  if (resize || !context) context = resizeCanvas(canvas, displayPixelScale);
+  if (resize || viewportChanged || !context) context = resizeCanvas(canvas, displayPixelScale);
   try {
     drawGame(context, view, images, displayPixelScale, mapCamera, showInspectionOverlay, getLanguage());
   } catch (error) {
@@ -2314,6 +2776,21 @@ function redraw(resize = false): void {
   }
 }
 
+function syncGameViewportToCanvas(): boolean {
+  const logicalViewport = document.fullscreenElement === gameFrame
+    ? fitLogicalViewportToScreen(
+      canvas.clientWidth,
+      canvas.clientHeight,
+      BASE_GAME_VIEWPORT.width,
+      BASE_GAME_VIEWPORT.height,
+    )
+    : BASE_GAME_VIEWPORT;
+  const changed = Math.abs(GAME_VIEWPORT.width - logicalViewport.width) >= 0.01
+    || Math.abs(GAME_VIEWPORT.height - logicalViewport.height) >= 0.01;
+  if (changed) setGameViewport(logicalViewport.width, logicalViewport.height);
+  return changed;
+}
+
 function getDisplayPixelScale(): number {
   const cssWidth = canvas.getBoundingClientRect().width;
   const cssScale = cssWidth > 0 ? cssWidth / GAME_VIEWPORT.width : 1;
@@ -2327,12 +2804,18 @@ function currentGameStepEnvironment(): { tileSizePixels: number } {
 }
 
 const assetNames = new Set([
+  ...techTownMapEntityAssets,
+  ...techTownTrainTestContent.map.background.map(({ asset }) => asset),
+  ...techTownTrainTestContent.map.streets.map(({ asset }) => asset),
+  ...(techTownTrainTestContent.map.decorations ?? []).map(({ asset }) => asset),
+  ...techTownTrainTestContent.units.map(({ asset }) => asset),
+  ...gamblerDialogAssets,
   ...view.map.background.map((tile) => tile.asset),
   ...view.map.streets.map((tile) => tile.asset),
   ...(view.map.decorations ?? []).map((decoration) => decoration.asset),
   ...view.units.map((unit) => unit.asset),
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
-  ...[cowGulchLevelOneContent, apacheValleyContent].flatMap((content) => [
+  ...[cowGulchLevelOneContent, apacheValleyContent, fortKaboomLevelThreeContent, techTownLevelFourCampaignContent].flatMap((content) => [
     ...content.map.background.map((tile) => tile.asset),
     ...content.map.streets.map((tile) => tile.asset),
     ...(content.map.decorations ?? []).map((decoration) => decoration.asset),
@@ -2344,6 +2827,10 @@ const assetNames = new Set([
   'horseman_turn',
   'wagon',
   'wagon_turn',
+  'stagecoach',
+  'stagecoach_turn',
+  'goldtransport',
+  'goldtransport_turn',
   'horse_wagon',
   'horse_wagon_white',
   'horse_wagon_turn',
@@ -2352,13 +2839,46 @@ const assetNames = new Set([
   'sfx_death_pioneers',
   'sfx_smoke_explosion',
   'sfx_exploding_parts',
+  'bonus_box',
+  'sfx_bonus_box',
+  'gng_speechbubble',
+  'sfx_lok_steam',
+  'hud_bonus_sheriff',
+  'hud_bonus_cash',
+  'hud_bonus_speed',
+  'hud_bonus_damage',
+  'player_gatling',
+  'player_gatling_shot',
   'player_gunslinger_shot',
   'player_mexican',
   'player_mexican_shot',
+  'player_cannon',
+  'player_cannon_sleep',
+  'player_cannon_shot',
+  'player_indian',
+  'player_indian_sleep',
+  'player_indian_shot',
+  'player_scout',
+  'player_scout_sleep',
+  'player_scout_shot',
+  'player_geezer',
+  'player_geezer_sleep',
+  'player_geezer_shot',
+  'player_pyromaniac',
+  'player_pyromaniac_sleep',
+  'player_pyromaniac_shot',
+  'player_salesman',
+  'player_salesman_sleep',
+  'player_salesman_shot',
   'cursor',
   'hud_crosshair',
   'sfx_mexican_dynamite',
   'sfx_explosion',
+  'sfx_pyromaniac_rocket',
+  'sfx_salesman_bottle',
+  'sfx_poison',
+  'sfx_rocket_explosion',
+  'sfx_rocket_sparkles',
   'gng_wave_arrow_a',
   'gng_wave_arrow_b',
   'gng_wave_arrow_c',
@@ -2375,10 +2895,15 @@ const assetNames = new Set([
   'portrait_pedro',
   'portrait_indian',
   'portrait_settlers',
+  'portrait_deserter',
+  'portrait_engineer',
+  'portrait_pyromaniac',
+  'portrait_salesman',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
-const gameSoundEffects = new SoundEffectsManager();
+let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
+const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
 let backgroundMusicTrack: CowGulchMusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
@@ -2430,9 +2955,6 @@ assetLoadFailureNames = failedAssets;
 redraw(true);
 renderStatus();
 
-const frame = app.querySelector<HTMLElement>('.game-frame');
-if (!frame) throw new Error('Game frame is missing');
-const gameFrame: HTMLElement = frame;
 type FullscreenStatusKey =
   | 'fullscreenUnsupported'
   | 'fullscreenRequestFailed'
@@ -2443,9 +2965,14 @@ let fullscreenStatusKey: FullscreenStatusKey | undefined;
 
 function renderFullscreenControl(): void {
   const fullscreenActive = document.fullscreenElement === gameFrame;
-  fullscreenToggleButton.textContent = fullscreenActive
+  gameFrame.classList.toggle('is-fullscreen', fullscreenActive);
+  document.body.classList.toggle('gng-game-fullscreen', fullscreenActive);
+  const label = fullscreenActive
     ? languageMessages[getLanguage()].fullscreenExit
     : languageMessages[getLanguage()].fullscreenEnter;
+  fullscreenToggleButton.textContent = '⛶';
+  fullscreenToggleButton.setAttribute('aria-label', label);
+  fullscreenToggleButton.title = label;
   fullscreenToggleButton.setAttribute('aria-pressed', String(fullscreenActive));
 }
 
@@ -2527,8 +3054,8 @@ document.addEventListener('fullscreenchange', () => {
 window.addEventListener('orientationchange', () => redraw(true));
 screen.orientation?.addEventListener('change', () => redraw(true));
 
-if (frame && typeof ResizeObserver !== 'undefined') {
-  new ResizeObserver(() => redraw(true)).observe(frame);
+if (typeof ResizeObserver !== 'undefined') {
+  new ResizeObserver(() => redraw(true)).observe(gameFrame);
 }
 window.addEventListener('resize', () => redraw(true));
 
@@ -2573,6 +3100,8 @@ function isOfficialCowGulchSession(): boolean {
 function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[] {
   if (scenarioId === cowGulchLevelOneContent.id) return cowGulchWaveIntros;
   if (scenarioId === apacheValleyLevelTwoContent.id) return apacheValleyWaveIntros;
+  if (scenarioId === fortKaboomLevelThreeContent.id) return fortKaboomWaveIntros;
+  if (scenarioId === techTownLevelFourCampaignContent.id) return techTownWaveIntros;
   return [];
 }
 
@@ -2751,6 +3280,21 @@ function retryCampaignWaveIntroVoice(): void {
   if (intro?.voiceSound && soundEnabled) playAudioAsset(intro.voiceSound);
 }
 
+const positionalUnitShotSounds: Readonly<Record<UnitShotSound, { id: number; assets: readonly string[] }>> = {
+  sound_cannon: { id: 1, assets: ['sound_cannon', 'sound_cannon2'] },
+  sound_fire_arrow: { id: 2, assets: ['sound_fire_arrow', 'sound_fire_arrow2'] },
+  sound_gattling_gun: { id: 3, assets: ['sound_gattling_gun', 'sound_gattling_gun2'] },
+  sound_shotgun: { id: 4, assets: ['sound_shotgun', 'sound_shotgun'] },
+  sound_rifle: { id: 5, assets: ['sound_rifle', 'sound_rifle'] },
+  sound_rocket_launch: { id: 6, assets: ['sound_rocket_launch_1', 'sound_rocket_launch_2'] },
+  sound_rocket_explosion: { id: 7, assets: ['sound_rocket_explosion_1', 'sound_rocket_explosion_2'] },
+  sound_poison_splash: { id: 8, assets: ['sound_poison_splash_1', 'sound_poison_splash_2'] },
+};
+const unitHireSoundVariations = {
+  sound_pyromaniac: ['sound_pyromaniac_1', 'sound_pyromaniac_2'],
+  sound_snakeoilsalesman: ['sound_snakeoilsalesman_1', 'sound_snakeoilsalesman_2'],
+} as const;
+
 function playRequestedSounds(
   events: readonly GameEvent[],
   eventWaveNumber = view.wave?.number,
@@ -2766,6 +3310,13 @@ function playRequestedSounds(
   };
   for (const event of events) {
     if (event.type === 'sound-requested') {
+      if (!('positionFine' in event)) {
+        const variations = event.sound in unitHireSoundVariations
+          ? unitHireSoundVariations[event.sound as keyof typeof unitHireSoundVariations]
+          : undefined;
+        playAudioAsset(variations ? chooseSoundVariation(variations, () => presentationRandom.nextDouble())! : event.sound);
+        continue;
+      }
       if (event.sound === 'sound_revolver') {
         const asset = gameSoundEffects.request({
           id: 0,
@@ -2781,7 +3332,14 @@ function playRequestedSounds(
         }, soundViewport);
         if (asset) playAudioAsset(asset);
       } else {
-        playAudioAsset(event.sound);
+        const request = positionalUnitShotSounds[event.sound as UnitShotSound];
+        if (request) {
+          const asset = gameSoundEffects.request({
+            ...request,
+            positionFine: event.positionFine,
+          }, soundViewport);
+          if (asset) playAudioAsset(asset);
+        }
       }
     }
     if (!isOfficialCowGulchSession()) continue;
@@ -2841,7 +3399,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   stopGameLoop();
   pauseReason = 'wave-intro';
   view = session.pause();
-  frame?.scrollIntoView({ block: 'center', behavior: 'instant' });
+  gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
   renderCampaignWaveIntro();
   if (!campaignWaveIntroDialog.open) campaignWaveIntroDialog.show();
   continueCampaignWaveIntroControl.focus({ preventScroll: true });
@@ -2859,7 +3417,7 @@ function continueCampaignWaveIntro(): void {
   campaignWaveIntroDialog.close();
   playBackgroundMusic();
   if (pauseReason !== 'wave-intro' || !view.paused || document.hidden) return;
-  frame?.scrollIntoView({ block: 'center', behavior: 'instant' });
+  gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
   pauseReason = undefined;
   view = session.resume();
   renderStatus();
@@ -2874,9 +3432,12 @@ function activateSession(
 ): void {
   stopGameLoop();
   if (campaignWaveIntroDialog.open) campaignWaveIntroDialog.close();
+  if (gamblerDialog.open) closeGamblerDialog();
   pendingCampaignWaveIntro = undefined;
   const previousSession = session;
   session = nextSession;
+  presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
+  gameSoundEffects.reset();
   campaignWaveIntroCursor = new CampaignWaveIntroCursor(waveIntrosForScenario(session.startRecord.scenarioId));
   if (!isOfficialCowGulchSession()) stopCowGulchBackgroundMusic();
   view = session.observe();
@@ -2891,6 +3452,7 @@ function activateSession(
   lastUpgradeEvent = undefined;
   pendingUpgradeUnitId = undefined;
   upgradeCommandNumber = 0;
+  gamblerCommandNumber = 0;
   if (recruitConfirmation.open) recruitConfirmation.close();
   if (upgradeConfirmation.open) upgradeConfirmation.close();
   confirmUpgradeControl.hidden = false;
@@ -2911,7 +3473,10 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
     && (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving));
   stopGameLoop();
   try {
-    const nextSession = await game.open(request);
+    const sessionGame = request.scenarioId === techTownLevelFourCampaignContent.id && campaignProgressView
+      ? createBrowserGame(campaignProgressView.profile.completedScenarios)
+      : game;
+    const nextSession = await sessionGame.open(request);
     sceneOpenFailure = undefined;
     activateSession(nextSession);
     return true;
@@ -3538,14 +4103,31 @@ campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="confirm
 settlementCampaignMenuButton.addEventListener('click', enterCampaignMenu);
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
-mapHireControl.addEventListener('click', () => {
-  const unit = view.units.find((candidate) => candidate.selected && candidate.activity === 4);
-  if (!unit) return;
+confirmMapHireControl.addEventListener('click', () => {
+  const unitId = pendingMapHireUnitId;
+  closeMapHireConfirmation();
+  if (!unitId) return;
   dispatch({
     type: 'hire-map-unit',
-    unitId: unit.id,
+    unitId,
     commandId: `${session.id}:map-hire:${++mapHireCommandNumber}`,
   });
+  canvas.focus({ preventScroll: true });
+});
+cancelMapHireControl.addEventListener('click', () => {
+  closeMapHireConfirmation();
+  canvas.focus({ preventScroll: true });
+});
+mapHireConfirmation.addEventListener('cancel', (event: Event) => {
+  event.preventDefault();
+  closeMapHireConfirmation();
+  canvas.focus({ preventScroll: true });
+});
+mapHireConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  closeMapHireConfirmation();
+  canvas.focus({ preventScroll: true });
 });
 recruitControl.addEventListener('click', () => {
   const recruit = view.recruitPool[0];
@@ -3604,6 +4186,15 @@ campaignWaveIntroDialog.addEventListener('keydown', (event: KeyboardEvent) => {
 startUpgradeSampleControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen('cow-gulch-upgrade-sample', 'debug'));
 });
+startGamblerSampleControl.addEventListener('click', () => {
+  void replaceSession(requestScenarioOpen('gambler-ui-sample', 'debug'));
+});
+startGamblerLowCashSampleControl.addEventListener('click', () => {
+  void replaceSession(requestScenarioOpen('gambler-ui-low-cash-sample', 'debug'));
+});
+startTechTownTrainSampleControl.addEventListener('click', () => {
+  void replaceSession(requestScenarioOpen(techTownTrainTestContent.id, 'debug'));
+});
 returnCowGulchControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen(cowGulchP1aSampleContent.id, 'formal'));
 });
@@ -3614,6 +4205,31 @@ upgradeControl.addEventListener('click', () => {
   renderUpgradeConfirmation(getLanguage());
   upgradeConfirmation.show();
   (confirmUpgradeControl.hidden ? cancelUpgradeControl : confirmUpgradeControl).focus();
+});
+playGamblerControl.addEventListener('click', playGamblerRound);
+closeGamblerControl.addEventListener('click', closeGamblerDialog);
+gamblerDialog.addEventListener('cancel', (event: Event) => {
+  event.preventDefault();
+  closeGamblerDialog();
+});
+gamblerDialog.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeGamblerDialog();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+  const focusable = [...gamblerDialog.querySelectorAll<HTMLButtonElement>('button:not([disabled]):not([hidden])')];
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (!first || !last) return;
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 });
 confirmUpgradeControl.addEventListener('click', () => {
   const unitId = pendingUpgradeUnitId;
@@ -4011,6 +4627,22 @@ canvas.addEventListener('pointerup', (event: PointerEvent) => {
   if (pointer.pointerType === 'touch' && !pointerMovedBeyondTolerance && activeMapPan?.kind !== 'minimap') {
     const point = pointerMapPosition(event);
     if (point) dispatch({ type: 'select-at', x: point.mapX, y: point.mapY });
+  }
+  if (!pointerMovedBeyondTolerance && activeMapPan?.kind !== 'minimap') {
+    const point = pointerMapPosition(event);
+    const tappedMapHireUnit = point && view.units.find((unit) => unit.selected && unit.activity === 4
+      && unit.hirePrice !== undefined
+      && point.mapX >= unit.hitArea.x && point.mapX < unit.hitArea.x + unit.hitArea.width
+      && point.mapY >= unit.hitArea.y && point.mapY < unit.hitArea.y + unit.hitArea.height);
+    const tappedGambler = point && view.units.find((unit) => unit.type === 'gambler' && unit.selected
+      && point.mapX >= unit.hitArea.x && point.mapX < unit.hitArea.x + unit.hitArea.width
+      && point.mapY >= unit.hitArea.y && point.mapY < unit.hitArea.y + unit.hitArea.height);
+    if (tappedMapHireUnit) {
+      const unitId = tappedMapHireUnit.id;
+      // Let the browser dispatch the touch-generated click before focusing the dialog button.
+      window.setTimeout(() => openMapHireConfirmation(unitId), 0);
+    }
+    else if (tappedGambler) openGamblerDialog(tappedGambler.id);
   }
   finishPointerMovement(event.pointerId);
 });

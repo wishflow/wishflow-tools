@@ -7,8 +7,8 @@ export interface CampaignWaveIntro {
   waveNumber: number;
   speaker: LocalizedCampaignCopy;
   text: LocalizedCampaignCopy;
-  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers';
-  voiceSound?: 'sound_indian_hugh' | 'sound_pedro';
+  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers' | 'portrait_deserter' | 'portrait_engineer';
+  voiceSound?: 'sound_deserter_yes_sir' | 'sound_indian_hugh' | 'sound_pedro' | 'sound_siedler';
 }
 
 /** Cow Gulch wave dialogue transcribed from APK campaign strings and pointer controls. */
@@ -138,6 +138,7 @@ export const apacheValleyWaveIntros: readonly CampaignWaveIntro[] = Object.freez
       zh: '亲爱的，这条阴森的峡谷让我毛骨悚然。我们不能走东边那条路吗？',
     },
     portraitAsset: 'portrait_settlers',
+    voiceSound: 'sound_siedler',
   },
   {
     waveNumber: 4,
@@ -157,6 +158,7 @@ export const apacheValleyWaveIntros: readonly CampaignWaveIntro[] = Object.freez
       zh: '你听到比利的消息了吗？他到底有没有到牛溪谷？',
     },
     portraitAsset: 'portrait_settlers',
+    voiceSound: 'sound_siedler',
   },
   {
     waveNumber: 6,

@@ -16,13 +16,24 @@ const highDensityMapAtlases = new Set([
   'tiles_bridge_hori',
   'tiles_bridge_pier_left',
   'tiles_bridge_pier_right',
+  'tiles_railway_hori',
 ]);
 
 const highDensityMapDecorations = new Set([
+  'b_3x2_fort',
+  'b_3x2_saloon',
+  'b_3x2_casino',
+  'b_2x1_tipi',
   'b_2x1_shack',
   'b_1x1_windmill',
   'b_1x1_stake',
+  'b_1x1_watertower',
   'b_1x1_tipi_small',
+  'lok_hori_1of2',
+  'lok_hori_2of2',
+  'lok_wagon_hori',
+  'tiles_railway_buffers_hori_left',
+  'tiles_railway_buffers_hori_right',
   'e_1x1_bush',
   'e_1x1_cactus_a',
   'e_1x1_cactus_b',
@@ -36,6 +47,10 @@ const highDensityMapDecorations = new Set([
 const highDensityVehicleAssets = new Set([
   'wagon',
   'wagon_turn',
+  'stagecoach',
+  'stagecoach_turn',
+  'goldtransport',
+  'goldtransport_turn',
   'horse_wagon',
   'horse_wagon_white',
   'horse_wagon_turn',
@@ -43,12 +58,14 @@ const highDensityVehicleAssets = new Set([
 ]);
 
 const highDensityMapFrameAssets = new Set(['gng_frame']);
+const highDensityGamblerAssets = new Set(['card_back', 'card_front', 'card_symbols', 'card_numbers']);
 
 export function gameAssetRelativePath(assetName: string): string {
   const densityDirectory = highDensityMapAtlases.has(assetName)
     || highDensityMapDecorations.has(assetName)
     || highDensityVehicleAssets.has(assetName)
     || highDensityMapFrameAssets.has(assetName)
+    || highDensityGamblerAssets.has(assetName)
     ? 'hdpi/'
     : '';
   return `${densityDirectory}${assetName}.png`;

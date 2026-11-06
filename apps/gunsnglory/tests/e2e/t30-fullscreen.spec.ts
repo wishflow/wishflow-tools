@@ -1,4 +1,7 @@
 import { expect, test } from './auto-continue-fixtures';
+import { readFile } from 'node:fs/promises';
+
+const sharedWidgetStyles = await readFile(new URL('../../../../site/usagi-widget.css', import.meta.url), 'utf8');
 
 type FullscreenTestWindow = Window & {
   __gngFullscreenElement?: Element | null;
@@ -67,21 +70,79 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
   try {
     await page.goto('/');
     const toggle = page.getByTestId('fullscreen-toggle');
-    await expect(toggle).toHaveText('Enter fullscreen');
+    await expect(toggle).toHaveAccessibleName('Enter fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
 
     await toggle.click();
-    await expect(toggle).toHaveText('Exit fullscreen');
+    await expect(toggle).toHaveAccessibleName('Exit fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByTestId('fullscreen-status')).toHaveText('Landscape orientation is enabled.');
     expect(await page.evaluate(() => document.fullscreenElement === document.querySelector('.game-frame'))).toBe(true);
     expect(await page.evaluate(() => (window as FullscreenTestWindow).__gngOrientationLockCalls)).toEqual(['landscape']);
 
     await toggle.click();
-    await expect(toggle).toHaveText('Enter fullscreen');
+    await expect(toggle).toHaveAccessibleName('Enter fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByTestId('fullscreen-status')).toBeHidden();
     expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
+  } finally {
+    await context.close();
+  }
+});
+
+test('fills the fullscreen viewport and keeps the shared Usagi widget above the game only in window mode', async ({ browser }) => {
+  const context = await browser.newContext({
+    viewport: { width: 844, height: 390 },
+    hasTouch: true,
+    isMobile: true,
+  });
+  const page = await context.newPage();
+  await installFullscreenMock(page);
+  try {
+    await page.goto('/');
+    await page.addStyleTag({ content: sharedWidgetStyles });
+    await page.evaluate(() => {
+      const widget = document.createElement('button');
+      widget.id = 'usagi-layer-test';
+      widget.className = 'usagi-widget';
+      widget.setAttribute('aria-label', 'Usagi test widget');
+      widget.style.left = '0';
+      widget.style.top = '0';
+      widget.textContent = 'Usagi';
+      widget.addEventListener('click', () => { widget.dataset.clicked = 'true'; });
+      document.body.append(widget);
+    });
+
+    const widget = page.locator('#usagi-layer-test');
+    await expect(widget).toBeVisible();
+    expect(await page.evaluate(() => {
+      const pet = document.querySelector<HTMLElement>('#usagi-layer-test');
+      if (!pet) return false;
+      const bounds = pet.getBoundingClientRect();
+      return document.elementFromPoint(bounds.x + 8, bounds.y + 8) === pet;
+    })).toBe(true);
+    await widget.click();
+    await expect(widget).toHaveAttribute('data-clicked', 'true');
+
+    await page.getByTestId('fullscreen-toggle').click();
+    const frame = await page.locator('.game-frame').boundingBox();
+    expect(frame).toBeTruthy();
+    expect(Math.abs(frame!.x)).toBeLessThan(1);
+    expect(Math.abs(frame!.y)).toBeLessThan(1);
+    expect(Math.abs(frame!.width - 844)).toBeLessThan(1);
+    expect(Math.abs(frame!.height - 390)).toBeLessThan(1);
+    await expect(widget).toBeHidden();
+    expect(await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.width / canvas.height))
+      .toBeCloseTo(844 / 390, 2);
+
+    await page.getByTestId('fullscreen-toggle').click();
+    await expect(widget).toBeVisible();
+    expect(await page.evaluate(() => {
+      const pet = document.querySelector<HTMLElement>('#usagi-layer-test');
+      if (!pet) return false;
+      const bounds = pet.getBoundingClientRect();
+      return document.elementFromPoint(bounds.x + 8, bounds.y + 8) === pet;
+    })).toBe(true);
   } finally {
     await context.close();
   }
@@ -98,7 +159,7 @@ test('keeps fullscreen available when mobile orientation locking is rejected', a
   try {
     await page.goto('/');
     await page.getByTestId('fullscreen-toggle').click();
-    await expect(page.getByTestId('fullscreen-toggle')).toHaveText('Exit fullscreen');
+    await expect(page.getByTestId('fullscreen-toggle')).toHaveAccessibleName('Exit fullscreen');
     await expect(page.getByTestId('fullscreen-status')).toHaveText(
       'Fullscreen is active. Rotate your device to landscape for the best view.',
     );
@@ -113,14 +174,14 @@ test('reports a rejected fullscreen request and keeps the page usable', async ({
   await page.goto('/');
   const toggle = page.getByTestId('fullscreen-toggle');
   await toggle.click();
-  await expect(toggle).toHaveText('Enter fullscreen');
+  await expect(toggle).toHaveAccessibleName('Enter fullscreen');
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByTestId('fullscreen-status')).toHaveText(
     'Could not enter fullscreen. Use your browser’s fullscreen control instead.',
   );
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
-  await expect(toggle).toHaveText('进入全屏');
+  await expect(toggle).toHaveAccessibleName('进入全屏');
   await expect(page.getByTestId('fullscreen-status')).toHaveText('无法进入全屏，请使用浏览器的全屏控制。');
 });
 
@@ -129,6 +190,6 @@ test('explains when fullscreen is unsupported', async ({ page }) => {
   await page.goto('/');
   const toggle = page.getByTestId('fullscreen-toggle');
   await toggle.click();
-  await expect(toggle).toHaveText('Enter fullscreen');
+  await expect(toggle).toHaveAccessibleName('Enter fullscreen');
   await expect(page.getByTestId('fullscreen-status')).toHaveText('Fullscreen is not supported by this browser.');
 });

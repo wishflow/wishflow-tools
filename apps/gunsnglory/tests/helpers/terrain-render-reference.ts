@@ -243,3 +243,196 @@ export function deriveOriginalMapDrawCommands(content: CowGulchSource): {
     streets: deriveOriginalStreets(content.map.streets, random),
   };
 }
+
+/** Rebuilds the authored street layer for a map whose only input is the original TDM grid. */
+export function deriveOriginalTdmMapDrawCommands(content: Pick<CowGulchSource, 'originalTileGrid'>): {
+  background: RenderTile[];
+  streets: RenderTile[];
+} {
+  const random = new SeededJavaRandom(VARIATION_SEED);
+  const raw = content.originalTileGrid;
+  const backgroundCodes = deriveOriginalBackgroundCodes({
+    originalTileGrid: raw,
+    map: { width: raw[0]?.length ?? 0, height: raw.length, tileSize: 32, background: [], streets: [] },
+  }, random);
+  const background = backgroundCodes.flatMap((row, y) => row.map((value, x) => ({
+    asset: backgroundAsset(value),
+    source: { ...backgroundSource(value), width: 32, height: 32 },
+    x,
+    y,
+    width: 1,
+    height: 1,
+  })));
+
+  const streetCodes: number[][] = raw.map((row) => row.map((tile) => {
+    if (tile === 16 || tile === 150 || (tile >= 112 && tile <= 114)) return 16;
+    if (tile === 80) return 64;
+    if (tile === 81) return 68;
+    if (tile >= 82 && tile <= 85) return 72;
+    if (tile === 88) return 76;
+    if (tile === 89) return 80;
+    if (tile >= 90 && tile <= 93) return 84;
+    return 0;
+  }));
+
+  for (let y = 0; y < streetCodes.length; y += 1) {
+    for (let x = 0; x < (streetCodes[y]?.length ?? 0); x += 1) {
+      const street = streetCodes[y]![x]!;
+      if (street < 16 || street >= 32) continue;
+      const mask = overlayValue(streetCodes, x, y, [16, 31], [16, 31]) & 15;
+      streetCodes[y]![x] = mask + 16;
+    }
+  }
+
+  const pathTiles = streetCodes.flatMap((row, y) => row.flatMap((street, x) => {
+    if (street < 16 || street >= 32) return [];
+    return [{
+      asset: 'tiles_path',
+      source: { ...originalPathSource(street), width: 32, height: 32 },
+      x,
+      y,
+      width: 1,
+      height: 1,
+    }];
+  }));
+  const paths = deriveOriginalStreets(pathTiles, random);
+  const pathByCell = new Map(paths.map((tile) => [`${tile.x},${tile.y}`, tile]));
+
+  const hasRailwayTracks = raw.some((row) => row.some((tile) => (
+    (tile >= 81 && tile <= 85) || (tile >= 89 && tile <= 93)
+  )));
+  if (!hasRailwayTracks) {
+    const bridges: RenderTile[] = [];
+    const piers: RenderTile[] = [];
+    for (let y = 0; y < streetCodes.length; y += 1) {
+      const row = streetCodes[y] ?? [];
+      for (let x = 0; x < row.length; x += 1) {
+        if (raw[y]?.[x] === 80) {
+          bridges.push({
+            asset: 'tiles_bridge_hori',
+            source: { x: 0, y: 0, width: 48, height: 32 },
+            x: x - 0.25,
+            y,
+            width: 1.5,
+            height: 1,
+          });
+        } else if (raw[y]?.[x] === 88) {
+          bridges.push({
+            asset: 'tiles_bridge_verti',
+            source: { x: 0, y: 0, width: 32, height: 48 },
+            x,
+            y: y - 0.25,
+            width: 1,
+            height: 1.5,
+          });
+        }
+      }
+
+      let bridgeStart: number | undefined;
+      for (let x = 0; x <= row.length; x += 1) {
+        if (row[x] === 64) {
+          bridgeStart ??= x;
+          continue;
+        }
+        if (bridgeStart === undefined) continue;
+        const bridgeEnd = x - 1;
+        piers.push(
+          {
+            asset: 'tiles_bridge_pier_left',
+            source: { x: 0, y: 0, width: 24, height: 24 },
+            x: bridgeStart - 0.25,
+            y: y + 0.75,
+            width: 0.75,
+            height: 0.75,
+          },
+          {
+            asset: 'tiles_bridge_pier_right',
+            source: { x: 0, y: 0, width: 24, height: 24 },
+            x: bridgeEnd + 0.5,
+            y: y + 0.75,
+            width: 0.75,
+            height: 0.75,
+          },
+        );
+        bridgeStart = undefined;
+      }
+    }
+    return { background, streets: [...paths, ...bridges, ...piers] };
+  }
+
+  const streets: RenderTile[] = [];
+
+  for (let y = 0; y < streetCodes.length; y += 1) {
+    const row = streetCodes[y] ?? [];
+    let horizontalBridgeStart: number | undefined;
+    for (let x = 0; x < row.length; x += 1) {
+      const streetCode = row[x] ?? 0;
+      const path = pathByCell.get(`${x},${y}`);
+      if (path) streets.push(path);
+
+      if (streetCode === 64) {
+        streets.push({
+          asset: 'tiles_bridge_hori',
+          source: { x: 0, y: 0, width: 48, height: 32 },
+          x: x - 0.25,
+          y,
+          width: 1.5,
+          height: 1,
+        });
+      } else if (streetCode === 76) {
+        streets.push({
+          asset: 'tiles_bridge_verti',
+          source: { x: 0, y: 0, width: 32, height: 48 },
+          x,
+          y: y - 0.25,
+          width: 1,
+          height: 1.5,
+        });
+      } else if (streetCode === 68 || streetCode === 72) {
+        streets.push({
+          asset: 'tiles_railway_hori',
+          source: { x: 0, y: 0, width: 32, height: 32 },
+          x,
+          y,
+          width: 1,
+          height: 1,
+        });
+      } else if (streetCode === 80 || streetCode === 84) {
+        streets.push({
+          asset: 'tiles_railway_verti',
+          source: { x: 0, y: 0, width: 32, height: 32 },
+          x,
+          y,
+          width: 1,
+          height: 1,
+        });
+      }
+
+      if (streetCode === 64 || streetCode === 68) {
+        if (horizontalBridgeStart === undefined) {
+          horizontalBridgeStart = x;
+          streets.push({
+            asset: 'tiles_bridge_pier_left',
+            source: { x: 0, y: 0, width: 24, height: 24 },
+            x: x - 0.25,
+            y: y + 0.75,
+            width: 0.75,
+            height: 0.75,
+          });
+        }
+      } else if (horizontalBridgeStart !== undefined) {
+        streets.push({
+          asset: 'tiles_bridge_pier_right',
+          source: { x: 0, y: 0, width: 24, height: 24 },
+          x: x - 0.5,
+          y: y + 0.75,
+          width: 0.75,
+          height: 0.75,
+        });
+        horizontalBridgeStart = undefined;
+      }
+    }
+  }
+
+  return { background, streets };
+}

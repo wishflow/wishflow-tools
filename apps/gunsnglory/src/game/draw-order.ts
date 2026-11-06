@@ -1,4 +1,4 @@
-export type DrawOrderKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris';
+export type DrawOrderKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris' | 'collectable';
 
 export interface DrawOrderEntry {
   id: string;
@@ -79,7 +79,7 @@ export function synchronizeDrawOrder(
 
   const knownIds = new Set(queue.items());
   const entriesById = new Map(entries.map((entry) => [entry.id, entry]));
-  const phases: readonly DrawOrderKind[] = ['enemy', 'unit', 'shot', 'wagon-debris', 'decoration'];
+  const phases: readonly DrawOrderKind[] = ['enemy', 'unit', 'shot', 'wagon-debris', 'collectable', 'decoration'];
   for (const kind of phases) {
     for (const entry of entries) {
       if (entry.kind !== kind || !knownIds.has(entry.id)) continue;

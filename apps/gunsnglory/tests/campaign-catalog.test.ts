@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { campaignCatalog, campaignLevelState, campaignRegions } from '../src/content/campaign-catalog';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
+import {
+  apacheValleyLevelTwoContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+  techTownLevelFourCampaignContent,
+} from '../src/content/official-campaign';
 import { createProgress } from '../src/progress';
 import { createMemoryProfileRepository } from '../src/progress/memory-profile-repository';
 
@@ -31,7 +37,9 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
 
   assert.equal(campaignLevelState(1, initial), 'available');
   assert.equal(campaignLevelState(2, initial), 'locked');
-  assert.equal(campaignLevelState(3, initial), 'unimplemented');
+  assert.equal(campaignLevelState(3, initial), 'locked');
+  assert.equal(campaignLevelState(4, initial), 'locked');
+  assert.equal(campaignLevelState(5, initial), 'locked');
 
   await progress.applySettlement({
     settlementId: `catalog-test:${cowGulchLevelOneContent.id}:1`,
@@ -48,10 +56,59 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
 
   assert.equal(campaignLevelState(1, afterCowGulch), 'completed');
   assert.equal(campaignLevelState(2, afterCowGulch), 'available');
-  assert.equal(campaignLevelState(3, afterCowGulch), 'unimplemented');
+  assert.equal(campaignLevelState(3, afterCowGulch), 'locked');
+
+  await progress.applySettlement({
+    settlementId: `catalog-test:${apacheValleyLevelTwoContent.id}:6`,
+    sessionId: 'catalog-test',
+    scenarioId: apacheValleyLevelTwoContent.id,
+    mode: 'formal',
+    waveNumber: 6,
+    outcome: 'victory',
+    scoreBase: 200,
+    displayScore: 200,
+    highScoreCandidate: 200,
+  });
+  const afterApacheValley = await progress.loadCampaign();
+  assert.equal(campaignLevelState(2, afterApacheValley), 'completed');
+  assert.equal(campaignLevelState(3, afterApacheValley), 'available');
+  assert.equal(campaignLevelState(4, afterApacheValley), 'locked');
+
+  await progress.applySettlement({
+    settlementId: `catalog-test:${fortKaboomLevelThreeContent.id}:10`,
+    sessionId: 'catalog-test',
+    scenarioId: fortKaboomLevelThreeContent.id,
+    mode: 'formal',
+    waveNumber: 10,
+    outcome: 'victory',
+    scoreBase: 300,
+    displayScore: 300,
+    highScoreCandidate: 300,
+  });
+  const afterFortKaboom = await progress.loadCampaign();
+  assert.equal(campaignLevelState(3, afterFortKaboom), 'completed');
+  assert.equal(campaignLevelState(4, afterFortKaboom), 'available');
+  assert.equal(campaignLevelState(5, afterFortKaboom), 'locked');
+
+  await progress.applySettlement({
+    settlementId: `catalog-test:${techTownLevelFourCampaignContent.id}:8`,
+    sessionId: 'catalog-test',
+    scenarioId: techTownLevelFourCampaignContent.id,
+    mode: 'formal',
+    waveNumber: 8,
+    outcome: 'victory',
+    scoreBase: 400,
+    displayScore: 400,
+    highScoreCandidate: 400,
+  });
+  const afterTechTown = await progress.loadCampaign();
+  assert.equal(campaignLevelState(4, afterTechTown), 'completed');
+  assert.equal(campaignLevelState(5, afterTechTown), 'unimplemented');
+  assert.equal(campaignLevelState(6, afterTechTown), 'locked', 'later levels cannot skip the unimplemented level five');
   assert.equal(campaignLevelState(2, undefined), 'unimplemented');
   assert.equal(campaignLevelState(2, {
     ...afterCowGulch,
     stages: afterCowGulch.stages.filter(({ scenarioId }) => scenarioId !== apacheValleyLevelTwoContent.id),
   }), 'unimplemented');
+  assert.equal(fortKaboomLevelThreeContent.id, 'campaign-new-mexico-03');
 });

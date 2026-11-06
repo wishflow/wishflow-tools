@@ -1,7 +1,7 @@
 import type { GameDifficulty, GameIntent, GameMode, GameView, ShotView, UnitView, WaveSettlement } from './index';
 import { canonicalSha256Digest } from '../value-digest';
 
-export const GAME_RULES_VERSION = 'gng-rules-12';
+export const GAME_RULES_VERSION = 'gng-rules-21';
 export const GAME_REPLAY_FORMAT_VERSION = 2;
 export const GAME_REPLAY_CHECKPOINT_INTERVAL = 120;
 export const GAME_REPLAY_MAX_CHARACTERS = 10_000_000;
@@ -92,6 +92,9 @@ export function captureReplayState(view: GameView): ReplayState {
     enemies: view.enemies,
     shots: view.shots.map(({ fineZ: _fineZ, heightFine: _heightFine, ...shot }) => shot),
     recruitPool: view.recruitPool,
+    bonusCrates: view.bonusCrates ?? [],
+    bonusCratePool: view.bonusCratePool ?? null,
+    bonusNotice: view.bonusNotice ?? null,
     events: view.events,
     wave: view.wave ?? null,
   };
@@ -101,11 +104,13 @@ type ReplayShotState = Omit<ShotView, 'fineZ' | 'heightFine'>;
 type ReplayUnitState = Omit<UnitView, 'walkingAnimation'>;
 
 export type ReplayState = Omit<
-  Pick<GameView, 'frame' | 'elapsedMs' | 'priorityTargetId' | 'units' | 'enemies' | 'shots' | 'recruitPool' | 'events'>,
-  'shots' | 'units'
+  Pick<GameView, 'frame' | 'elapsedMs' | 'priorityTargetId' | 'units' | 'enemies' | 'shots' | 'recruitPool' | 'events' | 'bonusCrates' | 'bonusCratePool'>,
+  'shots' | 'units' | 'bonusCratePool'
 > & {
   units: readonly ReplayUnitState[];
   shots: readonly ReplayShotState[];
+  bonusNotice: NonNullable<GameView['bonusNotice']> | null;
+  bonusCratePool: NonNullable<GameView['bonusCratePool']> | null;
   wave: GameView['wave'] | null;
 };
 
@@ -301,6 +306,9 @@ function isGameIntent(value: unknown): value is GameIntent {
       && typeof value.unitType === 'string' && value.unitType.length > 0 && value.unitType.length <= 128
       && typeof value.commandId === 'string' && value.commandId.trim().length > 0 && value.commandId.length <= 128;
     case 'upgrade-unit': return hasOnlyKeys(value, ['type', 'unitId', 'commandId'])
+      && typeof value.unitId === 'string' && value.unitId.length > 0 && value.unitId.length <= 128
+      && typeof value.commandId === 'string' && value.commandId.trim().length > 0 && value.commandId.length <= 128;
+    case 'play-gambler': return hasOnlyKeys(value, ['type', 'unitId', 'commandId'])
       && typeof value.unitId === 'string' && value.unitId.length > 0 && value.unitId.length <= 128
       && typeof value.commandId === 'string' && value.commandId.trim().length > 0 && value.commandId.length <= 128;
     default: return false;

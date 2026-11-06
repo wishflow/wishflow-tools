@@ -161,10 +161,11 @@ async function hireThroughMapUi(page: import('@playwright/test').Page, slot: Hir
   const point = await mapHirePoint(page, slot);
   await clickCanvasPoint(page, point.x, point.y);
   const unitName = slot.type === 'gunslinger' ? 'Gunslinger' : 'Mexican';
-  const hireButton = page.getByTestId('hire-map-unit');
-  await expect(hireButton).toHaveText(`Hire map ${unitName} · $${slot.price}`);
-  await expect(hireButton).toBeEnabled();
-  await hireButton.click();
+  await expect(page.getByTestId('map-hire-confirmation')).toBeVisible();
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText(`Hire ${unitName} for $${slot.price}?`);
+  const confirmHire = page.getByTestId('confirm-map-hire');
+  await expect(confirmHire).toBeEnabled();
+  await confirmHire.click();
   await expect(page.getByTestId('map-hire-status')).toContainText('hired from the map');
 }
 
@@ -246,7 +247,7 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   const finalStatus = await status.innerText();
   const lives = Number(finalStatus.match(/Lives (\d+)/)?.[1]);
   expect(lives).toBeGreaterThan(0);
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('2/2 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('2/4 stages complete');
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
 
   const profile = await readProfile(page);

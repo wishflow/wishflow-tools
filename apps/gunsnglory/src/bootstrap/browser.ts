@@ -7,7 +7,15 @@ import {
   cowGulchUpgradeSampleContent,
 } from '../content/cow-gulch';
 import { cowGulchDefeatContent } from '../content/cow-gulch-defeat';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../content/official-campaign';
+import { gamblerUiLowCashSampleContent, gamblerUiSampleContent } from '../content/gambler-ui-sample';
+import { techTownTrainTestContent } from '../content/tech-town-train-sample';
+import { createTechTownCampaignContent, techTownCampaignId, techTownLevelFourContent } from '../content/tech-town-campaign';
+import {
+  apacheValleyLevelTwoContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+} from '../content/official-campaign';
 import {
   campaignProgressSampleOne,
   campaignProgressSampleTwo,
@@ -31,8 +39,13 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchP1dCampaignContent.id]: cowGulchP1dCampaignContent,
   [cowGulchLevelOneContent.id]: cowGulchLevelOneContent,
   [apacheValleyLevelTwoContent.id]: apacheValleyLevelTwoContent,
+  [fortKaboomLevelThreeContent.id]: fortKaboomLevelThreeContent,
+  [techTownLevelFourContent.id]: techTownLevelFourContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
+  [gamblerUiSampleContent.id]: gamblerUiSampleContent,
+  [gamblerUiLowCashSampleContent.id]: gamblerUiLowCashSampleContent,
+  [techTownTrainTestContent.id]: techTownTrainTestContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
   [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,
 };
@@ -42,9 +55,13 @@ export function getBrowserScenarioContentVersion(scenarioId: string): string | u
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
 
-export function createBrowserGame() {
+export function createBrowserGame(completedScenarioIds: readonly string[] = ['campaign-new-mexico-03']) {
+  const scenarios = {
+    ...browserScenarios,
+    [techTownCampaignId]: createTechTownCampaignContent(completedScenarioIds),
+  };
   return createGame({
-    scenarios: browserScenarios,
+    scenarios,
     randomSeedSource: () => {
       const seed = new Uint32Array(1);
       globalThis.crypto.getRandomValues(seed);

@@ -14,6 +14,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const femaleEnemyImage = {} as HTMLImageElement;
   const pioneerDeathImage = { naturalWidth: 96, naturalHeight: 24 } as HTMLImageElement;
   const wagonImage = {} as HTMLImageElement;
+  const stagecoachImage = { naturalWidth: 144, naturalHeight: 216 } as HTMLImageElement;
+  const stagecoachTurnImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
+  const goldTransportImage = { naturalWidth: 144, naturalHeight: 216 } as HTMLImageElement;
+  const goldTransportTurnImage = { naturalWidth: 96, naturalHeight: 72 } as HTMLImageElement;
   const horseWagonImage = {} as HTMLImageElement;
   const smokeImage = { naturalWidth: 384, naturalHeight: 64 } as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
@@ -57,6 +61,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     get globalAlpha() { return currentAlpha; },
     set globalAlpha(value: number) { currentAlpha = value; },
     clearRect() {},
+    translate() {},
+    scale() {},
     fillRect(...rect: number[]) { fillCalls.push({ color: currentFillStyle, rect }); },
     get fillStyle() { return currentFillStyle; },
     set fillStyle(value: string) { currentFillStyle = value; },
@@ -203,6 +209,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     pioneer_female: femaleEnemyImage,
     sfx_death_pioneers: pioneerDeathImage,
     wagon: wagonImage,
+    stagecoach: stagecoachImage,
+    goldtransport: goldTransportImage,
     horse_wagon: horseWagonImage,
     sfx_smoke_explosion: smokeImage,
     unit: unitImage,
@@ -462,6 +470,70 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.ok(horsemanTurnDraw);
   assert.deepEqual(horsemanTurnDraw.slice(1, 5), [32, 0, 32, 40], 'Horseman turns use the two-frame APK turn sheet');
 
+  const stagecoach: EnemyView = {
+    ...sampleEnemy,
+    id: 'stagecoach-1',
+    type: 5,
+    asset: 'stagecoach',
+    direction: 'east',
+    animationFrame: 2,
+  };
+  drawCalls.length = 0;
+  drawGame(context, { ...view, units: [], enemies: [stagecoach], shots: [], wagonDebris: [], drawOrder: ['enemy:stagecoach-1'] }, images);
+  const stagecoachDraw = drawCalls.find(([image]) => image === stagecoachImage);
+  assert.ok(stagecoachDraw);
+  assert.deepEqual(stagecoachDraw.slice(1, 5), [96, 0, 48, 72], 'Post Coach crops the APK 48×72 frame from its 3×3 atlas');
+  assert.deepEqual(stagecoachDraw.slice(7, 9), [60, 90], 'Post Coach uses its 32×48 logical footprint at the current map scale');
+  assert.equal((stagecoachDraw[6] as number) + (stagecoachDraw[8] as number),
+    getMapViewport(view).origin.y + (stagecoach.positionFine.y / 240) * getMapViewport(view).scaleFactor,
+    'Post Coach remains anchored to the route foot position');
+
+  drawCalls.length = 0;
+  drawGame(context, {
+    ...view,
+    units: [],
+    enemies: [{ ...stagecoach, turningAnimation: { asset: 'stagecoach_turn', frame: 1, mirrored: false } }],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:stagecoach-1'],
+  }, { ...images, stagecoach_turn: stagecoachTurnImage });
+  const stagecoachTurnDraw = drawCalls.find(([image]) => image === stagecoachTurnImage);
+  assert.ok(stagecoachTurnDraw);
+  assert.deepEqual(stagecoachTurnDraw.slice(1, 5), [48, 0, 48, 72], 'Post Coach uses the original two-frame turn atlas');
+  assert.deepEqual(stagecoachTurnDraw.slice(7, 9), [60, 90]);
+
+  const goldTransport: EnemyView = {
+    ...sampleEnemy,
+    id: 'gold-transport-1',
+    type: 6,
+    asset: 'goldtransport',
+    direction: 'east',
+    animationFrame: 2,
+  };
+  drawCalls.length = 0;
+  drawGame(context, { ...view, units: [], enemies: [goldTransport], shots: [], wagonDebris: [], drawOrder: ['enemy:gold-transport-1'] }, images);
+  const goldTransportDraw = drawCalls.find(([image]) => image === goldTransportImage);
+  assert.ok(goldTransportDraw);
+  assert.deepEqual(goldTransportDraw.slice(1, 5), [96, 0, 48, 72], 'Gold Transport crops one 48×72 frame from the APK 3×3 atlas');
+  assert.deepEqual(goldTransportDraw.slice(7, 9), [60, 90], 'Gold Transport uses its 32×48 logical footprint');
+  assert.equal((goldTransportDraw[6] as number) + (goldTransportDraw[8] as number),
+    getMapViewport(view).origin.y + (goldTransport.positionFine.y / 240) * getMapViewport(view).scaleFactor,
+    'Gold Transport remains anchored to the route foot position');
+
+  drawCalls.length = 0;
+  drawGame(context, {
+    ...view,
+    units: [],
+    enemies: [{ ...goldTransport, turningAnimation: { asset: 'goldtransport_turn', frame: 1, mirrored: false } }],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:gold-transport-1'],
+  }, { ...images, goldtransport_turn: goldTransportTurnImage });
+  const goldTransportTurnDraw = drawCalls.find(([image]) => image === goldTransportTurnImage);
+  assert.ok(goldTransportTurnDraw);
+  assert.deepEqual(goldTransportTurnDraw.slice(1, 5), [48, 0, 48, 72], 'Gold Transport turn uses the two-frame APK atlas');
+  assert.deepEqual(goldTransportTurnDraw.slice(7, 9), [60, 90]);
+
   for (const [deathRemainingMs, frame] of [[599, 0], [500, 0], [499, 1], [100, 4], [99, 5], [0, 5]] as const) {
     pioneerDeathDraws.length = 0;
     drawGame(context, {
@@ -474,9 +546,10 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     assert.equal(deathDraw.alpha, 1, 'the original death animation stays fully opaque');
   }
 
-  for (const [type, asset, bodyImage] of [
-    [4, 'wagon', wagonImage],
-    [8, 'horse_wagon', horseWagonImage],
+  for (const [type, asset, bodyImage, frameHeight, drawHeight] of [
+    [4, 'wagon', wagonImage, 60, 75],
+    [5, 'stagecoach', stagecoachImage, 72, 90],
+    [8, 'horse_wagon', horseWagonImage, 60, 75],
   ] as const) {
     for (const [deathRemainingMs, smokeFrame, bodyVisible] of [
       [799, 0, true],
@@ -500,8 +573,8 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
       assert.equal(bodyDraws.length, bodyVisible ? 1 : 0,
         'vehicle body visibility matches the original 350 ms cutoff at ' + deathRemainingMs + ' ms');
       if (bodyDraws[0]) {
-        assert.deepEqual(bodyDraws[0].slice(3, 5), [48, 60], 'vehicles crop one APK hdpi atlas frame');
-        assert.deepEqual(bodyDraws[0].slice(7, 9), [60, 75], 'hdpi frames retain their 32×40 logical draw size');
+        assert.deepEqual(bodyDraws[0].slice(3, 5), [48, frameHeight], 'vehicles crop one APK hdpi atlas frame');
+        assert.deepEqual(bodyDraws[0].slice(7, 9), [60, drawHeight], 'vehicle frames retain their original logical draw size');
       }
       const smokeDraw = drawCalls.find(([image]) => image === smokeImage);
       assert.ok(smokeDraw, 'death style for enemy type ' + type + ' keeps its smoke at ' + deathRemainingMs + ' ms');
@@ -653,6 +726,101 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     assert.equal((enemyDraw[6] as number) + (enemyDraw[8] as number), feet.y,
       'bridge-crossing enemy feet stay anchored to the TDM route position');
   }
+});
+
+test('draws original bonus-crate frames, reward icons, and the centered localized speech bubble', () => {
+  const calls: unknown[][] = [];
+  const texts: string[] = [];
+  const context = {
+    globalAlpha: 1,
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    translate() {},
+    scale() {},
+    drawImage(...args: unknown[]) { calls.push(args); },
+    fillText(text: string) { texts.push(text); },
+  } as unknown as CanvasRenderingContext2D;
+  const view = {
+    frame: 5,
+    elapsedMs: 0,
+    paused: false,
+    scenarioId: 'bonus-render-test',
+    map: { width: 17, height: 17, tileSize: 32, background: [], streets: [] },
+    units: [],
+    enemies: [],
+    shots: [],
+    recruitPool: [],
+    events: [],
+    bonusCrates: [{
+      id: 'bonus-crate-01',
+      cell: { x: 8, y: 8 },
+      positionFine: { x: (8 * 7_680) + 3_840, y: (8 * 7_680) + 5_760 },
+      rewardType: 2,
+      phase: 'spawning',
+      animationFrame: 2,
+    }],
+    bonusNotice: { rewardType: 4, remainingMs: 300 },
+    drawOrder: ['bonus-crate:bonus-crate-01'],
+  } as unknown as GameView;
+  const images = {
+    bonus_box: { naturalWidth: 32, naturalHeight: 32 } as HTMLImageElement,
+    sfx_bonus_box: { naturalWidth: 160, naturalHeight: 44 } as HTMLImageElement,
+    hud_bonus_cash: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    hud_bonus_damage: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    hud_bonus_speed: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    gng_speechbubble: { naturalWidth: 209, naturalHeight: 90 } as HTMLImageElement,
+    player_gunslinger: { naturalWidth: 96, naturalHeight: 132 } as HTMLImageElement,
+  };
+
+  drawGame(context, view, images);
+  const spawningFrame = calls.find((call) => call[0] === images.sfx_bonus_box);
+  assert.ok(spawningFrame);
+  assert.deepEqual(spawningFrame.slice(1, 5), [64, 0, 32, 44]);
+  const bubble = calls.find((call) => call[0] === images.gng_speechbubble);
+  assert.ok(bubble, 'the popup uses the APK speech bubble image');
+  assert.ok(texts.includes('Damage boost!'));
+
+  calls.length = 0;
+  texts.length = 0;
+  const activeCrateView: GameView = {
+    ...view,
+    elapsedMs: 200,
+    bonusCrates: [{ ...view.bonusCrates![0]!, phase: 'active', animationFrame: 0 }],
+    bonusNotice: { rewardType: 2, remainingMs: 600 },
+  };
+  drawGame(context, activeCrateView, images, 1, undefined, false, 'zh');
+  const activeIcon = calls.find((call) => call[0] === images.hud_bonus_cash);
+  assert.ok(activeIcon);
+  assert.deepEqual(activeIcon.slice(1, 5), [32, 0, 16, 16], 'the active reward icon uses the APK 0, 1, 2, 1 frame loop');
+  assert.ok(texts.includes('获得 $25'));
+
+  calls.length = 0;
+  const unitWithBonus: GameView = {
+    ...view,
+    elapsedMs: 100,
+    bonusCrates: [],
+    bonusNotice: undefined,
+    units: [{
+      id: 'player', type: 'gunslinger', cell: { x: 8, y: 8 }, movementSpeedFinePer100Ms: 1_500,
+      asset: 'player_gunslinger', frame: { x: 0, y: 0, width: 32, height: 44 },
+      render: { x: 8, y: 7.625, width: 1, height: 1.375 },
+      hitArea: { x: 8, y: 7.625, width: 1, height: 1.375 },
+      selected: false, moving: false,
+      positionFine: { x: (8 * 7_680) + 3_840, y: (8 * 7_680) + 5_760 },
+      upgradeLevel: 0,
+      bonus: { type: 3, remainingMs: 30_000 },
+    }],
+    drawOrder: ['unit:player'],
+  };
+  drawGame(context, unitWithBonus, images);
+  const unitBonusIcon = calls.find((call) => call[0] === images.hud_bonus_speed);
+  assert.ok(unitBonusIcon, 'active units show the matching bonus icon');
+  assert.deepEqual(unitBonusIcon.slice(1, 5), [16, 0, 16, 16], 'unit bonus icon follows the APK 0, 1, 0 loop');
 });
 
 test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {
@@ -1061,6 +1229,68 @@ test('draws original firing, Mexican dynamite, and explosion atlas frames', () =
   assert.deepEqual(transforms.at(-1), ['scale', -1, 1], 'the walking atlas mirrors only when its direction row requests it');
 });
 
+test('draws Damage Style 6 flight, impact, and sparkle atlas frames', () => {
+  const ground = {} as HTMLImageElement;
+  const rocket = {} as HTMLImageElement;
+  const explosion = {} as HTMLImageElement;
+  const sparkles = {} as HTMLImageElement;
+  const drawCalls: unknown[][] = [];
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+  } as unknown as CanvasRenderingContext2D;
+  const view: GameView = {
+    frame: 1,
+    elapsedMs: 100,
+    paused: false,
+    scenarioId: 'style6-render',
+    map: { width: 1, height: 1, tileSize: 32, background: [], streets: [] },
+    units: [],
+    enemies: [],
+    shots: [{
+      id: 'flight', shooterId: 'grandpa', targetId: 'enemy',
+      positionFine: { x: 3_840, y: 3_840 }, remainingMs: 100,
+      damageStyle: 6, imageAsset: 'sfx_pyromaniac_rocket', animationFrame: 11,
+      fineZ: 0, heightFine: 0,
+    }, {
+      id: 'impact', shooterId: 'grandpa', targetId: 'enemy',
+      positionFine: { x: 7_680, y: 7_680 }, remainingMs: 599,
+      damageStyle: 6, imageAsset: 'sfx_rocket_explosion', animationFrame: 3,
+      explosionRemainingMs: 599, fineZ: 7680, heightFine: 0,
+    }],
+    rocketSparkles: [{
+      id: 'sparkle', positionFine: { x: 11_520, y: 11_520 },
+      remainingMs: 99, animationFrame: 2, fineZ: 7680,
+    }],
+    drawOrder: ['shot:flight', 'shot:impact', 'rocket-sparkle:sparkle'],
+    recruitPool: [],
+    events: [],
+  };
+
+  drawGame(context, view, {
+    ground,
+    sfx_pyromaniac_rocket: rocket,
+    sfx_rocket_explosion: explosion,
+    sfx_rocket_sparkles: sparkles,
+  });
+
+  const rocketDraw = drawCalls.find(([image]) => image === rocket);
+  assert.ok(rocketDraw);
+  assert.deepEqual(rocketDraw.slice(1, 5), [176, 0, 16, 16], 'flight orientation selects the original 16th atlas frame');
+  const explosionDraw = drawCalls.find(([image]) => image === explosion);
+  assert.ok(explosionDraw);
+  assert.deepEqual(explosionDraw.slice(1, 5), [168, 0, 56, 52], 'impact uses the 56×52 rocket explosion atlas');
+  const sparkleDraw = drawCalls.find(([image]) => image === sparkles);
+  assert.ok(sparkleDraw);
+  assert.deepEqual(sparkleDraw.slice(1, 5), [56, 0, 28, 28], 'sparkles use the final 28×28 atlas frame');
+});
+
 test('draws ordinary bullets as small dark-red rectangles without an outline', () => {
   const ground = {} as HTMLImageElement;
   const fillCalls: Array<{ color: string; rect: number[] }> = [];
@@ -1224,6 +1454,7 @@ test('ordinary horse-wagon and covered-wagon frames mirror eastward movement lik
   };
   const variants = [
     { type: 4 as const, asset: 'wagon' as const },
+    { type: 5 as const, asset: 'stagecoach' as const },
     { type: 8 as const, asset: 'horse_wagon' as const },
     { type: 8 as const, asset: 'horse_wagon_white' as const },
   ];
@@ -1247,7 +1478,7 @@ test('ordinary horse-wagon and covered-wagon frames mirror eastward movement lik
         positionFine: { x: 8 * 7680 + 3840, y: 8 * 7680 + 3840 },
         drawingOffsetFine: { x: 0, y: 0 },
         groupId: 'vehicle-group',
-        damageable: variant.type === 4,
+        damageable: variant.type === 4 || variant.type === 5,
         hitPoints: 200,
         maxHitPoints: 200,
         alive: true,

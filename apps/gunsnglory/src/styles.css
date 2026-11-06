@@ -338,7 +338,7 @@ body {
 
 .game-frame {
   position: relative;
-  z-index: 81;
+  z-index: 79;
   width: min(100%, 1024px);
   aspect-ratio: 16 / 9;
   container-type: inline-size;
@@ -364,18 +364,29 @@ body {
   z-index: 12;
   top: 0.5rem;
   right: 0.5rem;
-  min-height: 2.3rem;
+  display: grid;
+  width: 2.75rem;
+  min-width: 2.75rem;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  place-items: center;
   border: 1px solid rgba(255, 225, 168, 0.58);
   border-radius: 0.4rem;
-  padding: 0.4rem 0.65rem;
+  padding: 0;
   color: #ffe1a8;
   background: rgba(25, 20, 15, 0.92);
   box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.35);
   font: inherit;
-  font-size: clamp(0.65rem, 1.05cqw, 0.9rem);
+  font-size: 0;
+  line-height: 1;
   font-weight: 750;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.game-frame-fullscreen-toggle::before {
+  content: "⛶";
+  font-size: 1.35rem;
 }
 
 .game-frame-fullscreen-toggle:hover {
@@ -409,24 +420,30 @@ body {
   display: none;
 }
 
-.game-frame:fullscreen {
+.game-frame:fullscreen,
+.game-frame.is-fullscreen {
   position: fixed;
   inset: 0;
   z-index: 2147483647;
-  width: min(100vw, 177.7778vh);
-  height: min(100vh, 56.25vw);
-  width: min(100dvw, 177.7778dvh);
-  height: min(100dvh, 56.25dvw);
+  width: 100vw;
+  height: 100vh;
+  width: 100dvw;
+  height: 100dvh;
   max-width: none;
-  aspect-ratio: 16 / 9;
-  margin: auto;
+  aspect-ratio: auto;
+  margin: 0;
   border: 0;
   border-radius: 0;
   box-shadow: none;
 }
 
-.game-frame:fullscreen::backdrop {
+.game-frame:fullscreen::backdrop,
+.game-frame.is-fullscreen::backdrop {
   background: #100d09;
+}
+
+body.gng-game-fullscreen .usagi-widget {
+  display: none;
 }
 
 .game-frame canvas:focus-visible {
@@ -1224,6 +1241,11 @@ body {
   background: rgba(10, 8, 6, 0.6);
   backdrop-filter: blur(1px);
   content: "";
+}
+
+.game-frame:has(dialog[open]) .game-frame-fullscreen-toggle,
+.game-frame:has(dialog[open]) .game-frame-fullscreen-status {
+  display: none;
 }
 
 .archive-panel {
@@ -2071,6 +2093,12 @@ body {
   line-height: 1.5;
 }
 
+.map-hire-confirmation p {
+  margin: 0 0 1rem;
+  color: #f0d5a8;
+  line-height: 1.5;
+}
+
 .recruit-confirmation-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2092,6 +2120,266 @@ body {
 .recruit-confirmation button:focus-visible {
   outline: 2px solid #ffe28a;
   outline-offset: 3px;
+}
+
+.gambler-confirmation {
+  width: min(28rem, calc(100% - 1rem));
+  padding: clamp(0.65rem, 2.1cqw, 1rem);
+}
+
+.gambler-dialog-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.45rem;
+}
+
+.gambler-dialog-heading > img {
+  flex: 0 0 auto;
+  width: clamp(2.5rem, 6cqw, 4rem);
+  height: auto;
+  border: 1px solid rgba(237, 191, 117, 0.55);
+  image-rendering: pixelated;
+}
+
+.gambler-dialog-heading h2 {
+  margin: 0 0 0.2rem;
+}
+
+.gambler-dialog-heading p,
+.gambler-result {
+  margin: 0;
+  color: #f0d5a8;
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.gambler-cash {
+  margin: 0.3rem 0 0.55rem;
+  color: #f7d68d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.gambler-cards {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.2rem, 0.75cqw, 0.5rem);
+  min-height: 0;
+  margin: 0.2rem 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  perspective: 40rem;
+}
+
+.gambler-card {
+  position: relative;
+  flex: 0 1 clamp(2.35rem, 7cqw, 4.5rem);
+  width: clamp(2.35rem, 7cqw, 4.5rem);
+  aspect-ratio: 11 / 16;
+  overflow: visible;
+  border-radius: 0.15rem;
+  opacity: 1;
+  transform: translateY(var(--final-offset, 0));
+  transition: transform var(--card-duration, 410ms) ease, opacity 180ms ease;
+  transform-style: preserve-3d;
+}
+
+.gambler-cards[data-phase="hidden"] .gambler-card {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--collect-offset, 24px)));
+}
+
+.gambler-cards[data-phase="collecting"] .gambler-card {
+  opacity: 1;
+  transform: translateY(var(--collect-offset));
+}
+
+.gambler-card-back,
+.gambler-card-front {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  backface-visibility: hidden;
+}
+
+.gambler-card-back {
+  display: block;
+  object-fit: fill;
+  image-rendering: pixelated;
+  transition: transform 220ms ease, opacity 220ms ease;
+}
+
+.gambler-card-front {
+  overflow: hidden;
+  border: 1px solid #d1bf92;
+  background-size: 100% 100%;
+  transform: rotateY(-180deg);
+  transition: transform 220ms ease;
+}
+
+.gambler-cards[data-phase="dealing"] .gambler-card-back,
+.gambler-cards[data-phase="result"] .gambler-card-back {
+  opacity: 0;
+  transform: rotateY(180deg);
+}
+
+.gambler-cards[data-phase="dealing"] .gambler-card-front,
+.gambler-cards[data-phase="result"] .gambler-card-front {
+  transform: rotateY(0);
+}
+
+.gambler-card-rank,
+.gambler-card-suit {
+  position: absolute;
+  display: block;
+  width: 1rem;
+  height: 1rem;
+  background-repeat: no-repeat;
+  background-size: 208px 16px;
+  image-rendering: pixelated;
+}
+
+.gambler-card-rank {
+  top: 0.12rem;
+  left: 0.12rem;
+  background-position-y: 0;
+}
+
+.gambler-card-rank::after {
+  position: absolute;
+  inset: 0;
+  background-image: inherit;
+  background-position: inherit;
+  background-repeat: no-repeat;
+  background-size: inherit;
+  content: "";
+  transform: rotate(180deg);
+}
+
+.gambler-card-suit {
+  top: 1.15rem;
+  left: 0.12rem;
+  width: 1rem;
+  height: 1rem;
+  background-size: 64px 16px;
+}
+
+.gambler-card-suit::after {
+  position: absolute;
+  right: 0.12rem;
+  bottom: 0.12rem;
+  width: 1rem;
+  height: 1rem;
+  background-image: inherit;
+  background-position: inherit;
+  background-repeat: no-repeat;
+  background-size: inherit;
+  content: "";
+  transform: rotate(180deg);
+}
+
+.gambler-card.is-important {
+  z-index: 1;
+}
+
+.gambler-result {
+  min-height: 1.15em;
+  margin: 0.25rem 0 0.55rem;
+  color: #ffd892;
+  font-weight: 700;
+  text-align: center;
+}
+
+.gambler-actions {
+  justify-content: center;
+}
+
+.gambler-actions button {
+  min-width: 6rem;
+}
+
+@media (max-width: 600px) {
+  .gambler-confirmation {
+    max-height: calc(100% - 0.25rem);
+    padding: 0.35rem;
+  }
+
+  .gambler-dialog-heading {
+    gap: 0.35rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .gambler-dialog-heading > img {
+    width: 1.8rem;
+  }
+
+  .gambler-dialog-heading h2 {
+    margin-bottom: 0.05rem;
+    font-size: 0.84rem;
+  }
+
+  .gambler-dialog-heading p,
+  .gambler-result,
+  .gambler-cash {
+    font-size: 0.65rem;
+    line-height: 1.12;
+  }
+
+  .gambler-cash {
+    margin: 0.1rem 0 0.2rem;
+  }
+
+  .gambler-cards {
+    gap: 0.12rem;
+    margin: 0.05rem 0 0.12rem;
+  }
+
+  .gambler-card {
+    flex-basis: clamp(1.9rem, 7.8cqw, 2.4rem);
+    width: clamp(1.9rem, 7.8cqw, 2.4rem);
+  }
+
+  .gambler-card-rank,
+  .gambler-card-suit {
+    transform: scale(0.72);
+    transform-origin: top left;
+  }
+
+  .gambler-card-suit {
+    top: 0.82rem;
+  }
+
+  .gambler-card-rank::after,
+  .gambler-card-suit::after {
+    display: none;
+  }
+
+  .gambler-result {
+    margin: 0.05rem 0 0.12rem;
+  }
+
+  .gambler-actions {
+    gap: 0.35rem;
+  }
+
+  .gambler-actions button {
+    min-width: 5rem;
+    min-height: 2.5rem;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gambler-card,
+  .gambler-card-back,
+  .gambler-card-front {
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .scene-caption {
@@ -2217,8 +2505,9 @@ body {
     right: 0.25rem;
     top: 0.25rem;
     bottom: auto;
-    max-width: 7rem;
+    max-width: 4.75rem;
     overflow: hidden;
+    padding: 0.3rem 0.25rem;
     text-overflow: ellipsis;
   }
 
@@ -2228,12 +2517,14 @@ body {
   }
 
   .game-toolbar-actions {
-    padding-right: 7rem;
+    max-width: calc(100% - 4.75rem);
+    gap: 0.25rem;
+    padding-right: 0;
   }
 
   .game-toolbar button {
     min-height: 2rem;
-    padding: 0.24rem 0.38rem;
+    padding: 0.24rem 0.3rem;
     font-size: 0.66rem;
   }
 

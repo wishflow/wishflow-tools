@@ -211,7 +211,7 @@ test('covered-wagon passenger count is derived from raw campaign difficulty', as
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
     scenarioId: scenario.id,
     mode: 'formal',
-    randomSeed: 42,
+    randomSeed: 7,
   });
 
   let view = session.observe();
@@ -238,5 +238,5 @@ test('covered-wagon passenger count is derived from raw campaign difficulty', as
     passengers = view.enemies.filter(({ id }) => id.startsWith('wagon-passenger-'));
   }
   assert.equal(passengers.length, 2,
-    'seed 42 and raw difficulty 258 produce two passenger slots; the clamped bound produces one');
+    'seed 7 and raw difficulty 258 produce two passenger slots; the clamped bound produces one');
 });

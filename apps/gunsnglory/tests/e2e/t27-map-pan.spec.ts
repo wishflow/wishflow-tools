@@ -37,6 +37,27 @@ async function expectCanvasHashChange(
   await expect.poll(() => canvasHash(page), { message, timeout: 1000 }).not.toBe(previousHash);
 }
 
+async function expectFullscreenControlOutsideMinimap(page: import('@playwright/test').Page): Promise<void> {
+  const overlapsMinimap = await page.evaluate(() => {
+    const canvas = document.querySelector('[data-testid="game-canvas"]');
+    const button = document.querySelector('[data-testid="fullscreen-toggle"]');
+    if (!(canvas instanceof HTMLCanvasElement) || !(button instanceof HTMLElement)) return true;
+    const canvasBounds = canvas.getBoundingClientRect();
+    const buttonBounds = button.getBoundingClientRect();
+    const minimapBounds = {
+      left: canvasBounds.left + canvasBounds.width * 686 / 1024,
+      right: canvasBounds.left + canvasBounds.width * (686 + 66) / 1024,
+      top: canvasBounds.top + canvasBounds.height * 2 / 576,
+      bottom: canvasBounds.top + canvasBounds.height * (2 + 50) / 576,
+    };
+    return buttonBounds.left < minimapBounds.right
+      && buttonBounds.right > minimapBounds.left
+      && buttonBounds.top < minimapBounds.bottom
+      && buttonBounds.bottom > minimapBounds.top;
+  });
+  expect(overlapsMinimap, 'the fullscreen button does not cover the original HUD minimap').toBe(false);
+}
+
 async function openPausedOfficialBattle(page: import('@playwright/test').Page): Promise<void> {
   await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/?testBattle=1');
@@ -99,6 +120,7 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
   const cdp = await context.newCDPSession(page);
   try {
     await openPausedOfficialBattle(page);
+    await expectFullscreenControlOutsideMinimap(page);
     const beforeWorldDrag = await canvasHash(page);
     const worldStart = await canvasPoint(page, 80, 100);
     const worldEnd = await canvasPoint(page, 80, 160);
@@ -144,6 +166,7 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
     });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
     await expectCanvasHashChange(page, beforeMinimapDrag, 'touching and dragging the minimap updates the main view');
+    await expect(page.getByTestId('fullscreen-toggle')).toHaveAttribute('aria-pressed', 'false');
 
     const beforeMinimapHorizontalDrag = await canvasHash(page);
     const minimapHorizontalStart = await canvasPoint(page, 719, 15);
@@ -162,6 +185,7 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
       beforeMinimapHorizontalDrag,
       'horizontal touch dragging the minimap pans Cow Gulch',
     );
+    await expect(page.getByTestId('fullscreen-toggle')).toHaveAttribute('aria-pressed', 'false');
   } finally {
     await cdp.detach();
     await context.close();

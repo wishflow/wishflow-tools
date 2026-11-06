@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cowGulchContent } from '../src/content/cow-gulch';
 import { createGame, type ScenarioContent } from '../src/game';
+import { deriveSessionRandomSeed, JavaUtilRandom } from '../src/game/java-random';
 
 const settlerSpawnOffsets = [
   { x: -2560, y: -2080 },
@@ -10,29 +11,8 @@ const settlerSpawnOffsets = [
   { x: 2560, y: 4000 },
 ] as const;
 
-function javaRandom(seed: number) {
-  let state = (BigInt(seed) ^ 0x5deece66dn) & ((1n << 48n) - 1n);
-  const next = (bits: number) => {
-    state = (state * 0x5deece66dn + 0xbn) & ((1n << 48n) - 1n);
-    return Number(state >> BigInt(48 - bits));
-  };
-
-  return {
-    nextInt(bound: number) {
-      if ((bound & (bound - 1)) === 0) return Math.floor((bound * next(31)) / 0x8000_0000);
-      let bits: number;
-      let value: number;
-      do {
-        bits = next(31);
-        value = bits % bound;
-      } while (bits - value + (bound - 1) >= 0x8000_0000);
-      return value;
-    },
-  };
-}
-
 function expectedSettlerGroup(seed: number, groupSize: number) {
-  const random = javaRandom(seed);
+  const random = new JavaUtilRandom(deriveSessionRandomSeed(seed, 'game-util'));
   random.nextInt(1); // WaveManager selects the only pending pool request.
   random.nextInt(1); // EnemyDirector selects the only map spawn field.
   const speedPercent = 90 + random.nextInt(20); // One speed roll is shared by this request.

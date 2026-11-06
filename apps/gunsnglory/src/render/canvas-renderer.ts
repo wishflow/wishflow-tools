@@ -1,4 +1,5 @@
-import type { Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
+import type { BonusCrateView, BonusNoticeView, Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
+import { campaignBonusRewardAsset } from '../game/campaign-bonus-crates';
 import { GAME_DRAW_ORDER_ROAD_CUTOFF } from '../game/draw-order';
 import {
   calculateMapViewport,
@@ -11,12 +12,31 @@ import { gameAssetLogicalSize, gameAssetSourceScale } from './game-asset-path';
 import { drawMapFrame, drawRouteInspectionOverlay } from './map-overlays';
 import { getWaveSpawnIndicatorDraws } from './wave-spawn-indicators';
 
-export const GAME_VIEWPORT = Object.freeze({ width: 1024, height: 576 });
+export interface GameViewportSize {
+  width: number;
+  height: number;
+}
+
+export const BASE_GAME_VIEWPORT: Readonly<GameViewportSize> = Object.freeze({ width: 1024, height: 576 });
+export let GAME_VIEWPORT: Readonly<GameViewportSize> = BASE_GAME_VIEWPORT;
+
+export function setGameViewport(width: number, height: number): void {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    throw new RangeError('Game viewport dimensions must be finite and positive');
+  }
+  if (Math.abs(GAME_VIEWPORT.width - width) < 0.01 && Math.abs(GAME_VIEWPORT.height - height) < 0.01) return;
+  GAME_VIEWPORT = Object.freeze({ width, height });
+}
 
 const FINE_UNITS_PER_CELL = 7680;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
 const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
+const SALESMAN_BOTTLE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
+const POISON_CLOUD_FRAME = Object.freeze({ width: 32, height: 32, count: 6 });
 const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
+const ROCKET_FRAME = Object.freeze({ width: 16, height: 16, count: 16 });
+const ROCKET_EXPLOSION_FRAME = Object.freeze({ width: 56, height: 52, count: 8 });
+const ROCKET_SPARKLES_FRAME = Object.freeze({ width: 28, height: 28, count: 3 });
 const SELECTION_RANGE_CIRCLE_COLOR = 'rgba(255, 255, 255, 0.1568627450980392)';
 const SELECTION_CURSOR_FRAMES = 4;
 
@@ -75,7 +95,7 @@ export function mapDecorationDestination(
   const width = logicalImageSize.width * viewport.scaleFactor;
   const height = logicalImageSize.height * viewport.scaleFactor;
   const centerX = viewport.origin.x + (decoration.cell.x + 0.5 + (decoration.anchorOffsetX ?? 0)) * viewport.tileSize;
-  const feetY = viewport.origin.y + (decoration.cell.y + 1) * viewport.tileSize;
+  const feetY = viewport.origin.y + (decoration.cell.y + 1 + (decoration.anchorOffsetY ?? 0)) * viewport.tileSize;
   const x = Math.trunc(centerX - width / 2);
   const y = Math.trunc(feetY - height);
   return {
@@ -107,13 +127,16 @@ function drawUnit(
   unit: UnitView,
   images: GameImages,
   viewport: MapViewport,
+  elapsedMs: number,
+  sessionFrame: number,
 ): void {
   const left = viewport.origin.x + unit.render.x * viewport.tileSize;
   const top = viewport.origin.y + unit.render.y * viewport.tileSize;
   const width = unit.render.width * viewport.tileSize;
   const height = unit.render.height * viewport.tileSize;
 
-  const firing = unit.shootingAnimation;
+  const gatlingWagon = unit.type === 'train-12';
+  const firing = gatlingWagon ? undefined : unit.shootingAnimation;
   const walking = unit.walkingAnimation;
   const asset = firing?.asset ?? unit.asset;
   const image = images[asset];
@@ -136,10 +159,89 @@ function drawUnit(
   context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
   context.restore();
 
-  if (unit.activity === 4) {
+  if (gatlingWagon && unit.activity === 5 && unit.weapon) {
+    const firingWeapon = unit.shootingAnimation;
+    const weaponAsset = firingWeapon?.asset ?? 'player_gatling';
+    const weaponImage = images[weaponAsset];
+    if (!weaponImage) throw new Error('Missing game image: ' + weaponAsset);
+    const weaponFrame = firingWeapon?.frame ?? 0;
+    const weaponRow = firingWeapon?.row ?? unit.weaponFacing?.row ?? 1;
+    const weaponMirrored = firingWeapon?.mirrored ?? unit.weaponFacing?.mirrored ?? false;
+    const weaponSize = viewport.tileSize;
+    const weaponCenterX = left + (width / 2);
+    const weaponCenterY = top + height - ((6912 / FINE_UNITS_PER_CELL) * viewport.tileSize);
+    context.save();
+    if (weaponMirrored) {
+      context.translate(weaponCenterX * 2, 0);
+      context.scale(-1, 1);
+    }
+    context.drawImage(
+      weaponImage,
+      weaponFrame * 32,
+      weaponRow * 32,
+      32,
+      32,
+      Math.trunc(weaponCenterX - weaponSize / 2),
+      Math.trunc(weaponCenterY - weaponSize / 2),
+      Math.trunc(weaponSize),
+      Math.trunc(weaponSize),
+    );
+    context.restore();
+  }
+
+  if (unit.steamClouds?.length) {
+    const steamImage = images.sfx_lok_steam;
+    if (!steamImage) throw new Error('Missing game image: sfx_lok_steam');
+    const frameWidth = steamImage.naturalWidth / 5;
+    const frameHeight = steamImage.naturalHeight;
+    const scale = viewport.scaleFactor;
+    for (const cloud of unit.steamClouds) {
+      const centerX = viewport.origin.x + (cloud.positionFine.x / FINE_UNITS_PER_CELL) * viewport.tileSize;
+      const centerY = viewport.origin.y + (cloud.positionFine.y / FINE_UNITS_PER_CELL) * viewport.tileSize;
+      const cloudWidth = frameWidth * scale;
+      const cloudHeight = frameHeight * scale;
+      const animationFrame = Math.max(0, Math.min(4, Math.trunc(cloud.animationFrame)));
+      context.drawImage(
+        steamImage,
+        animationFrame * frameWidth,
+        0,
+        frameWidth,
+        frameHeight,
+        Math.trunc(centerX - cloudWidth / 2),
+        Math.trunc(centerY - cloudHeight / 2),
+        Math.trunc(cloudWidth),
+        Math.trunc(cloudHeight),
+      );
+    }
+  }
+
+  if (unit.bonus && unit.bonus.remainingMs > 0) {
+    const bonusImage = images[campaignBonusRewardAsset(unit.bonus.type)];
+    if (!bonusImage) throw new Error('Missing game image: ' + campaignBonusRewardAsset(unit.bonus.type));
+    const sourceWidth = bonusImage.naturalWidth / 3;
+    const scale = viewport.scaleFactor;
+    const width = sourceWidth * scale;
+    const height = bonusImage.naturalHeight * scale;
+    let bonusFrame = (Math.floor(elapsedMs / 100) % 3) + 1;
+    if (bonusFrame === 3) bonusFrame = 1;
+    const verticalPulse = bonusPulseOffset(sessionFrame, scale);
+    context.drawImage(
+      bonusImage,
+      (bonusFrame - 1) * sourceWidth,
+      0,
+      sourceWidth,
+      bonusImage.naturalHeight,
+      Math.trunc(left + (unit.render.width * viewport.tileSize / 2) - (width / 2)),
+      Math.trunc(top - height - verticalPulse),
+      Math.trunc(width),
+      Math.trunc(height),
+    );
+  }
+
+  if (unit.sleepingAnimationFrame !== undefined) {
     const effectImage = images.sfx_sleeping;
     if (!effectImage) throw new Error('Missing game image: sfx_sleeping');
-    const animationFrame = Math.max(0, Math.trunc(unit.sleepingAnimationFrame ?? 0)) % SLEEPING_EFFECT_FRAME.count;
+    const animationFrame = Math.max(0, Math.trunc(unit.sleepingAnimationFrame)) % SLEEPING_EFFECT_FRAME.count;
     const feetX = viewport.origin.x + (unit.positionFine.x / 240) * viewport.scaleFactor;
     const feetY = viewport.origin.y + (unit.positionFine.y / 240) * viewport.scaleFactor;
     const effectScale = viewport.scaleFactor;
@@ -157,6 +259,117 @@ function drawUnit(
       effectHeight,
     );
   }
+}
+
+function drawBonusCrate(
+  context: CanvasRenderingContext2D,
+  crate: BonusCrateView,
+  elapsedMs: number,
+  sessionFrame: number,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const chestImage = images.bonus_box;
+  if (!chestImage) throw new Error('Missing game image: bonus_box');
+  const scale = viewport.scaleFactor;
+  const tileSize = viewport.tileSize;
+  const centerX = viewport.origin.x + (crate.positionFine.x / FINE_UNITS_PER_CELL) * tileSize;
+  const feetY = viewport.origin.y + (crate.positionFine.y / FINE_UNITS_PER_CELL) * tileSize;
+  const left = Math.trunc(centerX - tileSize / 2);
+  const top = Math.trunc(feetY - tileSize);
+  context.drawImage(chestImage, left, top, Math.trunc(tileSize), Math.trunc(tileSize));
+
+  if (crate.phase !== 'active') {
+    const effectImage = images.sfx_bonus_box;
+    if (!effectImage) throw new Error('Missing game image: sfx_bonus_box');
+    const frameWidth = effectImage.naturalWidth / 5;
+    const width = frameWidth * scale;
+    const height = effectImage.naturalHeight * scale;
+    context.drawImage(
+      effectImage,
+      crate.animationFrame * frameWidth,
+      0,
+      frameWidth,
+      effectImage.naturalHeight,
+      Math.trunc(centerX - width / 2),
+      Math.trunc(feetY - height),
+      Math.trunc(width),
+      Math.trunc(height),
+    );
+    return;
+  }
+
+  const icon = images[campaignBonusRewardAsset(crate.rewardType)];
+  if (!icon) throw new Error('Missing game image: ' + campaignBonusRewardAsset(crate.rewardType));
+  const frameWidth = icon.naturalWidth / 3;
+  const iconSize = 16 * scale;
+  let iconFrame = Math.floor(elapsedMs / 100) % 4;
+  if (iconFrame === 3) iconFrame = 1;
+  const verticalPulse = bonusPulseOffset(sessionFrame, scale);
+  context.drawImage(
+    icon,
+    iconFrame * frameWidth,
+    0,
+    frameWidth,
+    icon.naturalHeight,
+    Math.trunc(centerX - iconSize / 2),
+    Math.trunc(feetY - tileSize - iconSize - verticalPulse),
+    Math.trunc(iconSize),
+    Math.trunc(icon.naturalHeight * scale),
+  );
+}
+
+function bonusPulseOffset(frame: number, scale: number): number {
+  const step = Math.floor(Math.max(0, frame)) % 20;
+  const animationTime = step <= 10 ? step / 10 : (20 - step) / 10;
+  return Math.trunc(Math.sin(animationTime) * scale);
+}
+
+function bonusMessage(rewardType: BonusNoticeView['rewardType'], language: 'en' | 'zh'): string {
+  const messages: Record<BonusNoticeView['rewardType'], { en: string; zh: string }> = {
+    1: { en: '5 Sheriff points!', zh: '警长生命 +5' },
+    2: { en: '25 dollars!', zh: '获得 $25' },
+    3: { en: 'Quick shot!', zh: '快速射击！' },
+    4: { en: 'Damage boost!', zh: '伤害提升！' },
+  };
+  return messages[rewardType][language];
+}
+
+function drawBonusNotice(
+  context: CanvasRenderingContext2D,
+  notice: BonusNoticeView,
+  viewport: MapViewport,
+  language: 'en' | 'zh',
+  images: GameImages,
+): void {
+  const bubble = images.gng_speechbubble;
+  if (!bubble) throw new Error('Missing game image: gng_speechbubble');
+  const scale = viewport.scaleFactor;
+  const elapsedMs = Math.max(0, 1_200 - notice.remainingMs);
+  const inProgress = Math.min(1, elapsedMs / 600);
+  const outProgress = Math.min(1, notice.remainingMs / 600);
+  const animationScale = Math.sin((inProgress * Math.PI) / 2);
+  const alpha = elapsedMs < 600
+    ? animationScale
+    : Math.sin((outProgress * Math.PI) / 2);
+  const width = bubble.naturalWidth * scale;
+  const height = bubble.naturalHeight * scale;
+  const centerX = GAME_VIEWPORT.width / 2;
+  const centerY = GAME_VIEWPORT.height / 2;
+  const text = bonusMessage(notice.rewardType, language);
+  context.save();
+  context.globalAlpha *= alpha;
+  context.translate(centerX, centerY);
+  context.scale(animationScale, animationScale);
+  context.drawImage(bubble, -width / 2, -height / 2, width, height);
+  context.font = Math.trunc(20 * scale) + 'px Georgia, serif';
+  context.fillStyle = '#fff';
+  context.shadowColor = '#000';
+  context.shadowBlur = 2 * scale;
+  context.textAlign = 'center';
+  context.textBaseline = 'alphabetic';
+  context.fillText(text, 0, (height / 2) + (20 * scale / 3));
+  context.restore();
 }
 
 function drawSelectedUnitFeedback(
@@ -219,7 +432,7 @@ function drawSelectedUnitFeedback(
   context.restore();
 }
 
-type DrawObjectKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris';
+type DrawObjectKind = 'decoration' | 'unit' | 'enemy' | 'shot' | 'wagon-debris' | 'collectable';
 
 interface DrawObject {
   id: string;
@@ -247,7 +460,7 @@ function createDrawObjects(
     kind: 'unit',
     cell: unit.cell,
     depth: unit.positionFine.y + GAME_DRAW_ORDER_ROAD_CUTOFF,
-    draw: () => drawUnit(context, unit, images, viewport),
+    draw: () => drawUnit(context, unit, images, viewport, view.elapsedMs, view.frame),
   }));
   const enemies = view.enemies.map((enemy): DrawObject => ({
     id: `enemy:${enemy.id}`,
@@ -261,17 +474,29 @@ function createDrawObjects(
     depth: shot.positionFine.y + (shot.fineZ * 100),
     draw: () => drawShot(context, shot, images, viewport),
   }));
+  const rocketSparkles = (view.rocketSparkles ?? []).map((sparkle): DrawObject => ({
+    id: `rocket-sparkle:${sparkle.id}`,
+    kind: 'shot',
+    depth: sparkle.positionFine.y + (sparkle.fineZ * 100),
+    draw: () => drawRocketSparkle(context, sparkle, images, viewport),
+  }));
   const wagonDebris = (view.wagonDebris ?? []).map((part): DrawObject => ({
     id: `wagon-debris:${part.id}`,
     kind: 'wagon-debris',
     depth: part.depthFineY + GAME_DRAW_ORDER_ROAD_CUTOFF,
     draw: () => drawWagonDebrisPart(context, part, images, viewport),
   }));
+  const collectables = (view.bonusCrates ?? []).map((crate): DrawObject => ({
+    id: `bonus-crate:${crate.id}`,
+    kind: 'collectable',
+    depth: crate.positionFine.y + (7_680 * 100),
+    draw: () => drawBonusCrate(context, crate, view.elapsedMs, view.frame, images, viewport),
+  }));
 
   const mapObjects = [...decorations, ...units].sort((left, right) => (
     left.cell!.y - right.cell!.y || left.cell!.x - right.cell!.x
   ));
-  return [...mapObjects, ...enemies, ...shots, ...wagonDebris];
+  return [...mapObjects, ...enemies, ...shots, ...rocketSparkles, ...wagonDebris, ...collectables];
 }
 
 function drawWorldObjects(
@@ -376,7 +601,7 @@ function drawEnemy(
   images: GameImages,
   viewport: MapViewport,
 ): void {
-  const vehicle = enemy.type === 4 || enemy.type === 8;
+  const vehicle = enemy.type === 4 || enemy.type === 5 || enemy.type === 6 || enemy.type === 8;
   const turn = enemy.turningAnimation;
   const deathFrame = !enemy.alive && (enemy.type === 1 || enemy.type === 2)
     ? Math.max(0, Math.min(5, 5 - Math.floor(enemy.deathRemainingMs / 100)))
@@ -386,9 +611,9 @@ function drawEnemy(
   if (!image) throw new Error('Missing game image: ' + asset);
 
   const sourceWidth = vehicle ? 48 : enemy.type === 3 ? 32 : 16;
-  const sourceHeight = vehicle ? 60 : enemy.type === 3 ? 40 : 24;
+  const sourceHeight = enemy.type === 5 || enemy.type === 6 ? 72 : vehicle ? 60 : enemy.type === 3 ? 40 : 24;
   const frameWidth = vehicle ? 32 : sourceWidth;
-  const frameHeight = vehicle ? 40 : sourceHeight;
+  const frameHeight = enemy.type === 5 || enemy.type === 6 ? 48 : vehicle ? 40 : sourceHeight;
   const tileScale = viewport.scaleFactor;
   const width = frameWidth * tileScale;
   const height = frameHeight * tileScale;
@@ -475,6 +700,44 @@ function drawShot(
   const tileScale = viewport.scaleFactor;
   const x = viewport.origin.x + (shot.positionFine.x / 240) * tileScale;
   const y = viewport.origin.y + ((shot.positionFine.y - shot.heightFine) / 240) * tileScale;
+  if (shot.imageAsset === 'sfx_rocket_explosion') {
+    const image = images.sfx_rocket_explosion;
+    if (!image) throw new Error('Missing game image: sfx_rocket_explosion');
+    const frame = Math.min(ROCKET_EXPLOSION_FRAME.count - 1, Math.max(0, shot.animationFrame));
+    const width = ROCKET_EXPLOSION_FRAME.width * tileScale;
+    const height = ROCKET_EXPLOSION_FRAME.height * tileScale;
+    context.drawImage(
+      image,
+      frame * ROCKET_EXPLOSION_FRAME.width,
+      0,
+      ROCKET_EXPLOSION_FRAME.width,
+      ROCKET_EXPLOSION_FRAME.height,
+      x - width / 2,
+      y - height,
+      width,
+      height,
+    );
+    return;
+  }
+  if (shot.imageAsset === 'sfx_poison') {
+    const image = images.sfx_poison;
+    if (!image) throw new Error('Missing game image: sfx_poison');
+    const frame = Math.min(POISON_CLOUD_FRAME.count - 1, Math.max(0, shot.animationFrame));
+    const width = POISON_CLOUD_FRAME.width * tileScale;
+    const height = POISON_CLOUD_FRAME.height * tileScale;
+    context.drawImage(
+      image,
+      frame * POISON_CLOUD_FRAME.width,
+      0,
+      POISON_CLOUD_FRAME.width,
+      POISON_CLOUD_FRAME.height,
+      x - width / 2,
+      y - height,
+      width,
+      height,
+    );
+    return;
+  }
   if (shot.imageAsset) {
     if (shot.explosionRemainingMs !== undefined) {
       const image = images.sfx_explosion;
@@ -498,15 +761,18 @@ function drawShot(
 
     const image = images[shot.imageAsset];
     if (!image) throw new Error('Missing game image: ' + shot.imageAsset);
-    const frame = Math.min(MEXICAN_DYNAMITE_FRAME.count - 1, Math.max(0, shot.animationFrame));
-    const width = MEXICAN_DYNAMITE_FRAME.width * tileScale;
-    const height = MEXICAN_DYNAMITE_FRAME.height * tileScale;
+    const frameSpec = shot.imageAsset === 'sfx_pyromaniac_rocket'
+      ? ROCKET_FRAME
+      : shot.imageAsset === 'sfx_salesman_bottle' ? SALESMAN_BOTTLE_FRAME : MEXICAN_DYNAMITE_FRAME;
+    const frame = Math.min(frameSpec.count - 1, Math.max(0, shot.animationFrame));
+    const width = frameSpec.width * tileScale;
+    const height = frameSpec.height * tileScale;
     context.drawImage(
       image,
-      frame * MEXICAN_DYNAMITE_FRAME.width,
+      frame * frameSpec.width,
       0,
-      MEXICAN_DYNAMITE_FRAME.width,
-      MEXICAN_DYNAMITE_FRAME.height,
+      frameSpec.width,
+      frameSpec.height,
       x - width / 2,
       y - height,
       width,
@@ -518,6 +784,33 @@ function drawShot(
   const bulletSize = Math.max(1, 3 * tileScale);
   context.fillStyle = '#7f0000';
   context.fillRect(x - bulletSize / 2, y - bulletSize / 2, bulletSize, bulletSize);
+}
+
+function drawRocketSparkle(
+  context: CanvasRenderingContext2D,
+  sparkle: NonNullable<GameView['rocketSparkles']>[number],
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  const image = images.sfx_rocket_sparkles;
+  if (!image) throw new Error('Missing game image: sfx_rocket_sparkles');
+  const tileScale = viewport.scaleFactor;
+  const width = ROCKET_SPARKLES_FRAME.width * tileScale;
+  const height = ROCKET_SPARKLES_FRAME.height * tileScale;
+  const x = viewport.origin.x + (sparkle.positionFine.x / 240) * tileScale;
+  const y = viewport.origin.y + (sparkle.positionFine.y / 240) * tileScale;
+  const frame = Math.min(ROCKET_SPARKLES_FRAME.count - 1, Math.max(0, sparkle.animationFrame));
+  context.drawImage(
+    image,
+    frame * ROCKET_SPARKLES_FRAME.width,
+    0,
+    ROCKET_SPARKLES_FRAME.width,
+    ROCKET_SPARKLES_FRAME.height,
+    x - width / 2,
+    y - height,
+    width,
+    height,
+  );
 }
 
 function drawInspectionLabel(
@@ -871,7 +1164,7 @@ function drawPriorityTargetFeedback(
   const offset = target.drawingOffsetFine ?? { x: 0, y: 0 };
   const centerX = viewport.origin.x + ((target.positionFine.x + offset.x) / 240) * viewport.scaleFactor;
   const feetY = viewport.origin.y + ((target.positionFine.y + offset.y) / 240) * viewport.scaleFactor;
-  const targetFrameHeight = target.type === 4 || target.type === 8 ? 40 : 24;
+  const targetFrameHeight = target.type === 5 || target.type === 6 ? 48 : target.type === 4 || target.type === 8 ? 40 : 24;
   const centerY = Math.trunc(feetY - (targetFrameHeight * viewport.scaleFactor) / 2);
   const gap = priorityCrosshairGap(view.elapsedMs);
   const left = Math.trunc(centerX - size / 2);
@@ -951,6 +1244,7 @@ export function drawGame(
   drawWorldObjects(orderedDrawObjects, drawObjects, false);
   drawPriorityTargetFeedback(context, view, images, viewport);
   drawSelectedUnitFeedback(context, view, images, viewport);
+  if (view.bonusNotice) drawBonusNotice(context, view.bonusNotice, viewport, language, images);
   drawWaveSpawnIndicators(context, view, images, viewport, displayPixelScale);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);

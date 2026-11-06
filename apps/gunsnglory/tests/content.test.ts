@@ -11,7 +11,13 @@ import {
   cowGulchUpgradeSampleContent,
 } from '../src/content/cow-gulch';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
+import {
+  apacheValleyLevelTwoContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+  techTownLevelFourCampaignContent,
+} from '../src/content/official-campaign';
 import { calculateMapViewport } from '../src/render/map-viewport';
 import { mapDecorationDestination } from '../src/render/canvas-renderer';
 import { createRoutePriorityMap } from '../src/game/route-priority';
@@ -119,6 +125,18 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: apacheValleyLevelTwoContent.title,
     globalLevel: 2,
     requiresCompletedScenarioIds: [cowGulchLevelOneContent.id],
+  }, {
+    scenarioId: fortKaboomLevelThreeContent.id,
+    contentVersion: fortKaboomLevelThreeContent.contentVersion,
+    title: fortKaboomLevelThreeContent.title,
+    globalLevel: 3,
+    requiresCompletedScenarioIds: [apacheValleyLevelTwoContent.id],
+  }, {
+    scenarioId: techTownLevelFourCampaignContent.id,
+    contentVersion: techTownLevelFourCampaignContent.contentVersion,
+    title: techTownLevelFourCampaignContent.title,
+    globalLevel: 4,
+    requiresCompletedScenarioIds: [fortKaboomLevelThreeContent.id],
   }]);
 });
 
@@ -234,10 +252,15 @@ test('reconstructs the first map decorations from original TDM object codes', ()
     [73, { asset: 'e_1x1_cactus_b', collisionBoxFine: commonCollisionBox }],
     [74, { asset: 'b_1x1_windmill', collisionBoxFine: commonCollisionBox }],
     [76, { asset: 'e_1x1_bush', collisionBoxFine: commonCollisionBox }],
-    [77, { asset: 'e_1x2_bones', collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 } }],
+    [77, {
+      asset: 'e_1x2_bones',
+      collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 },
+      fieldBlockBounds: { left: 0, right: 0, top: -1, bottom: 0 },
+    }],
     [116, {
       asset: 'b_2x1_shack', anchorOffsetX: -0.5,
       collisionBoxFine: { x: -3840, y: -1228, width: 15360, height: 3840 },
+      fieldBlockBounds: { left: -1, right: 1, top: 0, bottom: 0 },
     }],
     [126, { asset: 'e_1x1_rocks_water', collisionBoxFine: commonCollisionBox }],
   ]);

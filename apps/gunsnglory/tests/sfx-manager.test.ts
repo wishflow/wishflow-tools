@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { SoundEffectsManager, type SoundEffectRequest, type SoundEffectViewport } from '../src/audio/sfx-manager';
+import { chooseSoundVariation, SoundEffectsManager, type SoundEffectRequest, type SoundEffectViewport } from '../src/audio/sfx-manager';
+import { deriveSessionRandomSeed, JavaUtilRandom } from '../src/game/java-random';
 
 const viewport: SoundEffectViewport = {
   origin: { x: 0, y: 0 },
@@ -15,11 +16,26 @@ const revolver = (id: 0 | 1): SoundEffectRequest => ({
   assets: ['sound_revolver', 'sound_revolver2'],
 });
 
+test('chooses one independent sound variation without consuming randomness for fixed or empty assets', () => {
+  let randomCalls = 0;
+  const random = () => {
+    randomCalls += 1;
+    return randomCalls === 1 ? 0 : 0.999;
+  };
+
+  assert.equal(chooseSoundVariation(['sound_pyromaniac_1', 'sound_pyromaniac_2'], random), 'sound_pyromaniac_1');
+  assert.equal(chooseSoundVariation(['sound_pyromaniac_1', 'sound_pyromaniac_2'], random), 'sound_pyromaniac_2');
+  assert.equal(chooseSoundVariation(['sound_fixed'], random), 'sound_fixed');
+  assert.equal(chooseSoundVariation([], random), undefined);
+  assert.equal(randomCalls, 2);
+});
+
 test('filters off-screen requests before consuming a variation or starting cooldown', () => {
   let randomCalls = 0;
-  const manager = new SoundEffectsManager(() => {
+  const manager = new SoundEffectsManager((bound) => {
+    assert.equal(bound, 2);
     randomCalls += 1;
-    return 0.75;
+    return 1;
   });
 
   assert.equal(manager.request({ ...revolver(0), positionFine: { x: -2 * 7680, y: 8 * 7680 } }, viewport), undefined);
@@ -30,9 +46,10 @@ test('filters off-screen requests before consuming a variation or starting coold
 
 test('shares each 200 ms cooldown across a variation pair and releases at the boundary', () => {
   let randomCalls = 0;
-  const manager = new SoundEffectsManager(() => {
+  const manager = new SoundEffectsManager((bound) => {
+    assert.equal(bound, 2);
     randomCalls += 1;
-    return randomCalls % 2 === 0 ? 0 : 0.75;
+    return randomCalls % 2 === 0 ? 0 : 1;
   });
 
   assert.equal(manager.request(revolver(0), viewport), 'sound_revolver2');
@@ -47,7 +64,8 @@ test('shares each 200 ms cooldown across a variation pair and releases at the bo
 
 test('fixed effects use a 300 ms cooldown and do not consume variation randomness', () => {
   let randomCalls = 0;
-  const manager = new SoundEffectsManager(() => {
+  const manager = new SoundEffectsManager((bound) => {
+    assert.equal(bound, 2);
     randomCalls += 1;
     return 0;
   });
@@ -65,9 +83,10 @@ test('muting playback does not change accepted variants, cooldowns, or variation
   const simulate = (soundEnabled: boolean) => {
     let randomCalls = 0;
     const played: string[] = [];
-    const manager = new SoundEffectsManager(() => {
+    const manager = new SoundEffectsManager((bound) => {
+      assert.equal(bound, 2);
       randomCalls += 1;
-      return randomCalls % 2 === 1 ? 0.75 : 0;
+      return randomCalls % 2 === 1 ? 1 : 0;
     });
     const selected: string[] = [];
     const request = (effect: SoundEffectRequest) => {
@@ -97,4 +116,27 @@ test('screen filtering follows map camera origin and clips at the 16:9 viewport 
 
   assert.equal(manager.request({ ...revolver(0), positionFine: { x: -1 * 7680, y: 8 * 7680 } }, pannedViewport), undefined);
   assert.equal(manager.request({ ...revolver(0), positionFine: { x: 16 * 7680, y: 10 * 7680 } }, pannedViewport), 'sound_revolver');
+});
+
+test('resets cooldown state when a new session is activated', () => {
+  const manager = new SoundEffectsManager(() => 1);
+  assert.equal(manager.request(revolver(0), viewport), 'sound_revolver2');
+  assert.equal(manager.request(revolver(1), viewport), undefined);
+
+  manager.reset();
+  assert.equal(manager.request(revolver(1), viewport), 'sound_revolver2');
+});
+
+test('same StartRecord seed and audio event sequence replay the same sound choices', () => {
+  const simulate = (seed: number) => {
+    const random = new JavaUtilRandom(deriveSessionRandomSeed(seed, 'presentation'));
+    const manager = new SoundEffectsManager((bound) => random.nextInt(bound));
+    const selected = [manager.request(revolver(0), viewport)];
+    manager.advance(200);
+    selected.push(manager.request(revolver(1), viewport));
+    selected.push(chooseSoundVariation(['sound_pyromaniac_1', 'sound_pyromaniac_2'], () => random.nextDouble()));
+    return selected;
+  };
+
+  assert.deepEqual(simulate(42), simulate(42));
 });

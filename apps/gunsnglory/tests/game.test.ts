@@ -853,7 +853,7 @@ test('uses physical enemy coordinates at the strict weapon range boundary despit
   }
   const unit = view.units[0]!;
   const target = view.enemies[0]!;
-  assert.deepEqual(target.drawingOffsetFine, { x: 2560, y: -2080 });
+  assert.deepEqual(target.drawingOffsetFine, { x: -2560, y: -2080 });
   assert.equal(unit.positionFine.x - target.positionFine.x, 5 * 7680,
     'the physical centers are exactly five tiles apart horizontally');
   assert.ok(unit.weapon);
@@ -1180,7 +1180,7 @@ test('does not create the controlled wave until the start intent advances', asyn
   assert.equal(started.wave?.phase, 'active');
   assert.equal(started.enemies.length, 1);
   assert.deepEqual(started.enemies[0]?.positionFine, { x: -11520, y: 80640 });
-  assert.equal(started.enemies[0]?.speed, 490, 'seed 1234 uses Java Random nextInt(20) = 8');
+  assert.equal(started.enemies[0]?.speed, 500, 'enemy speed uses the session Util stream');
   assert.equal(started.wave?.lives, 50);
   assert.equal(session.startRecord.randomSeed, 1234);
 
@@ -1310,7 +1310,7 @@ test('special projectile arcs use the original Java float32 ratio for all four d
     { style: 3 as const, expectedHeightFine: 7681 },
     { style: 4 as const, expectedHeightFine: 6080 },
     { style: 5 as const, expectedHeightFine: 7681 },
-    { style: 6 as const, expectedHeightFine: 1122 },
+    { style: 6 as const, expectedHeightFine: 754 },
   ];
   for (const { style, expectedHeightFine } of cases) {
     const precisionScenario: ScenarioContent = {
@@ -1436,7 +1436,7 @@ test('ordinary projectile AOE uses physical impact coordinates, not group displa
     scenarioId: areaScenario.id,
     mode: 'formal',
     difficulty: 'easy',
-    randomSeed: 1,
+    randomSeed: 8,
   });
   let view = session.observe();
   for (let index = 0; index < 10 && view.enemies.length < 4; index += 1) {
@@ -1444,9 +1444,9 @@ test('ordinary projectile AOE uses physical impact coordinates, not group displa
   }
   assert.equal(view.enemies.length, 4);
   assert.deepEqual(view.enemies.map(({ drawingOffsetFine }) => drawingOffsetFine), [
+    { x: -2560, y: -2080 },
     { x: 2560, y: -2080 },
     { x: -2560, y: 4000 },
-    { x: -2560, y: -2080 },
     { x: 2560, y: 4000 },
   ]);
 
@@ -1538,7 +1538,7 @@ test('the Mexican dynamite hits inside the strict one-tile radius and leaves bou
   assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
 });
 
-test('requests the dynamite impact sound for damage style 4', async () => {
+test('requests the cannon impact sound for damage style 4', async () => {
   const styleFourScenario: ScenarioContent = {
     ...combatScenario,
     id: 'style-four-impact-sound-fixture',
@@ -1573,7 +1573,7 @@ test('requests the dynamite impact sound for damage style 4', async () => {
   advanceFor(session, 300);
   const view = advanceFor(session, 1_040);
 
-  assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_dynamite'));
+  assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_cannon'));
 });
 
 test('matches APK pre-increment attack frame thresholds for Gunslinger and Mexican', async () => {
@@ -2041,7 +2041,7 @@ test('follows the first Cow Gulch redirect and clamps variable time to the origi
   ));
   const after100 = variableSession.advance({ deltaMs: 63 });
   assert.equal(after100.enemies[0]!.positionFine.x, expectedAfter100);
-  assert.equal(after100.enemies[0]!.positionFine.x - variableStartX, 491);
+  assert.equal(after100.enemies[0]!.positionFine.x - variableStartX, 500);
 
   let steps = 0;
   while (view.enemies[0]?.direction === 'east' && steps < 1000) {
@@ -2315,7 +2315,7 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
   const record = JSON.parse(serialized) as {
     formatVersion: number;
     rulesVersion: string;
-    startRecord: { contentVersion: string; mode: string };
+    startRecord: { contentVersion: string; mode: string; rulesVersion: string };
     frames: Array<{ frame: number; deltaMs: number; tileSizePixels: number; intents: unknown[] }>;
     checkpoints: Array<{ frame: number; stateDigest: string }>;
     terminal: { frame: number; settlement: unknown; stateDigest: string };
@@ -2353,6 +2353,12 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
   const unsupportedFormatVersion = structuredClone(record);
   unsupportedFormatVersion.formatVersion = 3;
   await assert.rejects(game.replay(JSON.stringify(unsupportedFormatVersion)), (error: unknown) =>
+    (error as { code?: string }).code === 'unsupported-version');
+
+  const unsupportedRulesVersion = structuredClone(record);
+  unsupportedRulesVersion.rulesVersion = 'gng-rules-18';
+  unsupportedRulesVersion.startRecord.rulesVersion = 'gng-rules-18';
+  await assert.rejects(game.replay(JSON.stringify(unsupportedRulesVersion)), (error: unknown) =>
     (error as { code?: string }).code === 'unsupported-version');
 
   const unsupportedRandomAlgorithm = structuredClone(record) as typeof record & {
@@ -2902,7 +2908,7 @@ test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async 
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-12');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-21');
 
   session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });

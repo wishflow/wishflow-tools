@@ -88,6 +88,11 @@ export type CampaignLevelState = 'available' | 'completed' | 'locked' | 'unimple
 
 export function campaignLevelState(level: number, progress: CampaignProgressView | undefined): CampaignLevelState {
   const stage = progress?.stages.find((candidate) => candidate.globalLevel === level);
-  if (!stage) return 'unimplemented';
-  return stage.status;
+  if (stage) return stage.status;
+  const previousImplementedStage = progress?.stages
+    .filter((candidate) => candidate.globalLevel < level)
+    .sort((left, right) => right.globalLevel - left.globalLevel)[0];
+  if (!previousImplementedStage) return 'unimplemented';
+  if (previousImplementedStage.globalLevel !== level - 1) return 'locked';
+  return previousImplementedStage.status === 'completed' ? 'unimplemented' : 'locked';
 }

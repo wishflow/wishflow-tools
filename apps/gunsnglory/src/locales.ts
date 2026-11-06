@@ -27,6 +27,7 @@ export const messages = {
   'Start one pioneer sample': { en: 'Start one pioneer sample', zh: '开始单个拓荒者样本' },
   'Test defeat with one life': { en: 'Test defeat with one life', zh: '测试一条生命耗尽败北' },
   'Open upgrade rules sample': { en: 'Open upgrade rules sample', zh: '打开升级规则测试样本' },
+  'Open Tech Town train and Gatling sample': { en: 'Open Tech Town train and Gatling sample', zh: '打开 Tech Town 列车与加特林测试样本' },
   'Return to Cow Gulch sample': { en: 'Return to Cow Gulch sample', zh: '返回牛溪谷原始样本' },
   'Upgrade selected Gunslinger': { en: 'Upgrade selected Gunslinger', zh: '升级已选枪手' },
   'Confirm upgrade': { en: 'Confirm upgrade', zh: '确认升级' },
@@ -77,7 +78,6 @@ export const messages = {
   'Battle replay': { en: 'Battle replay', zh: '战局重放' },
   'Export settled battle': { en: 'Export settled battle', zh: '导出已结算战局' },
   'Import replay': { en: 'Import replay', zh: '导入重放文件' },
-  'Hire selected map unit': { en: 'Hire selected map unit', zh: '雇佣选中的地图单位' },
   'Cow Gulch game map': { en: 'Cow Gulch game map', zh: '牛溪谷游戏地图' },
   'Compare numeric schemes': { en: 'Compare numeric schemes', zh: '比较数值方案' },
   'Compare the original Cow Gulch reward with an immutable draft using matched random samples.': {

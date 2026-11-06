@@ -5,7 +5,12 @@ import test from 'node:test';
 import map from '../src/content/new-mexico-02.json';
 import { apacheValleyCampaignWaves } from '../src/content/apache-valley-waves';
 import { apacheValleyContent } from '../src/content/apache-valley';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, officialCampaignStages } from '../src/content/official-campaign';
+import {
+  apacheValleyLevelTwoContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+} from '../src/content/official-campaign';
 import { apacheValleyWaveIntros } from '../src/content/cow-gulch-wave-intros';
 import { createGame, type CampaignWaveDefinition, type ScenarioContent } from '../src/game';
 import { createRoutePriorityMap } from '../src/game/route-priority';
@@ -106,6 +111,7 @@ test('Apache Valley reconstructs fresh units, static objects, weapon stats and o
     assert.ok(existsSync(path.join(appRoot, 'public/assets', gameAssetRelativePath(asset))), `${asset} resolves to a bundled asset`);
   }
   assert.ok(existsSync(path.join(appRoot, 'public/assets/sounds/sound_indian_hugh.ogg')));
+  assert.ok(existsSync(path.join(appRoot, 'public/assets/sounds/sound_siedler.ogg')));
 });
 
 test('Apache Valley route priority keeps independent paths and converges on each matching exit', () => {
@@ -140,6 +146,8 @@ test('official Apache Valley content exposes its six source wave schedules and u
   assert.deepEqual(officialCampaignStages.map(({ scenarioId, requiresCompletedScenarioIds }) => [scenarioId, requiresCompletedScenarioIds]), [
     [cowGulchLevelOneContent.id, []],
     [apacheValleyLevelTwoContent.id, [cowGulchLevelOneContent.id]],
+    [fortKaboomLevelThreeContent.id, [apacheValleyLevelTwoContent.id]],
+    ['campaign-new-mexico-04', ['campaign-new-mexico-03']],
   ]);
 });
 
@@ -150,9 +158,9 @@ test('Apache Valley dialogue keeps the APK text order and uses only bundled spea
   assert.deepEqual(apacheValleyWaveIntros.map(({ portraitAsset, voiceSound }) => [portraitAsset, voiceSound]), [
     ['portrait_pedro', 'sound_pedro'],
     ['portrait_pedro', 'sound_pedro'],
-    ['portrait_settlers', undefined],
+    ['portrait_settlers', 'sound_siedler'],
     ['portrait_indian', 'sound_indian_hugh'],
-    ['portrait_settlers', undefined],
+    ['portrait_settlers', 'sound_siedler'],
     ['portrait_pedro', 'sound_pedro'],
   ]);
   assert.ok(apacheValleyWaveIntros.every(({ text }) => text.en.length > 0 && text.zh.length > 0));
