@@ -461,7 +461,7 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
   await expect(page.getByTestId('campaign-level-03')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-04')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-05')).toBeDisabled();
-  await expect(page.getByTestId('campaign-level-05')).toHaveAttribute('aria-label', /not implemented yet/i);
+  await expect(page.getByTestId('campaign-level-05')).toHaveAttribute('aria-label', /locked/i);
   await page.getByTestId('campaign-level-03').click();
   await page.getByTestId('campaign-stage-play').click();
   await page.getByTestId('campaign-difficulty-easy').click();
