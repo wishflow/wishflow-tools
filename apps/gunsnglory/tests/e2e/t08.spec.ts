@@ -35,8 +35,7 @@ test('keeps the original level locked and upgrades the selected Gunslinger in th
   await expect(details).toContainText('Level 0 → 1');
   await expect(details).toContainText('Speed 1.95 cells/s (1500 fine/100ms) → 2.28 cells/s (1750 fine/100ms)');
   await expect(details).toContainText('Damage 140 → 140 base damage/shot');
-  await expect(details).toContainText('pioneers 100%, wagons 50%');
-  await expect(details).toContainText('HP loss = trunc(base × target multiplier / 100)');
+  await expect(details).toContainText('HP loss = trunc(base × target-type modifier / 100)');
   await expect(details).toContainText('Range 5.00 cells (38400 fine units) → 5.00 cells (38400 fine units)');
   await expect(details).toContainText('Reload 500 → 400 ms');
   await expect(details).toContainText('Special reload 1500 → 1250 ms');

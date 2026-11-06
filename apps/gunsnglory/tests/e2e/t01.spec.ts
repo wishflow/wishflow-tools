@@ -6,6 +6,7 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await page.goto('/?testBattle=1');
   const canvas = page.getByTestId('game-canvas');
   const status = page.getByTestId('selection-status');
+  const hireDialog = page.getByTestId('map-hire-confirmation');
 
   await expect(canvas).toBeVisible();
   await expect(status).toContainText('No unit selected');
@@ -33,6 +34,10 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
 
   await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(status).toContainText('Gunslinger is waiting to be hired');
+  await expect(hireDialog).toBeVisible();
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
+  await page.getByTestId('cancel-map-hire').click();
+  await expect(hireDialog).toBeHidden();
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
   await expect(page.getByTestId('recruit-pool-status')).toContainText('empty');
   await clickCanvasPoint(page, { x: 250, y: 24 });
@@ -40,6 +45,10 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
 
   await clickCanvasPoint(page, cowGulchMarkerPoint(6, 5));
   await expect(status).toContainText('Mexican is waiting to be hired');
+  await expect(hireDialog).toBeVisible();
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Mexican for $100?');
+  await page.getByTestId('cancel-map-hire').click();
+  await expect(hireDialog).toBeHidden();
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
