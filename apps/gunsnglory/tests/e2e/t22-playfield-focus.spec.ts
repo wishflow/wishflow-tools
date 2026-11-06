@@ -49,7 +49,7 @@ for (const profile of viewports) {
     await expect.poll(() => elementIsInsideGameFrame('[data-testid="simulation-speed"]')).toBe(true);
     await expect.poll(() => elementIsInsideGameFrame('[data-testid="sound-toggle"]')).toBe(true);
     if (profile.viewport.width <= 520) {
-      const toolbarLayout = await page.evaluate(() => {
+      const readToolbarLayout = () => page.evaluate(() => {
         const summary = document.querySelector<HTMLElement>('[data-testid="game-toolbar-toggle"]')?.getBoundingClientRect();
         const actionsElement = document.querySelector<HTMLElement>('.game-toolbar-actions');
         const actions = actionsElement?.getBoundingClientRect();
@@ -70,9 +70,11 @@ for (const profile of viewports) {
           canScroll: actionsElement.scrollWidth > actionsElement.clientWidth,
         };
       });
-      expect(toolbarLayout.overlaps).toBe(false);
-      expect(toolbarLayout.primaryControlsFit).toBe(true);
-      expect(toolbarLayout.canScroll).toBe(true);
+      await expect.poll(readToolbarLayout).toEqual({
+        overlaps: false,
+        primaryControlsFit: true,
+        canScroll: true,
+      });
 
       const toolbarToggle = page.getByTestId('game-toolbar-toggle');
       await toolbarToggle.tap();
