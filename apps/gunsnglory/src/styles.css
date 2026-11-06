@@ -2522,6 +2522,13 @@ body.gng-game-fullscreen .usagi-widget {
     padding-right: 0;
   }
 
+  .game-toolbar-actions [data-testid="start-wave"],
+  .game-toolbar-actions [data-action="recruit-unit"],
+  .game-toolbar-actions [data-action="upgrade-unit"],
+  .game-toolbar-actions .map-zoom-controls {
+    order: 1;
+  }
+
   .game-toolbar button {
     min-height: 2rem;
     padding: 0.24rem 0.3rem;
