@@ -29,6 +29,8 @@
 
 静态清单已整理60关配置、527条 `newWaves`、1,377条 `addToWave`、86个生成池动作、63个地图文件、21个 unit type 映射、14组共44行升级数据、9行敌人设计数据，以及943个 PNG 路径和67个已导出 OGG。数组行数、文件数和 tile 标记都不是实际敌人数、可玩关卡数或功能覆盖率。八名可雇用角色为 Desperado、Mexican、Cannon、Indian、Grandpa、Sniper、Pyromaniac、Salesman；车辆/武器组件含 Train、Gatling、Steamer、DoubleCannon；特殊对象含炸药触发器/箱、Gambler/Casino。实际首次出现和解锁由关卡映射及消费者共同决定。
 
+Tech Town 是战役第 4 关，原版玩家生成池仅含 type 1–4。地图上预置的特殊角色按同一正式档案解锁：Grandpa 在已完成关卡30后出现，Sniper 在40后出现，Gambler 与 Pyromaniac 在50后出现，Salesman 在60后出现；Gambler 与 Casino 必须同步出现或隐藏。原版当前关卡等级门槛分别为21、31、41、51，因此在 map04 不会直接开放这些角色；此处由已完成里程碑决定。
+
 ## 世界坐标、地图与移动
 
 世界 fine 坐标每格为7680。Cow Gulch 是17×17地图。TDM action1/2/3分别表达生成点、转向点与出口，敌人在格心消费路线方向和分支。地图底图、道路、PriorityMap、碰撞对象和屏幕像素是不同数据；PriorityMap 不是寻路器。敌人路线按原版字段和状态实现，不能为视觉观感移动路线，也不能以 A*、通用物理或背景碰撞替换未经确认的规则。
