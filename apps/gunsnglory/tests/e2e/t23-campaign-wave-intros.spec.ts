@@ -194,7 +194,7 @@ test('keeps a reusable bilingual controls guide inside the game window without a
   await page.goto('/?testBattle=1');
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeVisible();
-  await expect.poll(() => intro.evaluate((dialog) => dialog.parentElement?.classList.contains('game-frame'))).toBe(true);
+  await expect.poll(() => intro.evaluate((dialog) => dialog.closest('.game-frame') !== null)).toBe(true);
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(intro).toBeHidden();
   await page.getByRole('button', { name: 'Pause battle' }).click();

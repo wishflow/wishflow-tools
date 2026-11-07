@@ -18,15 +18,7 @@ export interface GameViewportSize {
 }
 
 export const BASE_GAME_VIEWPORT: Readonly<GameViewportSize> = Object.freeze({ width: 1024, height: 576 });
-export let GAME_VIEWPORT: Readonly<GameViewportSize> = BASE_GAME_VIEWPORT;
-
-export function setGameViewport(width: number, height: number): void {
-  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    throw new RangeError('Game viewport dimensions must be finite and positive');
-  }
-  if (Math.abs(GAME_VIEWPORT.width - width) < 0.01 && Math.abs(GAME_VIEWPORT.height - height) < 0.01) return;
-  GAME_VIEWPORT = Object.freeze({ width, height });
-}
+export const GAME_VIEWPORT: Readonly<GameViewportSize> = BASE_GAME_VIEWPORT;
 
 const FINE_UNITS_PER_CELL = 7680;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });

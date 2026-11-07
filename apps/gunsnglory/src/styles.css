@@ -350,6 +350,12 @@ body {
   box-shadow: inset 0 0 0.5rem rgba(0, 0, 0, 0.55);
 }
 
+.game-stage {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+}
+
 .game-frame canvas {
   display: block;
   width: 100%;
@@ -361,7 +367,7 @@ body {
 
 .game-frame-fullscreen-toggle {
   position: absolute;
-  z-index: 12;
+  z-index: 20;
   top: 0.5rem;
   right: 0.5rem;
   display: grid;
@@ -400,7 +406,7 @@ body {
 
 .game-frame-fullscreen-status {
   position: absolute;
-  z-index: 12;
+  z-index: 20;
   top: 3.25rem;
   right: 0.5rem;
   max-width: min(72%, 28rem);
@@ -420,6 +426,34 @@ body {
   display: none;
 }
 
+.portrait-orientation-overlay {
+  position: absolute;
+  z-index: 14;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  color: #fff0d0;
+  background: #100d09;
+  text-align: center;
+}
+
+.portrait-orientation-overlay p {
+  max-width: 28rem;
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.game-frame.is-portrait-fullscreen .portrait-orientation-overlay {
+  display: flex;
+}
+
+.game-frame.is-portrait-fullscreen .game-frame-fullscreen-status {
+  display: none;
+}
+
 .game-frame:fullscreen,
 .game-frame.is-fullscreen {
   position: fixed;
@@ -435,6 +469,17 @@ body {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.game-frame:fullscreen .game-stage,
+.game-frame.is-fullscreen .game-stage {
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  width: 1024px;
+  height: 576px;
+  transform: translate(-50%, -50%) scale(var(--gng-fullscreen-scale, 1));
+  transform-origin: center;
 }
 
 .game-frame:fullscreen::backdrop,
@@ -569,9 +614,9 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-menu-home-actions {
   position: absolute;
-  inset: 20% 2% 2%;
+  inset: 16% 2% 2%;
   display: grid;
-  grid-template-rows: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(4, minmax(0, 1fr));
   align-items: center;
   justify-items: center;
   gap: 1.5%;
@@ -1183,6 +1228,61 @@ body.gng-game-fullscreen .usagi-widget {
   text-align: center;
 }
 
+.campaign-profile-archive {
+  margin-top: 0.8em;
+  border-top: 1px solid rgba(234, 197, 139, 0.45);
+  padding-top: 0.55em;
+}
+
+.campaign-profile-archive h3 {
+  margin: 0;
+  color: #ffd892;
+  font-size: clamp(9px, 1.35cqw, 14px);
+  text-align: center;
+}
+
+.campaign-profile-archive-actions,
+.experiment-archive-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.campaign-profile-archive-actions button,
+.campaign-profile-archive-actions .replay-import-label {
+  min-height: 2rem;
+  padding: 0.35em 0.65em;
+  border: 1px solid #d8af72;
+  border-radius: 0.35rem;
+  color: #fff2d9;
+  background: rgba(122, 77, 34, 0.8);
+  font: inherit;
+  font-size: clamp(8px, 1.05cqw, 11px);
+  font-weight: 700;
+}
+
+.campaign-profile-archive-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.campaign-profile-archive input[type="file"],
+.experiment-archive-actions input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 .campaign-exit-confirmation {
   z-index: 20;
   max-width: min(90%, 520px);
@@ -1214,20 +1314,20 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 @media (max-width: 520px) {
-  .campaign-menu-map {
+  body:not(.gng-game-fullscreen) .campaign-menu-map {
     width: 74%;
   }
 
-  .campaign-menu-card {
+  body:not(.gng-game-fullscreen) .campaign-menu-card {
     width: 84%;
     max-height: 90%;
   }
 
-  .campaign-menu-home-brand {
+  body:not(.gng-game-fullscreen) .campaign-menu-home-brand {
     padding: 7% 3% 2%;
   }
 
-  .campaign-menu-home-board {
+  body:not(.gng-game-fullscreen) .campaign-menu-home-board {
     width: 96%;
     height: 88%;
   }
@@ -1382,7 +1482,7 @@ body.gng-game-fullscreen .usagi-widget {
   color: #ffe8c1;
   background: rgba(81, 56, 33, 0.94);
   font: inherit;
-  font-size: clamp(0.72rem, 1.15vw, 0.86rem);
+  font-size: clamp(0.72rem, 1.15cqw, 0.86rem);
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -1443,8 +1543,8 @@ body.gng-game-fullscreen .usagi-widget {
   z-index: 7;
   right: 0;
   bottom: calc(100% + 0.5rem);
-  width: min(26rem, calc(100vw - 1.5rem));
-  max-height: min(55vh, 18rem);
+  width: min(26rem, calc(100cqw - 1.5rem));
+  max-height: min(55cqh, 18rem);
   overflow: auto;
   padding: 0.75rem 1rem 0.75rem 2rem;
   border: 1px solid rgba(255, 225, 168, 0.56);
@@ -1470,7 +1570,7 @@ body.gng-game-fullscreen .usagi-widget {
   width: min(88%, 30rem);
   max-height: 90%;
   overflow: auto;
-  padding: clamp(1rem, 4vw, 1.75rem);
+  padding: clamp(1rem, 4cqw, 1.75rem);
   border: 1px solid rgba(255, 225, 168, 0.7);
   border-radius: 0.8rem;
   background: rgba(30, 25, 20, 0.96);
@@ -1624,6 +1724,44 @@ body.gng-game-fullscreen .usagi-widget {
   align-items: end;
   flex-wrap: wrap;
   gap: 0.65rem;
+}
+
+.experiment-archive-actions button,
+.experiment-archive-actions .replay-import-label {
+  min-height: 2.3rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(130, 211, 195, 0.52);
+  border-radius: 0.55rem;
+  color: #e1fff6;
+  background: #24413c;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.experiment-archive-actions button:disabled,
+.experiment-archive-actions .replay-import-label:has(input:disabled) {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.experiment-archive-actions button:hover,
+.experiment-archive-actions .replay-import-label:hover {
+  background: #31584f;
+}
+
+.experiment-archive-actions :focus-visible,
+.experiment-archive-actions .replay-import-label:focus-within {
+  outline: 2px solid #9ee9e2;
+  outline-offset: 2px;
+}
+
+.experiment-panel [data-testid="experiment-archive-status"] {
+  min-height: 1.4em;
+  overflow-wrap: anywhere;
+  color: #c5e4d7;
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .experiment-controls label,
@@ -1981,7 +2119,7 @@ body.gng-game-fullscreen .usagi-widget {
 .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
   color: #23160c;
   font-family: Georgia, "Noto Serif CJK SC", serif;
-  font-size: clamp(0.85rem, 1.45vw, 1.25rem);
+  font-size: clamp(0.85rem, 1.45cqw, 1.25rem);
   line-height: 1.25;
 }
 
@@ -2303,70 +2441,70 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 @media (max-width: 600px) {
-  .gambler-confirmation {
+  body:not(.gng-game-fullscreen) .gambler-confirmation {
     max-height: calc(100% - 0.25rem);
     padding: 0.35rem;
   }
 
-  .gambler-dialog-heading {
+  body:not(.gng-game-fullscreen) .gambler-dialog-heading {
     gap: 0.35rem;
     margin-bottom: 0.1rem;
   }
 
-  .gambler-dialog-heading > img {
+  body:not(.gng-game-fullscreen) .gambler-dialog-heading > img {
     width: 1.8rem;
   }
 
-  .gambler-dialog-heading h2 {
+  body:not(.gng-game-fullscreen) .gambler-dialog-heading h2 {
     margin-bottom: 0.05rem;
     font-size: 0.84rem;
   }
 
-  .gambler-dialog-heading p,
-  .gambler-result,
-  .gambler-cash {
+  body:not(.gng-game-fullscreen) .gambler-dialog-heading p,
+  body:not(.gng-game-fullscreen) .gambler-result,
+  body:not(.gng-game-fullscreen) .gambler-cash {
     font-size: 0.65rem;
     line-height: 1.12;
   }
 
-  .gambler-cash {
+  body:not(.gng-game-fullscreen) .gambler-cash {
     margin: 0.1rem 0 0.2rem;
   }
 
-  .gambler-cards {
+  body:not(.gng-game-fullscreen) .gambler-cards {
     gap: 0.12rem;
     margin: 0.05rem 0 0.12rem;
   }
 
-  .gambler-card {
+  body:not(.gng-game-fullscreen) .gambler-card {
     flex-basis: clamp(1.9rem, 7.8cqw, 2.4rem);
     width: clamp(1.9rem, 7.8cqw, 2.4rem);
   }
 
-  .gambler-card-rank,
-  .gambler-card-suit {
+  body:not(.gng-game-fullscreen) .gambler-card-rank,
+  body:not(.gng-game-fullscreen) .gambler-card-suit {
     transform: scale(0.72);
     transform-origin: top left;
   }
 
-  .gambler-card-suit {
+  body:not(.gng-game-fullscreen) .gambler-card-suit {
     top: 0.82rem;
   }
 
-  .gambler-card-rank::after,
-  .gambler-card-suit::after {
+  body:not(.gng-game-fullscreen) .gambler-card-rank::after,
+  body:not(.gng-game-fullscreen) .gambler-card-suit::after {
     display: none;
   }
 
-  .gambler-result {
+  body:not(.gng-game-fullscreen) .gambler-result {
     margin: 0.05rem 0 0.12rem;
   }
 
-  .gambler-actions {
+  body:not(.gng-game-fullscreen) .gambler-actions {
     gap: 0.35rem;
   }
 
-  .gambler-actions button {
+  body:not(.gng-game-fullscreen) .gambler-actions button {
     min-width: 5rem;
     min-height: 2.5rem;
     padding: 0.35rem 0.6rem;
@@ -2395,21 +2533,21 @@ body.gng-game-fullscreen .usagi-widget {
     padding: 0.75rem;
   }
 
-  .campaign-wave-intro {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro {
     width: min(92%, 42rem);
     max-height: calc(100% - 0.125rem);
   }
 
-  .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
     top: -28%;
     width: 30%;
   }
 
-  .campaign-wave-intro-copy {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-copy {
     inset: 22% 10% 27%;
   }
 
-  .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
     font-size: clamp(0.72rem, 3.2vw, 1rem);
     line-height: 1.22;
   }
@@ -2612,16 +2750,16 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 @media (max-width: 360px) {
-  .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
     top: -26%;
     width: 29%;
   }
 
-  .campaign-wave-intro-copy {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-copy {
     inset: 23% 9% 28%;
   }
 
-  .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
     font-size: 0.68rem;
     line-height: 1.18;
   }
@@ -2641,20 +2779,20 @@ body.gng-game-fullscreen .usagi-widget {
     width: min(100%, calc((100dvh - 1rem) * 16 / 9));
   }
 
-  .campaign-wave-intro {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro {
     width: min(62%, 42rem);
   }
 
-  .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
     top: -29%;
     width: 25%;
   }
 
-  .campaign-wave-intro-copy {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-copy {
     inset: 22% 10% 26%;
   }
 
-  .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
+  body:not(.gng-game-fullscreen) .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
     font-size: clamp(0.76rem, 1.6vw, 1rem);
     line-height: 1.2;
   }

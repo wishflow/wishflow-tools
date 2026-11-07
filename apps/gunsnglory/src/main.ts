@@ -18,7 +18,7 @@ import { apacheValleyContent } from './content/apache-valley';
 import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
 import { techTownTrainTestContent } from './content/tech-town-train-sample';
 import { gamblerDialogAssets } from './content/gambler-dialog-assets';
-import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas, setGameViewport } from './render/canvas-renderer';
+import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages, techTownLevelFourCampaignContent } from './content/official-campaign';
 import { techTownWaveIntros } from './content/tech-town-wave-intros';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
@@ -39,7 +39,7 @@ import {
   screenToMapCell,
   type MapCamera,
 } from './render/map-viewport';
-import { fitAspectViewport, fitLogicalViewportToScreen, toLogicalPoint } from './render/viewport';
+import { fitAspectViewport, toLogicalPoint } from './render/viewport';
 import { gameAssetRelativePath } from './render/game-asset-path';
 import { DEFAULT_SIMULATION_SPEED, normalizeSimulationSpeed, SimulationTimeAccumulator } from './game/time-scaling';
 import { chooseSoundVariation, SoundEffectsManager } from './audio/sfx-manager';
@@ -47,7 +47,16 @@ import { deriveSessionRandomSeed, JavaUtilRandom } from './game/java-random';
 import { acquireAudioPlayer, silenceAudioPlayers } from './audio/audio-playback';
 import { GameOpenError, GameReplayError, isGameDifficulty } from './game';
 import { summarizeEnemyDefeats, type EnemyDefeatSummary } from './ui/combat-feedback';
-import { createExperiments, type ExperimentComparisonReport } from './experiments';
+import {
+  createExperiments,
+  type ExperimentArchiveMergeResult,
+  type ExperimentComparisonReport,
+} from './experiments';
+import {
+  ExperimentArchiveError,
+  parseExperimentArchive,
+  serializeExperimentArchive,
+} from './experiments/experiment-archive';
 import type {
   GameEvent,
   CampaignEnemyType,
@@ -65,6 +74,7 @@ import type {
   UnitShotSound,
 } from './game';
 import { ProgressError, type CampaignProgressView, type ProfileView, type SettlementSaveResult } from './progress';
+import { ProfileArchiveError, parseProfileArchive, serializeProfileArchive } from './progress/profile-archive';
 import { messages } from './locales';
 import './styles.css';
 
@@ -89,9 +99,8 @@ app.innerHTML = [
   '    <section class="asset-load-error" data-testid="asset-load-error" role="alert" hidden><p data-testid="asset-load-error-message"></p><button type="button" data-testid="retry-assets" data-action="retry-assets">Retry loading game resources</button></section>',
   '    <div class="scene-heading" hidden><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
   '    <div class="game-frame">',
+  '      <div class="game-stage" data-testid="game-stage">',
   '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
-  '      <button type="button" class="game-frame-fullscreen-toggle" data-testid="fullscreen-toggle" data-action="toggle-fullscreen" aria-pressed="false" aria-describedby="fullscreen-status">Enter fullscreen</button>',
-  '      <p class="game-frame-fullscreen-status" id="fullscreen-status" data-testid="fullscreen-status" role="status" aria-live="polite" hidden></p>',
   '      <section class="campaign-menu-screen" data-testid="campaign-menu-screen" aria-label="Campaign menu">',
   '        <div class="campaign-menu-view" data-testid="campaign-menu-view"></div>',
   '      </section>',
@@ -205,6 +214,10 @@ app.innerHTML = [
   '          </div>',
   '        </div>',
   '      </dialog>',
+  '      </div>',
+  '      <button type="button" class="game-frame-fullscreen-toggle" data-testid="fullscreen-toggle" data-action="toggle-fullscreen" aria-pressed="false" aria-describedby="fullscreen-status">Enter fullscreen</button>',
+  '      <p class="game-frame-fullscreen-status" id="fullscreen-status" data-testid="fullscreen-status" role="status" aria-live="polite" hidden></p>',
+  '      <div class="portrait-orientation-overlay" data-testid="portrait-orientation-overlay" role="alert" aria-hidden="true"><p>Rotate your device to landscape to continue.</p></div>',
   '    </div>',
   '    <details class="archive-panel" data-testid="archive-panel" hidden>',
   '      <summary data-locale="Archive and testing tools">Archive and testing tools</summary>',
@@ -257,6 +270,11 @@ app.innerHTML = [
   '        <button type="button" data-testid="compare-schemes" data-action="compare-schemes" data-locale="Compare schemes">Compare schemes</button>',
   '        <button type="button" data-testid="save-comparison" data-action="save-comparison" data-locale="Save comparison" disabled>Save comparison</button>',
   '      </div>',
+  '      <div class="experiment-archive-actions">',
+  '        <button type="button" data-testid="export-experiment-archive" data-locale="Export experiment archive">Export experiment archive</button>',
+  '        <label class="replay-import-label" data-locale="Import experiment archive">Import experiment archive<input type="file" data-testid="import-experiment-archive" accept="application/json,.json" aria-label="Import experiment archive"></label>',
+  '      </div>',
+  '      <p data-testid="experiment-archive-status" role="status" aria-live="polite"></p>',
   '      <div class="saved-experiment-controls">',
   '        <label for="saved-comparison-select" data-locale="Saved comparisons">Saved comparisons',
   '          <select id="saved-comparison-select" data-testid="saved-comparison-select"><option value="" data-locale="No saved comparisons">No saved comparisons</option></select>',
@@ -319,10 +337,13 @@ registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const gameFrameElement = app.querySelector<HTMLElement>('.game-frame');
+const gameStageElement = app.querySelector<HTMLElement>('[data-testid="game-stage"]');
 const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
 const fullscreenToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="fullscreen-toggle"]');
 const fullscreenStatusElement = app.querySelector<HTMLElement>('[data-testid="fullscreen-status"]');
+const portraitOrientationOverlayElement = app.querySelector<HTMLElement>('[data-testid="portrait-orientation-overlay"]');
+const portraitOrientationMessageElement = portraitOrientationOverlayElement?.querySelector<HTMLElement>('p');
 const mapZoomControlsElement = app.querySelector<HTMLElement>('[data-testid="map-zoom-controls"]');
 const mapZoomOutButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="map-zoom-out"]');
 const mapZoomInButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="map-zoom-in"]');
@@ -441,14 +462,18 @@ const experimentCashRewardInputElement = app.querySelector<HTMLInputElement>('[d
 const experimentSampleCountSelectElement = app.querySelector<HTMLSelectElement>('[data-testid="experiment-sample-count"]');
 const experimentStatusElement = app.querySelector<HTMLElement>('[data-testid="experiment-status"]');
 const saveComparisonButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="save-comparison"]');
+const exportExperimentArchiveButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="export-experiment-archive"]');
+const importExperimentArchiveInputElement = app.querySelector<HTMLInputElement>('[data-testid="import-experiment-archive"]');
+const experimentArchiveStatusElement = app.querySelector<HTMLElement>('[data-testid="experiment-archive-status"]');
 const savedComparisonSelectElement = app.querySelector<HTMLSelectElement>('[data-testid="saved-comparison-select"]');
 const openComparisonButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="open-comparison"]');
 const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="load-more-comparisons"]');
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !gameFrameElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
-  || !fullscreenStatusElement || !mapZoomControlsElement || !mapZoomOutButtonElement
+if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
+  || !fullscreenStatusElement || !portraitOrientationOverlayElement || !portraitOrientationMessageElement
+  || !mapZoomControlsElement || !mapZoomOutButtonElement
   || !mapZoomInButtonElement || !mapZoomResetButtonElement || !mapZoomLevelElement
   || !sceneHeadingElement || !gameToolbarElement
   || !campaignExitConfirmationElement || !campaignPanelElement
@@ -490,16 +515,20 @@ if (!canvasElement || !gameFrameElement || !campaignMenuScreenElement || !campai
   || !exportReplayButton || !importReplayInput || !replayStatusElement
   || !compareSchemesButtonElement || !experimentCashRewardInputElement || !experimentSampleCountSelectElement
   || !experimentStatusElement || !experimentReportElement || !experimentReportSummaryElement
+  || !exportExperimentArchiveButtonElement || !importExperimentArchiveInputElement || !experimentArchiveStatusElement
   || !saveComparisonButtonElement || !savedComparisonSelectElement || !openComparisonButtonElement
   || !loadMoreComparisonsButtonElement || !savedComparisonStatusElement) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
 const gameFrame: HTMLElement = gameFrameElement;
+const gameStage: HTMLElement = gameStageElement;
 const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
 const fullscreenToggleButton: HTMLButtonElement = fullscreenToggleButtonElement;
 const fullscreenStatus: HTMLElement = fullscreenStatusElement;
+const portraitOrientationOverlay: HTMLElement = portraitOrientationOverlayElement;
+const portraitOrientationMessage: HTMLElement = portraitOrientationMessageElement;
 const mapZoomControls: HTMLElement = mapZoomControlsElement;
 const mapZoomOutButton: HTMLButtonElement = mapZoomOutButtonElement;
 const mapZoomInButton: HTMLButtonElement = mapZoomInButtonElement;
@@ -618,6 +647,9 @@ const experimentCashRewardInput: HTMLInputElement = experimentCashRewardInputEle
 const experimentSampleCountSelect: HTMLSelectElement = experimentSampleCountSelectElement;
 const experimentStatus: HTMLElement = experimentStatusElement;
 const saveComparisonControl: HTMLButtonElement = saveComparisonButtonElement;
+const exportExperimentArchiveControl: HTMLButtonElement = exportExperimentArchiveButtonElement;
+const importExperimentArchiveControl: HTMLInputElement = importExperimentArchiveInputElement;
+const experimentArchiveStatus: HTMLElement = experimentArchiveStatusElement;
 const savedComparisonSelect: HTMLSelectElement = savedComparisonSelectElement;
 const openComparisonControl: HTMLButtonElement = openComparisonButtonElement;
 const loadMoreComparisonsControl: HTMLButtonElement = loadMoreComparisonsButtonElement;
@@ -656,11 +688,16 @@ let profile: ProfileView = {
   completedScenarios: [],
   highScores: {},
 };
+type ProfileArchiveStatusKey = 'exported' | 'imported' | 'imported-refresh-failed' | 'cancelled' | 'invalid' | 'unsupported' | 'failed';
+let profileArchiveStatusKey: ProfileArchiveStatusKey | undefined;
+let profileArchiveBusy = false;
 let campaignProgressView: CampaignProgressView | undefined;
 type CampaignMenuScreenState = 'home' | 'regions' | 'levels' | 'overview' | 'difficulty' | 'options' | 'help';
 let campaignMenuState: CampaignMenuScreenState = 'home';
 let selectedMenuRegionId: CampaignRegionId = 'new-mexico';
 let selectedMenuLevel = 1;
+let freePlayMenuActive = false;
+let freePlayDifficulty: GameDifficulty = 'easy';
 let menuReturnWasPaused = false;
 let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'difficulty-locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
 let campaignSelectionBusy = false;
@@ -680,7 +717,7 @@ let profileLoadFailed = false;
 let profileLoadErrorCode: string | undefined;
 let profileRecoveryStatusKey: 'backup-exported' | 'export-failed' | 'reset-failed' | 'profile-reset' | 'profile-refreshed' | undefined;
 let corruptProfileBackup: string | undefined;
-let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | 'replay' | undefined;
+let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | 'free' | 'replay' | undefined;
 let activeSettlementRecord: GameSettlementRecord | undefined;
 type PendingFormalSettlement = {
   record: GameSettlementRecord;
@@ -765,6 +802,7 @@ const languageMessages = {
       if (scenarioId === cowGulchDefeatContent.id) return 'Defeat-path sample: no defenders, one starting life, and no official campaign progress.';
       return 'This scene is not part of official campaign progress.';
     },
+    freePlayCaption: (caption: string) => `FREE PLAY · ${caption} Free play does not change campaign progress, high scores, unlocks, or saved difficulty.`,
     openCampaignStage: (name: string) => `Open ${name}`,
     campaignLocked: (name: string) => `${name} is locked. Complete its prerequisites first.`,
     campaignOpening: (name: string) => `Opening ${name}…`,
@@ -818,7 +856,8 @@ const languageMessages = {
     fullscreenRequestFailed: 'Could not enter fullscreen. Use your browser’s fullscreen control instead.',
     fullscreenExitFailed: 'Could not exit fullscreen. Use Escape or your browser’s fullscreen control.',
     fullscreenLandscapeLocked: 'Landscape orientation is enabled.',
-    fullscreenLandscapeUnavailable: 'Fullscreen is active. Rotate your device to landscape for the best view.',
+    fullscreenLandscapeUnavailable: 'Fullscreen is active. Rotate your device to landscape to continue.',
+    fullscreenRotateToLandscape: 'Rotate your device to landscape to continue.',
     mapZoomGroup: 'Map zoom',
     mapZoomLevel: 'Map zoom level',
     mapZoomIn: 'Zoom in',
@@ -923,6 +962,7 @@ const languageMessages = {
     retryPendingSettlement: 'Retry pending save',
     settlementDebug: 'Debug result · not added to the saved profile.',
     settlementReplay: 'Replay result · not added to the saved profile.',
+    settlementFree: 'Free play result · not added to the saved profile.',
     replayExported: 'Replay file exported.',
     replayImporting: 'Checking and replaying battle…',
     replayVerified: (checkpointCount: number, outcome: string) => `Replay verified · ${checkpointCount} checkpoints · ${outcome}.`,
@@ -974,6 +1014,7 @@ const languageMessages = {
       if (scenarioId === cowGulchDefeatContent.id) return '败北流程样本：不部署防守单位，初始生命为 1，不计入正式战役进度。';
       return '此场景不属于正式战役进度。';
     },
+    freePlayCaption: (caption: string) => `自由游玩 · ${caption} 自由局不会更改战役进度、最高分、解锁状态或已保存难度。`,
     openCampaignStage: (name: string) => `进入${name}`,
     campaignLocked: (name: string) => `${name}尚未解锁，请先完成前置关卡。`,
     campaignOpening: (name: string) => `正在进入${name}…`,
@@ -1027,7 +1068,8 @@ const languageMessages = {
     fullscreenRequestFailed: '无法进入全屏，请使用浏览器的全屏控制。',
     fullscreenExitFailed: '无法退出全屏，请按 Esc 键或使用浏览器的全屏控制。',
     fullscreenLandscapeLocked: '已锁定为横屏。',
-    fullscreenLandscapeUnavailable: '已进入全屏，请手动将设备旋转至横屏以获得最佳显示效果。',
+    fullscreenLandscapeUnavailable: '已进入全屏，请将设备旋转为横屏后继续。',
+    fullscreenRotateToLandscape: '请将设备旋转为横屏后继续。',
     mapZoomGroup: '地图缩放',
     mapZoomLevel: '地图缩放倍率',
     mapZoomIn: '放大地图',
@@ -1132,6 +1174,7 @@ const languageMessages = {
     retryPendingSettlement: '重试保存结算',
     settlementDebug: '调试结果 · 不会写入已保存档案。',
     settlementReplay: '重放结果 · 不会写入已保存档案。',
+    settlementFree: '自由游玩结果 · 不会写入已保存档案。',
     replayExported: '战局文件已导出。',
     replayImporting: '正在检查并重放战局…',
     replayVerified: (checkpointCount: number, outcome: string) => `重放验证通过 · ${checkpointCount} 个检查点 · ${outcome}。`,
@@ -1248,7 +1291,12 @@ function gamblerCardLabel(card: GamblerCardView, language: keyof typeof gamblerD
 
 const campaignMenuCopy = {
   en: {
-    start: 'START', help: 'HELP', options: 'OPTIONS', sound: 'SOUND',
+    start: 'START', freePlay: 'FREE PLAY', help: 'HELP', options: 'OPTIONS', sound: 'SOUND',
+    freePlayMenu: 'Free Play menu', freePlayRegionHeading: 'Choose a region for Free Play',
+    freePlayRegionHint: 'Free Play opens the four implemented campaign levels and any difficulty, without campaign unlock requirements.',
+    freePlayLevelHint: (available: number) => `${available}/10 implemented levels available in Free Play. Other levels are not implemented yet.`,
+    freePlayScoreNote: 'Free play does not change the saved campaign score or progress.',
+    freePlayDifficultyNotice: 'Free play results do not change campaign progress, high scores, unlocks, or saved difficulty.',
     chooseRegion: 'Choose a region', chooseLevel: 'Select a level',
     regionHint: 'Choose a region to view its ten campaign levels.',
     levelHint: 'Select an unlocked level. Unimplemented levels are shown with a lock.',
@@ -1275,6 +1323,16 @@ const campaignMenuCopy = {
     ],
     optionsTitle: 'OPTIONS', speed: 'Simulation speed',
     speedHelp: 'Adjust the test speed from 0.25× to 4×.',
+    profileArchiveTitle: 'Profile archive',
+    profileArchiveHelp: 'Export or replace this browser’s campaign profile. This file is separate from experiment data and battle replays.',
+    exportProfileArchive: 'Export profile', importProfileArchive: 'Import profile',
+    confirmProfileImport: 'Replace the current profile with this file? Existing campaign progress and settings will be replaced.',
+    profileArchiveStatus: {
+      exported: 'Profile archive downloaded.', imported: 'Profile archive imported and campaign progress refreshed.',
+      'imported-refresh-failed': 'Profile archive was imported, but the campaign view could not be refreshed. Reload the profile before starting a battle.',
+      cancelled: 'Profile import cancelled.', invalid: 'Profile file is invalid or damaged.',
+      unsupported: 'Profile file format or version is not supported.', failed: 'Profile could not be imported or exported.',
+    },
     selectRegion: (name: string) => `Select ${name}`,
     selectLevel: (number: number, title: string, state: string) => `Level ${number}: ${title}. ${state}`,
     levelNumber: (number: number) => `LEVEL ${String(number).padStart(2, '0')}`,
@@ -1283,7 +1341,12 @@ const campaignMenuCopy = {
     campaign: 'Campaign',
   },
   zh: {
-    start: '开始', help: '帮助', options: '选项', sound: '音效',
+    start: '开始', freePlay: '自由游玩', help: '帮助', options: '选项', sound: '音效',
+    freePlayMenu: '自由游玩菜单', freePlayRegionHeading: '选择自由游玩区域',
+    freePlayRegionHint: '自由游玩可进入目前已实现的四个战役关卡和任意难度，不受战役解锁条件限制。',
+    freePlayLevelHint: (available: number) => `自由游玩可进入 ${available}/10 个已实现关卡，其他关卡尚未实现。`,
+    freePlayScoreNote: '自由游玩不会更改已保存的战役分数或进度。',
+    freePlayDifficultyNotice: '自由游玩不会更改战役进度、最高分、解锁状态或已保存难度。',
     chooseRegion: '选择区域', chooseLevel: '选择关卡',
     regionHint: '选择一个区域，查看其中的十个战役关卡。',
     levelHint: '选择已开放的关卡。尚未实现的关卡会显示锁定标记。',
@@ -1310,6 +1373,16 @@ const campaignMenuCopy = {
     ],
     optionsTitle: '选项', speed: '模拟速度',
     speedHelp: '测试速度可在 0.25× 到 4× 之间调整。',
+    profileArchiveTitle: '档案文件',
+    profileArchiveHelp: '导出或替换此浏览器中的战役档案。档案文件独立于实验数据和战局回放。',
+    exportProfileArchive: '导出档案', importProfileArchive: '导入档案',
+    confirmProfileImport: '要用此文件替换当前档案吗？现有战役进度和设置将被替换。',
+    profileArchiveStatus: {
+      exported: '档案文件已下载。', imported: '档案文件已导入，战役进度已刷新。',
+      'imported-refresh-failed': '档案文件已导入，但无法刷新战役界面。开始战斗前请重新加载档案。',
+      cancelled: '已取消档案导入。', invalid: '档案文件无效或已损坏。',
+      unsupported: '不支持此档案文件格式或版本。', failed: '档案文件导入或导出失败。',
+    },
     selectRegion: (name: string) => `选择${name}`,
     selectLevel: (number: number, title: string, state: string) => `第 ${number} 关：${title}。${state}`,
     levelNumber: (number: number) => `第 ${String(number).padStart(2, '0')} 关`,
@@ -1318,6 +1391,76 @@ const campaignMenuCopy = {
     campaign: '战役地图',
   },
 };
+
+function downloadJsonFile(contents: string, filename: string): void {
+  const blob = new Blob([contents], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+async function exportProfileArchive(): Promise<void> {
+  if (profileArchiveBusy) return;
+  profileArchiveBusy = true;
+  profileArchiveStatusKey = undefined;
+  renderCampaignMenu();
+  try {
+    const profileData = await progress.exportProfileData();
+    downloadJsonFile(serializeProfileArchive(profileData), 'gunsnglory-profile.json');
+    profileArchiveStatusKey = 'exported';
+  } catch {
+    profileArchiveStatusKey = 'failed';
+  } finally {
+    profileArchiveBusy = false;
+    renderCampaignMenu();
+  }
+}
+
+async function importProfileArchiveFile(file?: File): Promise<void> {
+  if (!file || profileArchiveBusy) return;
+  profileArchiveBusy = true;
+  profileArchiveStatusKey = undefined;
+  renderCampaignMenu();
+  let statusKey: ProfileArchiveStatusKey = 'failed';
+  try {
+    const profileData = parseProfileArchive(await file.text());
+    if (!window.confirm(campaignMenuCopy[getLanguage()].confirmProfileImport)) {
+      statusKey = 'cancelled';
+      return;
+    }
+    profile = await progress.replaceProfileData(profileData);
+    campaignFeedback = undefined;
+    profileLoadFailed = false;
+    profileLoadErrorCode = undefined;
+    corruptProfileBackup = undefined;
+    profileRecoveryStatusKey = undefined;
+    try {
+      campaignProgressView = await progress.loadCampaign();
+      profile = campaignProgressView.profile;
+    } catch {
+      campaignProgressView = undefined;
+      campaignFeedback = { type: 'load-failed' };
+      statusKey = 'imported-refresh-failed';
+    }
+    applyProfileSettings(profile.settings);
+    settingsStatusKey = 'saved';
+    if (statusKey !== 'imported-refresh-failed') statusKey = 'imported';
+  } catch (error) {
+    if (error instanceof ProfileArchiveError) {
+      statusKey = error.code === 'unsupported-format' || error.code === 'unsupported-version' ? 'unsupported' : 'invalid';
+    } else {
+      statusKey = 'failed';
+    }
+  } finally {
+    profileArchiveBusy = false;
+    profileArchiveStatusKey = statusKey;
+    renderStatus();
+    renderCampaignMenu();
+  }
+}
 
 function profileMessage(language: keyof typeof languageMessages): string {
   const messages = languageMessages[language];
@@ -1461,6 +1604,16 @@ function escapeMenuText(value: string): string {
   })[character] ?? character);
 }
 
+function freePlayStageForLevel(level: number) {
+  return officialCampaignStages.find((stage) => stage.globalLevel === level);
+}
+
+function menuLevelState(level: number) {
+  return freePlayMenuActive
+    ? freePlayStageForLevel(level) ? 'available' as const : 'unimplemented' as const
+    : campaignLevelState(level, campaignProgressView);
+}
+
 function campaignMenuAssetUrl(filename: string): string {
   return new URL(`${import.meta.env.BASE_URL}assets/menu/${filename}`, window.location.href).toString();
 }
@@ -1480,11 +1633,11 @@ function campaignMenuRegionScreen(): string {
     </button>`;
   }).join('');
   return `<section class="campaign-region-screen" aria-labelledby="campaign-menu-heading">
-    <h2 class="campaign-menu-visually-hidden" id="campaign-menu-heading">${copy.chooseRegion}</h2>
+    <h2 class="campaign-menu-visually-hidden" id="campaign-menu-heading">${freePlayMenuActive ? copy.freePlayRegionHeading : copy.chooseRegion}</h2>
     <div class="campaign-menu-map campaign-world-map">
       <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_usmap_00_box.png')}" alt="" aria-hidden="true">${nodes}
     </div>
-    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${copy.regionHint}</p>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${freePlayMenuActive ? copy.freePlayRegionHint : copy.regionHint}</p>
     <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
   </section>`;
 }
@@ -1494,9 +1647,10 @@ function campaignMenuLevelScreen(): string {
   const copy = campaignMenuCopy[language];
   const region = campaignRegions.find((candidate) => candidate.id === selectedMenuRegionId) ?? campaignRegions[0];
   const levels = campaignCatalog.filter((level) => level.regionId === region.id);
-  const completed = levels.filter((level) => campaignLevelState(level.level, campaignProgressView) === 'completed').length;
+  const completed = levels.filter((level) => menuLevelState(level.level) === 'completed').length;
+  const availableInFreePlay = levels.filter((level) => freePlayStageForLevel(level.level) !== undefined).length;
   const nodes = levels.map((level, index) => {
-    const status = campaignLevelState(level.level, campaignProgressView);
+    const status = menuLevelState(level.level);
     const disabled = status === 'locked' || status === 'unimplemented';
     const statusLabel = status === 'completed' ? copy.completed
       : status === 'available' ? copy.available
@@ -1516,7 +1670,7 @@ function campaignMenuLevelScreen(): string {
     <div class="campaign-menu-map campaign-level-map">
       <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_levelmap_box_00.png')}" alt="" aria-hidden="true">${nodes}
     </div>
-    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(copy.regionProgress(completed))}. ${escapeMenuText(copy.levelHint)}</p>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(freePlayMenuActive ? copy.freePlayLevelHint(availableInFreePlay) : `${copy.regionProgress(completed)}. ${copy.levelHint}`)}</p>
     <button type="button" class="campaign-menu-back" data-action="menu-back-regions" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
   </section>`;
 }
@@ -1559,7 +1713,11 @@ function campaignMenuOverviewScreen(): string {
   const entry = campaignCatalog.find((candidate) => candidate.level === selectedMenuLevel);
   if (!entry) return campaignMenuLevelScreen();
   const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === entry.level);
-  if (!stage || (stage.status !== 'available' && stage.status !== 'completed')) return campaignMenuLevelScreen();
+  const freeStage = freePlayStageForLevel(entry.level);
+  if (freePlayMenuActive ? !freeStage : !stage || (stage.status !== 'available' && stage.status !== 'completed')) {
+    return campaignMenuLevelScreen();
+  }
+  const scenarioId = freePlayMenuActive ? freeStage!.scenarioId : stage!.scenarioId;
   const content = entry.level === 1 ? cowGulchLevelOneContent
     : entry.level === 2 ? apacheValleyLevelTwoContent
       : entry.level === 3 ? fortKaboomLevelThreeContent : techTownLevelFourCampaignContent;
@@ -1567,12 +1725,15 @@ function campaignMenuOverviewScreen(): string {
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo : copy.levelFourInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
-  const score = stage.highScore === undefined
-    ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.noHighScore)}</p>`
-    : `<img class="campaign-overview-wanted" src="${campaignMenuAssetUrl('gng_highscore_1_wanted.png')}" alt="" aria-hidden="true"><p class="campaign-overview-score-label">${copy.highScoreLabel}</p><p class="campaign-overview-score">${escapeMenuText(copy.bestScore(stage.highScore))}</p>`;
+  const score = freePlayMenuActive
+    ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
+    : stage!.highScore === undefined
+      ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.noHighScore)}</p>`
+      : `<img class="campaign-overview-wanted" src="${campaignMenuAssetUrl('gng_highscore_1_wanted.png')}" alt="" aria-hidden="true"><p class="campaign-overview-score-label">${copy.highScoreLabel}</p><p class="campaign-overview-score">${escapeMenuText(copy.bestScore(stage!.highScore))}</p>`;
   const campaignFeedbackText = campaignFeedback?.type === 'open-failed' || assetLoadFailureNames.length > 0
     ? languageMessages[language].campaignOpenFailed : '';
-  const unavailable = assetLoadFailureNames.length > 0 || campaignSelectionBusy || settingsSaveBusy || profileLoadFailed;
+  const unavailable = assetLoadFailureNames.length > 0 || campaignSelectionBusy || replacingSession || replaying
+    || (!freePlayMenuActive && (settingsSaveBusy || profileLoadFailed));
   return `<section class="campaign-overview-screen" aria-labelledby="campaign-menu-heading">
     <button type="button" class="campaign-menu-back" data-action="menu-back-levels" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
     <article class="campaign-overview-card">
@@ -1584,7 +1745,7 @@ function campaignMenuOverviewScreen(): string {
       <p class="campaign-level-description">${escapeMenuText(description)}</p>
       <div class="campaign-overview-highscore">${score}</div>
       <p class="campaign-menu-error" role="status" data-testid="campaign-menu-error">${escapeMenuText(campaignFeedbackText)}</p>
-      <button type="button" class="campaign-overview-play" data-action="open-campaign-difficulty" data-scenario-id="${escapeMenuText(stage.scenarioId)}" data-testid="campaign-stage-play" aria-label="${copy.startLevel}" ${unavailable ? 'disabled' : ''}>
+      <button type="button" class="campaign-overview-play" data-action="open-campaign-difficulty" data-scenario-id="${escapeMenuText(scenarioId)}" data-testid="campaign-stage-play" aria-label="${copy.startLevel}" ${unavailable ? 'disabled' : ''}>
         <img src="${campaignMenuAssetUrl('gng_highscore_2_button.png')}" alt="" aria-hidden="true"><span>${copy.startLevel}</span>
       </button>
       <button type="button" class="campaign-overview-cancel" data-action="menu-back-levels" aria-label="${copy.back}" title="${copy.back}"><img src="${campaignMenuAssetUrl('gng_hud_2_no.png')}" alt="" aria-hidden="true"></button>
@@ -1597,11 +1758,15 @@ function campaignMenuDifficultyScreen(): string {
   const copy = campaignMenuCopy[language];
   const entry = campaignCatalog.find((candidate) => candidate.level === selectedMenuLevel);
   const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === selectedMenuLevel);
+  const freeStage = freePlayStageForLevel(selectedMenuLevel);
   const region = campaignRegions.find((candidate) => candidate.id === selectedMenuRegionId) ?? campaignRegions[0];
-  if (!entry || !stage || (stage.status !== 'available' && stage.status !== 'completed')) return campaignMenuLevelScreen();
+  if (!entry || (freePlayMenuActive ? !freeStage : !stage || (stage.status !== 'available' && stage.status !== 'completed'))) {
+    return campaignMenuLevelScreen();
+  }
+  const scenarioId = freePlayMenuActive ? freeStage!.scenarioId : stage!.scenarioId;
   const levels = campaignCatalog.filter((level) => level.regionId === region.id);
   const backdropNodes = levels.map((level, index) => {
-    const status = campaignLevelState(level.level, campaignProgressView);
+    const status = menuLevelState(level.level);
     const locked = status === 'locked' || status === 'unimplemented';
     const position = campaignLevelPositions[index];
     return `<div class="campaign-difficulty-map-node${locked ? ' is-locked' : ''}" style="left:${(position.x / 480) * 100}%;top:${(position.y / 320) * 100}%">
@@ -1610,13 +1775,14 @@ function campaignMenuDifficultyScreen(): string {
   }).join('');
   const difficulties: readonly GameDifficulty[] = ['easy', 'medium', 'hard'];
   const choices = difficulties.map((difficulty) => {
-    const isLocked = difficulty === 'hard' && campaignProgressView?.hardModeUnlocked !== true;
-    const isBusy = campaignSelectionBusy || settingsSaveBusy || assetLoadFailureNames.length > 0 || profileLoadFailed;
-    const selected = selectedDifficulty === difficulty;
+    const isLocked = difficulty === 'hard' && !freePlayMenuActive && campaignProgressView?.hardModeUnlocked !== true;
+    const isBusy = campaignSelectionBusy || assetLoadFailureNames.length > 0 || replacingSession || replaying
+      || (!freePlayMenuActive && (settingsSaveBusy || profileLoadFailed));
+    const selected = (freePlayMenuActive ? freePlayDifficulty : selectedDifficulty) === difficulty;
     const labels = { easy: copy.easy, medium: copy.medium, hard: copy.hard };
     const portrait = difficulty === 'easy' ? 'portrait_settlers.png'
       : difficulty === 'medium' ? 'portrait_pedro.png' : 'oregon_dakota_portrait_boss.png';
-    return `<button type="button" class="campaign-difficulty-choice${selected ? ' is-selected' : ''}" data-action="choose-campaign-difficulty" data-difficulty="${difficulty}" data-scenario-id="${escapeMenuText(stage.scenarioId)}" data-testid="campaign-difficulty-${difficulty}" aria-pressed="${selected}" ${isLocked || isBusy ? 'disabled' : ''}>
+    return `<button type="button" class="campaign-difficulty-choice${selected ? ' is-selected' : ''}" data-action="choose-campaign-difficulty" data-difficulty="${difficulty}" data-scenario-id="${escapeMenuText(scenarioId)}" data-testid="campaign-difficulty-${difficulty}" aria-pressed="${selected}" ${isLocked || isBusy ? 'disabled' : ''}>
       <img src="${campaignPortraitAssetUrl(portrait)}" alt="" aria-hidden="true"><span>${labels[difficulty]}</span>
     </button>`;
   }).join('');
@@ -1628,7 +1794,7 @@ function campaignMenuDifficultyScreen(): string {
     <article class="campaign-difficulty-dialog" role="dialog" aria-modal="true">
       <h2 id="campaign-menu-heading">${copy.chooseDifficulty}</h2>
       <div class="campaign-difficulty-choices">${choices}</div>
-      <p class="campaign-menu-notice" data-testid="campaign-menu-notice">${campaignProgressView?.hardModeUnlocked ? '' : copy.hardLocked}</p>
+      <p class="campaign-menu-notice" data-testid="campaign-menu-notice">${freePlayMenuActive ? copy.freePlayDifficultyNotice : campaignProgressView?.hardModeUnlocked ? '' : copy.hardLocked}</p>
       <p class="campaign-menu-error" role="status" data-testid="campaign-menu-error">${escapeMenuText(campaignFeedbackText)}</p>
     </article>
   </section>`;
@@ -1637,7 +1803,7 @@ function campaignMenuDifficultyScreen(): string {
 function renderCampaignMenu(): void {
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
-  campaignMenuScreen.setAttribute('aria-label', language === 'en' ? 'Campaign menu' : '战役菜单');
+  campaignMenuScreen.setAttribute('aria-label', freePlayMenuActive ? copy.freePlayMenu : language === 'en' ? 'Campaign menu' : '战役菜单');
   campaignMenuScreen.style.setProperty('--campaign-menu-background', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_0_sky.png')}")`);
   campaignMenuScreen.style.setProperty('--campaign-menu-cloud-left', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_1.png')}")`);
   campaignMenuScreen.style.setProperty('--campaign-menu-cloud-right', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_2.png')}")`);
@@ -1660,6 +1826,7 @@ function renderCampaignMenu(): void {
           <img class="campaign-menu-board-frame" src="${campaignMenuAssetUrl('gng_startmenu_2_menu_0_box.png')}" alt="" aria-hidden="true">
           <nav class="campaign-menu-home-actions" aria-label="${copy.home}">
             <button type="button" class="campaign-wood-button" data-action="menu-start" data-testid="menu-start">${copy.start}</button>
+            <button type="button" class="campaign-wood-button" data-action="menu-free-play" data-testid="menu-free-play">${copy.freePlay}</button>
             <button type="button" class="campaign-wood-button" data-action="menu-help" data-testid="menu-help">${copy.help}</button>
             <button type="button" class="campaign-wood-button" data-action="menu-options" data-testid="menu-options">${copy.options}</button>
           </nav>
@@ -1680,6 +1847,15 @@ function renderCampaignMenu(): void {
           <button type="button" class="campaign-setting-toggle" data-action="menu-toggle-sound" data-testid="menu-sound" aria-pressed="${soundEnabled}">${copy.sound}: ${soundEnabled ? language === 'en' ? 'On' : '开' : language === 'en' ? 'Off' : '关'}</button>
           <label class="campaign-speed-setting"><span>${copy.speed}</span><output data-testid="menu-simulation-speed-value">${simulationSpeed}×</output><input type="range" min="0.25" max="4" step="0.25" value="${simulationSpeed}" data-testid="menu-simulation-speed" aria-label="${copy.speed}"></label>
           <p class="campaign-menu-subtle">${copy.speedHelp}</p>
+          <section class="campaign-profile-archive" aria-labelledby="campaign-profile-archive-title">
+            <h3 id="campaign-profile-archive-title">${copy.profileArchiveTitle}</h3>
+            <p class="campaign-menu-subtle">${copy.profileArchiveHelp}</p>
+            <div class="campaign-profile-archive-actions">
+              <button type="button" data-action="export-profile-archive" data-testid="export-profile-archive" ${profileArchiveBusy ? 'disabled' : ''}>${copy.exportProfileArchive}</button>
+              <label class="replay-import-label">${copy.importProfileArchive}<input type="file" data-testid="import-profile-archive" accept="application/json,.json" aria-label="${copy.importProfileArchive}" ${profileArchiveBusy ? 'disabled' : ''}></label>
+            </div>
+            <p data-testid="profile-archive-status" class="campaign-menu-status" role="status" aria-live="polite">${profileArchiveStatusKey ? copy.profileArchiveStatus[profileArchiveStatusKey] : ''}</p>
+          </section>
           <p class="campaign-menu-status" data-testid="menu-settings-status" role="status"></p>
         </article>
       </section>`;
@@ -1735,6 +1911,7 @@ function settlementSaveMessage(language: keyof typeof languageMessages): string 
     case 'failed': return messages.settlementFailed;
     case 'conflict': return messages.settlementConflict;
     case 'debug': return messages.settlementDebug;
+    case 'free': return messages.settlementFree;
     case 'replay': return messages.settlementReplay;
     default: return '';
   }
@@ -1796,6 +1973,18 @@ const experimentCopy = {
     noSaved: 'No saved comparisons',
     savedOption: (id: string, date: string) => `${id} · ${date}`,
     loadMore: 'Load more',
+    archiveExported: (schemes: number, comparisons: number) => `Downloaded ${schemes} scheme${schemes === 1 ? '' : 's'} and ${comparisons} comparison${comparisons === 1 ? '' : 's'}.`,
+    archiveMerged: (result: ExperimentArchiveMergeResult) => {
+      const conflicts = [
+        ...result.conflicts.schemes.map(({ id, version }) => `${id}@${version}`),
+        ...result.conflicts.comparisons,
+      ];
+      const comparisonWord = (count: number) => `comparison${count === 1 ? '' : 's'}`;
+      return `Added ${result.addedSchemes} schemes and ${result.addedComparisons} ${comparisonWord(result.addedComparisons)}; skipped ${result.skippedSchemes} schemes and ${result.skippedComparisons} ${comparisonWord(result.skippedComparisons)}; conflicts ${conflicts.length}${conflicts.length ? `: ${conflicts.join(', ')}` : ''}.`;
+    },
+    archiveInvalid: 'Experiment file is invalid or damaged.',
+    archiveUnsupported: 'Experiment file format or version is not supported.',
+    archiveFailed: 'Experiment data could not be imported or exported.',
   },
   zh: {
     invalidReward: '请输入 $0 到 $1,000,000,000 之间的整数奖励。',
@@ -1815,8 +2004,87 @@ const experimentCopy = {
     noSaved: '没有已保存的比较',
     savedOption: (id: string, date: string) => `${id} · ${date}`,
     loadMore: '加载更多',
+    archiveExported: (schemes: number, comparisons: number) => `已下载 ${schemes} 个数值方案和 ${comparisons} 份比较报告。`,
+    archiveMerged: (result: ExperimentArchiveMergeResult) => {
+      const conflicts = [
+        ...result.conflicts.schemes.map(({ id, version }) => `${id}@${version}`),
+        ...result.conflicts.comparisons,
+      ];
+      return `新增 ${result.addedSchemes} 个方案、${result.addedComparisons} 份报告；跳过 ${result.skippedSchemes} 个方案、${result.skippedComparisons} 份报告；冲突 ${conflicts.length}${conflicts.length ? `：${conflicts.join('、')}` : ''}。`;
+    },
+    archiveInvalid: '实验文件无效或已损坏。',
+    archiveUnsupported: '不支持此实验文件格式或版本。',
+    archiveFailed: '实验数据导入或导出失败。',
   },
 };
+
+type ExperimentArchiveStatus =
+  | { kind: 'exported'; schemes: number; comparisons: number }
+  | { kind: 'merged'; result: ExperimentArchiveMergeResult }
+  | { kind: 'invalid' | 'unsupported' | 'failed' };
+let experimentArchiveStatusValue: ExperimentArchiveStatus | undefined;
+let experimentArchiveBusy = false;
+
+function renderExperimentArchiveStatus(): void {
+  const copy = experimentCopy[getLanguage()];
+  const status = experimentArchiveStatusValue;
+  if (!status) {
+    experimentArchiveStatus.textContent = '';
+    return;
+  }
+  switch (status.kind) {
+    case 'exported': experimentArchiveStatus.textContent = copy.archiveExported(status.schemes, status.comparisons); break;
+    case 'merged': experimentArchiveStatus.textContent = copy.archiveMerged(status.result); break;
+    case 'invalid': experimentArchiveStatus.textContent = copy.archiveInvalid; break;
+    case 'unsupported': experimentArchiveStatus.textContent = copy.archiveUnsupported; break;
+    case 'failed': experimentArchiveStatus.textContent = copy.archiveFailed; break;
+  }
+}
+
+function setExperimentArchiveBusy(busy: boolean): void {
+  experimentArchiveBusy = busy;
+  exportExperimentArchiveControl.disabled = busy;
+  importExperimentArchiveControl.disabled = busy;
+}
+
+async function exportExperimentArchive(): Promise<void> {
+  if (experimentArchiveBusy) return;
+  setExperimentArchiveBusy(true);
+  experimentArchiveStatusValue = undefined;
+  renderExperimentArchiveStatus();
+  try {
+    const data = await experiments.exportArchive();
+    downloadJsonFile(serializeExperimentArchive(data), 'gunsnglory-experiments.json');
+    experimentArchiveStatusValue = {
+      kind: 'exported', schemes: data.schemes.length, comparisons: data.comparisons.length,
+    };
+  } catch {
+    experimentArchiveStatusValue = { kind: 'failed' };
+  } finally {
+    setExperimentArchiveBusy(false);
+    renderExperimentArchiveStatus();
+  }
+}
+
+async function importExperimentArchiveFile(file?: File): Promise<void> {
+  if (!file || experimentArchiveBusy) return;
+  setExperimentArchiveBusy(true);
+  experimentArchiveStatusValue = undefined;
+  renderExperimentArchiveStatus();
+  try {
+    const data = parseExperimentArchive(await file.text());
+    const result = await experiments.mergeArchive(data);
+    experimentArchiveStatusValue = { kind: 'merged', result };
+    await loadSavedComparisons({ reset: true, reportFailure: true });
+  } catch (error) {
+    experimentArchiveStatusValue = error instanceof ExperimentArchiveError
+      ? error.code === 'unsupported-format' || error.code === 'unsupported-version' ? { kind: 'unsupported' } : { kind: 'invalid' }
+      : { kind: 'failed' };
+  } finally {
+    setExperimentArchiveBusy(false);
+    renderExperimentArchiveStatus();
+  }
+}
 
 type SavedComparisonStatusKey = 'saved' | 'opened' | 'missing' | 'saveFailed' | 'openFailed' | 'listFailed' | 'savedListFailed';
 let savedComparisonStatusKey: SavedComparisonStatusKey | undefined;
@@ -2055,6 +2323,16 @@ openComparisonControl.addEventListener('click', async () => {
 
 loadMoreComparisonsControl.addEventListener('click', () => {
   void loadSavedComparisons({ reportFailure: true });
+});
+
+exportExperimentArchiveControl.addEventListener('click', () => {
+  void exportExperimentArchive();
+});
+
+importExperimentArchiveControl.addEventListener('change', () => {
+  const file = importExperimentArchiveControl.files?.[0];
+  importExperimentArchiveControl.value = '';
+  void importExperimentArchiveFile(file);
 });
 
 void loadSavedComparisons({ reset: true, reportFailure: true });
@@ -2331,7 +2609,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     const recruitLabel = messages.recruitButton(recruitDefinition.name[language], recruitDefinition.price);
     if (recruitControl.textContent !== recruitLabel) recruitControl.textContent = recruitLabel;
   }
-  recruitControl.hidden = session.startRecord.mode === 'formal' || !recruitDefinition;
+  recruitControl.hidden = session.startRecord.mode === 'formal' || session.startRecord.mode === 'free' || !recruitDefinition;
   const upgradeScenario = view.scenarioId === 'cow-gulch-upgrade-sample';
   const originalWaveScenario = view.scenarioId === cowGulchP1cCampaignContent.id
     || view.scenarioId === cowGulchP1dCampaignContent.id;
@@ -2342,6 +2620,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? messages.originalCampaignNotice
     : messages.originalWaveNotice;
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
+  const officialStage = officialCampaignStages.find(({ scenarioId }) => scenarioId === view.scenarioId);
+  const displayedCampaignStage = activeCampaignStage ?? officialStage;
   const techTownTrainSample = view.scenarioId === techTownTrainTestContent.id;
   sceneTitle.textContent = upgradeScenario
     ? messages.upgradeSceneTitle
@@ -2349,24 +2629,28 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       ? techTownTrainTestContent.title[language]
     : originalWaveScenario
       ? originalWaveContent.title[language]
-    : activeCampaignStage?.title[language] ?? 'Cow Gulch';
+    : displayedCampaignStage?.title[language]
+      ?? 'Cow Gulch';
   sceneContext.textContent = upgradeScenario
     ? messages.upgradeSceneContext
     : techTownTrainSample
       ? language === 'zh' ? '开发测试 · 列车' : 'DEVELOPER TEST · TRAIN'
     : originalWaveScenario
       ? messages.originalWaveContext
-    : activeCampaignStage ? `NEW MEXICO · ${String(activeCampaignStage.globalLevel).padStart(2, '0')}`
+    : session.startRecord.mode === 'free'
+      ? `${language === 'zh' ? '自由游玩' : 'FREE PLAY'} · NEW MEXICO · ${String(officialStage?.globalLevel ?? 0).padStart(2, '0')}`
+    : displayedCampaignStage ? `NEW MEXICO · ${String(displayedCampaignStage.globalLevel).padStart(2, '0')}`
       : language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE';
-  sceneCaption.textContent = messages.sceneCaption(view.scenarioId);
+  const sceneDescription = messages.sceneCaption(view.scenarioId);
+  sceneCaption.textContent = session.startRecord.mode === 'free' ? messages.freePlayCaption(sceneDescription) : sceneDescription;
   upgradeSampleStatus.textContent = techTownTrainSample
     ? ''
     : upgradeScenario
     ? messages.debugUpgradeFixture
     : originalWaveScenario ? originalWaveNotice
-      : activeCampaignStage?.scenarioId === apacheValleyLevelTwoContent.id
+      : displayedCampaignStage?.scenarioId === apacheValleyLevelTwoContent.id
         ? messages.apacheValleyNotice
-        : activeCampaignStage ? messages.originalCampaignNotice : messages.originalUpgradeLimit;
+        : displayedCampaignStage ? messages.originalCampaignNotice : messages.originalUpgradeLimit;
   const selectedUnit = unit;
   const upgradeUnitName = selectedUnit
     ? messages.unitName(selectedUnit.type)
@@ -2428,7 +2712,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       activeSettlementRecord = session.terminalRecord();
       settlementSaveState = activeSettlementRecord?.mode === 'formal'
         ? 'saving'
-        : activeSettlementRecord?.mode === 'replay' ? 'replay' : 'debug';
+        : activeSettlementRecord?.mode === 'replay' ? 'replay'
+          : activeSettlementRecord?.mode === 'free' ? 'free' : 'debug';
     }
     settlementTitle.textContent = messages.result;
     settlementOutcome.textContent = messages[settlement.outcome];
@@ -2777,18 +3062,18 @@ function redraw(resize = false): void {
 }
 
 function syncGameViewportToCanvas(): boolean {
-  const logicalViewport = document.fullscreenElement === gameFrame
-    ? fitLogicalViewportToScreen(
-      canvas.clientWidth,
-      canvas.clientHeight,
-      BASE_GAME_VIEWPORT.width,
-      BASE_GAME_VIEWPORT.height,
-    )
-    : BASE_GAME_VIEWPORT;
-  const changed = Math.abs(GAME_VIEWPORT.width - logicalViewport.width) >= 0.01
-    || Math.abs(GAME_VIEWPORT.height - logicalViewport.height) >= 0.01;
-  if (changed) setGameViewport(logicalViewport.width, logicalViewport.height);
-  return changed;
+  if (document.fullscreenElement !== gameFrame) {
+    gameStage.style.removeProperty('--gng-fullscreen-scale');
+    return false;
+  }
+  const viewport = fitAspectViewport(
+    gameFrame.clientWidth,
+    gameFrame.clientHeight,
+    BASE_GAME_VIEWPORT.width,
+    BASE_GAME_VIEWPORT.height,
+  );
+  gameStage.style.setProperty('--gng-fullscreen-scale', String(viewport.scale));
+  return false;
 }
 
 function getDisplayPixelScale(): number {
@@ -2965,7 +3250,14 @@ let fullscreenStatusKey: FullscreenStatusKey | undefined;
 
 function renderFullscreenControl(): void {
   const fullscreenActive = document.fullscreenElement === gameFrame;
+  const needsLandscape = fullscreenActive && supportsTouchOrientationLock() && window.innerHeight > window.innerWidth;
   gameFrame.classList.toggle('is-fullscreen', fullscreenActive);
+  gameFrame.classList.toggle('is-portrait-fullscreen', needsLandscape);
+  gameStage.inert = needsLandscape;
+  portraitOrientationOverlay.setAttribute('aria-hidden', String(!needsLandscape));
+  portraitOrientationMessage.textContent = needsLandscape
+    ? languageMessages[getLanguage()].fullscreenRotateToLandscape
+    : '';
   document.body.classList.toggle('gng-game-fullscreen', fullscreenActive);
   const label = fullscreenActive
     ? languageMessages[getLanguage()].fullscreenExit
@@ -3051,13 +3343,22 @@ document.addEventListener('fullscreenchange', () => {
   }
   redraw(true);
 });
-window.addEventListener('orientationchange', () => redraw(true));
-screen.orientation?.addEventListener('change', () => redraw(true));
+window.addEventListener('orientationchange', () => {
+  renderFullscreenControl();
+  redraw(true);
+});
+screen.orientation?.addEventListener('change', () => {
+  renderFullscreenControl();
+  redraw(true);
+});
 
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(() => redraw(true)).observe(gameFrame);
 }
-window.addEventListener('resize', () => redraw(true));
+window.addEventListener('resize', () => {
+  renderFullscreenControl();
+  redraw(true);
+});
 
 let animationFrame = 0;
 let previousTimestamp: number | undefined;
@@ -3093,7 +3394,7 @@ function stopGameLoop(): void {
 }
 
 function isOfficialCowGulchSession(): boolean {
-  return session.startRecord.mode === 'formal'
+  return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
     && session.startRecord.scenarioId === cowGulchLevelOneContent.id;
 }
 
@@ -3106,7 +3407,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
 }
 
 function isOfficialCampaignSession(): boolean {
-  return session.startRecord.mode === 'formal'
+  return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
     && officialCampaignStages.some(({ scenarioId }) => scenarioId === session.startRecord.scenarioId);
 }
 
@@ -3473,8 +3774,12 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
     && (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving));
   stopGameLoop();
   try {
-    const sessionGame = request.scenarioId === techTownLevelFourCampaignContent.id && campaignProgressView
-      ? createBrowserGame(campaignProgressView.profile.completedScenarios)
+    const techTownFreePlayUnlocks = request.mode === 'free'
+      ? [...new Set([...(campaignProgressView?.profile.completedScenarios ?? []), fortKaboomLevelThreeContent.id])]
+      : campaignProgressView?.profile.completedScenarios;
+    const sessionGame = request.scenarioId === techTownLevelFourCampaignContent.id
+      && (campaignProgressView || request.mode === 'free')
+      ? createBrowserGame(techTownFreePlayUnlocks)
       : game;
     const nextSession = await sessionGame.open(request);
     sceneOpenFailure = undefined;
@@ -3541,6 +3846,29 @@ async function openCampaignStage(scenarioId: string): Promise<boolean> {
   }
 }
 
+async function openFreePlayStage(scenarioId: string, difficulty: GameDifficulty): Promise<boolean> {
+  const stage = officialCampaignStages.find((candidate) => candidate.scenarioId === scenarioId);
+  if (!stage || assetLoadFailureNames.length > 0 || campaignSelectionBusy || replacingSession || replaying) return false;
+  campaignSelectionBusy = true;
+  campaignFeedback = { type: 'opening', scenarioId };
+  renderCampaignMenu();
+  try {
+    const opened = await replaceSession({
+      scenarioId: stage.scenarioId,
+      contentVersion: stage.contentVersion,
+      randomSeed: session.startRecord.randomSeed,
+      difficulty,
+      mode: 'free',
+    });
+    campaignFeedback = { type: opened ? 'opened' : 'open-failed', scenarioId };
+    if (opened) showBattleScene();
+    return opened;
+  } finally {
+    campaignSelectionBusy = false;
+    renderStatus();
+  }
+}
+
 async function selectCampaignDifficultyAndOpen(scenarioId: string, difficulty: GameDifficulty): Promise<void> {
   if (campaignSelectionBusy || settingsSaveBusy || (difficulty === 'hard' && !campaignProgressView?.hardModeUnlocked)) return;
   selectedDifficulty = difficulty;
@@ -3549,6 +3877,13 @@ async function selectCampaignDifficultyAndOpen(scenarioId: string, difficulty: G
   await saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
   const opened = await openCampaignStage(scenarioId);
   if (!opened && !campaignMenuScreen.hidden) renderCampaignMenu();
+}
+
+async function selectFreePlayDifficultyAndOpen(scenarioId: string, difficulty: GameDifficulty): Promise<void> {
+  if (!freePlayMenuActive || campaignSelectionBusy || assetLoadFailureNames.length > 0) return;
+  freePlayDifficulty = difficulty;
+  campaignFeedback = undefined;
+  await openFreePlayStage(scenarioId, difficulty);
 }
 
 function requestScenarioOpen(
@@ -3588,6 +3923,23 @@ async function exportCurrentReplay(): Promise<void> {
   }
 }
 
+function gameForReplay(serialized: string) {
+  try {
+    const parsed = JSON.parse(serialized) as {
+      startRecord?: { scenarioId?: unknown };
+    };
+    if (parsed.startRecord?.scenarioId === techTownLevelFourCampaignContent.id) {
+      const completedScenarioIds = campaignProgressView?.profile.completedScenarios ?? [];
+      // Map04's mandatory type 1–4 player pool is available on map entry; later special units still
+      // follow the current profile's actual milestone unlocks.
+      return createBrowserGame([...new Set([...completedScenarioIds, fortKaboomLevelThreeContent.id])]);
+    }
+  } catch {
+    // Let Game.replay report the authoritative malformed-file error.
+  }
+  return game;
+}
+
 async function importReplayFile(file: File | undefined): Promise<void> {
   if (!file || replaying || replacingSession) return;
   replaying = true;
@@ -3597,7 +3949,8 @@ async function importReplayFile(file: File | undefined): Promise<void> {
     if (file.size > 10_000_000) {
       throw new GameReplayError('corrupt-input', 'Replay file is too large');
     }
-    const result: GameReplayResult = await game.replay(await file.text());
+    const serialized = await file.text();
+    const result: GameReplayResult = await gameForReplay(serialized).replay(serialized);
     if (result.sourceStartRecord.mode === 'replay') {
       result.session.close();
       throw new GameReplayError('unsupported-mode', 'A replay cannot be used as the source battle');
@@ -4002,13 +4355,22 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
   const button = target.closest<HTMLButtonElement>('button[data-action]');
   if (!button || button.disabled) return;
   switch (button.dataset.action) {
-    case 'menu-start': showCampaignMenu('regions'); break;
+    case 'menu-start':
+      freePlayMenuActive = false;
+      showCampaignMenu('regions');
+      break;
+    case 'menu-free-play':
+      freePlayMenuActive = true;
+      freePlayDifficulty = 'easy';
+      showCampaignMenu('regions');
+      break;
     case 'menu-help': showCampaignMenu('help'); break;
     case 'menu-options': showCampaignMenu('options'); break;
     case 'menu-back-home': showCampaignMenu('home'); break;
     case 'menu-back-regions': showCampaignMenu('regions'); break;
     case 'menu-back-levels': showCampaignMenu('levels'); break;
     case 'menu-back-overview': showCampaignMenu('overview'); break;
+    case 'export-profile-archive': void exportProfileArchive(); break;
     case 'choose-campaign-region': {
       const region = campaignRegions.find((candidate) => candidate.id === button.dataset.region);
       if (!region) return;
@@ -4019,8 +4381,8 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
     case 'choose-campaign-level': {
       const level = Number(button.dataset.level);
       const entry = campaignCatalog.find((candidate) => candidate.level === level);
-      if (!entry || campaignLevelState(level, campaignProgressView) === 'locked'
-        || campaignLevelState(level, campaignProgressView) === 'unimplemented') return;
+      const state = menuLevelState(level);
+      if (!entry || state === 'locked' || state === 'unimplemented') return;
       selectedMenuLevel = level;
       showCampaignMenu('overview');
       break;
@@ -4029,7 +4391,8 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
       const difficulty = button.dataset.difficulty;
       const scenarioId = button.dataset.scenarioId;
       if (!isGameDifficulty(difficulty) || !scenarioId) return;
-      void selectCampaignDifficultyAndOpen(scenarioId, difficulty);
+      if (freePlayMenuActive) void selectFreePlayDifficultyAndOpen(scenarioId, difficulty);
+      else void selectCampaignDifficultyAndOpen(scenarioId, difficulty);
       break;
     }
     case 'open-campaign-difficulty': {
@@ -4059,6 +4422,12 @@ campaignMenuView.addEventListener('input', (event: Event) => {
 
 campaignMenuView.addEventListener('change', (event: Event) => {
   const target = event.target;
+  if (target instanceof HTMLInputElement && target.dataset.testid === 'import-profile-archive') {
+    const file = target.files?.[0];
+    target.value = '';
+    void importProfileArchiveFile(file);
+    return;
+  }
   if (!(target instanceof HTMLInputElement) || target.dataset.testid !== 'menu-simulation-speed') return;
   saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
 });
@@ -4660,6 +5029,7 @@ subscribeLanguage(() => {
   renderExperimentComparison();
   renderSavedComparisonOptions();
   renderSavedComparisonStatus();
+  renderExperimentArchiveStatus();
 });
 
 const testBattleStart = import.meta.env.DEV && new URLSearchParams(window.location.search).get('testBattle') === '1';

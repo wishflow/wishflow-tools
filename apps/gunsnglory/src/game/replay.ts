@@ -279,7 +279,7 @@ function validStartRecord(value: unknown): value is GameStartRecord {
     && value.randomAlgorithm === 'java.util.Random'
     && Number.isSafeInteger(value.randomSeed) && (value.randomSeed as number) >= 0 && (value.randomSeed as number) <= 0xffff_ffff
     && (value.difficulty === undefined || value.difficulty === 'easy' || value.difficulty === 'medium' || value.difficulty === 'hard')
-    && (value.mode === 'formal' || value.mode === 'debug' || value.mode === 'experiment');
+    && (value.mode === 'formal' || value.mode === 'free' || value.mode === 'debug' || value.mode === 'experiment');
 }
 
 function validTerminal(value: unknown): value is GameReplayTerminal {

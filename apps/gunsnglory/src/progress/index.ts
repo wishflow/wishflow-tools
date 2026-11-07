@@ -2,6 +2,7 @@ import { isGameDifficulty, type GameDifficulty, type GameSettlementRecord } from
 import { DEFAULT_SIMULATION_SPEED, isSimulationSpeed, normalizeSimulationSpeed } from '../game/time-scaling';
 import {
   cloneProfileData,
+  isProfileData,
   ProfileRepositoryError,
   type ProfileData,
   type ProfileRepository,
@@ -59,6 +60,8 @@ export interface Progress {
   loadSettings(): Promise<GameSettings>;
   saveSettings(settings: GameSettingsInput): Promise<GameSettings>;
   retrySettings(): Promise<GameSettings>;
+  exportProfileData(): Promise<ProfileData>;
+  replaceProfileData(data: ProfileData): Promise<ProfileView>;
   exportSavedProfile(): Promise<string | null>;
   resetCorruptProfile(snapshot: string): Promise<ProfileView>;
   applySettlement(settlement: GameSettlementRecord): Promise<SettlementSaveResult>;
@@ -166,6 +169,7 @@ export function createProgress(
   let lastKnownRevision: number | null = null;
   let hasLoadedProfile = false;
   let pendingSettingsRequest: WriteProfileRequest | undefined;
+  let profileImportSequence = 0;
   const pendingSettlements = new Map<string, GameSettlementRecord>();
 
   function serialize<T>(operation: () => Promise<T>): Promise<T> {
@@ -368,6 +372,46 @@ export function createProgress(
     }
   }
 
+  async function exportProfileData(): Promise<ProfileData> {
+    return serialize(async () => {
+      try {
+        const current = await loadStored();
+        return cloneProfileData(current?.data ?? createDefaultProfileData());
+      } catch (error) {
+        throw progressError(error);
+      }
+    });
+  }
+
+  async function replaceProfileData(data: ProfileData): Promise<ProfileView> {
+    if (!isProfileData(data)) throw new ProgressError('invalid-input', 'Imported profile data is invalid');
+    const imported = cloneProfileData(data);
+    try {
+      publicProfile(imported);
+    } catch (error) {
+      throw new ProgressError('invalid-input', error instanceof Error ? error.message : 'Imported profile settings are invalid');
+    }
+    return serialize(async () => {
+      try {
+        const current = await loadStored();
+        const operationId = `profile-import:${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}:${++profileImportSequence}`}`;
+        const saved = await repository.writeProfile({
+          data: imported,
+          expectedRevision: current?.revision ?? null,
+          operationId,
+        });
+        lastKnownData = imported;
+        lastKnownRevision = saved.revision;
+        hasLoadedProfile = true;
+        pendingSettingsRequest = undefined;
+        pendingSettlements.clear();
+        return publicProfile(imported);
+      } catch (error) {
+        throw progressError(error);
+      }
+    });
+  }
+
   async function resetCorruptProfile(snapshot: string): Promise<ProfileView> {
     try {
       await repository.resetCorruptProfile(snapshot);
@@ -409,6 +453,8 @@ export function createProgress(
     loadSettings,
     saveSettings,
     retrySettings,
+    exportProfileData,
+    replaceProfileData,
     exportSavedProfile,
     resetCorruptProfile,
     applySettlement,

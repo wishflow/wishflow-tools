@@ -31,7 +31,7 @@ test('keeps the original level locked and upgrades the selected Gunslinger in th
   const confirmation = page.getByTestId('upgrade-confirmation');
   const details = page.getByTestId('upgrade-confirmation-details');
   await expect(confirmation).toBeVisible();
-  await expect.poll(() => confirmation.evaluate((dialog) => dialog.parentElement?.classList.contains('game-frame'))).toBe(true);
+  await expect.poll(() => confirmation.evaluate((dialog) => dialog.closest('.game-frame') !== null)).toBe(true);
   await expect(details).toContainText('Level 0 → 1');
   await expect(details).toContainText('Speed 1.95 cells/s (1500 fine/100ms) → 2.28 cells/s (1750 fine/100ms)');
   await expect(details).toContainText('Damage 140 → 140 base damage/shot');

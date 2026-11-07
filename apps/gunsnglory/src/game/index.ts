@@ -566,7 +566,7 @@ export interface RoutePoint {
   y: number;
 }
 
-export type GameMode = 'formal' | 'debug' | 'experiment' | 'replay';
+export type GameMode = 'formal' | 'free' | 'debug' | 'experiment' | 'replay';
 
 export interface GameSettlementRecord extends WaveSettlement {
   settlementId: string;
@@ -2847,7 +2847,9 @@ export function createGame(options: {
       }
       const campaignWaves = scenario.campaignWaves;
       const campaignWaveCount = scenario.campaignWaveCount ?? campaignWaves?.length ?? 0;
-      const campaignMode = (mode === 'formal' || (mode === 'replay' && replaySourceMode === 'formal'))
+      const officialSessionMode = mode === 'formal' || mode === 'free';
+      const campaignMode = (officialSessionMode || (mode === 'replay'
+        && (replaySourceMode === 'formal' || replaySourceMode === 'free')))
         && Boolean(campaignWaves?.length);
       if (campaignWaves) {
         const spawnCount = scenario.previewWave
@@ -2930,17 +2932,17 @@ export function createGame(options: {
         || !(scenario.originalTileGrid ?? scenario.map.originalTileGrid))) {
         throw new GameOpenError('scenario-unavailable', 'Campaign bonus-crate data is invalid');
       }
-      if (mode === 'formal' && preparedSetup) {
+      if (officialSessionMode && preparedSetup) {
         const baseline = await prepare({ scenarioId });
         if (baseline.digest !== resolved.setup.digest) {
-          throw new GameOpenError('prepared-setup-mismatch', 'Formal games cannot use modified numeric parameters');
+          throw new GameOpenError('prepared-setup-mismatch', 'Official games cannot use modified numeric parameters');
         }
       }
-      if (mode === 'formal' && scenario.formalSettlementSupported !== true) {
-        throw new Error('Formal mode is not supported for scenario: ' + scenarioId);
+      if (officialSessionMode && scenario.formalSettlementSupported !== true) {
+        throw new Error(`${mode === 'free' ? 'Free play' : 'Formal mode'} is not supported for scenario: ${scenarioId}`);
       }
-      if (mode === 'formal' && !scenario.previewWave && !campaignWaves?.length) {
-        throw new Error('Formal mode requires a settleable scenario: ' + scenarioId);
+      if (officialSessionMode && !scenario.previewWave && !campaignWaves?.length) {
+        throw new Error(`${mode === 'free' ? 'Free play' : 'Formal mode'} requires a settleable scenario: ${scenarioId}`);
       }
 
       const resolvedSeed = randomSeed ?? options.randomSeedSource?.() ?? 1;
