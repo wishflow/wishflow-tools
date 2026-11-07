@@ -8,9 +8,24 @@ import {
   type NumericParameterValue,
   type PreparedSetup,
 } from '../game';
-import { ExperimentRepositoryError, type ExperimentRepository, type ListSavedComparisonsRequest, type SavedComparison, type SavedComparisonPage } from './experiment-repository';
+import {
+  ExperimentRepositoryError,
+  type ExperimentArchiveData,
+  type ExperimentArchiveMergeResult,
+  type ExperimentRepository,
+  type ListSavedComparisonsRequest,
+  type SavedComparison,
+  type SavedComparisonPage,
+} from './experiment-repository';
 import { createMemoryExperimentRepository } from './memory-experiment-repository';
-export type { ListSavedComparisonsRequest, SavedComparison, SavedComparisonPage, SavedComparisonSummary } from './experiment-repository';
+export type {
+  ExperimentArchiveData,
+  ExperimentArchiveMergeResult,
+  ListSavedComparisonsRequest,
+  SavedComparison,
+  SavedComparisonPage,
+  SavedComparisonSummary,
+} from './experiment-repository';
 
 export type RunStatus = 'completed' | 'cancelled' | 'budget-exceeded' | 'failed' | 'invalid-input';
 export type RunOutcome = 'victory' | 'defeat';
@@ -268,6 +283,8 @@ export interface Experiments {
   saveComparison(report: ExperimentComparisonReport): Promise<SavedComparison>;
   openComparison(id: string): Promise<SavedComparison | null>;
   listComparisons(request?: ListSavedComparisonsRequest): Promise<SavedComparisonPage>;
+  exportArchive(): Promise<ExperimentArchiveData>;
+  mergeArchive(data: ExperimentArchiveData): Promise<ExperimentArchiveMergeResult>;
 }
 
 interface ExperimentsRuntime {
@@ -1113,6 +1130,20 @@ export function createExperiments(options: CreateExperimentsOptions): Experiment
   };
   const listComparisons: Experiments['listComparisons'] = async (request) =>
     freezeDeep(await repository.listComparisons(request));
+  const exportArchive: Experiments['exportArchive'] = async () =>
+    freezeDeep(await repository.exportArchive());
+  const mergeArchive: Experiments['mergeArchive'] = async (data) =>
+    freezeDeep(await repository.mergeArchive(data));
 
-  return Object.freeze({ run: runSingle, runBatch, saveScheme, compare, saveComparison, openComparison, listComparisons });
+  return Object.freeze({
+    run: runSingle,
+    runBatch,
+    saveScheme,
+    compare,
+    saveComparison,
+    openComparison,
+    listComparisons,
+    exportArchive,
+    mergeArchive,
+  });
 }

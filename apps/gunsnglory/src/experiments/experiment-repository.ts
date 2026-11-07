@@ -60,6 +60,22 @@ export interface SavedComparisonPage {
   nextCursor?: string;
 }
 
+export interface ExperimentArchiveData {
+  schemes: NumericSchemeVersion[];
+  comparisons: NewSavedComparison[];
+}
+
+export interface ExperimentArchiveMergeResult {
+  addedSchemes: number;
+  skippedSchemes: number;
+  addedComparisons: number;
+  skippedComparisons: number;
+  conflicts: {
+    schemes: NumericSchemeReference[];
+    comparisons: string[];
+  };
+}
+
 export interface ListSavedComparisonsRequest {
   /** Defaults to 20 and is capped at 50. */
   limit?: number;
@@ -73,6 +89,8 @@ export interface ExperimentRepository {
   saveComparison(comparison: NewSavedComparison): Promise<SavedComparison>;
   openComparison(id: string): Promise<SavedComparison | null>;
   listComparisons(request?: ListSavedComparisonsRequest): Promise<SavedComparisonPage>;
+  exportArchive(): Promise<ExperimentArchiveData>;
+  mergeArchive(data: ExperimentArchiveData): Promise<ExperimentArchiveMergeResult>;
 }
 
 export const EXPERIMENT_REPOSITORY_SCHEMA_VERSION = 1;
@@ -159,6 +177,44 @@ export function isNewSavedComparison(value: unknown): value is NewSavedCompariso
     && summary.candidateScheme.version === request.candidate.version
     && summary.plannedSampleCount === report.plannedSampleCount
     && summary.completedRunCount === report.completedRunCount;
+}
+
+function hasExactKeys(value: object, expected: readonly string[]): boolean {
+  return Object.keys(value).sort().join(',') === [...expected].sort().join(',');
+}
+
+function validArchiveScheme(value: unknown): value is NumericSchemeVersion {
+  if (!isNumericSchemeVersion(value) || !hasExactKeys(value, [
+    'id', 'version', 'scenarioId', 'contentVersion', 'rulesVersion', 'preparedSetup',
+  ])) return false;
+  const scheme = value as NumericSchemeVersion;
+  return hasExactKeys(scheme.preparedSetup, ['scenarioId', 'contentVersion', 'rulesVersion', 'parameters', 'digest'])
+    && scheme.preparedSetup.parameters.every((parameter) => hasExactKeys(parameter, ['path', 'value']));
+}
+
+function validArchiveComparison(value: unknown): value is NewSavedComparison {
+  return isNewSavedComparison(value)
+    && hasExactKeys(value, ['id', 'savedAt', 'request', 'summary', 'report']);
+}
+
+export function isExperimentArchiveData(value: unknown): value is ExperimentArchiveData {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)
+    || !hasExactKeys(value, ['schemes', 'comparisons'])) return false;
+  const archive = value as Partial<ExperimentArchiveData>;
+  if (!Array.isArray(archive.schemes) || !Array.isArray(archive.comparisons)
+    || !archive.schemes.every(validArchiveScheme) || !archive.comparisons.every(validArchiveComparison)) return false;
+
+  const schemes = archive.schemes as NumericSchemeVersion[];
+  const comparisons = archive.comparisons as NewSavedComparison[];
+  const schemesByKey = new Map(schemes.map((scheme) => [schemeStorageKey(scheme), scheme]));
+  if (schemesByKey.size !== schemes.length || new Set(comparisons.map(({ id }) => id)).size !== comparisons.length) return false;
+  return comparisons.every((comparison) => {
+    const baseline = schemesByKey.get(schemeStorageKey(comparison.request.baseline));
+    const candidate = schemesByKey.get(schemeStorageKey(comparison.request.candidate));
+    return baseline !== undefined && candidate !== undefined
+      && canonicalJsonValue(baseline) === canonicalJsonValue(comparison.report.baseline.scheme)
+      && canonicalJsonValue(candidate) === canonicalJsonValue(comparison.report.candidate.scheme);
+  });
 }
 
 export async function savedComparisonDigest(value: NewSavedComparison): Promise<string> {

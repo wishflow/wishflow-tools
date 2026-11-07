@@ -2,6 +2,7 @@ import { canonicalJsonValue, canonicalSha256Digest } from '../value-digest';
 import {
   encodeComparisonCursor,
   ExperimentRepositoryError,
+  isExperimentArchiveData,
   isNewSavedComparison,
   isNumericSchemeVersion,
   normalizeComparisonPageRequest,
@@ -10,6 +11,8 @@ import {
   validRepositoryId,
   validSchemeReference,
   type ExperimentRepository,
+  type ExperimentArchiveData,
+  type ExperimentArchiveMergeResult,
   type NewSavedComparison,
   type SavedComparison,
   type SavedComparisonPage,
@@ -447,6 +450,244 @@ export function createIndexedDbExperimentRepository(): ExperimentRepository {
         };
       } catch (error) {
         throw asRepositoryError(error);
+      }
+    },
+
+    async exportArchive(): Promise<ExperimentArchiveData> {
+      try {
+        const db = await database();
+        const transaction = db.transaction([SCHEMES_STORE, COMPARISONS_STORE, ARTIFACTS_STORE], 'readonly');
+        const done = transactionDone(transaction);
+        done.catch(() => undefined);
+        const [rawSchemes, rawIndexes, rawArtifacts] = await Promise.all([
+          requestResult(transaction.objectStore(SCHEMES_STORE).getAll()),
+          requestResult(transaction.objectStore(COMPARISONS_STORE).getAll()),
+          requestResult(transaction.objectStore(ARTIFACTS_STORE).getAll()),
+        ]);
+        await done;
+
+        const schemes = new Map<string, NumericSchemeVersion>();
+        for (const raw of rawSchemes) {
+          if (!isStoredScheme(raw) || raw.key !== schemeStorageKey(raw.value)) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Stored numeric scheme is malformed');
+          }
+          if (await canonicalSha256Digest(raw.value) !== raw.digest) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Stored numeric scheme digest does not match its contents');
+          }
+          schemes.set(raw.key, copy(raw.value));
+        }
+
+        const indexes = new Map<string, StoredComparisonIndex>();
+        for (const raw of rawIndexes) {
+          if (!isStoredIndex(raw) || indexes.has(raw.id)) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison index is malformed');
+          }
+          indexes.set(raw.id, raw);
+        }
+        const artifacts = new Map<string, StoredComparisonArtifact>();
+        for (const raw of rawArtifacts) {
+          if (!isStoredArtifact(raw) || artifacts.has(raw.id)) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison artifact is malformed');
+          }
+          artifacts.set(raw.id, raw);
+        }
+        if (indexes.size !== artifacts.size) {
+          throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison index and artifact counts do not match');
+        }
+
+        const comparisons: NewSavedComparison[] = [];
+        for (const [id, index] of [...indexes.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+          const artifact = artifacts.get(id);
+          if (!artifact || artifact.digest !== index.digest) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison artifact is missing or inconsistent');
+          }
+          const comparison: NewSavedComparison = {
+            id,
+            savedAt: index.savedAt,
+            request: copy(index.request),
+            summary: copy(index.summary),
+            report: copy(artifact.report),
+          };
+          if (!isNewSavedComparison(comparison)
+            || await savedComparisonDigest(comparison) !== index.digest) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison digest does not match its contents');
+          }
+          const baseline = schemes.get(schemeStorageKey(comparison.request.baseline));
+          const candidate = schemes.get(schemeStorageKey(comparison.request.candidate));
+          if (!baseline || !candidate
+            || !sameJson(baseline, comparison.report.baseline.scheme)
+            || !sameJson(candidate, comparison.report.candidate.scheme)) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison references a missing or changed numeric scheme');
+          }
+          comparisons.push(comparison);
+        }
+
+        return {
+          schemes: [...schemes.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([, scheme]) => scheme),
+          comparisons,
+        };
+      } catch (error) {
+        throw asRepositoryError(error);
+      }
+    },
+
+    async mergeArchive(input: ExperimentArchiveData): Promise<ExperimentArchiveMergeResult> {
+      if (!isExperimentArchiveData(input)) throw invalidWrite('Experiment archive is invalid or incomplete');
+      const importedSchemes = copy(input.schemes);
+      const importedComparisons = copy(input.comparisons);
+      const schemeRows = await Promise.all(importedSchemes.map(async (scheme) => ({
+        key: schemeStorageKey(scheme),
+        digest: await canonicalSha256Digest(scheme),
+        value: scheme,
+      })));
+      const comparisonRows = await Promise.all(importedComparisons.map(async (comparison) => {
+        const digest = await savedComparisonDigest(comparison);
+        return {
+          id: comparison.id,
+          digest,
+          index: {
+            id: comparison.id,
+            savedAt: comparison.savedAt,
+            digest,
+            request: copy(comparison.request),
+            summary: copy(comparison.summary),
+          } satisfies StoredComparisonIndex,
+          artifact: {
+            id: comparison.id,
+            digest,
+            report: copy(comparison.report),
+          } satisfies StoredComparisonArtifact,
+          value: comparison,
+        };
+      }));
+
+      try {
+        const db = await database();
+        const transaction = db.transaction([SCHEMES_STORE, COMPARISONS_STORE, ARTIFACTS_STORE], 'readwrite');
+        const done = transactionDone(transaction);
+        done.catch(() => undefined);
+        const schemesStore = transaction.objectStore(SCHEMES_STORE);
+        const comparisonsStore = transaction.objectStore(COMPARISONS_STORE);
+        const artifactsStore = transaction.objectStore(ARTIFACTS_STORE);
+        try {
+          const [rawSchemes, rawIndexes, rawArtifacts] = await Promise.all([
+            requestResult(schemesStore.getAll()),
+            requestResult(comparisonsStore.getAll()),
+            requestResult(artifactsStore.getAll()),
+          ]);
+          const localSchemes = new Map<string, StoredScheme>();
+          for (const raw of rawSchemes) {
+            if (!isStoredScheme(raw) || raw.key !== schemeStorageKey(raw.value) || localSchemes.has(raw.key)) {
+              throw new ExperimentRepositoryError('corrupt-data', 'Stored numeric scheme is malformed', 'not-committed');
+            }
+            localSchemes.set(raw.key, raw);
+          }
+          const localIndexes = new Map<string, StoredComparisonIndex>();
+          for (const raw of rawIndexes) {
+            if (!isStoredIndex(raw) || localIndexes.has(raw.id)) {
+              throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison index is malformed', 'not-committed');
+            }
+            localIndexes.set(raw.id, raw);
+          }
+          const localArtifacts = new Map<string, StoredComparisonArtifact>();
+          for (const raw of rawArtifacts) {
+            if (!isStoredArtifact(raw) || localArtifacts.has(raw.id)) {
+              throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison artifact is malformed', 'not-committed');
+            }
+            localArtifacts.set(raw.id, raw);
+          }
+          if (localIndexes.size !== localArtifacts.size) {
+            throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison index and artifact counts do not match', 'not-committed');
+          }
+          for (const [id, index] of localIndexes) {
+            const artifact = localArtifacts.get(id);
+            if (!artifact || artifact.digest !== index.digest) {
+              throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison index and artifact do not match', 'not-committed');
+            }
+          }
+
+          const resolvedSchemes = new Map([...localSchemes.entries()].map(([key, row]) => [key, row.value]));
+          const schemesToAdd: typeof schemeRows = [];
+          const conflicts: ExperimentArchiveMergeResult['conflicts'] = { schemes: [], comparisons: [] };
+          let skippedSchemes = 0;
+          for (const row of schemeRows) {
+            const local = localSchemes.get(row.key);
+            if (!local) {
+              schemesToAdd.push(row);
+              resolvedSchemes.set(row.key, row.value);
+            } else if (sameJson(local.value, row.value)) {
+              if (local.digest !== row.digest) {
+                throw new ExperimentRepositoryError('corrupt-data', 'Stored numeric scheme digest does not match its contents', 'not-committed');
+              }
+              skippedSchemes += 1;
+            } else {
+              conflicts.schemes.push({ id: row.value.id, version: row.value.version });
+            }
+          }
+
+          const comparisonsToAdd: typeof comparisonRows = [];
+          let skippedComparisons = 0;
+          for (const row of comparisonRows) {
+            const localIndex = localIndexes.get(row.id);
+            const localArtifact = localArtifacts.get(row.id);
+            if (localIndex || localArtifact) {
+              if (!localIndex || !localArtifact || localIndex.digest !== localArtifact.digest) {
+                throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison is missing its committed artifact', 'not-committed');
+              }
+              const localValue: NewSavedComparison = {
+                id: localIndex.id,
+                savedAt: localIndex.savedAt,
+                request: localIndex.request,
+                summary: localIndex.summary,
+                report: localArtifact.report,
+              };
+              if (!isNewSavedComparison(localValue)) {
+                throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison record is malformed', 'not-committed');
+              }
+              if (sameJson(localValue, row.value)) {
+                if (localIndex.digest !== row.digest) {
+                  throw new ExperimentRepositoryError('corrupt-data', 'Saved comparison digest does not match its contents', 'not-committed');
+                }
+                skippedComparisons += 1;
+              } else {
+                conflicts.comparisons.push(row.id);
+              }
+              continue;
+            }
+
+            const baseline = resolvedSchemes.get(schemeStorageKey(row.value.request.baseline));
+            const candidate = resolvedSchemes.get(schemeStorageKey(row.value.request.candidate));
+            if (!baseline || !candidate
+              || !sameJson(baseline, row.value.report.baseline.scheme)
+              || !sameJson(candidate, row.value.report.candidate.scheme)) {
+              conflicts.comparisons.push(row.id);
+              continue;
+            }
+            comparisonsToAdd.push(row);
+          }
+
+          for (const row of schemesToAdd) {
+            schemesStore.add({ key: row.key, digest: row.digest, value: row.value } satisfies StoredScheme);
+          }
+          for (const row of comparisonsToAdd) {
+            comparisonsStore.add(row.index);
+            artifactsStore.add(row.artifact);
+          }
+          await done;
+          return {
+            addedSchemes: schemesToAdd.length,
+            skippedSchemes,
+            addedComparisons: comparisonsToAdd.length,
+            skippedComparisons,
+            conflicts,
+          };
+        } catch (error) {
+          try { transaction.abort(); } catch { /* The transaction has already finished. */ }
+          await done.catch(() => undefined);
+          throw error;
+        }
+      } catch (error) {
+        throw asRepositoryError(error, true);
       }
     },
   };

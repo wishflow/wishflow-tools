@@ -167,4 +167,61 @@ export async function verifyExperimentRepositoryContract(
 
   await assert.rejects(repository.listComparisons({ limit: 0 }), repositoryError('invalid-input'));
   await assert.rejects(repository.listComparisons({ limit: 1, cursor: 'not-a-cursor' }), repositoryError('invalid-input'));
+
+  await repository.saveScheme(await scheme('unlinked-scheme', '1', 13));
+  const archive = await repository.exportArchive();
+  assert.equal(archive.schemes.length, 4, 'archive contains standalone immutable schemes too');
+  assert.equal(archive.comparisons.length, 2);
+
+  assert.deepEqual(await repository.mergeArchive(archive), {
+    addedSchemes: 0,
+    skippedSchemes: 4,
+    addedComparisons: 0,
+    skippedComparisons: 2,
+    conflicts: { schemes: [], comparisons: [] },
+  }, 'merging the exported archive skips identical local records');
+  assert.deepEqual(await repository.mergeArchive(archive), {
+    addedSchemes: 0,
+    skippedSchemes: 4,
+    addedComparisons: 0,
+    skippedComparisons: 2,
+    conflicts: { schemes: [], comparisons: [] },
+  }, 'an identical archive remains idempotent on repeated merge');
+
+  const localConflict = await scheme('cow-gulch-draft', 'draft-5', 500);
+  const originalBaseline = archive.schemes.find(({ id }) => id === 'cow-gulch-original');
+  const comparisonAlpha = archive.comparisons.find(({ id }) => id === 'comparison-alpha');
+  if (!originalBaseline || !comparisonAlpha) throw new Error('archive contract fixture is incomplete');
+  const dependentComparison = structuredClone(comparisonAlpha);
+  dependentComparison.id = 'comparison-gamma';
+  dependentComparison.request.comparisonId = dependentComparison.id;
+  dependentComparison.report.comparisonId = dependentComparison.id;
+  dependentComparison.report.request.comparisonId = dependentComparison.id;
+  dependentComparison.report.candidate.scheme = localConflict;
+  assert.deepEqual(await repository.mergeArchive({
+    schemes: [originalBaseline, localConflict],
+    comparisons: [dependentComparison],
+  }), {
+    addedSchemes: 0,
+    skippedSchemes: 1,
+    addedComparisons: 0,
+    skippedComparisons: 0,
+    conflicts: {
+      schemes: [{ id: localConflict.id, version: localConflict.version }],
+      comparisons: ['comparison-gamma'],
+    },
+  }, 'a locally conflicting scheme is preserved and a new report that depends on its imported value is skipped');
+
+  const idConflict = structuredClone(comparisonAlpha);
+  idConflict.savedAt += 1;
+  assert.deepEqual(await repository.mergeArchive({
+    schemes: archive.schemes,
+    comparisons: [idConflict],
+  }), {
+    addedSchemes: 0,
+    skippedSchemes: 4,
+    addedComparisons: 0,
+    skippedComparisons: 0,
+    conflicts: { schemes: [], comparisons: ['comparison-alpha'] },
+  }, 'a saved comparison with the same ID and different content is preserved locally');
 }

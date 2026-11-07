@@ -6,12 +6,6 @@ export interface ViewportRect {
   scale: number;
 }
 
-export interface LogicalViewportSize {
-  width: number;
-  height: number;
-  scale: number;
-}
-
 function assertDimensions(width: number, height: number): void {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
     throw new RangeError('Viewport dimensions must be finite and positive');
@@ -34,23 +28,6 @@ export function fitAspectViewport(
     y: (containerHeight - height) / 2,
     width,
     height,
-    scale,
-  };
-}
-
-/** Computes a logical viewport that fills a screen using one uniform scale. */
-export function fitLogicalViewportToScreen(
-  screenWidth: number,
-  screenHeight: number,
-  baseWidth: number,
-  baseHeight: number,
-): LogicalViewportSize {
-  assertDimensions(screenWidth, screenHeight);
-  assertDimensions(baseWidth, baseHeight);
-  const scale = Math.max(screenWidth / baseWidth, screenHeight / baseHeight);
-  return {
-    width: screenWidth / scale,
-    height: screenHeight / scale,
     scale,
   };
 }

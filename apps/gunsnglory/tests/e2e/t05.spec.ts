@@ -29,7 +29,7 @@ test('saves a formal result across reload and discards an unfinished wave', asyn
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.', { timeout: 10000 });
   await expect.poll(() => page.getByTestId('settlement')
-    .evaluate((panel) => panel.parentElement?.classList.contains('game-frame'))).toBe(true);
+    .evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
   await expect(page.getByTestId('profile-status')).toHaveText('Saved profile: no official Cow Gulch level 1 result yet.');
 
   const stored = await page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {

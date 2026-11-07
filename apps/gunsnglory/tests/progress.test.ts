@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createProgress, ProgressError } from '../src/progress';
 import { createMemoryProfileRepository } from '../src/progress/memory-profile-repository';
+import type { ProfileData } from '../src/progress/profile-repository';
 import { verifyProfileRepositoryContract } from './profile-repository-contract';
 import type { GameSettlementRecord } from '../src/game';
 import type { CampaignStageDefinition } from '../src/progress';
@@ -34,6 +35,45 @@ test('loads and saves supported speeds through the shared profile repository', a
     difficulty: 'medium',
     soundEnabled: true,
   });
+});
+
+test('exports ProfileData and atomically replaces it without exposing the storage revision', async () => {
+  const repository = createMemoryProfileRepository({
+    settings: { simulationSpeed: 1, difficulty: 'easy', soundEnabled: true },
+  });
+  const progress = createProgress(repository, officialCampaignStages);
+  await progress.loadProfile();
+  await progress.saveSettings({ simulationSpeed: 2, difficulty: 'easy', soundEnabled: true });
+  const beforeRecord = JSON.parse((await repository.exportRawProfileRecord()) ?? 'null') as { revision: number };
+
+  const imported: ProfileData = {
+    settings: { simulationSpeed: 2.25, difficulty: 'medium', soundEnabled: false },
+    completedScenarios: [cowGulchLevelOneContent.id],
+    highScores: { [cowGulchLevelOneContent.id]: 180 },
+    appliedSettlementIds: ['imported-session:cow-gulch:8'],
+  };
+  assert.deepEqual(await progress.exportProfileData(), {
+    settings: { simulationSpeed: 2, difficulty: 'easy', soundEnabled: true },
+    completedScenarios: [],
+    highScores: {},
+    appliedSettlementIds: [],
+  });
+  assert.deepEqual(await progress.replaceProfileData(imported), {
+    settings: imported.settings,
+    completedScenarios: imported.completedScenarios,
+    highScores: imported.highScores,
+  });
+  assert.deepEqual(await progress.exportProfileData(), imported);
+  assert.equal((await progress.loadCampaign()).stages[0]?.status, 'completed');
+  const afterRecord = JSON.parse((await repository.exportRawProfileRecord()) ?? 'null') as { revision: number };
+  assert.equal(afterRecord.revision, beforeRecord.revision + 1);
+
+  const snapshot = await progress.exportProfileData();
+  await assert.rejects(progress.replaceProfileData({
+    ...imported,
+    settings: { simulationSpeed: 20 },
+  } as ProfileData), (error: unknown) => (error as { code?: string }).code === 'invalid-input');
+  assert.deepEqual(await progress.exportProfileData(), snapshot, 'invalid replacement must not change the saved profile');
 });
 
 test('reports a stale settings write instead of silently replacing another profile update', async () => {
@@ -243,9 +283,9 @@ test('records a formal sample settlement once and keeps the best score', async (
   assert.deepEqual(lower.profile.highScores, { 'cow-gulch': 50 });
 });
 
-test('does not apply debug, experiment, or replay settlements to a formal profile', async () => {
+test('does not apply debug, experiment, replay, or free-play settlements to a formal profile', async () => {
   const progress = createProgress(createMemoryProfileRepository());
-  for (const mode of ['debug', 'experiment', 'replay'] as const) {
+  for (const mode of ['debug', 'experiment', 'replay', 'free'] as const) {
     await assert.rejects(progress.applySettlement(settlement({ mode })), /formal/i);
   }
   assert.deepEqual(await progress.loadProfile(), {

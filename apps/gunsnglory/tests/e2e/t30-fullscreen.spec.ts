@@ -61,7 +61,7 @@ async function installFullscreenMock(
 
 test('enters and exits fullscreen, requests landscape on touch, and keeps the control state synchronized', async ({ browser }) => {
   const context = await browser.newContext({
-    viewport: { width: 390, height: 844 },
+    viewport: { width: 844, height: 390 },
     hasTouch: true,
     isMobile: true,
   });
@@ -77,6 +77,7 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
     await expect(toggle).toHaveAccessibleName('Exit fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByTestId('fullscreen-status')).toHaveText('Landscape orientation is enabled.');
+    await expect(page.getByTestId('portrait-orientation-overlay')).toBeHidden();
     expect(await page.evaluate(() => document.fullscreenElement === document.querySelector('.game-frame'))).toBe(true);
     expect(await page.evaluate(() => (window as FullscreenTestWindow).__gngOrientationLockCalls)).toEqual(['landscape']);
 
@@ -90,7 +91,7 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
   }
 });
 
-test('fills the fullscreen viewport and keeps the shared Usagi widget above the game only in window mode', async ({ browser }) => {
+test('keeps the complete game composition 16:9 in fullscreen and keeps Usagi above the game only in window mode', async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 844, height: 390 },
     hasTouch: true,
@@ -132,8 +133,38 @@ test('fills the fullscreen viewport and keeps the shared Usagi widget above the 
     expect(Math.abs(frame!.width - 844)).toBeLessThan(1);
     expect(Math.abs(frame!.height - 390)).toBeLessThan(1);
     await expect(widget).toBeHidden();
-    expect(await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.width / canvas.height))
-      .toBeCloseTo(844 / 390, 2);
+    const stage = await page.getByTestId('game-stage').boundingBox();
+    expect(stage).toBeTruthy();
+    expect(stage!.width / stage!.height).toBeCloseTo(16 / 9, 5);
+    expect(stage!.height).toBeCloseTo(390, 0);
+    expect(stage!.width).toBeCloseTo(390 * 16 / 9, 0);
+    expect(stage!.x).toBeCloseTo((844 - stage!.width) / 2, 0);
+    expect(stage!.y).toBeCloseTo(0, 0);
+    const canvas = page.locator('[data-testid="game-canvas"]');
+    const canvasBounds = await canvas.boundingBox();
+    expect(canvasBounds).toBeTruthy();
+    expect(canvasBounds!.width / canvasBounds!.height).toBeCloseTo(16 / 9, 5);
+    expect(await canvas.evaluate((element: HTMLCanvasElement) => element.width / element.height))
+      .toBeCloseTo(16 / 9, 2);
+    const menuBounds = await page.locator('[data-testid="campaign-menu-screen"]').boundingBox();
+    expect(menuBounds).toBeTruthy();
+    expect(menuBounds!.x).toBeCloseTo(stage!.x, 0);
+    expect(menuBounds!.y).toBeCloseTo(stage!.y, 0);
+    expect(menuBounds!.width).toBeCloseTo(stage!.width, 0);
+    expect(menuBounds!.height).toBeCloseTo(stage!.height, 0);
+
+    await page.evaluate(() => {
+      const canvasElement = document.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
+      if (!canvasElement) throw new Error('Missing game canvas');
+      canvasElement.dataset.pointerCount = '0';
+      canvasElement.addEventListener('pointerdown', () => {
+        canvasElement.dataset.pointerCount = String(Number(canvasElement.dataset.pointerCount) + 1);
+      });
+    });
+    await page.mouse.click(12, 195);
+    await expect(canvas).toHaveAttribute('data-pointer-count', '0');
+    await page.getByTestId('menu-start').click();
+    await expect(page.getByTestId('campaign-region-new-mexico')).toBeVisible();
 
     await page.getByTestId('fullscreen-toggle').click();
     await expect(widget).toBeVisible();
@@ -161,9 +192,24 @@ test('keeps fullscreen available when mobile orientation locking is rejected', a
     await page.getByTestId('fullscreen-toggle').click();
     await expect(page.getByTestId('fullscreen-toggle')).toHaveAccessibleName('Exit fullscreen');
     await expect(page.getByTestId('fullscreen-status')).toHaveText(
-      'Fullscreen is active. Rotate your device to landscape for the best view.',
+      'Fullscreen is active. Rotate your device to landscape to continue.',
     );
     expect(await page.evaluate(() => document.fullscreenElement === document.querySelector('.game-frame'))).toBe(true);
+    await expect(page.getByTestId('portrait-orientation-overlay')).toBeVisible();
+    await expect(page.getByTestId('portrait-orientation-overlay')).toContainText('Rotate your device to landscape to continue.');
+    await page.evaluate(() => {
+      const canvasElement = document.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
+      if (!canvasElement) throw new Error('Missing game canvas');
+      canvasElement.dataset.pointerCount = '0';
+      canvasElement.addEventListener('pointerdown', () => {
+        canvasElement.dataset.pointerCount = String(Number(canvasElement.dataset.pointerCount) + 1);
+      });
+    });
+    const canvasBounds = await page.locator('[data-testid="game-canvas"]').boundingBox();
+    expect(canvasBounds).toBeTruthy();
+    await page.mouse.click(canvasBounds!.x + canvasBounds!.width / 2, canvasBounds!.y + canvasBounds!.height / 2);
+    await expect(page.getByTestId('game-canvas')).toHaveAttribute('data-pointer-count', '0');
+    await expect(page.getByTestId('fullscreen-toggle')).toBeVisible();
   } finally {
     await context.close();
   }
