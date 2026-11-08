@@ -53,8 +53,13 @@
 - [x] 基于 Linux 实测的工具栏修复已 squash 到 `master` 并发布。GitHub Actions `42459138730` 全部成功；GitHub Pages 与 Cloudflare Pages 根 `build-info.json` 均报告来源 SHA `2cf6bd841f4fe9e7e2ad0556273c07f56f20846e`。
 - [x] 内置浏览器在该部署 SHA、窗口模式和静音下确认战斗中的战役退出弹窗、全屏按钮和 Keep playing 可见。尝试原生全屏时，内置浏览器宿主拒绝 Fullscreen API；初次截图发现拒绝提示盖住弹窗标题，故追加修复。宿主拒绝时不得将自动化 mock 描述为真实全屏成功。
 - [x] 修复全屏请求失败提示在战役退出弹窗中的布局：提示须与全屏控件同处顶部，不遮挡标题、说明和操作按钮；Playwright 检查实际矩形不相交并点击 Keep playing。CSS 与 `t30-fullscreen.spec.ts` 回归覆盖通过；完整 `pnpm run test:ci` 通过类型检查、399 项单测、生产构建及 104 项 E2E。Vite 主 JS chunk 超过 500KB 的既有提示仍存在。
-- [ ] 该补充切片通过后，提交并 squash 集成到 `master`，等待 GitHub Actions 成功，核对 GitHub Pages 与 Cloudflare Pages 根 `build-info.json` 的来源 SHA，再用内置浏览器复核同一 SHA 的窗口模式与弹窗点击；若宿主继续拒绝原生全屏，记录限制，不声称真实全屏成功。
-- [ ] 更新计划及经验记录，完成 Markdown 检查和副本后，将发布 `master` 同步回 `gunsnglory` 集成分支并推送，关闭本批。
+- [x] 补充修复已 squash 到 `master` 提交 `50289f2c54150c7f4ca4d369e0daa8a2f777b84a`。GitHub Actions `42460770199` 全部成功，包含 Guns’n’Glory 完整测试及 GitHub Pages、Cloudflare Pages 部署；两处根 `build-info.json` 均匹配该 SHA。
+- [x] 内置浏览器在 `50289f2`、窗口模式和静音下打开战役退出弹窗，尝试全屏后确认错误提示位于弹窗顶部、标题/说明未被覆盖；Keep playing 可关闭弹窗并恢复战斗。浏览器宿主仍拒绝原生 Fullscreen API，因此只核验拒绝状态与页面可用性，未声称成功进入真实全屏；全屏状态切换由自动化 mock 覆盖。
+- [x] 发布提交 `50289f2` 已合并并推送回 `gunsnglory` 集成分支；同步合并提交为 `7639e1f`。经验记录和计划已更新，Markdown 已检查并复制；本批关闭。
+
+### 批次发布比例
+
+此前基线为 7 次成功发布 / 36 个实现切片（19.4%）。本修复批次线上发现手机操作行和全屏错误提示两个真实缺陷，完整修复共 4 个实现切片、实际发布 2 次；累计为 9 次 / 40 个切片（22.5%）。该修复批次按规则记录实际比例；超出 20% 的部分来自完整修复批次验收中必须发布的修正，不作为普通功能发布目标调整依据。
 
 ## 后续批次：New Mexico 第 5 关 Billy Hills
 
