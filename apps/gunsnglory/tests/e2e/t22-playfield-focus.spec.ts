@@ -67,10 +67,15 @@ for (const profile of viewports) {
             const rect = button.getBoundingClientRect();
             return rect.width > 0 && rect.left >= actions.left && rect.right <= actions.right;
           }),
+          primaryControlBounds: primaryControls.map((button) => {
+            const rect = button?.getBoundingClientRect();
+            return rect ? { left: rect.left, right: rect.right, width: rect.width } : undefined;
+          }),
+          actionsBounds: { left: actions.left, right: actions.right, width: actions.width },
           canScroll: actionsElement.scrollWidth > actionsElement.clientWidth,
         };
       });
-      await expect.poll(readToolbarLayout).toEqual({
+      await expect.poll(readToolbarLayout).toMatchObject({
         overlaps: false,
         primaryControlsFit: true,
         canScroll: true,

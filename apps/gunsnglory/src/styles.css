@@ -2677,7 +2677,7 @@ body.gng-game-fullscreen .usagi-widget {
 
   .game-toolbar-actions {
     max-width: calc(100% - 4.75rem);
-    gap: 0.25rem;
+    gap: 0.2rem;
     padding-right: 0;
   }
 
@@ -2692,6 +2692,13 @@ body.gng-game-fullscreen .usagi-widget {
     min-height: 2rem;
     padding: 0.24rem 0.18rem;
     font-size: 0.66rem;
+  }
+
+  .game-toolbar-actions > [data-testid="pause-toggle"],
+  .game-toolbar-actions > [data-testid="campaign-menu-toggle"],
+  .game-toolbar-actions > [data-action="clear-selection"] {
+    padding-right: 0.1rem;
+    padding-left: 0.1rem;
   }
 
   .game-toolbar-options {
