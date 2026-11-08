@@ -16,7 +16,7 @@
 
 ## UI 图层与全屏弹窗
 
-**状态：已关闭。**弹窗图层、按钮样式、同语言布局和手机输入已通过本地完整检查，修复通过 GitHub Actions `42459138730` 与补充发布 Actions `42460770199`。最终部署 SHA 为 `50289f2c54150c7f4ca4d369e0daa8a2f777b84a`；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器窗口模式、静音实测确认战役退出弹窗可打开；浏览器拒绝 Fullscreen API 后提示不遮挡标题/正文，Keep playing 可关闭弹窗并恢复战斗。该宿主拒绝真实全屏请求，因此本轮未验证成功进入/退出原生全屏；自动化 mock 只验证应用状态和布局逻辑。
+**状态：已关闭。**弹窗图层、按钮样式、同语言布局和手机输入已通过本地完整检查，修复通过[手机工具栏部署检查](https://github.com/wishflow/wishflow-tools/actions/runs/42459138730)与[补充发布检查](https://github.com/wishflow/wishflow-tools/actions/runs/42460770199)。最终部署提交为 `50289f2`；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器窗口模式、静音实测确认战役退出弹窗可打开；浏览器拒绝 Fullscreen API 后提示不遮挡标题/正文，Keep playing 可关闭弹窗并恢复战斗。该宿主拒绝真实全屏请求，因此本轮未验证成功进入/退出原生全屏；自动化 mock 只验证应用状态和布局逻辑。
 
 ### 当前证据
 
