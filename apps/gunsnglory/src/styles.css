@@ -1322,6 +1322,14 @@ body.gng-game-fullscreen .usagi-widget {
   right: 0.35rem;
 }
 
+.campaign-exit-confirmation .game-frame-fullscreen-controls:has(.game-frame-fullscreen-status:not([hidden])) {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-start;
+  gap: 0.35rem;
+  max-width: calc(100% - 0.7rem);
+}
+
 .campaign-exit-confirmation h2 {
   margin-top: 0;
   color: #ffd892;

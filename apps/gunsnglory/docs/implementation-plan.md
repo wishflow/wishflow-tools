@@ -50,9 +50,11 @@
 ### 4. 批次验收与发布
 
 - [x] 三个实现切片的定向 E2E、计划/经验更新及本地提交已完成。GitHub Actions `42455930720`、`42457077109` 均发现 390px 手机竖屏操作行越界；诊断运行 `42458377072` 测得最后一个主按钮超出 1.6875px。已将三颗主按钮左右内边距缩到 `0.05rem`，回收的总宽度超过实测越界；`t22`、`t09` 定向 7 项通过，最终 `pnpm run test:ci` 通过类型检查、399 项单测、构建和 103 项 E2E。把手机标题移入正常布局流的尝试曾造成 9 项触屏地图操作失败，已撤回，并以 17 项相关 E2E 验证回退。Vite 构建保留主 JS chunk 超过 500KB 的既有提示。
-- [ ] 提交并推送基于 Linux 实测的内边距修复，等待新的 GitHub Actions 全部成功；核对公开 `build-info.json` 来源 SHA 与最终发布提交完全一致。
-- [ ] 使用内置浏览器在最终通过 CI 的 SHA 构建上验证桌面交互和真实全屏往返；移动竖屏/横屏由定向 E2E 与完整 CI 覆盖。保持窗口模式与静音为默认，真实全屏只在对应验收中启用。当前浏览器若固定在旧 `release` SHA，不作为新代码验收证据。
-- [ ] 内置浏览器复核弹窗切换、按钮命中、遮罩阻断、布局和语言行为后，更新计划及经验记录并关闭本批。
+- [x] 基于 Linux 实测的工具栏修复已 squash 到 `master` 并发布。GitHub Actions `42459138730` 全部成功；GitHub Pages 与 Cloudflare Pages 根 `build-info.json` 均报告来源 SHA `2cf6bd841f4fe9e7e2ad0556273c07f56f20846e`。
+- [x] 内置浏览器在该部署 SHA、窗口模式和静音下确认战斗中的战役退出弹窗、全屏按钮和 Keep playing 可见。尝试原生全屏时，内置浏览器宿主拒绝 Fullscreen API；初次截图发现拒绝提示盖住弹窗标题，故追加修复。宿主拒绝时不得将自动化 mock 描述为真实全屏成功。
+- [x] 修复全屏请求失败提示在战役退出弹窗中的布局：提示须与全屏控件同处顶部，不遮挡标题、说明和操作按钮；Playwright 检查实际矩形不相交并点击 Keep playing。CSS 与 `t30-fullscreen.spec.ts` 回归覆盖通过；完整 `pnpm run test:ci` 通过类型检查、399 项单测、生产构建及 104 项 E2E。Vite 主 JS chunk 超过 500KB 的既有提示仍存在。
+- [ ] 该补充切片通过后，提交并 squash 集成到 `master`，等待 GitHub Actions 成功，核对 GitHub Pages 与 Cloudflare Pages 根 `build-info.json` 的来源 SHA，再用内置浏览器复核同一 SHA 的窗口模式与弹窗点击；若宿主继续拒绝原生全屏，记录限制，不声称真实全屏成功。
+- [ ] 更新计划及经验记录，完成 Markdown 检查和副本后，将发布 `master` 同步回 `gunsnglory` 集成分支并推送，关闭本批。
 
 ## 后续批次：New Mexico 第 5 关 Billy Hills
 

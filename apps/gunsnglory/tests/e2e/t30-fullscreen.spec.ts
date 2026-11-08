@@ -211,6 +211,39 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
   }
 });
 
+test('keeps a fullscreen failure message beside the campaign dialog instead of over its text', async ({ page }) => {
+  await installFullscreenMock(page, { request: 'reject' });
+  await page.goto('/?testBattle=1');
+
+  const dialog = page.getByTestId('campaign-exit-confirmation');
+  await page.getByTestId('campaign-menu-toggle').click();
+  await expect(dialog).toBeVisible();
+
+  const fullscreen = page.getByTestId('fullscreen-toggle');
+  await fullscreen.click();
+  await expect(page.getByTestId('fullscreen-status')).toBeVisible();
+
+  const overlapsDialogHeading = await page.getByTestId('fullscreen-status').evaluate((status: HTMLElement) => {
+    const heading = status.closest('dialog')?.querySelector('h2');
+    if (!heading) return true;
+    const statusBounds = status.getBoundingClientRect();
+    const headingBounds = heading.getBoundingClientRect();
+    return statusBounds.left < headingBounds.right
+      && statusBounds.right > headingBounds.left
+      && statusBounds.top < headingBounds.bottom
+      && statusBounds.bottom > headingBounds.top;
+  });
+  expect(overlapsDialogHeading).toBe(false);
+
+  const keepPlaying = dialog.getByRole('button', { name: 'Keep playing' });
+  expect(await keepPlaying.evaluate((button: HTMLButtonElement) => {
+    const bounds = button.getBoundingClientRect();
+    return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
+  })).toBe(true);
+  await keepPlaying.click();
+  await expect(dialog).toBeHidden();
+});
+
 test('uses consistent game action styles across ordinary dialogs and settlement', async ({ page }) => {
   await page.goto('/?testBattle=1');
   await page.getByTestId('campaign-menu-toggle').click();
