@@ -58,7 +58,7 @@ test('Gambler click opens an in-frame dialog; cancel, drag and other units do no
   const initialCash = page.getByTestId('gambler-cash');
   await tapGambler(page);
   await expect(dialog).toBeVisible();
-  await expect(page.getByTestId('fullscreen-toggle')).toBeHidden();
+  await expect(page.getByTestId('fullscreen-toggle')).toBeVisible();
   await expectDialogInsideGameFrame(page);
   await expect(initialCash).toHaveText('Cash: $50 · Wager: $50');
   await expect(page.getByTestId('gambler-message')).toHaveText('Show what you’ve got!');
@@ -120,7 +120,7 @@ test('touch input opens the Gambler dialog without escaping the 390px game frame
     await page.touchscreen.tap(point.x, point.y);
     const dialog = page.getByTestId('gambler-dialog');
     await expect(dialog).toBeVisible();
-    await expect(page.getByTestId('fullscreen-toggle')).toBeHidden();
+    await expect(page.getByTestId('fullscreen-toggle')).toBeVisible();
     await expectDialogInsideGameFrame(page);
     await expect(page.getByTestId('play-gambler')).toBeEnabled();
     await expect(page.getByTestId('close-gambler')).toBeVisible();

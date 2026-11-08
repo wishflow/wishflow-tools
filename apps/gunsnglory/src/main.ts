@@ -215,8 +215,10 @@ app.innerHTML = [
   '        </div>',
   '      </dialog>',
   '      </div>',
-  '      <button type="button" class="game-frame-fullscreen-toggle" data-testid="fullscreen-toggle" data-action="toggle-fullscreen" aria-pressed="false" aria-describedby="fullscreen-status">Enter fullscreen</button>',
-  '      <p class="game-frame-fullscreen-status" id="fullscreen-status" data-testid="fullscreen-status" role="status" aria-live="polite" hidden></p>',
+  '      <div class="game-frame-fullscreen-controls" data-testid="fullscreen-controls">',
+  '        <button type="button" class="game-frame-fullscreen-toggle" data-testid="fullscreen-toggle" data-action="toggle-fullscreen" aria-pressed="false" aria-describedby="fullscreen-status">Enter fullscreen</button>',
+  '        <p class="game-frame-fullscreen-status" id="fullscreen-status" data-testid="fullscreen-status" role="status" aria-live="polite" hidden></p>',
+  '      </div>',
   '      <div class="portrait-orientation-overlay" data-testid="portrait-orientation-overlay" role="alert" aria-hidden="true"><p>Rotate your device to landscape to continue.</p></div>',
   '    </div>',
   '    <details class="archive-panel" data-testid="archive-panel" hidden>',
@@ -340,6 +342,7 @@ const gameFrameElement = app.querySelector<HTMLElement>('.game-frame');
 const gameStageElement = app.querySelector<HTMLElement>('[data-testid="game-stage"]');
 const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
+const fullscreenControlsElement = app.querySelector<HTMLElement>('[data-testid="fullscreen-controls"]');
 const fullscreenToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="fullscreen-toggle"]');
 const fullscreenStatusElement = app.querySelector<HTMLElement>('[data-testid="fullscreen-status"]');
 const portraitOrientationOverlayElement = app.querySelector<HTMLElement>('[data-testid="portrait-orientation-overlay"]');
@@ -471,7 +474,8 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScreenElement || !campaignMenuViewElement || !fullscreenToggleButtonElement
+if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScreenElement || !campaignMenuViewElement
+  || !fullscreenControlsElement || !fullscreenToggleButtonElement
   || !fullscreenStatusElement || !portraitOrientationOverlayElement || !portraitOrientationMessageElement
   || !mapZoomControlsElement || !mapZoomOutButtonElement
   || !mapZoomInButtonElement || !mapZoomResetButtonElement || !mapZoomLevelElement
@@ -525,6 +529,7 @@ const gameFrame: HTMLElement = gameFrameElement;
 const gameStage: HTMLElement = gameStageElement;
 const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
+const fullscreenControls: HTMLElement = fullscreenControlsElement;
 const fullscreenToggleButton: HTMLButtonElement = fullscreenToggleButtonElement;
 const fullscreenStatus: HTMLElement = fullscreenStatusElement;
 const portraitOrientationOverlay: HTMLElement = portraitOrientationOverlayElement;
@@ -711,6 +716,8 @@ let campaignWaveIntroCursor = new CampaignWaveIntroCursor();
 let pendingCampaignWaveIntro: CampaignWaveIntro | undefined;
 let showInspectionOverlay = false;
 let pageLeaving = false;
+let pauseButtonMeasureContext: CanvasRenderingContext2D | null | undefined;
+let pauseButtonWidthKey = '';
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | 'conflict' | 'profile-reset' | undefined;
 let settingsSaveBusy = false;
 let profileLoadFailed = false;
@@ -719,6 +726,7 @@ let profileRecoveryStatusKey: 'backup-exported' | 'export-failed' | 'reset-faile
 let corruptProfileBackup: string | undefined;
 let settlementSaveState: SettlementSaveResult['status'] | 'saving' | 'debug' | 'free' | 'replay' | undefined;
 let activeSettlementRecord: GameSettlementRecord | undefined;
+let settlementPanelDismissed = false;
 type PendingFormalSettlement = {
   record: GameSettlementRecord;
   state: 'saving' | 'failed' | 'conflict';
@@ -2425,6 +2433,37 @@ function renderMapZoomControls(language: keyof typeof languageMessages = getLang
   mapZoomResetButton.disabled = mapCamera.zoom === 1 && mapCamera.offsetX === 0 && mapCamera.offsetY === 0;
 }
 
+function syncPauseButtonWidth(language: keyof typeof languageMessages): void {
+  const style = getComputedStyle(pauseControl);
+  const widthKey = [
+    language,
+    style.font,
+    style.paddingLeft,
+    style.paddingRight,
+    style.borderLeftWidth,
+    style.borderRightWidth,
+  ].join('|');
+  if (widthKey === pauseButtonWidthKey) return;
+
+  if (pauseButtonMeasureContext === undefined) {
+    pauseButtonMeasureContext = document.createElement('canvas').getContext('2d');
+  }
+  if (!pauseButtonMeasureContext) return;
+
+  const localizedMessages = languageMessages[language];
+  pauseButtonMeasureContext.font = style.font;
+  const labelWidth = Math.max(
+    pauseButtonMeasureContext.measureText(localizedMessages.pauseBattle).width,
+    pauseButtonMeasureContext.measureText(localizedMessages.resumeBattle).width,
+  );
+  const horizontalSpace = Number.parseFloat(style.paddingLeft)
+    + Number.parseFloat(style.paddingRight)
+    + Number.parseFloat(style.borderLeftWidth)
+    + Number.parseFloat(style.borderRightWidth);
+  pauseControl.style.width = `${Math.ceil(labelWidth + horizontalSpace + 1)}px`;
+  pauseButtonWidthKey = widthKey;
+}
+
 function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
@@ -2509,6 +2548,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   pauseStatus.textContent = pauseMessage;
   pauseStatus.hidden = !view.paused || pauseReason === 'wave-intro';
   pauseControl.textContent = view.paused ? messages.resumeBattle : messages.pauseBattle;
+  syncPauseButtonWidth(language);
   pauseControl.disabled = actionLocked || pauseReason === 'wave-intro' || (!view.paused
     && view.wave?.phase !== 'active'
     && !view.units.some((candidate) => candidate.moving));
@@ -2695,8 +2735,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (pendingUpgradeUnitId) renderUpgradeConfirmation(language);
   if (pendingMapHireUnitId) renderMapHireConfirmation(language);
   const settlement = view.wave?.settlement;
-  const newSettlement = Boolean(settlement) && settlementPanel.hidden;
-  settlementPanel.hidden = !settlement;
+  const newSettlement = Boolean(settlement) && settlementSaveState === undefined;
+  settlementPanel.hidden = !settlement || settlementPanelDismissed;
   if (settlement && recruitConfirmation.open) {
     pendingRecruitmentType = undefined;
     recruitConfirmation.close();
@@ -3353,9 +3393,13 @@ screen.orientation?.addEventListener('change', () => {
 });
 
 if (typeof ResizeObserver !== 'undefined') {
-  new ResizeObserver(() => redraw(true)).observe(gameFrame);
+  new ResizeObserver(() => {
+    syncPauseButtonWidth(getLanguage());
+    redraw(true);
+  }).observe(gameFrame);
 }
 window.addEventListener('resize', () => {
+  syncPauseButtonWidth(getLanguage());
   renderFullscreenControl();
   redraw(true);
 });
@@ -3759,6 +3803,7 @@ function activateSession(
   confirmUpgradeControl.hidden = false;
   activeSettlementRecord = undefined;
   settlementSaveState = undefined;
+  settlementPanelDismissed = false;
   settlementPanel.hidden = true;
   replayStatusState = nextReplayStatus;
   restartModeOverride = nextRestartMode;
@@ -4433,6 +4478,7 @@ campaignMenuView.addEventListener('change', (event: Event) => {
 });
 
 function enterCampaignMenu(): void {
+  if (view.wave?.settlement) settlementPanelDismissed = true;
   campaignExitConfirmation.close();
   stopGameLoop();
   previousTimestamp = undefined;
@@ -4442,6 +4488,13 @@ function enterCampaignMenu(): void {
   showCampaignMenu('home');
   renderStatus();
 }
+
+campaignExitConfirmation.addEventListener('close', () => {
+  if (fullscreenControls.parentElement !== gameFrame) {
+    gameFrame.insertBefore(fullscreenControls, portraitOrientationOverlay);
+  }
+  renderFullscreenControl();
+});
 
 campaignMenuToggle.addEventListener('click', () => {
   if (campaignExitConfirmation.open) return;
@@ -4454,6 +4507,7 @@ campaignMenuToggle.addEventListener('click', () => {
     renderStatus();
     redraw();
   }
+  campaignExitConfirmation.append(fullscreenControls);
   campaignExitConfirmation.showModal();
 });
 

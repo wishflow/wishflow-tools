@@ -117,3 +117,86 @@ test('pause and resume controls remain usable with touch on a phone-sized viewpo
     await context.close();
   }
 });
+
+test('keeps pause and neighboring toolbar positions stable within each language and viewport', async ({ page }) => {
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = () => Promise.resolve();
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?testBattle=1');
+  const sound = page.getByTestId('sound-toggle');
+  if (await sound.getAttribute('aria-pressed') === 'true') await sound.click();
+  await setFourTimesSpeed(page);
+  await openSingleWaveSample(page);
+  await page.getByRole('button', { name: 'Open upgrade rules sample' }).click();
+  await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
+  await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
+
+  const pause = page.getByTestId('pause-toggle');
+  const campaign = page.getByTestId('campaign-menu-toggle');
+  const readBounds = () => page.evaluate(() => {
+    const rect = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing element: ${selector}`);
+      const bounds = element.getBoundingClientRect();
+      return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+    };
+    return {
+      frame: rect('.game-frame'),
+      pause: rect('[data-testid="pause-toggle"]'),
+      campaign: rect('[data-testid="campaign-menu-toggle"]'),
+    };
+  });
+  const expectSamePosition = (
+    before: Awaited<ReturnType<typeof readBounds>>,
+    after: Awaited<ReturnType<typeof readBounds>>,
+  ) => {
+    for (const name of ['pause', 'campaign'] as const) {
+      for (const key of ['x', 'y', 'width', 'height'] as const) {
+        expect(after[name][key], `${name}.${key}: ${before[name][key]} → ${after[name][key]}`).toBeCloseTo(before[name][key], 1);
+      }
+    }
+  };
+  const expectToolbarInsideFrame = async () => {
+    const bounds = await readBounds();
+    for (const name of ['pause', 'campaign'] as const) {
+      expect(bounds[name].x).toBeGreaterThanOrEqual(bounds.frame.x);
+      expect(bounds[name].y).toBeGreaterThanOrEqual(bounds.frame.y);
+      expect(bounds[name].x + bounds[name].width).toBeLessThanOrEqual(bounds.frame.x + bounds.frame.width);
+      expect(bounds[name].y + bounds[name].height).toBeLessThanOrEqual(bounds.frame.y + bounds.frame.height);
+    }
+    const overlapX = Math.min(
+      bounds.pause.x + bounds.pause.width,
+      bounds.campaign.x + bounds.campaign.width,
+    ) - Math.max(bounds.pause.x, bounds.campaign.x);
+    const overlapY = Math.min(
+      bounds.pause.y + bounds.pause.height,
+      bounds.campaign.y + bounds.campaign.height,
+    ) - Math.max(bounds.pause.y, bounds.campaign.y);
+    expect(overlapX <= 0 || overlapY <= 0).toBe(true);
+  };
+  const checkLocaleStability = async (pauseText: string, resumeText: string) => {
+    await pause.scrollIntoViewIfNeeded();
+    await expect(pause).toHaveText(pauseText);
+    const playing = await readBounds();
+    await pause.click();
+    await expect(pause).toHaveText(resumeText);
+    const paused = await readBounds();
+    expectSamePosition(playing, paused);
+    await pause.click();
+    await expect(pause).toHaveText(pauseText);
+    const resumed = await readBounds();
+    expectSamePosition(playing, resumed);
+    await expectToolbarInsideFrame();
+  };
+
+  await checkLocaleStability('Pause battle', 'Resume battle');
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await checkLocaleStability('暂停战斗', '继续战斗');
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByTestId('game-toolbar').evaluate((toolbar: HTMLDetailsElement) => { toolbar.open = true; });
+  await checkLocaleStability('暂停战斗', '继续战斗');
+  await page.getByRole('button', { name: '切换界面语言为英文' }).click();
+  await checkLocaleStability('Pause battle', 'Resume battle');
+});

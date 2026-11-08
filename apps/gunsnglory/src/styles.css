@@ -337,6 +337,13 @@ body {
 }
 
 .game-frame {
+  --gng-layer-scene: 10;
+  --gng-layer-help: 20;
+  --gng-layer-modal-backdrop: 30;
+  --gng-layer-modal: 40;
+  --gng-layer-fullscreen-status: 50;
+  --gng-layer-orientation: 55;
+  --gng-layer-fullscreen-control: 60;
   position: relative;
   z-index: 79;
   width: min(100%, 1024px);
@@ -365,11 +372,21 @@ body {
   outline: none;
 }
 
-.game-frame-fullscreen-toggle {
+.game-frame-fullscreen-controls {
   position: absolute;
-  z-index: 20;
+  z-index: var(--gng-layer-fullscreen-control);
   top: 0.5rem;
   right: 0.5rem;
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+}
+
+.game-frame-fullscreen-toggle {
+  position: relative;
+  z-index: auto;
+  top: auto;
+  right: auto;
   display: grid;
   width: 2.75rem;
   min-width: 2.75rem;
@@ -383,16 +400,11 @@ body {
   background: rgba(25, 20, 15, 0.92);
   box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.35);
   font: inherit;
-  font-size: 0;
+  font-size: 1.35rem;
   line-height: 1;
   font-weight: 750;
   cursor: pointer;
   touch-action: manipulation;
-}
-
-.game-frame-fullscreen-toggle::before {
-  content: "⛶";
-  font-size: 1.35rem;
 }
 
 .game-frame-fullscreen-toggle:hover {
@@ -405,11 +417,12 @@ body {
 }
 
 .game-frame-fullscreen-status {
-  position: absolute;
-  z-index: 20;
-  top: 3.25rem;
-  right: 0.5rem;
-  max-width: min(72%, 28rem);
+  position: relative;
+  z-index: auto;
+  top: auto;
+  right: auto;
+  width: min(72cqw, 28rem);
+  max-width: 100%;
   margin: 0;
   border: 1px solid rgba(255, 225, 168, 0.42);
   border-radius: 0.35rem;
@@ -428,7 +441,7 @@ body {
 
 .portrait-orientation-overlay {
   position: absolute;
-  z-index: 14;
+  z-index: var(--gng-layer-orientation);
   inset: 0;
   display: none;
   align-items: center;
@@ -498,7 +511,7 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-menu-screen {
   position: absolute;
-  z-index: 10;
+  z-index: var(--gng-layer-scene);
   inset: 0;
   overflow: hidden;
   color: #fff4df;
@@ -1284,17 +1297,29 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .campaign-exit-confirmation {
-  z-index: 20;
-  max-width: min(90%, 520px);
+  position: absolute;
+  z-index: var(--gng-layer-modal);
+  top: 50%;
+  left: 50%;
+  width: min(90%, 32.5rem);
+  max-height: calc(100% - 2rem);
+  overflow: auto;
+  margin: 0;
   border: 2px solid #e2c18c;
   border-radius: 0.6rem;
-  padding: 1rem;
+  padding: 3.75rem 1rem 1rem;
   color: #fff2d9;
   background: #30271f;
+  transform: translate(-50%, -50%);
 }
 
 .campaign-exit-confirmation::backdrop {
   background: rgba(8, 6, 4, 0.76);
+}
+
+.campaign-exit-confirmation .game-frame-fullscreen-controls {
+  top: 0.35rem;
+  right: 0.35rem;
 }
 
 .campaign-exit-confirmation h2 {
@@ -1333,19 +1358,18 @@ body.gng-game-fullscreen .usagi-widget {
   }
 }
 
-.game-frame:has(dialog[open]:not(.campaign-wave-intro))::before,
-.game-frame:has(.settlement-panel:not([hidden]))::before {
+.game-stage:has(dialog[open]:not(:modal))::before,
+.game-stage:has(.settlement-panel:not([hidden]))::before {
   position: absolute;
-  z-index: 3;
+  z-index: var(--gng-layer-modal-backdrop);
   inset: 0;
   background: rgba(10, 8, 6, 0.6);
   backdrop-filter: blur(1px);
   content: "";
 }
 
-.game-frame:has(dialog[open]) .game-frame-fullscreen-toggle,
-.game-frame:has(dialog[open]) .game-frame-fullscreen-status {
-  display: none;
+.game-stage dialog[open] {
+  z-index: var(--gng-layer-modal);
 }
 
 .archive-panel {
@@ -1372,7 +1396,7 @@ body.gng-game-fullscreen .usagi-widget {
 
 .game-toolbar {
   position: absolute;
-  z-index: 2;
+  z-index: var(--gng-layer-scene);
   right: 0.5rem;
   bottom: 0.5rem;
   left: auto;
@@ -1540,7 +1564,7 @@ body.gng-game-fullscreen .usagi-widget {
 
 .game-toolbar .controls-help ul {
   position: absolute;
-  z-index: 7;
+  z-index: var(--gng-layer-help);
   right: 0;
   bottom: calc(100% + 0.5rem);
   width: min(26rem, calc(100cqw - 1.5rem));
@@ -1557,12 +1581,12 @@ body.gng-game-fullscreen .usagi-widget {
 
 .game-toolbar .controls-help[open] {
   position: relative;
-  z-index: 7;
+  z-index: var(--gng-layer-help);
 }
 
 .settlement-panel {
   position: absolute;
-  z-index: 4;
+  z-index: var(--gng-layer-modal);
   top: 50%;
   left: 50%;
   display: grid;
@@ -1603,6 +1627,8 @@ body.gng-game-fullscreen .usagi-widget {
   font-weight: 800;
 }
 
+.campaign-exit-confirmation button,
+.recruit-confirmation button,
 .settlement-panel button {
   min-height: 2.6rem;
   padding: 0.55rem 0.85rem;
@@ -1615,10 +1641,22 @@ body.gng-game-fullscreen .usagi-widget {
   cursor: pointer;
 }
 
-.settlement-panel button:hover {
+.campaign-exit-confirmation button:hover:not(:disabled),
+.recruit-confirmation button:hover:not(:disabled),
+.settlement-panel button:hover:not(:disabled) {
   background: #67482b;
 }
 
+.campaign-exit-confirmation button:disabled,
+.recruit-confirmation button:disabled,
+.settlement-panel button:disabled {
+  color: #a99a84;
+  background: #30271f;
+  cursor: default;
+}
+
+.campaign-exit-confirmation button:focus-visible,
+.recruit-confirmation button:focus-visible,
 .settlement-panel button:focus-visible {
   outline: 2px solid #ffe28a;
   outline-offset: 3px;
@@ -2042,7 +2080,7 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-wave-intro {
   position: absolute;
-  z-index: 5;
+  z-index: var(--gng-layer-modal);
   top: 50%;
   left: 50%;
   width: min(52%, 42rem);
@@ -2203,7 +2241,7 @@ body.gng-game-fullscreen .usagi-widget {
 
 .recruit-confirmation {
   position: absolute;
-  z-index: 5;
+  z-index: var(--gng-layer-modal);
   top: 50%;
   left: 50%;
   width: min(28rem, calc(100% - 2rem));
@@ -2241,23 +2279,6 @@ body.gng-game-fullscreen .usagi-widget {
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
-}
-
-.recruit-confirmation button {
-  min-height: 2.6rem;
-  padding: 0.55rem 0.85rem;
-  border: 1px solid rgba(237, 191, 117, 0.65);
-  border-radius: 0.6rem;
-  color: #ffe8c1;
-  background: #513821;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.recruit-confirmation button:focus-visible {
-  outline: 2px solid #ffe28a;
-  outline-offset: 3px;
 }
 
 .gambler-confirmation {
