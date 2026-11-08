@@ -2697,8 +2697,8 @@ body.gng-game-fullscreen .usagi-widget {
   .game-toolbar-actions > [data-testid="pause-toggle"],
   .game-toolbar-actions > [data-testid="campaign-menu-toggle"],
   .game-toolbar-actions > [data-action="clear-selection"] {
-    padding-right: 0.1rem;
-    padding-left: 0.1rem;
+    padding-right: 0.05rem;
+    padding-left: 0.05rem;
   }
 
   .game-toolbar-options {
