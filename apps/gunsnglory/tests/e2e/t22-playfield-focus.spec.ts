@@ -49,7 +49,9 @@ for (const profile of viewports) {
     await expect.poll(() => elementIsInsideGameFrame('[data-testid="simulation-speed"]')).toBe(true);
     await expect.poll(() => elementIsInsideGameFrame('[data-testid="sound-toggle"]')).toBe(true);
     if (profile.viewport.width <= 520) {
-      const readToolbarLayout = () => page.evaluate(() => {
+      let toolbarLayoutLogged = false;
+      const readToolbarLayout = async () => {
+        const layout = await page.evaluate(() => {
         const summary = document.querySelector<HTMLElement>('[data-testid="game-toolbar-toggle"]')?.getBoundingClientRect();
         const actionsElement = document.querySelector<HTMLElement>('.game-toolbar-actions');
         const actions = actionsElement?.getBoundingClientRect();
@@ -69,12 +71,28 @@ for (const profile of viewports) {
           }),
           primaryControlBounds: primaryControls.map((button) => {
             const rect = button?.getBoundingClientRect();
-            return rect ? { left: rect.left, right: rect.right, width: rect.width } : undefined;
+            if (!rect || !button) return undefined;
+            const style = getComputedStyle(button);
+            return {
+              label: button.textContent?.trim(),
+              left: rect.left,
+              right: rect.right,
+              width: rect.width,
+              font: style.font,
+              paddingLeft: style.paddingLeft,
+              paddingRight: style.paddingRight,
+            };
           }),
           actionsBounds: { left: actions.left, right: actions.right, width: actions.width },
           canScroll: actionsElement.scrollWidth > actionsElement.clientWidth,
         };
       });
+        if (!layout.primaryControlsFit && !toolbarLayoutLogged) {
+          console.error(`[t22 toolbar geometry] ${JSON.stringify(layout)}`);
+          toolbarLayoutLogged = true;
+        }
+        return layout;
+      };
       await expect.poll(readToolbarLayout).toMatchObject({
         overlaps: false,
         primaryControlsFit: true,
