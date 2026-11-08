@@ -17,6 +17,7 @@
 | 改 Module、接口、依赖或类型归属 | [架构](docs/architecture.md) |
 | 改档案、内容读取或实验持久化 | [存储契约](docs/storage-contracts.md) |
 | 改步进、随机、回放、脚本或批次 | [模拟与自动化契约](docs/simulation-and-automation.md) |
+| 修复或验证 UI、输入及图层问题 | [经验记录](docs/experience-log.md)；先核对相关问题和防回归要求 |
 | 选择任务、依赖、验收门槛或发布批次 | [实施计划](docs/implementation-plan.md) |
 
 每次开始或恢复任务，先用 `git rev-parse --show-toplevel`、`git status --short --branch`、`git worktree list` 和 `git branch -vv` 确认仓库、工作树、分支和上游；不得默认当前目录对应最新集成状态。需在 `gunsnglory` 集成分支工作时，先 `git fetch origin master gunsnglory`，确认本地 `master` 与 `origin/master` 对齐、`gunsnglory` 已包含 `origin/master` 且跟踪 `origin/gunsnglory`。若落后，使用普通 merge 同步并完成适用验证；不 rebase、不强推。发现旧工作树有未提交改动时，保留其现场并改用干净工作树，不切分支或覆盖改动。提交推送后再核对本地与远端状态。
@@ -40,5 +41,6 @@
 4. 普通公开发布次数除以已验收实现切片数的目标不高于20%；修复批次按完整批次发布所造成的实际比例如实记录，不拆散或延迟已验收修复来美化比例。当前计数及下一次普通发布门槛只在实施计划维护。文档整理不计产品切片、不单独发布。
 5. 每个实现提交说明写明行为变化、范围、针对性验证命令与结果，以及未验证项或限制；批次交付说明补充全套验证与发布结果，不维护逐任务验证日志。静态应用发布后等待 CI 成功，核对公开构建来源 SHA，再以 Codex 内置浏览器验证整批功能；未完成这些检查不得报告发布完成。
 6. 文档交付检查链接、唯一职责与事实依据，运行 `git diff --check`，并按仓库规则复制成品 Markdown 到 `/tmp/var/wishflow-tools/`。
+7. 每个已复现并关闭的应用问题，都要在[经验记录](docs/experience-log.md)中写下复现条件、证据支持的根因、漏测点、修复和防回归要求。根因尚未确认时标为假设，不得写成事实；记录按主题组织，不按日期堆叠。
 
 [CLAUDE.md](CLAUDE.md) 仅导入本文件；用户明确的项目分支约定优先于根规则的默认分支约定。
