@@ -146,12 +146,12 @@
 
 ## 实验工作台与游戏内设置归属
 
-**状态：实现已提交，待完整检查和发布。**实现提交 `bef0ced` 与测试补强提交 `3652185` 已将实验室和全屏图像接入当前实现分支；完整 `pnpm run test:ci` 及公开部署验收尚未完成。
+**状态：实现、完整本地检查已通过，待集成发布。**实现提交 `bef0ced`、测试补强提交 `3652185` 和坐标 helper 修正 `c5999e4` 已将实验室、全屏图像与相关回归检查接入当前实现分支；公开部署验收尚未完成。
 
 - **表现与复现：**主菜单 Options 曾包含 Profile 档案、实验数据、比较报告及倍速；回放入口在其他页面区域；全屏按钮则显示通用字符，均与原版游戏选项和按钮美术混杂。内置浏览器在 390px 窄屏还显示工作台标题压在羊皮纸的烧边装饰上。
 - **根因与证据：**旧 `renderOptionsPanelView()` 输出网页实验工具，`renderOptionsPanel()` 动态搬动实验面板，回放及倍速还有独立入口。旧全屏控件由 `frame-chrome.ts` 写入 `⛶`。首次窄屏截图发现新工作台 h3 与羊皮纸上缘装饰交叠；工作台卡片顶部留白不足。声音开关原有通用按钮底色，E2E 也证实它没有木按钮图。
 - **修复：**实验、比较报告、Profile/实验档案、回放和唯一倍速入口集中到游戏框外的 `#lab`；Options 仅保留 Help/Sound，Sound 与菜单和暂停板状态同步。工作台使用羊皮纸背景、浅色内衬、木按钮及响应式列布局；增加上边距避开烧边装饰。全屏按钮使用项目资源 `public/assets/gng-frame-fullscreen-states.png`，横向精灵图尺寸为 1774×887，按 200% 背景宽度切换两个状态；按钮文本为空，辅助名称仍随状态本地化。
-- **防回归：**`t29-campaign-menu.spec.ts` 与 `t41-lab-workbench.spec.ts` 确认入口在 `.game-frame` 外、Options 只含 Help/Sound、local nav 锚点有效、桌面和 360px 窄屏无页面溢出、卡片标题避开装饰且中英文可读。`t30-fullscreen.spec.ts` 检查图像两态、可访问名称、键盘焦点、真实可点击状态；`t38-data-archives.spec.ts` 保留 Profile 替换确认、实验合并冲突及回放行为。受影响 9 份 Playwright spec 共 31 项通过；补充的 13 项检查有重叠，不重复累计。类型检查通过；完整应用检查待执行。
+- **防回归：**`t29-campaign-menu.spec.ts` 与 `t41-lab-workbench.spec.ts` 确认入口在 `.game-frame` 外、Options 只含 Help/Sound、local nav 锚点有效、桌面和 360px 窄屏无页面溢出、卡片标题避开装饰且中英文可读。`t30-fullscreen.spec.ts` 检查图像两态、可访问名称、键盘焦点、真实可点击状态；`t38-data-archives.spec.ts` 保留 Profile 替换确认、实验合并冲突及回放行为。受影响 9 份 Playwright spec 共 31 项通过；补充的 13 项检查有重叠，不重复累计。批次最终 `CI=1 pnpm run test:ci` 通过，包括类型检查、409 项单测、生产构建和 119 项 Playwright E2E。构建的主 JS chunk 超过 500KB 提示仍存在，但测试和构建成功。
 - **浏览器验证边界：**内置浏览器在 `http://localhost:5191/` 实测桌面、390×844、中文和本地导航。对全屏按钮仅尝试一次真实 Fullscreen API，宿主拒绝并显示失败提示，因此没有真实原生全屏进出证据；Playwright mock 只证明状态图和状态处理正确。全程默认窗口模式、静音。
 - **兼容边界：**仅迁移呈现入口，不改公共 API、规则、IndexedDB、Profile/实验 JSON 或回放格式；导入导出语义和站点语言状态不变。
 - **地图点击 E2E 的视口假设：**完整检查首轮中 `t36-tech-town-gatling.spec.ts` 的地图雇佣用例失败。复现后确认，Playwright 点击位于页面下方的调试样本入口会滚动页面；helper 随后读取到画布 `y=-529.69`，却仍按画布矩形发出屏幕点击，坐标落在可视区外，因此状态显示“未选择单位”。修复为点击前 `scrollIntoViewIfNeeded()`，再读取画布矩形；定向用例通过。地图坐标测试在页面滚动后必须先把画布带回视口，不能直接把负的 bounding-box 坐标交给鼠标 API。
