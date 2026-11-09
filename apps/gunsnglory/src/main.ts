@@ -76,6 +76,7 @@ import type {
 import { ProgressError, type CampaignProgressView, type ProfileView, type SettlementSaveResult } from './progress';
 import { ProfileArchiveError, parseProfileArchive, serializeProfileArchive } from './progress/profile-archive';
 import { messages } from './locales';
+import { OverlayHost } from './ui/overlay-host';
 import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -144,7 +145,10 @@ app.innerHTML = [
   '          </div>',
   '        </div>',
   '      </details>',
-  '      <section class="settlement-panel" data-testid="settlement" aria-labelledby="settlement-title" aria-live="polite" hidden>',
+  '      <div class="game-overlay-host" data-testid="overlay-host" hidden>',
+  '        <div class="game-overlay-backdrop" data-testid="overlay-backdrop" aria-hidden="true"></div>',
+  '        <div class="game-overlay-panels">',
+  '      <section class="settlement-panel" data-testid="settlement" data-overlay-id="settlement" role="dialog" aria-modal="false" aria-labelledby="settlement-title" aria-live="polite" tabindex="-1" hidden>',
   '        <h2 id="settlement-title">Battle result</h2>',
   '        <p data-testid="settlement-outcome"></p>',
   '        <p data-testid="settlement-summary"></p>',
@@ -155,7 +159,7 @@ app.innerHTML = [
   '        <button type="button" data-action="restart-sample">Restart this sample</button>',
   '        <button type="button" data-testid="settlement-campaign-menu" data-action="return-campaign-from-settlement">Campaign map</button>',
   '      </section>',
-  '      <dialog class="campaign-exit-confirmation" data-testid="campaign-exit-confirmation" aria-labelledby="campaign-exit-title">',
+  '      <dialog class="campaign-exit-confirmation" data-testid="campaign-exit-confirmation" data-overlay-id="campaign-exit" aria-labelledby="campaign-exit-title">',
   '        <h2 id="campaign-exit-title" data-locale="Return to campaign">Return to campaign</h2>',
   '        <p data-locale="The unfinished battle will not be saved and will restart from its first wave if you return.">The unfinished battle will not be saved and will restart from its first wave if you return.</p>',
   '        <div class="recruit-confirmation-actions">',
@@ -163,14 +167,14 @@ app.innerHTML = [
   '          <button type="button" data-action="confirm-campaign-exit" data-locale="Leave battle">Leave battle</button>',
   '        </div>',
   '      </dialog>',
-  '      <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
+  '      <dialog class="recruit-confirmation" data-testid="recruit-confirmation" data-overlay-id="recruit" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
   '        <h2 id="recruit-confirmation-title"></h2>',
   '        <div class="recruit-confirmation-actions">',
   '          <button type="button" data-action="confirm-recruit">Recruit</button>',
   '          <button type="button" data-action="cancel-recruit">Cancel</button>',
   '        </div>',
   '      </dialog>',
-  '      <dialog class="recruit-confirmation map-hire-confirmation" data-testid="map-hire-confirmation" aria-modal="false" aria-labelledby="map-hire-confirmation-title">',
+  '      <dialog class="recruit-confirmation map-hire-confirmation" data-testid="map-hire-confirmation" data-overlay-id="map-hire" aria-modal="false" aria-labelledby="map-hire-confirmation-title">',
   '        <h2 id="map-hire-confirmation-title" data-testid="map-hire-confirmation-title"></h2>',
   '        <p data-testid="map-hire-confirmation-details" aria-live="polite"></p>',
   '        <div class="recruit-confirmation-actions">',
@@ -178,7 +182,7 @@ app.innerHTML = [
   '          <button type="button" data-testid="cancel-map-hire" data-action="cancel-map-hire">Cancel</button>',
   '        </div>',
   '      </dialog>',
-  '      <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
+  '      <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" data-overlay-id="upgrade" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
   '        <h2 id="upgrade-confirmation-title"></h2>',
   '        <p data-testid="upgrade-confirmation-details"></p>',
   '        <div class="recruit-confirmation-actions">',
@@ -186,7 +190,7 @@ app.innerHTML = [
   '          <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
   '        </div>',
   '      </dialog>',
-  '      <dialog class="recruit-confirmation gambler-confirmation" data-testid="gambler-dialog" aria-modal="false" aria-labelledby="gambler-dialog-title" aria-describedby="gambler-dialog-message">',
+  '      <dialog class="recruit-confirmation gambler-confirmation" data-testid="gambler-dialog" data-overlay-id="gambler" aria-modal="false" aria-labelledby="gambler-dialog-title" aria-describedby="gambler-dialog-message">',
   '        <div class="gambler-dialog-heading">',
   '          <img data-testid="gambler-portrait" alt="" width="64" height="64">',
   '          <div><h2 id="gambler-dialog-title" data-testid="gambler-dialog-title"></h2><p id="gambler-dialog-message" data-testid="gambler-message" aria-live="polite"></p></div>',
@@ -199,7 +203,7 @@ app.innerHTML = [
   '          <button type="button" data-action="close-gambler" data-testid="close-gambler">Cancel</button>',
   '        </div>',
   '      </dialog>',
-  '      <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
+  '      <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" data-overlay-id="wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
   '        <div class="campaign-wave-intro-card">',
   '          <img class="campaign-wave-intro-parchment" data-testid="campaign-wave-intro-parchment" alt="" width="384" height="192">',
   '          <img data-testid="campaign-wave-intro-portrait" alt="" width="96" height="110">',
@@ -214,6 +218,8 @@ app.innerHTML = [
   '          </div>',
   '        </div>',
   '      </dialog>',
+  '        </div>',
+  '      </div>',
   '      </div>',
   '      <div class="game-frame-fullscreen-controls" data-testid="fullscreen-controls">',
   '        <button type="button" class="game-frame-fullscreen-toggle" data-testid="fullscreen-toggle" data-action="toggle-fullscreen" aria-pressed="false" aria-describedby="fullscreen-status">Enter fullscreen</button>',
@@ -340,6 +346,8 @@ registerMessages('gunsnglory', messages);
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const gameFrameElement = app.querySelector<HTMLElement>('.game-frame');
 const gameStageElement = app.querySelector<HTMLElement>('[data-testid="game-stage"]');
+const overlayHostElement = app.querySelector<HTMLElement>('[data-testid="overlay-host"]');
+const overlayBackdropElement = app.querySelector<HTMLElement>('[data-testid="overlay-backdrop"]');
 const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
 const fullscreenControlsElement = app.querySelector<HTMLElement>('[data-testid="fullscreen-controls"]');
@@ -474,7 +482,8 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScreenElement || !campaignMenuViewElement
+if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElement || !overlayBackdropElement
+  || !campaignMenuScreenElement || !campaignMenuViewElement
   || !fullscreenControlsElement || !fullscreenToggleButtonElement
   || !fullscreenStatusElement || !portraitOrientationOverlayElement || !portraitOrientationMessageElement
   || !mapZoomControlsElement || !mapZoomOutButtonElement
@@ -527,6 +536,8 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScr
 const canvas: HTMLCanvasElement = canvasElement;
 const gameFrame: HTMLElement = gameFrameElement;
 const gameStage: HTMLElement = gameStageElement;
+const overlayHostRoot: HTMLElement = overlayHostElement;
+const overlayBackdrop: HTMLElement = overlayBackdropElement;
 const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
 const fullscreenControls: HTMLElement = fullscreenControlsElement;
@@ -681,6 +692,42 @@ let session = await game.open({
   mode: 'debug',
 });
 let view = session.observe();
+type GameUiScreen = 'menu' | 'battle';
+type GameUiSimulationState = 'ready' | 'running' | 'paused' | 'settled';
+interface GameUiState {
+  screen: GameUiScreen;
+  simulation: GameUiSimulationState;
+  overlay: string | null;
+  fullscreen: boolean;
+}
+const gameUiState: GameUiState = {
+  screen: 'menu',
+  simulation: 'ready',
+  overlay: null,
+  fullscreen: false,
+};
+const overlayHost = new OverlayHost(overlayHostRoot, overlayBackdrop, {
+  frame: gameFrame,
+  frameChrome: fullscreenControls,
+  onActivePanelChange: () => syncGameUiState(),
+});
+
+function syncGameUiState(): void {
+  gameUiState.screen = campaignMenuScreen.hidden ? 'battle' : 'menu';
+  gameUiState.simulation = view.wave?.settlement
+    ? 'settled'
+    : view.paused
+      ? 'paused'
+      : view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)
+        ? 'running'
+        : 'ready';
+  gameUiState.overlay = overlayHost.activeId;
+  gameUiState.fullscreen = document.fullscreenElement === gameFrame;
+  gameFrame.dataset.uiScreen = gameUiState.screen;
+  gameFrame.dataset.simulationState = gameUiState.simulation;
+  gameFrame.dataset.activeOverlay = gameUiState.overlay ?? '';
+  gameFrame.dataset.fullscreen = String(gameUiState.fullscreen);
+}
 type GamblerDialogMode = 'closed' | 'prompt' | 'revealing' | 'result';
 type GamblerRoundState = NonNullable<ReturnType<GameSession['observe']>['units'][number]['gambler']>['lastRound'];
 let gamblerDialogMode: GamblerDialogMode = 'closed';
@@ -1885,6 +1932,7 @@ function showBattleScene(): void {
   campaignPanel.hidden = true;
   sceneHeading.hidden = false;
   gameToolbar.hidden = false;
+  syncGameUiState();
 }
 
 function showCampaignMenu(screen: CampaignMenuScreenState = 'home'): void {
@@ -1894,6 +1942,7 @@ function showCampaignMenu(screen: CampaignMenuScreenState = 'home'): void {
   sceneHeading.hidden = true;
   gameToolbar.hidden = true;
   renderCampaignMenu();
+  syncGameUiState();
   if (screen === 'difficulty') {
     requestAnimationFrame(() => campaignMenuView.querySelector<HTMLButtonElement>('[data-testid="campaign-difficulty-easy"]')?.focus());
   }
@@ -2736,17 +2785,19 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (pendingMapHireUnitId) renderMapHireConfirmation(language);
   const settlement = view.wave?.settlement;
   const newSettlement = Boolean(settlement) && settlementSaveState === undefined;
-  settlementPanel.hidden = !settlement || settlementPanelDismissed;
   if (settlement && recruitConfirmation.open) {
     pendingRecruitmentType = undefined;
-    recruitConfirmation.close();
+    overlayHost.close(recruitConfirmation, false);
   }
   if (settlement && upgradeConfirmation.open) {
     pendingUpgradeUnitId = undefined;
-    upgradeConfirmation.close();
+    overlayHost.close(upgradeConfirmation, false);
     confirmUpgradeControl.hidden = false;
   }
   if (settlement && mapHireConfirmation.open) closeMapHireConfirmation();
+  const showSettlement = Boolean(settlement) && !settlementPanelDismissed;
+  if (showSettlement) overlayHost.open(settlementPanel);
+  else if (overlayHost.active === settlementPanel) overlayHost.close(settlementPanel, false);
   if (settlement && view.wave) {
     if (newSettlement) {
       activeSettlementRecord = session.terminalRecord();
@@ -2936,9 +2987,10 @@ function closeGamblerDialog(): void {
   gamblerDialogMode = 'closed';
   gamblerDialogUnitId = undefined;
   gamblerDialogRoundId = undefined;
-  if (gamblerDialog.open) gamblerDialog.close();
+  if (gamblerDialog.open) overlayHost.close(gamblerDialog);
   gamblerCards.replaceChildren();
-  canvas.focus({ preventScroll: true });
+  syncGameUiState();
+  if (!overlayHost.active) canvas.focus({ preventScroll: true });
 }
 
 function openGamblerDialog(unitId: string): void {
@@ -2950,7 +3002,7 @@ function openGamblerDialog(unitId: string): void {
   gamblerDialogUnitId = unitId;
   gamblerDialogRoundId = undefined;
   gamblerCards.replaceChildren();
-  gamblerDialog.show();
+  overlayHost.open(gamblerDialog);
   renderGamblerDialog(getLanguage());
   (playGamblerControl.disabled ? closeGamblerControl : playGamblerControl).focus({ preventScroll: true });
 }
@@ -3003,7 +3055,7 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
   const cash = view.wave?.cash;
   if (!unit || !nextUpgrade || !unit.weapon || cash === undefined) {
     pendingUpgradeUnitId = undefined;
-    if (upgradeConfirmation.open) upgradeConfirmation.close();
+    if (upgradeConfirmation.open) overlayHost.close(upgradeConfirmation);
     confirmUpgradeControl.hidden = false;
     return;
   }
@@ -3061,7 +3113,7 @@ function renderMapHireConfirmation(language: keyof typeof languageMessages): voi
 
 function closeMapHireConfirmation(): void {
   pendingMapHireUnitId = undefined;
-  if (mapHireConfirmation.open) mapHireConfirmation.close();
+  if (mapHireConfirmation.open) overlayHost.close(mapHireConfirmation);
   confirmMapHireControl.hidden = false;
   confirmMapHireControl.disabled = false;
 }
@@ -3074,7 +3126,7 @@ function openMapHireConfirmation(unitId: string): void {
   if (!unit || !view.wave) return;
   pendingMapHireUnitId = unit.id;
   renderMapHireConfirmation(getLanguage());
-  mapHireConfirmation.show();
+  overlayHost.open(mapHireConfirmation);
   (confirmMapHireControl.hidden ? cancelMapHireControl : confirmMapHireControl).focus({ preventScroll: true });
 }
 
@@ -3306,6 +3358,7 @@ function renderFullscreenControl(): void {
   fullscreenToggleButton.setAttribute('aria-label', label);
   fullscreenToggleButton.title = label;
   fullscreenToggleButton.setAttribute('aria-pressed', String(fullscreenActive));
+  syncGameUiState();
 }
 
 function renderFullscreenStatus(): void {
@@ -3746,7 +3799,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   view = session.pause();
   gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
   renderCampaignWaveIntro();
-  if (!campaignWaveIntroDialog.open) campaignWaveIntroDialog.show();
+  if (!campaignWaveIntroDialog.open) overlayHost.open(campaignWaveIntroDialog);
   continueCampaignWaveIntroControl.focus({ preventScroll: true });
   if (intro.voiceSound) playAudioAsset(intro.voiceSound);
   return true;
@@ -3759,7 +3812,7 @@ function showCampaignWaveIntroAfterWaveChange(previousWaveNumber: number | undef
 function continueCampaignWaveIntro(): void {
   if (!pendingCampaignWaveIntro) return;
   pendingCampaignWaveIntro = undefined;
-  campaignWaveIntroDialog.close();
+  overlayHost.close(campaignWaveIntroDialog);
   playBackgroundMusic();
   if (pauseReason !== 'wave-intro' || !view.paused || document.hidden) return;
   gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -3776,7 +3829,7 @@ function activateSession(
   nextRestartMode?: Exclude<GameMode, 'replay'>,
 ): void {
   stopGameLoop();
-  if (campaignWaveIntroDialog.open) campaignWaveIntroDialog.close();
+  if (campaignWaveIntroDialog.open) overlayHost.close(campaignWaveIntroDialog, false);
   if (gamblerDialog.open) closeGamblerDialog();
   pendingCampaignWaveIntro = undefined;
   const previousSession = session;
@@ -3798,13 +3851,13 @@ function activateSession(
   pendingUpgradeUnitId = undefined;
   upgradeCommandNumber = 0;
   gamblerCommandNumber = 0;
-  if (recruitConfirmation.open) recruitConfirmation.close();
-  if (upgradeConfirmation.open) upgradeConfirmation.close();
+  if (recruitConfirmation.open) overlayHost.close(recruitConfirmation, false);
+  if (upgradeConfirmation.open) overlayHost.close(upgradeConfirmation, false);
   confirmUpgradeControl.hidden = false;
   activeSettlementRecord = undefined;
   settlementSaveState = undefined;
   settlementPanelDismissed = false;
-  settlementPanel.hidden = true;
+  if (overlayHost.active === settlementPanel) overlayHost.close(settlementPanel, false);
   replayStatusState = nextReplayStatus;
   restartModeOverride = nextRestartMode;
   showCampaignWaveIntroForCurrentWave();
@@ -4479,7 +4532,7 @@ campaignMenuView.addEventListener('change', (event: Event) => {
 
 function enterCampaignMenu(): void {
   if (view.wave?.settlement) settlementPanelDismissed = true;
-  campaignExitConfirmation.close();
+  overlayHost.close(campaignExitConfirmation);
   stopGameLoop();
   previousTimestamp = undefined;
   simulationTime.reset();
@@ -4488,13 +4541,6 @@ function enterCampaignMenu(): void {
   showCampaignMenu('home');
   renderStatus();
 }
-
-campaignExitConfirmation.addEventListener('close', () => {
-  if (fullscreenControls.parentElement !== gameFrame) {
-    gameFrame.insertBefore(fullscreenControls, portraitOrientationOverlay);
-  }
-  renderFullscreenControl();
-});
 
 campaignMenuToggle.addEventListener('click', () => {
   if (campaignExitConfirmation.open) return;
@@ -4507,12 +4553,11 @@ campaignMenuToggle.addEventListener('click', () => {
     renderStatus();
     redraw();
   }
-  campaignExitConfirmation.append(fullscreenControls);
-  campaignExitConfirmation.showModal();
+  overlayHost.open(campaignExitConfirmation);
 });
 
 campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="cancel-campaign-exit"]')?.addEventListener('click', () => {
-  campaignExitConfirmation.close();
+  overlayHost.close(campaignExitConfirmation);
   if (!menuReturnWasPaused) {
     pauseReason = undefined;
     view = session.resume();
@@ -4568,13 +4613,13 @@ recruitControl.addEventListener('click', () => {
   recruitConfirmationTitle.textContent = languageMessages[getLanguage()].confirmRecruit(
     recruit.name[getLanguage()], recruit.price,
   );
-  recruitConfirmation.show();
+  overlayHost.open(recruitConfirmation);
   confirmRecruitControl.focus();
 });
 confirmRecruitControl.addEventListener('click', () => {
   const unitType = pendingRecruitmentType;
   pendingRecruitmentType = undefined;
-  recruitConfirmation.close();
+  overlayHost.close(recruitConfirmation);
   if (!unitType) return;
   dispatch({
     type: 'recruit-unit',
@@ -4585,14 +4630,14 @@ confirmRecruitControl.addEventListener('click', () => {
 });
 cancelRecruitControl.addEventListener('click', () => {
   pendingRecruitmentType = undefined;
-  recruitConfirmation.close();
+  overlayHost.close(recruitConfirmation);
   recruitControl.focus({ preventScroll: true });
 });
 recruitConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key !== 'Escape') return;
   event.preventDefault();
   pendingRecruitmentType = undefined;
-  recruitConfirmation.close();
+  overlayHost.close(recruitConfirmation);
   recruitControl.focus({ preventScroll: true });
 });
 continueCampaignWaveIntroControl.addEventListener('click', continueCampaignWaveIntro);
@@ -4626,7 +4671,7 @@ upgradeControl.addEventListener('click', () => {
   if (!unit || upgradeConfirmation.open || view.wave?.cash === undefined) return;
   pendingUpgradeUnitId = unit.id;
   renderUpgradeConfirmation(getLanguage());
-  upgradeConfirmation.show();
+  overlayHost.open(upgradeConfirmation);
   (confirmUpgradeControl.hidden ? cancelUpgradeControl : confirmUpgradeControl).focus();
 });
 playGamblerControl.addEventListener('click', playGamblerRound);
@@ -4657,7 +4702,7 @@ gamblerDialog.addEventListener('keydown', (event: KeyboardEvent) => {
 confirmUpgradeControl.addEventListener('click', () => {
   const unitId = pendingUpgradeUnitId;
   pendingUpgradeUnitId = undefined;
-  upgradeConfirmation.close();
+  overlayHost.close(upgradeConfirmation);
   confirmUpgradeControl.hidden = false;
   if (!unitId) return;
   dispatch({
@@ -4670,7 +4715,7 @@ confirmUpgradeControl.addEventListener('click', () => {
 });
 cancelUpgradeControl.addEventListener('click', () => {
   pendingUpgradeUnitId = undefined;
-  upgradeConfirmation.close();
+  overlayHost.close(upgradeConfirmation);
   confirmUpgradeControl.hidden = false;
   if (!upgradeControl.hidden && !upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
   else canvas.focus({ preventScroll: true });
@@ -4679,7 +4724,7 @@ upgradeConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
   if (event.key !== 'Escape') return;
   event.preventDefault();
   pendingUpgradeUnitId = undefined;
-  upgradeConfirmation.close();
+  overlayHost.close(upgradeConfirmation);
   confirmUpgradeControl.hidden = false;
   if (!upgradeControl.hidden && !upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
   else canvas.focus({ preventScroll: true });

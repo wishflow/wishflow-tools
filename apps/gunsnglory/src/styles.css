@@ -363,6 +363,39 @@ body {
   container-type: size;
 }
 
+.game-overlay-host {
+  position: absolute;
+  z-index: var(--gng-layer-modal);
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.game-overlay-host[hidden] {
+  display: none;
+}
+
+.game-overlay-backdrop {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: rgba(10, 8, 6, 0.6);
+  backdrop-filter: blur(1px);
+  pointer-events: auto;
+}
+
+.game-overlay-panels {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.game-overlay-panels > [role="dialog"],
+.game-overlay-panels > dialog[open] {
+  pointer-events: auto;
+}
+
 .game-frame canvas {
   display: block;
   width: 100%;
@@ -1307,27 +1340,10 @@ body.gng-game-fullscreen .usagi-widget {
   margin: 0;
   border: 2px solid #e2c18c;
   border-radius: 0.6rem;
-  padding: 3.75rem 1rem 1rem;
+  padding: 1.25rem;
   color: #fff2d9;
   background: #30271f;
   transform: translate(-50%, -50%);
-}
-
-.campaign-exit-confirmation::backdrop {
-  background: rgba(8, 6, 4, 0.76);
-}
-
-.campaign-exit-confirmation .game-frame-fullscreen-controls {
-  top: 0.35rem;
-  right: 0.35rem;
-}
-
-.campaign-exit-confirmation .game-frame-fullscreen-controls:has(.game-frame-fullscreen-status:not([hidden])) {
-  display: flex;
-  flex-direction: row-reverse;
-  align-items: flex-start;
-  gap: 0.35rem;
-  max-width: calc(100% - 0.7rem);
 }
 
 .campaign-exit-confirmation h2 {
@@ -1366,17 +1382,7 @@ body.gng-game-fullscreen .usagi-widget {
   }
 }
 
-.game-stage:has(dialog[open]:not(:modal))::before,
-.game-stage:has(.settlement-panel:not([hidden]))::before {
-  position: absolute;
-  z-index: var(--gng-layer-modal-backdrop);
-  inset: 0;
-  background: rgba(10, 8, 6, 0.6);
-  backdrop-filter: blur(1px);
-  content: "";
-}
-
-.game-stage dialog[open] {
+.game-overlay-panels dialog[open] {
   z-index: var(--gng-layer-modal);
 }
 

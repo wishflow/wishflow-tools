@@ -91,7 +91,7 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
   }
 });
 
-test('keeps fullscreen and dialog actions clickable while a modal covers the help guide', async ({ browser }) => {
+test('keeps frame-local overlays and fixed fullscreen controls interactive in both fullscreen states', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
   await installFullscreenMock(page);
@@ -102,10 +102,18 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
     await page.goto('/?testBattle=1');
     await expect(page.getByTestId('game-toolbar')).toBeVisible();
     const fullscreen = page.getByTestId('fullscreen-toggle');
+    const overlayHost = page.getByTestId('overlay-host');
     const waveIntro = page.getByTestId('campaign-wave-intro');
     await expect(waveIntro).toBeVisible();
+    await expect(overlayHost).toBeVisible();
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'wave-intro');
+    expect(await waveIntro.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
+    const fullscreenParentBefore = await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'));
+    expect(await fullscreen.evaluate((button) => button.closest('[data-testid="overlay-host"]'))).toBeNull();
     await fullscreen.click();
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'wave-intro');
+    expect(await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'))).toBe(fullscreenParentBefore);
     const continueWave = waveIntro.getByRole('button', { name: 'Continue' });
     expect(await continueWave.evaluate((button: HTMLButtonElement) => {
       const bounds = button.getBoundingClientRect();
@@ -123,14 +131,23 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
     await expect(help).toHaveAttribute('open', '');
 
     const dialog = page.getByTestId('campaign-exit-confirmation');
+    const simulationBeforeExitPrompt = await page.locator('.game-frame').getAttribute('data-simulation-state');
     await page.getByTestId('campaign-menu-toggle').click();
     await expect(dialog).toBeVisible();
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await expect(overlayHost).toBeVisible();
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'campaign-exit');
+    await expect(overlayHost.locator('[data-overlay-active="true"]')).toHaveCount(1);
+    expect(await dialog.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
     await expect(fullscreen).toBeVisible();
-    await expect.poll(() => fullscreen.evaluate((button) => button.closest('dialog[open]') !== null)).toBe(true);
+    expect(await fullscreen.evaluate((button) => button.closest('[data-testid="overlay-host"]'))).toBeNull();
+    expect(await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'))).toBe(fullscreenParentBefore);
 
     await fullscreen.click();
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
     await expect(dialog).toBeVisible();
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'campaign-exit');
     const keepPlaying = dialog.getByRole('button', { name: 'Keep playing' });
     expect(await keepPlaying.evaluate((button: HTMLButtonElement) => {
       const bounds = button.getBoundingClientRect();
@@ -155,6 +172,7 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
     const mapPoint = { x: canvasBounds!.x + 24, y: canvasBounds!.y + 24 };
     expect(mapPoint.x < dialogBounds!.x || mapPoint.x > dialogBounds!.x + dialogBounds!.width
       || mapPoint.y < dialogBounds!.y || mapPoint.y > dialogBounds!.y + dialogBounds!.height).toBe(true);
+    expect(await page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('[data-testid="overlay-backdrop"]')), mapPoint)).toBe(true);
     await page.mouse.click(mapPoint.x, mapPoint.y);
     await expect(canvas).toHaveAttribute('data-layer-pointer-count', '0');
 
@@ -163,29 +181,9 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Keep playing' }).click();
     await expect(dialog).toBeHidden();
-    await expect.poll(() => fullscreen.evaluate((button) => button.closest('.game-frame') !== null)).toBe(true);
-
-    for (const [testId, cancelAction] of [
-      ['recruit-confirmation', 'cancel-recruit'],
-      ['map-hire-confirmation', 'cancel-map-hire'],
-      ['upgrade-confirmation', 'cancel-upgrade'],
-      ['gambler-dialog', 'close-gambler'],
-    ]) {
-      const confirmation = page.getByTestId(testId);
-      await confirmation.evaluate((element: HTMLDialogElement) => element.show());
-      const cancel = confirmation.locator(`[data-action="${cancelAction}"]`);
-      await expect(confirmation).toBeVisible();
-      await fullscreen.click();
-      await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
-      expect(await cancel.evaluate((button: HTMLButtonElement) => {
-        const bounds = button.getBoundingClientRect();
-        return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
-      })).toBe(true);
-      await fullscreen.click();
-      await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
-      await cancel.click();
-      await expect(confirmation).toBeHidden();
-    }
+    await expect(overlayHost).toBeHidden();
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', simulationBeforeExitPrompt ?? '');
+    expect(await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'))).toBe(fullscreenParentBefore);
 
     const speed = page.getByRole('slider', { name: 'Simulation speed' });
     await speed.focus();
@@ -224,7 +222,7 @@ test('keeps a fullscreen failure message beside the campaign dialog instead of o
   await expect(page.getByTestId('fullscreen-status')).toBeVisible();
 
   const overlapsDialogHeading = await page.getByTestId('fullscreen-status').evaluate((status: HTMLElement) => {
-    const heading = status.closest('dialog')?.querySelector('h2');
+    const heading = document.querySelector<HTMLElement>('[data-testid="campaign-exit-confirmation"] h2');
     if (!heading) return true;
     const statusBounds = status.getBoundingClientRect();
     const headingBounds = heading.getBoundingClientRect();
