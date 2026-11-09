@@ -63,12 +63,12 @@
 
 ## 后续修复批次：避免窄屏 Usagi 覆盖实验室内容
 
-**状态：修复与定向验证通过，待本地提交、完整检查和发布。**
+**状态：实现、定向验证及整批本地检查通过，待发布与线上复验。**
 
 1. **已完成：**仅在 `max-width:560px` 为 `.lab-workbench` 建立 `position:relative; z-index:81`，保留游戏框 `z-index:79` 和桌面宠物层级。
 2. **已完成：**`t41-lab-workbench.spec.ts` 在390×844检查无水平溢出、工作台层级；若测试页提供 `.usagi-widget`，还比较宠物层级，并在真实几何重叠时用 `elementFromPoint()` 验证命中落在工作台。卡片纵向排布与中英文检查继续覆盖。
-3. **定向验收：**`pnpm run typecheck` 通过，`pnpm exec playwright test tests/e2e/t41-lab-workbench.spec.ts --workers=1` 两项通过。当前代码和测试修改待提交；批次结束时还须运行 `CI=1 pnpm run test:ci`。
-4. **发布关闭条件：**完整检查通过后，以一个 UI 缺陷修复批次发布；核对两处 `build-info.json`，用内置浏览器在静音、窗口模式下复验390×844标题命中、Options和双状态全屏图。不重试已被宿主拒绝的原生全屏。
+3. **本地验收已通过：**`pnpm run typecheck`、定向 `t41-lab-workbench.spec.ts`（2项）和整批 `CI=1 pnpm run test:ci` 通过；完整检查包含409项单测、生产构建及119项 Playwright E2E。构建仍提示主 JS chunk 超过500KB，不影响构建或测试。
+4. **发布关闭条件：**以一个 UI 缺陷修复批次发布；核对两处 `build-info.json`，用内置浏览器在静音、窗口模式下复验390×844标题命中、Options和双状态全屏图。不重试已被宿主拒绝的原生全屏。线上验收通过后再关闭本批问题。
 
 ## 后续批次：New Mexico 第 5 关 Billy Hills
 
