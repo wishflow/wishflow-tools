@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { pauseFromHud, setPauseBoardSound } from './helpers';
 
 test('plays Cow Gulch music, follows sound and visibility settings, and retries browser autoplay', async ({ page }) => {
   await page.addInitScript(() => {
@@ -60,12 +61,10 @@ test('plays Cow Gulch music, follows sound and visibility settings, and retries 
   await expect(page.getByTestId('sound-playback-status')).toBeHidden();
   await expect(page.getByTestId('campaign-wave-intro')).toBeHidden();
 
-  await page.getByTestId('sound-toggle').click();
-  await expect(page.getByTestId('sound-toggle')).toHaveText('Sound: Off');
+  await setPauseBoardSound(page, false);
   await expect.poll(async () => (await musicCalls()).some(({ action, file }) =>
     action === 'pause' && file === 'music_loop1.ogg')).toBe(true);
-  await page.getByTestId('sound-toggle').click();
-  await expect(page.getByTestId('sound-toggle')).toHaveText('Sound: On');
+  await setPauseBoardSound(page, true);
   await expect.poll(async () => (await musicCalls()).filter(({ action, file }) =>
     action === 'play' && file === 'music_loop1.ogg').length).toBeGreaterThanOrEqual(2);
 
@@ -143,7 +142,8 @@ test('reloads a muted profile into active sound players after a settings conflic
   await speed.press('ArrowRight');
   await expect(page.getByTestId('settings-status')).toContainText('newer profile exists');
   await page.getByRole('button', { name: 'Reload saved profile' }).click();
-  await expect(page.getByTestId('sound-toggle')).toHaveText('Sound: Off');
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-sound-toggle')).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(async () => (await audioCalls()).some(({ action, path }) =>
     action === 'pause' && path.includes('/assets/sounds/sound_pedro.ogg'))).toBe(true);
   await expect.poll(async () => (await audioCalls()).some(({ action, path }) =>

@@ -45,6 +45,21 @@ export async function continueFromPauseBoard(page: Page, input: 'click' | 'tap' 
   else await button.click();
 }
 
+export async function setPauseBoardSound(
+  page: Page,
+  enabled: boolean,
+  options: { input?: 'click' | 'tap'; keepPaused?: boolean } = {},
+): Promise<void> {
+  const board = page.getByTestId('pause-board');
+  if (!(await board.isVisible())) await pauseFromHud(page, options.input);
+  const toggle = page.getByTestId('pause-sound-toggle');
+  if (await toggle.getAttribute('aria-pressed') !== String(enabled)) {
+    if (options.input === 'tap') await toggle.tap();
+    else await toggle.click();
+  }
+  if (!options.keepPaused) await continueFromPauseBoard(page, options.input);
+}
+
 export async function leaveBattleFromPauseBoard(page: Page, input: 'click' | 'tap' = 'click'): Promise<void> {
   await pauseFromHud(page, input);
   const close = page.getByTestId('pause-close');

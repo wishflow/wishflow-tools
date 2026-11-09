@@ -1,5 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
-import { openSingleWaveSample } from './helpers';
+import { continueFromPauseBoard, openSingleWaveSample, pauseFromHud, setPauseBoardSound } from './helpers';
 
 test('scales the map by width and clips drawing at map and playfield edges', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -49,11 +49,13 @@ test('scales the map by width and clips drawing at map and playfield edges', asy
 test('loads legacy profile settings, saves the selected speed to IndexedDB, and restores it after reload', async ({ page }) => {
   await page.goto('/?testBattle=1');
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
-  const soundToggle = page.getByTestId('sound-toggle');
   const settingsStatus = page.getByTestId('settings-status');
   await expect(speed).toBeEnabled();
   await expect(speed).toHaveValue('1');
-  await expect(soundToggle).toHaveText('Sound: On');
+  await pauseFromHud(page);
+  const soundToggle = page.getByTestId('pause-sound-toggle');
+  await expect(soundToggle).toHaveAttribute('aria-pressed', 'true');
+  await continueFromPauseBoard(page);
 
   await page.evaluate(async () => {
     await new Promise<void>((resolve, reject) => {
@@ -80,7 +82,9 @@ test('loads legacy profile settings, saves the selected speed to IndexedDB, and 
   await page.reload();
   await expect(speed).toBeEnabled();
   await expect(speed).toHaveValue('1');
-  await expect(soundToggle).toHaveText('Sound: Off');
+  await pauseFromHud(page);
+  await expect(soundToggle).toHaveAttribute('aria-pressed', 'false');
+  await continueFromPauseBoard(page);
   await speed.focus();
   for (let index = 0; index < 5; index += 1) await speed.press('ArrowRight');
   await expect(speed).toHaveValue('2.25');
@@ -112,13 +116,15 @@ test('loads legacy profile settings, saves the selected speed to IndexedDB, and 
   expect(typeof savedProfile.lastRequestDigest).toBe('string');
   expect((savedProfile.lastRequestDigest as string).length).toBeGreaterThan(0);
 
-  await soundToggle.click();
-  await expect(soundToggle).toHaveText('Sound: On');
+  await setPauseBoardSound(page, true, { keepPaused: true });
   await expect(soundToggle).toHaveAttribute('aria-pressed', 'true');
   await expect(settingsStatus).toContainText('saved');
+  await continueFromPauseBoard(page);
   await page.reload();
   await expect(page.getByRole('slider', { name: 'Simulation speed' })).toHaveValue('2.25');
-  await expect(page.getByTestId('sound-toggle')).toHaveText('Sound: On');
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-sound-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await continueFromPauseBoard(page);
 });
 
 test('does not let a previous settings save overwrite a newer slider choice', async ({ page }) => {
@@ -378,9 +384,7 @@ test('does not play real combat sound events while the saved sound setting is mu
   });
   await page.goto('/?testBattle=1');
   await openSingleWaveSample(page);
-  const soundToggle = page.getByTestId('sound-toggle');
-  await soundToggle.click();
-  await expect(soundToggle).toHaveText('Sound: Off');
+  await setPauseBoardSound(page, false);
   await expect(page.getByTestId('settings-status')).toContainText('saved');
   // The official campaign's initial Pedro voice is played before this test
   // mutes the game. Count only playback attempts made while muted below.

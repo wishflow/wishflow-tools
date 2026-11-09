@@ -266,34 +266,6 @@ body {
   grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.controls-help {
-  grid-column: 1 / -1;
-  color: #e2c28e;
-  font-size: 0.85rem;
-}
-
-.controls-help summary {
-  width: fit-content;
-  min-height: 2.35rem;
-  padding: 0.55rem 0;
-  color: #ffe1a8;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.controls-help summary:focus-visible {
-  outline: 2px solid #ffe28a;
-  outline-offset: 2px;
-}
-
-.controls-help ul {
-  display: grid;
-  gap: 0.35rem;
-  margin: 0 0 0.5rem;
-  padding-left: 1.25rem;
-  line-height: 1.45;
-}
-
 .simulation-speed-control {
   display: grid;
   grid-column: 1 / -1;
@@ -660,7 +632,7 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-menu-home-actions {
   position: absolute;
-  inset: 16% 2% 2%;
+  inset: 16% 2% 18%;
   display: grid;
   grid-template-rows: repeat(4, minmax(0, 1fr));
   align-items: center;
@@ -689,10 +661,10 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-menu-sound {
   position: absolute;
-  top: 12%;
-  right: 2%;
+  bottom: 2%;
+  left: 6%;
   width: 14%;
-  height: 11%;
+  height: 12%;
   border: 0;
   padding: 0;
   background: transparent;
@@ -1228,16 +1200,29 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-menu-card h2 {
   margin-bottom: 1em;
-  color: #ffd892;
+  color: #563919;
+  text-shadow: none;
 }
 
 .campaign-menu-card ol {
   display: grid;
-  gap: 0.5em;
-  margin: 0;
+  gap: 0.45em;
+  width: 56%;
+  margin: 0 0 2.8em;
   padding-left: 1.25em;
-  font-size: clamp(8px, 1.2cqw, 13px);
+  color: #493722;
+  font-size: clamp(10px, 1.25cqw, 14px);
   line-height: 1.35;
+}
+
+.campaign-help-card {
+  width: min(74%, 720px);
+}
+
+.campaign-help-card h2 {
+  width: 56%;
+  margin: 0 0 0.6em;
+  text-align: center;
 }
 
 .campaign-setting-toggle {
@@ -1250,6 +1235,130 @@ body.gng-game-fullscreen .usagi-widget {
   padding: 0.4em 1em;
   background: rgba(122, 77, 34, 0.8);
   font-size: clamp(10px, 1.3cqw, 14px) !important;
+}
+
+.campaign-options-card {
+  width: min(90%, 900px);
+  max-height: 90%;
+  padding: 2.8% 4% 5%;
+}
+
+.campaign-options-help {
+  width: min(42%, 250px);
+  min-height: 2.3em;
+  margin: 0.2em auto 0;
+  padding: 0.35em 0.8em;
+  border: 0;
+  border-radius: 0;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #301b0e;
+}
+
+.campaign-options-sound-note {
+  margin: 0.25em 0 0.5em;
+}
+
+.campaign-options-card .campaign-speed-setting {
+  max-width: 42rem;
+  margin: 0 auto;
+  color: #4c351e;
+  font-weight: 750;
+}
+
+.campaign-options-card .campaign-speed-setting input {
+  accent-color: #895324;
+}
+
+.campaign-options-card .campaign-menu-subtle {
+  color: #5d4a33;
+}
+
+.campaign-options-card .campaign-profile-archive h3,
+.campaign-options-card .campaign-menu-status {
+  color: #493722;
+}
+
+.campaign-experiment-tools {
+  margin-top: 0.5em;
+  border-top: 1px solid rgba(89, 57, 26, 0.45);
+  padding-top: 0.5em;
+}
+
+.campaign-experiment-tools > summary {
+  width: min(100%, 30rem);
+  margin: 0 auto;
+  border: 1px solid rgba(105, 69, 34, 0.72);
+  border-radius: 0.25rem;
+  padding: 0.45em 0.7em;
+  color: #fff4db;
+  background: #684522;
+  font-size: clamp(9px, 1.25cqw, 13px);
+  font-weight: 750;
+  text-align: center;
+  cursor: pointer;
+}
+
+.campaign-experiment-tools > summary:focus-visible {
+  outline: 2px solid #61421f;
+  outline-offset: 2px;
+}
+
+.campaign-experiment-host {
+  max-width: 100%;
+  margin-top: 0.5em;
+}
+
+.campaign-experiment-host .experiment-panel {
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border-color: rgba(105, 69, 34, 0.4);
+  border-radius: 0.35rem;
+  color: #392a1b;
+  background: rgba(245, 226, 188, 0.85);
+}
+
+.campaign-experiment-host .experiment-panel h2,
+.campaign-experiment-host .experiment-panel .experiment-report-summary {
+  color: #563919;
+}
+
+.campaign-experiment-host .experiment-panel p,
+.campaign-experiment-host .experiment-panel label,
+.campaign-experiment-host .experiment-panel th,
+.campaign-experiment-host .experiment-panel td,
+.campaign-experiment-host .experiment-panel .experiment-scheme-values {
+  color: #493722;
+}
+
+.campaign-experiment-host .experiment-controls input,
+.campaign-experiment-host .experiment-controls select,
+.campaign-experiment-host .saved-experiment-controls select {
+  border-color: rgba(105, 69, 34, 0.45);
+  color: #352617;
+  background: #fff4da;
+}
+
+.campaign-experiment-host .experiment-controls button,
+.campaign-experiment-host .saved-experiment-controls button,
+.campaign-experiment-host .experiment-archive-actions button,
+.campaign-experiment-host .experiment-archive-actions .replay-import-label {
+  border-color: #67431f;
+  color: #fff5df;
+  background: #704a25;
+}
+
+.campaign-experiment-host .experiment-controls button:hover,
+.campaign-experiment-host .saved-experiment-controls button:hover,
+.campaign-experiment-host .experiment-archive-actions button:hover,
+.campaign-experiment-host .experiment-archive-actions .replay-import-label:hover {
+  background: #875d31;
+}
+
+.campaign-experiment-host .experiment-table-scroll th,
+.campaign-experiment-host .experiment-table-scroll td {
+  border-color: rgba(105, 69, 34, 0.2);
 }
 
 .campaign-speed-setting {
@@ -1488,6 +1597,18 @@ body.gng-game-fullscreen .usagi-widget {
     max-height: 90%;
   }
 
+  body:not(.gng-game-fullscreen) .campaign-options-card {
+    width: 94%;
+    max-height: 94%;
+    padding: 3% 4% 7%;
+  }
+
+  body:not(.gng-game-fullscreen) .campaign-help-card {
+    width: 94%;
+    max-height: 94%;
+    padding: 3% 4% 7%;
+  }
+
   body:not(.gng-game-fullscreen) .campaign-menu-home-brand {
     padding: 7% 3% 2%;
   }
@@ -1674,44 +1795,6 @@ body.gng-game-fullscreen .usagi-widget {
 
 .game-toolbar-options .simulation-speed-control input {
   min-height: 2.3rem;
-}
-
-.game-toolbar-options .sound-toggle {
-  justify-self: auto;
-}
-
-.game-toolbar .controls-help {
-  flex: 0 0 auto;
-  grid-column: auto;
-  font-size: 0.78rem;
-}
-
-.game-toolbar .controls-help summary {
-  min-height: 2.3rem;
-  padding: 0.55rem 0.35rem;
-  white-space: nowrap;
-}
-
-.game-toolbar .controls-help ul {
-  position: absolute;
-  z-index: var(--gng-layer-help);
-  right: 0;
-  bottom: calc(100% + 0.5rem);
-  width: min(26rem, calc(100cqw - 1.5rem));
-  max-height: min(55cqh, 18rem);
-  overflow: auto;
-  padding: 0.75rem 1rem 0.75rem 2rem;
-  border: 1px solid rgba(255, 225, 168, 0.56);
-  border-radius: 0.55rem;
-  color: #f0d5a8;
-  background: rgba(30, 25, 20, 0.98);
-  box-shadow: 0 0.6rem 1.8rem rgba(0, 0, 0, 0.55);
-  line-height: 1.45;
-}
-
-.game-toolbar .controls-help[open] {
-  position: relative;
-  z-index: var(--gng-layer-help);
 }
 
 .settlement-panel {
@@ -2855,12 +2938,6 @@ body.gng-game-fullscreen .usagi-widget {
     grid-column: 1;
     grid-row: 1;
     min-height: 2rem;
-  }
-
-  .game-toolbar .controls-help summary {
-    min-height: 2.25rem;
-    padding: 0.5rem 0.25rem;
-    font-size: 0.72rem;
   }
 
   .replay-panel {

@@ -1,4 +1,5 @@
 import { expect, test } from './auto-continue-fixtures';
+import { pauseFromHud } from './helpers';
 
 async function expectCampaignMenuImagesLoaded(page: import('@playwright/test').Page): Promise<void> {
   await page.waitForFunction(() => [...document.querySelectorAll<HTMLImageElement>(
@@ -145,6 +146,79 @@ test('shows the original wanted poster and saved score when a level has a high s
   await expect(page.locator('.campaign-overview-no-score')).toHaveCount(0);
 });
 
+test('routes Help, Options, and experiment tools through the in-game menu', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+
+  await expect(page.getByTestId('menu-start')).toBeVisible();
+  await expect(page.getByTestId('menu-free-play')).toBeVisible();
+  await expect(page.getByTestId('menu-help')).toBeVisible();
+  await expect(page.getByTestId('menu-options')).toBeVisible();
+  await expect(page.getByTestId('menu-sound')).toBeVisible();
+
+  await page.getByTestId('menu-help').click();
+  await expect(page.getByTestId('campaign-menu-screen')).toContainText('HOW TO PLAY');
+  await expect(page.getByTestId('campaign-menu-screen')).toContainText('Pinch');
+  const helpText = page.locator('.campaign-help-card ol');
+  await expect(helpText).toHaveCSS('color', 'rgb(73, 55, 34)');
+  expect(await helpText.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(10);
+  const helpLayout = await page.evaluate(() => {
+    const card = document.querySelector<HTMLElement>('.campaign-help-card');
+    const list = card?.querySelector('ol');
+    if (!card || !list) throw new Error('Help card content is missing');
+    const cardBounds = card.getBoundingClientRect();
+    const titleBounds = card.querySelector<HTMLElement>(':scope > h2')?.getBoundingClientRect();
+    const listBounds = list.getBoundingClientRect();
+    const backBounds = card.querySelector<HTMLElement>('.campaign-menu-back')?.getBoundingClientRect();
+    if (!titleBounds || !backBounds) throw new Error('Help title or back control is missing');
+    const overlapsBack = listBounds.left < backBounds.right && listBounds.right > backBounds.left
+      && listBounds.top < backBounds.bottom && listBounds.bottom > backBounds.top;
+    const leftPanelEnd = cardBounds.left + cardBounds.width * 0.65;
+    return { listRight: listBounds.right, titleRight: titleBounds.right, leftPanelEnd, overlapsBack };
+  });
+  expect(helpLayout.listRight).toBeLessThanOrEqual(helpLayout.leftPanelEnd);
+  expect(helpLayout.titleRight).toBeLessThanOrEqual(helpLayout.leftPanelEnd);
+  expect(helpLayout.overlapsBack).toBe(false);
+  await page.getByTestId('campaign-menu-back').click();
+
+  await page.getByTestId('menu-options').click();
+  await expect(page.locator('.campaign-options-card > h2')).toHaveCSS('color', 'rgb(86, 57, 25)');
+  await expect(page.getByTestId('menu-simulation-speed')).toBeVisible();
+  await expect(page.getByTestId('export-profile-archive')).toBeVisible();
+  await expect(page.getByTestId('import-profile-archive')).toBeVisible();
+  await expect(page.getByTestId('menu-sound')).toHaveCount(0);
+  await expect(page.getByTestId('options-help')).toBeVisible();
+  const experimentTools = page.getByTestId('menu-experiment-tools');
+  await expect(experimentTools).toBeVisible();
+  await experimentTools.locator('summary').click();
+  await expect(page.getByTestId('experiment-cash-reward')).toBeVisible();
+  await expect(page.getByTestId('export-experiment-archive')).toBeVisible();
+  await expect(page.getByTestId('import-experiment-archive')).toBeVisible();
+
+  await page.getByTestId('options-help').click();
+  await expect(page.getByTestId('campaign-menu-screen')).toContainText('Select a unit, then click or tap');
+  await page.getByTestId('campaign-menu-back').click();
+  await expect(page.getByTestId('menu-start')).toBeVisible();
+});
+
+test('opens Help from pause Options and returns to the still-paused board', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?testBattle=1');
+  await expect(page.getByTestId('campaign-wave-intro')).toBeHidden();
+  await expect(page.getByTestId('controls-help')).toHaveCount(0);
+  await expect(page.getByTestId('sound-toggle')).toHaveCount(0);
+
+  await pauseFromHud(page);
+  await page.getByTestId('pause-options').click();
+  await page.getByTestId('options-help').click();
+  await expect(page.getByTestId('campaign-menu-screen')).toContainText('HOW TO PLAY');
+  await page.getByTestId('campaign-menu-back').click();
+
+  await expect(page.getByTestId('campaign-menu-screen')).toBeHidden();
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+});
+
 test('keeps menu options usable at narrow phone width and persists sound and speed with the site language', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto('/');
@@ -155,7 +229,24 @@ test('keeps menu options usable at narrow phone width and persists sound and spe
   expect(Math.abs(bounds.width / bounds.height - 16 / 9)).toBeLessThan(0.02);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 
+  const sound = page.getByTestId('menu-sound');
+  await expect(sound).toHaveAttribute('aria-pressed', 'true');
+  const soundHit = await sound.evaluate((button) => {
+    const bounds = button.getBoundingClientRect();
+    const target = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+    return {
+      bounds: { left: bounds.left, top: bounds.top, right: bounds.right, bottom: bounds.bottom },
+      hit: target?.outerHTML.slice(0, 180),
+      isTopmost: target === button || button.contains(target),
+    };
+  });
+  expect(soundHit.isTopmost, JSON.stringify(soundHit)).toBe(true);
+  await sound.click();
+  await expect(sound).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
+
   await page.getByTestId('menu-options').click();
+  await expect(page.getByTestId('menu-sound')).toHaveCount(0);
   const speed = page.getByTestId('menu-simulation-speed');
   await speed.evaluate((element) => {
     const slider = element as HTMLInputElement;
@@ -164,17 +255,15 @@ test('keeps menu options usable at narrow phone width and persists sound and spe
     slider.dispatchEvent(new Event('change', { bubbles: true }));
   });
   await expect(page.getByTestId('menu-simulation-speed-value')).toHaveText('2.5×');
-  await page.getByTestId('menu-sound').click();
-  await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.getByTestId('menu-settings-status')).toHaveText('Settings saved.');
 
   await page.reload();
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
   await expect(page.getByTestId('menu-start')).toHaveText('开始');
+  await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
   await page.getByTestId('menu-options').click();
   await expect(page.getByTestId('menu-simulation-speed')).toHaveValue('2.5');
   await expect(page.getByTestId('menu-simulation-speed-value')).toHaveText('2.5×');
-  await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('menu-sound')).toHaveCount(0);
   await expect(page.getByTestId('campaign-menu-back')).toHaveAttribute('aria-label', '返回');
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);
 });

@@ -126,20 +126,6 @@ app.innerHTML = [
   '            <input id="simulation-speed" data-testid="simulation-speed" aria-labelledby="simulation-speed-label" type="range" min="0.25" max="4" step="0.25" value="1" disabled>',
   '            <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
   '          </label>',
-  '          <button type="button" class="sound-toggle" data-testid="sound-toggle" data-action="toggle-sound" aria-pressed="true">Sound: On</button>',
-  '          <details class="controls-help" data-testid="controls-help">',
-  '            <summary data-locale="Controls">Controls</summary>',
-  '            <ul>',
-  '              <li data-locale="Click or tap a unit to select it; click empty ground to clear selection.">Click or tap a unit to select it; click empty ground to clear selection.</li>',
-  '              <li data-locale="Drag a selected unit to move it to a reachable cell.">Drag a selected unit to move it to a reachable cell.</li>',
-  '              <li data-locale="Click or tap a settler to set or clear a priority target.">Click or tap a settler to set or clear a priority target.</li>',
-  '              <li data-locale="Drag empty ground to pan the map; drag the minimap to move its viewport.">Drag empty ground to pan the map; drag the minimap to move its viewport.</li>',
-  '              <li data-locale="Pinch with two fingers to zoom the map.">Pinch with two fingers to zoom the map.</li>',
-  '              <li data-locale="Use the HUD pause icon to pause. Continue on the pause board resumes.">Use the HUD pause icon to pause. Continue on the pause board resumes.</li>',
-  '              <li data-locale="Tap Game controls to show or hide the in-game toolbar.">Tap Game controls to show or hide the in-game toolbar.</li>',
-  '              <li data-locale="Open Inspect battle for state details; single-step works while paused.">Open Inspect battle for state details; single-step works while paused.</li>',
-  '            </ul>',
-  '          </details>',
   '          </div>',
   '        </div>',
   '      </details>',
@@ -392,6 +378,8 @@ const confirmPauseIconElement = app.querySelector<HTMLImageElement>('[data-testi
 const cancelPauseIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-pause-icon"]');
 const campaignPanelElement = app.querySelector<HTMLElement>('.campaign-panel');
 const archivePanelElement = app.querySelector<HTMLDetailsElement>('[data-testid="archive-panel"]');
+const archivePanelContentElement = app.querySelector<HTMLElement>('.archive-panel-content');
+const experimentPanelElement = app.querySelector<HTMLElement>('.experiment-panel');
 const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
 const pendingSettlementStatusElement = app.querySelector<HTMLElement>('[data-testid="pending-settlement-status"]');
 const retryPendingSettlementButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-pending-settlement"]');
@@ -435,7 +423,6 @@ const inspectionEnemiesElement = app.querySelector<HTMLElement>('[data-testid="i
 const inspectionRouteElement = app.querySelector<HTMLElement>('[data-testid="inspection-route"]');
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
-const soundToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="sound-toggle"]');
 const soundPlaybackStatusElement = app.querySelector<HTMLElement>('[data-testid="sound-playback-status"]');
 const retrySoundPlaybackButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-sound-playback"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
@@ -518,8 +505,7 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !pauseOptionsButtonElement || !pauseCloseButtonElement || !pauseSoundToggleButtonElement || !pauseSoundIconElement
   || !pauseConfirmationElement || !pauseConfirmationArtElement || !pauseConfirmationTitleElement || !pauseConfirmationMessageElement
   || !confirmPauseActionButtonElement || !cancelPauseActionButtonElement || !confirmPauseIconElement || !cancelPauseIconElement
-  || !campaignPanelElement
-  || !archivePanelElement
+  || !campaignPanelElement || !archivePanelElement || !archivePanelContentElement || !experimentPanelElement
   || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
@@ -548,7 +534,7 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !pauseStatusElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
-  || !simulationSpeedInputElement || !simulationSpeedValueElement || !soundToggleButtonElement
+  || !simulationSpeedInputElement || !simulationSpeedValueElement
   || !soundPlaybackStatusElement || !retrySoundPlaybackButtonElement
   || !clearButton || !startWaveButton
   || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
@@ -642,7 +628,8 @@ const inspectionEnemies: HTMLElement = inspectionEnemiesElement;
 const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
-const soundToggleButton: HTMLButtonElement = soundToggleButtonElement;
+const archivePanelContent: HTMLElement = archivePanelContentElement;
+const experimentPanel: HTMLElement = experimentPanelElement;
 const soundPlaybackStatus: HTMLElement = soundPlaybackStatusElement;
 const retrySoundPlaybackButton: HTMLButtonElement = retrySoundPlaybackButtonElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
@@ -1414,14 +1401,20 @@ const campaignMenuCopy = {
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpTitle: 'HOW TO PLAY',
     helpLines: [
-      'Select a unit, then tap or click a reachable map cell to move it.',
-      'Select a sleeping unit on the map and use Hire to recruit it.',
-      'Select an enemy to set or clear a priority target.',
-      'Drag empty ground to pan the map; use the minimap to move the viewport.',
+      'Select a unit, then click or tap a reachable map cell to move it.',
+      'Select a sleeping unit and use the in-game Hire action to recruit it.',
+      'Select a settler to set or clear a priority target.',
+      'Drag empty ground to pan the map; drag the minimap viewport to move the camera.',
+      'Pinch with two fingers, use the map-edge zoom buttons, or use the mouse wheel to zoom.',
+      'Tap the HUD pause icon to open the pause board. Continue resumes; Restart and Close ask for confirmation.',
       'Pause the battle before using single-step or inspection tools.',
     ],
     optionsTitle: 'OPTIONS', speed: 'Simulation speed',
     speedHelp: 'Adjust the test speed from 0.25× to 4×.',
+    originalSoundNote: 'Sound stays on the main menu and pause board. The settings below are web-only tools.',
+    optionsHelp: 'HOW TO PLAY',
+    experimentTools: 'EXPERIMENTS AND DATA',
+    experimentToolsHelp: 'Compare numeric schemes and import or export experiment records. These tools do not change campaign progress.',
     profileArchiveTitle: 'Profile archive',
     profileArchiveHelp: 'Export or replace this browser’s campaign profile. This file is separate from experiment data and battle replays.',
     exportProfileArchive: 'Export profile', importProfileArchive: 'Import profile',
@@ -1469,13 +1462,19 @@ const campaignMenuCopy = {
     helpTitle: '游戏说明',
     helpLines: [
       '选择单位，再点击或轻触可到达的地图格移动。',
-      '选择地图上的休息单位，然后使用雇佣操作招募。',
-      '选择敌人可设置或取消优先目标。',
-      '拖动空地平移地图；拖动小地图视口框移动视野。',
-      '暂停战斗后再使用单步或状态检查工具。',
+      '选择地图上的休息单位，再使用游戏内的雇佣操作招募。',
+      '选择拓荒者可设置或取消优先目标。',
+      '拖动空地平移地图；拖动小地图视口框移动镜头。',
+      '双指捏合、使用地图边缘的缩放按钮或桌面鼠标滚轮都可缩放地图。',
+      '点击 HUD 暂停图标打开暂停板；“继续”恢复战斗，“重新开始”和“关闭”会先确认。',
+      '使用单步或状态检查工具前先暂停战斗。',
     ],
     optionsTitle: '选项', speed: '模拟速度',
     speedHelp: '测试速度可在 0.25× 到 4× 之间调整。',
+    originalSoundNote: '音效开关位于主菜单和暂停板；以下内容是网页扩展工具。',
+    optionsHelp: '游戏说明',
+    experimentTools: '实验与数据',
+    experimentToolsHelp: '比较数值方案，并导入或导出实验记录。这些工具不会改变战役进度。',
     profileArchiveTitle: '档案文件',
     profileArchiveHelp: '导出或替换此浏览器中的战役档案。档案文件独立于实验数据和战局回放。',
     exportProfileArchive: '导出档案', importProfileArchive: '导入档案',
@@ -1903,7 +1902,12 @@ function campaignMenuDifficultyScreen(): string {
   </section>`;
 }
 
+function restoreExperimentPanelToArchive(): void {
+  if (experimentPanel.parentElement !== archivePanelContent) archivePanelContent.append(experimentPanel);
+}
+
 function renderCampaignMenu(): void {
+  restoreExperimentPanelToArchive();
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
   campaignMenuScreen.setAttribute('aria-label', freePlayMenuActive ? copy.freePlayMenu : language === 'en' ? 'Campaign menu' : '战役菜单');
@@ -1947,9 +1951,15 @@ function renderCampaignMenu(): void {
         <article class="campaign-menu-card campaign-options-card">
           <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
           <h2 id="campaign-menu-heading">${copy.optionsTitle}</h2>
-          <button type="button" class="campaign-setting-toggle" data-action="menu-toggle-sound" data-testid="menu-sound" aria-pressed="${soundEnabled}">${copy.sound}: ${soundEnabled ? language === 'en' ? 'On' : '开' : language === 'en' ? 'Off' : '关'}</button>
+          <button type="button" class="campaign-setting-toggle campaign-options-help" data-action="menu-help" data-testid="options-help">${copy.optionsHelp}</button>
+          <p class="campaign-menu-subtle campaign-options-sound-note">${copy.originalSoundNote}</p>
           <label class="campaign-speed-setting"><span>${copy.speed}</span><output data-testid="menu-simulation-speed-value">${simulationSpeed}×</output><input type="range" min="0.25" max="4" step="0.25" value="${simulationSpeed}" data-testid="menu-simulation-speed" aria-label="${copy.speed}"></label>
           <p class="campaign-menu-subtle">${copy.speedHelp}</p>
+          <details class="campaign-experiment-tools" data-testid="menu-experiment-tools">
+            <summary>${copy.experimentTools}</summary>
+            <p class="campaign-menu-subtle">${copy.experimentToolsHelp}</p>
+            <div class="campaign-experiment-host" data-testid="campaign-experiment-host"></div>
+          </details>
           <section class="campaign-profile-archive" aria-labelledby="campaign-profile-archive-title">
             <h3 id="campaign-profile-archive-title">${copy.profileArchiveTitle}</h3>
             <p class="campaign-menu-subtle">${copy.profileArchiveHelp}</p>
@@ -1973,9 +1983,13 @@ function renderCampaignMenu(): void {
       </section>`;
       break;
   }
+  if (campaignMenuState === 'options') {
+    campaignMenuView.querySelector<HTMLElement>('[data-testid="campaign-experiment-host"]')?.append(experimentPanel);
+  }
 }
 
 function showBattleScene(): void {
+  restoreExperimentPanelToArchive();
   campaignMenuScreen.hidden = true;
   campaignPanel.hidden = true;
   sceneHeading.hidden = false;
@@ -2650,8 +2664,6 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.none;
   if (status.textContent !== selectionText) status.textContent = selectionText;
   simulationSpeedValue.textContent = simulationSpeed + '×';
-  soundToggleButton.textContent = soundEnabled ? messages.soundOn : messages.soundOff;
-  soundToggleButton.setAttribute('aria-pressed', String(soundEnabled));
   soundPlaybackStatus.hidden = failedSoundElements.size === 0;
   soundPlaybackStatus.textContent = failedSoundElements.size > 0 ? messages.soundPlaybackFailed : '';
   retrySoundPlaybackButton.hidden = failedSoundElements.size === 0 || !soundEnabled;
@@ -2695,7 +2707,6 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const campaignMenuSettingsStatus = campaignMenuView.querySelector<HTMLElement>('[data-testid="menu-settings-status"]');
   if (campaignMenuSettingsStatus) campaignMenuSettingsStatus.textContent = settingsText;
   simulationSpeedInput.disabled = !campaignProgressView && !profileLoadFailed;
-  soundToggleButton.disabled = !campaignProgressView && !profileLoadFailed;
   retrySettingsButton.hidden = settingsStatusKey !== 'save-failed' || profileLoadFailed;
   retrySettingsButton.textContent = messages.retrySettings;
   reloadProfileButton.hidden = settingsStatusKey !== 'conflict';
@@ -3621,7 +3632,7 @@ function playSound(sound: string, audio: HTMLAudioElement, resetPosition = true)
 
 function eventTargetsSoundToggle(event: Event): boolean {
   const target = event.target;
-  return target instanceof Element && target.closest('[data-action="toggle-sound"]') !== null;
+  return target instanceof Element && target.closest('[data-action="menu-toggle-sound"], [data-action="pause-toggle-sound"]') !== null;
 }
 
 function retryCurrentAudioOnFirstGesture(event: Event): void {
@@ -4173,11 +4184,6 @@ simulationSpeedInput.addEventListener('change', () => {
 });
 
 retrySoundPlaybackButton.addEventListener('click', retryFailedSoundPlayback);
-
-soundToggleButton.addEventListener('click', () => {
-  setSoundEnabled(!soundEnabled);
-  saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
-});
 
 campaignDifficultySelect.addEventListener('change', () => {
   const requestedDifficulty = campaignDifficultySelect.value;

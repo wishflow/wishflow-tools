@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { pauseFromHud } from './helpers';
+import { continueFromPauseBoard, pauseFromHud, setPauseBoardSound } from './helpers';
 
 async function setDocumentHidden(page: import('@playwright/test').Page, hidden: boolean): Promise<void> {
   await page.evaluate((isHidden) => {
@@ -203,36 +203,36 @@ test('a paused single step that crosses into wave two opens its introduction onc
   await expect(intro).toBeHidden();
 });
 
-test('keeps the current bilingual controls guide inside the game window while the battle is background-paused', async ({ page }) => {
+test('keeps bilingual Help available from pause Options without resuming the battle', async ({ page }) => {
   await page.goto('/?testBattle=1');
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeVisible();
   await expect.poll(() => intro.evaluate((dialog) => dialog.closest('.game-frame') !== null)).toBe(true);
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(intro).toBeHidden();
-  await setDocumentHidden(page, true);
-  const guide = page.getByTestId('controls-help');
-  const summary = guide.locator('summary');
+  await pauseFromHud(page);
+  await page.getByTestId('pause-options').click();
+  await page.getByTestId('options-help').click();
+  const guide = page.getByTestId('campaign-menu-screen');
   const frame = page.getByTestId('inspection-frame');
   const readFrame = async () => (await frame.textContent())?.match(/\d+/g)?.map(Number);
   const beforeFrame = await readFrame();
 
-  await summary.click();
-  await expect(guide).toHaveAttribute('open', '');
-  await expect(guide).toContainText('Click or tap a unit to select it');
-  await expect(guide).toContainText('Pinch with two fingers to zoom');
+  await setDocumentHidden(page, true);
+  await expect(guide).toContainText('Select a unit, then click or tap a reachable map cell to move it.');
+  await expect(guide).toContainText('mouse wheel to zoom');
   expect(await readFrame()).toEqual(beforeFrame);
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
-  await expect(guide).toContainText('点击或轻触单位进行选择');
-  await expect(guide).toContainText('双指捏合可缩放地图');
+  await expect(guide).toContainText('选择单位，再点击或轻触可到达的地图格移动。');
+  await expect(guide).toContainText('桌面鼠标滚轮都可缩放地图');
   expect(await readFrame()).toEqual(beforeFrame);
 
-  await summary.click();
-  await expect(guide).not.toHaveAttribute('open', '');
-  await summary.click();
-  await expect(guide).toHaveAttribute('open', '');
   await setDocumentHidden(page, false);
+  await page.getByTestId('campaign-menu-back').click();
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+  await continueFromPauseBoard(page);
 });
 
 test('keeps campaign dialogue and its touch target inside the game frame without scrolling on phones', async ({ browser }) => {
@@ -305,8 +305,7 @@ test('respects the saved mute setting when the campaign intro is reopened', asyn
     (window as unknown as Window & { __soundPlayCount: number }).__soundPlayCount)).toBe(1);
 
   await page.getByRole('button', { name: 'Continue' }).click();
-  await page.getByTestId('sound-toggle').click();
-  await expect(page.getByTestId('sound-toggle')).toHaveText('Sound: Off');
+  await setPauseBoardSound(page, false);
   await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
   await page.reload();
 

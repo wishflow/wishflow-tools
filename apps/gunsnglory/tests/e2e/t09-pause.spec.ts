@@ -171,7 +171,7 @@ test('pause-board Sound switches the saved setting and its original icon', async
   await expect(icon).toHaveAttribute('src', /gng_startmenu_2_menu_2_sound_off\.png/);
   await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
   await continueFromPauseBoard(page);
-  await expect(page.getByTestId('sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('sound-toggle')).toHaveCount(0);
 });
 
 test('touching the original HUD pause icon opens the same pause board', async ({ browser }) => {

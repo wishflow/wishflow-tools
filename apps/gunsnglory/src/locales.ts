@@ -40,39 +40,6 @@ export const messages = {
   'Simulation speed': { en: 'Simulation speed', zh: '模拟速度' },
   'Game controls': { en: 'Game controls', zh: '游戏操作' },
   'Archive and testing tools': { en: 'Archive and testing tools', zh: '资料库与测试工具' },
-  Controls: { en: 'Controls', zh: '操作说明' },
-  'Click or tap a unit to select it; click empty ground to clear selection.': {
-    en: 'Click or tap a unit to select it; click empty ground to clear selection.',
-    zh: '点击或轻触单位进行选择；点击空地可取消选择。',
-  },
-  'Drag a selected unit to move it to a reachable cell.': {
-    en: 'Drag a selected unit to move it to a reachable cell.',
-    zh: '拖动已选单位，将它移动到可到达的格子。',
-  },
-  'Click or tap a settler to set or clear a priority target.': {
-    en: 'Click or tap a settler to set or clear a priority target.',
-    zh: '点击或轻触拓荒者可设置或取消优先目标。',
-  },
-  'Drag empty ground to pan the map; drag the minimap to move its viewport.': {
-    en: 'Drag empty ground to pan the map; drag the minimap to move its viewport.',
-    zh: '拖动空地可平移地图；拖动小地图视口框可移动主视口。',
-  },
-  'Pinch with two fingers to zoom the map.': {
-    en: 'Pinch with two fingers to zoom the map; use the zoom buttons or mouse wheel on desktop.',
-    zh: '双指捏合可缩放地图；桌面端可使用缩放按钮或鼠标滚轮。',
-  },
-  'Use the HUD pause icon to pause. Continue on the pause board resumes.': {
-    en: 'Use the HUD pause icon to pause. Continue on the pause board resumes.',
-    zh: '点击 HUD 暂停图标暂停；在暂停菜单中点击“继续”恢复战斗。',
-  },
-  'Tap Game controls to show or hide the in-game toolbar.': {
-    en: 'Tap Game controls to show or hide the in-game toolbar.',
-    zh: '轻触“游戏操作”可展开或收起战斗控制条。',
-  },
-  'Open Inspect battle for state details; single-step works while paused.': {
-    en: 'Open Inspect battle for state details; single-step works while paused.',
-    zh: '打开“检查战局”查看状态；单步推进仅在暂停时可用。',
-  },
   'Battle replay': { en: 'Battle replay', zh: '战局重放' },
   'Export settled battle': { en: 'Export settled battle', zh: '导出已结算战局' },
   'Import replay': { en: 'Import replay', zh: '导入重放文件' },

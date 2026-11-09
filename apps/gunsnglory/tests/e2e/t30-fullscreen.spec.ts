@@ -1,5 +1,5 @@
 import { expect, test } from './auto-continue-fixtures';
-import { continueFromPauseBoard, pauseFromHud } from './helpers';
+import { continueFromPauseBoard, pauseFromHud, setPauseBoardSound } from './helpers';
 import { readFile } from 'node:fs/promises';
 
 const sharedWidgetStyles = await readFile(new URL('../../../../site/usagi-widget.css', import.meta.url), 'utf8');
@@ -124,12 +124,10 @@ test('keeps frame-local overlays and fixed fullscreen controls interactive in bo
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
     await continueWave.click();
     await expect(waveIntro).toBeHidden();
-    await page.getByTestId('sound-toggle').click();
-    await expect(page.getByTestId('sound-toggle')).toHaveAttribute('aria-pressed', 'false');
-
-    const help = page.getByTestId('controls-help');
-    await help.locator('summary').click();
-    await expect(help).toHaveAttribute('open', '');
+    await expect(page.getByTestId('sound-toggle')).toHaveCount(0);
+    await expect(page.getByTestId('controls-help')).toHaveCount(0);
+    await setPauseBoardSound(page, false);
+    await expect(page.getByTestId('settings-status')).toContainText('saved');
 
     const board = page.getByTestId('pause-board');
     const dialog = page.getByTestId('pause-confirmation');
@@ -157,11 +155,6 @@ test('keeps frame-local overlays and fixed fullscreen controls interactive in bo
       const bounds = button.getBoundingClientRect();
       return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
     })).toBe(true);
-    expect(await help.locator('ul').evaluate((list: HTMLElement) => {
-      const bounds = list.getBoundingClientRect();
-      return document.elementFromPoint(bounds.x + 4, bounds.y + 4)?.closest('[data-testid="controls-help"]') === list.parentElement;
-    })).toBe(false);
-
     const canvas = page.getByTestId('game-canvas');
     await canvas.evaluate((element: HTMLCanvasElement) => {
       element.dataset.layerPointerCount = '0';

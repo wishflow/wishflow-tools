@@ -27,13 +27,16 @@ for (const profile of viewports) {
       await expect(intro).toBeHidden();
       await expect(page.getByTestId('game-toolbar')).toBeVisible();
       await expect(page.getByTestId('simulation-speed')).toBeVisible();
-      await expect(page.getByTestId('sound-toggle')).toBeVisible();
+      await expect(page.getByTestId('sound-toggle')).toHaveCount(0);
+      await expect(page.getByTestId('controls-help')).toHaveCount(0);
+      await expect(page.getByTestId('pause-sound-toggle')).toBeHidden();
       await expect(page.getByTestId('pause-toggle')).toHaveCount(0);
       await expect(page.getByTestId('campaign-menu-toggle')).toHaveCount(0);
 
       await pauseFromHud(page, profile.hasTouch ? 'tap' : 'click');
       const board = page.getByTestId('pause-board');
       await expect(board).toBeVisible();
+      await expect(page.getByTestId('pause-sound-toggle')).toBeVisible();
       await expect(frame).toHaveAttribute('data-active-overlay', 'pause-board');
       const geometry = await page.evaluate(() => {
         const frameElement = document.querySelector<HTMLElement>('.game-frame');
