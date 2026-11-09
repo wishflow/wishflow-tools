@@ -3682,6 +3682,8 @@ body.gng-game-fullscreen .usagi-widget {
 
 @media (max-width: 560px) {
   .lab-workbench {
+    position: relative;
+    z-index: 81;
     width: calc(100% - 1rem);
     margin: 1rem auto;
     padding: 0.75rem;

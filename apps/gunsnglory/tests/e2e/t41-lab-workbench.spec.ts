@@ -53,15 +53,41 @@ test('uses parchment and wood materials with readable desktop and narrow-screen 
   expect(desktopGeometry[0]!.x + desktopGeometry[0]!.width).toBeLessThanOrEqual(desktopGeometry[1]!.x + 1);
   expect(desktopGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
 
-  await page.setViewportSize({ width: 360, height: 800 });
+  await page.setViewportSize({ width: 390, height: 844 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const labLayer = await lab.evaluate((element) => ({
+    position: getComputedStyle(element).position,
+    zIndex: Number(getComputedStyle(element).zIndex),
+  }));
+  expect(labLayer).toEqual({ position: 'relative', zIndex: 81 });
+
+  const sitePet = page.locator('.usagi-widget');
+  if (await sitePet.count()) {
+    const petZIndex = Number(await sitePet.evaluate((element) => getComputedStyle(element).zIndex));
+    expect(labLayer.zIndex).toBeGreaterThan(petZIndex);
+    const petBounds = await sitePet.boundingBox();
+    const titleBounds = await lab.getByRole('heading', { name: 'Experiment laboratory' }).boundingBox();
+    if (petBounds && titleBounds) {
+      const left = Math.max(petBounds.x, titleBounds.x);
+      const top = Math.max(petBounds.y, titleBounds.y);
+      const right = Math.min(petBounds.x + petBounds.width, titleBounds.x + titleBounds.width);
+      const bottom = Math.min(petBounds.y + petBounds.height, titleBounds.y + titleBounds.height);
+      if (left < right && top < bottom) {
+        const targetIsWorkbench = await page.evaluate(({ x, y }) => {
+          return Boolean(document.elementFromPoint(x, y)?.closest('.lab-workbench'));
+        }, { x: (left + right) / 2, y: (top + bottom) / 2 });
+        expect(targetIsWorkbench).toBe(true);
+      }
+    }
+  }
+
   const narrowGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();
     const heading = element.querySelector<HTMLElement>(':scope > h3')?.getBoundingClientRect();
     return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, headingTop: heading?.top };
   }));
   expect(narrowGeometry[1]!.y).toBeGreaterThanOrEqual(narrowGeometry[0]!.y + narrowGeometry[0]!.height);
-  expect(narrowGeometry.every((bounds) => bounds.x >= 0 && bounds.x + bounds.width <= 360)).toBe(true);
+  expect(narrowGeometry.every((bounds) => bounds.x >= 0 && bounds.x + bounds.width <= 390)).toBe(true);
   expect(narrowGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
