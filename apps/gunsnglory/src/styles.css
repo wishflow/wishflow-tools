@@ -1368,145 +1368,32 @@ body.gng-game-fullscreen .usagi-widget {
   text-shadow: 0 1px 2px #301b0e;
 }
 
-.campaign-options-sound-note {
-  max-width: 82%;
-  margin: 0.25em auto 0.5em;
-}
-
-.campaign-options-card .campaign-speed-setting {
-  max-width: min(68%, 42rem);
-  margin: 0 auto;
-  color: #4c351e;
-  font-weight: 750;
-}
-
-.campaign-options-card .campaign-speed-setting input {
-  accent-color: #895324;
-}
-
-.campaign-options-card .campaign-menu-subtle {
-  color: #5d4a33;
-}
-
-.campaign-options-card > .campaign-menu-subtle:not(.campaign-options-sound-note) {
-  max-width: 76%;
-  margin: 0.25em auto 0.5em;
-}
-
-.campaign-options-card > .campaign-data-tools {
-  width: min(82%, 42rem);
-  margin-right: auto;
-  margin-left: auto;
-}
-
-.campaign-options-card .campaign-profile-archive h3,
-.campaign-options-card .campaign-menu-status {
-  color: #493722;
-}
-
-.campaign-data-tools {
-  margin-top: 0.5em;
-  border-top: 1px solid rgba(89, 57, 26, 0.45);
-  padding-top: 0.5em;
-}
-
-.campaign-data-tools > summary {
-  width: min(100%, 30rem);
-  margin: 0 auto;
-  min-height: 2.4em;
-  border: 0;
-  border-radius: 0;
-  padding: 0.45em 0.7em;
-  color: #fff8e6;
-  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
-  font-size: clamp(9px, 1.25cqw, 13px);
-  font-weight: 750;
-  text-shadow: 0 1px 2px #301b0e;
-  text-align: center;
-  cursor: pointer;
-}
-
-.campaign-data-tools > summary:focus-visible {
-  outline: 2px solid #fff0a7;
-  outline-offset: 2px;
-}
-
-.campaign-data-tools > summary:hover,
-.campaign-profile-archive-actions button:hover,
-.campaign-profile-archive-actions .replay-import-label:hover {
-  filter: brightness(1.08) drop-shadow(0 0.1rem 0.08rem rgba(31, 17, 8, 0.55));
-}
-
-.campaign-experiment-host {
-  max-width: 100%;
-  margin-top: 0.5em;
-}
-
-.campaign-experiment-host .experiment-panel {
-  gap: 0.55rem;
-  padding: 0.65rem 0.75rem;
-  border-color: rgba(105, 69, 34, 0.4);
-  border-radius: 0.35rem;
-  color: #392a1b;
-  background: rgba(245, 226, 188, 0.85);
-}
-
-.campaign-experiment-host .experiment-panel h2,
-.campaign-experiment-host .experiment-panel .experiment-report-summary {
-  color: #563919;
-}
-
-.campaign-experiment-host .experiment-panel p,
-.campaign-experiment-host .experiment-panel label,
-.campaign-experiment-host .experiment-panel th,
-.campaign-experiment-host .experiment-panel td,
-.campaign-experiment-host .experiment-panel .experiment-scheme-values {
-  color: #493722;
-}
-
-.campaign-experiment-host .experiment-controls input,
-.campaign-experiment-host .experiment-controls select,
-.campaign-experiment-host .saved-experiment-controls select {
-  border-color: rgba(105, 69, 34, 0.45);
-  color: #352617;
-  background: #fff4da;
-}
-
-.campaign-experiment-host .experiment-controls button,
-.campaign-experiment-host .saved-experiment-controls button,
-.campaign-experiment-host .experiment-archive-actions button,
-.campaign-experiment-host .experiment-archive-actions .replay-import-label {
-  border: 0;
-  border-radius: 0;
-  color: #fff8e6;
-  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
-  text-shadow: 0 1px 2px #301b0e;
-}
-
-.campaign-experiment-host .experiment-controls button:hover,
-.campaign-experiment-host .saved-experiment-controls button:hover,
-.campaign-experiment-host .experiment-archive-actions button:hover,
-.campaign-experiment-host .experiment-archive-actions .replay-import-label:hover {
-  filter: brightness(1.08) drop-shadow(0 0.1rem 0.08rem rgba(31, 17, 8, 0.55));
-}
-
-.campaign-experiment-host .experiment-table-scroll th,
-.campaign-experiment-host .experiment-table-scroll td {
-  border-color: rgba(105, 69, 34, 0.2);
-}
-
-.campaign-speed-setting {
+.campaign-options-sound {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 0.35em 1em;
-  font-size: clamp(9px, 1.2cqw, 13px);
+  gap: 0.35em 0.65em;
+  width: min(68%, 320px);
+  min-height: 2.5em;
+  margin: 0.45em auto 0;
+  border: 0;
+  border-radius: 0;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #301b0e;
 }
 
-.campaign-speed-setting input {
-  grid-column: 1 / -1;
-  width: 100%;
-  accent-color: #e2a84b;
+.campaign-options-sound img {
+  display: block;
+  width: 1.45em;
+  height: 1.45em;
+  object-fit: contain;
+}
+
+.campaign-options-sound [data-testid="options-sound-state"] {
+  font-size: 0.82em;
+  white-space: nowrap;
 }
 
 .campaign-menu-subtle,
@@ -1748,44 +1635,11 @@ body.gng-game-fullscreen .usagi-widget {
     margin-top: 0.1em;
   }
 
-  .campaign-options-card .campaign-options-sound-note {
-    max-width: 88%;
-    margin-top: 0.15em;
-    margin-bottom: 0.2em;
-    line-height: 1.1;
-  }
-
-  .campaign-options-card .campaign-speed-setting {
-    gap: 0.1em 0.5em;
-  }
-
-  .campaign-options-card > .campaign-menu-subtle:not(.campaign-options-sound-note) {
-    margin-top: 0.1em;
-    margin-bottom: 0.2em;
-    line-height: 1.1;
-  }
-
-  .campaign-options-card > .campaign-data-tools {
-    margin-top: 0.2em;
-    padding-top: 0.2em;
-  }
-
-  .campaign-options-card > .campaign-menu-status {
-    margin-top: 0.15em;
-    line-height: 1.1;
-  }
-
   body:not(.gng-game-fullscreen) .campaign-help-card {
     width: 94%;
     height: 98%;
     max-height: 98%;
     padding: 4% 7% 7%;
-  }
-
-  .campaign-options-card .campaign-speed-setting,
-  .campaign-options-card > .campaign-data-tools {
-    max-width: 88%;
-    width: 88%;
   }
 
   .campaign-help-card ol {
@@ -3445,5 +3299,443 @@ body.gng-game-fullscreen .usagi-widget {
   body:not(.gng-game-fullscreen) .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
     font-size: clamp(0.76rem, 1.6vw, 1rem);
     line-height: 1.2;
+  }
+}
+
+/* The experiment workbench uses the game's parchment and wood materials outside the 16:9 frame. */
+.lab-workbench {
+  --lab-ink: #392817;
+  --lab-muted-ink: #654b2c;
+  --lab-border: rgba(91, 55, 24, 0.48);
+  width: min(calc(100% - 2rem), 1180px);
+  margin: clamp(1.25rem, 4vw, 3rem) auto;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 2px solid #8b6234;
+  border-radius: 0.65rem;
+  color: #f4dfb8;
+  color-scheme: light;
+  background:
+    linear-gradient(145deg, rgba(87, 58, 31, 0.97), rgba(35, 26, 18, 0.99));
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(238, 195, 128, 0.18);
+  font-family: Georgia, "Noto Serif CJK SC", serif;
+}
+
+.lab-heading {
+  max-width: 56rem;
+  margin: 0 auto clamp(1rem, 2.5vw, 1.75rem);
+  text-align: center;
+}
+
+.lab-heading .eyebrow {
+  margin: 0 0 0.3rem;
+  color: #d6aa66;
+}
+
+.lab-heading h2 {
+  margin: 0;
+  color: #ffe3b0;
+  font-size: clamp(1.35rem, 2.8vw, 2rem);
+  text-shadow: 0 2px 2px #28190d;
+}
+
+.lab-heading > p:last-child {
+  margin: 0.45rem 0 0;
+  color: #dfc79f;
+  font-size: clamp(0.82rem, 1.4vw, 0.98rem);
+  line-height: 1.5;
+}
+
+.lab-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(17rem, 0.85fr);
+  align-items: start;
+  gap: clamp(0.8rem, 1.8vw, 1.35rem);
+}
+
+.lab-card {
+  min-width: 0;
+  padding: clamp(3.5rem, 5vw, 4rem) clamp(1.15rem, 2.1vw, 1.65rem) 1.35rem;
+  border: 0;
+  color: var(--lab-ink);
+  background: #ead19e var(--lab-parchment-background) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 0.35rem 0.45rem rgba(13, 9, 5, 0.45));
+}
+
+.lab-card > h3,
+.lab-card h4 {
+  margin: 0;
+  color: #563919;
+  font-size: clamp(1.02rem, 1.6vw, 1.28rem);
+  line-height: 1.25;
+}
+
+.lab-card > h3 {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--lab-border);
+}
+
+.lab-card p,
+.lab-card label,
+.lab-card th,
+.lab-card td,
+.lab-card output {
+  color: var(--lab-ink);
+}
+
+.lab-speed-setting {
+  display: grid;
+  grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1.7fr) auto;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.lab-speed-setting input {
+  width: 100%;
+  accent-color: #885324;
+}
+
+.lab-speed-setting output {
+  min-width: 3.2em;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.lab-workbench [data-testid="settings-status"],
+.lab-workbench [data-testid="profile-archive-status"],
+.lab-workbench [data-testid="profile-recovery-status"],
+.lab-workbench [data-testid="experiment-status"],
+.lab-workbench [data-testid="saved-comparison-status"],
+.lab-workbench [data-testid="experiment-archive-status"],
+.lab-workbench [data-testid="replay-status"] {
+  min-height: 1.35em;
+  margin: 0.35rem 0;
+  color: #654b2c;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.lab-workbench .experiment-panel,
+.lab-workbench .campaign-profile-archive,
+.lab-workbench .lab-experiment-archive,
+.lab-workbench .replay-panel {
+  min-width: 0;
+  margin-top: 0.9rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(91, 55, 24, 0.36);
+  border-radius: 0.25rem;
+  color: var(--lab-ink);
+  background: rgba(255, 246, 222, 0.7);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.55);
+}
+
+.lab-workbench .experiment-panel {
+  gap: 0.65rem;
+}
+
+.lab-workbench .experiment-panel h2,
+.lab-workbench .replay-panel h4 {
+  margin: 0;
+  color: #563919;
+  font-size: 1rem;
+}
+
+.lab-workbench .experiment-panel p,
+.lab-workbench .replay-panel p,
+.lab-workbench .campaign-profile-archive p {
+  margin: 0;
+  color: var(--lab-muted-ink);
+  line-height: 1.45;
+}
+
+.lab-workbench .experiment-intro,
+.lab-workbench .experiment-note {
+  font-size: 0.84rem;
+}
+
+.lab-workbench .experiment-controls,
+.lab-workbench .saved-experiment-controls,
+.lab-workbench .campaign-profile-archive-actions,
+.lab-workbench .experiment-archive-actions,
+.lab-workbench .replay-actions {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.lab-workbench .experiment-controls label,
+.lab-workbench .saved-experiment-controls label {
+  min-width: 8rem;
+  color: var(--lab-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.lab-workbench .experiment-controls input,
+.lab-workbench .experiment-controls select,
+.lab-workbench .saved-experiment-controls select {
+  min-width: 0;
+  min-height: 2.45rem;
+  border: 1px solid rgba(91, 55, 24, 0.58);
+  border-radius: 0.15rem;
+  padding: 0.42rem 0.55rem;
+  color: #302112;
+  background: #fff4d9;
+  font: inherit;
+}
+
+.lab-workbench .experiment-controls button,
+.lab-workbench .saved-experiment-controls button,
+.lab-workbench .campaign-profile-archive-actions button,
+.lab-workbench .experiment-archive-actions button,
+.lab-workbench .replay-actions button,
+.lab-workbench .replay-import-label,
+.lab-workbench [data-action="retry-settings-save"] {
+  position: relative;
+  display: inline-flex;
+  min-height: 2.55rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  padding: 0.45rem 1rem;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 0.1rem 0.08rem rgba(31, 17, 8, 0.55));
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-shadow: 0 1px 2px #301b0e;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.lab-workbench .campaign-profile-archive-actions button:hover,
+.lab-workbench .experiment-controls button:hover:not(:disabled),
+.lab-workbench .saved-experiment-controls button:hover:not(:disabled),
+.lab-workbench .experiment-archive-actions button:hover,
+.lab-workbench .replay-actions button:hover:not(:disabled),
+.lab-workbench .replay-import-label:hover,
+.lab-workbench [data-action="retry-settings-save"]:hover {
+  filter: brightness(1.08) drop-shadow(0 0.1rem 0.08rem rgba(31, 17, 8, 0.55));
+}
+
+.lab-workbench .experiment-controls button:disabled,
+.lab-workbench .saved-experiment-controls button:disabled,
+.lab-workbench .campaign-profile-archive-actions button:disabled,
+.lab-workbench .experiment-archive-actions button:disabled,
+.lab-workbench .replay-actions button:disabled,
+.lab-workbench .replay-import-label:has(input:disabled),
+.lab-workbench [data-action="retry-settings-save"]:disabled {
+  filter: grayscale(0.45) opacity(0.66);
+  cursor: not-allowed;
+}
+
+.lab-workbench :is(button, input, select, .replay-import-label):focus-visible {
+  outline: 2px solid #734717;
+  outline-offset: 3px;
+}
+
+.lab-workbench .campaign-profile-archive > h4,
+.lab-workbench .lab-experiment-archive > h4,
+.lab-workbench .replay-panel > h4 {
+  margin-bottom: 0.4rem;
+  color: #563919;
+  font-size: 0.96rem;
+}
+
+.lab-workbench .campaign-profile-archive-actions,
+.lab-workbench .experiment-archive-actions,
+.lab-workbench .replay-actions {
+  margin-top: 0.55rem;
+}
+
+.lab-workbench .replay-import-label {
+  position: relative;
+  overflow: hidden;
+}
+
+.lab-workbench .replay-import-label input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.lab-workbench .experiment-report {
+  gap: 0.55rem;
+}
+
+.lab-workbench .experiment-report-summary {
+  color: #563919;
+}
+
+.lab-workbench .experiment-scheme-values,
+.lab-workbench .experiment-table-scroll tbody th,
+.lab-workbench .experiment-table-scroll td {
+  color: var(--lab-ink);
+}
+
+.lab-workbench .experiment-table-scroll {
+  max-width: 100%;
+  border: 1px solid rgba(91, 55, 24, 0.24);
+  background: rgba(255, 250, 235, 0.74);
+}
+
+.lab-workbench .experiment-table-scroll table {
+  min-width: 32rem;
+}
+
+.lab-workbench .experiment-table-scroll th,
+.lab-workbench .experiment-table-scroll td {
+  border-color: rgba(91, 55, 24, 0.22);
+}
+
+.lab-workbench .experiment-table-scroll thead th {
+  color: #563919;
+}
+
+.lab-profile-confirmation {
+  width: min(calc(100vw - 2rem), 33rem);
+  border: 0;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  color: var(--lab-ink);
+  background: #ead19e var(--lab-parchment-background) center / 100% 100% no-repeat;
+  text-align: center;
+}
+
+.lab-profile-confirmation::backdrop {
+  background: rgba(16, 11, 7, 0.72);
+}
+
+.lab-profile-confirmation h3 {
+  margin: 0;
+  color: #563919;
+}
+
+.lab-profile-confirmation p {
+  color: var(--lab-ink);
+  line-height: 1.5;
+}
+
+.lab-profile-confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.lab-profile-confirmation-actions .campaign-wood-button {
+  min-width: min(45%, 10rem);
+  min-height: 2.7rem;
+  border: 0;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  font: inherit;
+  font-weight: 700;
+  text-shadow: 0 1px 2px #301b0e;
+}
+
+.game-frame-fullscreen-toggle {
+  border: 0;
+  border-radius: 0;
+  color: transparent;
+  background-color: transparent;
+  background-image: var(--gng-fullscreen-button-sprite);
+  background-repeat: no-repeat;
+  background-position: 0% 50%;
+  background-size: 200% 100%;
+  box-shadow: none;
+  font-size: 0;
+}
+
+.game-frame-fullscreen-toggle[aria-pressed="true"] {
+  background-position: 100% 50%;
+}
+
+.game-frame-fullscreen-toggle:hover {
+  background-color: transparent;
+  filter: brightness(1.12) drop-shadow(0 0.15rem 0.2rem rgba(0, 0, 0, 0.62));
+}
+
+.game-frame-fullscreen-toggle:focus-visible {
+  outline: 2px solid #ffe7b0;
+  outline-offset: 1px;
+  filter: drop-shadow(0 0 0.2rem rgba(255, 227, 164, 0.9));
+}
+
+@media (max-width: 820px) {
+  .lab-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .lab-workbench {
+    width: calc(100% - 1rem);
+    margin: 1rem auto;
+    padding: 0.75rem;
+  }
+
+  .lab-card {
+    padding: 3.5rem 1rem 1rem;
+  }
+
+  .lab-speed-setting {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.35rem 0.6rem;
+  }
+
+  .lab-speed-setting input {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .lab-speed-setting output {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .lab-workbench .experiment-controls,
+  .lab-workbench .saved-experiment-controls,
+  .lab-workbench .campaign-profile-archive-actions,
+  .lab-workbench .experiment-archive-actions,
+  .lab-workbench .replay-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .lab-workbench .experiment-controls label,
+  .lab-workbench .saved-experiment-controls label,
+  .lab-workbench .experiment-controls input,
+  .lab-workbench .experiment-controls select,
+  .lab-workbench .saved-experiment-controls select,
+  .lab-workbench .experiment-controls button,
+  .lab-workbench .saved-experiment-controls button,
+  .lab-workbench .campaign-profile-archive-actions button,
+  .lab-workbench .experiment-archive-actions button,
+  .lab-workbench .replay-actions button,
+  .lab-workbench .replay-import-label {
+    width: 100%;
+  }
+
+  .lab-profile-confirmation-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lab-profile-confirmation-actions .campaign-wood-button {
+    width: 100%;
   }
 }

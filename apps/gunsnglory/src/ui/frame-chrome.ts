@@ -51,7 +51,8 @@ export class FrameChromeController {
     this.options.orientationMessage.textContent = needsLandscape ? this.options.getMessages().rotate : '';
     document.body.classList.toggle('gng-game-fullscreen', active);
     const label = active ? this.options.getMessages().exit : this.options.getMessages().enter;
-    this.options.toggleButton.textContent = '⛶';
+    this.options.toggleButton.textContent = '';
+    this.options.toggleButton.dataset.fullscreen = String(active);
     this.options.toggleButton.setAttribute('aria-label', label);
     this.options.toggleButton.title = label;
     this.options.toggleButton.setAttribute('aria-pressed', String(active));

@@ -82,10 +82,16 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
     const toggle = page.getByTestId('fullscreen-toggle');
     await expect(toggle).toHaveAccessibleName('Enter fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(toggle).toHaveAttribute('data-fullscreen', 'false');
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundImage)).toContain('gng-frame-fullscreen-states.png');
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundSize)).toBe('200% 100%');
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundPositionX)).toBe('0%');
 
     await toggle.click();
     await expect(toggle).toHaveAccessibleName('Exit fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(toggle).toHaveAttribute('data-fullscreen', 'true');
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundPositionX)).toBe('100%');
     await expect(page.getByTestId('fullscreen-status')).toHaveText('Landscape orientation is enabled.');
     await expect(page.getByTestId('portrait-orientation-overlay')).toBeHidden();
     expect(await page.evaluate(() => document.fullscreenElement === document.querySelector('.game-frame'))).toBe(true);
@@ -94,6 +100,7 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
     await toggle.click();
     await expect(toggle).toHaveAccessibleName('Enter fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundPositionX)).toBe('0%');
     await expect(page.getByTestId('fullscreen-status')).toBeHidden();
     expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
   } finally {
@@ -295,7 +302,9 @@ test('uses original menu and confirmation artwork in the pause flow', async ({ p
   const board = page.getByTestId('pause-board');
   await expect(board).toBeVisible();
   const fullscreen = page.getByTestId('fullscreen-toggle');
-  await expect(fullscreen).toHaveText('⛶');
+  await expect(fullscreen).toHaveText('');
+  await expect(fullscreen).toHaveAccessibleName('Enter fullscreen');
+  expect(await fullscreen.evaluate((button) => getComputedStyle(button).backgroundImage)).toContain('gng-frame-fullscreen-states.png');
   expect(await fullscreen.evaluate((button) => getComputedStyle(button, '::before').content)).toBe('none');
 
   expect(await page.getByTestId('pause-board-art').getAttribute('src')).toContain('gng_startmenu_2_menu_0_box.png');

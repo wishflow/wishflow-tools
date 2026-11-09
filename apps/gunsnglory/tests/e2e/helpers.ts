@@ -45,14 +45,13 @@ export async function continueFromPauseBoard(page: Page, input: 'click' | 'tap' 
   else await button.click();
 }
 
-export async function setSimulationSpeedFromPauseOptions(page: Page, value: number): Promise<void> {
+export async function setSimulationSpeedFromLab(page: Page, value: number): Promise<void> {
   const pauseBoard = page.getByTestId('pause-board');
   if (!(await pauseBoard.isVisible())) await pauseFromHud(page);
   await expect(pauseBoard).toBeVisible();
-  await pauseBoard.getByTestId('pause-options').click();
 
-  const optionsPanel = page.getByTestId('game-options');
-  const speed = optionsPanel.getByTestId('menu-simulation-speed');
+  const speed = page.getByTestId('simulation-speed');
+  await speed.scrollIntoViewIfNeeded();
   const minimum = Number(await speed.getAttribute('min'));
   const maximum = Number(await speed.getAttribute('max'));
   const step = Number(await speed.getAttribute('step'));
@@ -65,8 +64,7 @@ export async function setSimulationSpeedFromPauseOptions(page: Page, value: numb
     await speed.press('ArrowRight');
   }
   await expect(speed).toHaveValue(String(value));
-  await expect(optionsPanel.getByTestId('menu-settings-status')).toContainText('saved');
-  await optionsPanel.getByTestId('campaign-menu-back').click();
+  await expect(page.getByTestId('settings-status')).toContainText('saved');
   await expect(pauseBoard).toBeVisible();
 }
 
