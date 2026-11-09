@@ -1,4 +1,5 @@
 import { expect, test } from './auto-continue-fixtures';
+import { leaveBattleFromPauseBoard } from './helpers';
 
 async function readSavedProfile(page: import('@playwright/test').Page): Promise<{
   settings: unknown;
@@ -39,9 +40,13 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   await page.goto('/');
 
   await page.getByTestId('menu-options').click();
+  await expect(page.getByTestId('game-options')).toBeVisible();
+  await page.getByTestId('game-options').getByTestId('campaign-menu-back').click();
   await page.getByTestId('menu-sound').click();
+  await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
+  await page.getByTestId('menu-options').click();
   await expect(page.getByTestId('menu-settings-status')).toHaveText('Settings saved.');
-  await page.getByTestId('campaign-menu-back').click();
+  await page.getByTestId('game-options').getByTestId('campaign-menu-back').click();
   const profileBefore = await readSavedProfile(page);
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
@@ -55,12 +60,12 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   for (const level of [5, 6, 7, 8, 9, 10]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
-  await page.getByTestId('campaign-menu-back').click();
+  await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
   await page.getByTestId('campaign-region-mississippi').click();
   for (const level of [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
-  await page.getByTestId('campaign-menu-back').click();
+  await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
   await page.getByTestId('campaign-region-new-mexico').click();
   await page.getByTestId('campaign-level-02').click();
   await expect(page.getByRole('heading', { name: 'Death Valley' })).toBeVisible();
@@ -77,8 +82,7 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   await expect(page.getByTestId('scene-caption')).toContainText(/FREE PLAY/);
   expect(await readSavedProfile(page)).toEqual(profileBefore);
 
-  await page.getByTestId('campaign-menu-toggle').click();
-  await page.getByRole('button', { name: 'Leave battle' }).click();
+  await leaveBattleFromPauseBoard(page);
   await expect(page.getByTestId('menu-free-play')).toBeVisible();
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-new-mexico').click();

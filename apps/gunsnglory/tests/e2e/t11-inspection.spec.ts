@@ -1,5 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
-import { openSingleWaveSample } from './helpers';
+import { openSingleWaveSample, pauseFromHud } from './helpers';
 
 test('single-step advances one frame and inspection overlays leave the paused battle unchanged', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -7,8 +7,9 @@ test('single-step advances one frame and inspection overlays leave the paused ba
   await openSingleWaveSample(page);
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
-  await page.getByRole('button', { name: 'Pause battle' }).click();
-  await expect(page.getByTestId('pause-status')).toHaveText('Battle paused.');
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
 
   await page.getByTestId('inspection-panel').locator('summary').click();
   const frame = page.getByTestId('inspection-frame');
@@ -31,7 +32,7 @@ test('single-step advances one frame and inspection overlays leave the paused ba
   expect(afterMatch).not.toBeNull();
   expect(Number(afterMatch?.[1])).toBe(beforeFrame + 1);
   expect(Number(afterMatch?.[2])).toBe(beforeElapsed + 16);
-  await expect(page.getByTestId('pause-status')).toHaveText('Battle paused.');
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
 
   const canvas = page.getByTestId('game-canvas');
   const canvasHash = () => canvas.evaluate((element) => {
@@ -71,7 +72,8 @@ test('inspection and single-step controls remain usable on a phone-sized touch v
     await openSingleWaveSample(page, 'tap');
     await page.getByRole('button', { name: 'Start one pioneer sample' }).tap();
     await expect(page.getByTestId('wave-status')).toContainText('Enemies 1');
-    await page.getByRole('button', { name: 'Pause battle' }).tap();
+    await pauseFromHud(page, 'tap');
+    await expect(page.getByTestId('pause-board')).toBeVisible();
     await page.getByTestId('inspection-panel').locator('summary').tap();
 
     const frame = page.getByTestId('inspection-frame');

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { calculateMapViewport } from '../../src/render/map-viewport';
+import { expectInteractiveGameOverlay } from './helpers';
 
 const gamblerCell = { x: 6, y: 6 };
 const mapViewport = calculateMapViewport(17, 17, 1024, 576);
@@ -58,6 +59,7 @@ test('Gambler click opens an in-frame dialog; cancel, drag and other units do no
   const initialCash = page.getByTestId('gambler-cash');
   await tapGambler(page);
   await expect(dialog).toBeVisible();
+  await expectInteractiveGameOverlay(page, 'gambler', 'gambler-dialog', '[data-testid="close-gambler"]');
   await expect(page.getByTestId('fullscreen-toggle')).toBeVisible();
   await expectDialogInsideGameFrame(page);
   await expect(initialCash).toHaveText('Cash: $50 · Wager: $50');
@@ -120,6 +122,7 @@ test('touch input opens the Gambler dialog without escaping the 390px game frame
     await page.touchscreen.tap(point.x, point.y);
     const dialog = page.getByTestId('gambler-dialog');
     await expect(dialog).toBeVisible();
+    await expectInteractiveGameOverlay(page, 'gambler', 'gambler-dialog', '[data-testid="close-gambler"]');
     await expect(page.getByTestId('fullscreen-toggle')).toBeVisible();
     await expectDialogInsideGameFrame(page);
     await expect(page.getByTestId('play-gambler')).toBeEnabled();

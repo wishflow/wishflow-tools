@@ -1,5 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
-import { clickCanvasPoint, cowGulchMarkerPoint, tapCanvasPoint } from './helpers';
+import { clickCanvasPoint, continueFromPauseBoard, cowGulchMarkerPoint, pauseFromHud, tapCanvasPoint } from './helpers';
 
 test('opens Cow Gulch, selects the gunslinger, clears selection, and survives resize', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -105,14 +105,12 @@ test('selects and clears the unit with mobile touch input', async ({ browser }) 
   await context.close();
 });
 
-test('renders the original battle HUD and routes its pause tap away from map selection', async ({ page }) => {
+test('renders the original battle HUD and routes its pause tap to the in-game pause board', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?testBattle=1');
-  const pauseStatus = page.getByTestId('pause-status');
   const selectionStatus = page.getByTestId('selection-status');
   const canvas = page.getByTestId('game-canvas');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
-  await expect(page.getByRole('button', { name: 'Pause battle' })).toBeEnabled();
   const minimapPixels = await canvas.evaluate((element) => {
     const canvasElement = element as HTMLCanvasElement;
     const context = canvasElement.getContext('2d');
@@ -134,12 +132,11 @@ test('renders the original battle HUD and routes its pause tap away from map sel
   expect(minimapPixels.minimapViewportTop.slice(0, 3).every((channel) => channel >= 220)).toBe(true);
   expect(minimapPixels.minimapViewportInner.slice(0, 3).every((channel) => channel <= 32)).toBe(true);
 
-  await clickCanvasPoint(page, { x: 314, y: 24 });
-  await expect(pauseStatus).toHaveText('Battle paused.');
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
   await clickCanvasPoint(page, { x: 250, y: 24 });
   await expect(selectionStatus).toHaveText('No unit selected');
-
-  await clickCanvasPoint(page, { x: 314, y: 24 });
-  await expect(pauseStatus).toBeHidden();
-  await expect(page.getByRole('button', { name: 'Pause battle' })).toBeEnabled();
+  await continueFromPauseBoard(page);
+  await expect(page.getByTestId('pause-board')).toBeHidden();
 });

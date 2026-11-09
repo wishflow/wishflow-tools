@@ -1,4 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
+import { leaveBattleFromPauseBoard } from './helpers';
 
 const officialLevelId = 'campaign-new-mexico-01';
 
@@ -223,8 +224,7 @@ test('blocks Apache Valley until its missing horseman sprite is restored', async
   await page.getByTestId('retry-assets').click();
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
-  await page.getByTestId('campaign-menu-toggle').click();
-  await page.getByTestId('campaign-exit-confirmation').getByRole('button', { name: 'Leave battle' }).click();
+  await leaveBattleFromPauseBoard(page);
   await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
   await page.getByTestId('menu-start').click();
   await page.getByTestId('campaign-region-new-mexico').click();

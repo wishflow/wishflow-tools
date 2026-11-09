@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { calculateMapViewport } from '../../src/render/map-viewport';
+import { leaveBattleFromPauseBoard } from './helpers';
 
 const techTownMapViewport = calculateMapViewport(32, 24, 1024, 576);
 
@@ -96,8 +97,7 @@ test('opens formal Tech Town from the campaign and hires a real map unit in a mu
   expect(attemptedAudioSources).toEqual([]);
   expect(pageErrors).toEqual([]);
 
-  await page.getByTestId('campaign-menu-toggle').click();
-  await page.getByTestId('campaign-exit-confirmation').getByRole('button', { name: 'Leave battle' }).click();
+  await leaveBattleFromPauseBoard(page);
   await page.getByTestId('menu-start').click();
   await page.getByTestId('campaign-region-new-mexico').click();
   await expect(page.getByTestId('campaign-level-05')).toBeDisabled();

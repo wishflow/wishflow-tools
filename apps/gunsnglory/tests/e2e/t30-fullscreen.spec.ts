@@ -1,4 +1,5 @@
 import { expect, test } from './auto-continue-fixtures';
+import { continueFromPauseBoard, pauseFromHud, setPauseBoardSound } from './helpers';
 import { readFile } from 'node:fs/promises';
 
 const sharedWidgetStyles = await readFile(new URL('../../../../site/usagi-widget.css', import.meta.url), 'utf8');
@@ -27,6 +28,15 @@ async function installFullscreenMock(
         document.dispatchEvent(new Event('fullscreenchange'));
       },
     });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !testWindow.__gngFullscreenElement) return;
+      const activeDialog = document.querySelector<HTMLDialogElement>('dialog[open]');
+      window.setTimeout(() => {
+        if (activeDialog?.open) activeDialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+        testWindow.__gngFullscreenElement = null;
+        document.dispatchEvent(new Event('fullscreenchange'));
+      }, 0);
+    }, true);
 
     if (request === 'missing') {
       Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
@@ -91,7 +101,7 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
   }
 });
 
-test('keeps fullscreen and dialog actions clickable while a modal covers the help guide', async ({ browser }) => {
+test('keeps frame-local overlays and fixed fullscreen controls interactive in both fullscreen states', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const page = await context.newPage();
   await installFullscreenMock(page);
@@ -102,10 +112,18 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
     await page.goto('/?testBattle=1');
     await expect(page.getByTestId('game-toolbar')).toBeVisible();
     const fullscreen = page.getByTestId('fullscreen-toggle');
+    const overlayHost = page.getByTestId('overlay-host');
     const waveIntro = page.getByTestId('campaign-wave-intro');
     await expect(waveIntro).toBeVisible();
+    await expect(overlayHost).toBeVisible();
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'wave-intro');
+    expect(await waveIntro.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
+    const fullscreenParentBefore = await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'));
+    expect(await fullscreen.evaluate((button) => button.closest('[data-testid="overlay-host"]'))).toBeNull();
     await fullscreen.click();
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'wave-intro');
+    expect(await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'))).toBe(fullscreenParentBefore);
     const continueWave = waveIntro.getByRole('button', { name: 'Continue' });
     expect(await continueWave.evaluate((button: HTMLButtonElement) => {
       const bounds = button.getBoundingClientRect();
@@ -115,32 +133,37 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
     await continueWave.click();
     await expect(waveIntro).toBeHidden();
-    await page.getByTestId('sound-toggle').click();
-    await expect(page.getByTestId('sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('sound-toggle')).toHaveCount(0);
+    await expect(page.getByTestId('controls-help')).toHaveCount(0);
+    await setPauseBoardSound(page, false);
+    await expect(page.getByTestId('settings-status')).toContainText('saved');
 
-    const help = page.getByTestId('controls-help');
-    await help.locator('summary').click();
-    await expect(help).toHaveAttribute('open', '');
-
-    const dialog = page.getByTestId('campaign-exit-confirmation');
-    await page.getByTestId('campaign-menu-toggle').click();
-    await expect(dialog).toBeVisible();
+    const board = page.getByTestId('pause-board');
+    const dialog = page.getByTestId('pause-confirmation');
+    await pauseFromHud(page);
+    await expect(board).toBeVisible();
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await expect(overlayHost).toBeVisible();
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'pause-board');
+    await expect(overlayHost.locator('[data-overlay-active="true"]')).toHaveCount(1);
+    expect(await dialog.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
     await expect(fullscreen).toBeVisible();
-    await expect.poll(() => fullscreen.evaluate((button) => button.closest('dialog[open]') !== null)).toBe(true);
+    expect(await fullscreen.evaluate((button) => button.closest('[data-testid="overlay-host"]'))).toBeNull();
+    expect(await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'))).toBe(fullscreenParentBefore);
 
     await fullscreen.click();
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
+    await expect(board).toBeVisible();
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await page.getByTestId('pause-close').click();
     await expect(dialog).toBeVisible();
-    const keepPlaying = dialog.getByRole('button', { name: 'Keep playing' });
-    expect(await keepPlaying.evaluate((button: HTMLButtonElement) => {
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'pause-confirmation');
+    const cancel = page.getByTestId('cancel-pause-action');
+    expect(await cancel.evaluate((button: HTMLButtonElement) => {
       const bounds = button.getBoundingClientRect();
       return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
     })).toBe(true);
-    expect(await help.locator('ul').evaluate((list: HTMLElement) => {
-      const bounds = list.getBoundingClientRect();
-      return document.elementFromPoint(bounds.x + 4, bounds.y + 4)?.closest('[data-testid="controls-help"]') === list.parentElement;
-    })).toBe(false);
-
     const canvas = page.getByTestId('game-canvas');
     await canvas.evaluate((element: HTMLCanvasElement) => {
       element.dataset.layerPointerCount = '0';
@@ -155,37 +178,23 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
     const mapPoint = { x: canvasBounds!.x + 24, y: canvasBounds!.y + 24 };
     expect(mapPoint.x < dialogBounds!.x || mapPoint.x > dialogBounds!.x + dialogBounds!.width
       || mapPoint.y < dialogBounds!.y || mapPoint.y > dialogBounds!.y + dialogBounds!.height).toBe(true);
+    expect(await page.evaluate(({ x, y }) => Boolean(document.elementFromPoint(x, y)?.closest('[data-testid="overlay-backdrop"]')), mapPoint)).toBe(true);
     await page.mouse.click(mapPoint.x, mapPoint.y);
     await expect(canvas).toHaveAttribute('data-layer-pointer-count', '0');
 
     await fullscreen.click();
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Keep playing' }).click();
+    await cancel.click();
     await expect(dialog).toBeHidden();
-    await expect.poll(() => fullscreen.evaluate((button) => button.closest('.game-frame') !== null)).toBe(true);
-
-    for (const [testId, cancelAction] of [
-      ['recruit-confirmation', 'cancel-recruit'],
-      ['map-hire-confirmation', 'cancel-map-hire'],
-      ['upgrade-confirmation', 'cancel-upgrade'],
-      ['gambler-dialog', 'close-gambler'],
-    ]) {
-      const confirmation = page.getByTestId(testId);
-      await confirmation.evaluate((element: HTMLDialogElement) => element.show());
-      const cancel = confirmation.locator(`[data-action="${cancelAction}"]`);
-      await expect(confirmation).toBeVisible();
-      await fullscreen.click();
-      await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
-      expect(await cancel.evaluate((button: HTMLButtonElement) => {
-        const bounds = button.getBoundingClientRect();
-        return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
-      })).toBe(true);
-      await fullscreen.click();
-      await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
-      await cancel.click();
-      await expect(confirmation).toBeHidden();
-    }
+    await expect(board).toBeVisible();
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'pause-board');
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await continueFromPauseBoard(page);
+    await expect(board).toBeHidden();
+    await expect(overlayHost).toBeHidden();
+    await expect(page.locator('.game-frame')).not.toHaveAttribute('data-simulation-state', 'paused');
+    expect(await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'))).toBe(fullscreenParentBefore);
 
     const speed = page.getByRole('slider', { name: 'Simulation speed' });
     await speed.focus();
@@ -211,12 +220,46 @@ test('keeps fullscreen and dialog actions clickable while a modal covers the hel
   }
 });
 
-test('keeps a fullscreen failure message beside the campaign dialog instead of over its text', async ({ page }) => {
+test('Escape exits fullscreen while preserving the active confirmation and paused parent board', async ({ page }) => {
+  await installFullscreenMock(page);
+  await page.goto('/?testBattle=1');
+  const waveIntro = page.getByTestId('campaign-wave-intro');
+  if (await waveIntro.isVisible()) await waveIntro.getByRole('button', { name: 'Continue' }).click();
+
+  await pauseFromHud(page);
+  const board = page.getByTestId('pause-board');
+  await page.getByTestId('pause-close').click();
+  const confirmation = page.getByTestId('pause-confirmation');
+  await expect(confirmation).toBeVisible();
+  await expect(board).toBeVisible();
+  await expect(board).toHaveAttribute('aria-hidden', 'true');
+
+  const fullscreen = page.getByTestId('fullscreen-toggle');
+  await fullscreen.click();
+  await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+
+  await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
+  await expect(confirmation).toBeVisible();
+  await expect(board).toBeVisible();
+  await expect(page.getByTestId('overlay-host')).toHaveAttribute('data-active-overlay', 'pause-confirmation');
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+
+  await page.getByTestId('cancel-pause-action').click();
+  await expect(confirmation).toBeHidden();
+  await expect(board).toBeVisible();
+  await page.getByTestId('pause-continue').click();
+  await expect(board).toBeHidden();
+  await expect(page.locator('.game-frame')).not.toHaveAttribute('data-simulation-state', 'paused');
+});
+
+test('keeps a fullscreen failure message beside the pause confirmation instead of over its text', async ({ page }) => {
   await installFullscreenMock(page, { request: 'reject' });
   await page.goto('/?testBattle=1');
 
-  const dialog = page.getByTestId('campaign-exit-confirmation');
-  await page.getByTestId('campaign-menu-toggle').click();
+  await pauseFromHud(page);
+  await page.getByTestId('pause-close').click();
+  const dialog = page.getByTestId('pause-confirmation');
   await expect(dialog).toBeVisible();
 
   const fullscreen = page.getByTestId('fullscreen-toggle');
@@ -224,7 +267,7 @@ test('keeps a fullscreen failure message beside the campaign dialog instead of o
   await expect(page.getByTestId('fullscreen-status')).toBeVisible();
 
   const overlapsDialogHeading = await page.getByTestId('fullscreen-status').evaluate((status: HTMLElement) => {
-    const heading = status.closest('dialog')?.querySelector('h2');
+    const heading = document.querySelector<HTMLElement>('[data-testid="pause-confirmation-title"]');
     if (!heading) return true;
     const statusBounds = status.getBoundingClientRect();
     const headingBounds = heading.getBoundingClientRect();
@@ -235,55 +278,52 @@ test('keeps a fullscreen failure message beside the campaign dialog instead of o
   });
   expect(overlapsDialogHeading).toBe(false);
 
-  const keepPlaying = dialog.getByRole('button', { name: 'Keep playing' });
-  expect(await keepPlaying.evaluate((button: HTMLButtonElement) => {
+  const cancel = dialog.getByTestId('cancel-pause-action');
+  expect(await cancel.evaluate((button: HTMLButtonElement) => {
     const bounds = button.getBoundingClientRect();
     return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
   })).toBe(true);
-  await keepPlaying.click();
+  await cancel.click();
   await expect(dialog).toBeHidden();
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await continueFromPauseBoard(page);
 });
 
-test('uses consistent game action styles across ordinary dialogs and settlement', async ({ page }) => {
+test('uses original menu and confirmation artwork in the pause flow', async ({ page }) => {
   await page.goto('/?testBattle=1');
-  await page.getByTestId('campaign-menu-toggle').click();
-  const exitDialog = page.getByTestId('campaign-exit-confirmation');
-  await expect(exitDialog).toBeVisible();
+  await pauseFromHud(page);
+  const board = page.getByTestId('pause-board');
+  await expect(board).toBeVisible();
   const fullscreen = page.getByTestId('fullscreen-toggle');
   await expect(fullscreen).toHaveText('⛶');
   expect(await fullscreen.evaluate((button) => getComputedStyle(button, '::before').content)).toBe('none');
 
-  const actionStyles = await page.evaluate(() => {
-    const buttons = [
-      ...document.querySelectorAll<HTMLElement>('[data-action="cancel-campaign-exit"], [data-action="confirm-campaign-exit"]'),
-      ...document.querySelectorAll<HTMLElement>('.recruit-confirmation button'),
-      ...document.querySelectorAll<HTMLElement>('.settlement-panel button'),
-    ];
-    return buttons.map((button) => {
-      const style = getComputedStyle(button);
-      return {
-        color: style.color,
-        background: style.backgroundColor,
-        border: style.border,
-        radius: style.borderRadius,
-        font: style.font,
-        minHeight: style.minHeight,
-      };
-    });
-  });
-  expect(actionStyles.length).toBeGreaterThan(8);
-  expect(new Set(actionStyles.map((style) => JSON.stringify(style))).size).toBe(1);
+  expect(await page.getByTestId('pause-board-art').getAttribute('src')).toContain('gng_startmenu_2_menu_0_box.png');
+  const buttonBackground = await page.getByTestId('pause-continue').evaluate((button) => getComputedStyle(button).backgroundImage);
+  expect(buttonBackground).toContain('gng_startmenu_2_menu_1_button.png');
+  await page.getByTestId('pause-restart').click();
+  const confirmation = page.getByTestId('pause-confirmation');
+  await expect(confirmation).toBeVisible();
+  expect(await page.getByTestId('pause-confirmation-art').getAttribute('src')).toContain('gng_hud_2_textbox_large.png');
+  expect(await page.getByTestId('confirm-pause-icon').getAttribute('src')).toContain('gng_hud_2_yes.png');
+  expect(await page.getByTestId('cancel-pause-icon').getAttribute('src')).toContain('gng_hud_2_no.png');
 
-  const campaignCancel = exitDialog.getByRole('button', { name: 'Keep playing' });
-  await page.keyboard.press('Tab');
-  await campaignCancel.focus();
-  expect(await campaignCancel.evaluate((button) => button.matches(':focus-visible'))).toBe(true);
-  expect(await campaignCancel.evaluate((button) => getComputedStyle(button).outlineWidth)).toBe('2px');
-
+  for (const testId of ['recruit-confirmation-art', 'map-hire-confirmation-art', 'upgrade-confirmation-art']) {
+    await expect(page.getByTestId(testId)).toHaveAttribute('src', /gng_hud_2_textbox_large\.png/);
+    await expect(page.getByTestId(testId)).toHaveJSProperty('naturalWidth', 384);
+  }
+  for (const testId of ['confirm-recruit-icon', 'confirm-map-hire-icon', 'confirm-upgrade-icon']) {
+    await expect(page.getByTestId(testId)).toHaveAttribute('src', /gng_hud_2_yes\.png/);
+    await expect(page.getByTestId(testId)).toHaveJSProperty('naturalWidth', 32);
+  }
+  for (const testId of ['cancel-recruit-icon', 'cancel-map-hire-icon', 'cancel-upgrade-icon']) {
+    await expect(page.getByTestId(testId)).toHaveAttribute('src', /gng_hud_2_no\.png/);
+    await expect(page.getByTestId(testId)).toHaveJSProperty('naturalWidth', 32);
+  }
   const recruitConfirm = page.locator('[data-action="confirm-recruit"]');
-  await recruitConfirm.evaluate((button: HTMLButtonElement) => { button.disabled = true; });
-  expect(await recruitConfirm.evaluate((button) => getComputedStyle(button).cursor)).toBe('default');
-  expect(await recruitConfirm.evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgb(48, 39, 31)');
+  expect(await recruitConfirm.evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  expect(await page.getByTestId('settlement-campaign-menu').evaluate((button) => getComputedStyle(button).backgroundImage))
+    .toContain('gng_startmenu_2_menu_1_button.png');
 });
 
 test('keeps the complete game composition 16:9 in fullscreen and keeps Usagi above the game only in window mode', async ({ browser }) => {

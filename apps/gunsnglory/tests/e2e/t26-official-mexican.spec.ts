@@ -83,8 +83,8 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
     };
     await expect(page.getByTestId('campaign-wave-intro')).toBeHidden();
     await expect(page.getByTestId('pause-status')).toBeHidden();
-    await expect(page.getByTestId('pause-toggle')).toHaveText('Pause battle');
-    await expect(page.getByTestId('pause-toggle')).toHaveText('Pause battle');
+    await expect(page.getByTestId('pause-board')).toBeHidden();
+    await expect(page.getByTestId('pause-toggle')).toHaveCount(0);
     const mexicanPoint = await screenPointForCanvasPoint(page, mexicanMarker);
     await cdp.send('Input.dispatchTouchEvent', {
       type: 'touchStart',

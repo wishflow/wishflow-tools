@@ -1,5 +1,6 @@
 import '@wishflow/site-shell';
 import { getLanguage, registerMessages, subscribeLanguage } from '@wishflow/site-shell';
+import { gamePageTemplate } from './ui/game-page-template';
 import {
   createBrowserExperimentRepository,
   createBrowserGame,
@@ -18,6 +19,7 @@ import { apacheValleyContent } from './content/apache-valley';
 import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
 import { techTownTrainTestContent } from './content/tech-town-train-sample';
 import { gamblerDialogAssets } from './content/gambler-dialog-assets';
+import { recruitConfirmationUiSampleContent } from './content/recruit-confirmation-ui-sample';
 import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages, techTownLevelFourCampaignContent } from './content/official-campaign';
 import { techTownWaveIntros } from './content/tech-town-wave-intros';
@@ -76,270 +78,25 @@ import type {
 import { ProgressError, type CampaignProgressView, type ProfileView, type SettlementSaveResult } from './progress';
 import { ProfileArchiveError, parseProfileArchive, serializeProfileArchive } from './progress/profile-archive';
 import { messages } from './locales';
+import { OverlayHost } from './ui/overlay-host';
+import { GameUiController, type GameUiPanel, type GameUiRoute } from './ui/controller';
+import { FrameChromeController } from './ui/frame-chrome';
+import { renderHelpPanelView, renderOptionsPanelView } from './ui/menu-panels';
 import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
 if (!app) throw new Error('Game root is missing');
+const testBattleStart = import.meta.env.DEV && new URLSearchParams(window.location.search).get('testBattle') === '1';
 
-app.innerHTML = [
-  '<section class="game-page" id="game">',
-  '  <header class="game-heading">',
-  '    <p class="eyebrow" data-locale="ORIGINAL CAMPAIGN">ORIGINAL CAMPAIGN</p>',
-  '    <h1>Guns’n’Glory</h1>',
-  '    <p class="intro" data-locale="Play Guns’n’Glory’s original campaign in your browser.">Play Guns’n’Glory’s original campaign in your browser.</p>',
-  '  </header>',
-  '  <section class="game-panel" aria-labelledby="scene-title">',
-  '    <section class="campaign-panel" aria-labelledby="campaign-title" hidden>',
-  '      <div class="campaign-heading"><h2 id="campaign-title" data-locale="Campaign progress">Campaign progress</h2><p data-testid="campaign-progress-summary"></p></div>',
-  '      <p class="campaign-note" data-locale="Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.">Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.</p>',
-  '      <div class="campaign-difficulty-control"><label for="campaign-difficulty" data-locale="Difficulty for the next battle">Difficulty for the next battle<select id="campaign-difficulty" data-testid="difficulty-select" disabled><option value="easy" data-locale="Easy">Easy</option><option value="medium" data-locale="Medium">Medium</option><option value="hard" data-locale="Hard">Hard</option></select></label><p data-testid="difficulty-status" role="status" aria-live="polite"></p></div>',
-  '      <ol class="campaign-stage-list" data-testid="campaign-stage-list"></ol>',
-  '      <p class="campaign-status" data-testid="campaign-status" role="status" aria-live="polite"></p>',
-  '    </section>',
-  '    <section class="asset-load-error" data-testid="asset-load-error" role="alert" hidden><p data-testid="asset-load-error-message"></p><button type="button" data-testid="retry-assets" data-action="retry-assets">Retry loading game resources</button></section>',
-  '    <div class="scene-heading" hidden><h2 id="scene-title">Cow Gulch</h2><span data-testid="scene-context">NEW MEXICO · 01</span><span data-testid="scene-difficulty"></span></div>',
-  '    <div class="game-frame">',
-  '      <div class="game-stage" data-testid="game-stage">',
-  '      <canvas data-testid="game-canvas" aria-label="Cow Gulch game map" tabindex="0"></canvas>',
-  '      <section class="campaign-menu-screen" data-testid="campaign-menu-screen" aria-label="Campaign menu">',
-  '        <div class="campaign-menu-view" data-testid="campaign-menu-view"></div>',
-  '      </section>',
-  '      <details class="game-toolbar" data-testid="game-toolbar" aria-label="Game controls" open hidden>',
-  '        <summary data-testid="game-toolbar-toggle" data-locale="Game controls">Game controls</summary>',
-  '        <div class="game-toolbar-panel">',
-  '          <div class="game-toolbar-actions">',
-  '          <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
-  '          <button type="button" data-testid="campaign-menu-toggle" data-action="show-campaign-menu">Campaign</button>',
-  '          <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
-  '          <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
-  '          <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
-  '          <button type="button" data-action="clear-selection">Clear selection</button>',
-  '          <div class="map-zoom-controls" data-testid="map-zoom-controls" role="group" aria-label="Map zoom" hidden>',
-  '            <button type="button" data-testid="map-zoom-out" data-action="map-zoom-out" aria-label="Zoom out">−</button>',
-  '            <output data-testid="map-zoom-level" aria-label="Map zoom level" aria-live="off">1×</output>',
-  '            <button type="button" data-testid="map-zoom-in" data-action="map-zoom-in" aria-label="Zoom in">+</button>',
-  '            <button type="button" data-testid="map-zoom-reset" data-action="map-zoom-reset">Reset zoom</button>',
-  '          </div>',
-  '          </div>',
-  '          <div class="game-toolbar-options">',
-  '          <label class="simulation-speed-control" for="simulation-speed">',
-  '            <span id="simulation-speed-label">Simulation speed</span>',
-  '            <input id="simulation-speed" data-testid="simulation-speed" aria-labelledby="simulation-speed-label" type="range" min="0.25" max="4" step="0.25" value="1" disabled>',
-  '            <output data-testid="simulation-speed-value" for="simulation-speed">1×</output>',
-  '          </label>',
-  '          <button type="button" class="sound-toggle" data-testid="sound-toggle" data-action="toggle-sound" aria-pressed="true">Sound: On</button>',
-  '          <details class="controls-help" data-testid="controls-help">',
-  '            <summary data-locale="Controls">Controls</summary>',
-  '            <ul>',
-  '              <li data-locale="Click or tap a unit to select it; click empty ground to clear selection.">Click or tap a unit to select it; click empty ground to clear selection.</li>',
-  '              <li data-locale="Drag a selected unit to move it to a reachable cell.">Drag a selected unit to move it to a reachable cell.</li>',
-  '              <li data-locale="Click or tap a settler to set or clear a priority target.">Click or tap a settler to set or clear a priority target.</li>',
-  '              <li data-locale="Drag empty ground to pan the map; drag the minimap to move its viewport.">Drag empty ground to pan the map; drag the minimap to move its viewport.</li>',
-  '              <li data-locale="Pinch with two fingers to zoom the map.">Pinch with two fingers to zoom the map.</li>',
-  '              <li data-locale="Use the pause button or HUD pause icon to pause and resume.">Use the pause button or HUD pause icon to pause and resume.</li>',
-  '              <li data-locale="Tap Game controls to show or hide the in-game toolbar.">Tap Game controls to show or hide the in-game toolbar.</li>',
-  '              <li data-locale="Open Inspect battle for state details; single-step works while paused.">Open Inspect battle for state details; single-step works while paused.</li>',
-  '            </ul>',
-  '          </details>',
-  '          </div>',
-  '        </div>',
-  '      </details>',
-  '      <section class="settlement-panel" data-testid="settlement" aria-labelledby="settlement-title" aria-live="polite" hidden>',
-  '        <h2 id="settlement-title">Battle result</h2>',
-  '        <p data-testid="settlement-outcome"></p>',
-  '        <p data-testid="settlement-summary"></p>',
-  '        <p data-testid="settlement-score"></p>',
-  '        <p data-testid="settlement-high-score"></p>',
-  '        <p data-testid="settlement-save-status" role="status" aria-live="polite"></p>',
-  '        <button type="button" data-action="retry-settlement-save" hidden>Retry saving result</button>',
-  '        <button type="button" data-action="restart-sample">Restart this sample</button>',
-  '        <button type="button" data-testid="settlement-campaign-menu" data-action="return-campaign-from-settlement">Campaign map</button>',
-  '      </section>',
-  '      <dialog class="campaign-exit-confirmation" data-testid="campaign-exit-confirmation" aria-labelledby="campaign-exit-title">',
-  '        <h2 id="campaign-exit-title" data-locale="Return to campaign">Return to campaign</h2>',
-  '        <p data-locale="The unfinished battle will not be saved and will restart from its first wave if you return.">The unfinished battle will not be saved and will restart from its first wave if you return.</p>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-action="cancel-campaign-exit" data-locale="Keep playing">Keep playing</button>',
-  '          <button type="button" data-action="confirm-campaign-exit" data-locale="Leave battle">Leave battle</button>',
-  '        </div>',
-  '      </dialog>',
-  '      <dialog class="recruit-confirmation" data-testid="recruit-confirmation" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
-  '        <h2 id="recruit-confirmation-title"></h2>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-action="confirm-recruit">Recruit</button>',
-  '          <button type="button" data-action="cancel-recruit">Cancel</button>',
-  '        </div>',
-  '      </dialog>',
-  '      <dialog class="recruit-confirmation map-hire-confirmation" data-testid="map-hire-confirmation" aria-modal="false" aria-labelledby="map-hire-confirmation-title">',
-  '        <h2 id="map-hire-confirmation-title" data-testid="map-hire-confirmation-title"></h2>',
-  '        <p data-testid="map-hire-confirmation-details" aria-live="polite"></p>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-testid="confirm-map-hire" data-action="confirm-map-hire">Hire</button>',
-  '          <button type="button" data-testid="cancel-map-hire" data-action="cancel-map-hire">Cancel</button>',
-  '        </div>',
-  '      </dialog>',
-  '      <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
-  '        <h2 id="upgrade-confirmation-title"></h2>',
-  '        <p data-testid="upgrade-confirmation-details"></p>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-action="confirm-upgrade">Confirm upgrade</button>',
-  '          <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
-  '        </div>',
-  '      </dialog>',
-  '      <dialog class="recruit-confirmation gambler-confirmation" data-testid="gambler-dialog" aria-modal="false" aria-labelledby="gambler-dialog-title" aria-describedby="gambler-dialog-message">',
-  '        <div class="gambler-dialog-heading">',
-  '          <img data-testid="gambler-portrait" alt="" width="64" height="64">',
-  '          <div><h2 id="gambler-dialog-title" data-testid="gambler-dialog-title"></h2><p id="gambler-dialog-message" data-testid="gambler-message" aria-live="polite"></p></div>',
-  '        </div>',
-  '        <p class="gambler-cash" data-testid="gambler-cash"></p>',
-  '        <ol class="gambler-cards" data-testid="gambler-cards" aria-label="Gambler hand"></ol>',
-  '        <p class="gambler-result" data-testid="gambler-result" aria-live="polite"></p>',
-  '        <div class="recruit-confirmation-actions gambler-actions">',
-  '          <button type="button" data-action="play-gambler" data-testid="play-gambler">Play</button>',
-  '          <button type="button" data-action="close-gambler" data-testid="close-gambler">Cancel</button>',
-  '        </div>',
-  '      </dialog>',
-  '      <dialog class="campaign-wave-intro" data-testid="campaign-wave-intro" aria-modal="false" aria-labelledby="campaign-wave-intro-title" aria-describedby="campaign-wave-intro-text">',
-  '        <div class="campaign-wave-intro-card">',
-  '          <img class="campaign-wave-intro-parchment" data-testid="campaign-wave-intro-parchment" alt="" width="384" height="192">',
-  '          <img data-testid="campaign-wave-intro-portrait" alt="" width="96" height="110">',
-  '          <div class="campaign-wave-intro-copy">',
-  '            <p class="eyebrow" data-testid="campaign-wave-intro-wave"></p>',
-  '            <h2 id="campaign-wave-intro-title"></h2>',
-  '            <p id="campaign-wave-intro-text" data-testid="campaign-wave-intro-text"></p>',
-  '          </div>',
-  '          <div class="campaign-wave-intro-actions">',
-  '              <button type="button" data-action="retry-wave-intro-voice" hidden>Retry Pedro’s voice</button>',
-  '              <button type="button" data-action="continue-wave-intro"><img class="campaign-wave-intro-confirm-icon" data-testid="campaign-wave-intro-confirm-icon" alt="" width="32" height="32"><span class="campaign-wave-intro-continue-label">Continue</span></button>',
-  '          </div>',
-  '        </div>',
-  '      </dialog>',
-  '      </div>',
-  '      <div class="game-frame-fullscreen-controls" data-testid="fullscreen-controls">',
-  '        <button type="button" class="game-frame-fullscreen-toggle" data-testid="fullscreen-toggle" data-action="toggle-fullscreen" aria-pressed="false" aria-describedby="fullscreen-status">Enter fullscreen</button>',
-  '        <p class="game-frame-fullscreen-status" id="fullscreen-status" data-testid="fullscreen-status" role="status" aria-live="polite" hidden></p>',
-  '      </div>',
-  '      <div class="portrait-orientation-overlay" data-testid="portrait-orientation-overlay" role="alert" aria-hidden="true"><p>Rotate your device to landscape to continue.</p></div>',
-  '    </div>',
-  '    <details class="archive-panel" data-testid="archive-panel" hidden>',
-  '      <summary data-locale="Archive and testing tools">Archive and testing tools</summary>',
-  '      <div class="archive-panel-content">',
-  '    <div class="game-controls">',
-  '      <p data-testid="profile-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="pending-settlement-status" role="status" aria-live="polite" hidden></p>',
-  '      <button type="button" data-testid="retry-pending-settlement" data-action="retry-pending-settlement" hidden disabled>Retry saving pending result</button>',
-  '      <p data-testid="profile-recovery-status" role="status" aria-live="polite"></p>',
-  '      <button type="button" data-action="export-corrupt-profile" hidden>Download profile backup</button>',
-  '      <button type="button" data-action="reset-corrupt-profile" hidden>Replace damaged profile</button>',
-  '      <p data-testid="selection-status" role="status" aria-live="polite"></p>',
-  '      <section data-testid="scene-open-error" role="alert" hidden>',
-  '        <p data-testid="scene-open-error-message"></p>',
-  '        <button type="button" data-action="retry-scene-open">Retry loading requested scene</button>',
-  '        <button type="button" data-action="return-to-previous-scene">Return to previous scene</button>',
-  '      </section>',
-  '      <p data-testid="wave-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="combat-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="sound-playback-status" role="status" aria-live="polite" hidden></p>',
-  '      <button type="button" data-testid="retry-sound-playback" data-action="retry-sound-playback" hidden>Retry sound playback</button>',
-  '      <p data-testid="settings-status" role="status" aria-live="polite"></p>',
-  '      <button type="button" data-action="retry-settings-save" hidden>Retry saving settings</button>',
-  '      <button type="button" data-action="reload-saved-profile" hidden>Reload saved profile</button>',
-  '      <p data-testid="upgrade-sample-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="upgrade-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="recruit-pool-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="recruit-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="map-hire-status" role="status" aria-live="polite"></p>',
-  '      <button type="button" data-action="start-upgrade-sample">Open upgrade rules sample</button>',
-  '      <button type="button" data-action="start-gambler-sample">Open Gambler UI sample</button>',
-  '      <button type="button" data-action="start-gambler-low-cash-sample">Open low-cash Gambler sample</button>',
-  '      <button type="button" data-testid="open-tech-town-train-sample" data-action="start-tech-town-train-sample" data-locale="Open Tech Town train and Gatling sample">Open Tech Town train and Gatling sample</button>',
-  '      <button type="button" data-testid="open-single-wave-sample" data-action="return-cow-gulch" hidden>Return to Cow Gulch sample</button>',
-  '      <button type="button" data-action="start-defeat-sample">Test defeat with one life</button>',
-  '      <p data-testid="pause-status" role="status" aria-live="polite" hidden></p>',
-  '    </div>',
-  '    <section class="experiment-panel" aria-labelledby="experiment-title">',
-  '      <h2 id="experiment-title" data-locale="Compare numeric schemes">Compare numeric schemes</h2>',
-  '      <p class="experiment-intro" data-locale="Compare the original Cow Gulch reward with an immutable draft using matched random samples.">Compare the original Cow Gulch reward with an immutable draft using matched random samples.</p>',
-  '      <div class="experiment-controls">',
-  '        <label for="experiment-cash-reward" data-locale="Pioneer cash reward">Pioneer cash reward',
-  '          <input id="experiment-cash-reward" data-testid="experiment-cash-reward" type="number" min="0" max="1000000000" step="1" value="5">',
-  '        </label>',
-  '        <label for="experiment-sample-count" data-locale="Matched samples">Matched samples',
-  '          <select id="experiment-sample-count" data-testid="experiment-sample-count">',
-  '            <option value="1">1</option><option value="3" selected>3</option><option value="5">5</option>',
-  '          </select>',
-  '        </label>',
-  '        <button type="button" data-testid="compare-schemes" data-action="compare-schemes" data-locale="Compare schemes">Compare schemes</button>',
-  '        <button type="button" data-testid="save-comparison" data-action="save-comparison" data-locale="Save comparison" disabled>Save comparison</button>',
-  '      </div>',
-  '      <div class="experiment-archive-actions">',
-  '        <button type="button" data-testid="export-experiment-archive" data-locale="Export experiment archive">Export experiment archive</button>',
-  '        <label class="replay-import-label" data-locale="Import experiment archive">Import experiment archive<input type="file" data-testid="import-experiment-archive" accept="application/json,.json" aria-label="Import experiment archive"></label>',
-  '      </div>',
-  '      <p data-testid="experiment-archive-status" role="status" aria-live="polite"></p>',
-  '      <div class="saved-experiment-controls">',
-  '        <label for="saved-comparison-select" data-locale="Saved comparisons">Saved comparisons',
-  '          <select id="saved-comparison-select" data-testid="saved-comparison-select"><option value="" data-locale="No saved comparisons">No saved comparisons</option></select>',
-  '        </label>',
-  '        <button type="button" data-testid="open-comparison" data-action="open-comparison" data-locale="Open saved comparison" disabled>Open saved comparison</button>',
-  '        <button type="button" data-testid="load-more-comparisons" data-action="load-more-comparisons" data-locale="Load more" hidden disabled>Load more</button>',
-  '      </div>',
-  '      <p data-testid="saved-comparison-status" role="status" aria-live="polite"></p>',
-  '      <p data-testid="experiment-status" role="status" aria-live="polite"></p>',
-  '      <div class="experiment-report" data-testid="experiment-report" hidden>',
-  '        <p class="experiment-report-summary" data-testid="experiment-report-summary" aria-live="polite"></p>',
-  '        <p class="experiment-scheme-values" data-testid="experiment-scheme-values"></p>',
-  '        <div class="experiment-table-scroll">',
-  '          <table>',
-  '            <thead><tr><th scope="col" data-locale="Measure">Measure</th><th scope="col" data-locale="Original">Original</th><th scope="col" data-locale="Draft">Draft</th></tr></thead>',
-  '            <tbody>',
-  '              <tr><th scope="row" data-locale="Completed / planned">Completed / planned</th><td data-testid="experiment-baseline-completed"></td><td data-testid="experiment-candidate-completed"></td></tr>',
-  '              <tr><th scope="row" data-locale="Incomplete samples">Incomplete samples</th><td data-testid="experiment-baseline-incomplete"></td><td data-testid="experiment-candidate-incomplete"></td></tr>',
-  '              <tr><th scope="row" data-locale="Victories / defeats">Victories / defeats</th><td data-testid="experiment-baseline-outcomes"></td><td data-testid="experiment-candidate-outcomes"></td></tr>',
-  '              <tr><th scope="row" data-locale="Win rate">Win rate</th><td data-testid="experiment-baseline-win-rate"></td><td data-testid="experiment-candidate-win-rate"></td></tr>',
-  '              <tr><th scope="row" data-locale="Average lives remaining">Average lives remaining</th><td data-testid="experiment-baseline-lives"></td><td data-testid="experiment-candidate-lives"></td></tr>',
-  '              <tr><th scope="row" data-locale="Average victory time">Average victory time</th><td data-testid="experiment-baseline-time"></td><td data-testid="experiment-candidate-time"></td></tr>',
-  '              <tr><th scope="row" data-locale="Average final cash">Average final cash</th><td data-testid="experiment-baseline-cash"></td><td data-testid="experiment-candidate-cash"></td></tr>',
-  '              <tr><th scope="row" data-locale="Average cash change">Average cash change</th><td data-testid="experiment-baseline-cash-delta"></td><td data-testid="experiment-candidate-cash-delta"></td></tr>',
-  '              <tr><th scope="row" data-locale="Average peak enemies">Average peak enemies</th><td data-testid="experiment-baseline-peak-enemies"></td><td data-testid="experiment-candidate-peak-enemies"></td></tr>',
-  '              <tr><th scope="row" data-locale="Average escaped enemies">Average escaped enemies</th><td data-testid="experiment-baseline-escaped"></td><td data-testid="experiment-candidate-escaped"></td></tr>',
-  '            </tbody>',
-  '          </table>',
-  '        </div>',
-  '      </div>',
-  '      <p class="experiment-note" data-locale="These runs use fixed paired seeds and do not change the saved profile. Save a comparison to keep it across sessions.">These runs use fixed paired seeds and do not change the saved profile. Save a comparison to keep it across sessions.</p>',
-  '    </section>',
-  '    <section class="replay-panel" aria-labelledby="replay-title">',
-  '      <h2 id="replay-title" data-locale="Battle replay">Battle replay</h2>',
-  '      <div class="replay-actions">',
-  '        <button type="button" data-testid="export-replay" data-locale="Export settled battle">Export settled battle</button>',
-  '        <label class="replay-import-label" data-locale="Import replay">Import replay<input id="import-replay" data-testid="import-replay" type="file" accept="application/json,.json" aria-label="Import replay"></label>',
-  '      </div>',
-  '      <p data-testid="replay-status" role="status" aria-live="polite"></p>',
-  '    </section>',
-  '    <details class="inspection-panel" data-testid="inspection-panel">',
-  '      <summary>Inspect battle</summary>',
-  '      <div class="inspection-actions">',
-  '        <label><input type="checkbox" data-testid="inspection-overlay"> Show map overlay</label>',
-  '        <button type="button" data-testid="single-step" data-action="single-step" disabled>Single step · 16 ms</button>',
-  '      </div>',
-  '      <p data-testid="inspection-frame"></p>',
-  '      <p data-testid="inspection-units"></p>',
-  '      <p data-testid="inspection-enemies"></p>',
-  '      <p data-testid="inspection-route"></p>',
-  '    </details>',
-  '    <p class="scene-caption" data-testid="scene-caption"></p>',
-  '      </div>',
-  '    </details>',
-  '  </section>',
-  '</section>',
-].join('');
+app.innerHTML = gamePageTemplate;
 
 registerMessages('gunsnglory', messages);
 
 const canvasElement = app.querySelector<HTMLCanvasElement>('[data-testid="game-canvas"]');
 const gameFrameElement = app.querySelector<HTMLElement>('.game-frame');
 const gameStageElement = app.querySelector<HTMLElement>('[data-testid="game-stage"]');
+const overlayHostElement = app.querySelector<HTMLElement>('[data-testid="overlay-host"]');
+const overlayBackdropElement = app.querySelector<HTMLElement>('[data-testid="overlay-backdrop"]');
 const campaignMenuScreenElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-screen"]');
 const campaignMenuViewElement = app.querySelector<HTMLElement>('[data-testid="campaign-menu-view"]');
 const fullscreenControlsElement = app.querySelector<HTMLElement>('[data-testid="fullscreen-controls"]');
@@ -354,9 +111,28 @@ const mapZoomResetButtonElement = app.querySelector<HTMLButtonElement>('[data-te
 const mapZoomLevelElement = app.querySelector<HTMLOutputElement>('[data-testid="map-zoom-level"]');
 const sceneHeadingElement = app.querySelector<HTMLElement>('.scene-heading');
 const gameToolbarElement = app.querySelector<HTMLElement>('[data-testid="game-toolbar"]');
-const campaignExitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-exit-confirmation"]');
+const pauseBoardElement = app.querySelector<HTMLDialogElement>('[data-testid="pause-board"]');
+const pauseBoardArtElement = app.querySelector<HTMLImageElement>('[data-testid="pause-board-art"]');
+const pauseContinueButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-continue"]');
+const pauseRestartButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-restart"]');
+const pauseOptionsButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-options"]');
+const pauseCloseButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-close"]');
+const pauseSoundToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-sound-toggle"]');
+const pauseSoundIconElement = app.querySelector<HTMLImageElement>('[data-testid="pause-sound-icon"]');
+const pauseConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="pause-confirmation"]');
+const gameOptionsPanelElement = app.querySelector<HTMLDialogElement>('[data-testid="game-options"]');
+const gameHelpPanelElement = app.querySelector<HTMLDialogElement>('[data-testid="game-help"]');
+const pauseConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="pause-confirmation-art"]');
+const pauseConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="pause-confirmation-title"]');
+const pauseConfirmationMessageElement = app.querySelector<HTMLElement>('[data-testid="pause-confirmation-message"]');
+const confirmPauseActionButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="confirm-pause-action"]');
+const cancelPauseActionButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="cancel-pause-action"]');
+const confirmPauseIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-pause-icon"]');
+const cancelPauseIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-pause-icon"]');
 const campaignPanelElement = app.querySelector<HTMLElement>('.campaign-panel');
 const archivePanelElement = app.querySelector<HTMLDetailsElement>('[data-testid="archive-panel"]');
+const archivePanelContentElement = app.querySelector<HTMLElement>('.archive-panel-content');
+const experimentPanelElement = app.querySelector<HTMLElement>('.experiment-panel');
 const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
 const pendingSettlementStatusElement = app.querySelector<HTMLElement>('[data-testid="pending-settlement-status"]');
 const retryPendingSettlementButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-pending-settlement"]');
@@ -381,7 +157,6 @@ const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat
 const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
 const sceneContextElement = app.querySelector<HTMLElement>('[data-testid="scene-context"]');
 const sceneDifficultyElement = app.querySelector<HTMLElement>('[data-testid="scene-difficulty"]');
-const campaignMenuToggleElement = app.querySelector<HTMLButtonElement>('[data-action="show-campaign-menu"]');
 const settlementCampaignMenuButtonElement = app.querySelector<HTMLButtonElement>('[data-action="return-campaign-from-settlement"]');
 const sceneCaptionElement = app.querySelector<HTMLElement>('[data-testid="scene-caption"]');
 const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-sample-status"]');
@@ -393,7 +168,6 @@ const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="sett
 const retrySettingsButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-settings-save"]');
 const reloadProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="reload-saved-profile"]');
 const pauseStatusElement = app.querySelector<HTMLElement>('[data-testid="pause-status"]');
-const pauseButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-toggle"]');
 const singleStepButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="single-step"]');
 const inspectionOverlayInputElement = app.querySelector<HTMLInputElement>('[data-testid="inspection-overlay"]');
 const inspectionFrameElement = app.querySelector<HTMLElement>('[data-testid="inspection-frame"]');
@@ -402,7 +176,6 @@ const inspectionEnemiesElement = app.querySelector<HTMLElement>('[data-testid="i
 const inspectionRouteElement = app.querySelector<HTMLElement>('[data-testid="inspection-route"]');
 const simulationSpeedInputElement = app.querySelector<HTMLInputElement>('[data-testid="simulation-speed"]');
 const simulationSpeedValueElement = app.querySelector<HTMLOutputElement>('[data-testid="simulation-speed-value"]');
-const soundToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="sound-toggle"]');
 const soundPlaybackStatusElement = app.querySelector<HTMLElement>('[data-testid="sound-playback-status"]');
 const retrySoundPlaybackButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-sound-playback"]');
 const clearButton = app.querySelector<HTMLButtonElement>('[data-action="clear-selection"]');
@@ -413,18 +186,27 @@ const startUpgradeSampleButton = app.querySelector<HTMLButtonElement>('[data-act
 const returnCowGulchButton = app.querySelector<HTMLButtonElement>('[data-action="return-cow-gulch"]');
 const recruitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="recruit-confirmation"]');
 const recruitConfirmationTitleElement = app.querySelector<HTMLElement>('#recruit-confirmation-title');
+const recruitConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="recruit-confirmation-art"]');
 const confirmRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-recruit"]');
 const cancelRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-recruit"]');
+const confirmRecruitIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-recruit-icon"]');
+const cancelRecruitIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-recruit-icon"]');
 const upgradeConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="upgrade-confirmation"]');
 const upgradeConfirmationTitleElement = app.querySelector<HTMLElement>('#upgrade-confirmation-title');
 const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="upgrade-confirmation-details"]');
+const upgradeConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="upgrade-confirmation-art"]');
 const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
 const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
+const confirmUpgradeIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-upgrade-icon"]');
+const cancelUpgradeIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-upgrade-icon"]');
 const mapHireConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="map-hire-confirmation"]');
 const mapHireConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-title"]');
 const mapHireConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-details"]');
+const mapHireConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="map-hire-confirmation-art"]');
 const confirmMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-map-hire"]');
 const cancelMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-map-hire"]');
+const confirmMapHireIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-map-hire-icon"]');
+const cancelMapHireIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-map-hire-icon"]');
 const gamblerDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="gambler-dialog"]');
 const gamblerDialogTitleElement = app.querySelector<HTMLElement>('#gambler-dialog-title');
 const gamblerDialogMessageElement = app.querySelector<HTMLElement>('[data-testid="gambler-message"]');
@@ -449,6 +231,7 @@ const retryCampaignWaveIntroVoiceButtonElement = app.querySelector<HTMLButtonEle
 const continueCampaignWaveIntroButtonElement = app.querySelector<HTMLButtonElement>('[data-action="continue-wave-intro"]');
 const startDefeatButton = app.querySelector<HTMLButtonElement>('[data-action="start-defeat-sample"]');
 const settlementPanelElement = app.querySelector<HTMLElement>('[data-testid="settlement"]');
+const settlementArtElement = app.querySelector<HTMLImageElement>('[data-testid="settlement-art"]');
 const settlementTitleElement = app.querySelector<HTMLElement>('#settlement-title');
 const settlementOutcomeElement = app.querySelector<HTMLElement>('[data-testid="settlement-outcome"]');
 const settlementSummaryElement = app.querySelector<HTMLElement>('[data-testid="settlement-summary"]');
@@ -474,14 +257,19 @@ const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
-if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScreenElement || !campaignMenuViewElement
+if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElement || !overlayBackdropElement
+  || !campaignMenuScreenElement || !campaignMenuViewElement
   || !fullscreenControlsElement || !fullscreenToggleButtonElement
   || !fullscreenStatusElement || !portraitOrientationOverlayElement || !portraitOrientationMessageElement
   || !mapZoomControlsElement || !mapZoomOutButtonElement
   || !mapZoomInButtonElement || !mapZoomResetButtonElement || !mapZoomLevelElement
   || !sceneHeadingElement || !gameToolbarElement
-  || !campaignExitConfirmationElement || !campaignPanelElement
-  || !archivePanelElement
+  || !pauseBoardElement || !pauseBoardArtElement || !pauseContinueButtonElement || !pauseRestartButtonElement
+  || !pauseOptionsButtonElement || !pauseCloseButtonElement || !pauseSoundToggleButtonElement || !pauseSoundIconElement
+  || !pauseConfirmationElement || !gameOptionsPanelElement || !gameHelpPanelElement
+  || !pauseConfirmationArtElement || !pauseConfirmationTitleElement || !pauseConfirmationMessageElement
+  || !confirmPauseActionButtonElement || !cancelPauseActionButtonElement || !confirmPauseIconElement || !cancelPauseIconElement
+  || !campaignPanelElement || !archivePanelElement || !archivePanelContentElement || !experimentPanelElement
   || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
@@ -490,14 +278,17 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScr
   || !campaignProgressSummaryElement || !campaignStageListElement || !campaignStatusElement
   || !campaignDifficultySelectElement || !campaignDifficultyStatusElement
   || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement || !sceneCaptionElement
-  || !campaignMenuToggleElement || !settlementCampaignMenuButtonElement
+  || !settlementCampaignMenuButtonElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !mapHireStatusElement
-  || !recruitButton || !recruitConfirmationElement
+  || !recruitButton || !recruitConfirmationElement || !recruitConfirmationArtElement
+  || !confirmRecruitIconElement || !cancelRecruitIconElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
-  || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
+  || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !upgradeConfirmationArtElement
+  || !confirmUpgradeButton || !cancelUpgradeButton || !confirmUpgradeIconElement || !cancelUpgradeIconElement
   || !mapHireConfirmationElement || !mapHireConfirmationTitleElement || !mapHireConfirmationDetailsElement
-  || !confirmMapHireButton || !cancelMapHireButton
+  || !mapHireConfirmationArtElement || !confirmMapHireButton || !cancelMapHireButton
+  || !confirmMapHireIconElement || !cancelMapHireIconElement
   || !gamblerDialogElement || !gamblerDialogTitleElement || !gamblerDialogMessageElement || !gamblerPortraitElement
   || !gamblerCashElement || !gamblerCardsElement || !gamblerResultElement || !playGamblerButton || !closeGamblerButton
   || !startGamblerSampleButton || !startGamblerLowCashSampleButton || !startTechTownTrainSampleButton
@@ -507,13 +298,13 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScr
   || !continueCampaignWaveIntroButtonElement
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
   || !retrySettingsButtonElement || !reloadProfileButtonElement
-  || !pauseStatusElement || !pauseButtonElement
+  || !pauseStatusElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
-  || !simulationSpeedInputElement || !simulationSpeedValueElement || !soundToggleButtonElement
+  || !simulationSpeedInputElement || !simulationSpeedValueElement
   || !soundPlaybackStatusElement || !retrySoundPlaybackButtonElement
   || !clearButton || !startWaveButton
-  || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
+  || !startDefeatButton || !settlementPanelElement || !settlementArtElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
   || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
   || !exportReplayButton || !importReplayInput || !replayStatusElement
@@ -527,6 +318,8 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !campaignMenuScr
 const canvas: HTMLCanvasElement = canvasElement;
 const gameFrame: HTMLElement = gameFrameElement;
 const gameStage: HTMLElement = gameStageElement;
+const overlayHostRoot: HTMLElement = overlayHostElement;
+const overlayBackdrop: HTMLElement = overlayBackdropElement;
 const campaignMenuScreen: HTMLElement = campaignMenuScreenElement;
 const campaignMenuView: HTMLElement = campaignMenuViewElement;
 const fullscreenControls: HTMLElement = fullscreenControlsElement;
@@ -542,7 +335,24 @@ const mapZoomLevel: HTMLOutputElement = mapZoomLevelElement;
 const sceneHeading: HTMLElement = sceneHeadingElement;
 const gameToolbar: HTMLElement = gameToolbarElement;
 const campaignPanel: HTMLElement = campaignPanelElement;
-const campaignExitConfirmation: HTMLDialogElement = campaignExitConfirmationElement;
+const pauseBoard: HTMLDialogElement = pauseBoardElement;
+const pauseBoardArt: HTMLImageElement = pauseBoardArtElement;
+const pauseContinueControl: HTMLButtonElement = pauseContinueButtonElement;
+const pauseRestartControl: HTMLButtonElement = pauseRestartButtonElement;
+const pauseOptionsControl: HTMLButtonElement = pauseOptionsButtonElement;
+const pauseCloseControl: HTMLButtonElement = pauseCloseButtonElement;
+const pauseSoundToggleControl: HTMLButtonElement = pauseSoundToggleButtonElement;
+const pauseSoundIcon: HTMLImageElement = pauseSoundIconElement;
+const pauseConfirmation: HTMLDialogElement = pauseConfirmationElement;
+const gameOptionsPanel: HTMLDialogElement = gameOptionsPanelElement;
+const gameHelpPanel: HTMLDialogElement = gameHelpPanelElement;
+const pauseConfirmationArt: HTMLImageElement = pauseConfirmationArtElement;
+const pauseConfirmationTitle: HTMLElement = pauseConfirmationTitleElement;
+const pauseConfirmationMessage: HTMLElement = pauseConfirmationMessageElement;
+const confirmPauseActionControl: HTMLButtonElement = confirmPauseActionButtonElement;
+const cancelPauseActionControl: HTMLButtonElement = cancelPauseActionButtonElement;
+const confirmPauseIcon: HTMLImageElement = confirmPauseIconElement;
+const cancelPauseIcon: HTMLImageElement = cancelPauseIconElement;
 const archivePanel: HTMLDetailsElement = archivePanelElement;
 const profileStatus: HTMLElement = profileStatusElement;
 const pendingSettlementStatus: HTMLElement = pendingSettlementStatusElement;
@@ -568,7 +378,6 @@ const campaignDifficultyStatus: HTMLElement = campaignDifficultyStatusElement;
 const sceneTitle: HTMLElement = sceneTitleElement;
 const sceneContext: HTMLElement = sceneContextElement;
 const sceneDifficulty: HTMLElement = sceneDifficultyElement;
-const campaignMenuToggle: HTMLButtonElement = campaignMenuToggleElement;
 const settlementCampaignMenuButton: HTMLButtonElement = settlementCampaignMenuButtonElement;
 const sceneCaption: HTMLElement = sceneCaptionElement;
 const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
@@ -580,7 +389,6 @@ const settingsStatus: HTMLElement = settingsStatusElement;
 const retrySettingsButton: HTMLButtonElement = retrySettingsButtonElement;
 const reloadProfileButton: HTMLButtonElement = reloadProfileButtonElement;
 const pauseStatus: HTMLElement = pauseStatusElement;
-const pauseControl: HTMLButtonElement = pauseButtonElement;
 const singleStepControl: HTMLButtonElement = singleStepButtonElement;
 const inspectionOverlayInput: HTMLInputElement = inspectionOverlayInputElement;
 const inspectionFrame: HTMLElement = inspectionFrameElement;
@@ -589,7 +397,8 @@ const inspectionEnemies: HTMLElement = inspectionEnemiesElement;
 const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
-const soundToggleButton: HTMLButtonElement = soundToggleButtonElement;
+const archivePanelContent: HTMLElement = archivePanelContentElement;
+const experimentPanel: HTMLElement = experimentPanelElement;
 const soundPlaybackStatus: HTMLElement = soundPlaybackStatusElement;
 const retrySoundPlaybackButton: HTMLButtonElement = retrySoundPlaybackButtonElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
@@ -599,18 +408,27 @@ const startUpgradeSampleControl: HTMLButtonElement = startUpgradeSampleButton;
 const returnCowGulchControl: HTMLButtonElement = returnCowGulchButton;
 const recruitConfirmation: HTMLDialogElement = recruitConfirmationElement;
 const recruitConfirmationTitle: HTMLElement = recruitConfirmationTitleElement;
+const recruitConfirmationArt: HTMLImageElement = recruitConfirmationArtElement;
 const confirmRecruitControl: HTMLButtonElement = confirmRecruitButton;
 const cancelRecruitControl: HTMLButtonElement = cancelRecruitButton;
+const confirmRecruitIcon: HTMLImageElement = confirmRecruitIconElement;
+const cancelRecruitIcon: HTMLImageElement = cancelRecruitIconElement;
 const upgradeConfirmation: HTMLDialogElement = upgradeConfirmationElement;
 const upgradeConfirmationTitle: HTMLElement = upgradeConfirmationTitleElement;
 const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElement;
+const upgradeConfirmationArt: HTMLImageElement = upgradeConfirmationArtElement;
 const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
 const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
+const confirmUpgradeIcon: HTMLImageElement = confirmUpgradeIconElement;
+const cancelUpgradeIcon: HTMLImageElement = cancelUpgradeIconElement;
 const mapHireConfirmation: HTMLDialogElement = mapHireConfirmationElement;
 const mapHireConfirmationTitle: HTMLElement = mapHireConfirmationTitleElement;
 const mapHireConfirmationDetails: HTMLElement = mapHireConfirmationDetailsElement;
+const mapHireConfirmationArt: HTMLImageElement = mapHireConfirmationArtElement;
 const confirmMapHireControl: HTMLButtonElement = confirmMapHireButton;
 const cancelMapHireControl: HTMLButtonElement = cancelMapHireButton;
+const confirmMapHireIcon: HTMLImageElement = confirmMapHireIconElement;
+const cancelMapHireIcon: HTMLImageElement = cancelMapHireIconElement;
 const gamblerDialog: HTMLDialogElement = gamblerDialogElement;
 const gamblerDialogTitle: HTMLElement = gamblerDialogTitleElement;
 const gamblerDialogMessage: HTMLElement = gamblerDialogMessageElement;
@@ -637,6 +455,7 @@ const startDefeatControl: HTMLButtonElement = startDefeatButton;
 const clearSelectionControl: HTMLButtonElement = clearButton;
 const restartControl: HTMLButtonElement = restartButton;
 const settlementPanel: HTMLElement = settlementPanelElement;
+const settlementArt: HTMLImageElement = settlementArtElement;
 const settlementTitle: HTMLElement = settlementTitleElement;
 const settlementOutcome: HTMLElement = settlementOutcomeElement;
 const settlementSummary: HTMLElement = settlementSummaryElement;
@@ -681,6 +500,67 @@ let session = await game.open({
   mode: 'debug',
 });
 let view = session.observe();
+const gameUiController = new GameUiController();
+const overlayHost = new OverlayHost(overlayHostRoot, overlayBackdrop, {
+  frame: gameFrame,
+  frameChrome: fullscreenControls,
+  onActivePanelChange: () => {
+    syncGameUiState();
+    renderMapZoomControls();
+  },
+});
+
+const gameUiPanelElements: Record<GameUiPanel['kind'], HTMLElement> = {
+  pause: pauseBoard,
+  confirmation: pauseConfirmation,
+  options: gameOptionsPanel,
+  help: gameHelpPanel,
+  recruit: recruitConfirmation,
+  'map-hire': mapHireConfirmation,
+  upgrade: upgradeConfirmation,
+  gambler: gamblerDialog,
+  'wave-intro': campaignWaveIntroDialog,
+  settlement: settlementPanel,
+};
+
+function renderActiveGamePanel(): void {
+  const panels = gameUiController.visiblePanels.map(({ kind }) => gameUiPanelElements[kind]);
+  overlayHost.render(panels);
+  syncGameUiState();
+}
+
+function presentGamePanel(panel: GameUiPanel): void {
+  gameUiController.dispatch({ type: 'present-panel', panel });
+  renderActiveGamePanel();
+}
+
+function dismissGamePanel(kind?: GameUiPanel['kind'], restoreParent = true): void {
+  const activePanel = gameUiController.activePanel;
+  if (!activePanel || (kind && activePanel.kind !== kind)) return;
+  gameUiController.dispatch({ type: restoreParent ? 'dismiss-panel' : 'dismiss-all-panels' });
+  renderActiveGamePanel();
+}
+
+function dismissAllGamePanels(): void {
+  gameUiController.dispatch({ type: 'dismiss-all-panels' });
+  renderActiveGamePanel();
+}
+
+function syncGameUiState(): void {
+  const route = gameUiController.state.route;
+  const simulation = view.wave?.settlement
+    ? 'settled'
+    : view.paused
+      ? 'paused'
+      : view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)
+        ? 'running'
+        : 'ready';
+  gameFrame.dataset.uiScreen = route.screen === 'battle' ? 'battle' : 'menu';
+  gameFrame.dataset.uiRoute = route.screen === 'campaign' ? `${route.mode}:${route.page}` : route.screen;
+  gameFrame.dataset.simulationState = simulation;
+  gameFrame.dataset.activeOverlay = overlayHost.activeId ?? '';
+  gameFrame.dataset.fullscreen = String(document.fullscreenElement === gameFrame);
+}
 type GamblerDialogMode = 'closed' | 'prompt' | 'revealing' | 'result';
 type GamblerRoundState = NonNullable<ReturnType<GameSession['observe']>['units'][number]['gambler']>['lastRound'];
 let gamblerDialogMode: GamblerDialogMode = 'closed';
@@ -695,15 +575,12 @@ let profile: ProfileView = {
 };
 type ProfileArchiveStatusKey = 'exported' | 'imported' | 'imported-refresh-failed' | 'cancelled' | 'invalid' | 'unsupported' | 'failed';
 let profileArchiveStatusKey: ProfileArchiveStatusKey | undefined;
+let pendingProfileImport: ReturnType<typeof parseProfileArchive> | undefined;
 let profileArchiveBusy = false;
 let campaignProgressView: CampaignProgressView | undefined;
-type CampaignMenuScreenState = 'home' | 'regions' | 'levels' | 'overview' | 'difficulty' | 'options' | 'help';
-let campaignMenuState: CampaignMenuScreenState = 'home';
-let selectedMenuRegionId: CampaignRegionId = 'new-mexico';
-let selectedMenuLevel = 1;
-let freePlayMenuActive = false;
+type CampaignMenuScreenState = 'home' | 'regions' | 'levels' | 'overview' | 'difficulty';
 let freePlayDifficulty: GameDifficulty = 'easy';
-let menuReturnWasPaused = false;
+type PauseConfirmationAction = 'restart' | 'close' | 'profile-import';
 let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'difficulty-locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
 let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
@@ -716,8 +593,6 @@ let campaignWaveIntroCursor = new CampaignWaveIntroCursor();
 let pendingCampaignWaveIntro: CampaignWaveIntro | undefined;
 let showInspectionOverlay = false;
 let pageLeaving = false;
-let pauseButtonMeasureContext: CanvasRenderingContext2D | null | undefined;
-let pauseButtonWidthKey = '';
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | 'conflict' | 'profile-reset' | undefined;
 let settingsSaveBusy = false;
 let profileLoadFailed = false;
@@ -871,8 +746,6 @@ const languageMessages = {
     mapZoomIn: 'Zoom in',
     mapZoomOut: 'Zoom out',
     mapZoomReset: 'Reset zoom',
-    pauseBattle: 'Pause battle',
-    resumeBattle: 'Resume battle',
     battlePaused: 'Battle paused.',
     battlePausedInBackground: 'Battle paused automatically while this tab was in the background.',
     inspectTitle: 'Inspect battle',
@@ -1300,6 +1173,10 @@ function gamblerCardLabel(card: GamblerCardView, language: keyof typeof gamblerD
 const campaignMenuCopy = {
   en: {
     start: 'START', freePlay: 'FREE PLAY', help: 'HELP', options: 'OPTIONS', sound: 'SOUND',
+    pauseMenu: 'Pause menu', pausedTitle: 'PAUSED', continueBattle: 'CONTINUE', restartBattle: 'RESTART', closeBattle: 'CLOSE',
+    restartConfirmation: 'Restart this battle from the beginning?',
+    closeConfirmation: 'Return to the campaign menu? The unfinished battle will not be saved.',
+    confirmAction: 'YES', cancelAction: 'NO',
     freePlayMenu: 'Free Play menu', freePlayRegionHeading: 'Choose a region for Free Play',
     freePlayRegionHint: 'Free Play opens the four implemented campaign levels and any difficulty, without campaign unlock requirements.',
     freePlayLevelHint: (available: number) => `${available}/10 implemented levels available in Free Play. Other levels are not implemented yet.`,
@@ -1321,16 +1198,23 @@ const campaignMenuCopy = {
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
     levelFourInfo: "The railroad could be our most powerful weapon, if we mount deadly Gatling guns on empty cars! Unfortunately that isn't free.",
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
+    helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
     helpLines: [
-      'Select a unit, then tap or click a reachable map cell to move it.',
-      'Select a sleeping unit on the map and use Hire to recruit it.',
-      'Select an enemy to set or clear a priority target.',
-      'Drag empty ground to pan the map; use the minimap to move the viewport.',
+      'Select a unit, then click or tap a reachable map cell to move it.',
+      'Select a sleeping unit and use the in-game Hire action to recruit it.',
+      'Select a settler to set or clear a priority target.',
+      'Drag empty ground to pan the map; drag the minimap viewport to move the camera.',
+      'Pinch with two fingers, use the map-edge zoom buttons, or use the mouse wheel to zoom.',
+      'Tap the HUD pause icon to open the pause board. Continue resumes; Restart and Close ask for confirmation.',
       'Pause the battle before using single-step or inspection tools.',
     ],
     optionsTitle: 'OPTIONS', speed: 'Simulation speed',
     speedHelp: 'Adjust the test speed from 0.25× to 4×.',
+    originalSoundNote: 'Sound stays on the main menu and pause board. The settings below are web-only tools.',
+    optionsHelp: 'HOW TO PLAY',
+    experimentTools: 'EXPERIMENTS AND DATA',
+    experimentToolsHelp: 'Compare numeric schemes and import or export experiment records. These tools do not change campaign progress.',
     profileArchiveTitle: 'Profile archive',
     profileArchiveHelp: 'Export or replace this browser’s campaign profile. This file is separate from experiment data and battle replays.',
     exportProfileArchive: 'Export profile', importProfileArchive: 'Import profile',
@@ -1350,6 +1234,10 @@ const campaignMenuCopy = {
   },
   zh: {
     start: '开始', freePlay: '自由游玩', help: '帮助', options: '选项', sound: '音效',
+    pauseMenu: '暂停菜单', pausedTitle: '已暂停', continueBattle: '继续', restartBattle: '重新开始', closeBattle: '关闭',
+    restartConfirmation: '要从头重新开始本关吗？',
+    closeConfirmation: '要返回战役菜单吗？未完成的战斗不会保存。',
+    confirmAction: '是', cancelAction: '否',
     freePlayMenu: '自由游玩菜单', freePlayRegionHeading: '选择自由游玩区域',
     freePlayRegionHint: '自由游玩可进入目前已实现的四个战役关卡和任意难度，不受战役解锁条件限制。',
     freePlayLevelHint: (available: number) => `自由游玩可进入 ${available}/10 个已实现关卡，其他关卡尚未实现。`,
@@ -1371,16 +1259,23 @@ const campaignMenuCopy = {
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
     levelFourInfo: '如果能在空车厢上装上致命的加特林机枪，铁路就会成为我们最强大的武器！可惜，这可不便宜。',
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
+    helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
     helpLines: [
       '选择单位，再点击或轻触可到达的地图格移动。',
-      '选择地图上的休息单位，然后使用雇佣操作招募。',
-      '选择敌人可设置或取消优先目标。',
-      '拖动空地平移地图；拖动小地图视口框移动视野。',
-      '暂停战斗后再使用单步或状态检查工具。',
+      '选择地图上的休息单位，再使用游戏内的雇佣操作招募。',
+      '选择拓荒者可设置或取消优先目标。',
+      '拖动空地平移地图；拖动小地图视口框移动镜头。',
+      '双指捏合、使用地图边缘的缩放按钮或桌面鼠标滚轮都可缩放地图。',
+      '点击 HUD 暂停图标打开暂停板；“继续”恢复战斗，“重新开始”和“关闭”会先确认。',
+      '使用单步或状态检查工具前先暂停战斗。',
     ],
     optionsTitle: '选项', speed: '模拟速度',
     speedHelp: '测试速度可在 0.25× 到 4× 之间调整。',
+    originalSoundNote: '音效开关位于主菜单和暂停板；以下内容是网页扩展工具。',
+    optionsHelp: '游戏说明',
+    experimentTools: '实验与数据',
+    experimentToolsHelp: '比较数值方案，并导入或导出实验记录。这些工具不会改变战役进度。',
     profileArchiveTitle: '档案文件',
     profileArchiveHelp: '导出或替换此浏览器中的战役档案。档案文件独立于实验数据和战局回放。',
     exportProfileArchive: '导出档案', importProfileArchive: '导入档案',
@@ -1414,7 +1309,7 @@ async function exportProfileArchive(): Promise<void> {
   if (profileArchiveBusy) return;
   profileArchiveBusy = true;
   profileArchiveStatusKey = undefined;
-  renderCampaignMenu();
+  updateOptionsPanelStatus();
   try {
     const profileData = await progress.exportProfileData();
     downloadJsonFile(serializeProfileArchive(profileData), 'gunsnglory-profile.json');
@@ -1423,7 +1318,7 @@ async function exportProfileArchive(): Promise<void> {
     profileArchiveStatusKey = 'failed';
   } finally {
     profileArchiveBusy = false;
-    renderCampaignMenu();
+    updateOptionsPanelStatus();
   }
 }
 
@@ -1431,14 +1326,29 @@ async function importProfileArchiveFile(file?: File): Promise<void> {
   if (!file || profileArchiveBusy) return;
   profileArchiveBusy = true;
   profileArchiveStatusKey = undefined;
-  renderCampaignMenu();
+  updateOptionsPanelStatus();
+  try {
+    pendingProfileImport = parseProfileArchive(await file.text());
+    renderPauseConfirmation(getLanguage(), 'profile-import');
+    presentGamePanel({ kind: 'confirmation', action: 'profile-import' });
+  } catch (error) {
+    if (error instanceof ProfileArchiveError) {
+      profileArchiveStatusKey = error.code === 'unsupported-format' || error.code === 'unsupported-version' ? 'unsupported' : 'invalid';
+    } else {
+      profileArchiveStatusKey = 'failed';
+    }
+    updateOptionsPanelStatus();
+  } finally {
+    profileArchiveBusy = false;
+    updateOptionsPanelStatus();
+  }
+}
+
+async function replaceImportedProfile(profileData: ReturnType<typeof parseProfileArchive>): Promise<void> {
+  profileArchiveBusy = true;
+  updateOptionsPanelStatus();
   let statusKey: ProfileArchiveStatusKey = 'failed';
   try {
-    const profileData = parseProfileArchive(await file.text());
-    if (!window.confirm(campaignMenuCopy[getLanguage()].confirmProfileImport)) {
-      statusKey = 'cancelled';
-      return;
-    }
     profile = await progress.replaceProfileData(profileData);
     campaignFeedback = undefined;
     profileLoadFailed = false;
@@ -1465,8 +1375,8 @@ async function importProfileArchiveFile(file?: File): Promise<void> {
   } finally {
     profileArchiveBusy = false;
     profileArchiveStatusKey = statusKey;
+    updateOptionsPanelStatus();
     renderStatus();
-    renderCampaignMenu();
   }
 }
 
@@ -1616,8 +1526,19 @@ function freePlayStageForLevel(level: number) {
   return officialCampaignStages.find((stage) => stage.globalLevel === level);
 }
 
+function currentCampaignRoute(): Extract<GameUiRoute, { screen: 'campaign' }> {
+  const route = gameUiController.state.route;
+  return route.screen === 'campaign'
+    ? route
+    : { screen: 'campaign', mode: 'campaign', page: 'regions', regionId: 'new-mexico', level: 1 };
+}
+
+function isFreePlayMenuActive(): boolean {
+  return currentCampaignRoute().mode === 'free-play';
+}
+
 function menuLevelState(level: number) {
-  return freePlayMenuActive
+  return isFreePlayMenuActive()
     ? freePlayStageForLevel(level) ? 'available' as const : 'unimplemented' as const
     : campaignLevelState(level, campaignProgressView);
 }
@@ -1628,6 +1549,29 @@ function campaignMenuAssetUrl(filename: string): string {
 
 function campaignPortraitAssetUrl(filename: string): string {
   return new URL(`${import.meta.env.BASE_URL}assets/${filename}`, window.location.href).toString();
+}
+
+function setConfirmationButtonLabel(button: HTMLButtonElement, label: string): void {
+  const labelElement = button.querySelector<HTMLElement>('span');
+  if (!labelElement) throw new Error(`Confirmation button is missing its label: ${button.dataset.action ?? 'unknown'}`);
+  if (labelElement.textContent !== label) labelElement.textContent = label;
+}
+
+function renderConfirmationArtwork(): void {
+  const textbox = campaignPortraitAssetUrl('gng_hud_2_textbox_large.png');
+  const confirmIconUrl = campaignPortraitAssetUrl('gng_hud_2_yes.png');
+  const cancelIconUrl = campaignMenuAssetUrl('gng_hud_2_no.png');
+  const woodButton = campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png');
+  for (const art of [recruitConfirmationArt, mapHireConfirmationArt, upgradeConfirmationArt, settlementArt]) {
+    if (art.src !== textbox) art.src = textbox;
+  }
+  for (const icon of [confirmRecruitIcon, confirmMapHireIcon, confirmUpgradeIcon]) {
+    if (icon.src !== confirmIconUrl) icon.src = confirmIconUrl;
+  }
+  for (const icon of [cancelRecruitIcon, cancelMapHireIcon, cancelUpgradeIcon]) {
+    if (icon.src !== cancelIconUrl) icon.src = cancelIconUrl;
+  }
+  settlementPanel.style.setProperty('--campaign-menu-button-background', `url("${woodButton}")`);
 }
 
 function campaignMenuRegionScreen(): string {
@@ -1641,11 +1585,11 @@ function campaignMenuRegionScreen(): string {
     </button>`;
   }).join('');
   return `<section class="campaign-region-screen" aria-labelledby="campaign-menu-heading">
-    <h2 class="campaign-menu-visually-hidden" id="campaign-menu-heading">${freePlayMenuActive ? copy.freePlayRegionHeading : copy.chooseRegion}</h2>
+    <h2 class="campaign-menu-visually-hidden" id="campaign-menu-heading">${isFreePlayMenuActive() ? copy.freePlayRegionHeading : copy.chooseRegion}</h2>
     <div class="campaign-menu-map campaign-world-map">
       <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_usmap_00_box.png')}" alt="" aria-hidden="true">${nodes}
     </div>
-    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${freePlayMenuActive ? copy.freePlayRegionHint : copy.regionHint}</p>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${isFreePlayMenuActive() ? copy.freePlayRegionHint : copy.regionHint}</p>
     <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
   </section>`;
 }
@@ -1653,7 +1597,7 @@ function campaignMenuRegionScreen(): string {
 function campaignMenuLevelScreen(): string {
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
-  const region = campaignRegions.find((candidate) => candidate.id === selectedMenuRegionId) ?? campaignRegions[0];
+  const region = campaignRegions.find((candidate) => candidate.id === currentCampaignRoute().regionId) ?? campaignRegions[0];
   const levels = campaignCatalog.filter((level) => level.regionId === region.id);
   const completed = levels.filter((level) => menuLevelState(level.level) === 'completed').length;
   const availableInFreePlay = levels.filter((level) => freePlayStageForLevel(level.level) !== undefined).length;
@@ -1678,7 +1622,7 @@ function campaignMenuLevelScreen(): string {
     <div class="campaign-menu-map campaign-level-map">
       <img class="campaign-map-paper" src="${campaignMenuAssetUrl('gng_levelmap_box_00.png')}" alt="" aria-hidden="true">${nodes}
     </div>
-    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(freePlayMenuActive ? copy.freePlayLevelHint(availableInFreePlay) : `${copy.regionProgress(completed)}. ${copy.levelHint}`)}</p>
+    <p class="campaign-menu-visually-hidden" data-testid="campaign-menu-progress">${escapeMenuText(isFreePlayMenuActive() ? copy.freePlayLevelHint(availableInFreePlay) : `${copy.regionProgress(completed)}. ${copy.levelHint}`)}</p>
     <button type="button" class="campaign-menu-back" data-action="menu-back-regions" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
   </section>`;
 }
@@ -1718,14 +1662,15 @@ function campaignMenuMinimapDataUrl(content: ScenarioContent): string {
 function campaignMenuOverviewScreen(): string {
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
-  const entry = campaignCatalog.find((candidate) => candidate.level === selectedMenuLevel);
+  const route = currentCampaignRoute();
+  const entry = campaignCatalog.find((candidate) => candidate.level === route.level);
   if (!entry) return campaignMenuLevelScreen();
   const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === entry.level);
   const freeStage = freePlayStageForLevel(entry.level);
-  if (freePlayMenuActive ? !freeStage : !stage || (stage.status !== 'available' && stage.status !== 'completed')) {
+  if (isFreePlayMenuActive() ? !freeStage : !stage || (stage.status !== 'available' && stage.status !== 'completed')) {
     return campaignMenuLevelScreen();
   }
-  const scenarioId = freePlayMenuActive ? freeStage!.scenarioId : stage!.scenarioId;
+  const scenarioId = isFreePlayMenuActive() ? freeStage!.scenarioId : stage!.scenarioId;
   const content = entry.level === 1 ? cowGulchLevelOneContent
     : entry.level === 2 ? apacheValleyLevelTwoContent
       : entry.level === 3 ? fortKaboomLevelThreeContent : techTownLevelFourCampaignContent;
@@ -1733,7 +1678,7 @@ function campaignMenuOverviewScreen(): string {
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo : copy.levelFourInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
-  const score = freePlayMenuActive
+  const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
     : stage!.highScore === undefined
       ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.noHighScore)}</p>`
@@ -1741,7 +1686,7 @@ function campaignMenuOverviewScreen(): string {
   const campaignFeedbackText = campaignFeedback?.type === 'open-failed' || assetLoadFailureNames.length > 0
     ? languageMessages[language].campaignOpenFailed : '';
   const unavailable = assetLoadFailureNames.length > 0 || campaignSelectionBusy || replacingSession || replaying
-    || (!freePlayMenuActive && (settingsSaveBusy || profileLoadFailed));
+    || (!isFreePlayMenuActive() && (settingsSaveBusy || profileLoadFailed));
   return `<section class="campaign-overview-screen" aria-labelledby="campaign-menu-heading">
     <button type="button" class="campaign-menu-back" data-action="menu-back-levels" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
     <article class="campaign-overview-card">
@@ -1764,14 +1709,15 @@ function campaignMenuOverviewScreen(): string {
 function campaignMenuDifficultyScreen(): string {
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
-  const entry = campaignCatalog.find((candidate) => candidate.level === selectedMenuLevel);
-  const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === selectedMenuLevel);
-  const freeStage = freePlayStageForLevel(selectedMenuLevel);
-  const region = campaignRegions.find((candidate) => candidate.id === selectedMenuRegionId) ?? campaignRegions[0];
-  if (!entry || (freePlayMenuActive ? !freeStage : !stage || (stage.status !== 'available' && stage.status !== 'completed'))) {
+  const route = currentCampaignRoute();
+  const entry = campaignCatalog.find((candidate) => candidate.level === route.level);
+  const stage = campaignProgressView?.stages.find((candidate) => candidate.globalLevel === route.level);
+  const freeStage = freePlayStageForLevel(route.level);
+  const region = campaignRegions.find((candidate) => candidate.id === route.regionId) ?? campaignRegions[0];
+  if (!entry || (isFreePlayMenuActive() ? !freeStage : !stage || (stage.status !== 'available' && stage.status !== 'completed'))) {
     return campaignMenuLevelScreen();
   }
-  const scenarioId = freePlayMenuActive ? freeStage!.scenarioId : stage!.scenarioId;
+  const scenarioId = isFreePlayMenuActive() ? freeStage!.scenarioId : stage!.scenarioId;
   const levels = campaignCatalog.filter((level) => level.regionId === region.id);
   const backdropNodes = levels.map((level, index) => {
     const status = menuLevelState(level.level);
@@ -1783,10 +1729,10 @@ function campaignMenuDifficultyScreen(): string {
   }).join('');
   const difficulties: readonly GameDifficulty[] = ['easy', 'medium', 'hard'];
   const choices = difficulties.map((difficulty) => {
-    const isLocked = difficulty === 'hard' && !freePlayMenuActive && campaignProgressView?.hardModeUnlocked !== true;
+    const isLocked = difficulty === 'hard' && !isFreePlayMenuActive() && campaignProgressView?.hardModeUnlocked !== true;
     const isBusy = campaignSelectionBusy || assetLoadFailureNames.length > 0 || replacingSession || replaying
-      || (!freePlayMenuActive && (settingsSaveBusy || profileLoadFailed));
-    const selected = (freePlayMenuActive ? freePlayDifficulty : selectedDifficulty) === difficulty;
+      || (!isFreePlayMenuActive() && (settingsSaveBusy || profileLoadFailed));
+    const selected = (isFreePlayMenuActive() ? freePlayDifficulty : selectedDifficulty) === difficulty;
     const labels = { easy: copy.easy, medium: copy.medium, hard: copy.hard };
     const portrait = difficulty === 'easy' ? 'portrait_settlers.png'
       : difficulty === 'medium' ? 'portrait_pedro.png' : 'oregon_dakota_portrait_boss.png';
@@ -1802,23 +1748,110 @@ function campaignMenuDifficultyScreen(): string {
     <article class="campaign-difficulty-dialog" role="dialog" aria-modal="true">
       <h2 id="campaign-menu-heading">${copy.chooseDifficulty}</h2>
       <div class="campaign-difficulty-choices">${choices}</div>
-      <p class="campaign-menu-notice" data-testid="campaign-menu-notice">${freePlayMenuActive ? copy.freePlayDifficultyNotice : campaignProgressView?.hardModeUnlocked ? '' : copy.hardLocked}</p>
+      <p class="campaign-menu-notice" data-testid="campaign-menu-notice">${isFreePlayMenuActive() ? copy.freePlayDifficultyNotice : campaignProgressView?.hardModeUnlocked ? '' : copy.hardLocked}</p>
       <p class="campaign-menu-error" role="status" data-testid="campaign-menu-error">${escapeMenuText(campaignFeedbackText)}</p>
     </article>
   </section>`;
 }
 
+function restoreExperimentPanelToArchive(): void {
+  if (experimentPanel.parentElement !== archivePanelContent) archivePanelContent.append(experimentPanel);
+}
+
+function configureCampaignMenuAssets(): void {
+  gameFrame.style.setProperty('--campaign-menu-background', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_0_sky.png')}")`);
+  gameFrame.style.setProperty('--campaign-menu-cloud-left', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_1.png')}")`);
+  gameFrame.style.setProperty('--campaign-menu-cloud-right', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_2.png')}")`);
+  gameFrame.style.setProperty('--campaign-menu-button-background', `url("${campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png')}")`);
+  gameFrame.style.setProperty('--campaign-menu-card-background', `url("${campaignMenuAssetUrl('gng_highscore_0_box.png')}")`);
+  gameFrame.style.setProperty('--campaign-menu-textbox-background', `url("${campaignPortraitAssetUrl('gng_hud_2_textbox_large.png')}")`);
+  gameFrame.style.setProperty('--campaign-difficulty-background', `url("${campaignPortraitAssetUrl('gng_hud_2_textbox_large.png')}")`);
+}
+
+function renderOptionsPanel(): void {
+  restoreExperimentPanelToArchive();
+  configureCampaignMenuAssets();
+  const copy = campaignMenuCopy[getLanguage()];
+  gameOptionsPanel.innerHTML = renderOptionsPanelView({
+    backLabel: copy.back,
+    backImage: campaignMenuAssetUrl('left_button.png'),
+    title: copy.optionsTitle,
+    helpLabel: copy.optionsHelp,
+    soundNote: copy.originalSoundNote,
+    speedLabel: copy.speed,
+    speedHelp: copy.speedHelp,
+    speed: simulationSpeed,
+    experimentsTitle: copy.experimentTools,
+    experimentsHelp: copy.experimentToolsHelp,
+    profileTitle: copy.profileArchiveTitle,
+    profileHelp: copy.profileArchiveHelp,
+    exportProfile: copy.exportProfileArchive,
+    importProfile: copy.importProfileArchive,
+    profileStatus: profileArchiveStatusKey ? copy.profileArchiveStatus[profileArchiveStatusKey] : '',
+    settingsStatus: settingsStatusKey ? languageMessages[getLanguage()][settingsStatusKey] : '',
+    profileBusy: profileArchiveBusy,
+  });
+  gameOptionsPanel.querySelector<HTMLElement>('[data-testid="campaign-experiment-host"]')?.append(experimentPanel);
+}
+
+function renderHelpPanel(): void {
+  configureCampaignMenuAssets();
+  const copy = campaignMenuCopy[getLanguage()];
+  const helpPanelState = gameUiController.activePanel?.kind === 'help' ? gameUiController.activePanel : undefined;
+  const pageSize = 3;
+  const pageCount = Math.max(1, Math.ceil(copy.helpLines.length / pageSize));
+  const page = Math.min(helpPanelState?.page ?? 0, pageCount - 1);
+  const pageLines = copy.helpLines.slice(page * pageSize, (page + 1) * pageSize);
+  gameHelpPanel.innerHTML = renderHelpPanelView({
+    backLabel: copy.back,
+    backImage: campaignMenuAssetUrl('left_button.png'),
+    title: copy.helpTitle,
+    lines: pageLines,
+    page,
+    pageCount,
+    previousLabel: copy.helpPrevious,
+    nextLabel: copy.helpNext,
+    pageLabel: copy.helpPage(page + 1, pageCount),
+  });
+}
+
+function setHelpPageBy(delta: -1 | 1): void {
+  const activePanel = gameUiController.activePanel;
+  if (activePanel?.kind !== 'help') return;
+  const pageCount = Math.max(1, Math.ceil(campaignMenuCopy[getLanguage()].helpLines.length / 3));
+  const page = activePanel.page + delta;
+  gameUiController.dispatch({ type: 'set-help-page', page, pageCount });
+  renderHelpPanel();
+  const focusTestId = delta < 0 ? 'help-previous' : 'help-next';
+  gameHelpPanel.querySelector<HTMLButtonElement>(`[data-testid="${focusTestId}"]`)?.focus({ preventScroll: true });
+}
+
+function updateOptionsPanelStatus(): void {
+  const copy = campaignMenuCopy[getLanguage()];
+  const archiveStatus = gameOptionsPanel.querySelector<HTMLElement>('[data-testid="profile-archive-status"]');
+  const settingsStatus = gameOptionsPanel.querySelector<HTMLElement>('[data-testid="menu-settings-status"]');
+  const exportButton = gameOptionsPanel.querySelector<HTMLButtonElement>('[data-testid="export-profile-archive"]');
+  const importInput = gameOptionsPanel.querySelector<HTMLInputElement>('[data-testid="import-profile-archive"]');
+  const speedInput = gameOptionsPanel.querySelector<HTMLInputElement>('[data-testid="menu-simulation-speed"]');
+  const speedOutput = gameOptionsPanel.querySelector<HTMLOutputElement>('[data-testid="menu-simulation-speed-value"]');
+  if (archiveStatus) archiveStatus.textContent = profileArchiveStatusKey ? copy.profileArchiveStatus[profileArchiveStatusKey] : '';
+  if (settingsStatus) settingsStatus.textContent = settingsStatusKey ? languageMessages[getLanguage()][settingsStatusKey] : '';
+  if (exportButton) exportButton.disabled = profileArchiveBusy;
+  if (importInput) importInput.disabled = profileArchiveBusy;
+  if (speedInput) speedInput.value = String(simulationSpeed);
+  if (speedOutput) speedOutput.textContent = `${simulationSpeed}×`;
+}
+
 function renderCampaignMenu(): void {
+  restoreExperimentPanelToArchive();
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
-  campaignMenuScreen.setAttribute('aria-label', freePlayMenuActive ? copy.freePlayMenu : language === 'en' ? 'Campaign menu' : '战役菜单');
-  campaignMenuScreen.style.setProperty('--campaign-menu-background', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_0_sky.png')}")`);
-  campaignMenuScreen.style.setProperty('--campaign-menu-cloud-left', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_1.png')}")`);
-  campaignMenuScreen.style.setProperty('--campaign-menu-cloud-right', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_2.png')}")`);
-  campaignMenuScreen.style.setProperty('--campaign-menu-button-background', `url("${campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png')}")`);
-  campaignMenuScreen.style.setProperty('--campaign-menu-card-background', `url("${campaignMenuAssetUrl('gng_highscore_0_box.png')}")`);
-  campaignMenuScreen.style.setProperty('--campaign-difficulty-background', `url("${campaignPortraitAssetUrl('gng_hud_2_textbox_large.png')}")`);
-  switch (campaignMenuState) {
+  const route = gameUiController.state.route;
+  const menuPage = route.screen === 'campaign' ? route.page : 'home';
+  const freePlayActive = route.screen === 'campaign' && route.mode === 'free-play';
+  campaignMenuScreen.setAttribute('aria-label', freePlayActive ? copy.freePlayMenu : language === 'en' ? 'Campaign menu' : '战役菜单');
+  configureCampaignMenuAssets();
+  switch (menuPage) {
     case 'home': {
       campaignMenuView.innerHTML = `<section class="campaign-menu-home" aria-label="Guns’n’Glory">
         <div class="campaign-menu-home-brand">
@@ -1847,53 +1880,52 @@ function renderCampaignMenu(): void {
     case 'levels': campaignMenuView.innerHTML = campaignMenuLevelScreen(); break;
     case 'overview': campaignMenuView.innerHTML = campaignMenuOverviewScreen(); break;
     case 'difficulty': campaignMenuView.innerHTML = campaignMenuDifficultyScreen(); break;
-    case 'options':
-      campaignMenuView.innerHTML = `<section class="campaign-menu-card-screen" aria-labelledby="campaign-menu-heading">
-        <article class="campaign-menu-card campaign-options-card">
-          <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
-          <h2 id="campaign-menu-heading">${copy.optionsTitle}</h2>
-          <button type="button" class="campaign-setting-toggle" data-action="menu-toggle-sound" data-testid="menu-sound" aria-pressed="${soundEnabled}">${copy.sound}: ${soundEnabled ? language === 'en' ? 'On' : '开' : language === 'en' ? 'Off' : '关'}</button>
-          <label class="campaign-speed-setting"><span>${copy.speed}</span><output data-testid="menu-simulation-speed-value">${simulationSpeed}×</output><input type="range" min="0.25" max="4" step="0.25" value="${simulationSpeed}" data-testid="menu-simulation-speed" aria-label="${copy.speed}"></label>
-          <p class="campaign-menu-subtle">${copy.speedHelp}</p>
-          <section class="campaign-profile-archive" aria-labelledby="campaign-profile-archive-title">
-            <h3 id="campaign-profile-archive-title">${copy.profileArchiveTitle}</h3>
-            <p class="campaign-menu-subtle">${copy.profileArchiveHelp}</p>
-            <div class="campaign-profile-archive-actions">
-              <button type="button" data-action="export-profile-archive" data-testid="export-profile-archive" ${profileArchiveBusy ? 'disabled' : ''}>${copy.exportProfileArchive}</button>
-              <label class="replay-import-label">${copy.importProfileArchive}<input type="file" data-testid="import-profile-archive" accept="application/json,.json" aria-label="${copy.importProfileArchive}" ${profileArchiveBusy ? 'disabled' : ''}></label>
-            </div>
-            <p data-testid="profile-archive-status" class="campaign-menu-status" role="status" aria-live="polite">${profileArchiveStatusKey ? copy.profileArchiveStatus[profileArchiveStatusKey] : ''}</p>
-          </section>
-          <p class="campaign-menu-status" data-testid="menu-settings-status" role="status"></p>
-        </article>
-      </section>`;
-      break;
-    case 'help':
-      campaignMenuView.innerHTML = `<section class="campaign-menu-card-screen" aria-labelledby="campaign-menu-heading">
-        <article class="campaign-menu-card campaign-help-card">
-          <button type="button" class="campaign-menu-back" data-action="menu-back-home" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
-          <h2 id="campaign-menu-heading">${copy.helpTitle}</h2>
-          <ol>${copy.helpLines.map((line) => `<li>${escapeMenuText(line)}</li>`).join('')}</ol>
-        </article>
-      </section>`;
-      break;
   }
 }
 
 function showBattleScene(): void {
+  restoreExperimentPanelToArchive();
+  const mode = session.startRecord.mode === 'free' ? 'free-play' : 'campaign';
+  const route = gameUiController.state.route;
+  if (route.screen !== 'battle' || route.scenarioId !== session.startRecord.scenarioId || route.mode !== mode) {
+    gameUiController.dispatch({
+      type: 'navigate',
+      route: { screen: 'battle', scenarioId: session.startRecord.scenarioId, mode },
+    });
+    renderActiveGamePanel();
+  }
   campaignMenuScreen.hidden = true;
   campaignPanel.hidden = true;
   sceneHeading.hidden = false;
-  gameToolbar.hidden = false;
+  gameToolbar.hidden = !testBattleStart;
+  syncGameUiState();
+  renderMapZoomControls();
 }
 
-function showCampaignMenu(screen: CampaignMenuScreenState = 'home'): void {
-  campaignMenuState = screen;
+function showCampaignMenu(screen: CampaignMenuScreenState = 'home', mode?: 'campaign' | 'free-play'): void {
+  if (screen === 'home') {
+    gameUiController.dispatch({ type: 'navigate', route: { screen: 'home' } });
+  } else {
+    const previous = currentCampaignRoute();
+    gameUiController.dispatch({
+      type: 'navigate',
+      route: {
+        screen: 'campaign',
+        mode: mode ?? previous.mode,
+        page: screen,
+        regionId: previous.regionId,
+        level: previous.level,
+      },
+    });
+  }
+  renderActiveGamePanel();
   campaignMenuScreen.hidden = false;
   campaignPanel.hidden = true;
   sceneHeading.hidden = true;
   gameToolbar.hidden = true;
   renderCampaignMenu();
+  syncGameUiState();
+  renderMapZoomControls();
   if (screen === 'difficulty') {
     requestAnimationFrame(() => campaignMenuView.querySelector<HTMLButtonElement>('[data-testid="campaign-difficulty-easy"]')?.focus());
   }
@@ -2420,7 +2452,10 @@ async function retryFormalSettlement(): Promise<void> {
 
 function renderMapZoomControls(language: keyof typeof languageMessages = getLanguage()): void {
   const messages = languageMessages[language];
-  mapZoomControls.hidden = !view.wave || gameToolbar.hidden || campaignWaveIntroDialog.open || !settlementPanel.hidden;
+  mapZoomControls.hidden = gameUiController.state.route.screen !== 'battle'
+    || !view.wave
+    || overlayHost.active !== null
+    || !settlementPanel.hidden;
   mapZoomControls.setAttribute('aria-label', messages.mapZoomGroup);
   mapZoomOutButton.setAttribute('aria-label', messages.mapZoomOut);
   mapZoomInButton.setAttribute('aria-label', messages.mapZoomIn);
@@ -2433,44 +2468,65 @@ function renderMapZoomControls(language: keyof typeof languageMessages = getLang
   mapZoomResetButton.disabled = mapCamera.zoom === 1 && mapCamera.offsetX === 0 && mapCamera.offsetY === 0;
 }
 
-function syncPauseButtonWidth(language: keyof typeof languageMessages): void {
-  const style = getComputedStyle(pauseControl);
-  const widthKey = [
-    language,
-    style.font,
-    style.paddingLeft,
-    style.paddingRight,
-    style.borderLeftWidth,
-    style.borderRightWidth,
-  ].join('|');
-  if (widthKey === pauseButtonWidthKey) return;
+function renderPauseBoard(language: keyof typeof languageMessages): void {
+  const copy = campaignMenuCopy[language];
+  const soundCopy = languageMessages[language];
+  const boardArt = campaignMenuAssetUrl('gng_startmenu_2_menu_0_box.png');
+  const buttonArt = campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png');
+  const soundArt = campaignMenuAssetUrl(soundEnabled
+    ? 'gng_startmenu_2_menu_2_sound_on.png'
+    : 'gng_startmenu_2_menu_2_sound_off.png');
+  pauseBoard.querySelector<HTMLElement>('#pause-board-title')!.textContent = copy.pausedTitle;
+  pauseBoard.setAttribute('aria-label', copy.pauseMenu);
+  if (pauseBoardArt.src !== boardArt) pauseBoardArt.src = boardArt;
+  pauseBoard.style.setProperty('--pause-board-button-art', `url("${buttonArt}")`);
+  pauseContinueControl.textContent = copy.continueBattle;
+  pauseRestartControl.textContent = copy.restartBattle;
+  pauseOptionsControl.textContent = copy.options;
+  pauseCloseControl.textContent = copy.closeBattle;
+  pauseSoundToggleControl.setAttribute('aria-pressed', String(soundEnabled));
+  pauseSoundToggleControl.setAttribute('aria-label', `${copy.sound}: ${soundEnabled ? soundCopy.soundOn : soundCopy.soundOff}`);
+  pauseSoundToggleControl.title = soundEnabled ? soundCopy.soundOn : soundCopy.soundOff;
+  pauseSoundIcon.alt = soundEnabled ? soundCopy.soundOn : soundCopy.soundOff;
+  if (pauseSoundIcon.src !== soundArt) pauseSoundIcon.src = soundArt;
+  pauseContinueControl.disabled = replacingSession;
+  pauseRestartControl.disabled = replacingSession || replaying;
+  pauseOptionsControl.disabled = replacingSession;
+  pauseCloseControl.disabled = replacingSession;
+  renderPauseConfirmation(language);
+}
 
-  if (pauseButtonMeasureContext === undefined) {
-    pauseButtonMeasureContext = document.createElement('canvas').getContext('2d');
-  }
-  if (!pauseButtonMeasureContext) return;
-
-  const localizedMessages = languageMessages[language];
-  pauseButtonMeasureContext.font = style.font;
-  const labelWidth = Math.max(
-    pauseButtonMeasureContext.measureText(localizedMessages.pauseBattle).width,
-    pauseButtonMeasureContext.measureText(localizedMessages.resumeBattle).width,
-  );
-  const horizontalSpace = Number.parseFloat(style.paddingLeft)
-    + Number.parseFloat(style.paddingRight)
-    + Number.parseFloat(style.borderLeftWidth)
-    + Number.parseFloat(style.borderRightWidth);
-  pauseControl.style.width = `${Math.ceil(labelWidth + horizontalSpace + 1)}px`;
-  pauseButtonWidthKey = widthKey;
+function renderPauseConfirmation(language: keyof typeof languageMessages, requestedAction?: PauseConfirmationAction): void {
+  const activePanel = gameUiController.activePanel;
+  const action = requestedAction
+    ?? (activePanel?.kind === 'confirmation' ? activePanel.action : undefined);
+  if (!action) return;
+  const copy = campaignMenuCopy[language];
+  const textboxArt = campaignPortraitAssetUrl('gng_hud_2_textbox_large.png');
+  if (pauseConfirmationArt.src !== textboxArt) pauseConfirmationArt.src = textboxArt;
+  pauseConfirmationTitle.textContent = action === 'restart'
+    ? copy.restartBattle
+    : action === 'close' ? copy.closeBattle : copy.profileArchiveTitle;
+  pauseConfirmationMessage.textContent = action === 'restart'
+    ? copy.restartConfirmation
+    : action === 'close' ? copy.closeConfirmation : copy.confirmProfileImport;
+  confirmPauseActionControl.querySelector('span')!.textContent = copy.confirmAction;
+  cancelPauseActionControl.querySelector('span')!.textContent = copy.cancelAction;
+  const confirmIcon = campaignPortraitAssetUrl('gng_hud_2_yes.png');
+  const cancelIcon = campaignMenuAssetUrl('gng_hud_2_no.png');
+  if (confirmPauseIcon.src !== confirmIcon) confirmPauseIcon.src = confirmIcon;
+  if (cancelPauseIcon.src !== cancelIcon) cancelPauseIcon.src = cancelIcon;
 }
 
 function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
+  renderConfirmationArtwork();
   renderCampaign();
   if (!campaignMenuScreen.hidden) renderCampaignMenu();
   renderCampaignWaveIntro();
+  renderPauseBoard(language);
   renderMapZoomControls(language);
   const actionLocked = replaying || replacingSession;
   if (view.wave?.settlement && gamblerDialog.open) closeGamblerDialog();
@@ -2536,8 +2592,6 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.none;
   if (status.textContent !== selectionText) status.textContent = selectionText;
   simulationSpeedValue.textContent = simulationSpeed + '×';
-  soundToggleButton.textContent = soundEnabled ? messages.soundOn : messages.soundOff;
-  soundToggleButton.setAttribute('aria-pressed', String(soundEnabled));
   soundPlaybackStatus.hidden = failedSoundElements.size === 0;
   soundPlaybackStatus.textContent = failedSoundElements.size > 0 ? messages.soundPlaybackFailed : '';
   retrySoundPlaybackButton.hidden = failedSoundElements.size === 0 || !soundEnabled;
@@ -2546,12 +2600,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? pauseReason === 'background' ? messages.battlePausedInBackground : messages.battlePaused
     : '';
   pauseStatus.textContent = pauseMessage;
-  pauseStatus.hidden = !view.paused || pauseReason === 'wave-intro';
-  pauseControl.textContent = view.paused ? messages.resumeBattle : messages.pauseBattle;
-  syncPauseButtonWidth(language);
-  pauseControl.disabled = actionLocked || pauseReason === 'wave-intro' || (!view.paused
-    && view.wave?.phase !== 'active'
-    && !view.units.some((candidate) => candidate.moving));
+  pauseStatus.hidden = !view.paused || pauseReason === 'wave-intro' || !campaignMenuScreen.hidden
+    || overlayHost.active === pauseBoard || overlayHost.active === pauseConfirmation;
   singleStepControl.textContent = messages.singleStep;
   singleStepControl.disabled = actionLocked || pauseReason === 'wave-intro' || !view.paused || view.wave?.settlement !== undefined;
   inspectionOverlayInput.checked = showInspectionOverlay;
@@ -2582,10 +2632,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.noRoute);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
-  const campaignMenuSettingsStatus = campaignMenuView.querySelector<HTMLElement>('[data-testid="menu-settings-status"]');
-  if (campaignMenuSettingsStatus) campaignMenuSettingsStatus.textContent = settingsText;
+  updateOptionsPanelStatus();
   simulationSpeedInput.disabled = !campaignProgressView && !profileLoadFailed;
-  soundToggleButton.disabled = !campaignProgressView && !profileLoadFailed;
   retrySettingsButton.hidden = settingsStatusKey !== 'save-failed' || profileLoadFailed;
   retrySettingsButton.textContent = messages.retrySettings;
   reloadProfileButton.hidden = settingsStatusKey !== 'conflict';
@@ -2722,10 +2770,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   } else {
     upgradeControl.textContent = messages.upgradeButton(upgradeUnitName, 0);
   }
-  confirmRecruitControl.textContent = messages.confirmRecruitButton;
-  cancelRecruitControl.textContent = messages.cancelRecruitButton;
-  confirmUpgradeControl.textContent = messages.confirmUpgradeButton;
-  cancelUpgradeControl.textContent = messages.cancelUpgradeButton;
+  setConfirmationButtonLabel(confirmRecruitControl, messages.confirmRecruitButton);
+  setConfirmationButtonLabel(cancelRecruitControl, messages.cancelRecruitButton);
+  setConfirmationButtonLabel(confirmUpgradeControl, messages.confirmUpgradeButton);
+  setConfirmationButtonLabel(cancelUpgradeControl, messages.cancelUpgradeButton);
   if (pendingRecruitmentType) {
     const pendingRecruit = view.recruitPool.find((entry) => entry.unitType === pendingRecruitmentType);
     if (pendingRecruit) recruitConfirmationTitle.textContent = messages.confirmRecruit(
@@ -2736,17 +2784,19 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   if (pendingMapHireUnitId) renderMapHireConfirmation(language);
   const settlement = view.wave?.settlement;
   const newSettlement = Boolean(settlement) && settlementSaveState === undefined;
-  settlementPanel.hidden = !settlement || settlementPanelDismissed;
   if (settlement && recruitConfirmation.open) {
     pendingRecruitmentType = undefined;
-    recruitConfirmation.close();
+    dismissGamePanel('recruit', false);
   }
   if (settlement && upgradeConfirmation.open) {
     pendingUpgradeUnitId = undefined;
-    upgradeConfirmation.close();
+    dismissGamePanel('upgrade', false);
     confirmUpgradeControl.hidden = false;
   }
   if (settlement && mapHireConfirmation.open) closeMapHireConfirmation();
+  const showSettlement = Boolean(settlement) && !settlementPanelDismissed;
+  if (showSettlement) presentGamePanel({ kind: 'settlement' });
+  else if (gameUiController.activePanel?.kind === 'settlement') dismissGamePanel('settlement', false);
   if (settlement && view.wave) {
     if (newSettlement) {
       activeSettlementRecord = session.terminalRecord();
@@ -2802,6 +2852,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       ? language === 'zh' ? `${activeCampaignStage.title[language]}游戏地图` : `${activeCampaignStage.title[language]} game map`
       : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
   if (canvas.getAttribute('aria-label') !== canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
+  syncGameUiState();
 }
 
 function clearGamblerDialogTimers(): void {
@@ -2936,9 +2987,10 @@ function closeGamblerDialog(): void {
   gamblerDialogMode = 'closed';
   gamblerDialogUnitId = undefined;
   gamblerDialogRoundId = undefined;
-  if (gamblerDialog.open) gamblerDialog.close();
+  if (gamblerDialog.open) dismissGamePanel('gambler', false);
   gamblerCards.replaceChildren();
-  canvas.focus({ preventScroll: true });
+  syncGameUiState();
+  if (!overlayHost.active) canvas.focus({ preventScroll: true });
 }
 
 function openGamblerDialog(unitId: string): void {
@@ -2950,7 +3002,7 @@ function openGamblerDialog(unitId: string): void {
   gamblerDialogUnitId = unitId;
   gamblerDialogRoundId = undefined;
   gamblerCards.replaceChildren();
-  gamblerDialog.show();
+  presentGamePanel({ kind: 'gambler' });
   renderGamblerDialog(getLanguage());
   (playGamblerControl.disabled ? closeGamblerControl : playGamblerControl).focus({ preventScroll: true });
 }
@@ -3003,7 +3055,7 @@ function renderUpgradeConfirmation(language: keyof typeof languageMessages): voi
   const cash = view.wave?.cash;
   if (!unit || !nextUpgrade || !unit.weapon || cash === undefined) {
     pendingUpgradeUnitId = undefined;
-    if (upgradeConfirmation.open) upgradeConfirmation.close();
+    if (upgradeConfirmation.open) dismissGamePanel('upgrade', false);
     confirmUpgradeControl.hidden = false;
     return;
   }
@@ -3051,17 +3103,17 @@ function renderMapHireConfirmation(language: keyof typeof languageMessages): voi
   mapHireConfirmationDetails.textContent = affordable
     ? ''
     : languageMessages[language].mapHireInsufficientCash(price, cash);
-  confirmMapHireControl.textContent = languageMessages[language].confirmMapHire;
+  setConfirmationButtonLabel(confirmMapHireControl, languageMessages[language].confirmMapHire);
   confirmMapHireControl.hidden = !affordable;
   confirmMapHireControl.disabled = !affordable;
-  cancelMapHireControl.textContent = affordable
+  setConfirmationButtonLabel(cancelMapHireControl, affordable
     ? languageMessages[language].cancelMapHire
-    : languageMessages[language].closeMapHire;
+    : languageMessages[language].closeMapHire);
 }
 
 function closeMapHireConfirmation(): void {
   pendingMapHireUnitId = undefined;
-  if (mapHireConfirmation.open) mapHireConfirmation.close();
+  if (mapHireConfirmation.open) dismissGamePanel('map-hire', false);
   confirmMapHireControl.hidden = false;
   confirmMapHireControl.disabled = false;
 }
@@ -3074,7 +3126,7 @@ function openMapHireConfirmation(unitId: string): void {
   if (!unit || !view.wave) return;
   pendingMapHireUnitId = unit.id;
   renderMapHireConfirmation(getLanguage());
-  mapHireConfirmation.show();
+  presentGamePanel({ kind: 'map-hire' });
   (confirmMapHireControl.hidden ? cancelMapHireControl : confirmMapHireControl).focus({ preventScroll: true });
 }
 
@@ -3280,126 +3332,64 @@ assetLoadFailureNames = failedAssets;
 redraw(true);
 renderStatus();
 
-type FullscreenStatusKey =
-  | 'fullscreenUnsupported'
-  | 'fullscreenRequestFailed'
-  | 'fullscreenExitFailed'
-  | 'fullscreenLandscapeLocked'
-  | 'fullscreenLandscapeUnavailable';
-let fullscreenStatusKey: FullscreenStatusKey | undefined;
+const frameChromeController = new FrameChromeController({
+  frame: gameFrame,
+  stage: gameStage,
+  toggleButton: fullscreenToggleButton,
+  status: fullscreenStatus,
+  orientationOverlay: portraitOrientationOverlay,
+  orientationMessage: portraitOrientationMessage,
+  getMessages: () => {
+    const copy = languageMessages[getLanguage()];
+    return {
+      enter: copy.fullscreenEnter,
+      exit: copy.fullscreenExit,
+      rotate: copy.fullscreenRotateToLandscape,
+      status: {
+        fullscreenUnsupported: copy.fullscreenUnsupported,
+        fullscreenRequestFailed: copy.fullscreenRequestFailed,
+        fullscreenExitFailed: copy.fullscreenExitFailed,
+        fullscreenLandscapeLocked: copy.fullscreenLandscapeLocked,
+        fullscreenLandscapeUnavailable: copy.fullscreenLandscapeUnavailable,
+      },
+    };
+  },
+  onStateChange: syncGameUiState,
+  onViewportChange: () => redraw(true),
+});
+
+let fullscreenEscapeTimer = 0;
+let fullscreenEscapePending = false;
+document.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    fullscreenEscapePending = false;
+    window.clearTimeout(fullscreenEscapeTimer);
+    if (frameChromeController.isFullscreen) {
+      fullscreenEscapePending = true;
+      fullscreenEscapeTimer = window.setTimeout(() => {
+        fullscreenEscapePending = false;
+      }, 500);
+    }
+  } else {
+    fullscreenEscapePending = false;
+    window.clearTimeout(fullscreenEscapeTimer);
+  }
+}, true);
 
 function renderFullscreenControl(): void {
-  const fullscreenActive = document.fullscreenElement === gameFrame;
-  const needsLandscape = fullscreenActive && supportsTouchOrientationLock() && window.innerHeight > window.innerWidth;
-  gameFrame.classList.toggle('is-fullscreen', fullscreenActive);
-  gameFrame.classList.toggle('is-portrait-fullscreen', needsLandscape);
-  gameStage.inert = needsLandscape;
-  portraitOrientationOverlay.setAttribute('aria-hidden', String(!needsLandscape));
-  portraitOrientationMessage.textContent = needsLandscape
-    ? languageMessages[getLanguage()].fullscreenRotateToLandscape
-    : '';
-  document.body.classList.toggle('gng-game-fullscreen', fullscreenActive);
-  const label = fullscreenActive
-    ? languageMessages[getLanguage()].fullscreenExit
-    : languageMessages[getLanguage()].fullscreenEnter;
-  fullscreenToggleButton.textContent = '⛶';
-  fullscreenToggleButton.setAttribute('aria-label', label);
-  fullscreenToggleButton.title = label;
-  fullscreenToggleButton.setAttribute('aria-pressed', String(fullscreenActive));
+  frameChromeController.render();
 }
 
 function renderFullscreenStatus(): void {
-  const message = fullscreenStatusKey ? languageMessages[getLanguage()][fullscreenStatusKey] : undefined;
-  fullscreenStatus.textContent = message ?? '';
-  fullscreenStatus.hidden = message === undefined;
+  frameChromeController.renderStatus();
 }
-
-function setFullscreenStatus(key?: FullscreenStatusKey): void {
-  fullscreenStatusKey = key;
-  renderFullscreenStatus();
-}
-
-function supportsTouchOrientationLock(): boolean {
-  return navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
-}
-
-async function toggleGameFullscreen(): Promise<void> {
-  if (document.fullscreenElement === gameFrame) {
-    if (typeof document.exitFullscreen !== 'function') {
-      setFullscreenStatus('fullscreenExitFailed');
-      return;
-    }
-    try {
-      await document.exitFullscreen();
-    } catch {
-      setFullscreenStatus('fullscreenExitFailed');
-    }
-    return;
-  }
-
-  if (typeof gameFrame.requestFullscreen !== 'function') {
-    setFullscreenStatus('fullscreenUnsupported');
-    return;
-  }
-
-  try {
-    await gameFrame.requestFullscreen();
-  } catch {
-    setFullscreenStatus('fullscreenRequestFailed');
-    return;
-  }
-
-  renderFullscreenControl();
-  if (!supportsTouchOrientationLock()) {
-    setFullscreenStatus();
-    return;
-  }
-
-  try {
-    const orientation = screen.orientation;
-    if (!orientation || typeof orientation.lock !== 'function') {
-      setFullscreenStatus('fullscreenLandscapeUnavailable');
-      return;
-    }
-    await orientation.lock('landscape');
-    setFullscreenStatus('fullscreenLandscapeLocked');
-  } catch {
-    setFullscreenStatus('fullscreenLandscapeUnavailable');
-  }
-}
-
-fullscreenToggleButton.addEventListener('click', () => void toggleGameFullscreen());
-renderFullscreenControl();
-document.addEventListener('fullscreenchange', () => {
-  const fullscreenActive = document.fullscreenElement === gameFrame;
-  renderFullscreenControl();
-  if (!fullscreenActive) {
-    setFullscreenStatus();
-    try {
-      screen.orientation?.unlock();
-    } catch {
-      // Orientation unlock may be unavailable or rejected after a browser-controlled exit.
-    }
-  }
-  redraw(true);
-});
-window.addEventListener('orientationchange', () => {
-  renderFullscreenControl();
-  redraw(true);
-});
-screen.orientation?.addEventListener('change', () => {
-  renderFullscreenControl();
-  redraw(true);
-});
 
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(() => {
-    syncPauseButtonWidth(getLanguage());
     redraw(true);
   }).observe(gameFrame);
 }
 window.addEventListener('resize', () => {
-  syncPauseButtonWidth(getLanguage());
   renderFullscreenControl();
   redraw(true);
 });
@@ -3508,7 +3498,7 @@ function playSound(sound: string, audio: HTMLAudioElement, resetPosition = true)
 
 function eventTargetsSoundToggle(event: Event): boolean {
   const target = event.target;
-  return target instanceof Element && target.closest('[data-action="toggle-sound"]') !== null;
+  return target instanceof Element && target.closest('[data-action="menu-toggle-sound"], [data-action="pause-toggle-sound"]') !== null;
 }
 
 function retryCurrentAudioOnFirstGesture(event: Event): void {
@@ -3746,7 +3736,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   view = session.pause();
   gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
   renderCampaignWaveIntro();
-  if (!campaignWaveIntroDialog.open) campaignWaveIntroDialog.show();
+  if (!campaignWaveIntroDialog.open) presentGamePanel({ kind: 'wave-intro' });
   continueCampaignWaveIntroControl.focus({ preventScroll: true });
   if (intro.voiceSound) playAudioAsset(intro.voiceSound);
   return true;
@@ -3759,7 +3749,7 @@ function showCampaignWaveIntroAfterWaveChange(previousWaveNumber: number | undef
 function continueCampaignWaveIntro(): void {
   if (!pendingCampaignWaveIntro) return;
   pendingCampaignWaveIntro = undefined;
-  campaignWaveIntroDialog.close();
+  dismissGamePanel('wave-intro', false);
   playBackgroundMusic();
   if (pauseReason !== 'wave-intro' || !view.paused || document.hidden) return;
   gameFrame.scrollIntoView({ block: 'center', behavior: 'instant' });
@@ -3776,7 +3766,7 @@ function activateSession(
   nextRestartMode?: Exclude<GameMode, 'replay'>,
 ): void {
   stopGameLoop();
-  if (campaignWaveIntroDialog.open) campaignWaveIntroDialog.close();
+  if (campaignWaveIntroDialog.open) dismissGamePanel('wave-intro', false);
   if (gamblerDialog.open) closeGamblerDialog();
   pendingCampaignWaveIntro = undefined;
   const previousSession = session;
@@ -3787,6 +3777,12 @@ function activateSession(
   if (!isOfficialCowGulchSession()) stopCowGulchBackgroundMusic();
   view = session.observe();
   pauseReason = undefined;
+  const mode = session.startRecord.mode === 'free' ? 'free-play' : 'campaign';
+  gameUiController.dispatch({
+    type: 'navigate',
+    route: { screen: 'battle', scenarioId: session.startRecord.scenarioId, mode },
+  });
+  renderActiveGamePanel();
   mapCamera = createMapCamera();
   previousSession.close();
   lastDefeatFeedback = [];
@@ -3798,13 +3794,13 @@ function activateSession(
   pendingUpgradeUnitId = undefined;
   upgradeCommandNumber = 0;
   gamblerCommandNumber = 0;
-  if (recruitConfirmation.open) recruitConfirmation.close();
-  if (upgradeConfirmation.open) upgradeConfirmation.close();
+  if (recruitConfirmation.open) dismissGamePanel('recruit', false);
+  if (upgradeConfirmation.open) dismissGamePanel('upgrade', false);
   confirmUpgradeControl.hidden = false;
   activeSettlementRecord = undefined;
   settlementSaveState = undefined;
   settlementPanelDismissed = false;
-  settlementPanel.hidden = true;
+  if (gameUiController.activePanel?.kind === 'settlement') dismissGamePanel('settlement', false);
   replayStatusState = nextReplayStatus;
   restartModeOverride = nextRestartMode;
   showCampaignWaveIntroForCurrentWave();
@@ -3925,7 +3921,7 @@ async function selectCampaignDifficultyAndOpen(scenarioId: string, difficulty: G
 }
 
 async function selectFreePlayDifficultyAndOpen(scenarioId: string, difficulty: GameDifficulty): Promise<void> {
-  if (!freePlayMenuActive || campaignSelectionBusy || assetLoadFailureNames.length > 0) return;
+  if (!isFreePlayMenuActive() || campaignSelectionBusy || assetLoadFailureNames.length > 0) return;
   freePlayDifficulty = difficulty;
   campaignFeedback = undefined;
   await openFreePlayStage(scenarioId, difficulty);
@@ -4060,11 +4056,6 @@ simulationSpeedInput.addEventListener('change', () => {
 });
 
 retrySoundPlaybackButton.addEventListener('click', retryFailedSoundPlayback);
-
-soundToggleButton.addEventListener('click', () => {
-  setSoundEnabled(!soundEnabled);
-  saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
-});
 
 campaignDifficultySelect.addEventListener('change', () => {
   const requestedDifficulty = campaignDifficultySelect.value;
@@ -4345,26 +4336,159 @@ function dispatch(intent: GameIntent): void {
   if (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)) startGameLoop();
 }
 
-pauseControl.addEventListener('click', () => {
-  if (document.hidden) return;
+function pauseBattleFromHud(): void {
+  if (document.hidden || !view.wave || view.wave.settlement || replaying || replacingSession
+    || campaignWaveIntroDialog.open || gameUiController.activePanel?.kind === 'pause'
+    || gameUiController.activePanel?.kind === 'confirmation') return;
   previousTimestamp = undefined;
   simulationTime.reset();
-  if (view.paused) {
-    pauseReason = undefined;
-    view = session.resume();
-    renderStatus();
-    redraw();
-    startGameLoop();
-    return;
-  }
-
   cancelPointerGesture();
-  pauseReason = 'manual';
-  stopGameLoop();
-  view = session.pause();
+  if (!view.paused) {
+    pauseReason = 'manual';
+    stopGameLoop();
+    view = session.pause();
+  }
+  presentGamePanel({ kind: 'pause' });
   renderStatus();
   redraw();
+}
+
+function continuePauseBoard(): void {
+  if (gameUiController.activePanel?.kind !== 'pause') return;
+  dismissGamePanel('pause', false);
+  if (view.paused && !document.hidden) {
+    pauseReason = undefined;
+    view = session.resume();
+  }
+  renderStatus();
+  redraw();
+  startGameLoop();
+}
+
+function openPauseConfirmation(action: PauseConfirmationAction): void {
+  if (gameUiController.activePanel?.kind !== 'pause') return;
+  renderPauseConfirmation(getLanguage(), action);
+  presentGamePanel({ kind: 'confirmation', action });
+}
+
+function cancelPauseConfirmation(): void {
+  if (gameUiController.activePanel?.kind === 'confirmation'
+    && gameUiController.activePanel.action === 'profile-import') {
+    pendingProfileImport = undefined;
+    profileArchiveStatusKey = 'cancelled';
+  }
+  dismissGamePanel('confirmation');
+  updateOptionsPanelStatus();
+  renderPauseBoard(getLanguage());
+}
+
+function confirmPauseAction(): void {
+  const activePanel = gameUiController.activePanel;
+  if (activePanel?.kind !== 'confirmation') return;
+  const { action } = activePanel;
+  if (action === 'profile-import') {
+    const profileData = pendingProfileImport;
+    pendingProfileImport = undefined;
+    dismissGamePanel('confirmation');
+    if (profileData) void replaceImportedProfile(profileData);
+    return;
+  }
+  dismissGamePanel('confirmation', false);
+  if (action === 'restart') {
+    const { scenarioId, mode, difficulty } = session.startRecord;
+    void replaceSession(requestScenarioOpen(scenarioId, mode, difficulty ?? 'easy')).then((opened) => {
+      if (opened) return;
+      pauseReason = 'manual';
+      presentGamePanel({ kind: 'pause' });
+      renderStatus();
+      redraw();
+    });
+    return;
+  }
+  enterCampaignMenu();
+}
+
+function cancelActiveGamePanel(): void {
+  const activePanel = gameUiController.activePanel;
+  if (!activePanel) return;
+
+  switch (activePanel.kind) {
+    case 'pause':
+      return;
+    case 'confirmation':
+      cancelPauseConfirmation();
+      return;
+    case 'options':
+    case 'help':
+      dismissGamePanel(activePanel.kind);
+      return;
+    case 'recruit':
+      pendingRecruitmentType = undefined;
+      dismissGamePanel('recruit', false);
+      recruitControl.focus({ preventScroll: true });
+      return;
+    case 'map-hire':
+      closeMapHireConfirmation();
+      canvas.focus({ preventScroll: true });
+      return;
+    case 'upgrade':
+      pendingUpgradeUnitId = undefined;
+      dismissGamePanel('upgrade', false);
+      confirmUpgradeControl.hidden = false;
+      if (!upgradeControl.hidden && !upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
+      else canvas.focus({ preventScroll: true });
+      return;
+    case 'gambler':
+      closeGamblerDialog();
+      return;
+    case 'wave-intro':
+      continueCampaignWaveIntro();
+      return;
+    case 'settlement':
+      return;
+  }
+}
+
+function cancelActiveGameDialog(event: Event): void {
+  event.preventDefault();
+  if (frameChromeController.isFullscreen || fullscreenEscapePending) return;
+  const activePanel = gameUiController.activePanel;
+  if (!activePanel || gameUiPanelElements[activePanel.kind] !== event.currentTarget) return;
+  cancelActiveGamePanel();
+}
+
+for (const panel of Object.values(gameUiPanelElements)) {
+  if (panel instanceof HTMLDialogElement) panel.addEventListener('cancel', cancelActiveGameDialog);
+}
+
+document.addEventListener('keydown', (event: KeyboardEvent) => {
+  if (event.key !== 'Escape' || event.defaultPrevented || frameChromeController.isFullscreen) return;
+  if (gameUiController.activePanel) {
+    event.preventDefault();
+    cancelActiveGamePanel();
+    return;
+  }
+  if (gameUiController.state.route.screen === 'battle') {
+    event.preventDefault();
+    pauseBattleFromHud();
+  }
 });
+
+pauseContinueControl.addEventListener('click', continuePauseBoard);
+pauseRestartControl.addEventListener('click', () => openPauseConfirmation('restart'));
+pauseCloseControl.addEventListener('click', () => openPauseConfirmation('close'));
+pauseOptionsControl.addEventListener('click', () => {
+  if (gameUiController.activePanel?.kind !== 'pause') return;
+  renderOptionsPanel();
+  presentGamePanel({ kind: 'options' });
+});
+pauseSoundToggleControl.addEventListener('click', () => {
+  setSoundEnabled(!soundEnabled);
+  saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
+  renderStatus();
+});
+confirmPauseActionControl.addEventListener('click', confirmPauseAction);
+cancelPauseActionControl.addEventListener('click', cancelPauseConfirmation);
 
 singleStepControl.addEventListener('click', () => {
   if (!view.paused || singleStepControl.disabled) return;
@@ -4401,16 +4525,14 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
   if (!button || button.disabled) return;
   switch (button.dataset.action) {
     case 'menu-start':
-      freePlayMenuActive = false;
-      showCampaignMenu('regions');
+      showCampaignMenu('regions', 'campaign');
       break;
     case 'menu-free-play':
-      freePlayMenuActive = true;
       freePlayDifficulty = 'easy';
-      showCampaignMenu('regions');
+      showCampaignMenu('regions', 'free-play');
       break;
-    case 'menu-help': showCampaignMenu('help'); break;
-    case 'menu-options': showCampaignMenu('options'); break;
+    case 'menu-help': renderHelpPanel(); presentGamePanel({ kind: 'help', page: 0 }); break;
+    case 'menu-options': renderOptionsPanel(); presentGamePanel({ kind: 'options' }); break;
     case 'menu-back-home': showCampaignMenu('home'); break;
     case 'menu-back-regions': showCampaignMenu('regions'); break;
     case 'menu-back-levels': showCampaignMenu('levels'); break;
@@ -4419,8 +4541,13 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
     case 'choose-campaign-region': {
       const region = campaignRegions.find((candidate) => candidate.id === button.dataset.region);
       if (!region) return;
-      selectedMenuRegionId = region.id;
-      showCampaignMenu('levels');
+      const route = currentCampaignRoute();
+      gameUiController.dispatch({
+        type: 'navigate',
+        route: { ...route, page: 'levels', regionId: region.id },
+      });
+      renderActiveGamePanel();
+      renderCampaignMenu();
       break;
     }
     case 'choose-campaign-level': {
@@ -4428,15 +4555,17 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
       const entry = campaignCatalog.find((candidate) => candidate.level === level);
       const state = menuLevelState(level);
       if (!entry || state === 'locked' || state === 'unimplemented') return;
-      selectedMenuLevel = level;
-      showCampaignMenu('overview');
+      const route = currentCampaignRoute();
+      gameUiController.dispatch({ type: 'navigate', route: { ...route, page: 'overview', level } });
+      renderActiveGamePanel();
+      renderCampaignMenu();
       break;
     }
     case 'choose-campaign-difficulty': {
       const difficulty = button.dataset.difficulty;
       const scenarioId = button.dataset.scenarioId;
       if (!isGameDifficulty(difficulty) || !scenarioId) return;
-      if (freePlayMenuActive) void selectFreePlayDifficultyAndOpen(scenarioId, difficulty);
+      if (isFreePlayMenuActive()) void selectFreePlayDifficultyAndOpen(scenarioId, difficulty);
       else void selectCampaignDifficultyAndOpen(scenarioId, difficulty);
       break;
     }
@@ -4454,18 +4583,34 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
   }
 });
 
-campaignMenuView.addEventListener('input', (event: Event) => {
+overlayHostRoot.addEventListener('click', (event: MouseEvent) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest<HTMLButtonElement>('button[data-action]');
+  if (!button || button.disabled) return;
+  switch (button.dataset.action) {
+    case 'options-back': dismissGamePanel('options'); break;
+    case 'options-help': renderHelpPanel(); presentGamePanel({ kind: 'help', page: 0 }); break;
+    case 'help-back': dismissGamePanel('help'); break;
+    case 'help-previous': setHelpPageBy(-1); break;
+    case 'help-next': setHelpPageBy(1); break;
+    case 'export-profile-archive': void exportProfileArchive(); break;
+    default: break;
+  }
+});
+
+gameOptionsPanel.addEventListener('input', (event: Event) => {
   const target = event.target;
   if (!(target instanceof HTMLInputElement) || target.dataset.testid !== 'menu-simulation-speed') return;
   simulationSpeed = normalizeSimulationSpeed(Number(target.value));
   simulationSpeedInput.value = String(simulationSpeed);
   simulationSpeedValue.textContent = `${simulationSpeed}×`;
-  const output = campaignMenuView.querySelector<HTMLOutputElement>('[data-testid="menu-simulation-speed-value"]');
+  const output = gameOptionsPanel.querySelector<HTMLOutputElement>('[data-testid="menu-simulation-speed-value"]');
   if (output) output.textContent = `${simulationSpeed}×`;
   settingsStatusKey = undefined;
 });
 
-campaignMenuView.addEventListener('change', (event: Event) => {
+gameOptionsPanel.addEventListener('change', (event: Event) => {
   const target = event.target;
   if (target instanceof HTMLInputElement && target.dataset.testid === 'import-profile-archive') {
     const file = target.files?.[0];
@@ -4479,7 +4624,7 @@ campaignMenuView.addEventListener('change', (event: Event) => {
 
 function enterCampaignMenu(): void {
   if (view.wave?.settlement) settlementPanelDismissed = true;
-  campaignExitConfirmation.close();
+  dismissAllGamePanels();
   stopGameLoop();
   previousTimestamp = undefined;
   simulationTime.reset();
@@ -4488,41 +4633,6 @@ function enterCampaignMenu(): void {
   showCampaignMenu('home');
   renderStatus();
 }
-
-campaignExitConfirmation.addEventListener('close', () => {
-  if (fullscreenControls.parentElement !== gameFrame) {
-    gameFrame.insertBefore(fullscreenControls, portraitOrientationOverlay);
-  }
-  renderFullscreenControl();
-});
-
-campaignMenuToggle.addEventListener('click', () => {
-  if (campaignExitConfirmation.open) return;
-  menuReturnWasPaused = view.paused;
-  if (!view.paused) {
-    cancelPointerGesture();
-    stopGameLoop();
-    pauseReason = 'manual';
-    view = session.pause();
-    renderStatus();
-    redraw();
-  }
-  campaignExitConfirmation.append(fullscreenControls);
-  campaignExitConfirmation.showModal();
-});
-
-campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="cancel-campaign-exit"]')?.addEventListener('click', () => {
-  campaignExitConfirmation.close();
-  if (!menuReturnWasPaused) {
-    pauseReason = undefined;
-    view = session.resume();
-    renderStatus();
-    redraw();
-    startGameLoop();
-  }
-});
-
-campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="confirm-campaign-exit"]')?.addEventListener('click', enterCampaignMenu);
 settlementCampaignMenuButton.addEventListener('click', enterCampaignMenu);
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
@@ -4538,17 +4648,6 @@ confirmMapHireControl.addEventListener('click', () => {
   canvas.focus({ preventScroll: true });
 });
 cancelMapHireControl.addEventListener('click', () => {
-  closeMapHireConfirmation();
-  canvas.focus({ preventScroll: true });
-});
-mapHireConfirmation.addEventListener('cancel', (event: Event) => {
-  event.preventDefault();
-  closeMapHireConfirmation();
-  canvas.focus({ preventScroll: true });
-});
-mapHireConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.key !== 'Escape') return;
-  event.preventDefault();
   closeMapHireConfirmation();
   canvas.focus({ preventScroll: true });
 });
@@ -4568,13 +4667,13 @@ recruitControl.addEventListener('click', () => {
   recruitConfirmationTitle.textContent = languageMessages[getLanguage()].confirmRecruit(
     recruit.name[getLanguage()], recruit.price,
   );
-  recruitConfirmation.show();
+  presentGamePanel({ kind: 'recruit' });
   confirmRecruitControl.focus();
 });
 confirmRecruitControl.addEventListener('click', () => {
   const unitType = pendingRecruitmentType;
   pendingRecruitmentType = undefined;
-  recruitConfirmation.close();
+  dismissGamePanel('recruit', false);
   if (!unitType) return;
   dispatch({
     type: 'recruit-unit',
@@ -4585,27 +4684,11 @@ confirmRecruitControl.addEventListener('click', () => {
 });
 cancelRecruitControl.addEventListener('click', () => {
   pendingRecruitmentType = undefined;
-  recruitConfirmation.close();
-  recruitControl.focus({ preventScroll: true });
-});
-recruitConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.key !== 'Escape') return;
-  event.preventDefault();
-  pendingRecruitmentType = undefined;
-  recruitConfirmation.close();
+  dismissGamePanel('recruit', false);
   recruitControl.focus({ preventScroll: true });
 });
 continueCampaignWaveIntroControl.addEventListener('click', continueCampaignWaveIntro);
 retryCampaignWaveIntroVoiceControl.addEventListener('click', retryCampaignWaveIntroVoice);
-campaignWaveIntroDialog.addEventListener('cancel', (event: Event) => {
-  event.preventDefault();
-  continueCampaignWaveIntro();
-});
-campaignWaveIntroDialog.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.key !== 'Escape') return;
-  event.preventDefault();
-  continueCampaignWaveIntro();
-});
 startUpgradeSampleControl.addEventListener('click', () => {
   void replaceSession(requestScenarioOpen('cow-gulch-upgrade-sample', 'debug'));
 });
@@ -4626,21 +4709,12 @@ upgradeControl.addEventListener('click', () => {
   if (!unit || upgradeConfirmation.open || view.wave?.cash === undefined) return;
   pendingUpgradeUnitId = unit.id;
   renderUpgradeConfirmation(getLanguage());
-  upgradeConfirmation.show();
+  presentGamePanel({ kind: 'upgrade' });
   (confirmUpgradeControl.hidden ? cancelUpgradeControl : confirmUpgradeControl).focus();
 });
 playGamblerControl.addEventListener('click', playGamblerRound);
 closeGamblerControl.addEventListener('click', closeGamblerDialog);
-gamblerDialog.addEventListener('cancel', (event: Event) => {
-  event.preventDefault();
-  closeGamblerDialog();
-});
 gamblerDialog.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
-    event.preventDefault();
-    closeGamblerDialog();
-    return;
-  }
   if (event.key !== 'Tab') return;
   const focusable = [...gamblerDialog.querySelectorAll<HTMLButtonElement>('button:not([disabled]):not([hidden])')];
   const first = focusable[0];
@@ -4657,7 +4731,7 @@ gamblerDialog.addEventListener('keydown', (event: KeyboardEvent) => {
 confirmUpgradeControl.addEventListener('click', () => {
   const unitId = pendingUpgradeUnitId;
   pendingUpgradeUnitId = undefined;
-  upgradeConfirmation.close();
+  dismissGamePanel('upgrade', false);
   confirmUpgradeControl.hidden = false;
   if (!unitId) return;
   dispatch({
@@ -4670,16 +4744,7 @@ confirmUpgradeControl.addEventListener('click', () => {
 });
 cancelUpgradeControl.addEventListener('click', () => {
   pendingUpgradeUnitId = undefined;
-  upgradeConfirmation.close();
-  confirmUpgradeControl.hidden = false;
-  if (!upgradeControl.hidden && !upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
-  else canvas.focus({ preventScroll: true });
-});
-upgradeConfirmation.addEventListener('keydown', (event: KeyboardEvent) => {
-  if (event.key !== 'Escape') return;
-  event.preventDefault();
-  pendingUpgradeUnitId = undefined;
-  upgradeConfirmation.close();
+  dismissGamePanel('upgrade', false);
   confirmUpgradeControl.hidden = false;
   if (!upgradeControl.hidden && !upgradeControl.disabled) upgradeControl.focus({ preventScroll: true });
   else canvas.focus({ preventScroll: true });
@@ -4934,7 +4999,7 @@ canvas.addEventListener('pointerdown', (event: PointerEvent) => {
     const hudAction = gameHudPointerActionAt(point.x, point.y);
     if (hudAction && !minimapHit) {
       event.preventDefault();
-      if (hudAction === 'pause') pauseControl.click();
+      if (hudAction === 'pause') pauseBattleFromHud();
       return;
     }
   }
@@ -5077,6 +5142,8 @@ window.addEventListener('blur', cancelPointerGesture);
 subscribeLanguage(() => {
   renderStatus();
   renderCampaignMenu();
+  if (gameUiController.state.panels.some(({ kind }) => kind === 'options')) renderOptionsPanel();
+  if (gameUiController.activePanel?.kind === 'help') renderHelpPanel();
   renderFullscreenControl();
   renderFullscreenStatus();
   redraw();
@@ -5086,13 +5153,15 @@ subscribeLanguage(() => {
   renderExperimentArchiveStatus();
 });
 
-const testBattleStart = import.meta.env.DEV && new URLSearchParams(window.location.search).get('testBattle') === '1';
+const testRecruitStart = import.meta.env.DEV && new URLSearchParams(window.location.search).get('testRecruit') === '1';
 if (testBattleStart) {
   archivePanel.hidden = false;
   archivePanel.open = true;
   campaignPanel.hidden = false;
   showBattleScene();
-  if (assetLoadFailureNames.length === 0 && campaignProgressView) {
+  if (assetLoadFailureNames.length === 0 && testRecruitStart) {
+    await replaceSession(requestScenarioOpen(recruitConfirmationUiSampleContent.id, 'debug'));
+  } else if (assetLoadFailureNames.length === 0 && campaignProgressView) {
     await openCampaignStage(cowGulchLevelOneContent.id);
   }
 } else {

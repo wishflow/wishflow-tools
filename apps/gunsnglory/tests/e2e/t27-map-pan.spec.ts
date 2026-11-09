@@ -1,4 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
+import { continueFromPauseBoard, pauseFromHud } from './helpers';
 
 async function canvasPoint(
   page: import('@playwright/test').Page,
@@ -58,18 +59,18 @@ async function expectFullscreenControlOutsideMinimap(page: import('@playwright/t
   expect(overlapsMinimap, 'the fullscreen button does not cover the original HUD minimap').toBe(false);
 }
 
-async function openPausedOfficialBattle(page: import('@playwright/test').Page): Promise<void> {
+async function openOfficialBattleThroughPauseBoard(page: import('@playwright/test').Page): Promise<void> {
   await installAutoContinueCampaignWaveIntro(page);
   await page.goto('/?testBattle=1');
   await expect(page.getByTestId('game-canvas')).toBeVisible();
-  const pause = page.getByTestId('pause-toggle');
-  await expect(pause).toBeEnabled();
-  await pause.click();
-  await expect(pause).toHaveText('Resume battle');
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await continueFromPauseBoard(page);
+  await expect(page.getByTestId('pause-board')).toBeHidden();
 }
 
 test('desktop mouse pans the map and moves the minimap viewport frame with it', async ({ page }) => {
-  await openPausedOfficialBattle(page);
+  await openOfficialBattleThroughPauseBoard(page);
   const beforeWorldDrag = await canvasHash(page);
   const worldStart = await canvasPoint(page, 350, 300);
   const worldEnd = await canvasPoint(page, 350, 350);
@@ -119,7 +120,7 @@ test('mobile touch drags the minimap viewport', async ({ browser }) => {
   const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
   try {
-    await openPausedOfficialBattle(page);
+    await openOfficialBattleThroughPauseBoard(page);
     await expectFullscreenControlOutsideMinimap(page);
     const beforeWorldDrag = await canvasHash(page);
     const worldStart = await canvasPoint(page, 80, 100);

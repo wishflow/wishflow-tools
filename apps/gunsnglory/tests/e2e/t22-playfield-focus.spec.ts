@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { pauseFromHud } from './helpers';
 
 const viewports = [
   { name: 'desktop', viewport: { width: 1280, height: 720 }, hasTouch: false, isMobile: false },
@@ -7,109 +8,63 @@ const viewports = [
 ] as const;
 
 for (const profile of viewports) {
-  test(`keeps the Cow Gulch playfield visible through the opening dialogue on ${profile.name}`, async ({ browser }) => {
+  test(`keeps the game HUD and pause board inside the playfield on ${profile.name}`, async ({ browser }) => {
     const context = await browser.newContext({
       viewport: profile.viewport,
       ...(profile.hasTouch ? { hasTouch: true, isMobile: true } : {}),
     });
     const page = await context.newPage();
-    await page.goto('/?testBattle=1');
+    try {
+      await page.goto('/?testBattle=1');
+      const frame = page.locator('.game-frame');
+      const intro = page.getByTestId('campaign-wave-intro');
+      await expect(intro).toBeVisible();
+      await expect.poll(() => intro.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
 
-    const elementIsFullyVisible = async (selector: string) => {
-      const box = await page.locator(selector).boundingBox();
-      const viewport = page.viewportSize();
-      return Boolean(box && viewport
-        && box.x >= 0 && box.y >= 0
-        && box.x + box.width <= viewport.width
-        && box.y + box.height <= viewport.height);
-    };
-    const elementIsInsideGameFrame = async (selector: string) => page.evaluate((targetSelector) => {
-      const frame = document.querySelector<HTMLElement>('.game-frame');
-      const target = frame?.querySelector<HTMLElement>(targetSelector);
-      if (!frame || !target) return false;
-      const frameBox = frame.getBoundingClientRect();
-      const targetBox = target.getBoundingClientRect();
-      return targetBox.left >= frameBox.left
-        && targetBox.top >= frameBox.top
-        && targetBox.right <= frameBox.right
-        && targetBox.bottom <= frameBox.bottom;
-    }, selector);
+      const continueButton = intro.getByRole('button', { name: 'Continue' });
+      if (profile.hasTouch) await continueButton.tap();
+      else await continueButton.click();
+      await expect(intro).toBeHidden();
+      await expect(page.getByTestId('game-toolbar')).toBeVisible();
+      await expect(page.getByTestId('simulation-speed')).toBeVisible();
+      await expect(page.getByTestId('sound-toggle')).toHaveCount(0);
+      await expect(page.getByTestId('controls-help')).toHaveCount(0);
+      await expect(page.getByTestId('pause-sound-toggle')).toBeHidden();
+      await expect(page.getByTestId('pause-toggle')).toHaveCount(0);
+      await expect(page.getByTestId('campaign-menu-toggle')).toHaveCount(0);
 
-    await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
-    await expect.poll(() => elementIsFullyVisible('[data-testid="campaign-wave-intro"]')).toBe(true);
-    await expect.poll(() => elementIsInsideGameFrame('[data-testid="campaign-wave-intro"]')).toBe(true);
-
-    const continueButton = page.getByRole('button', { name: 'Continue' });
-    if (profile.hasTouch) await continueButton.tap();
-    else await continueButton.click();
-    await expect(page.getByRole('button', { name: 'Pause battle' })).toBeVisible();
-    await expect.poll(() => elementIsFullyVisible('[data-testid="game-canvas"]')).toBe(true);
-    await expect.poll(() => elementIsInsideGameFrame('[data-testid="game-toolbar"]')).toBe(true);
-    await expect.poll(() => elementIsInsideGameFrame('[data-testid="pause-toggle"]')).toBe(true);
-    await expect.poll(() => elementIsInsideGameFrame('[data-testid="simulation-speed"]')).toBe(true);
-    await expect.poll(() => elementIsInsideGameFrame('[data-testid="sound-toggle"]')).toBe(true);
-    if (profile.viewport.width <= 520) {
-      let toolbarLayoutLogged = false;
-      const readToolbarLayout = async () => {
-        const layout = await page.evaluate(() => {
-        const summary = document.querySelector<HTMLElement>('[data-testid="game-toolbar-toggle"]')?.getBoundingClientRect();
-        const actionsElement = document.querySelector<HTMLElement>('.game-toolbar-actions');
-        const actions = actionsElement?.getBoundingClientRect();
-        if (!summary || !actions || !actionsElement) return { overlaps: true, primaryControlsFit: false, canScroll: false };
-        const primaryControls = [
-          document.querySelector<HTMLElement>('[data-testid="pause-toggle"]'),
-          document.querySelector<HTMLElement>('[data-testid="campaign-menu-toggle"]'),
-          document.querySelector<HTMLElement>('[data-action="clear-selection"]'),
-        ];
+      await pauseFromHud(page, profile.hasTouch ? 'tap' : 'click');
+      const board = page.getByTestId('pause-board');
+      await expect(board).toBeVisible();
+      await expect(page.getByTestId('pause-sound-toggle')).toBeVisible();
+      await expect(frame).toHaveAttribute('data-active-overlay', 'pause-board');
+      const geometry = await page.evaluate(() => {
+        const frameElement = document.querySelector<HTMLElement>('.game-frame');
+        const boardElement = document.querySelector<HTMLElement>('[data-testid="pause-board"]');
+        if (!frameElement || !boardElement) throw new Error('Game frame or pause board is missing');
+        const bounds = (element: Element) => {
+          const rect = element.getBoundingClientRect();
+          return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+        };
         return {
-          overlaps: actions.left < summary.right && actions.right > summary.left
-            && actions.top < summary.bottom && actions.bottom > summary.top,
-          primaryControlsFit: primaryControls.every((button) => {
-            if (!button) return false;
-            const rect = button.getBoundingClientRect();
-            return rect.width > 0 && rect.left >= actions.left && rect.right <= actions.right;
-          }),
-          primaryControlBounds: primaryControls.map((button) => {
-            const rect = button?.getBoundingClientRect();
-            if (!rect || !button) return undefined;
-            const style = getComputedStyle(button);
-            return {
-              label: button.textContent?.trim(),
-              left: rect.left,
-              right: rect.right,
-              width: rect.width,
-              font: style.font,
-              paddingLeft: style.paddingLeft,
-              paddingRight: style.paddingRight,
-            };
-          }),
-          actionsBounds: { left: actions.left, right: actions.right, width: actions.width },
-          canScroll: actionsElement.scrollWidth > actionsElement.clientWidth,
+          frame: bounds(frameElement),
+          board: bounds(boardElement),
+          actions: [...boardElement.querySelectorAll('.pause-board-actions button')].map(bounds),
         };
       });
-        if (!layout.primaryControlsFit && !toolbarLayoutLogged) {
-          console.error(`[t22 toolbar geometry] ${JSON.stringify(layout)}`);
-          toolbarLayoutLogged = true;
-        }
-        return layout;
-      };
-      await expect.poll(readToolbarLayout).toMatchObject({
-        overlaps: false,
-        primaryControlsFit: true,
-        canScroll: true,
-      });
-
-      const toolbarToggle = page.getByTestId('game-toolbar-toggle');
-      await toolbarToggle.tap();
-      await expect(page.getByRole('button', { name: 'Pause battle' })).toBeHidden();
-      await toolbarToggle.tap();
-      await expect(page.getByRole('button', { name: 'Pause battle' })).toBeVisible();
+      expect(geometry.board.left).toBeGreaterThanOrEqual(geometry.frame.left);
+      expect(geometry.board.top).toBeGreaterThanOrEqual(geometry.frame.top);
+      expect(geometry.board.right).toBeLessThanOrEqual(geometry.frame.right);
+      expect(geometry.board.bottom).toBeLessThanOrEqual(geometry.frame.bottom);
+      expect(geometry.actions).toHaveLength(4);
+      for (const button of geometry.actions) {
+        expect(button.left).toBeGreaterThanOrEqual(geometry.board.left);
+        expect(button.top).toBeGreaterThanOrEqual(geometry.board.top);
+        expect(button.right).toBeLessThanOrEqual(geometry.board.right);
+        expect(button.bottom).toBeLessThanOrEqual(geometry.board.bottom);
+      }
+    } finally {
+      await context.close();
     }
-    const pauseButton = page.getByRole('button', { name: 'Pause battle' });
-    if (profile.hasTouch) await pauseButton.tap();
-    else await pauseButton.click();
-    await expect(page.getByRole('button', { name: 'Resume battle' })).toBeVisible();
-
-    await context.close();
   });
 }
