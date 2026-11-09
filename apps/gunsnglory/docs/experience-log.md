@@ -49,7 +49,7 @@
 
 ## 原版 UI 流程与状态管理
 
-**状态：OverlayHost 基础、APK 暂停板流程及主菜单/帮助/选项入口已实现；招募、地图雇佣、升级、Gambler、波次对白和结算的统一状态管理及整批视觉回归仍待完成。**此前的视觉与点击测试通过，但没有验证原版暂停、继续和退出顺序。本轮已按 APK 研究结果恢复暂停板状态迁移；后续仍需把各业务面板纳入同一 UI 流程。
+**状态：OverlayHost、APK 暂停板流程和主菜单/帮助/选项入口已实现，招募、地图雇佣、升级、Gambler、波次对白和结算也已接入同一活动面板管理；普通确认框/结算的原版美术适配、跨弹窗互斥验收及整批视觉回归仍待完成。**此前的视觉与点击测试通过，但没有验证原版暂停、继续和退出顺序。本轮已按 APK 研究结果恢复暂停板状态迁移；后续需完成剩余面板美术与逐类状态验收。
 
 ### 表现与代码证据
 
@@ -80,6 +80,12 @@
 - 浏览器定向验证：`t09-pause.spec.ts` 覆盖暂停、继续、后台往返、重开/退出取消与确认、选项返回、静音设置、中英文槽位及触屏 HUD 操作；`t01.spec.ts`、`t22-playfield-focus.spec.ts`、`t30-fullscreen.spec.ts` 验证遮罩命中、框内边界、木牌/确认框素材、固定全屏控件及全屏状态保持。另有 `t11-inspection.spec.ts`、`t23-campaign-wave-intros.spec.ts`、`t20-campaign-progress.spec.ts`、`t26-official-mexican.spec.ts`、`t27-map-pan.spec.ts`、`t28-apache-valley-formal.spec.ts`、`t31-free-play.spec.ts`、`t33-fort-kaboom-formal.spec.ts`、`t37-tech-town-formal.spec.ts` 的相关回归通过。全屏行为由 Playwright API mock 验证，本轮没有声称完成真实全屏验收。
 - 内置浏览器对本地代码进行了窗口模式、静音核对：实际点击 Canvas 暂停图标后显示木牌暂停菜单；重开进入游戏内羊皮纸确认框，Continue/Restart/Options/Close 与是/否按钮均位于游戏框内，辅助树可聚焦操作。该观察不替代后续发布 SHA 一致后的桌面/移动端视觉验收，也未进入真实全屏。
 - 两个验证遗漏已补成防回归要求：确认框 CSS 显式设置 `display:block` 会覆盖关闭 dialog 的浏览器默认隐藏状态；现改为仅 `[open]` 显示，并由取消流程断言确认框隐藏。另因模拟状态属性之前只在 OverlayHost 切换时更新，继续战斗后会短暂保留“暂停”；现由 `renderStatus()` 同步 UI 状态，测试断言实际运行状态。
+
+### 弹窗复查：宿主已完成，普通面板美术待修
+
+- 对照 DOM 结构和事件路由后，招募、地图雇佣、升级、Gambler、波次对白、暂停板/确认及结算均是 `.game-overlay-panels` 的成员，通过 `OverlayHost.open/close` 显示；应用源码没有 `showModal()`。OverlayHost 已提供单一活动面板和游戏框遮罩，因此本轮不重新实现这套架构。
+- 本地内置浏览器窗口模式、静音截图确认：波次对白使用原版羊皮纸与佩德罗素材；暂停确认使用 `gng_hud_2_textbox_large.png` 和原版是/否图标，位置在游戏框内且 FrameChrome 仍可见。这两类画面已有正确美术，不应重复重做。
+- 同一代码检查发现 `.recruit-confirmation` 仍是圆角深色通用面板，`.settlement-panel` 也使用深色圆角卡片；它们没有沿用 APK 文本框和木按钮，与主菜单、暂停板、对白风格不一致。旧 E2E 重点检查显示、功能与按钮点击，没有拿 APK 素材对照，也没有对所有面板统一断言活动 host 状态；后续只修这些尚存差异并补逐类断言。
 
 ### 主菜单、帮助与选项
 
