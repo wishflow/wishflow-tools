@@ -5,6 +5,7 @@ const mapViewport = calculateMapViewport(32, 24, 1024, 576);
 
 async function clickMapPoint(page: Page, mapX: number, mapY: number): Promise<void> {
   const canvas = page.getByTestId('game-canvas');
+  await canvas.scrollIntoViewIfNeeded();
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('Game canvas has no layout box');
   await page.mouse.click(

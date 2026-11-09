@@ -154,3 +154,4 @@
 - **防回归：**`t29-campaign-menu.spec.ts` 与 `t41-lab-workbench.spec.ts` 确认入口在 `.game-frame` 外、Options 只含 Help/Sound、local nav 锚点有效、桌面和 360px 窄屏无页面溢出、卡片标题避开装饰且中英文可读。`t30-fullscreen.spec.ts` 检查图像两态、可访问名称、键盘焦点、真实可点击状态；`t38-data-archives.spec.ts` 保留 Profile 替换确认、实验合并冲突及回放行为。受影响 9 份 Playwright spec 共 31 项通过；补充的 13 项检查有重叠，不重复累计。类型检查通过；完整应用检查待执行。
 - **浏览器验证边界：**内置浏览器在 `http://localhost:5191/` 实测桌面、390×844、中文和本地导航。对全屏按钮仅尝试一次真实 Fullscreen API，宿主拒绝并显示失败提示，因此没有真实原生全屏进出证据；Playwright mock 只证明状态图和状态处理正确。全程默认窗口模式、静音。
 - **兼容边界：**仅迁移呈现入口，不改公共 API、规则、IndexedDB、Profile/实验 JSON 或回放格式；导入导出语义和站点语言状态不变。
+- **地图点击 E2E 的视口假设：**完整检查首轮中 `t36-tech-town-gatling.spec.ts` 的地图雇佣用例失败。复现后确认，Playwright 点击位于页面下方的调试样本入口会滚动页面；helper 随后读取到画布 `y=-529.69`，却仍按画布矩形发出屏幕点击，坐标落在可视区外，因此状态显示“未选择单位”。修复为点击前 `scrollIntoViewIfNeeded()`，再读取画布矩形；定向用例通过。地图坐标测试在页面滚动后必须先把画布带回视口，不能直接把负的 bounding-box 坐标交给鼠标 API。
