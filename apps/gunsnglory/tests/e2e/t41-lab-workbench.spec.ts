@@ -47,18 +47,22 @@ test('uses parchment and wood materials with readable desktop and narrow-screen 
 
   const desktopGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();
-    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+    const heading = element.querySelector<HTMLElement>(':scope > h3')?.getBoundingClientRect();
+    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, headingTop: heading?.top };
   }));
   expect(desktopGeometry[0]!.x + desktopGeometry[0]!.width).toBeLessThanOrEqual(desktopGeometry[1]!.x + 1);
+  expect(desktopGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
 
   await page.setViewportSize({ width: 360, height: 800 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const narrowGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();
-    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+    const heading = element.querySelector<HTMLElement>(':scope > h3')?.getBoundingClientRect();
+    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, headingTop: heading?.top };
   }));
   expect(narrowGeometry[1]!.y).toBeGreaterThanOrEqual(narrowGeometry[0]!.y + narrowGeometry[0]!.height);
   expect(narrowGeometry.every((bounds) => bounds.x >= 0 && bounds.x + bounds.width <= 360)).toBe(true);
+  expect(narrowGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
   await expect(lab.getByRole('heading', { name: '实验室' })).toBeVisible();

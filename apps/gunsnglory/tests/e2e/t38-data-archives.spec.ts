@@ -87,6 +87,7 @@ test('profile archive export, confirmed replacement, cancellation, and invalid v
   const profileConfirmation = page.getByTestId('profile-import-confirmation');
   await expect(profileConfirmation).toBeVisible();
   expect(await profileConfirmation.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(false);
+  await expect(profileConfirmation).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
   await page.getByTestId('confirm-profile-import').click();
   await expect(page.getByTestId('profile-archive-status')).toHaveText('Profile archive imported and campaign progress refreshed.');
   const importedRecord = await readStoredProfile(page) as {
