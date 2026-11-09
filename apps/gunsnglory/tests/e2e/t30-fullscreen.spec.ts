@@ -266,10 +266,22 @@ test('uses original menu and confirmation artwork in the pause flow', async ({ p
   expect(await page.getByTestId('confirm-pause-icon').getAttribute('src')).toContain('gng_hud_2_yes.png');
   expect(await page.getByTestId('cancel-pause-icon').getAttribute('src')).toContain('gng_hud_2_no.png');
 
+  for (const testId of ['recruit-confirmation-art', 'map-hire-confirmation-art', 'upgrade-confirmation-art']) {
+    await expect(page.getByTestId(testId)).toHaveAttribute('src', /gng_hud_2_textbox_large\.png/);
+    await expect(page.getByTestId(testId)).toHaveJSProperty('naturalWidth', 384);
+  }
+  for (const testId of ['confirm-recruit-icon', 'confirm-map-hire-icon', 'confirm-upgrade-icon']) {
+    await expect(page.getByTestId(testId)).toHaveAttribute('src', /gng_hud_2_yes\.png/);
+    await expect(page.getByTestId(testId)).toHaveJSProperty('naturalWidth', 32);
+  }
+  for (const testId of ['cancel-recruit-icon', 'cancel-map-hire-icon', 'cancel-upgrade-icon']) {
+    await expect(page.getByTestId(testId)).toHaveAttribute('src', /gng_hud_2_no\.png/);
+    await expect(page.getByTestId(testId)).toHaveJSProperty('naturalWidth', 32);
+  }
   const recruitConfirm = page.locator('[data-action="confirm-recruit"]');
-  await recruitConfirm.evaluate((button: HTMLButtonElement) => { button.disabled = true; });
-  expect(await recruitConfirm.evaluate((button) => getComputedStyle(button).cursor)).toBe('default');
-  expect(await recruitConfirm.evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgb(48, 39, 31)');
+  expect(await recruitConfirm.evaluate((button) => getComputedStyle(button).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+  expect(await page.getByTestId('settlement-campaign-menu').evaluate((button) => getComputedStyle(button).backgroundImage))
+    .toContain('gng_startmenu_2_menu_1_button.png');
 });
 
 test('keeps the complete game composition 16:9 in fullscreen and keeps Usagi above the game only in window mode', async ({ browser }) => {

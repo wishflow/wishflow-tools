@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { calculateMapViewport } from '../../src/render/map-viewport';
 
 const cowGulchViewport = calculateMapViewport(17, 17, 1024, 576, 32);
@@ -74,4 +74,70 @@ export async function openSingleWaveSample(page: Page, input: 'click' | 'tap' = 
   const button = page.getByTestId('open-single-wave-sample');
   if (input === 'tap') await button.tap();
   else await button.click();
+}
+
+export async function expectInteractiveGameOverlay(
+  page: Page,
+  overlayId: string,
+  panelTestId: string,
+  actionSelector: string,
+): Promise<void> {
+  const host = page.getByTestId('overlay-host');
+  const panel = page.getByTestId(panelTestId);
+  const action = page.locator(actionSelector);
+  const frame = page.locator('.game-frame');
+  await frame.scrollIntoViewIfNeeded();
+  const frameBounds = await frame.boundingBox();
+  const panelBounds = await panel.boundingBox();
+  expect(frameBounds).not.toBeNull();
+  expect(panelBounds).not.toBeNull();
+  await expect(host).toHaveAttribute('data-active-overlay', overlayId);
+  await expect(panel).toBeVisible();
+  await expect(panel).toHaveAttribute('data-overlay-active', 'true');
+  await expect(host.locator('[data-overlay-active="true"]')).toHaveCount(1);
+  expect(await panel.evaluate((element) => element.closest('.game-frame') !== null)).toBe(true);
+  expect(panelBounds!.x).toBeGreaterThanOrEqual(frameBounds!.x);
+  expect(panelBounds!.y).toBeGreaterThanOrEqual(frameBounds!.y);
+  expect(panelBounds!.x + panelBounds!.width).toBeLessThanOrEqual(frameBounds!.x + frameBounds!.width + 1);
+  expect(panelBounds!.y + panelBounds!.height).toBeLessThanOrEqual(frameBounds!.y + frameBounds!.height + 1);
+
+  await expect(action).toBeVisible();
+  const actionIsTopmost = await action.evaluate((button: HTMLButtonElement) => {
+    const bounds = button.getBoundingClientRect();
+    return document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2)
+      ?.closest('button') === button;
+  });
+  expect(actionIsTopmost).toBe(true);
+
+  const canvas = page.getByTestId('game-canvas');
+  await canvas.evaluate((element: HTMLCanvasElement) => {
+    if (element.dataset.overlayPointerProbe === 'installed') return;
+    element.dataset.overlayPointerProbe = 'installed';
+    element.dataset.overlayPointerCount = '0';
+    element.addEventListener('pointerdown', () => {
+      element.dataset.overlayPointerCount = String(Number(element.dataset.overlayPointerCount) + 1);
+    });
+  });
+  const backdropPoint = { x: frameBounds!.x + 5, y: frameBounds!.y + 5 };
+  const backdropHit = await page.evaluate(({ x, y }) => {
+    const backdrop = document.querySelector('[data-testid="overlay-backdrop"]');
+    const target = document.elementFromPoint(x, y);
+    const frame = document.querySelector<HTMLElement>('.game-frame')?.getBoundingClientRect();
+    return {
+      isTopmost: target?.closest('[data-testid="overlay-backdrop"]') === backdrop,
+      target: target ? `${target.tagName}.${target.className}#${target.id}` : 'none',
+      frame: frame ? { x: frame.x, y: frame.y, width: frame.width, height: frame.height } : null,
+      backdrop: backdrop instanceof HTMLElement ? {
+        hidden: backdrop.hidden,
+        bounds: (() => {
+          const bounds = backdrop.getBoundingClientRect();
+          return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+        })(),
+      } : null,
+    };
+  }, backdropPoint);
+  expect(backdropHit.isTopmost, JSON.stringify(backdropHit)).toBe(true);
+  await page.mouse.click(backdropPoint.x, backdropPoint.y);
+  await expect(canvas).toHaveAttribute('data-overlay-pointer-count', '0');
+  await expect(host).toHaveAttribute('data-active-overlay', overlayId);
 }

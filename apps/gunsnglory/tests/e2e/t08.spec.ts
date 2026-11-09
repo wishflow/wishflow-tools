@@ -1,5 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
-import { openSingleWaveSample } from './helpers';
+import { expectInteractiveGameOverlay, openSingleWaveSample } from './helpers';
 
 async function clickMapCenter(page: import('@playwright/test').Page): Promise<void> {
   const canvas = page.getByTestId('game-canvas');
@@ -31,7 +31,7 @@ test('keeps the original level locked and upgrades the selected Gunslinger in th
   const confirmation = page.getByTestId('upgrade-confirmation');
   const details = page.getByTestId('upgrade-confirmation-details');
   await expect(confirmation).toBeVisible();
-  await expect.poll(() => confirmation.evaluate((dialog) => dialog.closest('.game-frame') !== null)).toBe(true);
+  await expectInteractiveGameOverlay(page, 'upgrade', 'upgrade-confirmation', '[data-action="cancel-upgrade"]');
   await expect(details).toContainText('Level 0 → 1');
   await expect(details).toContainText('Speed 1.95 cells/s (1500 fine/100ms) → 2.28 cells/s (1750 fine/100ms)');
   await expect(details).toContainText('Damage 140 → 140 base damage/shot');
@@ -88,7 +88,24 @@ test('upgrades a selected unit with touch on a phone-sized viewport', async ({ b
     const upgrade = page.getByRole('button', { name: 'Upgrade Gunslinger · $25' });
     await expect(upgrade).toBeVisible();
     await upgrade.tap();
-    await expect(page.getByTestId('upgrade-confirmation')).toBeVisible();
+    const confirmation = page.getByTestId('upgrade-confirmation');
+    await expect(confirmation).toBeVisible();
+    await expectInteractiveGameOverlay(page, 'upgrade', 'upgrade-confirmation', '[data-action="cancel-upgrade"]');
+    const detailsMetrics = await page.getByTestId('upgrade-confirmation-details').evaluate((element) => {
+      const style = getComputedStyle(element);
+      const bounds = element.getBoundingClientRect();
+      return {
+        scrollHeight: element.scrollHeight,
+        clientHeight: element.clientHeight,
+        clientWidth: element.clientWidth,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+        overflow: style.overflow,
+        text: element.textContent,
+      };
+    });
+    expect(detailsMetrics.scrollHeight, JSON.stringify(detailsMetrics)).toBeLessThanOrEqual(detailsMetrics.clientHeight);
     await page.getByRole('button', { name: 'Confirm upgrade' }).tap();
     await expect(page.getByTestId('wave-status')).toContainText('Cash $0');
     await expect(page.getByTestId('upgrade-status')).toContainText('upgraded to level 1 for $25');

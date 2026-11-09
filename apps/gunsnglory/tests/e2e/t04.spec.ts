@@ -1,5 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
-import { openSingleWaveSample } from './helpers';
+import { expectInteractiveGameOverlay, openSingleWaveSample } from './helpers';
 
 async function setFourTimesSpeed(page: import('@playwright/test').Page): Promise<void> {
   const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -25,6 +25,9 @@ test('shows a victory settlement and restarts the same sample from clean state',
   await page.getByRole('button', { name: 'Start one pioneer sample' }).click();
   const result = page.getByTestId('settlement');
   await expect(result).toBeVisible();
+  await expectInteractiveGameOverlay(page, 'settlement', 'settlement', '[data-action="restart-sample"]');
+  await expect(page.getByTestId('settlement-art')).toHaveJSProperty('naturalWidth', 384);
+  await expect(page.getByTestId('settlement-campaign-menu')).toHaveClass(/campaign-wood-button/);
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
   await expect(page.getByTestId('settlement-summary')).toContainText('Cash $66');
   await expect(page.getByTestId('settlement-score')).toHaveText('Displayed score: $50');

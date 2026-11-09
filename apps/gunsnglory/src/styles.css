@@ -1802,21 +1802,41 @@ body.gng-game-fullscreen .usagi-widget {
   z-index: var(--gng-layer-modal);
   top: 50%;
   left: 50%;
-  display: grid;
-  gap: 0.7rem;
-  width: min(88%, 30rem);
-  max-height: 90%;
-  overflow: auto;
-  padding: clamp(1rem, 4cqw, 1.75rem);
-  border: 1px solid rgba(255, 225, 168, 0.7);
-  border-radius: 0.8rem;
-  background: rgba(30, 25, 20, 0.96);
-  box-shadow: 0 0.8rem 3rem rgba(0, 0, 0, 0.65);
+  width: min(90%, 36rem);
+  max-height: calc(100% - 1rem);
+  aspect-ratio: 2 / 1;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  color: #493019;
+  background: transparent;
   transform: translate(-50%, -50%);
 }
 
 .settlement-panel[hidden] {
   display: none;
+}
+
+.settlement-panel-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.settlement-panel-content {
+  position: absolute;
+  z-index: 1;
+  inset: 9% 11% 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5%;
+  overflow: hidden;
+  text-align: center;
 }
 
 .settlement-panel h2,
@@ -1825,23 +1845,63 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .settlement-panel h2 {
-  color: #ffe1a8;
-  font-size: 1.2rem;
+  color: #543519;
+  font-size: clamp(9px, 1.55cqw, 16px);
+  font-weight: 800;
+  line-height: 1.1;
 }
 
 .settlement-panel p {
-  color: #f0d5a8;
-  line-height: 1.4;
+  color: #52371f;
+  font-size: clamp(7px, 1.1cqw, 11px);
+  font-weight: 650;
+  line-height: 1.15;
 }
 
 .settlement-panel [data-testid="settlement-outcome"] {
-  color: #e0a752;
-  font-size: 1.35rem;
+  color: #7a3d1d;
+  font-size: clamp(9px, 1.45cqw, 15px);
   font-weight: 800;
 }
 
-.recruit-confirmation button,
-.settlement-panel button {
+.settlement-actions {
+  display: flex;
+  flex: 0 0 21%;
+  justify-content: center;
+  gap: 2%;
+  width: 100%;
+  margin-top: auto;
+}
+
+.settlement-panel .campaign-wood-button {
+  width: min(46%, 13rem);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 0 4%;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 1px 1px rgba(31, 17, 8, 0.4));
+  font-size: clamp(7px, 1.12cqw, 12px) !important;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 2px #301b0e;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.settlement-panel .campaign-wood-button:hover:not(:disabled) {
+  filter: brightness(1.08) drop-shadow(0 1px 1px rgba(31, 17, 8, 0.4));
+}
+
+.settlement-panel .campaign-wood-button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 1px;
+}
+
+.gambler-confirmation button {
   min-height: 2.6rem;
   padding: 0.55rem 0.85rem;
   border: 1px solid rgba(237, 191, 117, 0.65);
@@ -1853,20 +1913,17 @@ body.gng-game-fullscreen .usagi-widget {
   cursor: pointer;
 }
 
-.recruit-confirmation button:hover:not(:disabled),
-.settlement-panel button:hover:not(:disabled) {
+.gambler-confirmation button:hover:not(:disabled) {
   background: #67482b;
 }
 
-.recruit-confirmation button:disabled,
-.settlement-panel button:disabled {
+.gambler-confirmation button:disabled {
   color: #a99a84;
   background: #30271f;
   cursor: default;
 }
 
-.recruit-confirmation button:focus-visible,
-.settlement-panel button:focus-visible {
+.gambler-confirmation button:focus-visible {
   outline: 2px solid #ffe28a;
   outline-offset: 3px;
 }
@@ -2482,6 +2539,123 @@ body.gng-game-fullscreen .usagi-widget {
   margin: 0 0 1rem;
   color: #f0d5a8;
   line-height: 1.5;
+}
+
+.game-original-confirmation {
+  width: min(84%, 36rem);
+  max-height: calc(100% - 1rem);
+  aspect-ratio: 2 / 1;
+  overflow: visible;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #493019;
+  background: transparent;
+  box-shadow: none;
+  filter: drop-shadow(0 0.35rem 0.9rem rgba(0, 0, 0, 0.55));
+}
+
+.game-original-confirmation[open] {
+  display: block;
+}
+
+.game-confirmation-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.game-confirmation-content {
+  position: absolute;
+  z-index: 1;
+  inset: 13% 11% 11%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2%;
+  overflow: hidden;
+  text-align: center;
+}
+
+.upgrade-confirmation .game-confirmation-content {
+  inset: 9% 11% 8%;
+}
+
+.game-original-confirmation h2 {
+  max-width: 100%;
+  margin: 0;
+  color: #543519;
+  font-size: clamp(9px, 1.55cqw, 16px);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.game-original-confirmation p {
+  width: 100%;
+  max-height: 42%;
+  margin: 0;
+  overflow: auto;
+  color: #52371f;
+  font-size: clamp(7px, 1.1cqw, 11px);
+  font-weight: 650;
+  line-height: 1.18;
+}
+
+.game-original-confirmation-actions {
+  display: flex;
+  flex: 0 0 28%;
+  align-items: center;
+  justify-content: center;
+  gap: 7%;
+  width: 100%;
+  margin-top: auto;
+}
+
+.game-original-confirmation-actions button {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  align-items: center;
+  gap: 0;
+  width: 31%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #493019;
+  background: transparent;
+  font-size: clamp(7px, 1.05cqw, 11px);
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 1px rgba(255, 245, 210, 0.6);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.game-original-confirmation-actions button img {
+  width: clamp(20px, 3.3cqw, 34px);
+  height: clamp(20px, 3.3cqw, 34px);
+  object-fit: contain;
+}
+
+.game-original-confirmation-actions button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.game-original-confirmation-actions button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.game-original-confirmation-actions button:focus-visible {
+  outline: 2px solid #73451e;
+  outline-offset: 1px;
 }
 
 .recruit-confirmation-actions {

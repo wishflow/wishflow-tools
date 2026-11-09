@@ -18,6 +18,7 @@ import { apacheValleyContent } from './content/apache-valley';
 import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
 import { techTownTrainTestContent } from './content/tech-town-train-sample';
 import { gamblerDialogAssets } from './content/gambler-dialog-assets';
+import { recruitConfirmationUiSampleContent } from './content/recruit-confirmation-ui-sample';
 import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
 import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages, techTownLevelFourCampaignContent } from './content/official-campaign';
 import { techTownWaveIntros } from './content/tech-town-wave-intros';
@@ -155,37 +156,51 @@ app.innerHTML = [
   '        </div>',
   '      </dialog>',
   '      <section class="settlement-panel" data-testid="settlement" data-overlay-id="settlement" role="dialog" aria-modal="false" aria-labelledby="settlement-title" aria-live="polite" tabindex="-1" hidden>',
-  '        <h2 id="settlement-title">Battle result</h2>',
-  '        <p data-testid="settlement-outcome"></p>',
-  '        <p data-testid="settlement-summary"></p>',
-  '        <p data-testid="settlement-score"></p>',
-  '        <p data-testid="settlement-high-score"></p>',
-  '        <p data-testid="settlement-save-status" role="status" aria-live="polite"></p>',
-  '        <button type="button" data-action="retry-settlement-save" hidden>Retry saving result</button>',
-  '        <button type="button" data-action="restart-sample">Restart this sample</button>',
-  '        <button type="button" data-testid="settlement-campaign-menu" data-action="return-campaign-from-settlement">Campaign map</button>',
+  '        <img class="settlement-panel-art" data-testid="settlement-art" alt="" aria-hidden="true">',
+  '        <div class="settlement-panel-content">',
+  '          <h2 id="settlement-title">Battle result</h2>',
+  '          <p data-testid="settlement-outcome"></p>',
+  '          <p data-testid="settlement-summary"></p>',
+  '          <p data-testid="settlement-score"></p>',
+  '          <p data-testid="settlement-high-score"></p>',
+  '          <p data-testid="settlement-save-status" role="status" aria-live="polite"></p>',
+  '          <div class="settlement-actions">',
+  '            <button type="button" class="campaign-wood-button" data-action="retry-settlement-save" hidden>Retry saving result</button>',
+  '            <button type="button" class="campaign-wood-button" data-action="restart-sample">Restart this sample</button>',
+  '            <button type="button" class="campaign-wood-button" data-testid="settlement-campaign-menu" data-action="return-campaign-from-settlement">Campaign map</button>',
+  '          </div>',
+  '        </div>',
   '      </section>',
-  '      <dialog class="recruit-confirmation" data-testid="recruit-confirmation" data-overlay-id="recruit" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
-  '        <h2 id="recruit-confirmation-title"></h2>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-action="confirm-recruit">Recruit</button>',
-  '          <button type="button" data-action="cancel-recruit">Cancel</button>',
+  '      <dialog class="recruit-confirmation game-original-confirmation" data-testid="recruit-confirmation" data-overlay-id="recruit" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
+  '        <img class="game-confirmation-art" data-testid="recruit-confirmation-art" alt="" aria-hidden="true">',
+  '        <div class="game-confirmation-content">',
+  '          <h2 id="recruit-confirmation-title"></h2>',
+  '          <div class="recruit-confirmation-actions game-original-confirmation-actions">',
+  '            <button type="button" data-action="confirm-recruit"><img data-testid="confirm-recruit-icon" alt="" aria-hidden="true"><span>Recruit</span></button>',
+  '            <button type="button" data-action="cancel-recruit"><img data-testid="cancel-recruit-icon" alt="" aria-hidden="true"><span>Cancel</span></button>',
+  '          </div>',
   '        </div>',
   '      </dialog>',
-  '      <dialog class="recruit-confirmation map-hire-confirmation" data-testid="map-hire-confirmation" data-overlay-id="map-hire" aria-modal="false" aria-labelledby="map-hire-confirmation-title">',
-  '        <h2 id="map-hire-confirmation-title" data-testid="map-hire-confirmation-title"></h2>',
-  '        <p data-testid="map-hire-confirmation-details" aria-live="polite"></p>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-testid="confirm-map-hire" data-action="confirm-map-hire">Hire</button>',
-  '          <button type="button" data-testid="cancel-map-hire" data-action="cancel-map-hire">Cancel</button>',
+  '      <dialog class="recruit-confirmation game-original-confirmation map-hire-confirmation" data-testid="map-hire-confirmation" data-overlay-id="map-hire" aria-modal="false" aria-labelledby="map-hire-confirmation-title">',
+  '        <img class="game-confirmation-art" data-testid="map-hire-confirmation-art" alt="" aria-hidden="true">',
+  '        <div class="game-confirmation-content">',
+  '          <h2 id="map-hire-confirmation-title" data-testid="map-hire-confirmation-title"></h2>',
+  '          <p data-testid="map-hire-confirmation-details" aria-live="polite"></p>',
+  '          <div class="recruit-confirmation-actions game-original-confirmation-actions">',
+  '            <button type="button" data-testid="confirm-map-hire" data-action="confirm-map-hire"><img data-testid="confirm-map-hire-icon" alt="" aria-hidden="true"><span>Hire</span></button>',
+  '            <button type="button" data-testid="cancel-map-hire" data-action="cancel-map-hire"><img data-testid="cancel-map-hire-icon" alt="" aria-hidden="true"><span>Cancel</span></button>',
+  '          </div>',
   '        </div>',
   '      </dialog>',
-  '      <dialog class="recruit-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" data-overlay-id="upgrade" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
-  '        <h2 id="upgrade-confirmation-title"></h2>',
-  '        <p data-testid="upgrade-confirmation-details"></p>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-action="confirm-upgrade">Confirm upgrade</button>',
-  '          <button type="button" data-action="cancel-upgrade">Cancel upgrade</button>',
+  '      <dialog class="recruit-confirmation game-original-confirmation upgrade-confirmation" data-testid="upgrade-confirmation" data-overlay-id="upgrade" aria-modal="false" aria-labelledby="upgrade-confirmation-title">',
+  '        <img class="game-confirmation-art" data-testid="upgrade-confirmation-art" alt="" aria-hidden="true">',
+  '        <div class="game-confirmation-content">',
+  '          <h2 id="upgrade-confirmation-title"></h2>',
+  '          <p data-testid="upgrade-confirmation-details"></p>',
+  '          <div class="recruit-confirmation-actions game-original-confirmation-actions">',
+  '            <button type="button" data-action="confirm-upgrade"><img data-testid="confirm-upgrade-icon" alt="" aria-hidden="true"><span>Confirm upgrade</span></button>',
+  '            <button type="button" data-action="cancel-upgrade"><img data-testid="cancel-upgrade-icon" alt="" aria-hidden="true"><span>Cancel upgrade</span></button>',
+  '          </div>',
   '        </div>',
   '      </dialog>',
   '      <dialog class="recruit-confirmation gambler-confirmation" data-testid="gambler-dialog" data-overlay-id="gambler" aria-modal="false" aria-labelledby="gambler-dialog-title" aria-describedby="gambler-dialog-message">',
@@ -433,18 +448,27 @@ const startUpgradeSampleButton = app.querySelector<HTMLButtonElement>('[data-act
 const returnCowGulchButton = app.querySelector<HTMLButtonElement>('[data-action="return-cow-gulch"]');
 const recruitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="recruit-confirmation"]');
 const recruitConfirmationTitleElement = app.querySelector<HTMLElement>('#recruit-confirmation-title');
+const recruitConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="recruit-confirmation-art"]');
 const confirmRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-recruit"]');
 const cancelRecruitButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-recruit"]');
+const confirmRecruitIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-recruit-icon"]');
+const cancelRecruitIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-recruit-icon"]');
 const upgradeConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="upgrade-confirmation"]');
 const upgradeConfirmationTitleElement = app.querySelector<HTMLElement>('#upgrade-confirmation-title');
 const upgradeConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="upgrade-confirmation-details"]');
+const upgradeConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="upgrade-confirmation-art"]');
 const confirmUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-upgrade"]');
 const cancelUpgradeButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-upgrade"]');
+const confirmUpgradeIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-upgrade-icon"]');
+const cancelUpgradeIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-upgrade-icon"]');
 const mapHireConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="map-hire-confirmation"]');
 const mapHireConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-title"]');
 const mapHireConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-details"]');
+const mapHireConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="map-hire-confirmation-art"]');
 const confirmMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-map-hire"]');
 const cancelMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-map-hire"]');
+const confirmMapHireIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-map-hire-icon"]');
+const cancelMapHireIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-map-hire-icon"]');
 const gamblerDialogElement = app.querySelector<HTMLDialogElement>('[data-testid="gambler-dialog"]');
 const gamblerDialogTitleElement = app.querySelector<HTMLElement>('#gambler-dialog-title');
 const gamblerDialogMessageElement = app.querySelector<HTMLElement>('[data-testid="gambler-message"]');
@@ -469,6 +493,7 @@ const retryCampaignWaveIntroVoiceButtonElement = app.querySelector<HTMLButtonEle
 const continueCampaignWaveIntroButtonElement = app.querySelector<HTMLButtonElement>('[data-action="continue-wave-intro"]');
 const startDefeatButton = app.querySelector<HTMLButtonElement>('[data-action="start-defeat-sample"]');
 const settlementPanelElement = app.querySelector<HTMLElement>('[data-testid="settlement"]');
+const settlementArtElement = app.querySelector<HTMLImageElement>('[data-testid="settlement-art"]');
 const settlementTitleElement = app.querySelector<HTMLElement>('#settlement-title');
 const settlementOutcomeElement = app.querySelector<HTMLElement>('[data-testid="settlement-outcome"]');
 const settlementSummaryElement = app.querySelector<HTMLElement>('[data-testid="settlement-summary"]');
@@ -517,11 +542,14 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !settlementCampaignMenuButtonElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !mapHireStatusElement
-  || !recruitButton || !recruitConfirmationElement
+  || !recruitButton || !recruitConfirmationElement || !recruitConfirmationArtElement
+  || !confirmRecruitIconElement || !cancelRecruitIconElement
   || !upgradeButton || !startUpgradeSampleButton || !returnCowGulchButton || !upgradeConfirmationElement
-  || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !confirmUpgradeButton || !cancelUpgradeButton
+  || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !upgradeConfirmationArtElement
+  || !confirmUpgradeButton || !cancelUpgradeButton || !confirmUpgradeIconElement || !cancelUpgradeIconElement
   || !mapHireConfirmationElement || !mapHireConfirmationTitleElement || !mapHireConfirmationDetailsElement
-  || !confirmMapHireButton || !cancelMapHireButton
+  || !mapHireConfirmationArtElement || !confirmMapHireButton || !cancelMapHireButton
+  || !confirmMapHireIconElement || !cancelMapHireIconElement
   || !gamblerDialogElement || !gamblerDialogTitleElement || !gamblerDialogMessageElement || !gamblerPortraitElement
   || !gamblerCashElement || !gamblerCardsElement || !gamblerResultElement || !playGamblerButton || !closeGamblerButton
   || !startGamblerSampleButton || !startGamblerLowCashSampleButton || !startTechTownTrainSampleButton
@@ -537,7 +565,7 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !simulationSpeedInputElement || !simulationSpeedValueElement
   || !soundPlaybackStatusElement || !retrySoundPlaybackButtonElement
   || !clearButton || !startWaveButton
-  || !startDefeatButton || !settlementPanelElement || !settlementTitleElement || !settlementOutcomeElement
+  || !startDefeatButton || !settlementPanelElement || !settlementArtElement || !settlementTitleElement || !settlementOutcomeElement
   || !settlementSummaryElement || !settlementScoreElement || !settlementHighScoreElement
   || !settlementSaveStatusElement || !retrySettlementButton || !restartButton
   || !exportReplayButton || !importReplayInput || !replayStatusElement
@@ -639,18 +667,27 @@ const startUpgradeSampleControl: HTMLButtonElement = startUpgradeSampleButton;
 const returnCowGulchControl: HTMLButtonElement = returnCowGulchButton;
 const recruitConfirmation: HTMLDialogElement = recruitConfirmationElement;
 const recruitConfirmationTitle: HTMLElement = recruitConfirmationTitleElement;
+const recruitConfirmationArt: HTMLImageElement = recruitConfirmationArtElement;
 const confirmRecruitControl: HTMLButtonElement = confirmRecruitButton;
 const cancelRecruitControl: HTMLButtonElement = cancelRecruitButton;
+const confirmRecruitIcon: HTMLImageElement = confirmRecruitIconElement;
+const cancelRecruitIcon: HTMLImageElement = cancelRecruitIconElement;
 const upgradeConfirmation: HTMLDialogElement = upgradeConfirmationElement;
 const upgradeConfirmationTitle: HTMLElement = upgradeConfirmationTitleElement;
 const upgradeConfirmationDetails: HTMLElement = upgradeConfirmationDetailsElement;
+const upgradeConfirmationArt: HTMLImageElement = upgradeConfirmationArtElement;
 const confirmUpgradeControl: HTMLButtonElement = confirmUpgradeButton;
 const cancelUpgradeControl: HTMLButtonElement = cancelUpgradeButton;
+const confirmUpgradeIcon: HTMLImageElement = confirmUpgradeIconElement;
+const cancelUpgradeIcon: HTMLImageElement = cancelUpgradeIconElement;
 const mapHireConfirmation: HTMLDialogElement = mapHireConfirmationElement;
 const mapHireConfirmationTitle: HTMLElement = mapHireConfirmationTitleElement;
 const mapHireConfirmationDetails: HTMLElement = mapHireConfirmationDetailsElement;
+const mapHireConfirmationArt: HTMLImageElement = mapHireConfirmationArtElement;
 const confirmMapHireControl: HTMLButtonElement = confirmMapHireButton;
 const cancelMapHireControl: HTMLButtonElement = cancelMapHireButton;
+const confirmMapHireIcon: HTMLImageElement = confirmMapHireIconElement;
+const cancelMapHireIcon: HTMLImageElement = cancelMapHireIconElement;
 const gamblerDialog: HTMLDialogElement = gamblerDialogElement;
 const gamblerDialogTitle: HTMLElement = gamblerDialogTitleElement;
 const gamblerDialogMessage: HTMLElement = gamblerDialogMessageElement;
@@ -677,6 +714,7 @@ const startDefeatControl: HTMLButtonElement = startDefeatButton;
 const clearSelectionControl: HTMLButtonElement = clearButton;
 const restartControl: HTMLButtonElement = restartButton;
 const settlementPanel: HTMLElement = settlementPanelElement;
+const settlementArt: HTMLImageElement = settlementArtElement;
 const settlementTitle: HTMLElement = settlementTitleElement;
 const settlementOutcome: HTMLElement = settlementOutcomeElement;
 const settlementSummary: HTMLElement = settlementSummaryElement;
@@ -1724,6 +1762,29 @@ function campaignPortraitAssetUrl(filename: string): string {
   return new URL(`${import.meta.env.BASE_URL}assets/${filename}`, window.location.href).toString();
 }
 
+function setConfirmationButtonLabel(button: HTMLButtonElement, label: string): void {
+  const labelElement = button.querySelector<HTMLElement>('span');
+  if (!labelElement) throw new Error(`Confirmation button is missing its label: ${button.dataset.action ?? 'unknown'}`);
+  if (labelElement.textContent !== label) labelElement.textContent = label;
+}
+
+function renderConfirmationArtwork(): void {
+  const textbox = campaignPortraitAssetUrl('gng_hud_2_textbox_large.png');
+  const confirmIconUrl = campaignPortraitAssetUrl('gng_hud_2_yes.png');
+  const cancelIconUrl = campaignMenuAssetUrl('gng_hud_2_no.png');
+  const woodButton = campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png');
+  for (const art of [recruitConfirmationArt, mapHireConfirmationArt, upgradeConfirmationArt, settlementArt]) {
+    if (art.src !== textbox) art.src = textbox;
+  }
+  for (const icon of [confirmRecruitIcon, confirmMapHireIcon, confirmUpgradeIcon]) {
+    if (icon.src !== confirmIconUrl) icon.src = confirmIconUrl;
+  }
+  for (const icon of [cancelRecruitIcon, cancelMapHireIcon, cancelUpgradeIcon]) {
+    if (icon.src !== cancelIconUrl) icon.src = cancelIconUrl;
+  }
+  settlementPanel.style.setProperty('--campaign-menu-button-background', `url("${woodButton}")`);
+}
+
 function campaignMenuRegionScreen(): string {
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
@@ -2595,6 +2656,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
+  renderConfirmationArtwork();
   renderCampaign();
   if (!campaignMenuScreen.hidden) renderCampaignMenu();
   renderCampaignWaveIntro();
@@ -2843,10 +2905,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   } else {
     upgradeControl.textContent = messages.upgradeButton(upgradeUnitName, 0);
   }
-  confirmRecruitControl.textContent = messages.confirmRecruitButton;
-  cancelRecruitControl.textContent = messages.cancelRecruitButton;
-  confirmUpgradeControl.textContent = messages.confirmUpgradeButton;
-  cancelUpgradeControl.textContent = messages.cancelUpgradeButton;
+  setConfirmationButtonLabel(confirmRecruitControl, messages.confirmRecruitButton);
+  setConfirmationButtonLabel(cancelRecruitControl, messages.cancelRecruitButton);
+  setConfirmationButtonLabel(confirmUpgradeControl, messages.confirmUpgradeButton);
+  setConfirmationButtonLabel(cancelUpgradeControl, messages.cancelUpgradeButton);
   if (pendingRecruitmentType) {
     const pendingRecruit = view.recruitPool.find((entry) => entry.unitType === pendingRecruitmentType);
     if (pendingRecruit) recruitConfirmationTitle.textContent = messages.confirmRecruit(
@@ -3176,12 +3238,12 @@ function renderMapHireConfirmation(language: keyof typeof languageMessages): voi
   mapHireConfirmationDetails.textContent = affordable
     ? ''
     : languageMessages[language].mapHireInsufficientCash(price, cash);
-  confirmMapHireControl.textContent = languageMessages[language].confirmMapHire;
+  setConfirmationButtonLabel(confirmMapHireControl, languageMessages[language].confirmMapHire);
   confirmMapHireControl.hidden = !affordable;
   confirmMapHireControl.disabled = !affordable;
-  cancelMapHireControl.textContent = affordable
+  setConfirmationButtonLabel(cancelMapHireControl, affordable
     ? languageMessages[language].cancelMapHire
-    : languageMessages[language].closeMapHire;
+    : languageMessages[language].closeMapHire);
 }
 
 function closeMapHireConfirmation(): void {
@@ -5237,12 +5299,15 @@ subscribeLanguage(() => {
 });
 
 const testBattleStart = import.meta.env.DEV && new URLSearchParams(window.location.search).get('testBattle') === '1';
+const testRecruitStart = import.meta.env.DEV && new URLSearchParams(window.location.search).get('testRecruit') === '1';
 if (testBattleStart) {
   archivePanel.hidden = false;
   archivePanel.open = true;
   campaignPanel.hidden = false;
   showBattleScene();
-  if (assetLoadFailureNames.length === 0 && campaignProgressView) {
+  if (assetLoadFailureNames.length === 0 && testRecruitStart) {
+    await replaceSession(requestScenarioOpen(recruitConfirmationUiSampleContent.id, 'debug'));
+  } else if (assetLoadFailureNames.length === 0 && campaignProgressView) {
     await openCampaignStage(cowGulchLevelOneContent.id);
   }
 } else {

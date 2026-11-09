@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { continueFromPauseBoard, pauseFromHud, setPauseBoardSound } from './helpers';
+import { continueFromPauseBoard, expectInteractiveGameOverlay, pauseFromHud, setPauseBoardSound } from './helpers';
 
 async function setDocumentHidden(page: import('@playwright/test').Page, hidden: boolean): Promise<void> {
   await page.evaluate((isHidden) => {
@@ -21,6 +21,7 @@ test('pauses the official campaign for first and next-wave introductions until c
   const introText = page.getByTestId('campaign-wave-intro-text');
   const continueButton = page.getByRole('button', { name: 'Continue' });
   await expect(intro).toBeVisible();
+  await expectInteractiveGameOverlay(page, 'wave-intro', 'campaign-wave-intro', '[data-action="continue-wave-intro"]');
   await expect(intro).toHaveAttribute('data-wave-number', '1');
   await expect(introText).toHaveText(
     "Hey, Boss! I'm Pedro, your faithful compañero! Grab this Desperado and move him to the canyon! Then, he can ambush the settlers and take their gold! Hee hee hee!",
@@ -248,6 +249,7 @@ test('keeps campaign dialogue and its touch target inside the game frame without
     const intro = page.getByTestId('campaign-wave-intro');
     const frame = page.locator('.game-frame');
     await expect(intro).toBeVisible();
+    await expectInteractiveGameOverlay(page, 'wave-intro', 'campaign-wave-intro', '[data-action="continue-wave-intro"]');
 
     const assertFits = async (buttonName: string) => {
       const continueButton = intro.getByRole('button', { name: buttonName, exact: true });

@@ -137,6 +137,7 @@ export class OverlayHost {
 
   private readonly stopOverlayClickThrough = (event: MouseEvent): void => {
     event.stopPropagation();
+    if (event.target === this.backdrop && this.activePanel) this.focusPanel(this.activePanel);
   };
 
   private readonly keepTabWithinGameOverlay = (event: KeyboardEvent): void => {

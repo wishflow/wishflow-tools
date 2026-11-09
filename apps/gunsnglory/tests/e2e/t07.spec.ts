@@ -1,5 +1,5 @@
 import { expect, installAutoContinueCampaignWaveIntro, test } from './auto-continue-fixtures';
-import { clickCanvasPoint, cowGulchMarkerPoint, tapCanvasPoint } from './helpers';
+import { clickCanvasPoint, cowGulchMarkerPoint, expectInteractiveGameOverlay, tapCanvasPoint } from './helpers';
 
 test('formal Cow Gulch only offers map hires for selected sleeping units', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -21,6 +21,7 @@ test('formal Cow Gulch only offers map hires for selected sleeping units', async
   await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
   await expect(page.getByTestId('map-hire-confirmation-details')).toHaveText('Not enough cash: need $75, have $65.');
   await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
+  await expectInteractiveGameOverlay(page, 'map-hire', 'map-hire-confirmation', '[data-testid="cancel-map-hire"]');
   await expect(page.getByTestId('map-hire-status')).toBeEmpty();
   await expect(page.getByTestId('recruit-pool-status')).toHaveText('Recruit pool: empty');
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
@@ -62,6 +63,7 @@ test('formal map-hire state is available through touch on a phone-sized viewport
     await tapCanvasPoint(page, cowGulchMarkerPoint(3, 6));
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired');
     await expect(hireDialog).toBeVisible();
+    await expectInteractiveGameOverlay(page, 'map-hire', 'map-hire-confirmation', '[data-testid="cancel-map-hire"]');
     await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
     await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
     await page.getByTestId('cancel-map-hire').click();
