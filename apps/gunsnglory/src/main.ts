@@ -131,8 +131,15 @@ const confirmPauseIconElement = app.querySelector<HTMLImageElement>('[data-testi
 const cancelPauseIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-pause-icon"]');
 const campaignPanelElement = app.querySelector<HTMLElement>('.campaign-panel');
 const archivePanelElement = app.querySelector<HTMLDetailsElement>('[data-testid="archive-panel"]');
-const archivePanelContentElement = app.querySelector<HTMLElement>('.archive-panel-content');
-const experimentPanelElement = app.querySelector<HTMLElement>('.experiment-panel');
+const labWorkbenchElement = app.querySelector<HTMLElement>('[data-testid="lab-workbench"]');
+const profileArchiveStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-archive-status"]');
+const exportProfileArchiveButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="export-profile-archive"]');
+const importProfileArchiveInputElement = app.querySelector<HTMLInputElement>('[data-testid="import-profile-archive"]');
+const profileImportConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="profile-import-confirmation"]');
+const profileImportConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="profile-import-confirmation-title"]');
+const profileImportConfirmationMessageElement = app.querySelector<HTMLElement>('[data-testid="profile-import-confirmation-message"]');
+const confirmProfileImportButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="confirm-profile-import"]');
+const cancelProfileImportButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="cancel-profile-import"]');
 const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
 const pendingSettlementStatusElement = app.querySelector<HTMLElement>('[data-testid="pending-settlement-status"]');
 const retryPendingSettlementButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="retry-pending-settlement"]');
@@ -269,7 +276,10 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !pauseConfirmationElement || !gameOptionsPanelElement || !gameHelpPanelElement
   || !pauseConfirmationArtElement || !pauseConfirmationTitleElement || !pauseConfirmationMessageElement
   || !confirmPauseActionButtonElement || !cancelPauseActionButtonElement || !confirmPauseIconElement || !cancelPauseIconElement
-  || !campaignPanelElement || !archivePanelElement || !archivePanelContentElement || !experimentPanelElement
+  || !campaignPanelElement || !archivePanelElement || !labWorkbenchElement
+  || !profileArchiveStatusElement || !exportProfileArchiveButtonElement || !importProfileArchiveInputElement
+  || !profileImportConfirmationElement || !profileImportConfirmationTitleElement || !profileImportConfirmationMessageElement
+  || !confirmProfileImportButtonElement || !cancelProfileImportButtonElement
   || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
   || !statusElement || !sceneOpenErrorElement || !sceneOpenErrorMessageElement
@@ -397,8 +407,15 @@ const inspectionEnemies: HTMLElement = inspectionEnemiesElement;
 const inspectionRoute: HTMLElement = inspectionRouteElement;
 const simulationSpeedInput: HTMLInputElement = simulationSpeedInputElement;
 const simulationSpeedValue: HTMLOutputElement = simulationSpeedValueElement;
-const archivePanelContent: HTMLElement = archivePanelContentElement;
-const experimentPanel: HTMLElement = experimentPanelElement;
+const labWorkbench: HTMLElement = labWorkbenchElement;
+const profileArchiveStatus: HTMLElement = profileArchiveStatusElement;
+const exportProfileArchiveButton: HTMLButtonElement = exportProfileArchiveButtonElement;
+const importProfileArchiveInput: HTMLInputElement = importProfileArchiveInputElement;
+const profileImportConfirmation: HTMLDialogElement = profileImportConfirmationElement;
+const profileImportConfirmationTitle: HTMLElement = profileImportConfirmationTitleElement;
+const profileImportConfirmationMessage: HTMLElement = profileImportConfirmationMessageElement;
+const confirmProfileImportControl: HTMLButtonElement = confirmProfileImportButtonElement;
+const cancelProfileImportControl: HTMLButtonElement = cancelProfileImportButtonElement;
 const soundPlaybackStatus: HTMLElement = soundPlaybackStatusElement;
 const retrySoundPlaybackButton: HTMLButtonElement = retrySoundPlaybackButtonElement;
 const startWaveControl: HTMLButtonElement = startWaveButton;
@@ -573,14 +590,14 @@ let profile: ProfileView = {
   completedScenarios: [],
   highScores: {},
 };
-type ProfileArchiveStatusKey = 'exported' | 'imported' | 'imported-refresh-failed' | 'cancelled' | 'invalid' | 'unsupported' | 'failed';
+type ProfileArchiveStatusKey = 'exported' | 'imported' | 'imported-refresh-failed' | 'cancelled' | 'invalid' | 'unsupported' | 'failed' | 'pause-required';
 let profileArchiveStatusKey: ProfileArchiveStatusKey | undefined;
 let pendingProfileImport: ReturnType<typeof parseProfileArchive> | undefined;
 let profileArchiveBusy = false;
 let campaignProgressView: CampaignProgressView | undefined;
 type CampaignMenuScreenState = 'home' | 'regions' | 'levels' | 'overview' | 'difficulty';
 let freePlayDifficulty: GameDifficulty = 'easy';
-type PauseConfirmationAction = 'restart' | 'close' | 'profile-import';
+type PauseConfirmationAction = 'restart' | 'close';
 let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'difficulty-locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
 let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
@@ -1209,20 +1226,14 @@ const campaignMenuCopy = {
       'Tap the HUD pause icon to open the pause board. Continue resumes; Restart and Close ask for confirmation.',
       'Pause the battle before using single-step or inspection tools.',
     ],
-    optionsTitle: 'OPTIONS', speed: 'Simulation speed',
-    speedHelp: 'Adjust the test speed from 0.25× to 4×.',
-    originalSoundNote: 'Sound stays on the main menu and pause board. The settings below are web-only tools.',
+    optionsTitle: 'OPTIONS',
     optionsHelp: 'HOW TO PLAY',
-    experimentTools: 'EXPERIMENTS AND DATA',
-    experimentToolsHelp: 'Compare numeric schemes and import or export experiment records. These tools do not change campaign progress.',
     profileArchiveTitle: 'Profile archive',
-    profileArchiveHelp: 'Export or replace this browser’s campaign profile. This file is separate from experiment data and battle replays.',
-    exportProfileArchive: 'Export profile', importProfileArchive: 'Import profile',
     confirmProfileImport: 'Replace the current profile with this file? Existing campaign progress and settings will be replaced.',
     profileArchiveStatus: {
       exported: 'Profile archive downloaded.', imported: 'Profile archive imported and campaign progress refreshed.',
       'imported-refresh-failed': 'Profile archive was imported, but the campaign view could not be refreshed. Reload the profile before starting a battle.',
-      cancelled: 'Profile import cancelled.', invalid: 'Profile file is invalid or damaged.',
+      cancelled: 'Profile import cancelled.', 'pause-required': 'Pause the battle before replacing the profile.', invalid: 'Profile file is invalid or damaged.',
       unsupported: 'Profile file format or version is not supported.', failed: 'Profile could not be imported or exported.',
     },
     selectRegion: (name: string) => `Select ${name}`,
@@ -1270,20 +1281,14 @@ const campaignMenuCopy = {
       '点击 HUD 暂停图标打开暂停板；“继续”恢复战斗，“重新开始”和“关闭”会先确认。',
       '使用单步或状态检查工具前先暂停战斗。',
     ],
-    optionsTitle: '选项', speed: '模拟速度',
-    speedHelp: '测试速度可在 0.25× 到 4× 之间调整。',
-    originalSoundNote: '音效开关位于主菜单和暂停板；以下内容是网页扩展工具。',
+    optionsTitle: '选项',
     optionsHelp: '游戏说明',
-    experimentTools: '实验与数据',
-    experimentToolsHelp: '比较数值方案，并导入或导出实验记录。这些工具不会改变战役进度。',
     profileArchiveTitle: '档案文件',
-    profileArchiveHelp: '导出或替换此浏览器中的战役档案。档案文件独立于实验数据和战局回放。',
-    exportProfileArchive: '导出档案', importProfileArchive: '导入档案',
     confirmProfileImport: '要用此文件替换当前档案吗？现有战役进度和设置将被替换。',
     profileArchiveStatus: {
       exported: '档案文件已下载。', imported: '档案文件已导入，战役进度已刷新。',
       'imported-refresh-failed': '档案文件已导入，但无法刷新战役界面。开始战斗前请重新加载档案。',
-      cancelled: '已取消档案导入。', invalid: '档案文件无效或已损坏。',
+      cancelled: '已取消档案导入。', 'pause-required': '替换档案前请先暂停战斗。', invalid: '档案文件无效或已损坏。',
       unsupported: '不支持此档案文件格式或版本。', failed: '档案文件导入或导出失败。',
     },
     selectRegion: (name: string) => `选择${name}`,
@@ -1309,7 +1314,7 @@ async function exportProfileArchive(): Promise<void> {
   if (profileArchiveBusy) return;
   profileArchiveBusy = true;
   profileArchiveStatusKey = undefined;
-  updateOptionsPanelStatus();
+  updateLabArchiveStatus();
   try {
     const profileData = await progress.exportProfileData();
     downloadJsonFile(serializeProfileArchive(profileData), 'gunsnglory-profile.json');
@@ -1318,35 +1323,72 @@ async function exportProfileArchive(): Promise<void> {
     profileArchiveStatusKey = 'failed';
   } finally {
     profileArchiveBusy = false;
-    updateOptionsPanelStatus();
+    updateLabArchiveStatus();
   }
+}
+
+function canImportProfileArchiveNow(): boolean {
+  if (gameUiController.state.route.screen !== 'battle') return true;
+  const activePanel = gameUiController.activePanel?.kind;
+  return view.paused && (activePanel === 'pause' || activePanel === 'options' || activePanel === 'help');
+}
+
+function renderProfileImportConfirmation(): void {
+  const language = getLanguage();
+  const copy = campaignMenuCopy[language];
+  profileImportConfirmationTitle.textContent = copy.profileArchiveTitle;
+  profileImportConfirmationMessage.textContent = copy.confirmProfileImport;
+  confirmProfileImportControl.textContent = copy.confirmAction;
+  cancelProfileImportControl.textContent = copy.cancelAction;
+  if (!profileImportConfirmation.open) profileImportConfirmation.showModal();
+  confirmProfileImportControl.focus({ preventScroll: true });
 }
 
 async function importProfileArchiveFile(file?: File): Promise<void> {
   if (!file || profileArchiveBusy) return;
+  if (!canImportProfileArchiveNow()) {
+    profileArchiveStatusKey = 'pause-required';
+    updateLabArchiveStatus();
+    return;
+  }
   profileArchiveBusy = true;
   profileArchiveStatusKey = undefined;
-  updateOptionsPanelStatus();
+  updateLabArchiveStatus();
   try {
     pendingProfileImport = parseProfileArchive(await file.text());
-    renderPauseConfirmation(getLanguage(), 'profile-import');
-    presentGamePanel({ kind: 'confirmation', action: 'profile-import' });
+    renderProfileImportConfirmation();
   } catch (error) {
     if (error instanceof ProfileArchiveError) {
       profileArchiveStatusKey = error.code === 'unsupported-format' || error.code === 'unsupported-version' ? 'unsupported' : 'invalid';
     } else {
       profileArchiveStatusKey = 'failed';
     }
-    updateOptionsPanelStatus();
+    updateLabArchiveStatus();
   } finally {
     profileArchiveBusy = false;
-    updateOptionsPanelStatus();
+    updateLabArchiveStatus();
   }
+}
+
+function cancelProfileImportConfirmation(): void {
+  if (!profileImportConfirmation.open) return;
+  profileImportConfirmation.close();
+  pendingProfileImport = undefined;
+  profileArchiveStatusKey = 'cancelled';
+  updateLabArchiveStatus();
+}
+
+function confirmProfileImportConfirmation(): void {
+  if (!profileImportConfirmation.open) return;
+  profileImportConfirmation.close();
+  const profileData = pendingProfileImport;
+  pendingProfileImport = undefined;
+  if (profileData) void replaceImportedProfile(profileData);
 }
 
 async function replaceImportedProfile(profileData: ReturnType<typeof parseProfileArchive>): Promise<void> {
   profileArchiveBusy = true;
-  updateOptionsPanelStatus();
+  updateLabArchiveStatus();
   let statusKey: ProfileArchiveStatusKey = 'failed';
   try {
     profile = await progress.replaceProfileData(profileData);
@@ -1375,7 +1417,7 @@ async function replaceImportedProfile(profileData: ReturnType<typeof parseProfil
   } finally {
     profileArchiveBusy = false;
     profileArchiveStatusKey = statusKey;
-    updateOptionsPanelStatus();
+    updateLabArchiveStatus();
     renderStatus();
   }
 }
@@ -1754,44 +1796,39 @@ function campaignMenuDifficultyScreen(): string {
   </section>`;
 }
 
-function restoreExperimentPanelToArchive(): void {
-  if (experimentPanel.parentElement !== archivePanelContent) archivePanelContent.append(experimentPanel);
-}
-
 function configureCampaignMenuAssets(): void {
+  const buttonBackground = `url("${campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png')}")`;
+  const parchmentBackground = `url("${campaignPortraitAssetUrl('gng_hud_2_textbox_large.png')}")`;
   gameFrame.style.setProperty('--campaign-menu-background', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_0_sky.png')}")`);
   gameFrame.style.setProperty('--campaign-menu-cloud-left', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_1.png')}")`);
   gameFrame.style.setProperty('--campaign-menu-cloud-right', `url("${campaignMenuAssetUrl('gng_startmenu_0_bg_1_cloud_2.png')}")`);
-  gameFrame.style.setProperty('--campaign-menu-button-background', `url("${campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png')}")`);
+  gameFrame.style.setProperty('--campaign-menu-button-background', buttonBackground);
   gameFrame.style.setProperty('--campaign-menu-card-background', `url("${campaignMenuAssetUrl('gng_highscore_0_box.png')}")`);
-  gameFrame.style.setProperty('--campaign-menu-textbox-background', `url("${campaignPortraitAssetUrl('gng_hud_2_textbox_large.png')}")`);
-  gameFrame.style.setProperty('--campaign-difficulty-background', `url("${campaignPortraitAssetUrl('gng_hud_2_textbox_large.png')}")`);
+  gameFrame.style.setProperty('--campaign-menu-textbox-background', parchmentBackground);
+  gameFrame.style.setProperty('--campaign-difficulty-background', parchmentBackground);
+  document.documentElement.style.setProperty('--campaign-menu-button-background', buttonBackground);
+  document.documentElement.style.setProperty('--lab-parchment-background', parchmentBackground);
+  document.documentElement.style.setProperty('--gng-fullscreen-button-sprite', `url("${new URL(`${import.meta.env.BASE_URL}assets/gng-frame-fullscreen-states.png`, window.location.href)}")`);
 }
 
 function renderOptionsPanel(): void {
-  restoreExperimentPanelToArchive();
   configureCampaignMenuAssets();
-  const copy = campaignMenuCopy[getLanguage()];
+  const language = getLanguage();
+  const copy = campaignMenuCopy[language];
+  const soundMessages = languageMessages[language];
   gameOptionsPanel.innerHTML = renderOptionsPanelView({
     backLabel: copy.back,
     backImage: campaignMenuAssetUrl('left_button.png'),
     title: copy.optionsTitle,
     helpLabel: copy.optionsHelp,
-    soundNote: copy.originalSoundNote,
-    speedLabel: copy.speed,
-    speedHelp: copy.speedHelp,
-    speed: simulationSpeed,
-    experimentsTitle: copy.experimentTools,
-    experimentsHelp: copy.experimentToolsHelp,
-    profileTitle: copy.profileArchiveTitle,
-    profileHelp: copy.profileArchiveHelp,
-    exportProfile: copy.exportProfileArchive,
-    importProfile: copy.importProfileArchive,
-    profileStatus: profileArchiveStatusKey ? copy.profileArchiveStatus[profileArchiveStatusKey] : '',
-    settingsStatus: settingsStatusKey ? languageMessages[getLanguage()][settingsStatusKey] : '',
-    profileBusy: profileArchiveBusy,
+    soundLabel: copy.sound,
+    soundOnLabel: soundMessages.soundOn,
+    soundOffLabel: soundMessages.soundOff,
+    soundImage: campaignMenuAssetUrl(soundEnabled
+      ? 'gng_startmenu_2_menu_2_sound_on.png'
+      : 'gng_startmenu_2_menu_2_sound_off.png'),
+    soundEnabled,
   });
-  gameOptionsPanel.querySelector<HTMLElement>('[data-testid="campaign-experiment-host"]')?.append(experimentPanel);
 }
 
 function renderHelpPanel(): void {
@@ -1826,24 +1863,17 @@ function setHelpPageBy(delta: -1 | 1): void {
   gameHelpPanel.querySelector<HTMLButtonElement>(`[data-testid="${focusTestId}"]`)?.focus({ preventScroll: true });
 }
 
-function updateOptionsPanelStatus(): void {
+function updateLabArchiveStatus(): void {
   const copy = campaignMenuCopy[getLanguage()];
-  const archiveStatus = gameOptionsPanel.querySelector<HTMLElement>('[data-testid="profile-archive-status"]');
-  const settingsStatus = gameOptionsPanel.querySelector<HTMLElement>('[data-testid="menu-settings-status"]');
-  const exportButton = gameOptionsPanel.querySelector<HTMLButtonElement>('[data-testid="export-profile-archive"]');
-  const importInput = gameOptionsPanel.querySelector<HTMLInputElement>('[data-testid="import-profile-archive"]');
-  const speedInput = gameOptionsPanel.querySelector<HTMLInputElement>('[data-testid="menu-simulation-speed"]');
-  const speedOutput = gameOptionsPanel.querySelector<HTMLOutputElement>('[data-testid="menu-simulation-speed-value"]');
-  if (archiveStatus) archiveStatus.textContent = profileArchiveStatusKey ? copy.profileArchiveStatus[profileArchiveStatusKey] : '';
-  if (settingsStatus) settingsStatus.textContent = settingsStatusKey ? languageMessages[getLanguage()][settingsStatusKey] : '';
-  if (exportButton) exportButton.disabled = profileArchiveBusy;
-  if (importInput) importInput.disabled = profileArchiveBusy;
-  if (speedInput) speedInput.value = String(simulationSpeed);
-  if (speedOutput) speedOutput.textContent = `${simulationSpeed}×`;
+  const cannotImportDuringBattle = !canImportProfileArchiveNow();
+  profileArchiveStatus.textContent = profileArchiveStatusKey
+    ? copy.profileArchiveStatus[profileArchiveStatusKey]
+    : cannotImportDuringBattle ? copy.profileArchiveStatus['pause-required'] : '';
+  exportProfileArchiveButton.disabled = profileArchiveBusy;
+  importProfileArchiveInput.disabled = profileArchiveBusy || cannotImportDuringBattle;
 }
 
 function renderCampaignMenu(): void {
-  restoreExperimentPanelToArchive();
   const language = getLanguage();
   const copy = campaignMenuCopy[language];
   const route = gameUiController.state.route;
@@ -1884,7 +1914,6 @@ function renderCampaignMenu(): void {
 }
 
 function showBattleScene(): void {
-  restoreExperimentPanelToArchive();
   const mode = session.startRecord.mode === 'free' ? 'free-play' : 'campaign';
   const route = gameUiController.state.route;
   if (route.screen !== 'battle' || route.scenarioId !== session.startRecord.scenarioId || route.mode !== mode) {
@@ -2632,7 +2661,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : messages.noRoute);
   const settingsText = settingsStatusKey ? messages[settingsStatusKey] : '';
   if (settingsStatus.textContent !== settingsText) settingsStatus.textContent = settingsText;
-  updateOptionsPanelStatus();
+  updateLabArchiveStatus();
   simulationSpeedInput.disabled = !campaignProgressView && !profileLoadFailed;
   retrySettingsButton.hidden = settingsStatusKey !== 'save-failed' || profileLoadFailed;
   retrySettingsButton.textContent = messages.retrySettings;
@@ -3329,6 +3358,7 @@ async function loadGameAssets(): Promise<string[]> {
 
 const [failedAssets] = await Promise.all([loadGameAssets(), loadSettings()]);
 assetLoadFailureNames = failedAssets;
+configureCampaignMenuAssets();
 redraw(true);
 renderStatus();
 
@@ -3547,8 +3577,33 @@ function playAudioAsset(sound: string): void {
   playSound(sound, audio);
 }
 
+function syncSoundToggleState(): void {
+  const language = getLanguage();
+  const soundMessages = languageMessages[language];
+  const soundLabel = campaignMenuCopy[language].sound;
+  const stateLabel = soundEnabled ? soundMessages.soundOn : soundMessages.soundOff;
+  const image = campaignMenuAssetUrl(soundEnabled
+    ? 'gng_startmenu_2_menu_2_sound_on.png'
+    : 'gng_startmenu_2_menu_2_sound_off.png');
+  for (const button of gameFrame.querySelectorAll<HTMLButtonElement>(
+    '[data-action="menu-toggle-sound"], [data-action="pause-toggle-sound"], [data-action="options-toggle-sound"]',
+  )) {
+    button.setAttribute('aria-pressed', String(soundEnabled));
+    button.setAttribute('aria-label', button.dataset.action === 'options-toggle-sound' ? stateLabel : `${soundLabel}: ${stateLabel}`);
+    button.title = stateLabel;
+    const icon = button.querySelector<HTMLImageElement>('img');
+    if (icon) {
+      icon.alt = stateLabel;
+      if (icon.getAttribute('src') !== image) icon.src = image;
+    }
+    const state = button.querySelector<HTMLElement>('[data-testid="options-sound-state"]');
+    if (state) state.textContent = stateLabel;
+  }
+}
+
 function setSoundEnabled(enabled: boolean): void {
   soundEnabled = enabled;
+  syncSoundToggleState();
   if (enabled) {
     playBackgroundMusic();
     return;
@@ -4372,13 +4427,7 @@ function openPauseConfirmation(action: PauseConfirmationAction): void {
 }
 
 function cancelPauseConfirmation(): void {
-  if (gameUiController.activePanel?.kind === 'confirmation'
-    && gameUiController.activePanel.action === 'profile-import') {
-    pendingProfileImport = undefined;
-    profileArchiveStatusKey = 'cancelled';
-  }
   dismissGamePanel('confirmation');
-  updateOptionsPanelStatus();
   renderPauseBoard(getLanguage());
 }
 
@@ -4386,13 +4435,6 @@ function confirmPauseAction(): void {
   const activePanel = gameUiController.activePanel;
   if (activePanel?.kind !== 'confirmation') return;
   const { action } = activePanel;
-  if (action === 'profile-import') {
-    const profileData = pendingProfileImport;
-    pendingProfileImport = undefined;
-    dismissGamePanel('confirmation');
-    if (profileData) void replaceImportedProfile(profileData);
-    return;
-  }
   dismissGamePanel('confirmation', false);
   if (action === 'restart') {
     const { scenarioId, mode, difficulty } = session.startRecord;
@@ -4591,35 +4633,43 @@ overlayHostRoot.addEventListener('click', (event: MouseEvent) => {
   switch (button.dataset.action) {
     case 'options-back': dismissGamePanel('options'); break;
     case 'options-help': renderHelpPanel(); presentGamePanel({ kind: 'help', page: 0 }); break;
+    case 'options-toggle-sound':
+      setSoundEnabled(!soundEnabled);
+      saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
+      renderStatus();
+      break;
     case 'help-back': dismissGamePanel('help'); break;
     case 'help-previous': setHelpPageBy(-1); break;
     case 'help-next': setHelpPageBy(1); break;
-    case 'export-profile-archive': void exportProfileArchive(); break;
     default: break;
   }
 });
 
-gameOptionsPanel.addEventListener('input', (event: Event) => {
+labWorkbench.addEventListener('click', (event: MouseEvent) => {
   const target = event.target;
-  if (!(target instanceof HTMLInputElement) || target.dataset.testid !== 'menu-simulation-speed') return;
-  simulationSpeed = normalizeSimulationSpeed(Number(target.value));
-  simulationSpeedInput.value = String(simulationSpeed);
-  simulationSpeedValue.textContent = `${simulationSpeed}×`;
-  const output = gameOptionsPanel.querySelector<HTMLOutputElement>('[data-testid="menu-simulation-speed-value"]');
-  if (output) output.textContent = `${simulationSpeed}×`;
-  settingsStatusKey = undefined;
+  if (!(target instanceof Element)) return;
+  const button = target.closest<HTMLButtonElement>('button[data-action]');
+  if (!button || button.disabled) return;
+  switch (button.dataset.action) {
+    case 'export-profile-archive': void exportProfileArchive(); break;
+    case 'confirm-profile-import': confirmProfileImportConfirmation(); break;
+    case 'cancel-profile-import': cancelProfileImportConfirmation(); break;
+    default: break;
+  }
 });
 
-gameOptionsPanel.addEventListener('change', (event: Event) => {
+labWorkbench.addEventListener('change', (event: Event) => {
   const target = event.target;
   if (target instanceof HTMLInputElement && target.dataset.testid === 'import-profile-archive') {
     const file = target.files?.[0];
     target.value = '';
     void importProfileArchiveFile(file);
-    return;
   }
-  if (!(target instanceof HTMLInputElement) || target.dataset.testid !== 'menu-simulation-speed') return;
-  saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
+});
+
+profileImportConfirmation.addEventListener('cancel', (event: Event) => {
+  event.preventDefault();
+  cancelProfileImportConfirmation();
 });
 
 function enterCampaignMenu(): void {

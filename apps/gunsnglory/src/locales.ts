@@ -4,6 +4,22 @@ export const messages = {
     en: 'Play Guns’n’Glory’s original campaign in your browser.',
     zh: '在浏览器中体验《Guns’n’Glory》原版战役。',
   },
+  'FIELD LAB': { en: 'FIELD LAB', zh: '实验工作台' },
+  'Experiment laboratory': { en: 'Experiment laboratory', zh: '实验室' },
+  'Run experiments and manage profiles, reports, and replays outside the game screen.': {
+    en: 'Run experiments and manage profiles, reports, and replays outside the game screen.',
+    zh: '在游戏画框外运行实验，并管理档案、报告和战局回放。',
+  },
+  'Experiment setup': { en: 'Experiment setup', zh: '实验设置' },
+  'Data archive': { en: 'Data archive', zh: '数据档案' },
+  'Profile archive': { en: 'Profile archive', zh: '战役档案' },
+  'Export or replace this browser’s campaign profile. This file is separate from experiment data and battle replays.': {
+    en: 'Export or replace this browser’s campaign profile. This file is separate from experiment data and battle replays.',
+    zh: '导出或替换此浏览器中的战役档案；该文件独立于实验数据和战局回放。',
+  },
+  'Export profile': { en: 'Export profile', zh: '导出档案' },
+  'Import profile': { en: 'Import profile', zh: '导入档案' },
+  'Experiment archive': { en: 'Experiment archive', zh: '实验数据档案' },
   'Cow Gulch': { en: 'Cow Gulch', zh: '牛溪谷' },
   'Campaign progress': { en: 'Campaign progress', zh: '战役进度' },
   'Cow Gulch and Apache Valley are the first two official levels. Earlier sample results remain separate from campaign progress.': {

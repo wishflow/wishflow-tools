@@ -147,7 +147,7 @@ test('shows the original wanted poster and saved score when a level has a high s
   await expect(page.locator('.campaign-overview-no-score')).toHaveCount(0);
 });
 
-test('routes Help, Options, and experiment tools through the in-game menu', async ({ page }) => {
+test('keeps Options to Help and Sound while the experiment lab stays outside the game frame', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
 
@@ -201,7 +201,14 @@ test('routes Help, Options, and experiment tools through the in-game menu', asyn
   await expect(page.locator('.campaign-options-card > h2')).toHaveCSS('color', 'rgb(86, 57, 25)');
   await expect(optionsPanel.locator('.campaign-options-card')).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
   await expect(optionsPanel.getByTestId('options-help')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
-  await expect(page.getByTestId('menu-simulation-speed')).toBeVisible();
+  await expect(optionsPanel.getByTestId('options-sound-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await expect(optionsPanel.getByTestId('options-sound-toggle')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
+  await expect(optionsPanel.getByTestId('export-profile-archive')).toHaveCount(0);
+  await expect(optionsPanel.getByTestId('simulation-speed')).toHaveCount(0);
+  await expect(optionsPanel.getByTestId('experiment-cash-reward')).toHaveCount(0);
+  await expect(optionsPanel.getByTestId('export-experiment-archive')).toHaveCount(0);
+  await expect(optionsPanel.getByTestId('export-replay')).toHaveCount(0);
+  await expect(optionsPanel.locator('button[data-action]')).toHaveCount(3);
   const menuSound = page.getByTestId('menu-sound');
   await expect(menuSound).toBeVisible();
   const menuSoundCovered = await menuSound.evaluate((button) => {
@@ -211,17 +218,29 @@ test('routes Help, Options, and experiment tools through the in-game menu', asyn
   });
   expect(menuSoundCovered).toBe(true);
   await expect(page.getByTestId('options-help')).toBeVisible();
-  const experimentTools = page.getByTestId('menu-experiment-tools');
-  await expect(experimentTools).toBeVisible();
-  await expect(experimentTools.locator('summary')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
-  await experimentTools.locator('summary').click();
+  const lab = page.getByTestId('lab-workbench');
+  await expect(lab).toBeVisible();
+  expect(await lab.evaluate((section) => section.closest('.game-frame') === null)).toBe(true);
+  await expect(lab.locator('.lab-card')).toHaveCount(2);
+  await expect(lab.locator('.lab-card').first()).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+  await expect(lab.getByTestId('compare-schemes')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
+  await expect(lab.getByTestId('export-experiment-archive')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
+  const speed = page.getByTestId('simulation-speed');
+  await expect(speed).toBeVisible();
+  const experimentPanel = page.locator('.experiment-panel');
+  await expect(experimentPanel).toBeVisible();
+  expect(await experimentPanel.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(false);
   await expect(page.getByTestId('export-profile-archive')).toBeVisible();
   await expect(page.getByTestId('import-profile-archive')).toBeVisible();
-  await expect(page.getByTestId('export-profile-archive')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
-  await expect(page.getByTestId('compare-schemes')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(page.getByTestId('experiment-cash-reward')).toBeVisible();
   await expect(page.getByTestId('export-experiment-archive')).toBeVisible();
   await expect(page.getByTestId('import-experiment-archive')).toBeVisible();
+  const optionsSound = optionsPanel.getByTestId('options-sound-toggle');
+  await optionsSound.click();
+  await expect(optionsSound).toHaveAttribute('aria-pressed', 'false');
+  await expect(menuSound).toHaveAttribute('aria-pressed', 'false');
+  await optionsSound.click();
+  await expect(optionsSound).toHaveAttribute('aria-pressed', 'true');
 
   await page.getByTestId('options-help').click();
   await expect(helpPanel).toBeVisible();
@@ -290,7 +309,7 @@ test('Escape returns through menu panels and opens the original pause board from
   await page.getByTestId('pause-continue').click();
 });
 
-test('keeps menu options usable at narrow phone width and persists sound and speed with the site language', async ({ page }) => {
+test('keeps Options and the external simulation speed usable on a narrow phone with the site language', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto('/');
   await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
@@ -318,23 +337,25 @@ test('keeps menu options usable at narrow phone width and persists sound and spe
 
   await page.getByTestId('menu-options').click();
   await expect(page.getByTestId('menu-sound')).toBeVisible();
-  const speed = page.getByTestId('menu-simulation-speed');
-  await speed.evaluate((element) => {
-    const slider = element as HTMLInputElement;
-    slider.value = '2.5';
-    slider.dispatchEvent(new Event('input', { bubbles: true }));
-    slider.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  await expect(page.getByTestId('menu-simulation-speed-value')).toHaveText('2.5×');
-  await expect(page.getByTestId('menu-settings-status')).toHaveText('Settings saved.');
+  await expect(page.getByTestId('options-sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await page.getByTestId('game-options').getByTestId('campaign-menu-back').click();
+  const speed = page.getByTestId('simulation-speed');
+  await speed.scrollIntoViewIfNeeded();
+  await speed.focus();
+  await speed.press('Home');
+  for (let index = 0; index < 9; index += 1) await speed.press('ArrowRight');
+  await expect(speed).toHaveValue('2.5');
+  await expect(page.getByTestId('simulation-speed-value')).toHaveText('2.5×');
+  await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
 
   await page.reload();
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
   await expect(page.getByTestId('menu-start')).toHaveText('开始');
   await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('simulation-speed')).toHaveValue('2.5');
+  await expect(page.getByTestId('simulation-speed-value')).toHaveText('2.5×');
   await page.getByTestId('menu-options').click();
-  await expect(page.getByTestId('menu-simulation-speed')).toHaveValue('2.5');
-  await expect(page.getByTestId('menu-simulation-speed-value')).toHaveText('2.5×');
+  await expect(page.getByTestId('options-sound-toggle')).toHaveAttribute('aria-pressed', 'false');
   await expect(page.getByTestId('menu-sound')).toBeVisible();
   await expect(page.getByTestId('campaign-menu-back')).toHaveAttribute('aria-label', '返回');
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false);

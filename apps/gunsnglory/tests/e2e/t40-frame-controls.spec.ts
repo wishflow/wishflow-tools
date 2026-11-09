@@ -218,7 +218,7 @@ test('keeps battle controls frame-local and the pause Options path stable on des
 
       await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
       await expect(optionsPanel).toContainText('选项');
-      await expect(optionsPanel).toContainText('模拟速度');
+      await expect(optionsPanel.getByTestId('simulation-speed')).toHaveCount(0);
       const chineseOptionsFit = await optionsPanel.locator('.campaign-options-card').evaluate((card) => {
         const frame = card.closest('.game-frame')?.getBoundingClientRect();
         const bounds = card.getBoundingClientRect();
@@ -255,10 +255,13 @@ test('keeps battle controls frame-local and the pause Options path stable on des
       await page.getByRole('button', { name: '切换界面语言为英文' }).click();
       await expect(optionsPanel).toContainText('OPTIONS');
 
-      const speed = page.getByTestId('menu-simulation-speed');
+      const speed = page.getByTestId('simulation-speed');
+      await expect(speed).toBeVisible();
       await speed.focus();
       await speed.press('End');
-      await expect(page.getByTestId('menu-simulation-speed-value')).toHaveText('4×');
+      await expect(page.getByTestId('simulation-speed-value')).toHaveText('4×');
+      await expect(optionsPanel.getByTestId('options-help')).toBeVisible();
+      await optionsPanel.getByTestId('campaign-menu-back').scrollIntoViewIfNeeded();
       await optionsPanel.getByTestId('campaign-menu-back').click();
 
       await expect(optionsPanel).toBeHidden();

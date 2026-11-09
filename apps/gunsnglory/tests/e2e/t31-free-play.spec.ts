@@ -45,7 +45,10 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   await page.getByTestId('menu-sound').click();
   await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
   await page.getByTestId('menu-options').click();
-  await expect(page.getByTestId('menu-settings-status')).toHaveText('Settings saved.');
+  await expect(page.getByTestId('options-sound-toggle')).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('settings-status')).toHaveText('Settings saved.');
+  await expect(page.getByTestId('game-options').getByTestId('options-help')).toBeVisible();
+  await expect(page.getByTestId('game-options').getByTestId('options-sound-toggle')).toBeVisible();
   await page.getByTestId('game-options').getByTestId('campaign-menu-back').click();
   const profileBefore = await readSavedProfile(page);
 

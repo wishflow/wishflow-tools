@@ -56,10 +56,14 @@ async function installSilence(page: import('@playwright/test').Page): Promise<vo
 
 test('profile archive export, confirmed replacement, cancellation, and invalid version handling', async ({ page }) => {
   await page.goto('/');
+  const options = page.getByTestId('game-options');
   await page.getByTestId('menu-options').click();
-  await page.getByTestId('menu-experiment-tools').locator('summary').click();
+  await expect(options).toBeVisible();
+  await expect(options.getByTestId('export-profile-archive')).toHaveCount(0);
+  await options.getByTestId('campaign-menu-back').click();
   const exportButton = page.getByTestId('export-profile-archive');
   await expect(exportButton).toBeVisible();
+  expect(await exportButton.evaluate((button) => button.closest('.game-frame') !== null)).toBe(false);
   const downloadPromise = page.waitForEvent('download');
   await exportButton.click();
   const download = await downloadPromise;
@@ -80,10 +84,11 @@ test('profile archive export, confirmed replacement, cancellation, and invalid v
     name: 'profile.json', mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify({ format: 'gunsnglory-profile', formatVersion: 1, profile })),
   });
-  const profileConfirmation = page.getByTestId('pause-confirmation');
+  const profileConfirmation = page.getByTestId('profile-import-confirmation');
   await expect(profileConfirmation).toBeVisible();
-  expect(await profileConfirmation.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
-  await page.getByTestId('confirm-pause-action').click();
+  expect(await profileConfirmation.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(false);
+  await expect(profileConfirmation).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+  await page.getByTestId('confirm-profile-import').click();
   await expect(page.getByTestId('profile-archive-status')).toHaveText('Profile archive imported and campaign progress refreshed.');
   const importedRecord = await readStoredProfile(page) as {
     revision: number;
@@ -106,7 +111,7 @@ test('profile archive export, confirmed replacement, cancellation, and invalid v
     })),
   });
   await expect(profileConfirmation).toBeVisible();
-  await page.getByTestId('cancel-pause-action').click();
+  await page.getByTestId('cancel-profile-import').click();
   await expect(page.getByTestId('profile-archive-status')).toHaveText('Profile import cancelled.');
   expect(await readStoredProfile(page)).toEqual(snapshot);
 
@@ -129,7 +134,7 @@ test('profile archive export, confirmed replacement, cancellation, and invalid v
     buffer: Buffer.from(JSON.stringify({ format: 'gunsnglory-profile', formatVersion: 1, profile: { ...profile, highScores: {} } })),
   });
   await expect(profileConfirmation).toBeVisible();
-  await page.getByTestId('confirm-pause-action').click();
+  await page.getByTestId('confirm-profile-import').click();
   await expect(page.getByTestId('profile-archive-status')).toHaveText('Profile could not be imported or exported.');
   expect(await readStoredProfile(page)).toEqual(snapshot);
 
