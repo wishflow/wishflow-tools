@@ -263,6 +263,7 @@ const openComparisonButtonElement = app.querySelector<HTMLButtonElement>('[data-
 const loadMoreComparisonsButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="load-more-comparisons"]');
 const savedComparisonStatusElement = app.querySelector<HTMLElement>('[data-testid="saved-comparison-status"]');
 const experimentReportElement = app.querySelector<HTMLElement>('[data-testid="experiment-report"]');
+const experimentEmptyStateElement = app.querySelector<HTMLElement>('[data-testid="experiment-empty-state"]');
 const experimentReportSummaryElement = app.querySelector<HTMLElement>('[data-testid="experiment-report-summary"]');
 if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElement || !overlayBackdropElement
   || !campaignMenuScreenElement || !campaignMenuViewElement
@@ -322,7 +323,7 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !experimentStatusElement || !experimentReportElement || !experimentReportSummaryElement
   || !exportExperimentArchiveButtonElement || !importExperimentArchiveInputElement || !experimentArchiveStatusElement
   || !saveComparisonButtonElement || !savedComparisonSelectElement || !openComparisonButtonElement
-  || !loadMoreComparisonsButtonElement || !savedComparisonStatusElement) {
+  || !loadMoreComparisonsButtonElement || !savedComparisonStatusElement || !experimentEmptyStateElement) {
   throw new Error('Game controls are missing');
 }
 const canvas: HTMLCanvasElement = canvasElement;
@@ -496,6 +497,7 @@ const openComparisonControl: HTMLButtonElement = openComparisonButtonElement;
 const loadMoreComparisonsControl: HTMLButtonElement = loadMoreComparisonsButtonElement;
 const savedComparisonStatus: HTMLElement = savedComparisonStatusElement;
 const experimentReport: HTMLElement = experimentReportElement;
+const experimentEmptyState: HTMLElement = experimentEmptyStateElement;
 const experimentReportSummary: HTMLElement = experimentReportSummaryElement;
 
 const game = createBrowserGame();
@@ -2261,6 +2263,7 @@ function renderExperimentComparison(): void {
     set(side, 'escaped', metric(values.averageEscapedEnemies));
   }
   experimentReport.hidden = false;
+  experimentEmptyState.hidden = true;
   saveComparisonControl.disabled = latestExperimentPersisted;
 }
 

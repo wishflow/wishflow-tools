@@ -40,7 +40,7 @@ test('uses parchment and wood materials with readable desktop and narrow-screen 
   await page.goto('/');
   const lab = page.getByTestId('lab-workbench');
   const cards = lab.locator('.lab-card');
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(3);
   await expect(cards.first()).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
   await expect(lab.getByTestId('compare-schemes')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(lab.getByTestId('import-profile-archive')).toHaveCSS('color', 'rgb(255, 248, 230)');
@@ -87,6 +87,7 @@ test('uses parchment and wood materials with readable desktop and narrow-screen 
     return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height, headingTop: heading?.top };
   }));
   expect(narrowGeometry[1]!.y).toBeGreaterThanOrEqual(narrowGeometry[0]!.y + narrowGeometry[0]!.height);
+  expect(narrowGeometry[2]!.y).toBeGreaterThanOrEqual(narrowGeometry[1]!.y + narrowGeometry[1]!.height);
   expect(narrowGeometry.every((bounds) => bounds.x >= 0 && bounds.x + bounds.width <= 390)).toBe(true);
   expect(narrowGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
 
@@ -94,4 +95,39 @@ test('uses parchment and wood materials with readable desktop and narrow-screen 
   await expect(lab.getByRole('heading', { name: '实验室' })).toBeVisible();
   await expect(lab.getByTestId('compare-schemes')).toContainText('开始比较');
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('keeps comparison inputs, live results, saved reports, and archives in separate sections', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto('/');
+
+  const lab = page.getByTestId('lab-workbench');
+  const setup = lab.locator('.lab-setup-card');
+  const archive = lab.locator('.lab-data-card');
+  const emptyState = lab.getByTestId('experiment-empty-state');
+  const report = lab.getByTestId('experiment-report');
+
+  await expect(setup.getByTestId('experiment-cash-reward')).toBeVisible();
+  await expect(setup.getByTestId('experiment-sample-count')).toBeVisible();
+  await expect(setup.getByTestId('compare-schemes')).toBeVisible();
+  await expect(emptyState).toBeVisible();
+  await expect(report).toBeHidden();
+  await expect(archive.getByTestId('saved-comparison-select')).toBeVisible();
+  await expect(archive.getByTestId('export-profile-archive')).toBeVisible();
+  await expect(archive.getByTestId('export-experiment-archive')).toBeVisible();
+  await expect(archive.getByTestId('import-replay')).toBeAttached();
+
+  await setup.getByTestId('experiment-sample-count').selectOption('1');
+  await setup.getByTestId('compare-schemes').click();
+  await expect(report).toBeVisible({ timeout: 20_000 });
+  await expect(emptyState).toBeHidden();
+  const summary = await report.getByTestId('experiment-report-summary').textContent();
+  await expect(report.getByTestId('save-comparison')).toBeEnabled();
+
+  await report.getByTestId('save-comparison').click();
+  await expect(archive.getByTestId('saved-comparison-status')).toContainText('saved');
+  await expect(archive.getByTestId('saved-comparison-select')).not.toHaveValue('');
+  await archive.getByTestId('open-comparison').click();
+  await expect(archive.getByTestId('saved-comparison-status')).toContainText('opened');
+  await expect(report.getByTestId('experiment-report-summary')).toHaveText(summary ?? '');
 });

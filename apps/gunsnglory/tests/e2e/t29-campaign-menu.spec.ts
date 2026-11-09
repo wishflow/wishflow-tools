@@ -221,7 +221,7 @@ test('keeps Options to Help and Sound while the experiment lab stays outside the
   const lab = page.getByTestId('lab-workbench');
   await expect(lab).toBeVisible();
   expect(await lab.evaluate((section) => section.closest('.game-frame') === null)).toBe(true);
-  await expect(lab.locator('.lab-card')).toHaveCount(2);
+  await expect(lab.locator('.lab-card')).toHaveCount(3);
   await expect(lab.locator('.lab-card').first()).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
   await expect(lab.getByTestId('compare-schemes')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(lab.getByTestId('export-experiment-archive')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
