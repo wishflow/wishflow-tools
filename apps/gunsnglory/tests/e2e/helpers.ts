@@ -45,6 +45,31 @@ export async function continueFromPauseBoard(page: Page, input: 'click' | 'tap' 
   else await button.click();
 }
 
+export async function setSimulationSpeedFromPauseOptions(page: Page, value: number): Promise<void> {
+  const pauseBoard = page.getByTestId('pause-board');
+  if (!(await pauseBoard.isVisible())) await pauseFromHud(page);
+  await expect(pauseBoard).toBeVisible();
+  await pauseBoard.getByTestId('pause-options').click();
+
+  const optionsPanel = page.getByTestId('game-options');
+  const speed = optionsPanel.getByTestId('menu-simulation-speed');
+  const minimum = Number(await speed.getAttribute('min'));
+  const maximum = Number(await speed.getAttribute('max'));
+  const step = Number(await speed.getAttribute('step'));
+  if (!Number.isFinite(step) || value < minimum || value > maximum || Math.abs((value - minimum) / step - Math.round((value - minimum) / step)) > 1e-8) {
+    throw new Error(`Simulation speed ${value} is outside the available steps`);
+  }
+  await speed.focus();
+  await speed.press('Home');
+  for (let index = 0; index < Math.round((value - minimum) / step); index += 1) {
+    await speed.press('ArrowRight');
+  }
+  await expect(speed).toHaveValue(String(value));
+  await expect(optionsPanel.getByTestId('menu-settings-status')).toContainText('saved');
+  await optionsPanel.getByTestId('campaign-menu-back').click();
+  await expect(pauseBoard).toBeVisible();
+}
+
 export async function setPauseBoardSound(
   page: Page,
   enabled: boolean,

@@ -6,10 +6,6 @@ export interface OverlayHostOptions {
   onActivePanelChange?: (panel: HTMLElement | null) => void;
 }
 
-interface OpenOptions {
-  preserveCurrent?: boolean;
-}
-
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled]):not([hidden])',
@@ -19,10 +15,9 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"]):not([hidden])',
 ].join(',');
 
-/** Keeps game overlays inside the game frame and exposes only one panel at a time. */
+/** Renders the panel selected by GameUiController; it owns no navigation or panel stack. */
 export class OverlayHost {
-  private activePanel: OverlayPanel | null = null;
-  private readonly parentPanels: OverlayPanel[] = [];
+  private presentedPanels: readonly OverlayPanel[] = [];
   private returnFocusTarget: HTMLElement | null = null;
 
   constructor(
@@ -35,79 +30,63 @@ export class OverlayHost {
   }
 
   get active(): OverlayPanel | null {
-    return this.activePanel;
+    return this.presentedPanels.at(-1) ?? null;
   }
 
   get activeId(): string | null {
-    if (!this.activePanel) return null;
-    return this.activePanel.dataset.overlayId
-      ?? this.activePanel.dataset.testid
-      ?? this.activePanel.id
+    const panel = this.active;
+    if (!panel) return null;
+    return panel.dataset.overlayId
+      ?? panel.dataset.testid
+      ?? panel.id
       ?? null;
   }
 
-  open(panel: OverlayPanel, { preserveCurrent = false }: OpenOptions = {}): void {
-    if (this.activePanel === panel) return;
+  render(panels: readonly OverlayPanel[]): void {
+    if (panels.length === this.presentedPanels.length
+      && panels.every((panel, index) => panel === this.presentedPanels[index])) return;
 
-    if (this.activePanel) {
-      const previous = this.activePanel;
-      this.hidePanel(previous);
-      if (preserveCurrent) this.parentPanels.push(previous);
-      else this.parentPanels.length = 0;
-    } else {
+    const previousPanels = this.presentedPanels;
+    const nextPanels = new Set(panels);
+    for (const panel of previousPanels) {
+      if (!nextPanels.has(panel)) this.hidePanel(panel);
+    }
+    if (previousPanels.length === 0 && panels.length > 0) {
       this.returnFocusTarget = document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
-      this.parentPanels.length = 0;
     }
 
-    this.activePanel = panel;
-    this.showPanel(panel);
-    this.root.hidden = false;
-    this.backdrop.hidden = false;
-    this.root.dataset.activeOverlay = this.activeId ?? '';
-    this.options.onActivePanelChange?.(panel);
-    this.focusPanel(panel);
-  }
-
-  close(panel: OverlayPanel | null = this.activePanel, restoreParent = true): void {
-    if (!panel) return;
-    if (panel !== this.activePanel) {
-      this.hidePanel(panel);
-      return;
-    }
-
-    this.hidePanel(panel);
-    const parent = restoreParent ? this.parentPanels.pop() : undefined;
-    if (parent) {
-      this.activePanel = parent;
-      this.showPanel(parent);
+    this.presentedPanels = [...panels];
+    if (panels.length > 0) {
+      panels.forEach((panel, index) => this.showPanel(panel, index, index === panels.length - 1));
+      this.root.hidden = false;
+      this.backdrop.hidden = false;
       this.root.dataset.activeOverlay = this.activeId ?? '';
-      this.options.onActivePanelChange?.(parent);
-      this.focusPanel(parent);
-      return;
+      const activePanel = this.active;
+      if (activePanel) this.focusPanel(activePanel);
+    } else {
+      this.root.hidden = true;
+      this.backdrop.hidden = true;
+      delete this.root.dataset.activeOverlay;
+      this.restoreFocusTarget();
     }
-
-    this.activePanel = null;
-    this.root.hidden = true;
-    this.backdrop.hidden = true;
-    delete this.root.dataset.activeOverlay;
-    this.parentPanels.length = 0;
-    this.options.onActivePanelChange?.(null);
-    this.restoreFocusTarget();
+    this.options.onActivePanelChange?.(this.active);
   }
 
-  closeActive(): void {
-    this.close(this.activePanel);
-  }
-
-  private showPanel(panel: OverlayPanel): void {
+  private showPanel(panel: OverlayPanel, depth: number, active: boolean): void {
     if (panel instanceof HTMLDialogElement) {
       if (!panel.open) panel.show();
     } else {
       panel.hidden = false;
     }
-    panel.dataset.overlayActive = 'true';
+    panel.style.zIndex = String(depth + 1);
+    panel.inert = !active;
+    panel.setAttribute('aria-hidden', String(!active));
+    panel.setAttribute('aria-modal', String(active));
+    panel.dataset.overlayActive = String(active);
+    if (active) delete panel.dataset.overlayParent;
+    else panel.dataset.overlayParent = 'true';
   }
 
   private hidePanel(panel: OverlayPanel): void {
@@ -116,7 +95,12 @@ export class OverlayHost {
     } else {
       panel.hidden = true;
     }
+    panel.inert = false;
+    panel.removeAttribute('aria-hidden');
+    panel.removeAttribute('aria-modal');
+    panel.style.removeProperty('z-index');
     delete panel.dataset.overlayActive;
+    delete panel.dataset.overlayParent;
   }
 
   private focusPanel(panel: OverlayPanel): void {
@@ -137,14 +121,15 @@ export class OverlayHost {
 
   private readonly stopOverlayClickThrough = (event: MouseEvent): void => {
     event.stopPropagation();
-    if (event.target === this.backdrop && this.activePanel) this.focusPanel(this.activePanel);
+    if (event.target === this.backdrop && this.active) this.focusPanel(this.active);
   };
 
   private readonly keepTabWithinGameOverlay = (event: KeyboardEvent): void => {
-    if (event.key !== 'Tab' || !this.activePanel) return;
+    const activePanel = this.active;
+    if (event.key !== 'Tab' || !activePanel) return;
 
     const focusable = [
-      ...this.activePanel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      ...activePanel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
       ...this.options.frameChrome.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
     ].filter((element) => element.getClientRects().length > 0);
     if (focusable.length === 0) {

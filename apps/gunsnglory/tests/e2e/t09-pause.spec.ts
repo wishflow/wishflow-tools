@@ -97,6 +97,8 @@ test('restart and close confirmations return to the pause board when cancelled',
 
   await page.getByTestId('pause-restart').click();
   await expect(confirmation).toBeVisible();
+  await expect(board).toBeVisible();
+  await expect(board).toHaveAttribute('aria-hidden', 'true');
   await expect(page.locator('.game-frame')).toHaveAttribute('data-active-overlay', 'pause-confirmation');
   await expect(page.locator('[data-overlay-active="true"]')).toHaveCount(1);
   await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
@@ -108,8 +110,9 @@ test('restart and close confirmations return to the pause board when cancelled',
 
   await page.getByTestId('pause-close').click();
   await expect(confirmation).toBeVisible();
-  await page.getByTestId('cancel-pause-action').click();
+  await page.keyboard.press('Escape');
   await expect(board).toBeVisible();
+  await expect(confirmation).toBeHidden();
   await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
 });
 
@@ -148,11 +151,14 @@ test('pause-board Options return to the still-paused battle', async ({ page }) =
   await startLongWave(page);
   await pauseFromHud(page);
   await page.getByTestId('pause-options').click();
-  await expect(page.getByTestId('pause-board')).toBeHidden();
-  await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
-  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
-  await page.getByTestId('campaign-menu-back').click();
+  const optionsPanel = page.getByTestId('game-options');
+  await expect(optionsPanel).toBeVisible();
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await expect(page.getByTestId('pause-board')).toHaveAttribute('aria-hidden', 'true');
   await expect(page.getByTestId('campaign-menu-screen')).toBeHidden();
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+  await optionsPanel.getByTestId('campaign-menu-back').click();
+  await expect(optionsPanel).toBeHidden();
   await expect(page.getByTestId('pause-board')).toBeVisible();
   await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
   await continueFromPauseBoard(page);
@@ -195,6 +201,7 @@ test('touching the original HUD pause icon opens the same pause board', async ({
 });
 
 test('pause board labels fit their fixed wood-button slots in both languages', async ({ page }) => {
+  await page.addInitScript(() => { HTMLMediaElement.prototype.play = () => Promise.resolve(); });
   await page.goto('/?testBattle=1');
   const intro = page.getByTestId('campaign-wave-intro');
   if (await intro.isVisible()) await intro.getByRole('button', { name: 'Continue' }).click();

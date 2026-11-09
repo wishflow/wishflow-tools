@@ -368,6 +368,51 @@ body {
   pointer-events: auto;
 }
 
+.game-overlay-panels > [data-overlay-parent="true"] {
+  filter: brightness(0.62);
+  pointer-events: none;
+}
+
+.game-overlay-panels > .game-menu-panel {
+  position: absolute;
+  inset: 0;
+  display: none;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  color: #fff2d9;
+  background: transparent;
+}
+
+.game-overlay-panels > .game-menu-panel[open] {
+  display: block;
+}
+
+.game-menu-panel::backdrop {
+  background: transparent;
+}
+
+.game-menu-panel button {
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.game-menu-panel button:focus-visible {
+  outline: 2px solid #fff0a7;
+  outline-offset: 2px;
+}
+
+.game-menu-panel .campaign-menu-card-screen {
+  background: rgba(12, 16, 21, 0.22);
+}
+
 .game-frame canvas {
   display: block;
   width: 100%;
@@ -1183,6 +1228,11 @@ body.gng-game-fullscreen .usagi-widget {
   background: rgba(12, 16, 21, 0.22);
 }
 
+.campaign-menu-card-screen:has(.campaign-options-card),
+.campaign-menu-card-screen:has(.campaign-help-card) {
+  background: transparent;
+}
+
 .campaign-menu-card {
   width: min(58%, 560px);
   padding: 4% 5%;
@@ -1216,13 +1266,68 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .campaign-help-card {
-  width: min(74%, 720px);
+  width: min(82%, 800px);
+  height: min(82%, 440px);
+  max-height: 90%;
+  border: 0;
+  border-radius: 0;
+  padding: 4% 7% 8%;
+  background: #e9cb94 var(--campaign-menu-textbox-background) center / 100% 100% no-repeat;
+  box-shadow: none;
 }
 
 .campaign-help-card h2 {
-  width: 56%;
+  width: auto;
   margin: 0 0 0.6em;
   text-align: center;
+}
+
+.campaign-help-card ol {
+  width: 84%;
+  margin: 0 auto 2.8em;
+}
+
+.campaign-help-pagination {
+  position: absolute;
+  right: 15%;
+  bottom: 7%;
+  display: flex;
+  width: 70%;
+  align-items: center;
+  justify-content: center;
+  gap: 10%;
+  color: #493722;
+  font-size: clamp(9px, 1.25cqw, 14px);
+  font-weight: 750;
+}
+
+.campaign-help-pagination button {
+  display: grid;
+  width: clamp(24px, 5cqw, 48px);
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  filter: drop-shadow(0 1px 2px rgba(20, 12, 8, 0.55));
+}
+
+.campaign-help-pagination button:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+
+.campaign-help-pagination img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.campaign-help-pagination button:last-child img {
+  transform: scaleX(-1);
 }
 
 .campaign-setting-toggle {
@@ -1239,8 +1344,15 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-options-card {
   width: min(90%, 900px);
-  max-height: 90%;
-  padding: 2.8% 4% 5%;
+  height: min(70%, 420px);
+  max-height: 92%;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  padding: 3.5% 7% 6%;
+  background: #e9cb94 var(--campaign-menu-textbox-background) center / 100% 100% no-repeat;
+  box-shadow: none;
+  text-align: center;
 }
 
 .campaign-options-help {
@@ -1257,11 +1369,12 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .campaign-options-sound-note {
-  margin: 0.25em 0 0.5em;
+  max-width: 82%;
+  margin: 0.25em auto 0.5em;
 }
 
 .campaign-options-card .campaign-speed-setting {
-  max-width: 42rem;
+  max-width: min(68%, 42rem);
   margin: 0 auto;
   color: #4c351e;
   font-weight: 750;
@@ -1275,34 +1388,53 @@ body.gng-game-fullscreen .usagi-widget {
   color: #5d4a33;
 }
 
+.campaign-options-card > .campaign-menu-subtle:not(.campaign-options-sound-note) {
+  max-width: 76%;
+  margin: 0.25em auto 0.5em;
+}
+
+.campaign-options-card > .campaign-data-tools {
+  width: min(82%, 42rem);
+  margin-right: auto;
+  margin-left: auto;
+}
+
 .campaign-options-card .campaign-profile-archive h3,
 .campaign-options-card .campaign-menu-status {
   color: #493722;
 }
 
-.campaign-experiment-tools {
+.campaign-data-tools {
   margin-top: 0.5em;
   border-top: 1px solid rgba(89, 57, 26, 0.45);
   padding-top: 0.5em;
 }
 
-.campaign-experiment-tools > summary {
+.campaign-data-tools > summary {
   width: min(100%, 30rem);
   margin: 0 auto;
-  border: 1px solid rgba(105, 69, 34, 0.72);
-  border-radius: 0.25rem;
+  min-height: 2.4em;
+  border: 0;
+  border-radius: 0;
   padding: 0.45em 0.7em;
-  color: #fff4db;
-  background: #684522;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
   font-size: clamp(9px, 1.25cqw, 13px);
   font-weight: 750;
+  text-shadow: 0 1px 2px #301b0e;
   text-align: center;
   cursor: pointer;
 }
 
-.campaign-experiment-tools > summary:focus-visible {
-  outline: 2px solid #61421f;
+.campaign-data-tools > summary:focus-visible {
+  outline: 2px solid #fff0a7;
   outline-offset: 2px;
+}
+
+.campaign-data-tools > summary:hover,
+.campaign-profile-archive-actions button:hover,
+.campaign-profile-archive-actions .replay-import-label:hover {
+  filter: brightness(1.08) drop-shadow(0 0.1rem 0.08rem rgba(31, 17, 8, 0.55));
 }
 
 .campaign-experiment-host {
@@ -1344,16 +1476,18 @@ body.gng-game-fullscreen .usagi-widget {
 .campaign-experiment-host .saved-experiment-controls button,
 .campaign-experiment-host .experiment-archive-actions button,
 .campaign-experiment-host .experiment-archive-actions .replay-import-label {
-  border-color: #67431f;
-  color: #fff5df;
-  background: #704a25;
+  border: 0;
+  border-radius: 0;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  text-shadow: 0 1px 2px #301b0e;
 }
 
 .campaign-experiment-host .experiment-controls button:hover,
 .campaign-experiment-host .saved-experiment-controls button:hover,
 .campaign-experiment-host .experiment-archive-actions button:hover,
 .campaign-experiment-host .experiment-archive-actions .replay-import-label:hover {
-  background: #875d31;
+  filter: brightness(1.08) drop-shadow(0 0.1rem 0.08rem rgba(31, 17, 8, 0.55));
 }
 
 .campaign-experiment-host .experiment-table-scroll th,
@@ -1408,15 +1542,16 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-profile-archive-actions button,
 .campaign-profile-archive-actions .replay-import-label {
-  min-height: 2rem;
+  min-height: 2.2em;
   padding: 0.35em 0.65em;
-  border: 1px solid #d8af72;
-  border-radius: 0.35rem;
-  color: #fff2d9;
-  background: rgba(122, 77, 34, 0.8);
+  border: 0;
+  border-radius: 0;
+  color: #fff8e6;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
   font: inherit;
   font-size: clamp(8px, 1.05cqw, 11px);
   font-weight: 700;
+  text-shadow: 0 1px 2px #301b0e;
 }
 
 .campaign-profile-archive-actions button:disabled {
@@ -1599,14 +1734,69 @@ body.gng-game-fullscreen .usagi-widget {
 
   body:not(.gng-game-fullscreen) .campaign-options-card {
     width: 94%;
+    height: 94%;
     max-height: 94%;
-    padding: 3% 4% 7%;
+    padding: 2% 6% 3%;
+  }
+
+  .campaign-options-card h2 {
+    margin-bottom: 0.15em;
+  }
+
+  .campaign-options-card .campaign-options-help {
+    min-height: 2em;
+    margin-top: 0.1em;
+  }
+
+  .campaign-options-card .campaign-options-sound-note {
+    max-width: 88%;
+    margin-top: 0.15em;
+    margin-bottom: 0.2em;
+    line-height: 1.1;
+  }
+
+  .campaign-options-card .campaign-speed-setting {
+    gap: 0.1em 0.5em;
+  }
+
+  .campaign-options-card > .campaign-menu-subtle:not(.campaign-options-sound-note) {
+    margin-top: 0.1em;
+    margin-bottom: 0.2em;
+    line-height: 1.1;
+  }
+
+  .campaign-options-card > .campaign-data-tools {
+    margin-top: 0.2em;
+    padding-top: 0.2em;
+  }
+
+  .campaign-options-card > .campaign-menu-status {
+    margin-top: 0.15em;
+    line-height: 1.1;
   }
 
   body:not(.gng-game-fullscreen) .campaign-help-card {
     width: 94%;
-    max-height: 94%;
-    padding: 3% 4% 7%;
+    height: 98%;
+    max-height: 98%;
+    padding: 4% 7% 7%;
+  }
+
+  .campaign-options-card .campaign-speed-setting,
+  .campaign-options-card > .campaign-data-tools {
+    max-width: 88%;
+    width: 88%;
+  }
+
+  .campaign-help-card ol {
+    width: 86%;
+    gap: 0.3em;
+    font-size: clamp(9px, 2.6cqw, 12px);
+    line-height: 1.2;
+  }
+
+  .campaign-help-pagination {
+    bottom: 2%;
   }
 
   body:not(.gng-game-fullscreen) .campaign-menu-home-brand {
@@ -1723,24 +1913,78 @@ body.gng-game-fullscreen .usagi-widget {
   display: flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 0.25rem;
-  border-left: 1px solid rgba(237, 191, 117, 0.4);
-  padding-left: 0.4rem;
+  gap: 0.18rem;
 }
 
 .map-zoom-controls[hidden] {
   display: none;
 }
 
-.map-zoom-controls button[data-testid="map-zoom-in"],
-.map-zoom-controls button[data-testid="map-zoom-out"] {
-  min-width: 2.3rem;
-  padding: 0.35rem;
-  font-size: 1rem;
+.frame-map-zoom-controls {
+  position: absolute;
+  z-index: var(--gng-layer-help);
+  top: 0.5rem;
+  bottom: auto;
+  left: 0.5rem;
+  max-width: calc(100% - 1rem);
+  align-items: center;
+  padding: 0.18rem;
+  border: 1px solid rgba(255, 225, 168, 0.42);
+  border-radius: 0.38rem;
+  background: rgba(26, 20, 14, 0.86);
+  box-shadow: 0 0.15rem 0.45rem rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(3px);
+  opacity: 0.86;
+  transition: opacity 120ms ease;
+}
+
+@container (max-width: 600px) {
+  .frame-map-zoom-controls {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .frame-map-zoom-controls {
+    display: none;
+  }
+}
+
+.frame-map-zoom-controls:hover,
+.frame-map-zoom-controls:focus-within {
+  opacity: 1;
+}
+
+.frame-map-zoom-controls button {
+  display: grid;
+  min-width: 1.9rem;
+  min-height: 1.9rem;
+  place-items: center;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgba(237, 191, 117, 0.55);
+  border-radius: 0.28rem;
+  color: #ffe8c1;
+  background: rgba(81, 56, 33, 0.94);
+  font: inherit;
+  font-size: clamp(0.72rem, 1.15cqw, 0.85rem);
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.frame-map-zoom-controls button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.frame-map-zoom-controls button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 1px;
 }
 
 .map-zoom-controls output {
-  min-width: 2.8rem;
+  min-width: 2.1rem;
   color: #ffe1a8;
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
@@ -2943,17 +3187,19 @@ body.gng-game-fullscreen .usagi-widget {
   }
 
   body:not(.gng-game-fullscreen) .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
-    top: -28%;
-    width: 30%;
+    top: 3%;
+    left: 10%;
+    width: 18%;
+    transform: none;
   }
 
   body:not(.gng-game-fullscreen) .campaign-wave-intro-copy {
-    inset: 22% 10% 27%;
+    inset: 18% 7% 20% 31%;
   }
 
   body:not(.gng-game-fullscreen) .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
-    font-size: clamp(0.72rem, 3.2vw, 1rem);
-    line-height: 1.22;
+    font-size: clamp(0.56rem, 2.7vw, 0.78rem);
+    line-height: 1.2;
   }
 
   .game-panel {
@@ -3066,8 +3312,7 @@ body.gng-game-fullscreen .usagi-widget {
 
   .game-toolbar-actions [data-testid="start-wave"],
   .game-toolbar-actions [data-action="recruit-unit"],
-  .game-toolbar-actions [data-action="upgrade-unit"],
-  .game-toolbar-actions .map-zoom-controls {
+  .game-toolbar-actions [data-action="upgrade-unit"] {
     order: 1;
   }
 
@@ -3154,17 +3399,19 @@ body.gng-game-fullscreen .usagi-widget {
 
 @media (max-width: 360px) {
   body:not(.gng-game-fullscreen) .campaign-wave-intro-card > img[data-testid="campaign-wave-intro-portrait"] {
-    top: -26%;
-    width: 29%;
+    top: 3%;
+    left: 9%;
+    width: 19%;
+    transform: none;
   }
 
   body:not(.gng-game-fullscreen) .campaign-wave-intro-copy {
-    inset: 23% 9% 28%;
+    inset: 15% 6% 20% 31%;
   }
 
   body:not(.gng-game-fullscreen) .campaign-wave-intro-copy p[data-testid="campaign-wave-intro-text"] {
-    font-size: 0.68rem;
-    line-height: 1.18;
+    font-size: clamp(0.5rem, 2.6vw, 0.65rem);
+    line-height: 1.12;
   }
 }
 

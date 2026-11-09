@@ -28,6 +28,15 @@ async function installFullscreenMock(
         document.dispatchEvent(new Event('fullscreenchange'));
       },
     });
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape' || !testWindow.__gngFullscreenElement) return;
+      const activeDialog = document.querySelector<HTMLDialogElement>('dialog[open]');
+      window.setTimeout(() => {
+        if (activeDialog?.open) activeDialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+        testWindow.__gngFullscreenElement = null;
+        document.dispatchEvent(new Event('fullscreenchange'));
+      }, 0);
+    }, true);
 
     if (request === 'missing') {
       Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', { configurable: true, value: undefined });
@@ -209,6 +218,39 @@ test('keeps frame-local overlays and fixed fullscreen controls interactive in bo
   } finally {
     await context.close();
   }
+});
+
+test('Escape exits fullscreen while preserving the active confirmation and paused parent board', async ({ page }) => {
+  await installFullscreenMock(page);
+  await page.goto('/?testBattle=1');
+  const waveIntro = page.getByTestId('campaign-wave-intro');
+  if (await waveIntro.isVisible()) await waveIntro.getByRole('button', { name: 'Continue' }).click();
+
+  await pauseFromHud(page);
+  const board = page.getByTestId('pause-board');
+  await page.getByTestId('pause-close').click();
+  const confirmation = page.getByTestId('pause-confirmation');
+  await expect(confirmation).toBeVisible();
+  await expect(board).toBeVisible();
+  await expect(board).toHaveAttribute('aria-hidden', 'true');
+
+  const fullscreen = page.getByTestId('fullscreen-toggle');
+  await fullscreen.click();
+  await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Escape');
+
+  await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
+  await expect(confirmation).toBeVisible();
+  await expect(board).toBeVisible();
+  await expect(page.getByTestId('overlay-host')).toHaveAttribute('data-active-overlay', 'pause-confirmation');
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+
+  await page.getByTestId('cancel-pause-action').click();
+  await expect(confirmation).toBeHidden();
+  await expect(board).toBeVisible();
+  await page.getByTestId('pause-continue').click();
+  await expect(board).toBeHidden();
+  await expect(page.locator('.game-frame')).not.toHaveAttribute('data-simulation-state', 'paused');
 });
 
 test('keeps a fullscreen failure message beside the pause confirmation instead of over its text', async ({ page }) => {

@@ -46,7 +46,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
   [gamblerUiLowCashSampleContent.id]: gamblerUiLowCashSampleContent,
-  ...(import.meta.env.DEV ? { [recruitConfirmationUiSampleContent.id]: recruitConfirmationUiSampleContent } : {}),
+  ...(import.meta.env?.DEV ? { [recruitConfirmationUiSampleContent.id]: recruitConfirmationUiSampleContent } : {}),
   [techTownTrainTestContent.id]: techTownTrainTestContent,
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
   [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,

@@ -214,23 +214,27 @@ test('keeps bilingual Help available from pause Options without resuming the bat
   await pauseFromHud(page);
   await page.getByTestId('pause-options').click();
   await page.getByTestId('options-help').click();
-  const guide = page.getByTestId('campaign-menu-screen');
+  const guide = page.getByTestId('game-help');
   const frame = page.getByTestId('inspection-frame');
   const readFrame = async () => (await frame.textContent())?.match(/\d+/g)?.map(Number);
   const beforeFrame = await readFrame();
 
   await setDocumentHidden(page, true);
   await expect(guide).toContainText('Select a unit, then click or tap a reachable map cell to move it.');
+  await page.getByTestId('help-next').click();
   await expect(guide).toContainText('mouse wheel to zoom');
   expect(await readFrame()).toEqual(beforeFrame);
 
   await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
-  await expect(guide).toContainText('选择单位，再点击或轻触可到达的地图格移动。');
   await expect(guide).toContainText('桌面鼠标滚轮都可缩放地图');
   expect(await readFrame()).toEqual(beforeFrame);
 
   await setDocumentHidden(page, false);
-  await page.getByTestId('campaign-menu-back').click();
+  await page.getByTestId('help-previous').click();
+  await expect(guide).toContainText('选择单位，再点击或轻触可到达的地图格移动。');
+  await guide.getByTestId('campaign-menu-back').click();
+  await expect(page.getByTestId('game-options')).toBeVisible();
+  await page.getByTestId('game-options').getByTestId('campaign-menu-back').click();
   await expect(page.getByTestId('pause-board')).toBeVisible();
   await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
   await continueFromPauseBoard(page);
