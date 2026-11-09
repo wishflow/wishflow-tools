@@ -49,51 +49,30 @@
 
 ## 原版 UI 流程与状态管理
 
-**状态：OverlayHost、APK 暂停板流程、主菜单/帮助/选项入口，以及普通确认框/结算的原版美术适配均已实现；逐类弹窗互斥和实际点击 E2E 已通过。**此前的视觉与点击测试通过，但没有验证原版暂停、继续和退出顺序。本轮已按 APK 研究结果恢复暂停板状态迁移；固定辅助控件和整批视觉回归仍在进行。
+**状态：重构进行中；局部功能存在，整体状态架构与 Options 返回关系尚未满足原版基线。本批次尚未发布。**当前功能分支包含 6 个先前提交和未提交的 UI 改动；这些改动未等同于公开版本。发布前必须核对 `build-info.json` 来源 SHA。
 
-### 表现与代码证据
+### 已证实的 APK 流程
 
-- 旧实现中 Canvas HUD 的暂停图标命中后，将 `pause` 动作转发为网页 Pause/Resume 切换；它不会打开 APK 原版暂停板。HUD 资产本身是双竖线暂停图标，不能按网页状态改成播放三角。现已移除该转发和两个网页快捷按钮，HUD 命中直接触发暂停板状态迁移。
-- `game-toolbar` 增加了常驻 Pause/Resume、Campaign、Controls 和文字 Sound 控件。`t09-pause.spec.ts` 主要检查工具条尺寸及文案切换，验证的是网页工具条自洽，不是 APK 按钮路径。
-- Campaign 退出框使用 `showModal()`，导致浏览器把页面其它节点置为 inert；旧实现通过把全屏控件临时插入原生弹窗再移回。这绕开了点击阻塞，但造成 DOM 结构随弹窗状态变化，且遮罩/弹窗范围不能可靠限制在游戏框。
-- `t30-fullscreen.spec.ts` 曾验证上述 reparenting 和原生弹窗按钮可点；可见性、命中和样式断言没有证明“暂停图标打开暂停板、Continue 才继续、Close/Restart 经确认”的语义。
-- 按已有 APK/REA 逆向结论，`dialog_pause` 包含 Continue、Restart、Options、Close 与 Sound；Canvas 暂停回调打开该暂停板。该行为是交互验收基线，不能由旧网页工具条设计反推。
+- `MainMenuScreenActivity.onStartButtonClick` 进入地图选择；`onHelpButtonClick` 进入独立 Help 页；`onOptionsButtonClick` 调用 `GameActivity.showOptionsDialog`；声音入口切换档案中的声音设置。
+- `GameScreenActivity.onPauseButtonClick` 调用 `displayDialog(4)`；战斗中的 Android Back 键在没有活动对话框时也打开同一个暂停面板。
+- `GameScreenActivity.onPrepareDialog(4)` 为暂停面板注册 Continue、Restart、Options、Close、Sound。Options 调用 `showOptionsDialog()`，未关闭暂停面板；Restart/Close 分别打开确认 ID 6/5。取消确认仅关闭确认面板，父暂停面板仍保留。
+- `GameActivity.showOptionsDialog` 创建 `dialog_options`，声音/震动设置在该面板中；平台隐私入口属于网页移除的平台/广告相关内容。HelpScreenActivity 的左右按钮翻页，边界按钮返回主菜单。
+- `GameScreenActivity.displayDialog` 会停止游戏线程。游戏内招募、升级等面板必须按具体调用路径确认何时暂停、何时恢复；不将所有 UI 状态推断为“游戏继续运行”。以上为 APK 静态 DEX/JADX 观察，不代表 Android 实机运行记录。
 
-### 根因与漏测点
+### 当前实现与根因
 
-根因已由调用链确认：Canvas 暂停事件路由到网页 Pause/Resume 切换，而不是 UI 层的“打开暂停面板”命令；UI 没有单一的活动覆盖层与确认返回状态，导致帮助、对话、确认框、结算和退出面板分别控制显示。测试围绕现有 DOM/样式写断言，并将旧入口行为固定下来，缺少以原版交互顺序为基准的状态迁移测试。
+- `main.ts` 同时包含整页 HTML 模板、菜单渲染、游戏面板事件、全屏控制和状态同步；`gameUiState` 从 DOM 可见状态与 GameSession 重新推导，OverlayHost 又单独持有 active panel 与 parent stack，另有 `pauseOptionsReturnToBoard` 等返回标记。存在多个相互依赖的状态所有者。
+- 暂停板 Options 目前关闭暂停板并调用 `showCampaignMenu('options')`，即用战役菜单页面代替 APK 原生选项对话框；返回时再依赖布尔标记重开暂停板。这是“按一下跳一层”的直接代码路径。
+- 当前工作树中的未提交修改仅将战斗工具栏隐藏、调整地图缩放控件位置和修复窄屏波次对白；这些局部调整不能替代 DOM/状态职责重构，也尚未提交或发布。
+- 过去测试大多断言 DOM 可见、点击成功或样式属性，没有覆盖“Options 叠在暂停板上”“返回回到调用面板”及从原版 HUD 入口开始的完整状态序列。
 
-### 修复与防回归要求
+### 重构约束与防回归
 
-- 建立显式 UI 状态与 OverlayHost；模拟运行状态仍由游戏 session 拥有，UI 层不得写入规则状态。主要覆盖层互斥，嵌套确认取消后返回正确父面板。
-- HUD 暂停图标只打开暂停板并暂停模拟。Continue 恢复；Restart/Close 先确认；取消后仍停留暂停板且模拟保持暂停；确认退出未完成关卡不得写入战役结算。
-- 游戏面板不调用 `showModal()`，不动态搬动 FrameChrome。frame-local 遮罩拦截场景输入，FrameChrome 位置固定且可操作。
-- 每项关键 E2E 既检查状态又真实点击目标，并断言结果；不以元素可见、点击未报错或 CSS 样式相同代替流程验证。
-- 覆盖主菜单、暂停、继续、重开/退出确认、Help/Options、声音、波次对白、招募/升级、Gambler、结算。全屏开关只改变 fullscreen 状态，不能关闭弹窗、恢复模拟或改变暂停板返回栈。
-- 视觉验收确认暂停板使用原版木牌/按钮、对白使用羊皮纸、确认框使用原版文本框资源；截图需覆盖菜单、战斗、暂停、确认和至少一个普通操作面板，而不只检查 CSS 计算样式。
-
-### 当前实现结果
-
-- `src/ui/overlay-host.ts` 统一管理当前面板、frame-local 遮罩、确认返回栈、焦点及 Tab 顺序；底层面板切换时保持单一活动面板。
-- 结算与已有 HTML dialog 都置于 OverlayHost；应用使用非模态 `show()` 和游戏框内遮罩，不调用原生 `showModal()`。FrameChrome DOM 位置未变，弹窗期间仍能点击全屏控件。
-- 暂停板现使用 APK 木牌和木按钮素材，提供 Continue、Restart、Options、Close、Sound。Restart/Close 通过确认框；取消恢复暂停板并维持暂停，确认分别重开同一场景/难度或返回战役菜单。退出未完成战斗不产生结算，因此不会解锁下一关。暂停板 Options 打开已有设置页，返回时恢复原暂停状态。
-- 浏览器定向验证：`t09-pause.spec.ts` 覆盖暂停、继续、后台往返、重开/退出取消与确认、选项返回、静音设置、中英文槽位及触屏 HUD 操作；`t01.spec.ts`、`t22-playfield-focus.spec.ts`、`t30-fullscreen.spec.ts` 验证遮罩命中、框内边界、木牌/确认框素材、固定全屏控件及全屏状态保持。另有 `t11-inspection.spec.ts`、`t23-campaign-wave-intros.spec.ts`、`t20-campaign-progress.spec.ts`、`t26-official-mexican.spec.ts`、`t27-map-pan.spec.ts`、`t28-apache-valley-formal.spec.ts`、`t31-free-play.spec.ts`、`t33-fort-kaboom-formal.spec.ts`、`t37-tech-town-formal.spec.ts` 的相关回归通过。全屏行为由 Playwright API mock 验证，本轮没有声称完成真实全屏验收。
-- 内置浏览器对本地代码进行了窗口模式、静音核对：实际点击 Canvas 暂停图标后显示木牌暂停菜单；重开进入游戏内羊皮纸确认框，Continue/Restart/Options/Close 与是/否按钮均位于游戏框内，辅助树可聚焦操作。该观察不替代后续发布 SHA 一致后的桌面/移动端视觉验收，也未进入真实全屏。
-- 两个验证遗漏已补成防回归要求：确认框 CSS 显式设置 `display:block` 会覆盖关闭 dialog 的浏览器默认隐藏状态；现改为仅 `[open]` 显示，并由取消流程断言确认框隐藏。另因模拟状态属性之前只在 OverlayHost 切换时更新，继续战斗后会短暂保留“暂停”；现由 `renderStatus()` 同步 UI 状态，测试断言实际运行状态。
-
-### 弹窗复查与普通面板美术
-
-- 对照 DOM 结构和事件路由后，招募、地图雇佣、升级、Gambler、波次对白、暂停板/确认及结算均是 `.game-overlay-panels` 的成员，通过 `OverlayHost.open/close` 显示；应用源码没有 `showModal()`。OverlayHost 已提供单一活动面板和游戏框遮罩，因此本轮不重新实现这套架构。
-- 本地内置浏览器窗口模式、静音截图确认：波次对白使用原版羊皮纸与佩德罗素材；暂停确认使用 `gng_hud_2_textbox_large.png` 和原版是/否图标，位置在游戏框内且 FrameChrome 仍可见。这两类画面已有正确美术，不应重复重做。
-- 复核时发现 `.recruit-confirmation` 仍是圆角深色通用面板，`.settlement-panel` 也使用深色圆角卡片；两者没有沿用 APK 文本框和木按钮。现确认框使用羊皮纸、是/否图标，结算使用文本框和木按钮；可复用断言检查活动 host、唯一活动面板、游戏框边界、实际命中与遮罩对底层的阻断。
-
-### 主菜单、帮助与选项
-
-- 主菜单现在用原版菜单板提供 Start、Free Play、Help、Options 和 Sound。Sound 留在主菜单及原版暂停板；战斗工具条上的文字 Sound 与 Controls 折叠栏已删除。Help 承载网页操作说明；Options 承载倍速、Profile 档案和折叠的实验数据工具，并说明声音开关仍在原版菜单中。暂停板 Options 可进入 Help，返回后仍停留在暂停板。
-- 320px 手机视口的真实命中检查发现，菜单 Sound 按钮原先占据木牌右上角，与 FrameChrome 全屏控件重叠；`elementFromPoint()` 命中的是全屏按钮，所以 Sound 看起来可点却不会改变设置。现把 Sound 移至菜单木牌左下独立槽位，并调整四个主菜单按钮区域；`t29-campaign-menu.spec.ts` 对 Sound 按钮中心点检查最上层命中对象，再实际点击并检查设置保存。
-- 内置浏览器截图发现 Help 文字继承了浅色前景，却绘制在浅羊皮纸上；列表还横跨到右侧装饰栏，末项贴住底部返回箭头。旧 E2E 只验证文案存在和元素可见，没有验证视觉对比或布局边界。现将标题与说明限定在左侧纸栏，改用深棕色文字、为返回按钮留出空间；`t29` 断言计算颜色、字号、标题/正文边界和返回按钮不重叠。
-- 选项页沿用木牌与羊皮纸素材，标题、档案说明等文字使用深棕色。手机窄视口回归检查页面不横向溢出；实验工具在 Options 内折叠显示，展开后仍使用原有仓库与导入导出逻辑。
-- 本切片定向回归：`t02`、`t09-pause`、`t29-campaign-menu` 共 24 项通过；最新 Help 布局修改后 `t29` 重跑5项通过。`t22`、`t23`、`t24`、`t30`、`t38` 共23项通过；包含手机竖屏/横屏、波次对白、暂停中 Help、静音、全屏状态模拟及档案往返。内置浏览器检查本地页面处于窗口模式且静音；没有启用全屏或播放音效。
+- 单一 `GameUiController` 持有页面、唯一活动面板和显式返回目标；GameSession 独占模拟状态；FullscreenController 仅响应浏览器 `fullscreenchange`。OverlayHost 只负责遮罩、挂载、焦点和输入阻断，不保存第二份面板栈。
+- 暂停板 Options 必须叠在暂停板上方；Help 从 Options 进入并逐级返回 Options、暂停板或菜单。确认取消返回父面板且保持会话暂停；全屏切换不改变 UI 或模拟状态。
+- 所有面板限制在固定 16:9 `.game-frame`，不调用 `showModal()`、不搬动 FrameChrome、不允许遮罩覆盖全页。只允许一个面板可交互，叠层中的父面板不可点击。
+- 原版木牌、羊皮纸、确认按钮和特殊面板保留各自美术；新增 Free Play、网页操作说明、倍速和档案也使用原版风格与返回关系。常规战斗无通用控制条；桌面缩放辅助控件位于地图边缘，触屏保留手势。
+- 关键测试必须从真实入口操作，检查状态、返回目标、底层阻断与 `elementFromPoint()` 命中；仅见到 DOM 或仅使用调试路线不算流程验收。浏览器默认窗口模式、静音；全屏仅用于全屏专项验收。
 
 ### 升级确认说明在手机画框内被截断
 
@@ -104,7 +83,20 @@
 
 ### 普通战斗仍显示开发控制栏
 
-- **状态：待修复，已纳入当前 UI 批次第 3 步。**
+- **状态：局部隐藏改动仍未提交；随本轮 UI DOM 重构统一关闭。**
 - **表现与复现：**从普通主菜单进入 Cow Gulch 并关闭开场对白后，游戏框底部仍出现 `Game controls` 折叠栏、`Clear selection`、测试用开波/招募入口和倍速滑条；这不是 APK 战斗 HUD。
 - **根因与证据：**`showBattleScene()` 无条件执行 `gameToolbar.hidden = false`；该容器同时承载测试操作和网页倍速。内置浏览器在不带 `testBattle` 参数的正常战役流程中直接观察到该面板。此前计划误把移除 Pause/Resume、Campaign 和文字 Sound 当成整个控制栏已删除；`t29` 还断言普通战斗工具栏可见，错误固化了现状。
-- **修复与防回归：**普通战斗隐藏开发工具栏，只在开发环境的 `?testBattle=1` 测试路线显示；倍速继续由主菜单/暂停 Options 提供；地图缩放移到 `.game-stage` 边缘独立控件。新增 E2E 要断言正常战斗没有工具栏、缩放边界位于画框内，暂停 Options 调整倍速后返回仍保持暂停。
+- **修复与防回归：**当前未提交 patch 已将普通场景工具栏隐藏，仅 `?testBattle=1` 显示，但工具栏 DOM 和旧事件处理仍存在。重构后常规 UI 完全没有该控制条；调试入口与普通用户页面隔离。E2E 从正式菜单进入，断言无通用控制条；倍速从 Options 调整并保持暂停返回。
+
+### 手机地图缩放控件遮住 Canvas HUD 暂停图标
+
+- **状态：本地未提交 patch 已避开触屏遮挡，仍需在重构后回归关闭。**`t40-frame-controls.spec.ts` 覆盖桌面及手机视口。
+- **根因与证据：**Canvas HUD 和地图按固定1024×576逻辑画布缩小；网页缩放控件则按 CSS 像素维持近似固定尺寸。桌面左上角不与 HUD 暂停按钮重叠，但窄画框会让按钮变成地图上的大块覆盖；390px触屏竖屏中还会覆盖暂停图标。内置浏览器截图确认下移左下虽然避开 HUD，却会挡住地图路线。项目契约已明确桌面使用网页缩放按钮、触屏继续使用捏合缩放。
+- **漏测点：**此前只检查控件是否在画框内，没有区分桌面与触屏入口，也没有验证固定 CSS 控件在缩小地图上遮挡可玩区域。桌面视口无法暴露控件与触屏 HUD 的冲突。
+- **修复与防回归：**当前未提交 patch 将桌面按钮放在 `.game-stage` 边缘，并在窄框/粗指针设备隐藏；触屏继续捏合，桌面滚轮缩放保留。重构后检查控件只在无业务面板的战斗中显示，实际点按并验证地图缩放；手机竖屏/横屏再次验证 HUD 暂停命中及捏合，避免按钮压住地图。
+
+### 手机竖屏波次对白的角色遮住正文
+
+- **状态：本地未提交 CSS 修正已在内置浏览器截图观察到分栏不重叠；重构后的跨尺寸 E2E 尚未关闭。**内置浏览器在 390×844 窗口视口曾显示第二波对白时 Pedro 立绘覆盖羊皮纸正文的前几行。
+- **根因与证据：**基础对白用顶部居中立绘和下方文本；`@media (max-width: 600px)` 将立绘尺寸放大并把文本区上移，立绘仍盖在正文上。当前 `t40` 只检查对白面板在 `.game-frame` 内，没有检查角色与正文矩形是否相交。
+- **修复与防回归：**当前未提交 CSS 将窄屏 Pedro 立绘放入左侧槽位，正文从右侧开始。重构后在桌面、手机竖屏与横屏计算立绘/文本边界，无交叠、无裁切且对白完整位于游戏框内。
