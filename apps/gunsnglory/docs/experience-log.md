@@ -49,7 +49,7 @@
 
 ## 原版 UI 流程与状态管理
 
-**状态：本地 UI 重构实现及完整检查完成；整批发布与公开 SHA 验收待完成。**`CI=1 pnpm run test:ci` 通过 409 项单测、生产构建与 117 项 Playwright E2E。内置浏览器窗口模式视觉检查通过；实际请求原生全屏时宿主拒绝，显示浏览器全屏控制提示，故真实全屏转换未验证。当前公开版本尚未包含本批次；发布前必须核对 `build-info.json` 来源 SHA。原始脏工作树未被改写，本轮在隔离工作树完成实现与本地浏览器检查。
+**状态：已集成发布并完成线上流程验收。**`CI=1 pnpm run test:ci` 通过 409 项单测、生产构建与 117 项 Playwright E2E；GitHub Actions `42597743682` 成功。发布 SHA `505643c5173bee21104cb2caac2192235fe02152` 已部署到 GitHub Pages 与 Cloudflare Pages，两处根路径 `build-info.json` 均匹配。内置浏览器静音、窗口模式下验证菜单、选关、暂停、Options/Help 返回和确认取消；原生 Fullscreen API 仍被宿主拒绝，未将模拟测试当作真实全屏证据。原始脏工作树未被改写。
 
 ### 已证实的 APK 流程
 
@@ -81,6 +81,12 @@
 - **修复与防回归：**Options/Help 改用原版 `gng_hud_2_textbox_large.png` 羊皮纸；Help 打开时只绘制 Help，返回时恢复 Options，Options 的调用暂停板继续留在 Options 下面。实验与档案收在可展开区，手机窄屏压紧 Options 间距；Summary、档案操作和实验按钮沿用原版木按钮图。`t29-campaign-menu.spec.ts` 检查资源背景，`t40-frame-controls.spec.ts` 检查桌面、390×844 竖屏、844×390 横屏的英文/中文面板边界、内部溢出及 Help/Options 返回状态。
 - **漏测点：**此前只核对 Help 与 Options 各自能打开、并断言按钮可见；没有检查它们同时出现时的视觉重复，也没有把整张选项卡的文本边界与底图留白区域对照。手机测试只检查外框，没有测内部滚动高度。
 - **避免重复：**为带肖像分区的原版资源先看实图再选择用途；嵌套页面测试必须同时断言“调用面板是否应该继续可见”与返回后恢复。移动版内容容器需比较 `scrollHeight/clientHeight`，不能只比较整个页面的 `scrollWidth`。
+
+### 已发布版本的线上流程复验
+
+- **验证范围：**打开带 `release=505643c` 的 GitHub Pages 公开页面，并以根路径 `build-info.json` 核对来源 SHA。内置浏览器保持静音和窗口模式；从主菜单进入 Options、Help 并逐级返回，再从 Start 进入 New Mexico、Cow Gulch、Easy 和 Pedro 开场对白。关闭对白后打开 HUD 暂停板，检查木按钮、Options→Help→Options→暂停板的返回链；关闭确认选择 No 后仍返回暂停板，Continue 恢复战斗。
+- **观察结果：**选项、帮助、暂停、确认框均限制在游戏框；暂停及确认期间 FrameChrome 全屏按钮仍显示。上述代表性路径与公开构建一致，没有手动完成关卡或写入胜利结算。
+- **全屏边界：**在暂停板仍打开时点击 FrameChrome，宿主拒绝 Fullscreen API 并提示改用浏览器自己的全屏控件；面板与模拟状态未被关闭。故本次公开版本没有真实浏览器全屏进出证据；响应布局和应用状态由桌面、390×844 竖屏、844×390 横屏 E2E 覆盖。
 
 ### 本地浏览器来源核对
 

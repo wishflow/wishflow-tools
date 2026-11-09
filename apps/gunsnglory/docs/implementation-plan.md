@@ -29,71 +29,15 @@
 
 该批次已发布到 `master`，部署来源为 `50289f2`。内容是 CSS 图层、点击和布局修复；测试证明元素可见、按钮可点、全屏状态可变，但没有核对 APK 的暂停菜单流程、菜单功能归属及唯一弹窗状态。用户复核发现原版交互仍不正确，因此该批次只作为历史发布记录，不能作为本轮 UI/交互验收通过的依据。具体漏测与修正方向见[经验记录](experience-log.md)。
 
-## 当前批次：游戏内 UI 与交互重构
+## 已关闭批次：游戏内 UI 与交互重构
 
-**状态：**UI 状态控制器、菜单路由、战斗暂停流程、游戏内面板层级和响应式美术已完成实现。完整 `CI=1 pnpm run test:ci` 通过：409 项单测、生产构建和 117 项 Playwright E2E；定向 UI 检查及内置浏览器窗口模式检查也通过。内置浏览器宿主拒绝真实 Fullscreen API 请求，故真实原生全屏未验证；自动化状态与几何覆盖通过。整批集成发布和公开 SHA 验收仍待完成。本轮在隔离工作树保留并复核了之前的地图缩放/波次对白改动；原始脏工作树保持不动。
+本批已按原版页面与暂停关系完成 UI 控制器、页面路由、游戏内面板和 FrameChrome 重构；实现细节及防回归要求见[经验记录](experience-log.md)。功能切片提交 `ddd4531`，整批 squash 发布提交为 `505643c5173bee21104cb2caac2192235fe02152`。
 
-**范围：**重写游戏窗口内的 UI DOM、页面路由和事件控制。保留 TypeScript、Canvas、`GameSession`、游戏规则、IndexedDB 契约、公共 API、共享站点外壳和语言切换；不引入 React/Preact，不改变战斗规则或存档格式。新增功能遵循原版木牌、羊皮纸、按钮槽位和返回路径。浏览器验收默认窗口模式、静音。
-
-### APK 流程基线
-
-- 主菜单 Start 进入地图选择；Help 打开独立分页帮助页；Options 打开选项对话框；Sound 切换保存的声音设置。以上来自 `MainMenuScreenActivity` 与 `GameActivity.showOptionsDialog` 静态代码。
-- 战斗 HUD 暂停图标与 Android 返回键均打开暂停板。暂停板包含 Continue、Restart、Options、Close、Sound；Restart/Close 分别打开确认框；Options 在暂停板上方显示选项对话框；取消确认后保留暂停状态。以上来自 `GameScreenActivity.onPauseButtonClick/onKeyUp/onPrepareDialog` 与 `onDialogOk/onDialogCancel`。
-- APK 的帮助页通过左右按钮换页，边界按钮用于返回主菜单。网页新增操作说明使用同样的分页与返回交互。
-- 游戏内原版对话调用会停止游戏线程。网页为各业务面板显式声明进入/关闭时的模拟策略，按 APK 调用点核对，不由通用 OverlayHost 猜测。
-- 平台隐私/广告入口不进入网页版本。Free Play、倍速、档案和实验资料属于网页补充，使用原版菜单与选项的外观结构承载。
-
-### 目标状态与层级
-
-```text
-游戏窗口（固定 16:9）
-├─ 当前页面：主菜单 / 战役选关 / Help / Options / 战斗
-├─ Canvas 场景与原版 HUD
-├─ 地图边缘辅助缩放（仅战斗且无业务面板时）
-├─ 游戏内遮罩与唯一活动面板（暂停 / 确认 / 招募 / 升级 / Gambler / 对白 / 结算）
-├─ 竖屏全屏提示
-└─ FrameChrome 全屏按钮（固定、始终可操作）
-```
-
-- 一个 `GameUiController` 持有页面路由与面板返回栈；Help 活动时替换视觉页面，但保留 Options/暂停板作为返回目标；暂停板上的 Options 则按 APK 关系显示在暂停板上方。DOM/视图只渲染控制器状态并分发事件，不从 `hidden`、DOM 层级或多个布尔标记反推当前页面。
-- `GameSession` 独占模拟运行/暂停状态；UI 控制器发送 pause/resume/restart/close 意图，不复制维护模拟状态。全屏由 `fullscreenchange` 事件独立更新。
-- OverlayHost 降为表现层：根据控制器给出的显示列表挂载活动面板与允许保留的暂停/选项父层，管理游戏框内遮罩、焦点与 Tab；不保存导航栈。父层不可操作，Help 不与 Options 重复叠显。所有游戏面板限制在 `.game-frame`，不得调用 `showModal()`。
-- FrameChrome 位于 OverlayHost 外但在游戏框内；地图缩放控件与业务弹窗分层。全屏切换只改变浏览器状态，不关闭当前面板或改变 GameSession。
-
-### 1. 建立状态控制器并迁移页面 DOM
-
-- [x] 将 UI 状态控制器、静态页面模板、Help/Options 面板视图和 FrameChrome 控制器拆为独立 TS 模块；`main.ts` 保留应用副作用及事件接线，不增运行时依赖。
-- [x] 定义有类型的路由、面板导航栈、确认动作及面板显示策略；模拟仍由 `GameSession`、全屏仍由 `FrameChromeController` 独立持有。
-- [x] 纯状态测试覆盖导航清空、Help 分页边界、暂停→Options→Help 返回、确认取消、档案确认以及唯一活动面板策略。
-
-### 2. 恢复原版主菜单、帮助与选项关系
-
-- [x] 主菜单保留 Start、Help、Options、Sound；Free Play 使用同套木牌按钮。Start 保留地区/关卡/难度流程。
-- [x] Help 使用原版左右翻页及返回语义；从 Options 进入后暂时代替 Options 页面，返回时恢复 Options，再返回菜单或暂停板。
-- [x] Options 作为游戏框内羊皮纸面板；暂停时暂停板保留在其下方。倍速为常驻简明项，档案与实验数据折叠在独立扩展区；声音仍由菜单/暂停板共享设置控制，未加平台隐私/广告入口。
-- [x] `t29-campaign-menu.spec.ts`、`t23-campaign-wave-intros.spec.ts` 与 `t40-frame-controls.spec.ts` 覆盖入口、返回链、帮助分页、中英文状态与原版按钮素材。
-
-### 3. 迁移战斗交互、暂停流程与游戏内面板
-
-- [x] Canvas HUD 暂停图标与窗口模式 Escape 共用暂停板；只有 Continue 恢复战斗。全屏 Escape 保留面板，让浏览器退出全屏。
-- [x] Restart/Close 经羊皮纸确认；取消后返回仍暂停的父板，确认后重开当前场景或回菜单，不写入未完成战斗进度。
-- [x] 暂停 Options/Help 按明确返回路径工作；Sound 更新共享持久设置及原版图标，不改变模拟状态。
-- [x] 招募、地图雇佣、升级、Gambler、波次对白、结算与档案替换确认均接入同一 UI 控制器；任一时刻只允许最上层操作。
-- [x] `t09-pause.spec.ts`、`t23-campaign-wave-intros.spec.ts`、`t30-fullscreen.spec.ts`、`t38-data-archives.spec.ts` 及其他业务 E2E 覆盖状态、副作用、返回目标和实际按钮操作。
-
-### 4. 重建图层、美术与响应式布局
-
-- [x] 页面、场景/HUD、遮罩、活动面板、方向提示和 FrameChrome 使用独立层级；全屏按钮固定在 FrameChrome，遮罩仅限 `.game-frame` 并阻断底层输入。
-- [x] 菜单/暂停/确认/对白/Gambler/结算保留各自素材。Options/Help 使用 HUD 羊皮纸文本框；数据折叠项、档案动作和测试设置使用木按钮素材，避免把高分牌头像框当成通用设置背景。
-- [x] 普通战斗不显示开发工具栏或常驻网页快捷项；测试工具只从显式开发测试入口显示，倍速在 Options。
-- [x] 桌面缩放仍位于地图边缘，触屏使用捏合；保留并检查窄屏对白分栏。
-- [x] `t40-frame-controls.spec.ts` 在桌面、390×844 手机竖屏和 844×390 手机横屏验证暂停入口、Options/Help 面板边界、层级隐藏/恢复、数据按钮命中、英文/中文内容无内部溢出；内置浏览器检查了主菜单、羊皮纸 Options/Help 和木按钮。真实原生全屏仍留到批次验收。
-
-### 5. 批次验证、集成与发布
-
-- [x] 定向检查已通过：UI 状态/浏览器启动单测 11 项；`t09/t23/t30` 26 项；`t29/t38/t40` 9 项，另在新增双语几何与素材断言后 `t29/t40` 7 项。最终 `CI=1 pnpm run test:ci` 通过：409 项单测、生产构建、117 项 Playwright E2E。全套检查中发现旧自由模式用例曾从 Options 遮罩下点击主页声音按钮、两条长关卡用例仍从旧控制栏查倍速；已按当前流程更新 E2E，定向复跑三项通过。
-- [x] 内置浏览器在本地严格端口 `5189` 检查桌面主菜单、Options、Help，默认静音和窗口模式。Options 打开时实际请求原生全屏，宿主拒绝并显示提示；画面与面板保持窗口状态，没有发生全屏转换，因此不宣称原生全屏已实测通过。全屏应用状态和固定逻辑画布由自动化覆盖。
-- [ ] 整批通过后按 Guns’n’Glory 流程 squash 集成并发布，核对 CI 与公开 build SHA，再对该 SHA 使用内置浏览器完成验收；宿主拒绝原生全屏时明确标记限制。
+- **本地验收：**`CI=1 pnpm run test:ci` 通过，含 409 项单测、生产构建和 117 项 Playwright E2E；GitHub Actions `42597743682` 成功。
+- **部署核对：**GitHub Pages 与 Cloudflare Pages 的根路径 `build-info.json` 均返回上述来源 SHA；`master` 与 `origin/master` 对齐。
+- **线上流程：**内置浏览器保持静音、窗口模式，验证主菜单、Options/Help 逐级返回、Start→New Mexico→Cow Gulch→Easy→对白 Continue、HUD 暂停、暂停板 Options/Help 返回、关闭确认取消后仍暂停，以及 Continue 恢复战斗。弹窗均位于游戏框内，全屏控件在弹窗期间可见。
+- **全屏限制：**在暂停板打开时尝试一次 Fullscreen API，内置浏览器宿主拒绝请求；暂停板保留且出现提示。自动化状态与视口几何检查通过，但该宿主下未验证真实原生全屏进出。
+- **发布比例：**本次为一个完整 UI 修复批次；按 8 次成功发布 / 40 个已验收实现切片记录，为 20.0%。
 
 ## 后续批次：New Mexico 第 5 关 Billy Hills
 
