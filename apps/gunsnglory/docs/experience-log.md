@@ -49,11 +49,11 @@
 
 ## 原版 UI 流程与状态管理
 
-**状态：调查已确认；OverlayHost 基础已实现，原版暂停/菜单行为待修复。**此前的视觉与点击测试通过，但用户复核发现暂停、继续、菜单入口和覆盖层仍未恢复原版流程。本轮不继续叠加旧工具条补丁；按 APK 研究结果重建游戏窗口内的 UI 状态和事件路径。
+**状态：OverlayHost 基础和 APK 暂停板流程已实现；主菜单入口、帮助/选项收纳及其余操作弹窗仍待完成。**此前的视觉与点击测试通过，但没有验证原版暂停、继续和退出顺序。本轮已按 APK 研究结果恢复暂停板状态迁移；后续仍需把各业务面板纳入同一 UI 流程。
 
 ### 表现与代码证据
 
-- Canvas HUD 的暂停图标命中后，`src/main.ts` 将 `pause` 动作转发为 `pauseControl.click()`；网页按钮只调用 `session.pause()`/`session.resume()`，因此不会打开 APK 原版暂停板。HUD 资产本身仍是双竖线暂停图标，不能按网页状态改成播放三角。
+- 旧实现中 Canvas HUD 的暂停图标命中后，将 `pause` 动作转发为网页 Pause/Resume 切换；它不会打开 APK 原版暂停板。HUD 资产本身是双竖线暂停图标，不能按网页状态改成播放三角。现已移除该转发和两个网页快捷按钮，HUD 命中直接触发暂停板状态迁移。
 - `game-toolbar` 增加了常驻 Pause/Resume、Campaign、Controls 和文字 Sound 控件。`t09-pause.spec.ts` 主要检查工具条尺寸及文案切换，验证的是网页工具条自洽，不是 APK 按钮路径。
 - Campaign 退出框使用 `showModal()`，导致浏览器把页面其它节点置为 inert；旧实现通过把全屏控件临时插入原生弹窗再移回。这绕开了点击阻塞，但造成 DOM 结构随弹窗状态变化，且遮罩/弹窗范围不能可靠限制在游戏框。
 - `t30-fullscreen.spec.ts` 曾验证上述 reparenting 和原生弹窗按钮可点；可见性、命中和样式断言没有证明“暂停图标打开暂停板、Continue 才继续、Close/Restart 经确认”的语义。
@@ -76,4 +76,7 @@
 
 - `src/ui/overlay-host.ts` 统一管理当前面板、frame-local 遮罩、确认返回栈、焦点及 Tab 顺序；底层面板切换时保持单一活动面板。
 - 结算与已有 HTML dialog 都置于 OverlayHost；应用使用非模态 `show()` 和游戏框内遮罩，不调用原生 `showModal()`。FrameChrome DOM 位置未变，弹窗期间仍能点击全屏控件。
-- 定向验证：`pnpm run typecheck` 通过；`pnpm exec playwright test tests/e2e/t30-fullscreen.spec.ts --workers=1` 8 项通过。该结果只关闭基础图层切片；暂停板、Continue、Restart/Close 和菜单功能仍未按原版行为验收。
+- 暂停板现使用 APK 木牌和木按钮素材，提供 Continue、Restart、Options、Close、Sound。Restart/Close 通过确认框；取消恢复暂停板并维持暂停，确认分别重开同一场景/难度或返回战役菜单。退出未完成战斗不产生结算，因此不会解锁下一关。暂停板 Options 打开已有设置页，返回时恢复原暂停状态。
+- 浏览器定向验证：`t09-pause.spec.ts` 覆盖暂停、继续、后台往返、重开/退出取消与确认、选项返回、静音设置、中英文槽位及触屏 HUD 操作；`t01.spec.ts`、`t22-playfield-focus.spec.ts`、`t30-fullscreen.spec.ts` 验证遮罩命中、框内边界、木牌/确认框素材、固定全屏控件及全屏状态保持。另有 `t11-inspection.spec.ts`、`t23-campaign-wave-intros.spec.ts`、`t20-campaign-progress.spec.ts`、`t26-official-mexican.spec.ts`、`t27-map-pan.spec.ts`、`t28-apache-valley-formal.spec.ts`、`t31-free-play.spec.ts`、`t33-fort-kaboom-formal.spec.ts`、`t37-tech-town-formal.spec.ts` 的相关回归通过。全屏行为由 Playwright API mock 验证，本轮没有声称完成真实全屏验收。
+- 内置浏览器对本地代码进行了窗口模式、静音核对：实际点击 Canvas 暂停图标后显示木牌暂停菜单；重开进入游戏内羊皮纸确认框，Continue/Restart/Options/Close 与是/否按钮均位于游戏框内，辅助树可聚焦操作。该观察不替代后续发布 SHA 一致后的桌面/移动端视觉验收，也未进入真实全屏。
+- 两个验证遗漏已补成防回归要求：确认框 CSS 显式设置 `display:block` 会覆盖关闭 dialog 的浏览器默认隐藏状态；现改为仅 `[open]` 显示，并由取消流程断言确认框隐藏。另因模拟状态属性之前只在 OverlayHost 切换时更新，继续战斗后会短暂保留“暂停”；现由 `renderStatus()` 同步 UI 状态，测试断言实际运行状态。

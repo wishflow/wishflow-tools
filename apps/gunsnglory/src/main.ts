@@ -109,8 +109,6 @@ app.innerHTML = [
   '        <summary data-testid="game-toolbar-toggle" data-locale="Game controls">Game controls</summary>',
   '        <div class="game-toolbar-panel">',
   '          <div class="game-toolbar-actions">',
-  '          <button type="button" data-testid="pause-toggle" data-action="toggle-pause" disabled>Pause battle</button>',
-  '          <button type="button" data-testid="campaign-menu-toggle" data-action="show-campaign-menu">Campaign</button>',
   '          <button type="button" data-testid="start-wave" data-action="start-wave">Start one pioneer sample</button>',
   '          <button type="button" data-action="recruit-unit">Hire Gunslinger</button>',
   '          <button type="button" data-action="upgrade-unit" hidden>Upgrade selected Gunslinger</button>',
@@ -137,7 +135,7 @@ app.innerHTML = [
   '              <li data-locale="Click or tap a settler to set or clear a priority target.">Click or tap a settler to set or clear a priority target.</li>',
   '              <li data-locale="Drag empty ground to pan the map; drag the minimap to move its viewport.">Drag empty ground to pan the map; drag the minimap to move its viewport.</li>',
   '              <li data-locale="Pinch with two fingers to zoom the map.">Pinch with two fingers to zoom the map.</li>',
-  '              <li data-locale="Use the pause button or HUD pause icon to pause and resume.">Use the pause button or HUD pause icon to pause and resume.</li>',
+  '              <li data-locale="Use the HUD pause icon to pause. Continue on the pause board resumes.">Use the HUD pause icon to pause. Continue on the pause board resumes.</li>',
   '              <li data-locale="Tap Game controls to show or hide the in-game toolbar.">Tap Game controls to show or hide the in-game toolbar.</li>',
   '              <li data-locale="Open Inspect battle for state details; single-step works while paused.">Open Inspect battle for state details; single-step works while paused.</li>',
   '            </ul>',
@@ -148,6 +146,28 @@ app.innerHTML = [
   '      <div class="game-overlay-host" data-testid="overlay-host" hidden>',
   '        <div class="game-overlay-backdrop" data-testid="overlay-backdrop" aria-hidden="true"></div>',
   '        <div class="game-overlay-panels">',
+  '      <dialog class="pause-board" data-testid="pause-board" data-overlay-id="pause-board" aria-labelledby="pause-board-title">',
+  '        <img class="pause-board-art" data-testid="pause-board-art" alt="" aria-hidden="true">',
+  '        <h2 class="campaign-menu-visually-hidden" id="pause-board-title">Paused</h2>',
+  '        <nav class="pause-board-actions" aria-label="Pause menu">',
+  '          <button type="button" class="campaign-wood-button" data-testid="pause-continue" data-action="pause-continue">Continue</button>',
+  '          <button type="button" class="campaign-wood-button" data-testid="pause-restart" data-action="pause-restart">Restart</button>',
+  '          <button type="button" class="campaign-wood-button" data-testid="pause-options" data-action="pause-options">Options</button>',
+  '          <button type="button" class="campaign-wood-button" data-testid="pause-close" data-action="pause-close">Close</button>',
+  '        </nav>',
+  '        <button type="button" class="pause-board-sound" data-testid="pause-sound-toggle" data-action="pause-toggle-sound" aria-pressed="true"><img data-testid="pause-sound-icon" alt="Sound"></button>',
+  '      </dialog>',
+  '      <dialog class="pause-confirmation" data-testid="pause-confirmation" data-overlay-id="pause-confirmation" aria-labelledby="pause-confirmation-title" aria-describedby="pause-confirmation-message">',
+  '        <img class="pause-confirmation-art" data-testid="pause-confirmation-art" alt="" aria-hidden="true">',
+  '        <div class="pause-confirmation-content">',
+  '          <h2 id="pause-confirmation-title" data-testid="pause-confirmation-title"></h2>',
+  '          <p id="pause-confirmation-message" data-testid="pause-confirmation-message"></p>',
+  '          <div class="pause-confirmation-actions">',
+  '            <button type="button" data-testid="confirm-pause-action" data-action="confirm-pause-action"><img data-testid="confirm-pause-icon" alt="" aria-hidden="true"><span></span></button>',
+  '            <button type="button" data-testid="cancel-pause-action" data-action="cancel-pause-action"><img data-testid="cancel-pause-icon" alt="" aria-hidden="true"><span></span></button>',
+  '          </div>',
+  '        </div>',
+  '      </dialog>',
   '      <section class="settlement-panel" data-testid="settlement" data-overlay-id="settlement" role="dialog" aria-modal="false" aria-labelledby="settlement-title" aria-live="polite" tabindex="-1" hidden>',
   '        <h2 id="settlement-title">Battle result</h2>',
   '        <p data-testid="settlement-outcome"></p>',
@@ -159,14 +179,6 @@ app.innerHTML = [
   '        <button type="button" data-action="restart-sample">Restart this sample</button>',
   '        <button type="button" data-testid="settlement-campaign-menu" data-action="return-campaign-from-settlement">Campaign map</button>',
   '      </section>',
-  '      <dialog class="campaign-exit-confirmation" data-testid="campaign-exit-confirmation" data-overlay-id="campaign-exit" aria-labelledby="campaign-exit-title">',
-  '        <h2 id="campaign-exit-title" data-locale="Return to campaign">Return to campaign</h2>',
-  '        <p data-locale="The unfinished battle will not be saved and will restart from its first wave if you return.">The unfinished battle will not be saved and will restart from its first wave if you return.</p>',
-  '        <div class="recruit-confirmation-actions">',
-  '          <button type="button" data-action="cancel-campaign-exit" data-locale="Keep playing">Keep playing</button>',
-  '          <button type="button" data-action="confirm-campaign-exit" data-locale="Leave battle">Leave battle</button>',
-  '        </div>',
-  '      </dialog>',
   '      <dialog class="recruit-confirmation" data-testid="recruit-confirmation" data-overlay-id="recruit" aria-modal="false" aria-labelledby="recruit-confirmation-title">',
   '        <h2 id="recruit-confirmation-title"></h2>',
   '        <div class="recruit-confirmation-actions">',
@@ -362,7 +374,22 @@ const mapZoomResetButtonElement = app.querySelector<HTMLButtonElement>('[data-te
 const mapZoomLevelElement = app.querySelector<HTMLOutputElement>('[data-testid="map-zoom-level"]');
 const sceneHeadingElement = app.querySelector<HTMLElement>('.scene-heading');
 const gameToolbarElement = app.querySelector<HTMLElement>('[data-testid="game-toolbar"]');
-const campaignExitConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="campaign-exit-confirmation"]');
+const pauseBoardElement = app.querySelector<HTMLDialogElement>('[data-testid="pause-board"]');
+const pauseBoardArtElement = app.querySelector<HTMLImageElement>('[data-testid="pause-board-art"]');
+const pauseContinueButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-continue"]');
+const pauseRestartButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-restart"]');
+const pauseOptionsButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-options"]');
+const pauseCloseButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-close"]');
+const pauseSoundToggleButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-sound-toggle"]');
+const pauseSoundIconElement = app.querySelector<HTMLImageElement>('[data-testid="pause-sound-icon"]');
+const pauseConfirmationElement = app.querySelector<HTMLDialogElement>('[data-testid="pause-confirmation"]');
+const pauseConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="pause-confirmation-art"]');
+const pauseConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="pause-confirmation-title"]');
+const pauseConfirmationMessageElement = app.querySelector<HTMLElement>('[data-testid="pause-confirmation-message"]');
+const confirmPauseActionButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="confirm-pause-action"]');
+const cancelPauseActionButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="cancel-pause-action"]');
+const confirmPauseIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-pause-icon"]');
+const cancelPauseIconElement = app.querySelector<HTMLImageElement>('[data-testid="cancel-pause-icon"]');
 const campaignPanelElement = app.querySelector<HTMLElement>('.campaign-panel');
 const archivePanelElement = app.querySelector<HTMLDetailsElement>('[data-testid="archive-panel"]');
 const profileStatusElement = app.querySelector<HTMLElement>('[data-testid="profile-status"]');
@@ -389,7 +416,6 @@ const combatStatusElement = app.querySelector<HTMLElement>('[data-testid="combat
 const sceneTitleElement = app.querySelector<HTMLElement>('#scene-title');
 const sceneContextElement = app.querySelector<HTMLElement>('[data-testid="scene-context"]');
 const sceneDifficultyElement = app.querySelector<HTMLElement>('[data-testid="scene-difficulty"]');
-const campaignMenuToggleElement = app.querySelector<HTMLButtonElement>('[data-action="show-campaign-menu"]');
 const settlementCampaignMenuButtonElement = app.querySelector<HTMLButtonElement>('[data-action="return-campaign-from-settlement"]');
 const sceneCaptionElement = app.querySelector<HTMLElement>('[data-testid="scene-caption"]');
 const upgradeSampleStatusElement = app.querySelector<HTMLElement>('[data-testid="upgrade-sample-status"]');
@@ -401,7 +427,6 @@ const settingsStatusElement = app.querySelector<HTMLElement>('[data-testid="sett
 const retrySettingsButtonElement = app.querySelector<HTMLButtonElement>('[data-action="retry-settings-save"]');
 const reloadProfileButtonElement = app.querySelector<HTMLButtonElement>('[data-action="reload-saved-profile"]');
 const pauseStatusElement = app.querySelector<HTMLElement>('[data-testid="pause-status"]');
-const pauseButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="pause-toggle"]');
 const singleStepButtonElement = app.querySelector<HTMLButtonElement>('[data-testid="single-step"]');
 const inspectionOverlayInputElement = app.querySelector<HTMLInputElement>('[data-testid="inspection-overlay"]');
 const inspectionFrameElement = app.querySelector<HTMLElement>('[data-testid="inspection-frame"]');
@@ -489,7 +514,11 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !mapZoomControlsElement || !mapZoomOutButtonElement
   || !mapZoomInButtonElement || !mapZoomResetButtonElement || !mapZoomLevelElement
   || !sceneHeadingElement || !gameToolbarElement
-  || !campaignExitConfirmationElement || !campaignPanelElement
+  || !pauseBoardElement || !pauseBoardArtElement || !pauseContinueButtonElement || !pauseRestartButtonElement
+  || !pauseOptionsButtonElement || !pauseCloseButtonElement || !pauseSoundToggleButtonElement || !pauseSoundIconElement
+  || !pauseConfirmationElement || !pauseConfirmationArtElement || !pauseConfirmationTitleElement || !pauseConfirmationMessageElement
+  || !confirmPauseActionButtonElement || !cancelPauseActionButtonElement || !confirmPauseIconElement || !cancelPauseIconElement
+  || !campaignPanelElement
   || !archivePanelElement
   || !profileStatusElement || !pendingSettlementStatusElement || !retryPendingSettlementButtonElement || !profileRecoveryStatusElement
   || !exportCorruptProfileButtonElement || !resetCorruptProfileButtonElement
@@ -499,7 +528,7 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !campaignProgressSummaryElement || !campaignStageListElement || !campaignStatusElement
   || !campaignDifficultySelectElement || !campaignDifficultyStatusElement
   || !sceneTitleElement || !sceneContextElement || !sceneDifficultyElement || !sceneCaptionElement
-  || !campaignMenuToggleElement || !settlementCampaignMenuButtonElement
+  || !settlementCampaignMenuButtonElement
   || !upgradeSampleStatusElement || !upgradeStatusElement
   || !recruitPoolStatusElement || !recruitStatusElement || !mapHireStatusElement
   || !recruitButton || !recruitConfirmationElement
@@ -516,7 +545,7 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !continueCampaignWaveIntroButtonElement
   || !recruitConfirmationTitleElement || !confirmRecruitButton || !cancelRecruitButton || !settingsStatusElement
   || !retrySettingsButtonElement || !reloadProfileButtonElement
-  || !pauseStatusElement || !pauseButtonElement
+  || !pauseStatusElement
   || !singleStepButtonElement || !inspectionOverlayInputElement || !inspectionFrameElement
   || !inspectionUnitsElement || !inspectionEnemiesElement || !inspectionRouteElement
   || !simulationSpeedInputElement || !simulationSpeedValueElement || !soundToggleButtonElement
@@ -553,7 +582,22 @@ const mapZoomLevel: HTMLOutputElement = mapZoomLevelElement;
 const sceneHeading: HTMLElement = sceneHeadingElement;
 const gameToolbar: HTMLElement = gameToolbarElement;
 const campaignPanel: HTMLElement = campaignPanelElement;
-const campaignExitConfirmation: HTMLDialogElement = campaignExitConfirmationElement;
+const pauseBoard: HTMLDialogElement = pauseBoardElement;
+const pauseBoardArt: HTMLImageElement = pauseBoardArtElement;
+const pauseContinueControl: HTMLButtonElement = pauseContinueButtonElement;
+const pauseRestartControl: HTMLButtonElement = pauseRestartButtonElement;
+const pauseOptionsControl: HTMLButtonElement = pauseOptionsButtonElement;
+const pauseCloseControl: HTMLButtonElement = pauseCloseButtonElement;
+const pauseSoundToggleControl: HTMLButtonElement = pauseSoundToggleButtonElement;
+const pauseSoundIcon: HTMLImageElement = pauseSoundIconElement;
+const pauseConfirmation: HTMLDialogElement = pauseConfirmationElement;
+const pauseConfirmationArt: HTMLImageElement = pauseConfirmationArtElement;
+const pauseConfirmationTitle: HTMLElement = pauseConfirmationTitleElement;
+const pauseConfirmationMessage: HTMLElement = pauseConfirmationMessageElement;
+const confirmPauseActionControl: HTMLButtonElement = confirmPauseActionButtonElement;
+const cancelPauseActionControl: HTMLButtonElement = cancelPauseActionButtonElement;
+const confirmPauseIcon: HTMLImageElement = confirmPauseIconElement;
+const cancelPauseIcon: HTMLImageElement = cancelPauseIconElement;
 const archivePanel: HTMLDetailsElement = archivePanelElement;
 const profileStatus: HTMLElement = profileStatusElement;
 const pendingSettlementStatus: HTMLElement = pendingSettlementStatusElement;
@@ -579,7 +623,6 @@ const campaignDifficultyStatus: HTMLElement = campaignDifficultyStatusElement;
 const sceneTitle: HTMLElement = sceneTitleElement;
 const sceneContext: HTMLElement = sceneContextElement;
 const sceneDifficulty: HTMLElement = sceneDifficultyElement;
-const campaignMenuToggle: HTMLButtonElement = campaignMenuToggleElement;
 const settlementCampaignMenuButton: HTMLButtonElement = settlementCampaignMenuButtonElement;
 const sceneCaption: HTMLElement = sceneCaptionElement;
 const upgradeSampleStatus: HTMLElement = upgradeSampleStatusElement;
@@ -591,7 +634,6 @@ const settingsStatus: HTMLElement = settingsStatusElement;
 const retrySettingsButton: HTMLButtonElement = retrySettingsButtonElement;
 const reloadProfileButton: HTMLButtonElement = reloadProfileButtonElement;
 const pauseStatus: HTMLElement = pauseStatusElement;
-const pauseControl: HTMLButtonElement = pauseButtonElement;
 const singleStepControl: HTMLButtonElement = singleStepButtonElement;
 const inspectionOverlayInput: HTMLInputElement = inspectionOverlayInputElement;
 const inspectionFrame: HTMLElement = inspectionFrameElement;
@@ -750,7 +792,9 @@ let selectedMenuRegionId: CampaignRegionId = 'new-mexico';
 let selectedMenuLevel = 1;
 let freePlayMenuActive = false;
 let freePlayDifficulty: GameDifficulty = 'easy';
-let menuReturnWasPaused = false;
+type PauseConfirmationAction = 'restart' | 'close';
+let pauseConfirmationAction: PauseConfirmationAction | undefined;
+let pauseOptionsReturnToBoard = false;
 let campaignFeedback: { type: 'loading' | 'load-failed' | 'locked' | 'difficulty-locked' | 'opening' | 'opened' | 'open-failed'; scenarioId?: string } | undefined;
 let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
@@ -763,8 +807,6 @@ let campaignWaveIntroCursor = new CampaignWaveIntroCursor();
 let pendingCampaignWaveIntro: CampaignWaveIntro | undefined;
 let showInspectionOverlay = false;
 let pageLeaving = false;
-let pauseButtonMeasureContext: CanvasRenderingContext2D | null | undefined;
-let pauseButtonWidthKey = '';
 let settingsStatusKey: 'load-failed' | 'saved' | 'save-failed' | 'conflict' | 'profile-reset' | undefined;
 let settingsSaveBusy = false;
 let profileLoadFailed = false;
@@ -918,8 +960,6 @@ const languageMessages = {
     mapZoomIn: 'Zoom in',
     mapZoomOut: 'Zoom out',
     mapZoomReset: 'Reset zoom',
-    pauseBattle: 'Pause battle',
-    resumeBattle: 'Resume battle',
     battlePaused: 'Battle paused.',
     battlePausedInBackground: 'Battle paused automatically while this tab was in the background.',
     inspectTitle: 'Inspect battle',
@@ -1347,6 +1387,10 @@ function gamblerCardLabel(card: GamblerCardView, language: keyof typeof gamblerD
 const campaignMenuCopy = {
   en: {
     start: 'START', freePlay: 'FREE PLAY', help: 'HELP', options: 'OPTIONS', sound: 'SOUND',
+    pauseMenu: 'Pause menu', pausedTitle: 'PAUSED', continueBattle: 'CONTINUE', restartBattle: 'RESTART', closeBattle: 'CLOSE',
+    restartConfirmation: 'Restart this battle from the beginning?',
+    closeConfirmation: 'Return to the campaign menu? The unfinished battle will not be saved.',
+    confirmAction: 'YES', cancelAction: 'NO',
     freePlayMenu: 'Free Play menu', freePlayRegionHeading: 'Choose a region for Free Play',
     freePlayRegionHint: 'Free Play opens the four implemented campaign levels and any difficulty, without campaign unlock requirements.',
     freePlayLevelHint: (available: number) => `${available}/10 implemented levels available in Free Play. Other levels are not implemented yet.`,
@@ -1397,6 +1441,10 @@ const campaignMenuCopy = {
   },
   zh: {
     start: '开始', freePlay: '自由游玩', help: '帮助', options: '选项', sound: '音效',
+    pauseMenu: '暂停菜单', pausedTitle: '已暂停', continueBattle: '继续', restartBattle: '重新开始', closeBattle: '关闭',
+    restartConfirmation: '要从头重新开始本关吗？',
+    closeConfirmation: '要返回战役菜单吗？未完成的战斗不会保存。',
+    confirmAction: '是', cancelAction: '否',
     freePlayMenu: '自由游玩菜单', freePlayRegionHeading: '选择自由游玩区域',
     freePlayRegionHint: '自由游玩可进入目前已实现的四个战役关卡和任意难度，不受战役解锁条件限制。',
     freePlayLevelHint: (available: number) => `自由游玩可进入 ${available}/10 个已实现关卡，其他关卡尚未实现。`,
@@ -2482,35 +2530,51 @@ function renderMapZoomControls(language: keyof typeof languageMessages = getLang
   mapZoomResetButton.disabled = mapCamera.zoom === 1 && mapCamera.offsetX === 0 && mapCamera.offsetY === 0;
 }
 
-function syncPauseButtonWidth(language: keyof typeof languageMessages): void {
-  const style = getComputedStyle(pauseControl);
-  const widthKey = [
-    language,
-    style.font,
-    style.paddingLeft,
-    style.paddingRight,
-    style.borderLeftWidth,
-    style.borderRightWidth,
-  ].join('|');
-  if (widthKey === pauseButtonWidthKey) return;
+function renderPauseBoard(language: keyof typeof languageMessages): void {
+  const copy = campaignMenuCopy[language];
+  const soundCopy = languageMessages[language];
+  const boardArt = campaignMenuAssetUrl('gng_startmenu_2_menu_0_box.png');
+  const buttonArt = campaignMenuAssetUrl('gng_startmenu_2_menu_1_button.png');
+  const soundArt = campaignMenuAssetUrl(soundEnabled
+    ? 'gng_startmenu_2_menu_2_sound_on.png'
+    : 'gng_startmenu_2_menu_2_sound_off.png');
+  pauseBoard.querySelector<HTMLElement>('#pause-board-title')!.textContent = copy.pausedTitle;
+  pauseBoard.setAttribute('aria-label', copy.pauseMenu);
+  if (pauseBoardArt.src !== boardArt) pauseBoardArt.src = boardArt;
+  pauseBoard.style.setProperty('--pause-board-button-art', `url("${buttonArt}")`);
+  pauseContinueControl.textContent = copy.continueBattle;
+  pauseRestartControl.textContent = copy.restartBattle;
+  pauseOptionsControl.textContent = copy.options;
+  pauseCloseControl.textContent = copy.closeBattle;
+  pauseSoundToggleControl.setAttribute('aria-pressed', String(soundEnabled));
+  pauseSoundToggleControl.setAttribute('aria-label', `${copy.sound}: ${soundEnabled ? soundCopy.soundOn : soundCopy.soundOff}`);
+  pauseSoundToggleControl.title = soundEnabled ? soundCopy.soundOn : soundCopy.soundOff;
+  pauseSoundIcon.alt = soundEnabled ? soundCopy.soundOn : soundCopy.soundOff;
+  if (pauseSoundIcon.src !== soundArt) pauseSoundIcon.src = soundArt;
+  pauseContinueControl.disabled = replacingSession;
+  pauseRestartControl.disabled = replacingSession || replaying;
+  pauseOptionsControl.disabled = replacingSession;
+  pauseCloseControl.disabled = replacingSession;
+  renderPauseConfirmation(language);
+}
 
-  if (pauseButtonMeasureContext === undefined) {
-    pauseButtonMeasureContext = document.createElement('canvas').getContext('2d');
-  }
-  if (!pauseButtonMeasureContext) return;
-
-  const localizedMessages = languageMessages[language];
-  pauseButtonMeasureContext.font = style.font;
-  const labelWidth = Math.max(
-    pauseButtonMeasureContext.measureText(localizedMessages.pauseBattle).width,
-    pauseButtonMeasureContext.measureText(localizedMessages.resumeBattle).width,
-  );
-  const horizontalSpace = Number.parseFloat(style.paddingLeft)
-    + Number.parseFloat(style.paddingRight)
-    + Number.parseFloat(style.borderLeftWidth)
-    + Number.parseFloat(style.borderRightWidth);
-  pauseControl.style.width = `${Math.ceil(labelWidth + horizontalSpace + 1)}px`;
-  pauseButtonWidthKey = widthKey;
+function renderPauseConfirmation(language: keyof typeof languageMessages): void {
+  if (!pauseConfirmationAction) return;
+  const copy = campaignMenuCopy[language];
+  const textboxArt = campaignPortraitAssetUrl('gng_hud_2_textbox_large.png');
+  if (pauseConfirmationArt.src !== textboxArt) pauseConfirmationArt.src = textboxArt;
+  pauseConfirmationTitle.textContent = pauseConfirmationAction === 'restart'
+    ? copy.restartBattle
+    : copy.closeBattle;
+  pauseConfirmationMessage.textContent = pauseConfirmationAction === 'restart'
+    ? copy.restartConfirmation
+    : copy.closeConfirmation;
+  confirmPauseActionControl.querySelector('span')!.textContent = copy.confirmAction;
+  cancelPauseActionControl.querySelector('span')!.textContent = copy.cancelAction;
+  const confirmIcon = campaignPortraitAssetUrl('gng_hud_2_yes.png');
+  const cancelIcon = campaignMenuAssetUrl('gng_hud_2_no.png');
+  if (confirmPauseIcon.src !== confirmIcon) confirmPauseIcon.src = confirmIcon;
+  if (cancelPauseIcon.src !== cancelIcon) cancelPauseIcon.src = cancelIcon;
 }
 
 function renderStatus(events: readonly GameEvent[] = view.events): void {
@@ -2520,6 +2584,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   renderCampaign();
   if (!campaignMenuScreen.hidden) renderCampaignMenu();
   renderCampaignWaveIntro();
+  renderPauseBoard(language);
   renderMapZoomControls(language);
   const actionLocked = replaying || replacingSession;
   if (view.wave?.settlement && gamblerDialog.open) closeGamblerDialog();
@@ -2595,12 +2660,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     ? pauseReason === 'background' ? messages.battlePausedInBackground : messages.battlePaused
     : '';
   pauseStatus.textContent = pauseMessage;
-  pauseStatus.hidden = !view.paused || pauseReason === 'wave-intro';
-  pauseControl.textContent = view.paused ? messages.resumeBattle : messages.pauseBattle;
-  syncPauseButtonWidth(language);
-  pauseControl.disabled = actionLocked || pauseReason === 'wave-intro' || (!view.paused
-    && view.wave?.phase !== 'active'
-    && !view.units.some((candidate) => candidate.moving));
+  pauseStatus.hidden = !view.paused || pauseReason === 'wave-intro' || !campaignMenuScreen.hidden
+    || overlayHost.active === pauseBoard || overlayHost.active === pauseConfirmation;
   singleStepControl.textContent = messages.singleStep;
   singleStepControl.disabled = actionLocked || pauseReason === 'wave-intro' || !view.paused || view.wave?.settlement !== undefined;
   inspectionOverlayInput.checked = showInspectionOverlay;
@@ -2853,6 +2914,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       ? language === 'zh' ? `${activeCampaignStage.title[language]}游戏地图` : `${activeCampaignStage.title[language]} game map`
       : language === 'zh' ? '牛溪谷游戏地图' : 'Cow Gulch game map';
   if (canvas.getAttribute('aria-label') !== canvasLabel) canvas.setAttribute('aria-label', canvasLabel);
+  syncGameUiState();
 }
 
 function clearGamblerDialogTimers(): void {
@@ -3447,12 +3509,10 @@ screen.orientation?.addEventListener('change', () => {
 
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(() => {
-    syncPauseButtonWidth(getLanguage());
     redraw(true);
   }).observe(gameFrame);
 }
 window.addEventListener('resize', () => {
-  syncPauseButtonWidth(getLanguage());
   renderFullscreenControl();
   redraw(true);
 });
@@ -4398,26 +4458,83 @@ function dispatch(intent: GameIntent): void {
   if (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving)) startGameLoop();
 }
 
-pauseControl.addEventListener('click', () => {
-  if (document.hidden) return;
+function pauseBattleFromHud(): void {
+  if (document.hidden || !view.wave || view.wave.settlement || replaying || replacingSession
+    || campaignWaveIntroDialog.open || pauseBoard.open || pauseConfirmation.open) return;
   previousTimestamp = undefined;
   simulationTime.reset();
-  if (view.paused) {
-    pauseReason = undefined;
-    view = session.resume();
-    renderStatus();
-    redraw();
-    startGameLoop();
-    return;
-  }
-
   cancelPointerGesture();
-  pauseReason = 'manual';
-  stopGameLoop();
-  view = session.pause();
+  if (!view.paused) {
+    pauseReason = 'manual';
+    stopGameLoop();
+    view = session.pause();
+  }
+  overlayHost.open(pauseBoard);
   renderStatus();
   redraw();
+}
+
+function continuePauseBoard(): void {
+  if (overlayHost.active !== pauseBoard) return;
+  overlayHost.close(pauseBoard, false);
+  if (view.paused && !document.hidden) {
+    pauseReason = undefined;
+    view = session.resume();
+  }
+  renderStatus();
+  redraw();
+  startGameLoop();
+}
+
+function openPauseConfirmation(action: PauseConfirmationAction): void {
+  if (overlayHost.active !== pauseBoard) return;
+  pauseConfirmationAction = action;
+  renderPauseConfirmation(getLanguage());
+  overlayHost.open(pauseConfirmation, { preserveCurrent: true });
+}
+
+function cancelPauseConfirmation(): void {
+  pauseConfirmationAction = undefined;
+  overlayHost.close(pauseConfirmation);
+  renderPauseBoard(getLanguage());
+}
+
+function confirmPauseAction(): void {
+  const action = pauseConfirmationAction;
+  if (!action) return;
+  pauseConfirmationAction = undefined;
+  overlayHost.close(pauseConfirmation);
+  overlayHost.close(pauseBoard, false);
+  if (action === 'restart') {
+    const { scenarioId, mode, difficulty } = session.startRecord;
+    void replaceSession(requestScenarioOpen(scenarioId, mode, difficulty ?? 'easy')).then((opened) => {
+      if (opened) return;
+      pauseReason = 'manual';
+      overlayHost.open(pauseBoard);
+      renderStatus();
+      redraw();
+    });
+    return;
+  }
+  enterCampaignMenu();
+}
+
+pauseContinueControl.addEventListener('click', continuePauseBoard);
+pauseRestartControl.addEventListener('click', () => openPauseConfirmation('restart'));
+pauseCloseControl.addEventListener('click', () => openPauseConfirmation('close'));
+pauseOptionsControl.addEventListener('click', () => {
+  if (overlayHost.active !== pauseBoard) return;
+  pauseOptionsReturnToBoard = true;
+  overlayHost.close(pauseBoard, false);
+  showCampaignMenu('options');
 });
+pauseSoundToggleControl.addEventListener('click', () => {
+  setSoundEnabled(!soundEnabled);
+  saveSettings({ simulationSpeed, difficulty: selectedDifficulty, soundEnabled });
+  renderStatus();
+});
+confirmPauseActionControl.addEventListener('click', confirmPauseAction);
+cancelPauseActionControl.addEventListener('click', cancelPauseConfirmation);
 
 singleStepControl.addEventListener('click', () => {
   if (!view.paused || singleStepControl.disabled) return;
@@ -4464,7 +4581,14 @@ campaignMenuView.addEventListener('click', (event: MouseEvent) => {
       break;
     case 'menu-help': showCampaignMenu('help'); break;
     case 'menu-options': showCampaignMenu('options'); break;
-    case 'menu-back-home': showCampaignMenu('home'); break;
+    case 'menu-back-home':
+      if (pauseOptionsReturnToBoard) {
+        pauseOptionsReturnToBoard = false;
+        showBattleScene();
+        overlayHost.open(pauseBoard);
+        renderStatus();
+      } else showCampaignMenu('home');
+      break;
     case 'menu-back-regions': showCampaignMenu('regions'); break;
     case 'menu-back-levels': showCampaignMenu('levels'); break;
     case 'menu-back-overview': showCampaignMenu('overview'); break;
@@ -4532,7 +4656,9 @@ campaignMenuView.addEventListener('change', (event: Event) => {
 
 function enterCampaignMenu(): void {
   if (view.wave?.settlement) settlementPanelDismissed = true;
-  overlayHost.close(campaignExitConfirmation);
+  overlayHost.closeActive();
+  pauseConfirmationAction = undefined;
+  pauseOptionsReturnToBoard = false;
   stopGameLoop();
   previousTimestamp = undefined;
   simulationTime.reset();
@@ -4541,33 +4667,6 @@ function enterCampaignMenu(): void {
   showCampaignMenu('home');
   renderStatus();
 }
-
-campaignMenuToggle.addEventListener('click', () => {
-  if (campaignExitConfirmation.open) return;
-  menuReturnWasPaused = view.paused;
-  if (!view.paused) {
-    cancelPointerGesture();
-    stopGameLoop();
-    pauseReason = 'manual';
-    view = session.pause();
-    renderStatus();
-    redraw();
-  }
-  overlayHost.open(campaignExitConfirmation);
-});
-
-campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="cancel-campaign-exit"]')?.addEventListener('click', () => {
-  overlayHost.close(campaignExitConfirmation);
-  if (!menuReturnWasPaused) {
-    pauseReason = undefined;
-    view = session.resume();
-    renderStatus();
-    redraw();
-    startGameLoop();
-  }
-});
-
-campaignExitConfirmation.querySelector<HTMLButtonElement>('[data-action="confirm-campaign-exit"]')?.addEventListener('click', enterCampaignMenu);
 settlementCampaignMenuButton.addEventListener('click', enterCampaignMenu);
 
 startWaveControl.addEventListener('click', () => dispatch({ type: 'start-wave' }));
@@ -4979,7 +5078,7 @@ canvas.addEventListener('pointerdown', (event: PointerEvent) => {
     const hudAction = gameHudPointerActionAt(point.x, point.y);
     if (hudAction && !minimapHit) {
       event.preventDefault();
-      if (hudAction === 'pause') pauseControl.click();
+      if (hudAction === 'pause') pauseBattleFromHud();
       return;
     }
   }

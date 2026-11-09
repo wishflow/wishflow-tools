@@ -1329,37 +1329,153 @@ body.gng-game-fullscreen .usagi-widget {
   border: 0;
 }
 
-.campaign-exit-confirmation {
+.pause-board,
+.pause-confirmation {
   position: absolute;
   z-index: var(--gng-layer-modal);
   top: 50%;
   left: 50%;
-  width: min(90%, 32.5rem);
-  max-height: calc(100% - 2rem);
-  overflow: auto;
+  display: none;
+  max-width: none;
+  max-height: none;
   margin: 0;
-  border: 2px solid #e2c18c;
-  border-radius: 0.6rem;
-  padding: 1.25rem;
+  border: 0;
+  padding: 0;
   color: #fff2d9;
-  background: #30271f;
+  background: transparent;
   transform: translate(-50%, -50%);
 }
 
-.campaign-exit-confirmation h2 {
-  margin-top: 0;
-  color: #ffd892;
+.pause-board::backdrop,
+.pause-confirmation::backdrop {
+  background: transparent;
 }
 
-.campaign-exit-confirmation p {
-  max-width: 32rem;
-  line-height: 1.45;
+.pause-board[open],
+.pause-confirmation[open] {
+  display: block;
 }
 
-.campaign-exit-confirmation .recruit-confirmation-actions {
+.pause-board {
+  width: min(30cqw, 23rem);
+  aspect-ratio: 182 / 252;
+  overflow: visible;
+}
+
+.pause-board-art,
+.pause-confirmation-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.pause-board-actions {
+  position: absolute;
+  inset: 24% 13% 10%;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
+  gap: 2%;
+}
+
+.pause-board .campaign-wood-button {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  background-image: var(--pause-board-button-art);
+  font-size: clamp(8px, 2.5cqw, 18px) !important;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.pause-board .campaign-wood-button:focus-visible,
+.pause-board-sound:focus-visible,
+.pause-confirmation-actions button:focus-visible {
+  outline: 2px solid #ffe28a;
+  outline-offset: 2px;
+}
+
+.pause-board-sound {
+  position: absolute;
+  top: 8%;
+  right: 7%;
+  width: 18%;
+  height: 12%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.pause-board-sound img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pause-confirmation {
+  width: min(64cqw, 38rem);
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+}
+
+.pause-confirmation-content {
+  position: absolute;
+  inset: 13% 12% 10%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: center;
+  justify-items: center;
+  gap: 3%;
+  color: #23160c;
+  text-align: center;
+}
+
+.pause-confirmation-content h2,
+.pause-confirmation-content p {
+  max-width: 100%;
+  margin: 0;
+  font-size: clamp(8px, 2.1cqw, 18px);
+  line-height: 1.2;
+}
+
+.pause-confirmation-content h2 {
+  color: #291a0e;
+  font-weight: 800;
+}
+
+.pause-confirmation-content p {
+  align-self: center;
+}
+
+.pause-confirmation-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  gap: 12%;
+}
+
+.pause-confirmation-actions button {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  min-width: 3.5rem;
+  border: 0;
+  padding: 0;
+  color: #28180c;
+  background: transparent;
+  font-size: clamp(7px, 1.6cqw, 13px);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pause-confirmation-actions img {
+  width: clamp(16px, 3.5cqw, 32px);
+  height: clamp(16px, 3.5cqw, 32px);
+  object-fit: contain;
 }
 
 @media (max-width: 520px) {
@@ -1641,7 +1757,6 @@ body.gng-game-fullscreen .usagi-widget {
   font-weight: 800;
 }
 
-.campaign-exit-confirmation button,
 .recruit-confirmation button,
 .settlement-panel button {
   min-height: 2.6rem;
@@ -1655,13 +1770,11 @@ body.gng-game-fullscreen .usagi-widget {
   cursor: pointer;
 }
 
-.campaign-exit-confirmation button:hover:not(:disabled),
 .recruit-confirmation button:hover:not(:disabled),
 .settlement-panel button:hover:not(:disabled) {
   background: #67482b;
 }
 
-.campaign-exit-confirmation button:disabled,
 .recruit-confirmation button:disabled,
 .settlement-panel button:disabled {
   color: #a99a84;
@@ -1669,7 +1782,6 @@ body.gng-game-fullscreen .usagi-widget {
   cursor: default;
 }
 
-.campaign-exit-confirmation button:focus-visible,
 .recruit-confirmation button:focus-visible,
 .settlement-panel button:focus-visible {
   outline: 2px solid #ffe28a;
@@ -2708,8 +2820,6 @@ body.gng-game-fullscreen .usagi-widget {
     font-size: 0.66rem;
   }
 
-  .game-toolbar-actions > [data-testid="pause-toggle"],
-  .game-toolbar-actions > [data-testid="campaign-menu-toggle"],
   .game-toolbar-actions > [data-action="clear-selection"] {
     padding-right: 0.05rem;
     padding-left: 0.05rem;

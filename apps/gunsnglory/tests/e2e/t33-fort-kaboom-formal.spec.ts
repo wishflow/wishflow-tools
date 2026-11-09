@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import map from '../../src/content/new-mexico-03.json' with { type: 'json' };
 import { calculateMapViewport } from '../../src/render/map-viewport';
+import { continueFromPauseBoard, pauseFromHud } from './helpers';
 
 const cowGulchId = 'campaign-new-mexico-01';
 const apacheValleyId = 'campaign-new-mexico-02';
@@ -373,13 +374,11 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
   await expect(speed).toHaveValue('4');
   await expect(page.getByTestId('settings-status')).toContainText('saved');
 
-  const pause = page.getByTestId('pause-toggle');
-  await expect(pause).toBeEnabled();
-  await pause.click();
-  await expect(pause).toHaveText('Resume battle');
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-board')).toBeVisible();
   await installManualGameClock(page);
-  await pause.click();
-  await expect(pause).toHaveText('Pause battle');
+  await continueFromPauseBoard(page);
+  await expect(page.getByTestId('pause-board')).toBeHidden();
 
   const slots = fortKaboomHireSlots();
   expect(slots).toHaveLength(31);

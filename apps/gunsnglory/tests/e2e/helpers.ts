@@ -24,12 +24,35 @@ export async function clickCanvasPoint(page: Page, point: { x: number; y: number
 
 export async function tapCanvasPoint(page: Page, point: { x: number; y: number }): Promise<void> {
   const canvas = page.getByTestId('game-canvas');
+  await canvas.scrollIntoViewIfNeeded();
   const bounds = await canvas.boundingBox();
   if (!bounds) throw new Error('Game canvas has no layout box');
   await page.touchscreen.tap(
     bounds.x + bounds.width * point.x / 1024,
     bounds.y + bounds.height * point.y / 576,
   );
+}
+
+export async function pauseFromHud(page: Page, input: 'click' | 'tap' = 'click'): Promise<void> {
+  const point = { x: 314, y: 24 };
+  if (input === 'tap') await tapCanvasPoint(page, point);
+  else await clickCanvasPoint(page, point);
+}
+
+export async function continueFromPauseBoard(page: Page, input: 'click' | 'tap' = 'click'): Promise<void> {
+  const button = page.getByTestId('pause-continue');
+  if (input === 'tap') await button.tap();
+  else await button.click();
+}
+
+export async function leaveBattleFromPauseBoard(page: Page, input: 'click' | 'tap' = 'click'): Promise<void> {
+  await pauseFromHud(page, input);
+  const close = page.getByTestId('pause-close');
+  if (input === 'tap') await close.tap();
+  else await close.click();
+  const confirm = page.getByTestId('confirm-pause-action');
+  if (input === 'tap') await confirm.tap();
+  else await confirm.click();
 }
 
 export async function openSingleWaveSample(page: Page, input: 'click' | 'tap' = 'click'): Promise<void> {

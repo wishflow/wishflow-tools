@@ -1,4 +1,5 @@
 import { expect, test } from './auto-continue-fixtures';
+import { leaveBattleFromPauseBoard } from './helpers';
 
 async function readSavedProfile(page: import('@playwright/test').Page): Promise<{
   settings: unknown;
@@ -77,8 +78,7 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   await expect(page.getByTestId('scene-caption')).toContainText(/FREE PLAY/);
   expect(await readSavedProfile(page)).toEqual(profileBefore);
 
-  await page.getByTestId('campaign-menu-toggle').click();
-  await page.getByRole('button', { name: 'Leave battle' }).click();
+  await leaveBattleFromPauseBoard(page);
   await expect(page.getByTestId('menu-free-play')).toBeVisible();
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-new-mexico').click();

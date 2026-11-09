@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import map from '../../src/content/new-mexico-02.json' with { type: 'json' };
 import { calculateMapViewport, getMapCameraOriginBounds } from '../../src/render/map-viewport';
+import { continueFromPauseBoard, pauseFromHud } from './helpers';
 
 const officialCowGulchId = 'campaign-new-mexico-01';
 const officialApacheValleyId = 'campaign-new-mexico-02';
@@ -198,13 +199,11 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   await speed.press('End');
   await expect(speed).toHaveValue('4');
   await expect(page.getByTestId('settings-status')).toContainText('saved');
-  const pause = page.getByTestId('pause-toggle');
-  await expect(pause).toBeEnabled();
-  await pause.click();
-  await expect(pause).toHaveText('Resume battle');
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-board')).toBeVisible();
   await installManualGameClock(page);
-  await pause.click();
-  await expect(pause).toHaveText('Pause battle');
+  await continueFromPauseBoard(page);
+  await expect(page.getByTestId('pause-board')).toBeHidden();
 
   const slots = apacheValleyHireSlots();
   const hired = new Set<string>();

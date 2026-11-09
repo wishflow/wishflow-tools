@@ -1,4 +1,5 @@
 import { expect, test } from './auto-continue-fixtures';
+import { continueFromPauseBoard, pauseFromHud } from './helpers';
 import { readFile } from 'node:fs/promises';
 
 const sharedWidgetStyles = await readFile(new URL('../../../../site/usagi-widget.css', import.meta.url), 'utf8');
@@ -130,13 +131,13 @@ test('keeps frame-local overlays and fixed fullscreen controls interactive in bo
     await help.locator('summary').click();
     await expect(help).toHaveAttribute('open', '');
 
-    const dialog = page.getByTestId('campaign-exit-confirmation');
-    const simulationBeforeExitPrompt = await page.locator('.game-frame').getAttribute('data-simulation-state');
-    await page.getByTestId('campaign-menu-toggle').click();
-    await expect(dialog).toBeVisible();
+    const board = page.getByTestId('pause-board');
+    const dialog = page.getByTestId('pause-confirmation');
+    await pauseFromHud(page);
+    await expect(board).toBeVisible();
     await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
     await expect(overlayHost).toBeVisible();
-    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'campaign-exit');
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'pause-board');
     await expect(overlayHost.locator('[data-overlay-active="true"]')).toHaveCount(1);
     expect(await dialog.evaluate((panel) => panel.closest('.game-frame') !== null)).toBe(true);
     await expect(fullscreen).toBeVisible();
@@ -145,11 +146,14 @@ test('keeps frame-local overlays and fixed fullscreen controls interactive in bo
 
     await fullscreen.click();
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'true');
+    await expect(board).toBeVisible();
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await page.getByTestId('pause-close').click();
     await expect(dialog).toBeVisible();
     await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
-    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'campaign-exit');
-    const keepPlaying = dialog.getByRole('button', { name: 'Keep playing' });
-    expect(await keepPlaying.evaluate((button: HTMLButtonElement) => {
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'pause-confirmation');
+    const cancel = page.getByTestId('cancel-pause-action');
+    expect(await cancel.evaluate((button: HTMLButtonElement) => {
       const bounds = button.getBoundingClientRect();
       return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
     })).toBe(true);
@@ -179,10 +183,15 @@ test('keeps frame-local overlays and fixed fullscreen controls interactive in bo
     await fullscreen.click();
     await expect(fullscreen).toHaveAttribute('aria-pressed', 'false');
     await expect(dialog).toBeVisible();
-    await dialog.getByRole('button', { name: 'Keep playing' }).click();
+    await cancel.click();
     await expect(dialog).toBeHidden();
+    await expect(board).toBeVisible();
+    await expect(overlayHost).toHaveAttribute('data-active-overlay', 'pause-board');
+    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
+    await continueFromPauseBoard(page);
+    await expect(board).toBeHidden();
     await expect(overlayHost).toBeHidden();
-    await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', simulationBeforeExitPrompt ?? '');
+    await expect(page.locator('.game-frame')).not.toHaveAttribute('data-simulation-state', 'paused');
     expect(await fullscreen.evaluate((button) => button.parentElement?.getAttribute('data-testid'))).toBe(fullscreenParentBefore);
 
     const speed = page.getByRole('slider', { name: 'Simulation speed' });
@@ -209,12 +218,13 @@ test('keeps frame-local overlays and fixed fullscreen controls interactive in bo
   }
 });
 
-test('keeps a fullscreen failure message beside the campaign dialog instead of over its text', async ({ page }) => {
+test('keeps a fullscreen failure message beside the pause confirmation instead of over its text', async ({ page }) => {
   await installFullscreenMock(page, { request: 'reject' });
   await page.goto('/?testBattle=1');
 
-  const dialog = page.getByTestId('campaign-exit-confirmation');
-  await page.getByTestId('campaign-menu-toggle').click();
+  await pauseFromHud(page);
+  await page.getByTestId('pause-close').click();
+  const dialog = page.getByTestId('pause-confirmation');
   await expect(dialog).toBeVisible();
 
   const fullscreen = page.getByTestId('fullscreen-toggle');
@@ -222,7 +232,7 @@ test('keeps a fullscreen failure message beside the campaign dialog instead of o
   await expect(page.getByTestId('fullscreen-status')).toBeVisible();
 
   const overlapsDialogHeading = await page.getByTestId('fullscreen-status').evaluate((status: HTMLElement) => {
-    const heading = document.querySelector<HTMLElement>('[data-testid="campaign-exit-confirmation"] h2');
+    const heading = document.querySelector<HTMLElement>('[data-testid="pause-confirmation-title"]');
     if (!heading) return true;
     const statusBounds = status.getBoundingClientRect();
     const headingBounds = heading.getBoundingClientRect();
@@ -233,50 +243,35 @@ test('keeps a fullscreen failure message beside the campaign dialog instead of o
   });
   expect(overlapsDialogHeading).toBe(false);
 
-  const keepPlaying = dialog.getByRole('button', { name: 'Keep playing' });
-  expect(await keepPlaying.evaluate((button: HTMLButtonElement) => {
+  const cancel = dialog.getByTestId('cancel-pause-action');
+  expect(await cancel.evaluate((button: HTMLButtonElement) => {
     const bounds = button.getBoundingClientRect();
     return document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)?.closest('button') === button;
   })).toBe(true);
-  await keepPlaying.click();
+  await cancel.click();
   await expect(dialog).toBeHidden();
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await continueFromPauseBoard(page);
 });
 
-test('uses consistent game action styles across ordinary dialogs and settlement', async ({ page }) => {
+test('uses original menu and confirmation artwork in the pause flow', async ({ page }) => {
   await page.goto('/?testBattle=1');
-  await page.getByTestId('campaign-menu-toggle').click();
-  const exitDialog = page.getByTestId('campaign-exit-confirmation');
-  await expect(exitDialog).toBeVisible();
+  await pauseFromHud(page);
+  const board = page.getByTestId('pause-board');
+  await expect(board).toBeVisible();
   const fullscreen = page.getByTestId('fullscreen-toggle');
   await expect(fullscreen).toHaveText('⛶');
   expect(await fullscreen.evaluate((button) => getComputedStyle(button, '::before').content)).toBe('none');
 
-  const actionStyles = await page.evaluate(() => {
-    const buttons = [
-      ...document.querySelectorAll<HTMLElement>('[data-action="cancel-campaign-exit"], [data-action="confirm-campaign-exit"]'),
-      ...document.querySelectorAll<HTMLElement>('.recruit-confirmation button'),
-      ...document.querySelectorAll<HTMLElement>('.settlement-panel button'),
-    ];
-    return buttons.map((button) => {
-      const style = getComputedStyle(button);
-      return {
-        color: style.color,
-        background: style.backgroundColor,
-        border: style.border,
-        radius: style.borderRadius,
-        font: style.font,
-        minHeight: style.minHeight,
-      };
-    });
-  });
-  expect(actionStyles.length).toBeGreaterThan(8);
-  expect(new Set(actionStyles.map((style) => JSON.stringify(style))).size).toBe(1);
-
-  const campaignCancel = exitDialog.getByRole('button', { name: 'Keep playing' });
-  await page.keyboard.press('Tab');
-  await campaignCancel.focus();
-  expect(await campaignCancel.evaluate((button) => button.matches(':focus-visible'))).toBe(true);
-  expect(await campaignCancel.evaluate((button) => getComputedStyle(button).outlineWidth)).toBe('2px');
+  expect(await page.getByTestId('pause-board-art').getAttribute('src')).toContain('gng_startmenu_2_menu_0_box.png');
+  const buttonBackground = await page.getByTestId('pause-continue').evaluate((button) => getComputedStyle(button).backgroundImage);
+  expect(buttonBackground).toContain('gng_startmenu_2_menu_1_button.png');
+  await page.getByTestId('pause-restart').click();
+  const confirmation = page.getByTestId('pause-confirmation');
+  await expect(confirmation).toBeVisible();
+  expect(await page.getByTestId('pause-confirmation-art').getAttribute('src')).toContain('gng_hud_2_textbox_large.png');
+  expect(await page.getByTestId('confirm-pause-icon').getAttribute('src')).toContain('gng_hud_2_yes.png');
+  expect(await page.getByTestId('cancel-pause-icon').getAttribute('src')).toContain('gng_hud_2_no.png');
 
   const recruitConfirm = page.locator('[data-action="confirm-recruit"]');
   await recruitConfirm.evaluate((button: HTMLButtonElement) => { button.disabled = true; });

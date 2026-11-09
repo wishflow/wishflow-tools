@@ -1,4 +1,16 @@
 import { expect, test } from '@playwright/test';
+import { pauseFromHud } from './helpers';
+
+async function setDocumentHidden(page: import('@playwright/test').Page, hidden: boolean): Promise<void> {
+  await page.evaluate((isHidden) => {
+    Object.defineProperty(document, 'hidden', { configurable: true, value: isHidden });
+    Object.defineProperty(document, 'visibilityState', {
+      configurable: true,
+      value: isHidden ? 'hidden' : 'visible',
+    });
+    document.dispatchEvent(new Event('visibilitychange'));
+  }, hidden);
+}
 
 test('pauses the official campaign for first and next-wave introductions until continuing', async ({ page }) => {
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
@@ -158,7 +170,8 @@ test('a paused single step that crosses into wave two opens its introduction onc
   await expect(intro).toBeVisible();
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
-  await page.getByRole('button', { name: 'Pause battle' }).click();
+  await pauseFromHud(page);
+  await expect(page.getByTestId('pause-board')).toBeVisible();
   await page.getByTestId('inspection-panel').locator('summary').click();
 
   const singleStep = page.getByTestId('single-step');
@@ -190,14 +203,14 @@ test('a paused single step that crosses into wave two opens its introduction onc
   await expect(intro).toBeHidden();
 });
 
-test('keeps a reusable bilingual controls guide inside the game window without advancing simulation', async ({ page }) => {
+test('keeps the current bilingual controls guide inside the game window while the battle is background-paused', async ({ page }) => {
   await page.goto('/?testBattle=1');
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeVisible();
   await expect.poll(() => intro.evaluate((dialog) => dialog.closest('.game-frame') !== null)).toBe(true);
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(intro).toBeHidden();
-  await page.getByRole('button', { name: 'Pause battle' }).click();
+  await setDocumentHidden(page, true);
   const guide = page.getByTestId('controls-help');
   const summary = guide.locator('summary');
   const frame = page.getByTestId('inspection-frame');
@@ -219,6 +232,7 @@ test('keeps a reusable bilingual controls guide inside the game window without a
   await expect(guide).not.toHaveAttribute('open', '');
   await summary.click();
   await expect(guide).toHaveAttribute('open', '');
+  await setDocumentHidden(page, false);
 });
 
 test('keeps campaign dialogue and its touch target inside the game frame without scrolling on phones', async ({ browser }) => {

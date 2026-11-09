@@ -14,8 +14,6 @@ export const messages = {
   Easy: { en: 'Easy', zh: '简单' },
   Medium: { en: 'Medium', zh: '中等' },
   Hard: { en: 'Hard', zh: '困难' },
-  'Pause battle': { en: 'Pause battle', zh: '暂停战斗' },
-  'Resume battle': { en: 'Resume battle', zh: '继续战斗' },
   'Inspect battle': { en: 'Inspect battle', zh: '检查战局' },
   'Show map overlay': { en: 'Show map overlay', zh: '显示地图覆盖层' },
   'Single step · 16 ms': { en: 'Single step · 16 ms', zh: '单步推进 · 16 毫秒' },
@@ -63,9 +61,9 @@ export const messages = {
     en: 'Pinch with two fingers to zoom the map; use the zoom buttons or mouse wheel on desktop.',
     zh: '双指捏合可缩放地图；桌面端可使用缩放按钮或鼠标滚轮。',
   },
-  'Use the pause button or HUD pause icon to pause and resume.': {
-    en: 'Use the pause button or HUD pause icon to pause and resume.',
-    zh: '使用暂停按钮或 HUD 暂停图标暂停和继续战斗。',
+  'Use the HUD pause icon to pause. Continue on the pause board resumes.': {
+    en: 'Use the HUD pause icon to pause. Continue on the pause board resumes.',
+    zh: '点击 HUD 暂停图标暂停；在暂停菜单中点击“继续”恢复战斗。',
   },
   'Tap Game controls to show or hide the in-game toolbar.': {
     en: 'Tap Game controls to show or hide the in-game toolbar.',
