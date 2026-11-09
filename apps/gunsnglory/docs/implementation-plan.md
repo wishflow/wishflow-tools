@@ -63,10 +63,12 @@
 
 ## 后续修复批次：避免窄屏 Usagi 覆盖实验室内容
 
-1. 给窄屏工作台建立高于站点浮层的应用内层级，保留游戏画框原层级。
-2. 在 `t41-lab-workbench.spec.ts` 加入390×844防回归检查：页面无水平溢出、窄屏工作台层级高于宠物；若测试页出现几何交叠，则标题区域命中仍落在工作台。检查中文/英文和卡片不溢出。
-3. 运行 `t41-lab-workbench.spec.ts` 定向测试并本地提交；本批结束后运行 `CI=1 pnpm run test:ci`。通过后按一个重要 UI 缺陷修复批次发布。
-4. 发布后核对两处 `build-info.json`，用内置浏览器在静音、窗口模式下复验390×844标题命中、Options和双状态全屏图；不重复尝试已被宿主拒绝的原生全屏。
+**状态：修复与定向验证通过，待本地提交、完整检查和发布。**
+
+1. **已完成：**仅在 `max-width:560px` 为 `.lab-workbench` 建立 `position:relative; z-index:81`，保留游戏框 `z-index:79` 和桌面宠物层级。
+2. **已完成：**`t41-lab-workbench.spec.ts` 在390×844检查无水平溢出、工作台层级；若测试页提供 `.usagi-widget`，还比较宠物层级，并在真实几何重叠时用 `elementFromPoint()` 验证命中落在工作台。卡片纵向排布与中英文检查继续覆盖。
+3. **定向验收：**`pnpm run typecheck` 通过，`pnpm exec playwright test tests/e2e/t41-lab-workbench.spec.ts --workers=1` 两项通过。当前代码和测试修改待提交；批次结束时还须运行 `CI=1 pnpm run test:ci`。
+4. **发布关闭条件：**完整检查通过后，以一个 UI 缺陷修复批次发布；核对两处 `build-info.json`，用内置浏览器在静音、窗口模式下复验390×844标题命中、Options和双状态全屏图。不重试已被宿主拒绝的原生全屏。
 
 ## 后续批次：New Mexico 第 5 关 Billy Hills
 
