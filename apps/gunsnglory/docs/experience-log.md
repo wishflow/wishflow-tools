@@ -32,6 +32,14 @@
 - **漏测点：**测试只核对了请求向量静态内容，却把静态列顺序误当成运行事件顺序，没有检查生成器的随机选择。
 - **修复与防回归：**测试按实际敌人类型核对血量和速度，并独立检查波次延迟后的生成、路线入口及请求向量。需要固定顺序时必须显式注入确定性随机源；否则不得断言向量第一项必然先生成。
 
+## GameSession 的 debug 模式不执行战役波次
+
+- **状态：问题已解决；下面的临时内容状态仅描述 map06 第 2 步数据切片期间。**map06 现在是正式登记关卡。
+- **表现与复现：**map06 短测已配置 `campaignWaves`，但用 `mode: 'debug'` 推进到开局延迟后仍没有敌人；debug 视图也不提供正式/自由战役的 `totalWaves`。
+- **根因与证据：**`src/game/index.ts` 只在 formal/free 会话，或其回放源模式为 formal/free 时启用 `campaignMode`；debug 模式只按普通预览波逻辑运行，不会消费 `CampaignWaveDefinition` 的请求池。内容数据正确，测试模式选错。
+- **修复与防回归：**关卡波次短测改用 `free` 会话。map06 数据切片尚未登记时，测试副本临时设置 `formalSettlementSupported: true`，当时不改变产品可玩状态；随后正式内容接入已把该标志登记到生产关卡。真实 map06 波次由静态审计期望验证；池 1 的 GameSession 入口映射另用单请求测试副本定点检查，不完整推进原版十波。
+- **避免重复：**验证 CampaignWaveDefinition 时先确认所用 GameSession mode 会启用 `campaignMode`。debug session 的初态可用于单位/渲染调试，不能当作正式波次生成证据。
+
 ## 实验室大块底板造成贴片感
 
 **状态：首轮修正已公开发布到 `3c434917`；用户复核发现材质层级反了，后续整改见下节。**
@@ -234,13 +242,20 @@
 - **修复与防回归：**需要检查对白内容、头像、资源或关闭后状态的专项用例直接从 `@playwright/test` 导入 `test` 和 `expect`；不检查对白且需跨过提示的普通战斗用例继续使用 auto-continue fixture。失败后先检查测试 fixture 是否主动操作目标元素，再判断产品逻辑。
 - **回放边界：**`GameSession.exportReplay()` 要求会话已经完成并形成正式结算。未完成的 map05 关卡不能直接导出回放；不要为验证内容注册或 profile 单位集合而完整模拟八波。需要覆盖 map05 回放往返时，另准备有明确来源的已结算 fixture，或单独安排经确认的完整模拟范围。
 
-## 增加正式关卡后更新进度摘要期望
+## 增加正式关卡后同步阶段快照与进度摘要
 
-- **状态：已修复。**更新摘要期望后，首轮失败的 6 个 Playwright 用例全部通过。
-- **表现与复现：**map05 加入官方关卡表后，完整 Playwright 检查中 121 项有 6 项失败；失败全部是旧 E2E 仍期待 `0/4`、`1/4`、`2/4` 或 `3/4 stages complete`，页面实际正确显示对应的 `/5`。
-- **根因与证据：**正式进度摘要以 `officialCampaignStages` 的条目数作为分母。新增第 5 个正式 stage 后，五份 E2E 文件中的既有期望没有同步更新；422 项单测和页面其它关卡流程均通过。
-- **漏测点：**新关卡注册和目录单测验证了 stage 列表，却没有在改动前搜索所有依赖正式关卡总数的 E2E 断言。
-- **修复与防回归：**修正 t20、t22、t25、t28、t33 中的摘要分母，保持现有完成计数；上述 6 个失败用例定向重跑通过。以后增删正式关卡时，搜索 `stages complete` 和 `campaign-progress-summary` 的固定文案，并运行全套 Playwright；不要为测试通过而改动正确的 progress 汇总逻辑。
+- **状态：已修复。**map05 加入时更新了摘要分母；map06 加入时另两处阶段列表快照仍过期。更新全部期望后完整 CI 通过。
+- **表现与复现：**map05 加入后，旧 E2E 仍期待 `/4 stages complete`，六项失败；map06 登记后，Apache Valley 与 Fort Kaboom 单测仍按五条 `officialCampaignStages` 比较，完整 CI 又失败两项。关卡选择和 Progress 实际按正式目录正确工作。
+- **根因与证据：**摘要分母取自 `officialCampaignStages.length`；阶段关系测试也有独立硬编码数组。新增正式 stage 后，这两类测试快照都需要更新，不能只修页面摘要用例。
+- **漏测点：**之前只搜索并修改 `stages complete` 和 `campaign-progress-summary`，没有一并搜索直接比较 `officialCampaignStages`、`globalLevel` 或前置 ID 的旧快照。
+- **修复与防回归：**map05 的五份 E2E 分母和 map06 的 Apache/Fort stage 快照都已同步；map06 解锁及结算通过 Progress 测试、六关三难度 Free Play 测试、E2E 和完整 `CI=1 pnpm run test:ci` 核对。以后新增或重排关卡时，搜索 `officialCampaignStages`、`globalLevel`、`requiresCompletedScenarioIds`、`stages complete` 和 `campaign-progress-summary`，检查所有静态快照及选择状态；不要为了让旧断言通过而改动正确的 Progress 逻辑。
+
+## 战役与自由模式的关卡说明按存档语义区分
+
+- **表现与复现：**map06 可同时从正式战役和 Free Play 进入；若两种模式都显示“胜利会记录战役完成与最高分”，Free Play 的提示就会误导玩家。
+- **根因与证据：**`sceneCaption` 过去只按 `scenarioId` 选文案。正式与自由会话共用 `campaign-new-mexico-06`，无法从关卡 ID 判断是否会写正式 Progress。
+- **漏测点：**既有首波 E2E 验证标题、难度和开局数值，却没有核对 Free Play 场景说明是否符合存档隔离规则。
+- **修复与防回归：**scene caption 按会话 `mode` 生成：Formal 说明正式结算；Free Play 明确说明不会改战役进度或最高分。`t43-murdock-mountains-formal.spec.ts` 对 Free Play caption 加断言，并比较进入前后 Profile。以后关卡可在多种模式启动时，说明文案应依据 session mode，而非仅凭 scenario ID。
 
 ## 本地完整 E2E 使用 CI worker 数
 
@@ -271,3 +286,11 @@
 - **地图点击 E2E 的视口假设：**完整检查首轮中 `t36-tech-town-gatling.spec.ts` 的地图雇佣用例失败。复现后确认，Playwright 点击位于页面下方的调试样本入口会滚动页面；helper 随后读取到画布 `y=-529.69`，却仍按画布矩形发出屏幕点击，坐标落在可视区外，因此状态显示“未选择单位”。修复为点击前 `scrollIntoViewIfNeeded()`，再读取画布矩形；定向用例通过。地图坐标测试在页面滚动后必须先把画布带回视口，不能直接把负的 bounding-box 坐标交给鼠标 API。
 - **线上窄屏层级问题（已修复并验收）：**首版部署390×844竖屏中，站点 `aside.usagi-widget` 固定层为 `x=12..124, y=549..697, z-index:80`；工作台标题为 `x=22..368, y=595.6..626.9`，文字被宠物挡住。页面宽度仍为390px，根因是 `.lab-workbench` 没有建立高于共享浮层的层叠上下文，既有 Playwright 也没检查外部浮层与工作台的实际命中。
 - **修复与防回归：**窄屏 `.lab-workbench` 建立 `position:relative; z-index:81`，不改共享站点外壳及游戏框层级。`t41-lab-workbench.spec.ts` 增加390×844层级/交叠命中检查；`CI=1 pnpm run test:ci` 通过，包括409项单测、生产构建和119项 Playwright E2E。修复 squash 发布 SHA 为 `0aab63b9b85455bf97caea9f30dc2563d3de19b8`，Actions `42621072039` 成功，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器用390×844窗口模式、静音复验：页面无横向溢出；工作台层级高于宠物，宠物框内测试点均由工作台接收；Options 仅含 Help/Sound，全屏按钮使用新图像资源。未重复请求宿主已拒绝的原生全屏。
+
+## 新关卡对象映射需逐关核对
+
+- **状态：**map06 场景切片已修正并添加防回归断言。
+- **表现与复现：**构建 Murdock Mountains 场景时，初版复用了 Cow Gulch 装饰表，却漏掉 map06 的 code 72 路桩和 code 75 水塔；第一轮对象坐标测试因此失败。
+- **根因与证据：**共享 `cowGulchDecorationCodes` 只覆盖 Cow Gulch 与少量共用类型，不能代表每张 New Mexico 地图的全部对象码。map06 审计格网明确包含 code 72/75，APK 对应贴图分别是 `b_1x1_stake` 和 `b_1x1_watertower`。
+- **漏测点：**若只测试共享构造器或贴图文件存在性，不会发现特定关卡的原始标记没有被场景层消费。
+- **修复与防回归：**map06 场景显式加入 72/75 映射；测试逐项从独立 TDM 基线生成“对象码→资产→格子”期望，并检查所有资产可加载。后续新地图必须核对该关完整对象码表，再决定继承共享项或增加关卡专属映射。

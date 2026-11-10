@@ -16,6 +16,7 @@ import {
   billyHillsLevelFiveCampaignContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
+  murdockMountainsLevelSixCampaignContent,
   officialCampaignStages,
   techTownLevelFourCampaignContent,
 } from '../src/content/official-campaign';
@@ -144,6 +145,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: billyHillsLevelFiveCampaignContent.title,
     globalLevel: 5,
     requiresCompletedScenarioIds: [techTownLevelFourCampaignContent.id],
+  }, {
+    scenarioId: murdockMountainsLevelSixCampaignContent.id,
+    contentVersion: murdockMountainsLevelSixCampaignContent.contentVersion,
+    title: murdockMountainsLevelSixCampaignContent.title,
+    globalLevel: 6,
+    requiresCompletedScenarioIds: [billyHillsLevelFiveCampaignContent.id],
   }]);
 });
 

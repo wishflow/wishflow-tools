@@ -27,11 +27,17 @@ import {
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
+  murdockMountainsLevelSixCampaignContent,
   techTownLevelFourCampaignContent,
 } from './content/official-campaign';
 import { techTownWaveIntros } from './content/tech-town-wave-intros';
 import { billyHillsCampaignId, billyHillsLevelFiveContent, createBillyHillsCampaignContent } from './content/billy-hills-campaign';
 import { billyHillsWaveIntros } from './content/billy-hills-wave-intros';
+import {
+  createMurdockMountainsCampaignContent,
+  murdockMountainsCampaignId,
+} from './content/murdock-mountains-campaign';
+import { murdockMountainsWaveIntros } from './content/murdock-mountains-wave-intros';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import { fortKaboomWaveIntros } from './content/fort-kaboom-wave-intros';
@@ -701,8 +707,11 @@ const languageMessages = {
     campaignDifficultyLocked: 'Hard unlocks after completing the 10th level in any region.',
     campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
     sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
-    sceneCaption: (scenarioId: string) => {
+    sceneCaption: (scenarioId: string, mode: string) => {
       if (scenarioId === techTownTrainTestContent.id) return 'Developer-only Tech Town train and Gatling test: move the original five-part train, hire and upgrade Gatling wagons, and fight one slow pioneer on route three. Debug results do not affect campaign progress.';
+      if (scenarioId === murdockMountainsCampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Murdock Mountains level 6: ten original waves across two canyon routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -911,8 +920,11 @@ const languageMessages = {
     campaignDifficultyLocked: '完成任意区域的第 10 关后解锁困难模式。',
     campaignDifficultyUnlocked: '困难模式已解锁。',
     sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
-    sceneCaption: (scenarioId: string) => {
+    sceneCaption: (scenarioId: string, mode: string) => {
       if (scenarioId === techTownTrainTestContent.id) return '仅供开发测试的 Tech Town 列车与加特林样例：移动原版五节列车，雇佣并升级加特林车厢，在第三条路线对付一名慢速拓荒者；不会修改正式战役进度。';
+      if (scenarioId === murdockMountainsCampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：默多克山脉，第 6 关。包含两条峡谷路线和原版十波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -1206,7 +1218,7 @@ const campaignMenuCopy = {
     closeConfirmation: 'Return to the campaign menu? The unfinished battle will not be saved.',
     confirmAction: 'YES', cancelAction: 'NO',
     freePlayMenu: 'Free Play menu', freePlayRegionHeading: 'Choose a region for Free Play',
-    freePlayRegionHint: 'Free Play opens the five implemented campaign levels and any difficulty, without campaign unlock requirements.',
+    freePlayRegionHint: 'Free Play opens the six implemented campaign levels and any difficulty, without campaign unlock requirements.',
     freePlayLevelHint: (available: number) => `${available}/10 implemented levels available in Free Play. Other levels are not implemented yet.`,
     freePlayScoreNote: 'Free play does not change the saved campaign score or progress.',
     freePlayDifficultyNotice: 'Free play results do not change campaign progress, high scores, unlocks, or saved difficulty.',
@@ -1222,11 +1234,13 @@ const campaignMenuCopy = {
     highScoreLabel: 'Best score',
     bestScore: (score: number) => `$ ${score}`,
     levelFiveTitle: 'Billy Hills',
+    levelSixTitle: 'Murdock Mountains',
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
     levelFourInfo: "The railroad could be our most powerful weapon, if we mount deadly Gatling guns on empty cars! Unfortunately that isn't free.",
     levelFiveInfo: 'Sheep and cows once grazed in this lovely area.',
+    levelSixInfo: 'The picturesque Murdock Mountains are always worth the trip!',
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
@@ -1263,7 +1277,7 @@ const campaignMenuCopy = {
     closeConfirmation: '要返回战役菜单吗？未完成的战斗不会保存。',
     confirmAction: '是', cancelAction: '否',
     freePlayMenu: '自由游玩菜单', freePlayRegionHeading: '选择自由游玩区域',
-    freePlayRegionHint: '自由游玩可进入目前已实现的五个战役关卡和任意难度，不受战役解锁条件限制。',
+    freePlayRegionHint: '自由游玩可进入目前已实现的六个战役关卡和任意难度，不受战役解锁条件限制。',
     freePlayLevelHint: (available: number) => `自由游玩可进入 ${available}/10 个已实现关卡，其他关卡尚未实现。`,
     freePlayScoreNote: '自由游玩不会更改已保存的战役分数或进度。',
     freePlayDifficultyNotice: '自由游玩不会更改战役进度、最高分、解锁状态或已保存难度。',
@@ -1279,11 +1293,13 @@ const campaignMenuCopy = {
     highScoreLabel: '最高分',
     bestScore: (score: number) => `$ ${score}`,
     levelFiveTitle: '比利山丘',
+    levelSixTitle: '默多克山脉',
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
     levelFourInfo: '如果能在空车厢上装上致命的加特林机枪，铁路就会成为我们最强大的武器！可惜，这可不便宜。',
     levelFiveInfo: '绵羊和奶牛曾在这片美丽的土地上悠闲吃草。',
+    levelSixInfo: '风景如画的默多克山脉，永远值得一游！',
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
@@ -1664,7 +1680,8 @@ function campaignMenuLevelScreen(): string {
     const statusLabel = status === 'completed' ? copy.completed
       : status === 'available' ? copy.available
         : status === 'locked' ? copy.locked : copy.unimplemented;
-    const levelTitle = level.level === 5 ? copy.levelFiveTitle : level.title;
+    const levelTitle = level.level === 5 ? copy.levelFiveTitle
+      : level.level === 6 ? copy.levelSixTitle : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.level).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -1733,11 +1750,13 @@ function campaignMenuOverviewScreen(): string {
     : entry.level === 2 ? apacheValleyLevelTwoContent
       : entry.level === 3 ? fortKaboomLevelThreeContent
         : entry.level === 4 ? techTownLevelFourCampaignContent
-          : createBillyHillsCampaignContent(campaignProgressView?.profile.completedScenarios ?? []);
+          : entry.level === 5 ? createBillyHillsCampaignContent(campaignProgressView?.profile.completedScenarios ?? [])
+            : createMurdockMountainsCampaignContent(campaignProgressView?.profile.completedScenarios ?? []);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo
-        : entry.level === 4 ? copy.levelFourInfo : copy.levelFiveInfo;
+        : entry.level === 4 ? copy.levelFourInfo
+          : entry.level === 5 ? copy.levelFiveInfo : copy.levelSixInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -1751,7 +1770,8 @@ function campaignMenuOverviewScreen(): string {
   return `<section class="campaign-overview-screen" aria-labelledby="campaign-menu-heading">
     <button type="button" class="campaign-menu-back" data-action="menu-back-levels" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
     <article class="campaign-overview-card">
-      <h2 id="campaign-menu-heading" class="campaign-overview-title">${escapeMenuText(entry.level === 5 ? copy.levelFiveTitle : entry.title)}</h2>
+      <h2 id="campaign-menu-heading" class="campaign-overview-title">${escapeMenuText(entry.level === 5 ? copy.levelFiveTitle
+        : entry.level === 6 ? copy.levelSixTitle : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -2778,7 +2798,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       ? `${language === 'zh' ? '自由游玩' : 'FREE PLAY'} · NEW MEXICO · ${String(officialStage?.globalLevel ?? 0).padStart(2, '0')}`
     : displayedCampaignStage ? `NEW MEXICO · ${String(displayedCampaignStage.globalLevel).padStart(2, '0')}`
       : language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE';
-  const sceneDescription = messages.sceneCaption(view.scenarioId);
+  const sceneDescription = messages.sceneCaption(view.scenarioId, session.startRecord.mode);
   sceneCaption.textContent = session.startRecord.mode === 'free' ? messages.freePlayCaption(sceneDescription) : sceneDescription;
   upgradeSampleStatus.textContent = techTownTrainSample
     ? ''
@@ -3232,6 +3252,9 @@ function currentGameStepEnvironment(): { tileSizePixels: number } {
 const billyHillsAllUnitsContent = createBillyHillsCampaignContent([
   'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
 ]);
+const murdockMountainsAllUnitsContent = createMurdockMountainsCampaignContent([
+  'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
+]);
 
 const assetNames = new Set([
   ...techTownMapEntityAssets,
@@ -3252,6 +3275,8 @@ const assetNames = new Set([
     techTownLevelFourCampaignContent,
     billyHillsLevelFiveContent,
     billyHillsAllUnitsContent,
+    murdockMountainsLevelSixCampaignContent,
+    murdockMountainsAllUnitsContent,
   ].flatMap((content) => [
     ...content.map.background.map((tile) => tile.asset),
     ...content.map.streets.map((tile) => tile.asset),
@@ -3501,6 +3526,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === fortKaboomLevelThreeContent.id) return fortKaboomWaveIntros;
   if (scenarioId === techTownLevelFourCampaignContent.id) return techTownWaveIntros;
   if (scenarioId === billyHillsCampaignId) return billyHillsWaveIntros;
+  if (scenarioId === murdockMountainsCampaignId) return murdockMountainsWaveIntros;
   return [];
 }
 
@@ -3913,7 +3939,9 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
       ? createBrowserGame(techTownFreePlayUnlocks)
       : request.scenarioId === billyHillsCampaignId && (campaignProgressView || request.mode === 'free')
         ? createBrowserGame(completedScenarioIds)
-      : game;
+        : request.scenarioId === murdockMountainsCampaignId && (campaignProgressView || request.mode === 'free')
+          ? createBrowserGame(completedScenarioIds)
+          : game;
     const nextSession = await sessionGame.open(request);
     sceneOpenFailure = undefined;
     activateSession(nextSession);
@@ -4068,6 +4096,9 @@ function gameForReplay(serialized: string) {
       return createBrowserGame([...new Set([...completedScenarioIds, fortKaboomLevelThreeContent.id])]);
     }
     if (parsed.startRecord?.scenarioId === billyHillsCampaignId) {
+      return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
+    }
+    if (parsed.startRecord?.scenarioId === murdockMountainsCampaignId) {
       return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
     }
   } catch {

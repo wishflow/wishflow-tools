@@ -7,6 +7,7 @@ import {
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
+  murdockMountainsLevelSixCampaignContent,
   techTownLevelFourCampaignContent,
 } from '../src/content/official-campaign';
 import { createProgress } from '../src/progress';
@@ -105,8 +106,8 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
   const afterTechTown = await progress.loadCampaign();
   assert.equal(campaignLevelState(4, afterTechTown), 'completed');
   assert.equal(campaignLevelState(5, afterTechTown), 'available');
-  assert.equal(campaignLevelState(6, afterTechTown), 'locked', 'later levels stay locked while map05 is playable');
-  assert.deepEqual(officialCampaignStages.at(-1), {
+  assert.equal(campaignLevelState(6, afterTechTown), 'locked', 'map06 stays locked while map05 is playable');
+  assert.deepEqual(officialCampaignStages.at(-2), {
     scenarioId: billyHillsLevelFiveCampaignContent.id,
     contentVersion: billyHillsLevelFiveCampaignContent.contentVersion,
     title: billyHillsLevelFiveCampaignContent.title,
@@ -127,11 +128,28 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
   });
   const afterBillyHills = await progress.loadCampaign();
   assert.equal(campaignLevelState(5, afterBillyHills), 'completed');
-  assert.equal(campaignLevelState(6, afterBillyHills), 'unimplemented', 'progress advances, but map06 stays disabled until its content is registered');
+  assert.equal(campaignLevelState(6, afterBillyHills), 'available', 'completing map05 unlocks the registered map06');
+  assert.equal(campaignLevelState(7, afterBillyHills), 'locked', 'map07 stays behind the playable map06');
   assert.equal(campaignLevelState(2, undefined), 'unimplemented');
   assert.equal(campaignLevelState(2, {
     ...afterCowGulch,
     stages: afterCowGulch.stages.filter(({ scenarioId }) => scenarioId !== apacheValleyLevelTwoContent.id),
   }), 'unimplemented');
   assert.equal(fortKaboomLevelThreeContent.id, 'campaign-new-mexico-03');
+  assert.equal(murdockMountainsLevelSixCampaignContent.id, 'campaign-new-mexico-06');
+
+  await progress.applySettlement({
+    settlementId: `catalog-test:${murdockMountainsLevelSixCampaignContent.id}:10`,
+    sessionId: 'catalog-test',
+    scenarioId: murdockMountainsLevelSixCampaignContent.id,
+    mode: 'formal',
+    waveNumber: 10,
+    outcome: 'victory',
+    scoreBase: 600,
+    displayScore: 600,
+    highScoreCandidate: 600,
+  });
+  const afterMurdockMountains = await progress.loadCampaign();
+  assert.equal(campaignLevelState(6, afterMurdockMountains), 'completed');
+  assert.equal(campaignLevelState(7, afterMurdockMountains), 'unimplemented');
 });

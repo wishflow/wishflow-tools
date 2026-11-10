@@ -17,6 +17,7 @@ const highDensityMapAtlases = new Set([
   'tiles_bridge_pier_left',
   'tiles_bridge_pier_right',
   'tiles_railway_hori',
+  'tiles_railway_verti',
 ]);
 
 const highDensityMapDecorations = new Set([
@@ -34,6 +35,8 @@ const highDensityMapDecorations = new Set([
   'lok_wagon_hori',
   'tiles_railway_buffers_hori_left',
   'tiles_railway_buffers_hori_right',
+  'tiles_railway_buffers_verti_up',
+  'tiles_railway_buffers_verti_down',
   'e_1x1_bush',
   'e_1x1_cactus_a',
   'e_1x1_cactus_b',

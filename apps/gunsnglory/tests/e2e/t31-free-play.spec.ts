@@ -57,10 +57,10 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   await page.getByRole('button', { name: '切换界面语言为英文' }).click();
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-new-mexico').click();
-  for (const level of [1, 2, 3, 4, 5]) {
+  for (const level of [1, 2, 3, 4, 5, 6]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeEnabled();
   }
-  for (const level of [6, 7, 8, 9, 10]) {
+  for (const level of [7, 8, 9, 10]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();

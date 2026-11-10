@@ -10,6 +10,7 @@ import {
 } from './fort-kaboom';
 import { techTownLevelFourContent } from './tech-town-campaign';
 import { billyHillsLevelFiveContent } from './billy-hills-campaign';
+import { createMurdockMountainsCampaignContent } from './murdock-mountains-campaign';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -41,6 +42,11 @@ export const techTownLevelFourCampaignContent = techTownLevelFourContent;
 /** Formal New Mexico level five assembled from the researched Billy Hills content. */
 export const billyHillsLevelFiveCampaignContent = billyHillsLevelFiveContent;
 
+/** Formal New Mexico level six assembled from the researched Murdock Mountains content. */
+export const murdockMountainsLevelSixCampaignContent = createMurdockMountainsCampaignContent([
+  billyHillsLevelFiveCampaignContent.id,
+]);
+
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
   contentVersion: cowGulchLevelOneContent.contentVersion,
@@ -71,4 +77,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: billyHillsLevelFiveCampaignContent.title,
   globalLevel: 5,
   requiresCompletedScenarioIds: [techTownLevelFourCampaignContent.id],
+}, {
+  scenarioId: murdockMountainsLevelSixCampaignContent.id,
+  contentVersion: murdockMountainsLevelSixCampaignContent.contentVersion!,
+  title: murdockMountainsLevelSixCampaignContent.title,
+  globalLevel: 6,
+  requiresCompletedScenarioIds: [billyHillsLevelFiveCampaignContent.id],
 }]);
