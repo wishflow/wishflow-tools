@@ -48,6 +48,7 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   await expect(lab).toHaveCSS('box-shadow', 'none');
   for (const card of await cards.all()) {
     await expect(card).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+    await expect(card).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   }
   const parchment = await cards.first().evaluate(async (card) => {
     const imageUrl = getComputedStyle(card).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];

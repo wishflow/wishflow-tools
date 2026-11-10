@@ -3357,7 +3357,7 @@ body.gng-game-fullscreen .usagi-widget {
   padding: clamp(3.4rem, 4.4vw, 3.8rem) clamp(1rem, 1.6vw, 1.35rem) 1.25rem;
   border: 0;
   color: var(--lab-ink);
-  background: #ead19e var(--lab-parchment-background) center / 100% 100% no-repeat;
+  background: var(--lab-parchment-background) center / 100% 100% no-repeat;
   filter: drop-shadow(0 0.25rem 0.32rem rgba(58, 37, 17, 0.2));
 }
 
