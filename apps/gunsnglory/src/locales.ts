@@ -11,6 +11,13 @@ export const messages = {
     zh: '在游戏画框外运行实验，并管理档案、报告和战局回放。',
   },
   'Experiment setup': { en: 'Experiment setup', zh: '实验设置' },
+  'Comparison results': { en: 'Comparison results', zh: '比较结果' },
+  'Reports and archives': { en: 'Reports and archives', zh: '报告与档案' },
+  'Run a comparison to see results here.': { en: 'Run a comparison to see results here.', zh: '运行比较后，结果会显示在这里。' },
+  'Simulation speed affects interactive play only; matched comparisons use their own fixed settings.': {
+    en: 'Simulation speed affects interactive play only; matched comparisons use their own fixed settings.',
+    zh: '模拟速度只影响交互式游戏；配对比较使用独立的固定设置。',
+  },
   'Data archive': { en: 'Data archive', zh: '数据档案' },
   'Profile archive': { en: 'Profile archive', zh: '战役档案' },
   'Export or replace this browser’s campaign profile. This file is separate from experiment data and battle replays.': {
@@ -72,6 +79,7 @@ export const messages = {
   'Export experiment archive': { en: 'Export experiment archive', zh: '导出实验数据' },
   'Import experiment archive': { en: 'Import experiment archive', zh: '导入实验数据' },
   'Saved comparisons': { en: 'Saved comparisons', zh: '已保存的比较' },
+  'Select a saved comparison': { en: 'Select a saved comparison', zh: '选择已保存的比较' },
   'No saved comparisons': { en: 'No saved comparisons', zh: '没有已保存的比较' },
   'Open saved comparison': { en: 'Open saved comparison', zh: '打开已保存比较' },
   'Load more': { en: 'Load more', zh: '加载更多' },
