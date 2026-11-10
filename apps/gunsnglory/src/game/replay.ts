@@ -95,6 +95,8 @@ export function captureReplayState(view: GameView): ReplayState {
     bonusCrates: view.bonusCrates ?? [],
     bonusCratePool: view.bonusCratePool ?? null,
     bonusNotice: view.bonusNotice ?? null,
+    ...(view.dynamites?.length ? { dynamites: view.dynamites } : {}),
+    ...(view.dynamiteExplosions?.length ? { dynamiteExplosions: view.dynamiteExplosions } : {}),
     events: view.events,
     wave: view.wave ?? null,
   };
@@ -107,6 +109,8 @@ export type ReplayState = Omit<
   Pick<GameView, 'frame' | 'elapsedMs' | 'priorityTargetId' | 'units' | 'enemies' | 'shots' | 'recruitPool' | 'events' | 'bonusCrates' | 'bonusCratePool'>,
   'shots' | 'units' | 'bonusCratePool'
 > & {
+  dynamites?: NonNullable<GameView['dynamites']>;
+  dynamiteExplosions?: NonNullable<GameView['dynamiteExplosions']>;
   units: readonly ReplayUnitState[];
   shots: readonly ReplayShotState[];
   bonusNotice: NonNullable<GameView['bonusNotice']> | null;

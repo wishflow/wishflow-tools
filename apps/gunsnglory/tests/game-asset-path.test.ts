@@ -8,6 +8,9 @@ test('uses the APK high-density atlases for wagon, cart, and Post Coach assets',
     'lok_hori_1of2',
     'lok_hori_2of2',
     'lok_wagon_hori',
+    'lok_verti_1of2',
+    'lok_verti_2of2',
+    'lok_wagon_verti',
     'wagon',
     'wagon_turn',
     'stagecoach',
@@ -62,4 +65,23 @@ test('maps APK horizontal train hdpi sprites to their mdpi logical dimensions', 
   assert.deepEqual(gameAssetLogicalSize('lok_hori_1of2', { width: 48, height: 72 }), { width: 32, height: 48 });
   assert.deepEqual(gameAssetLogicalSize('lok_hori_2of2', { width: 48, height: 72 }), { width: 32, height: 48 });
   assert.deepEqual(gameAssetLogicalSize('lok_wagon_hori', { width: 48, height: 48 }), { width: 32, height: 32 });
+});
+
+test('maps APK vertical train hdpi sprites to their mdpi logical dimensions', () => {
+  assert.equal(gameAssetRelativePath('lok_verti_1of2'), 'hdpi/lok_verti_1of2.png');
+  assert.equal(gameAssetRelativePath('lok_verti_2of2'), 'hdpi/lok_verti_2of2.png');
+  assert.equal(gameAssetRelativePath('lok_wagon_verti'), 'hdpi/lok_wagon_verti.png');
+  assert.deepEqual(gameAssetLogicalSize('lok_verti_1of2', { width: 48, height: 48 }), { width: 32, height: 32 });
+  assert.deepEqual(gameAssetLogicalSize('lok_verti_2of2', { width: 48, height: 60 }), { width: 32, height: 40 });
+  assert.deepEqual(gameAssetLogicalSize('lok_wagon_verti', { width: 48, height: 60 }), { width: 32, height: 40 });
+});
+
+test('maps APK dynamite objects and respawn frames to mdpi logical sizes', () => {
+  assert.equal(gameAssetRelativePath('dynamite_detonator'), 'hdpi/dynamite_detonator.png');
+  assert.equal(gameAssetRelativePath('dynamite_detonator_pressed'), 'hdpi/dynamite_detonator_pressed.png');
+  assert.equal(gameAssetRelativePath('dynamite_box'), 'hdpi/dynamite_box.png');
+  assert.equal(gameAssetRelativePath('sfx_dynamite_box'), 'hdpi/sfx_dynamite_box.png');
+  assert.deepEqual(gameAssetLogicalSize('dynamite_detonator', { width: 48, height: 60 }), { width: 32, height: 40 });
+  assert.deepEqual(gameAssetLogicalSize('dynamite_box', { width: 48, height: 48 }), { width: 32, height: 32 });
+  assert.deepEqual(gameAssetLogicalSize('sfx_dynamite_box', { width: 240, height: 66 }), { width: 160, height: 44 });
 });

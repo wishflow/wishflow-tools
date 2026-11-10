@@ -1,0 +1,6797 @@
+{
+  "id": "cactusville",
+  "title": {
+    "en": "Cactusville",
+    "zh": "仙人掌镇"
+  },
+  "source": {
+    "apkVersion": "Guns’n’Glory FREE 1.8.6",
+    "resource": "res/raw/td_map_08.tdm",
+    "researchArtifacts": [
+      "BasicMap.loadMap",
+      "BackgroundMap.createBackgroundMap",
+      "BackgroundMap.createStreetLayerMap",
+      "BackgroundMap.createVariationMap",
+      "BackgroundMap.shapenBackgroundMap",
+      "BackgroundMap.shapenStreetLayerMap",
+      "GameObjectManager.createGameObjectsFromBasicMap",
+      "EnemyDirector.createEnemyDirectorFieldsFromBasicMap",
+      "PriorityMap.recursiveLengthTracking"
+    ],
+    "variationPolicy": "Render valid Android background and path variations from a fixed Java Random seed; the original uses an unseeded Random, so per-launch variations are not replayed.",
+    "scope": "Raw map and APK-derived terrain/path draw commands; scene objects, routes, and battle rules are decoded by separate content modules."
+  },
+  "originalTileGrid": [
+    [
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36,
+      36
+    ],
+    [
+      48,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      54
+    ],
+    [
+      48,
+      32,
+      32,
+      32,
+      32,
+      54,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      32,
+      54,
+      32,
+      32
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      32,
+      0,
+      0,
+      0,
+      0,
+      0,
+      94,
+      0,
+      0,
+      32,
+      32,
+      32
+    ],
+    [
+      0,
+      114,
+      0,
+      16,
+      16,
+      80,
+      16,
+      16,
+      16,
+      16,
+      0,
+      90,
+      0,
+      0,
+      52,
+      54,
+      32
+    ],
+    [
+      0,
+      16,
+      16,
+      16,
+      99,
+      32,
+      0,
+      16,
+      98,
+      0,
+      0,
+      90,
+      0,
+      0,
+      0,
+      32,
+      32
+    ],
+    [
+      0,
+      16,
+      72,
+      36,
+      36,
+      32,
+      0,
+      16,
+      0,
+      0,
+      0,
+      90,
+      77,
+      0,
+      102,
+      32,
+      32
+    ],
+    [
+      0,
+      16,
+      0,
+      55,
+      32,
+      52,
+      0,
+      16,
+      0,
+      113,
+      0,
+      90,
+      0,
+      96,
+      36,
+      32,
+      32
+    ],
+    [
+      70,
+      16,
+      0,
+      32,
+      101,
+      0,
+      0,
+      16,
+      16,
+      16,
+      0,
+      92,
+      0,
+      0,
+      110,
+      32,
+      32
+    ],
+    [
+      0,
+      16,
+      96,
+      32,
+      0,
+      0,
+      0,
+      68,
+      0,
+      16,
+      0,
+      92,
+      97,
+      0,
+      32,
+      32,
+      32
+    ],
+    [
+      99,
+      16,
+      0,
+      32,
+      36,
+      36,
+      0,
+      98,
+      96,
+      16,
+      0,
+      92,
+      0,
+      0,
+      0,
+      32,
+      32
+    ],
+    [
+      0,
+      16,
+      0,
+      52,
+      32,
+      54,
+      96,
+      16,
+      16,
+      16,
+      98,
+      91,
+      75,
+      0,
+      130,
+      32,
+      32
+    ],
+    [
+      0,
+      16,
+      0,
+      0,
+      0,
+      32,
+      0,
+      16,
+      97,
+      0,
+      76,
+      91,
+      0,
+      0,
+      0,
+      32,
+      32
+    ],
+    [
+      68,
+      16,
+      16,
+      16,
+      16,
+      80,
+      16,
+      16,
+      0,
+      0,
+      0,
+      90,
+      0,
+      0,
+      0,
+      32,
+      32
+    ],
+    [
+      0,
+      0,
+      97,
+      0,
+      0,
+      32,
+      0,
+      0,
+      36,
+      36,
+      36,
+      89,
+      36,
+      36,
+      36,
+      32,
+      32
+    ],
+    [
+      0,
+      0,
+      0,
+      36,
+      36,
+      32,
+      36,
+      36,
+      55,
+      32,
+      32,
+      89,
+      32,
+      32,
+      32,
+      52,
+      32
+    ],
+    [
+      36,
+      36,
+      36,
+      55,
+      32,
+      57,
+      32,
+      32,
+      52,
+      55,
+      32,
+      89,
+      32,
+      32,
+      32,
+      32,
+      52
+    ],
+    [
+      55,
+      32,
+      32,
+      52,
+      32,
+      32,
+      55,
+      32,
+      32,
+      52,
+      0,
+      90,
+      0,
+      98,
+      0,
+      0,
+      0
+    ],
+    [
+      32,
+      32,
+      55,
+      32,
+      32,
+      32,
+      52,
+      100,
+      0,
+      0,
+      0,
+      90,
+      0,
+      0,
+      16,
+      16,
+      0
+    ],
+    [
+      32,
+      32,
+      32,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      73,
+      0,
+      95,
+      0,
+      0,
+      0,
+      16,
+      101
+    ],
+    [
+      32,
+      55,
+      52,
+      0,
+      16,
+      16,
+      0,
+      97,
+      0,
+      96,
+      0,
+      0,
+      0,
+      0,
+      0,
+      16,
+      0
+    ],
+    [
+      32,
+      32,
+      0,
+      0,
+      96,
+      16,
+      16,
+      16,
+      0,
+      0,
+      0,
+      0,
+      112,
+      0,
+      0,
+      16,
+      0
+    ],
+    [
+      32,
+      32,
+      71,
+      0,
+      0,
+      97,
+      0,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      131
+    ],
+    [
+      41,
+      40,
+      0,
+      0,
+      77,
+      0,
+      0,
+      69,
+      0,
+      0,
+      0,
+      0,
+      0,
+      116,
+      73,
+      0,
+      0
+    ]
+  ],
+  "map": {
+    "width": 17,
+    "height": 24,
+    "tileSize": 32,
+    "background": [
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 0,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 1,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 2,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 128,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 3,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 96,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 0,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 192,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 96,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 0,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 128,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 192,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 96,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 0,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 96,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 96,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 0,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 96,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 0,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 96,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 0,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 192,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 0,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 192,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 192,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 192,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 128,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 128,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 128,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 64,
+          "y": 32,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow",
+        "source": {
+          "x": 128,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 64,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon",
+        "source": {
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_floor_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 0,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_shadow_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_canyon_wall_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_desert_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 16,
+        "y": 23,
+        "width": 1,
+        "height": 1
+      }
+    ],
+    "streets": [
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 0,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_bridge_hori",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 32
+        },
+        "x": 4.75,
+        "y": 4,
+        "width": 1.5,
+        "height": 1
+      },
+      {
+        "asset": "tiles_bridge_pier_left",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 24,
+          "height": 24
+        },
+        "x": 4.75,
+        "y": 4.75,
+        "width": 0.75,
+        "height": 0.75
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_bridge_pier_right",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 24,
+          "height": 24
+        },
+        "x": 5.5,
+        "y": 4.75,
+        "width": 0.75,
+        "height": 0.75
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 64,
+          "y": 96,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 4,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 32,
+          "y": 96,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 5,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 6,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 0,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 7,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 96,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 8,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 9,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 10,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 11,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 12,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 1,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 2,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 3,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 32,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_bridge_hori",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 48,
+          "height": 32
+        },
+        "x": 4.75,
+        "y": 13,
+        "width": 1.5,
+        "height": 1
+      },
+      {
+        "asset": "tiles_bridge_pier_left",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 24,
+          "height": 24
+        },
+        "x": 4.75,
+        "y": 13.75,
+        "width": 0.75,
+        "height": 0.75
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_bridge_pier_right",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 24,
+          "height": 24
+        },
+        "x": 5.5,
+        "y": 13.75,
+        "width": 0.75,
+        "height": 0.75
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 13,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 14,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 15,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 16,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 17,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_railway_verti",
+        "source": {
+          "x": 0,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 18,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 19,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 4,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 20,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 5,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 6,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 32,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 0,
+          "y": 64,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 21,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 96,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 7,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 8,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 9,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 10,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 11,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 0,
+          "y": 96,
+          "width": 32,
+          "height": 32
+        },
+        "x": 12,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 13,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path_var",
+        "source": {
+          "x": 160,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 14,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      },
+      {
+        "asset": "tiles_path",
+        "source": {
+          "x": 64,
+          "y": 0,
+          "width": 32,
+          "height": 32
+        },
+        "x": 15,
+        "y": 22,
+        "width": 1,
+        "height": 1
+      }
+    ]
+  },
+  "units": []
+}

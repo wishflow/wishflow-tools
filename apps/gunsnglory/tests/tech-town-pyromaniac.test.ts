@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import map from '../src/content/new-mexico-04.json';
-import { createTechTownFreshGameUnitPlacements } from '../src/content/tech-town-map-units';
+import { createCampaignMapUnitPlacements } from '../src/content/campaign-map-unit-placements';
 import { createTechTownBaseUnits } from '../src/content/tech-town-units';
 import { GAME_RULES_VERSION, createGame, type ScenarioContent, type ScenarioUnit } from '../src/game';
 import { gameAssetRelativePath } from '../src/render/game-asset-path';
@@ -57,7 +57,7 @@ function pyromaniacFixture(unit: ScenarioUnit, initialCash: number): ScenarioCon
 }
 
 test('creates only the unlocked original Pyromaniac marker with level-zero APK data', () => {
-  const placement = createTechTownFreshGameUnitPlacements().find(({ sourceCode }) => sourceCode === 130);
+  const placement = createCampaignMapUnitPlacements(map.originalTileGrid).find(({ sourceCode }) => sourceCode === 130);
   assert.deepEqual(placement, {
     sourceCode: 130,
     unitTypeId: 35,

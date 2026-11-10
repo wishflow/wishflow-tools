@@ -49,6 +49,17 @@ import {
   type CampaignBonusRewardType,
 } from './campaign-bonus-crates';
 import { createRoutePriorityMap, normalizedRoutePriority, type RoutePriorityMap } from './route-priority';
+import {
+  DYNAMITE_BOX_RESPAWN_WINDOW_MS,
+  DYNAMITE_COOLDOWN_MS,
+  DYNAMITE_EXPLOSION_DURATION_MS,
+  DYNAMITE_TRIGGER_PRESSED_MS,
+  dynamiteDamageForEnemy,
+  isInsideDynamiteRadius,
+  type DynamiteExplosionView,
+  type DynamiteObjectView,
+  type DynamiteScenarioDefinition,
+} from './dynamite';
 import type {
   GameReplayFrame,
   GameReplayPayload,
@@ -79,6 +90,14 @@ export type {
   GamblerSuitCode,
   GamblerUnitType,
 } from './gambler-rules';
+export type {
+  DynamiteBoxPhase,
+  DynamiteCell,
+  DynamiteExplosionView,
+  DynamiteObjectView,
+  DynamitePairDefinition,
+  DynamiteScenarioDefinition,
+} from './dynamite';
 
 export type GameOpenErrorCode =
   | 'scenario-unavailable'
@@ -130,8 +149,8 @@ export interface ScenarioUnit {
   activity?: 2 | 4 | 5;
   /** Units with the same group ID share one drag target and move as a rigid row. */
   movementGroupId?: string;
-  /** Restricts a movement group to its original horizontal rail axis. */
-  movementAxis?: 'horizontal';
+  /** Restricts a movement group to one original rail axis. */
+  movementAxis?: 'horizontal' | 'vertical';
   /** Original collision bounds relative to this unit's fine position. */
   collisionBoxFine?: Rectangle;
   /** Hides the default sleeping bubble for map objects that use activity 4 for another purpose. */
@@ -160,6 +179,8 @@ export interface ScenarioUnit {
   render: Rectangle;
   hitArea: Rectangle;
   weapon?: UnitWeaponDefinition;
+  /** APK TrainVertical weapon anchor from the wagon's bottom edge, in fine units. */
+  weaponDrawOffsetYFine?: number;
   /** Upgrade rows are indexed by resulting level: entry 0 is level 1. */
   upgradeLevels?: readonly UnitUpgradeDefinition[];
 }
@@ -365,6 +386,10 @@ export interface ScenarioContent {
   campaignUnitPool?: CampaignUnitPoolDefinition;
   /** Optional scene-level pool of the original moving-unit bonus crates. */
   campaignBonusCratePool?: CampaignBonusCrateDefinition;
+  /** APK GameDesignData threshold for the special campaign kill feedback message. */
+  campaignAwesomeEnemyTypeThreshold?: number;
+  /** Original type-7/type-8 map objects, hidden until the saved progression unlocks them. */
+  dynamite?: DynamiteScenarioDefinition;
   gambler?: GamblerScenarioDefinition;
   /** Base type-1/type-2 settler data before level, wave, and dynamic-difficulty multipliers. */
   campaignEnemy?: PreviewEnemyDefinition;
@@ -517,11 +542,20 @@ export interface RocketSparkleView {
 export type GameEvent =
   | { type: 'enemy-group-spawned'; enemyIds: readonly string[]; waveNumber: number; spawnPointId: number; requestType: number; groupSize: number }
   | { type: 'enemy-hit'; enemyId: string; damage: number; hitPoints: number }
-  | { type: 'enemy-defeated'; enemyId: string; enemyType?: CampaignEnemyType; cashReward: number }
+  | {
+    type: 'enemy-defeated';
+    enemyId: string;
+    enemyType?: CampaignEnemyType;
+    cashReward: number;
+    /** Snapshot used by presentation feedback; does not affect combat or replay state. */
+    campaignAverageDifficulty?: number;
+  }
+  | { type: 'dynamite-exploded'; dynamiteId: string; affectedEnemyIds: readonly string[] }
+  | { type: 'dynamite-cooling-down'; dynamiteId: string; remainingMs: number }
   | { type: 'unit-fired'; unitId: string; targetId: string; specialReload: boolean }
   | {
     type: 'sound-requested';
-    sound: 'sound_revolver' | 'sound_dynamite' | 'sound_wagon_explode' | UnitShotSound;
+    sound: 'sound_revolver' | 'sound_dynamite' | 'sound_explosion' | 'sound_wagon_explode' | UnitShotSound;
     positionFine: { x: number; y: number };
   }
   | { type: 'sound-requested'; sound: UnitHireSound | UnitSelectionSound | 'sound_level_up' }
@@ -619,6 +653,8 @@ export interface GameView {
   bonusCrates?: readonly BonusCrateView[];
   bonusCratePool?: BonusCratePoolView;
   bonusNotice?: BonusNoticeView;
+  dynamites?: readonly DynamiteObjectView[];
+  dynamiteExplosions?: readonly DynamiteExplosionView[];
   shots: readonly ShotView[];
   rocketSparkles?: readonly RocketSparkleView[];
   /** Stable object keys in the original shared depth queue order. */
@@ -840,6 +876,19 @@ interface MutableBonusNotice {
   remainingMs: number;
 }
 
+interface MutableDynamite {
+  id: string;
+  triggerCell: { x: number; y: number };
+  boxCell: { x: number; y: number };
+  unlocked: boolean;
+  cooldownRemainingMs: number;
+  triggerPressedRemainingMs: number;
+}
+
+interface MutableDynamiteExplosion extends DynamiteExplosionView {
+  id: string;
+}
+
 function drawOrderEntries(
   scenario: ScenarioContent,
   units: readonly MutableUnit[],
@@ -853,6 +902,20 @@ function drawOrderEntries(
     depth: ((decoration.cell.y + 1 + (decoration.anchorOffsetY ?? 0)) * FINE_UNITS_PER_CELL)
       + GAME_DRAW_ORDER_ROAD_CUTOFF,
   }));
+  const dynamiteObjects = (scenario.dynamite?.pairs ?? []).flatMap((pair): DrawOrderEntry[] => [
+    {
+      id: `dynamite-trigger:${pair.id}`,
+      kind: 'decoration',
+      cell: pair.triggerCell,
+      depth: ((pair.triggerCell.y + 1) * FINE_UNITS_PER_CELL) + GAME_DRAW_ORDER_ROAD_CUTOFF,
+    },
+    {
+      id: `dynamite-box:${pair.id}`,
+      kind: 'decoration',
+      cell: pair.boxCell,
+      depth: ((pair.boxCell.y + 1) * FINE_UNITS_PER_CELL) + GAME_DRAW_ORDER_ROAD_CUTOFF,
+    },
+  ]);
   const unitEntries = units.map((unit): DrawOrderEntry => ({
     id: `unit:${unit.definition.id}`,
     kind: 'unit',
@@ -862,7 +925,7 @@ function drawOrderEntries(
     },
     depth: unit.positionFine.y + GAME_DRAW_ORDER_ROAD_CUTOFF,
   }));
-  const mapObjects = [...decorations, ...unitEntries].sort((left, right) => (
+  const mapObjects = [...decorations, ...dynamiteObjects, ...unitEntries].sort((left, right) => (
     left.cell!.y - right.cell!.y || left.cell!.x - right.cell!.x
   ));
   const enemies = (wave?.enemies ?? []).map((enemy): DrawOrderEntry => ({
@@ -1132,6 +1195,10 @@ function isActivePlayerUnit(unit: MutableUnit): boolean {
   return unit.definition.activity !== 4;
 }
 
+function isTrainGatlingWagon(type: string): boolean {
+  return type === 'train-12' || type === 'train-22';
+}
+
 function unitRenderOffsetAt(definition: ScenarioUnit, positionFine: { x: number; y: number }): { x: number; y: number } {
   const initialPosition = initialUnitPosition(definition);
   return {
@@ -1238,7 +1305,7 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
       },
     } : {}),
     ...(shootingAnimation ? { shootingAnimation } : {}),
-    ...(definition.type === 'train-12' ? {
+    ...(isTrainGatlingWagon(definition.type) ? {
       weaponFacing: unit.weaponFacingDirection
         ? weaponFacingView(unit.weaponFacingDirection)
         : { row: 1, mirrored: false },
@@ -1617,13 +1684,15 @@ function moveUnitGroup(
 ): void {
   const target = leader.movementTargetFine;
   if (!target || deltaMs === 0) return;
-  if (group.some(({ definition }) => definition.movementAxis !== 'horizontal')) {
+  const movementAxis = group[0]?.definition.movementAxis;
+  if (!movementAxis || group.some(({ definition }) => definition.movementAxis !== movementAxis)) {
     clearGroupMovementTarget(group);
     return;
   }
 
-  const dx = target.x - leader.positionFine.x;
-  if (Math.abs(dx) < UNIT_STOP_TOLERANCE_FINE) {
+  const coordinate = movementAxis === 'horizontal' ? 'x' : 'y';
+  const deltaToTarget = target[coordinate] - leader.positionFine[coordinate];
+  if (Math.abs(deltaToTarget) < UNIT_STOP_TOLERANCE_FINE) {
     clearGroupMovementTarget(group);
     return;
   }
@@ -1631,22 +1700,25 @@ function moveUnitGroup(
   const speedBonusActive = leader.bonusAttribute === 3 && (leader.bonusRemainingMs ?? 0) > 0;
   const speed = Math.trunc(leader.movementSpeedFinePer100Ms
     * (speedBonusActive ? 150 : 100) / 100);
-  const requestedDelta = Math.trunc((Math.sign(dx) * speed * deltaMs) / 100);
-  const deltaX = Math.sign(requestedDelta) * Math.min(Math.abs(dx), Math.abs(requestedDelta));
-  if (deltaX === 0) return;
+  const requestedDelta = Math.trunc((Math.sign(deltaToTarget) * speed * deltaMs) / 100);
+  const delta = Math.sign(requestedDelta) * Math.min(Math.abs(deltaToTarget), Math.abs(requestedDelta));
+  if (delta === 0) return;
 
   const blocked = group.some((unit) => {
-    const nextX = unit.positionFine.x + deltaX;
-    return !playerAxisWithinOriginalMapBounds(scenario, 'x', nextX, tileSizePixels)
-      || mapBlocksUnit(scenario, nextX, unit.positionFine.y, unit.definition.collisionBoxFine);
+    const nextPosition = {
+      x: unit.positionFine.x + (coordinate === 'x' ? delta : 0),
+      y: unit.positionFine.y + (coordinate === 'y' ? delta : 0),
+    };
+    return !playerAxisWithinOriginalMapBounds(scenario, coordinate, nextPosition[coordinate], tileSizePixels)
+      || mapBlocksUnit(scenario, nextPosition.x, nextPosition.y, unit.definition.collisionBoxFine);
   });
   if (blocked) {
     clearGroupMovementTarget(group);
     return;
   }
 
-  for (const unit of group) unit.positionFine.x += deltaX;
-  if (Math.abs(target.x - leader.positionFine.x) < UNIT_STOP_TOLERANCE_FINE) {
+  for (const unit of group) unit.positionFine[coordinate] += delta;
+  if (Math.abs(target[coordinate] - leader.positionFine[coordinate]) < UNIT_STOP_TOLERANCE_FINE) {
     clearGroupMovementTarget(group);
   }
 }
@@ -2181,6 +2253,7 @@ function applyEnemyDamage(
   damage: number,
   priorityMap: RoutePriorityMap,
   campaignMode: boolean,
+  awesomeEnemyTypeThreshold?: number,
 ): void {
   if (!enemy.alive || !enemy.damageable) return;
   enemy.hitPoints -= damage;
@@ -2195,11 +2268,20 @@ function applyEnemyDamage(
   wave.cash += enemy.cashReward;
   wave.cashMade += enemy.cashReward;
   wave.defeatedEnemies += 1;
+  const campaignAverageDifficulty = campaignMode
+    && awesomeEnemyTypeThreshold !== undefined
+    && enemy.type >= awesomeEnemyTypeThreshold
+    && wave.difficultyValue !== undefined
+    && wave.difficultyValueCounter !== undefined
+    && wave.difficultyValueCounter > 0
+    ? Math.trunc(wave.difficultyValue / wave.difficultyValueCounter)
+    : undefined;
   wave.events.push({
     type: 'enemy-defeated',
     enemyId: enemy.id,
     enemyType: enemy.type,
     cashReward: enemy.cashReward,
+    ...(campaignAverageDifficulty !== undefined ? { campaignAverageDifficulty } : {}),
   });
   if (enemy.type === 4) {
     for (const groupMember of wave.enemies) {
@@ -2994,10 +3076,20 @@ export function createGame(options: {
       let nextCampaignEnemyNumber = 1;
       let nextCampaignGroupNumber = 1;
       let nextWagonPartNumber = 1;
+      let nextDynamiteExplosionNumber = 1;
       const spawnFields = campaignSpawnFields(scenario);
       const priorityMap = createRoutePriorityMap(scenario);
       const campaignUnitPoolRuntime = createCampaignUnitPoolRuntime(scenario.campaignUnitPool);
       const campaignBonusCratePool = createCampaignBonusCratePool(bonusCrateDefinition);
+      const dynamites: MutableDynamite[] = (scenario.dynamite?.pairs ?? []).map((pair) => ({
+        id: pair.id,
+        triggerCell: { ...pair.triggerCell },
+        boxCell: { ...pair.boxCell },
+        unlocked: scenario.dynamite?.unlocked === true,
+        cooldownRemainingMs: 0,
+        triggerPressedRemainingMs: 0,
+      }));
+      const dynamiteExplosions: MutableDynamiteExplosion[] = [];
       let frame = 0;
       let elapsedMs = 0;
       let priorityTargetId: string | undefined;
@@ -3128,6 +3220,34 @@ export function createGame(options: {
             },
           } : {}),
           ...(bonusNotice ? { bonusNotice: clone(bonusNotice) } : {}),
+          ...(scenario.dynamite?.pairs.length ? {
+            dynamites: dynamites.map((dynamite): DynamiteObjectView => {
+              const boxPhase = !dynamite.unlocked
+                ? 'absent'
+                : dynamite.cooldownRemainingMs <= 0
+                  ? 'present'
+                  : dynamite.cooldownRemainingMs <= DYNAMITE_BOX_RESPAWN_WINDOW_MS
+                    ? 'respawning' : 'absent';
+              return {
+                id: dynamite.id,
+                triggerCell: { ...dynamite.triggerCell },
+                boxCell: { ...dynamite.boxCell },
+                unlocked: dynamite.unlocked,
+                cooldownRemainingMs: dynamite.cooldownRemainingMs,
+                triggerPressed: dynamite.triggerPressedRemainingMs > 0,
+                boxPhase,
+                boxAnimationFrame: boxPhase === 'respawning'
+                  ? Math.min(4, Math.max(0, Math.floor((DYNAMITE_BOX_RESPAWN_WINDOW_MS - dynamite.cooldownRemainingMs) / 100)))
+                  : 0,
+              };
+            }),
+            dynamiteExplosions: dynamiteExplosions.map((explosion) => ({
+              id: explosion.id,
+              positionFine: { ...explosion.positionFine },
+              remainingMs: explosion.remainingMs,
+              animationFrame: explosion.animationFrame,
+            })),
+          } : {}),
           shots: (wave?.shots ?? []).map((shot) => ({
             id: shot.id,
             shooterId: shot.shooterId,
@@ -3365,6 +3485,17 @@ export function createGame(options: {
             bonusNotice.remainingMs -= deltaMs;
             if (bonusNotice.remainingMs <= 0) bonusNotice = undefined;
           }
+          for (const dynamite of dynamites) {
+            dynamite.cooldownRemainingMs = Math.max(0, dynamite.cooldownRemainingMs - deltaMs);
+            dynamite.triggerPressedRemainingMs = Math.max(0, dynamite.triggerPressedRemainingMs - deltaMs);
+          }
+          for (const explosion of dynamiteExplosions) {
+            explosion.remainingMs = Math.max(0, explosion.remainingMs - deltaMs);
+            explosion.animationFrame = Math.min(7, Math.floor((DYNAMITE_EXPLOSION_DURATION_MS - explosion.remainingMs) / 100));
+          }
+          for (let index = dynamiteExplosions.length - 1; index >= 0; index -= 1) {
+            if (dynamiteExplosions[index]!.remainingMs === 0) dynamiteExplosions.splice(index, 1);
+          }
           let waveStarted = false;
           const drawOrderCreationOrder: string[] = [];
           pending.sort((left, right) => left.sequence - right.sequence);
@@ -3587,11 +3718,12 @@ export function createGame(options: {
                   const group = units.filter(({ definition }) => (
                     definition.movementGroupId === selectedUnit.definition.movementGroupId
                   ));
-                  const deltaX = targetX - selectedUnit.positionFine.x;
+                  const coordinate = selectedUnit.definition.movementAxis === 'vertical' ? 'y' : 'x';
+                  const delta = (coordinate === 'x' ? targetX : targetY) - selectedUnit.positionFine[coordinate];
                   for (const member of group) {
                     member.movementTargetFine = {
-                      x: member.positionFine.x + deltaX,
-                      y: member.positionFine.y,
+                      x: member.positionFine.x + (coordinate === 'x' ? delta : 0),
+                      y: member.positionFine.y + (coordinate === 'y' ? delta : 0),
                     };
                   }
                 } else {
@@ -3603,6 +3735,57 @@ export function createGame(options: {
 
             const selection = command.intent;
             if (selection.type !== 'select-at') continue;
+            const dynamite = dynamites.find(({ unlocked, triggerCell }) => unlocked
+              && selection.x >= triggerCell.x && selection.x < triggerCell.x + 1
+              && selection.y >= triggerCell.y && selection.y < triggerCell.y + 1);
+            if (dynamite) {
+              if (dynamite.cooldownRemainingMs > 0) {
+                const event: GameEvent = {
+                  type: 'dynamite-cooling-down',
+                  dynamiteId: dynamite.id,
+                  remainingMs: dynamite.cooldownRemainingMs,
+                };
+                if (wave) wave.events.push(event);
+                else sessionEvents.push(event);
+                continue;
+              }
+
+              dynamite.cooldownRemainingMs = DYNAMITE_COOLDOWN_MS;
+              dynamite.triggerPressedRemainingMs = DYNAMITE_TRIGGER_PRESSED_MS;
+              const positionFine = {
+                x: (dynamite.boxCell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+                y: (dynamite.boxCell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+              };
+              const explosionId = `${dynamite.id}-blast-${nextDynamiteExplosionNumber++}`;
+              dynamiteExplosions.push({
+                id: explosionId,
+                positionFine,
+                remainingMs: DYNAMITE_EXPLOSION_DURATION_MS,
+                animationFrame: 0,
+              });
+              const affectedEnemyIds: string[] = [];
+              for (const enemy of wave?.enemies ?? []) {
+                if (!enemy.alive || enemy.hitPoints <= 0 || !enemy.damageable
+                  || !isInsideDynamiteRadius(positionFine, enemy.positionFine)) continue;
+                const damage = dynamiteDamageForEnemy(enemy.type, enemy.penetration.heavy);
+                if (damage <= 0) continue;
+                affectedEnemyIds.push(enemy.id);
+                applyEnemyDamage(wave!, enemy, damage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold);
+              }
+              const event: GameEvent = {
+                type: 'dynamite-exploded',
+                dynamiteId: dynamite.id,
+                affectedEnemyIds,
+              };
+              const soundEvent: GameEvent = {
+                type: 'sound-requested',
+                sound: 'sound_explosion',
+                positionFine,
+              };
+              if (wave) wave.events.push(event, soundEvent);
+              else sessionEvents.push(event, soundEvent);
+              continue;
+            }
             const target = [...units].reverse().find((unit) => {
               const current = unitView(unit, scenario.maxUpgrades ?? 0, elapsedMs);
               return contains(current.hitArea, selection.x, selection.y);
@@ -3780,7 +3963,9 @@ export function createGame(options: {
                 const poisonDamage = Math.trunc(
                   (enemy.poisonDamage * damagePenetration(enemy, 'poison')) / 100,
                 );
-                if (poisonDamage > 0) applyEnemyDamage(wave, enemy, poisonDamage, priorityMap, campaignMode);
+                if (poisonDamage > 0) applyEnemyDamage(
+                  wave, enemy, poisonDamage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold,
+                );
                 enemy.poisoned = false;
                 enemy.poisonDamage = 0;
                 if (!enemy.alive) continue;
@@ -3796,7 +3981,9 @@ export function createGame(options: {
                 // APK EnemyDirector.moveEnemys() applies post damage using fire penetration.
                 const postDamage = Math.trunc((enemy.damageOverTime * deltaMs) / 100);
                 const fireDamage = Math.trunc((postDamage * damagePenetration(enemy, 'fire')) / 100);
-                if (fireDamage > 0) applyEnemyDamage(wave, enemy, fireDamage, priorityMap, campaignMode);
+                if (fireDamage > 0) applyEnemyDamage(
+                  wave, enemy, fireDamage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold,
+                );
                 enemy.damageOverTimeRemainingMs = Math.trunc(enemy.damageOverTimeRemainingMs - deltaMs);
                 if (enemy.damageOverTimeRemainingMs <= 0) enemy.damageOverTime = 0;
               }
@@ -3897,7 +4084,7 @@ export function createGame(options: {
                 y: Math.sign(target.positionFine.y - genericStartFine.y) as -1 | 0 | 1,
               };
               unit.shootingDirection = firingDirection;
-              if (unit.definition.type === 'train-12') unit.weaponFacingDirection = firingDirection;
+              if (isTrainGatlingWagon(unit.definition.type)) unit.weaponFacingDirection = firingDirection;
               unit.weaponCooldownMs = weapon.reloadTimeMs;
               let specialReload = false;
               if (weapon.specialReloadFrequency !== undefined && weapon.specialReloadFrequency > 0) {
@@ -3972,7 +4159,7 @@ export function createGame(options: {
                       if (!enemy.alive || !enemy.damageable
                         || shotTargetDistanceSquare(shot.positionFine, enemy) >= areaSquare) continue;
                       const damage = Math.trunc((shot.damage * damagePenetration(enemy, shot.damageType)) / 100);
-                      applyEnemyDamage(wave, enemy, damage, priorityMap, campaignMode);
+                      applyEnemyDamage(wave, enemy, damage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold);
                       if (shot.postDamage > 0) {
                         enemy.damageOverTime = shot.postDamage;
                         enemy.damageOverTimeRemainingMs = Math.max(
@@ -3999,7 +4186,7 @@ export function createGame(options: {
                 for (const hitEnemy of affected) {
                   affectedEnemyIds.push(hitEnemy.id);
                   const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
-                  applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode);
+                  applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold);
                   if (shot.postDamage > 0) {
                     hitEnemy.damageOverTime = shot.postDamage;
                     hitEnemy.damageOverTimeRemainingMs = Math.max(
@@ -4055,7 +4242,7 @@ export function createGame(options: {
                 if (!hitEnemy.alive || !hitEnemy.damageable) continue;
                 affectedEnemyIds.push(hitEnemy.id);
                 const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
-                applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode);
+                applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold);
                 if (shot.postDamage > 0) {
                   hitEnemy.damageOverTime = shot.postDamage;
                   hitEnemy.damageOverTimeRemainingMs = Math.max(

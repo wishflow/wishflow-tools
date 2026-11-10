@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import map from '../src/content/new-mexico-04.json';
 import { createTechTownMapScene } from '../src/content/tech-town-scene';
-import { createTechTownFreshGameUnitPlacements } from '../src/content/tech-town-map-units';
+import { createCampaignMapUnitPlacements } from '../src/content/campaign-map-unit-placements';
 import { createTechTownBaseUnits, createTechTownTrainUnits } from '../src/content/tech-town-units';
 import { techTownRouteDefinitions } from '../src/content/tech-town-routes';
 import { deriveOriginalTdmMapDrawCommands } from './helpers/terrain-render-reference';
@@ -160,7 +160,7 @@ test('decodes every fresh-game unit marker into its APK type and activity', () =
     132: { unitTypeId: 9, activity: 5 },
   } as const;
   const allUnitCodes = Object.keys(unitMetadataByCode).map(Number);
-  const decoded = createTechTownFreshGameUnitPlacements([[...allUnitCodes, 150]]);
+  const decoded = createCampaignMapUnitPlacements([[...allUnitCodes, 150]]);
 
   assert.deepEqual(decoded.map(({ sourceCode, unitTypeId, activity, cell }) => ({
     sourceCode,
@@ -196,7 +196,7 @@ test('places Tech Town units at every original map coordinate without treating C
     }))
   )).sort((left, right) => left.cell.y - right.cell.y || left.cell.x - right.cell.x);
 
-  assert.deepEqual(createTechTownFreshGameUnitPlacements(), expected);
+  assert.deepEqual(createCampaignMapUnitPlacements(map.originalTileGrid), expected);
 });
 
 test('creates only unlocked ordinary Tech Town units on the first level-four visit', () => {

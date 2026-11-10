@@ -48,6 +48,7 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   await expect(lab).toHaveCSS('box-shadow', 'none');
   for (const card of await cards.all()) {
     await expect(card).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+    await expect(card).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   }
   const parchment = await cards.first().evaluate(async (card) => {
     const imageUrl = getComputedStyle(card).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
@@ -73,6 +74,20 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   await expect(lab.locator('.lab-card > h3').first()).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(lab.getByTestId('compare-schemes')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(lab.getByTestId('import-profile-archive')).toHaveCSS('color', 'rgb(255, 248, 230)');
+
+  const importExperimentArchive = lab.locator('.experiment-archive-actions .replay-import-label');
+  const idleImportAppearance = await importExperimentArchive.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor };
+  });
+  expect(idleImportAppearance.backgroundImage).toMatch(/gng_startmenu_2_menu_1_button\.png/);
+  await importExperimentArchive.hover();
+  const hoverImportAppearance = await importExperimentArchive.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor, filter: style.filter };
+  });
+  expect(hoverImportAppearance).toMatchObject(idleImportAppearance);
+  expect(hoverImportAppearance.filter).toContain('brightness(1.08)');
 
   const desktopGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();

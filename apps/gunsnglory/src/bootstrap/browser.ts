@@ -11,11 +11,26 @@ import { gamblerUiLowCashSampleContent, gamblerUiSampleContent } from '../conten
 import { recruitConfirmationUiSampleContent } from '../content/recruit-confirmation-ui-sample';
 import { techTownTrainTestContent } from '../content/tech-town-train-sample';
 import { createTechTownCampaignContent, techTownCampaignId, techTownLevelFourContent } from '../content/tech-town-campaign';
+import { billyHillsCampaignId, billyHillsLevelFiveContent, createBillyHillsCampaignContent } from '../content/billy-hills-campaign';
+import {
+  createMurdockMountainsCampaignContent,
+  murdockMountainsCampaignId,
+} from '../content/murdock-mountains-campaign';
+import { createLuckyLakeCampaignContent, luckyLakeCampaignId } from '../content/lucky-lake-campaign';
+import {
+  cactusvilleCampaignId,
+  cactusvilleCampaignContentVersionFor,
+  cactusvilleCompletedScenarioIdsForContentVersion,
+  createCactusvilleCampaignContent,
+} from '../content/cactusville-campaign';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
+  luckyLakeLevelSevenCampaignContent,
+  cactusvilleLevelEightCampaignContent,
+  murdockMountainsLevelSixCampaignContent,
 } from '../content/official-campaign';
 import {
   campaignProgressSampleOne,
@@ -42,6 +57,10 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [apacheValleyLevelTwoContent.id]: apacheValleyLevelTwoContent,
   [fortKaboomLevelThreeContent.id]: fortKaboomLevelThreeContent,
   [techTownLevelFourContent.id]: techTownLevelFourContent,
+  [billyHillsLevelFiveContent.id]: billyHillsLevelFiveContent,
+  [murdockMountainsLevelSixCampaignContent.id]: murdockMountainsLevelSixCampaignContent,
+  [luckyLakeLevelSevenCampaignContent.id]: luckyLakeLevelSevenCampaignContent,
+  [cactusvilleLevelEightCampaignContent.id]: cactusvilleLevelEightCampaignContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -52,7 +71,13 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,
 };
 
-export function getBrowserScenarioContentVersion(scenarioId: string): string | undefined {
+export function getBrowserScenarioContentVersion(
+  scenarioId: string,
+  completedScenarioIds: readonly string[] = [],
+): string | undefined {
+  if (scenarioId === cactusvilleCampaignId) {
+    return cactusvilleCampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -61,6 +86,10 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
   const scenarios = {
     ...browserScenarios,
     [techTownCampaignId]: createTechTownCampaignContent(completedScenarioIds),
+    [billyHillsCampaignId]: createBillyHillsCampaignContent(completedScenarioIds),
+    [murdockMountainsCampaignId]: createMurdockMountainsCampaignContent(completedScenarioIds),
+    [luckyLakeCampaignId]: createLuckyLakeCampaignContent(completedScenarioIds),
+    [cactusvilleCampaignId]: createCactusvilleCampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -71,6 +100,14 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     },
     sessionIdSource: createSessionId,
   });
+}
+
+/** Replay import uses the recorded unlock snapshot, even if the current profile has changed. */
+export function createBrowserGameForCactusvilleReplay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? cactusvilleCompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
 }
 
 export function createBrowserProgress() {

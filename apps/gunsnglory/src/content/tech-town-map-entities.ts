@@ -1,7 +1,7 @@
 import type { MapDecoration, ScenarioUnit } from '../game';
+import type { CampaignMapUnitTypeId } from './campaign-map-unit-placements';
 import { createTechTownMapScene } from './tech-town-scene';
 import { createTechTownBaseUnits, createTechTownTrainUnits } from './tech-town-units';
-import type { TechTownUnitTypeId } from './tech-town-map-units';
 
 type TechTownScene = ReturnType<typeof createTechTownMapScene>;
 
@@ -19,7 +19,7 @@ export function assertTechTownGamblerCasinoPair(
 
 /** Builds both sides of the conditional map entity pair from one unlock snapshot. */
 export function createTechTownMapContent(
-  isUnitUnlocked: (unitTypeId: TechTownUnitTypeId) => boolean,
+  isUnitUnlocked: (unitTypeId: CampaignMapUnitTypeId) => boolean,
 ): { units: ScenarioUnit[]; scene: TechTownScene } {
   const gamblerUnlocked = isUnitUnlocked(9);
   const units = [

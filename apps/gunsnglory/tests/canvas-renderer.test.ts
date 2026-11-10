@@ -726,6 +726,55 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     assert.equal((enemyDraw[6] as number) + (enemyDraw[8] as number), feet.y,
       'bridge-crossing enemy feet stay anchored to the TDM route position');
   }
+
+  const dynamiteImages = {
+    ...images,
+    dynamite_detonator: { naturalWidth: 48, naturalHeight: 60 } as HTMLImageElement,
+    dynamite_detonator_pressed: { naturalWidth: 48, naturalHeight: 60 } as HTMLImageElement,
+    dynamite_box: { naturalWidth: 48, naturalHeight: 48 } as HTMLImageElement,
+    sfx_dynamite_box: { naturalWidth: 240, naturalHeight: 66 } as HTMLImageElement,
+    sfx_explosion: { naturalWidth: 384, naturalHeight: 52 } as HTMLImageElement,
+  };
+  const dynamiteView: GameView = {
+    ...view,
+    enemies: [],
+    shots: [],
+    wagonDebris: [],
+    units: [],
+    dynamites: [{
+      id: 'dynamite-1',
+      triggerCell: { x: 14, y: 6 },
+      boxCell: { x: 14, y: 8 },
+      unlocked: true,
+      cooldownRemainingMs: 300,
+      triggerPressed: true,
+      boxPhase: 'respawning',
+      boxAnimationFrame: 2,
+    }],
+    dynamiteExplosions: [{
+      id: 'dynamite-1-blast-1',
+      positionFine: { x: (14 * 7680) + 3840, y: (8 * 7680) + 3840 },
+      remainingMs: 599,
+      animationFrame: 2,
+    }],
+    drawOrder: ['dynamite-trigger:dynamite-1', 'dynamite-box:dynamite-1'],
+  };
+  const dynamiteDrawStart = drawCalls.length;
+  drawGame(context, dynamiteView, dynamiteImages);
+  const dynamiteDraws = drawCalls.slice(dynamiteDrawStart);
+  assert.ok(dynamiteDraws.some(([image]) => image === dynamiteImages.dynamite_detonator_pressed));
+  assert.ok(!dynamiteDraws.some(([image]) => image === dynamiteImages.dynamite_box),
+    'the paired box is hidden while its respawn atlas is active');
+  assert.deepEqual(
+    dynamiteDraws.find(([image]) => image === dynamiteImages.sfx_dynamite_box)?.slice(1, 5),
+    [96, 0, 48, 66],
+    'the APK five-frame box atlas selects its HDPI frame and source dimensions',
+  );
+  assert.deepEqual(
+    dynamiteDraws.find(([image]) => image === dynamiteImages.sfx_explosion)?.slice(1, 5),
+    [96, 0, 48, 52],
+    'the AOE effect uses the existing eight-frame explosion atlas at its paired box position',
+  );
 });
 
 test('draws original bonus-crate frames, reward icons, and the centered localized speech bubble', () => {
@@ -784,6 +833,15 @@ test('draws original bonus-crate frames, reward icons, and the centered localize
   const bubble = calls.find((call) => call[0] === images.gng_speechbubble);
   assert.ok(bubble, 'the popup uses the APK speech bubble image');
   assert.ok(texts.includes('Damage boost!'));
+  const awesomeMessage = { message: { en: 'Hit!', zh: '命中！' }, remainingMs: 900 };
+  drawGame(context, { ...view, bonusNotice: undefined, bonusCrates: [], drawOrder: [] }, images, 1, undefined, false, 'zh', awesomeMessage);
+  assert.ok(calls.some((call) => call[0] === images.gng_speechbubble), 'Awesome feedback reuses the APK speech bubble artwork');
+  assert.ok(texts.includes('命中！'), 'Awesome feedback uses the selected site language');
+  calls.length = 0;
+  texts.length = 0;
+  drawGame(context, view, images, 1, undefined, false, 'en', awesomeMessage);
+  assert.ok(texts.includes('Damage boost!'), 'an active bonus notice retains priority over Awesome feedback');
+  assert.ok(!texts.includes('Hit!'));
 
   calls.length = 0;
   texts.length = 0;

@@ -17,6 +17,7 @@ const highDensityMapAtlases = new Set([
   'tiles_bridge_pier_left',
   'tiles_bridge_pier_right',
   'tiles_railway_hori',
+  'tiles_railway_verti',
 ]);
 
 const highDensityMapDecorations = new Set([
@@ -32,8 +33,13 @@ const highDensityMapDecorations = new Set([
   'lok_hori_1of2',
   'lok_hori_2of2',
   'lok_wagon_hori',
+  'lok_verti_1of2',
+  'lok_verti_2of2',
+  'lok_wagon_verti',
   'tiles_railway_buffers_hori_left',
   'tiles_railway_buffers_hori_right',
+  'tiles_railway_buffers_verti_up',
+  'tiles_railway_buffers_verti_down',
   'e_1x1_bush',
   'e_1x1_cactus_a',
   'e_1x1_cactus_b',
@@ -42,6 +48,10 @@ const highDensityMapDecorations = new Set([
   'e_1x1_rocks_water',
   'e_1x1_tree',
   'e_1x2_bones',
+  'dynamite_detonator',
+  'dynamite_detonator_pressed',
+  'dynamite_box',
+  'sfx_dynamite_box',
 ]);
 
 const highDensityVehicleAssets = new Set([

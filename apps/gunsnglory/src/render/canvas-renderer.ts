@@ -1,4 +1,4 @@
-import type { BonusCrateView, BonusNoticeView, Direction, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
+import type { BonusCrateView, BonusNoticeView, Direction, DynamiteObjectView, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
 import { campaignBonusRewardAsset } from '../game/campaign-bonus-crates';
 import { GAME_DRAW_ORDER_ROAD_CUTOFF } from '../game/draw-order';
 import {
@@ -114,6 +114,83 @@ function drawMapDecoration(
   context.drawImage(image, destination.x, destination.y, destination.width, destination.height);
 }
 
+function drawDynamiteObject(
+  context: CanvasRenderingContext2D,
+  dynamite: DynamiteObjectView,
+  kind: 'trigger' | 'box',
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  if (!dynamite.unlocked) return;
+  if (kind === 'trigger') {
+    drawMapDecoration(context, {
+      asset: dynamite.triggerPressed ? 'dynamite_detonator_pressed' : 'dynamite_detonator',
+      cell: dynamite.triggerCell,
+    }, images, viewport);
+    return;
+  }
+  if (dynamite.boxPhase === 'absent') return;
+  if (dynamite.boxPhase === 'present') {
+    drawMapDecoration(context, { asset: 'dynamite_box', cell: dynamite.boxCell }, images, viewport);
+    return;
+  }
+
+  const image = images.sfx_dynamite_box;
+  if (!image) throw new Error('Missing game image: sfx_dynamite_box');
+  const tileScale = viewport.scaleFactor;
+  const width = 32 * tileScale;
+  const height = 44 * tileScale;
+  const centerX = viewport.origin.x + (dynamite.boxCell.x + 0.5) * viewport.tileSize;
+  const feetY = viewport.origin.y + (dynamite.boxCell.y + 1) * viewport.tileSize;
+  const frame = Math.min(4, Math.max(0, dynamite.boxAnimationFrame));
+  context.drawImage(
+    image,
+    frame * 48,
+    0,
+    48,
+    66,
+    Math.trunc(centerX - width / 2),
+    Math.trunc(feetY - height),
+    Math.trunc(width),
+    Math.trunc(height),
+  );
+}
+
+function drawDynamiteExplosions(
+  context: CanvasRenderingContext2D,
+  view: GameView,
+  images: GameImages,
+  viewport: MapViewport,
+): void {
+  if (!view.dynamiteExplosions?.length) return;
+  const image = images.sfx_explosion;
+  if (!image) throw new Error('Missing game image: sfx_explosion');
+  context.save();
+  context.beginPath();
+  context.rect(viewport.origin.x, viewport.origin.y, viewport.mapWidth, viewport.mapHeight);
+  context.clip();
+  for (const explosion of view.dynamiteExplosions) {
+    const tileScale = viewport.scaleFactor;
+    const width = EXPLOSION_FRAME.width * tileScale;
+    const height = EXPLOSION_FRAME.height * tileScale;
+    const centerX = viewport.origin.x + (explosion.positionFine.x / 240) * tileScale;
+    const feetY = viewport.origin.y + (explosion.positionFine.y / 240) * tileScale;
+    const frame = Math.min(EXPLOSION_FRAME.count - 1, Math.max(0, explosion.animationFrame));
+    context.drawImage(
+      image,
+      frame * EXPLOSION_FRAME.width,
+      0,
+      EXPLOSION_FRAME.width,
+      EXPLOSION_FRAME.height,
+      Math.trunc(centerX - width / 2),
+      Math.trunc(feetY - height),
+      Math.trunc(width),
+      Math.trunc(height),
+    );
+  }
+  context.restore();
+}
+
 function drawUnit(
   context: CanvasRenderingContext2D,
   unit: UnitView,
@@ -127,7 +204,7 @@ function drawUnit(
   const width = unit.render.width * viewport.tileSize;
   const height = unit.render.height * viewport.tileSize;
 
-  const gatlingWagon = unit.type === 'train-12';
+  const gatlingWagon = unit.type === 'train-12' || unit.type === 'train-22';
   const firing = gatlingWagon ? undefined : unit.shootingAnimation;
   const walking = unit.walkingAnimation;
   const asset = firing?.asset ?? unit.asset;
@@ -161,7 +238,8 @@ function drawUnit(
     const weaponMirrored = firingWeapon?.mirrored ?? unit.weaponFacing?.mirrored ?? false;
     const weaponSize = viewport.tileSize;
     const weaponCenterX = left + (width / 2);
-    const weaponCenterY = top + height - ((6912 / FINE_UNITS_PER_CELL) * viewport.tileSize);
+    const weaponCenterY = top + height
+      - (((unit.weaponDrawOffsetYFine ?? 6912) / FINE_UNITS_PER_CELL) * viewport.tileSize);
     context.save();
     if (weaponMirrored) {
       context.translate(weaponCenterX * 2, 0);
@@ -334,12 +412,38 @@ function drawBonusNotice(
   language: 'en' | 'zh',
   images: GameImages,
 ): void {
+  drawSpeechBubble(context, bonusMessage(notice.rewardType, language), notice.remainingMs, 1_200, viewport, images);
+}
+
+export interface AwesomeFeedbackBubble {
+  message: { en: string; zh: string };
+  remainingMs: number;
+}
+
+function drawAwesomeFeedbackBubble(
+  context: CanvasRenderingContext2D,
+  notice: AwesomeFeedbackBubble,
+  viewport: MapViewport,
+  language: 'en' | 'zh',
+  images: GameImages,
+): void {
+  drawSpeechBubble(context, notice.message[language], notice.remainingMs, 1_200, viewport, images);
+}
+
+function drawSpeechBubble(
+  context: CanvasRenderingContext2D,
+  text: string,
+  remainingMs: number,
+  durationMs: number,
+  viewport: MapViewport,
+  images: GameImages,
+): void {
   const bubble = images.gng_speechbubble;
   if (!bubble) throw new Error('Missing game image: gng_speechbubble');
   const scale = viewport.scaleFactor;
-  const elapsedMs = Math.max(0, 1_200 - notice.remainingMs);
+  const elapsedMs = Math.max(0, durationMs - remainingMs);
   const inProgress = Math.min(1, elapsedMs / 600);
-  const outProgress = Math.min(1, notice.remainingMs / 600);
+  const outProgress = Math.min(1, remainingMs / 600);
   const animationScale = Math.sin((inProgress * Math.PI) / 2);
   const alpha = elapsedMs < 600
     ? animationScale
@@ -348,7 +452,6 @@ function drawBonusNotice(
   const height = bubble.naturalHeight * scale;
   const centerX = GAME_VIEWPORT.width / 2;
   const centerY = GAME_VIEWPORT.height / 2;
-  const text = bonusMessage(notice.rewardType, language);
   context.save();
   context.globalAlpha *= alpha;
   context.translate(centerX, centerY);
@@ -447,6 +550,22 @@ function createDrawObjects(
     depth: ((decoration.cell.y + 1) * FINE_UNITS_PER_CELL) + GAME_DRAW_ORDER_ROAD_CUTOFF,
     draw: () => drawMapDecoration(context, decoration, images, viewport),
   }));
+  const dynamiteObjects = (view.dynamites ?? []).flatMap((dynamite): DrawObject[] => [
+    {
+      id: `dynamite-trigger:${dynamite.id}`,
+      kind: 'decoration',
+      cell: dynamite.triggerCell,
+      depth: ((dynamite.triggerCell.y + 1) * FINE_UNITS_PER_CELL) + GAME_DRAW_ORDER_ROAD_CUTOFF,
+      draw: () => drawDynamiteObject(context, dynamite, 'trigger', images, viewport),
+    },
+    {
+      id: `dynamite-box:${dynamite.id}`,
+      kind: 'decoration',
+      cell: dynamite.boxCell,
+      depth: ((dynamite.boxCell.y + 1) * FINE_UNITS_PER_CELL) + GAME_DRAW_ORDER_ROAD_CUTOFF,
+      draw: () => drawDynamiteObject(context, dynamite, 'box', images, viewport),
+    },
+  ]);
   const units = view.units.map((unit): DrawObject => ({
     id: `unit:${unit.id}`,
     kind: 'unit',
@@ -485,7 +604,7 @@ function createDrawObjects(
     draw: () => drawBonusCrate(context, crate, view.elapsedMs, view.frame, images, viewport),
   }));
 
-  const mapObjects = [...decorations, ...units].sort((left, right) => (
+  const mapObjects = [...decorations, ...dynamiteObjects, ...units].sort((left, right) => (
     left.cell!.y - right.cell!.y || left.cell!.x - right.cell!.x
   ));
   return [...mapObjects, ...enemies, ...shots, ...rocketSparkles, ...wagonDebris, ...collectables];
@@ -1211,6 +1330,7 @@ export function drawGame(
   camera: Readonly<MapCamera> = DEFAULT_MAP_CAMERA,
   showInspectionOverlay = false,
   language: 'en' | 'zh' = 'en',
+  awesomeFeedbackBubble?: AwesomeFeedbackBubble,
 ): void {
   context.save();
   context.clearRect(0, 0, GAME_VIEWPORT.width, GAME_VIEWPORT.height);
@@ -1234,9 +1354,11 @@ export function drawGame(
   drawTiles(context, view.map.streets, images, viewport);
   context.restore();
   drawWorldObjects(orderedDrawObjects, drawObjects, false);
+  drawDynamiteExplosions(context, view, images, viewport);
   drawPriorityTargetFeedback(context, view, images, viewport);
   drawSelectedUnitFeedback(context, view, images, viewport);
   if (view.bonusNotice) drawBonusNotice(context, view.bonusNotice, viewport, language, images);
+  else if (awesomeFeedbackBubble) drawAwesomeFeedbackBubble(context, awesomeFeedbackBubble, viewport, language, images);
   drawWaveSpawnIndicators(context, view, images, viewport, displayPixelScale);
 
   if (showInspectionOverlay) drawInspectionOverlay(context, view, viewport, language);

@@ -64,8 +64,12 @@ test('matches Java Random nextDouble for the deterministic Math.random adapter',
 test('derives repeatable, domain-separated simulation and presentation seeds', () => {
   const gameUtilSeed = deriveSessionRandomSeed(42, 'game-util');
   const presentationSeed = deriveSessionRandomSeed(42, 'presentation');
+  const awesomeFeedbackSeed = deriveSessionRandomSeed(42, 'awesome-feedback');
   assert.equal(gameUtilSeed, deriveSessionRandomSeed(42, 'game-util'));
   assert.equal(presentationSeed, deriveSessionRandomSeed(42, 'presentation'));
+  assert.equal(awesomeFeedbackSeed, deriveSessionRandomSeed(42, 'awesome-feedback'));
+  assert.notEqual(awesomeFeedbackSeed, presentationSeed);
+  assert.notEqual(awesomeFeedbackSeed, gameUtilSeed);
   assert.notEqual(gameUtilSeed, presentationSeed);
   assert.throws(() => deriveSessionRandomSeed(-1, 'game-util'), RangeError);
 });

@@ -57,10 +57,10 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   await page.getByRole('button', { name: '切换界面语言为英文' }).click();
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-new-mexico').click();
-  for (const level of [1, 2, 3, 4]) {
+  for (const level of [1, 2, 3, 4, 5, 6, 7]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeEnabled();
   }
-  for (const level of [5, 6, 7, 8, 9, 10]) {
+  for (const level of [9, 10]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
@@ -95,6 +95,21 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
 
   await expect(page.locator('#scene-title')).toHaveText('Tech Town · Level 4');
   await expect(page.getByTestId('scene-difficulty')).toContainText('MEDIUM');
+  await expect(page.getByTestId('wave-status')).toContainText('1/8');
+  expect(await readSavedProfile(page)).toEqual(profileBefore);
+
+  await leaveBattleFromPauseBoard(page);
+  await page.getByTestId('menu-free-play').click();
+  await page.getByTestId('campaign-region-new-mexico').click();
+  await page.getByTestId('campaign-level-05').click();
+  await expect(page.getByRole('heading', { name: 'Billy Hills' })).toBeVisible();
+  await page.getByTestId('campaign-stage-play').click();
+  for (const difficulty of ['easy', 'medium', 'hard']) {
+    await expect(page.getByTestId(`campaign-difficulty-${difficulty}`)).toBeEnabled();
+  }
+  await page.getByTestId('campaign-difficulty-hard').click();
+  await expect(page.locator('#scene-title')).toHaveText('Billy Hills · Level 5');
+  await expect(page.getByTestId('scene-difficulty')).toContainText('HARD');
   await expect(page.getByTestId('wave-status')).toContainText('1/8');
   expect(await readSavedProfile(page)).toEqual(profileBefore);
 });

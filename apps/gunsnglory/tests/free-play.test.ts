@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   apacheValleyLevelTwoContent,
+  billyHillsLevelFiveCampaignContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
+  murdockMountainsLevelSixCampaignContent,
   techTownLevelFourCampaignContent,
 } from '../src/content/official-campaign';
 import { createBrowserGame } from '../src/bootstrap/browser';
@@ -14,9 +16,11 @@ const officialContents = [
   apacheValleyLevelTwoContent,
   fortKaboomLevelThreeContent,
   techTownLevelFourCampaignContent,
+  billyHillsLevelFiveCampaignContent,
+  murdockMountainsLevelSixCampaignContent,
 ] as const;
 
-test('free mode opens all four official stages at every difficulty with complete campaign waves', async () => {
+test('free mode opens all six official stages at every difficulty with complete campaign waves', async () => {
   const game = createGame({
     scenarios: Object.fromEntries(officialContents.map((content) => [content.id, content])),
   });

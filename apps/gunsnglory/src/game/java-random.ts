@@ -2,11 +2,12 @@ const JAVA_RANDOM_MULTIPLIER = 0x5deece66dn;
 const JAVA_RANDOM_MASK = (1n << 48n) - 1n;
 const JAVA_INT_MAX = 0x7fff_ffff;
 
-export type SessionRandomStream = 'game-util' | 'presentation';
+export type SessionRandomStream = 'game-util' | 'presentation' | 'awesome-feedback';
 
 const SESSION_RANDOM_STREAM_SALTS: Readonly<Record<SessionRandomStream, number>> = {
   'game-util': 0x5354_4541,
   presentation: 0x5346_5801,
+  'awesome-feedback': 0x4157_4f4d,
 };
 
 /** Derives stable, role-specific Java Random seeds from a replay's StartRecord seed. */

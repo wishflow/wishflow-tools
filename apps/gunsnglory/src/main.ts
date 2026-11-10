@@ -4,6 +4,7 @@ import { gamePageTemplate } from './ui/game-page-template';
 import {
   createBrowserExperimentRepository,
   createBrowserGame,
+  createBrowserGameForCactusvilleReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
 } from './bootstrap/browser';
@@ -20,9 +21,33 @@ import { techTownMapEntityAssets } from './content/tech-town-map-entity-assets';
 import { techTownTrainTestContent } from './content/tech-town-train-sample';
 import { gamblerDialogAssets } from './content/gambler-dialog-assets';
 import { recruitConfirmationUiSampleContent } from './content/recruit-confirmation-ui-sample';
-import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas } from './render/canvas-renderer';
-import { apacheValleyLevelTwoContent, cowGulchLevelOneContent, fortKaboomLevelThreeContent, officialCampaignStages, techTownLevelFourCampaignContent } from './content/official-campaign';
+import { BASE_GAME_VIEWPORT, drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, resizeCanvas, type AwesomeFeedbackBubble } from './render/canvas-renderer';
+import {
+  apacheValleyLevelTwoContent,
+  billyHillsLevelFiveCampaignContent,
+  cowGulchLevelOneContent,
+  fortKaboomLevelThreeContent,
+  officialCampaignStages,
+  luckyLakeLevelSevenCampaignContent,
+  cactusvilleLevelEightCampaignContent,
+  murdockMountainsLevelSixCampaignContent,
+  techTownLevelFourCampaignContent,
+} from './content/official-campaign';
 import { techTownWaveIntros } from './content/tech-town-wave-intros';
+import { billyHillsCampaignId, billyHillsLevelFiveContent, createBillyHillsCampaignContent } from './content/billy-hills-campaign';
+import { billyHillsWaveIntros } from './content/billy-hills-wave-intros';
+import {
+  createMurdockMountainsCampaignContent,
+  murdockMountainsCampaignId,
+} from './content/murdock-mountains-campaign';
+import { murdockMountainsWaveIntros } from './content/murdock-mountains-wave-intros';
+import { createLuckyLakeCampaignContent, luckyLakeCampaignId } from './content/lucky-lake-campaign';
+import { luckyLakeWaveIntros } from './content/lucky-lake-wave-intros';
+import {
+  cactusvilleCampaignId,
+  createCactusvilleCampaignContent,
+} from './content/cactusville-campaign';
+import { cactusvilleWaveIntros } from './content/cactusville-wave-intros';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import { fortKaboomWaveIntros } from './content/fort-kaboom-wave-intros';
@@ -81,6 +106,7 @@ import { messages } from './locales';
 import { OverlayHost } from './ui/overlay-host';
 import { GameUiController, type GameUiPanel, type GameUiRoute } from './ui/controller';
 import { FrameChromeController } from './ui/frame-chrome';
+import { CACTUSVILLE_AWESOME_FEEDBACK, selectAwesomeFeedbackMessageIndex } from './ui/awesome-feedback';
 import { renderHelpPanelView, renderOptionsPanelView } from './ui/menu-panels';
 import './styles.css';
 
@@ -605,6 +631,10 @@ let campaignSelectionBusy = false;
 let context: CanvasRenderingContext2D | undefined;
 let simulationSpeed = DEFAULT_SIMULATION_SPEED;
 let soundEnabled = true;
+let awesomeFeedbackRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'awesome-feedback'));
+let awesomeFeedbackSessionId = session.id;
+let activeAwesomeFeedback: { messageIndex: number; untilElapsedMs: number } | undefined;
+const processedAwesomeDefeatIds = new Set<string>();
 const failedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let selectedDifficulty: GameDifficulty = 'easy';
 let pauseReason: 'manual' | 'background' | 'wave-intro' | undefined;
@@ -650,6 +680,7 @@ let replayStatusState: ReplayStatusState | undefined;
 let lastDefeatFeedback: EnemyDefeatSummary[] = [];
 let lastRecruitmentEvent: Extract<GameEvent, { type: 'unit-recruited' | 'unit-recruitment-rejected' }> | undefined;
 let lastMapHireEvent: Extract<GameEvent, { type: 'map-unit-hired' | 'map-unit-hire-rejected' }> | undefined;
+let dynamiteCooldownNotice: { id: string; untilElapsedMs: number } | undefined;
 let pendingRecruitmentType: string | undefined;
 let recruitmentCommandNumber = 0;
 let mapHireCommandNumber = 0;
@@ -692,8 +723,14 @@ const languageMessages = {
     campaignDifficultyLocked: 'Hard unlocks after completing the 10th level in any region.',
     campaignDifficultyUnlocked: 'Hard difficulty is unlocked.',
     sceneDifficulty: (difficulty: GameDifficulty) => `DIFFICULTY · ${difficulty.toUpperCase()}`,
-    sceneCaption: (scenarioId: string) => {
+    sceneCaption: (scenarioId: string, mode: string) => {
       if (scenarioId === techTownTrainTestContent.id) return 'Developer-only Tech Town train and Gatling test: move the original five-part train, hire and upgrade Gatling wagons, and fight one slow pioneer on route three. Debug results do not affect campaign progress.';
+      if (scenarioId === murdockMountainsCampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Murdock Mountains level 6: ten original waves across two canyon routes. Victory records campaign completion and best score.';
+      if (scenarioId === cactusvilleCampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Cactusville level 8: ten original waves. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -710,6 +747,7 @@ const languageMessages = {
     campaignOpening: (name: string) => `Opening ${name}…`,
     campaignOpened: (name: string) => `${name} opened.`,
     campaignOpenFailed: 'The stage could not be opened. The previous scene remains available.',
+    dynamiteCoolingDown: (seconds: number) => `Dynamite is recharging. Ready in ${seconds}s.`,
     none: 'No unit selected',
     unitName: (type: string) => ({
       mexican: 'Mexican',
@@ -720,6 +758,9 @@ const languageMessages = {
       'train-10': 'Train locomotive',
       'train-11': 'Train locomotive',
       'train-12': 'Gatling wagon',
+      'train-20': 'Train locomotive',
+      'train-21': 'Train locomotive',
+      'train-22': 'Gatling wagon',
       pyromaniac: 'Pyromaniac',
       salesman: 'Snake Oil Salesman',
       gambler: 'Card Gambler',
@@ -902,8 +943,14 @@ const languageMessages = {
     campaignDifficultyLocked: '完成任意区域的第 10 关后解锁困难模式。',
     campaignDifficultyUnlocked: '困难模式已解锁。',
     sceneDifficulty: (difficulty: GameDifficulty) => `难度 · ${({ easy: '简单', medium: '中等', hard: '困难' })[difficulty]}`,
-    sceneCaption: (scenarioId: string) => {
+    sceneCaption: (scenarioId: string, mode: string) => {
       if (scenarioId === techTownTrainTestContent.id) return '仅供开发测试的 Tech Town 列车与加特林样例：移动原版五节列车，雇佣并升级加特林车厢，在第三条路线对付一名慢速拓荒者；不会修改正式战役进度。';
+      if (scenarioId === murdockMountainsCampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：默多克山脉，第 6 关。包含两条峡谷路线和原版十波；胜利后记录战役完成与最高分。';
+      if (scenarioId === cactusvilleCampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：仙人掌镇，第 8 关。包含原版十波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -920,6 +967,7 @@ const languageMessages = {
     campaignOpening: (name: string) => `正在进入${name}…`,
     campaignOpened: (name: string) => `已进入${name}。`,
     campaignOpenFailed: '无法打开该关卡，之前的场景仍可使用。',
+    dynamiteCoolingDown: (seconds: number) => `炸药正在重新装填，${seconds} 秒后可用。`,
     none: '尚未选择单位',
     unitName: (type: string) => ({
       mexican: '墨西哥人',
@@ -930,6 +978,9 @@ const languageMessages = {
       'train-10': '列车机车',
       'train-11': '列车机车',
       'train-12': '加特林车厢',
+      'train-20': '列车机车',
+      'train-21': '列车机车',
+      'train-22': '加特林车厢',
       pyromaniac: '纵火狂',
       salesman: '蛇油推销员',
       gambler: '纸牌赌徒',
@@ -1197,7 +1248,7 @@ const campaignMenuCopy = {
     closeConfirmation: 'Return to the campaign menu? The unfinished battle will not be saved.',
     confirmAction: 'YES', cancelAction: 'NO',
     freePlayMenu: 'Free Play menu', freePlayRegionHeading: 'Choose a region for Free Play',
-    freePlayRegionHint: 'Free Play opens the four implemented campaign levels and any difficulty, without campaign unlock requirements.',
+    freePlayRegionHint: 'Free Play opens the eight implemented campaign levels and any difficulty, without campaign unlock requirements.',
     freePlayLevelHint: (available: number) => `${available}/10 implemented levels available in Free Play. Other levels are not implemented yet.`,
     freePlayScoreNote: 'Free play does not change the saved campaign score or progress.',
     freePlayDifficultyNotice: 'Free play results do not change campaign progress, high scores, unlocks, or saved difficulty.',
@@ -1212,10 +1263,18 @@ const campaignMenuCopy = {
     noHighScore: 'Your highscore for this level will be shown here as soon as you have played it for the first time.',
     highScoreLabel: 'Best score',
     bestScore: (score: number) => `$ ${score}`,
+    levelFiveTitle: 'Billy Hills',
+    levelSixTitle: 'Murdock Mountains',
+    levelSevenTitle: 'Lucky Lake',
+    levelEightTitle: 'Cactusville',
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
     levelFourInfo: "The railroad could be our most powerful weapon, if we mount deadly Gatling guns on empty cars! Unfortunately that isn't free.",
+    levelFiveInfo: 'Sheep and cows once grazed in this lovely area.',
+    levelSixInfo: 'The picturesque Murdock Mountains are always worth the trip!',
+    levelSevenInfo: 'A picture postcard lake where settlers flock in droves.',
+    levelEightInfo: 'Sheriff Starforce imposes law and order here. Nowhere will you find a more relaxed and carefree place to live than Cactusville!',
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
@@ -1252,7 +1311,7 @@ const campaignMenuCopy = {
     closeConfirmation: '要返回战役菜单吗？未完成的战斗不会保存。',
     confirmAction: '是', cancelAction: '否',
     freePlayMenu: '自由游玩菜单', freePlayRegionHeading: '选择自由游玩区域',
-    freePlayRegionHint: '自由游玩可进入目前已实现的四个战役关卡和任意难度，不受战役解锁条件限制。',
+    freePlayRegionHint: '自由游玩可进入目前已实现的八个战役关卡和任意难度，不受战役解锁条件限制。',
     freePlayLevelHint: (available: number) => `自由游玩可进入 ${available}/10 个已实现关卡，其他关卡尚未实现。`,
     freePlayScoreNote: '自由游玩不会更改已保存的战役分数或进度。',
     freePlayDifficultyNotice: '自由游玩不会更改战役进度、最高分、解锁状态或已保存难度。',
@@ -1267,10 +1326,18 @@ const campaignMenuCopy = {
     noHighScore: '玩过本关后，最高分将在此显示。',
     highScoreLabel: '最高分',
     bestScore: (score: number) => `$ ${score}`,
+    levelFiveTitle: '比利山丘',
+    levelSixTitle: '默多克山脉',
+    levelSevenTitle: '幸运湖',
+    levelEightTitle: '仙人掌镇',
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
     levelFourInfo: '如果能在空车厢上装上致命的加特林机枪，铁路就会成为我们最强大的武器！可惜，这可不便宜。',
+    levelFiveInfo: '绵羊和奶牛曾在这片美丽的土地上悠闲吃草。',
+    levelSixInfo: '风景如画的默多克山脉，永远值得一游！',
+    levelSevenInfo: '这片如明信片般美丽的湖泊，吸引着成群的拓荒者。',
+    levelEightInfo: '星力警长在这里维护法律与秩序。你再也找不到比仙人掌镇更悠闲自在的居住地了！',
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
@@ -1651,7 +1718,11 @@ function campaignMenuLevelScreen(): string {
     const statusLabel = status === 'completed' ? copy.completed
       : status === 'available' ? copy.available
         : status === 'locked' ? copy.locked : copy.unimplemented;
-    const title = copy.selectLevel(level.level, level.title, statusLabel);
+    const levelTitle = level.level === 5 ? copy.levelFiveTitle
+      : level.level === 6 ? copy.levelSixTitle
+        : level.level === 7 ? copy.levelSevenTitle
+          : level.level === 8 ? copy.levelEightTitle : level.title;
+    const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.level).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
     const lock = disabled
@@ -1715,12 +1786,22 @@ function campaignMenuOverviewScreen(): string {
     return campaignMenuLevelScreen();
   }
   const scenarioId = isFreePlayMenuActive() ? freeStage!.scenarioId : stage!.scenarioId;
+  const completedScenarios = campaignProgressView?.profile.completedScenarios ?? [];
   const content = entry.level === 1 ? cowGulchLevelOneContent
     : entry.level === 2 ? apacheValleyLevelTwoContent
-      : entry.level === 3 ? fortKaboomLevelThreeContent : techTownLevelFourCampaignContent;
+      : entry.level === 3 ? fortKaboomLevelThreeContent
+        : entry.level === 4 ? techTownLevelFourCampaignContent
+          : entry.level === 5 ? createBillyHillsCampaignContent(completedScenarios)
+            : entry.level === 6 ? createMurdockMountainsCampaignContent(completedScenarios)
+                : entry.level === 7 ? createLuckyLakeCampaignContent(completedScenarios)
+                  : createCactusvilleCampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
-      : entry.level === 3 ? copy.levelThreeInfo : copy.levelFourInfo;
+      : entry.level === 3 ? copy.levelThreeInfo
+        : entry.level === 4 ? copy.levelFourInfo
+          : entry.level === 5 ? copy.levelFiveInfo
+            : entry.level === 6 ? copy.levelSixInfo
+              : entry.level === 7 ? copy.levelSevenInfo : copy.levelEightInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -1734,7 +1815,10 @@ function campaignMenuOverviewScreen(): string {
   return `<section class="campaign-overview-screen" aria-labelledby="campaign-menu-heading">
     <button type="button" class="campaign-menu-back" data-action="menu-back-levels" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
     <article class="campaign-overview-card">
-      <h2 id="campaign-menu-heading" class="campaign-overview-title">${escapeMenuText(entry.title)}</h2>
+      <h2 id="campaign-menu-heading" class="campaign-overview-title">${escapeMenuText(entry.level === 5 ? copy.levelFiveTitle
+        : entry.level === 6 ? copy.levelSixTitle
+          : entry.level === 7 ? copy.levelSevenTitle
+            : entry.level === 8 ? copy.levelEightTitle : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -2550,7 +2634,48 @@ function renderPauseConfirmation(language: keyof typeof languageMessages, reques
   if (cancelPauseIcon.src !== cancelIcon) cancelPauseIcon.src = cancelIcon;
 }
 
+function updateAwesomeFeedback(events: readonly GameEvent[]): void {
+  if (awesomeFeedbackSessionId !== session.id) {
+    awesomeFeedbackSessionId = session.id;
+    activeAwesomeFeedback = undefined;
+    processedAwesomeDefeatIds.clear();
+    awesomeFeedbackRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'awesome-feedback'));
+  }
+  if (activeAwesomeFeedback && view.elapsedMs >= activeAwesomeFeedback.untilElapsedMs) {
+    activeAwesomeFeedback = undefined;
+  }
+  if (session.startRecord.scenarioId !== cactusvilleCampaignId) return;
+
+  let queueEmpty = !activeAwesomeFeedback && !(view.bonusNotice && view.bonusNotice.remainingMs > 0);
+  for (const event of events) {
+    if (event.type !== 'enemy-defeated' || event.campaignAverageDifficulty === undefined
+      || processedAwesomeDefeatIds.has(event.enemyId)) continue;
+    processedAwesomeDefeatIds.add(event.enemyId);
+    const messageIndex = selectAwesomeFeedbackMessageIndex(
+      event.enemyType ?? 0,
+      event.campaignAverageDifficulty,
+      queueEmpty,
+      () => awesomeFeedbackRandom.nextInt(3),
+    );
+    if (messageIndex === undefined) continue;
+    activeAwesomeFeedback = {
+      messageIndex,
+      untilElapsedMs: view.elapsedMs + CACTUSVILLE_AWESOME_FEEDBACK.durationMs,
+    };
+    queueEmpty = false;
+  }
+}
+
+function awesomeFeedbackBubbleForRender(): AwesomeFeedbackBubble | undefined {
+  if (!activeAwesomeFeedback || session.startRecord.scenarioId !== cactusvilleCampaignId) return undefined;
+  const remainingMs = activeAwesomeFeedback.untilElapsedMs - view.elapsedMs;
+  if (remainingMs <= 0) return undefined;
+  const message = CACTUSVILLE_AWESOME_FEEDBACK.messages[activeAwesomeFeedback.messageIndex];
+  return message ? { message, remainingMs } : undefined;
+}
+
 function renderStatus(events: readonly GameEvent[] = view.events): void {
+  updateAwesomeFeedback(events);
   const language = getLanguage();
   const unit = view.units.find((candidate) => candidate.selected);
   const messages = languageMessages[language];
@@ -2601,6 +2726,10 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   importReplayControl.disabled = replaying || replacingSession;
   const defeatFeedback = summarizeEnemyDefeats(events, view.enemies);
   if (defeatFeedback.length > 0) lastDefeatFeedback = defeatFeedback;
+  const coolingEvent = [...events].reverse().find((event) => event.type === 'dynamite-cooling-down');
+  if (coolingEvent?.type === 'dynamite-cooling-down') {
+    dynamiteCooldownNotice = { id: coolingEvent.dynamiteId, untilElapsedMs: view.elapsedMs + 2_500 };
+  }
   const recruitmentEvent = [...events].reverse().find((event) =>
     event.type === 'unit-recruited' || event.type === 'unit-recruitment-rejected');
   if (recruitmentEvent?.type === 'unit-recruited' || recruitmentEvent?.type === 'unit-recruitment-rejected') {
@@ -2691,7 +2820,14 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     waveStatus.textContent = '';
     startWaveControl.textContent = messages.startSample;
   }
-  const combatText = lastDefeatFeedback
+  const dynamiteCooldown = dynamiteCooldownNotice && view.elapsedMs < dynamiteCooldownNotice.untilElapsedMs
+    ? view.dynamites?.find(({ id }) => id === dynamiteCooldownNotice?.id)?.cooldownRemainingMs
+    : undefined;
+  if (dynamiteCooldown === undefined || dynamiteCooldown <= 0) dynamiteCooldownNotice = undefined;
+  const dynamiteText = dynamiteCooldown !== undefined && dynamiteCooldown > 0
+    ? messages.dynamiteCoolingDown(Math.ceil(dynamiteCooldown / 1_000))
+    : '';
+  const combatText = dynamiteText || lastDefeatFeedback
     .map(({ enemyType, count, cashReward }) => messages.defeated(enemyType, count, cashReward))
     .join(' · ');
   if (combatStatus.textContent !== combatText) combatStatus.textContent = combatText;
@@ -2761,7 +2897,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       ? `${language === 'zh' ? '自由游玩' : 'FREE PLAY'} · NEW MEXICO · ${String(officialStage?.globalLevel ?? 0).padStart(2, '0')}`
     : displayedCampaignStage ? `NEW MEXICO · ${String(displayedCampaignStage.globalLevel).padStart(2, '0')}`
       : language === 'zh' ? '进度验收样本' : 'PROGRESS SAMPLE';
-  const sceneDescription = messages.sceneCaption(view.scenarioId);
+  const sceneDescription = messages.sceneCaption(view.scenarioId, session.startRecord.mode);
   sceneCaption.textContent = session.startRecord.mode === 'free' ? messages.freePlayCaption(sceneDescription) : sceneDescription;
   upgradeSampleStatus.textContent = techTownTrainSample
     ? ''
@@ -3167,7 +3303,16 @@ function redraw(resize = false): void {
   const displayPixelScale = getDisplayPixelScale();
   if (resize || viewportChanged || !context) context = resizeCanvas(canvas, displayPixelScale);
   try {
-    drawGame(context, view, images, displayPixelScale, mapCamera, showInspectionOverlay, getLanguage());
+    drawGame(
+      context,
+      view,
+      images,
+      displayPixelScale,
+      mapCamera,
+      showInspectionOverlay,
+      getLanguage(),
+      awesomeFeedbackBubbleForRender(),
+    );
   } catch (error) {
     if (!(error instanceof Error)) throw error;
     const missingImage = /^Missing game image: (.+)$/.exec(error.message)?.[1];
@@ -3212,6 +3357,17 @@ function currentGameStepEnvironment(): { tileSizePixels: number } {
   return { tileSizePixels: Math.max(1, Math.trunc(mapViewport.tileSize * displayPixelScale)) };
 }
 
+const billyHillsAllUnitsContent = createBillyHillsCampaignContent([
+  'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
+]);
+const murdockMountainsAllUnitsContent = createMurdockMountainsCampaignContent([
+  'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
+]);
+const cactusvilleAllUnitsContent = createCactusvilleCampaignContent([
+  'campaign-mississippi-10', 'campaign-oregon-10', 'campaign-dakota-10',
+  'campaign-nevada-10', 'campaign-alaska-10',
+]);
+
 const assetNames = new Set([
   ...techTownMapEntityAssets,
   ...techTownTrainTestContent.map.background.map(({ asset }) => asset),
@@ -3224,7 +3380,22 @@ const assetNames = new Set([
   ...(view.map.decorations ?? []).map((decoration) => decoration.asset),
   ...view.units.map((unit) => unit.asset),
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
-  ...[cowGulchLevelOneContent, apacheValleyContent, fortKaboomLevelThreeContent, techTownLevelFourCampaignContent].flatMap((content) => [
+  ...[
+    cowGulchLevelOneContent,
+    apacheValleyContent,
+    fortKaboomLevelThreeContent,
+    techTownLevelFourCampaignContent,
+    billyHillsLevelFiveContent,
+    billyHillsAllUnitsContent,
+    murdockMountainsLevelSixCampaignContent,
+    murdockMountainsAllUnitsContent,
+    luckyLakeLevelSevenCampaignContent,
+    cactusvilleLevelEightCampaignContent,
+    cactusvilleAllUnitsContent,
+    createLuckyLakeCampaignContent([
+      'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
+    ]),
+  ].flatMap((content) => [
     ...content.map.background.map((tile) => tile.asset),
     ...content.map.streets.map((tile) => tile.asset),
     ...(content.map.decorations ?? []).map((decoration) => decoration.asset),
@@ -3236,6 +3407,9 @@ const assetNames = new Set([
   'horseman_turn',
   'wagon',
   'wagon_turn',
+  'lok_verti_1of2',
+  'lok_verti_2of2',
+  'lok_wagon_verti',
   'stagecoach',
   'stagecoach_turn',
   'goldtransport',
@@ -3248,6 +3422,10 @@ const assetNames = new Set([
   'sfx_death_pioneers',
   'sfx_smoke_explosion',
   'sfx_exploding_parts',
+  'dynamite_detonator',
+  'dynamite_detonator_pressed',
+  'dynamite_box',
+  'sfx_dynamite_box',
   'bonus_box',
   'sfx_bonus_box',
   'gng_speechbubble',
@@ -3306,6 +3484,7 @@ const assetNames = new Set([
   'portrait_settlers',
   'portrait_deserter',
   'portrait_engineer',
+  'portrait_sheriff',
   'portrait_pyromaniac',
   'portrait_salesman',
 ]);
@@ -3460,9 +3639,11 @@ function stopGameLoop(): void {
   simulationTime.reset();
 }
 
-function isOfficialCowGulchSession(): boolean {
-  return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
-    && session.startRecord.scenarioId === cowGulchLevelOneContent.id;
+function isOfficialNewMexicoMusicSession(): boolean {
+  if (session.startRecord.mode !== 'formal' && session.startRecord.mode !== 'free') return false;
+  const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === session.startRecord.scenarioId);
+  return stage !== undefined
+    && campaignCatalog.find(({ level }) => level === stage.globalLevel)?.regionId === 'new-mexico';
 }
 
 function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[] {
@@ -3470,6 +3651,10 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === apacheValleyLevelTwoContent.id) return apacheValleyWaveIntros;
   if (scenarioId === fortKaboomLevelThreeContent.id) return fortKaboomWaveIntros;
   if (scenarioId === techTownLevelFourCampaignContent.id) return techTownWaveIntros;
+  if (scenarioId === billyHillsCampaignId) return billyHillsWaveIntros;
+  if (scenarioId === murdockMountainsCampaignId) return murdockMountainsWaveIntros;
+  if (scenarioId === luckyLakeCampaignId) return luckyLakeWaveIntros;
+  if (scenarioId === cactusvilleCampaignId) return cactusvilleWaveIntros;
   return [];
 }
 
@@ -3627,8 +3812,8 @@ function pauseBackgroundMusic(resetPosition = false): void {
   if (resetPosition) backgroundMusic.currentTime = 0;
 }
 
-function setCowGulchBackgroundMusic(track: CowGulchMusicTrack): void {
-  if (!isOfficialCowGulchSession()) return;
+function setNewMexicoBackgroundMusic(track: CowGulchMusicTrack): void {
+  if (!isOfficialNewMexicoMusicSession()) return;
   if (backgroundMusicTrack === track && backgroundMusic) {
     playBackgroundMusic();
     return;
@@ -3658,7 +3843,7 @@ function setCowGulchBackgroundMusic(track: CowGulchMusicTrack): void {
   renderStatus();
 }
 
-function stopCowGulchBackgroundMusic(): void {
+function stopBackgroundMusic(): void {
   pauseBackgroundMusic(true);
   if (backgroundMusicTrack) {
     failedSoundElements.delete(`music:${backgroundMusicTrack}`);
@@ -3717,9 +3902,9 @@ function playRequestedSounds(
           assets: ['sound_revolver', 'sound_revolver2'],
         }, soundViewport);
         if (asset) playAudioAsset(asset);
-      } else if (event.sound === 'sound_dynamite' || event.sound === 'sound_wagon_explode') {
+      } else if (event.sound === 'sound_dynamite' || event.sound === 'sound_explosion' || event.sound === 'sound_wagon_explode') {
         const asset = gameSoundEffects.request({
-          id: event.sound === 'sound_dynamite' ? 10 : 12,
+          id: event.sound === 'sound_dynamite' ? 10 : event.sound === 'sound_explosion' ? 13 : 12,
           positionFine: event.positionFine,
           assets: [event.sound],
         }, soundViewport);
@@ -3735,14 +3920,14 @@ function playRequestedSounds(
         }
       }
     }
-    if (!isOfficialCowGulchSession()) continue;
+    if (!isOfficialNewMexicoMusicSession()) continue;
     if (event.type === 'unit-fired' && eventWaveNumber !== undefined && battleMusicWaveNumber !== eventWaveNumber) {
       battleMusicWaveNumber = eventWaveNumber;
       // GameView numbers waves from 1; the APK's GunsAndGloryThread.wave counter starts at 0.
-      setCowGulchBackgroundMusic(cowGulchBattleMusicForWave(eventWaveNumber - 1));
+      setNewMexicoBackgroundMusic(cowGulchBattleMusicForWave(eventWaveNumber - 1));
     }
     if (event.type === 'wave-settled') {
-      setCowGulchBackgroundMusic(event.settlement.outcome === 'victory'
+      setNewMexicoBackgroundMusic(event.settlement.outcome === 'victory'
         ? cowGulchVictoryMusic
         : cowGulchAmbientMusic);
     }
@@ -3787,7 +3972,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   const intro = campaignWaveIntroCursor.next(view.wave.number);
   if (!intro) return false;
   battleMusicWaveNumber = undefined;
-  if (isOfficialCowGulchSession()) setCowGulchBackgroundMusic(cowGulchAmbientMusic);
+  if (isOfficialNewMexicoMusicSession()) setNewMexicoBackgroundMusic(cowGulchAmbientMusic);
   pendingCampaignWaveIntro = intro;
   stopGameLoop();
   pauseReason = 'wave-intro';
@@ -3830,9 +4015,13 @@ function activateSession(
   const previousSession = session;
   session = nextSession;
   presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
+  awesomeFeedbackSessionId = session.id;
+  activeAwesomeFeedback = undefined;
+  processedAwesomeDefeatIds.clear();
+  awesomeFeedbackRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'awesome-feedback'));
   gameSoundEffects.reset();
   campaignWaveIntroCursor = new CampaignWaveIntroCursor(waveIntrosForScenario(session.startRecord.scenarioId));
-  if (!isOfficialCowGulchSession()) stopCowGulchBackgroundMusic();
+  if (!isOfficialNewMexicoMusicSession()) stopBackgroundMusic();
   view = session.observe();
   pauseReason = undefined;
   const mode = session.startRecord.mode === 'free' ? 'free-play' : 'campaign';
@@ -3876,10 +4065,19 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
     const techTownFreePlayUnlocks = request.mode === 'free'
       ? [...new Set([...(campaignProgressView?.profile.completedScenarios ?? []), fortKaboomLevelThreeContent.id])]
       : campaignProgressView?.profile.completedScenarios;
+    const completedScenarioIds = campaignProgressView?.profile.completedScenarios ?? [];
     const sessionGame = request.scenarioId === techTownLevelFourCampaignContent.id
       && (campaignProgressView || request.mode === 'free')
       ? createBrowserGame(techTownFreePlayUnlocks)
-      : game;
+      : request.scenarioId === billyHillsCampaignId && (campaignProgressView || request.mode === 'free')
+        ? createBrowserGame(completedScenarioIds)
+        : request.scenarioId === murdockMountainsCampaignId && (campaignProgressView || request.mode === 'free')
+          ? createBrowserGame(completedScenarioIds)
+        : request.scenarioId === luckyLakeCampaignId && (campaignProgressView || request.mode === 'free')
+          ? createBrowserGame(completedScenarioIds)
+          : request.scenarioId === cactusvilleCampaignId && (campaignProgressView || request.mode === 'free')
+            ? createBrowserGame(completedScenarioIds)
+          : game;
     const nextSession = await sessionGame.open(request);
     sceneOpenFailure = undefined;
     activateSession(nextSession);
@@ -3927,7 +4125,10 @@ async function openCampaignStage(scenarioId: string): Promise<boolean> {
     renderCampaign();
     const opened = await replaceSession({
       scenarioId: stage.scenarioId,
-      contentVersion: stage.contentVersion,
+      contentVersion: getBrowserScenarioContentVersion(
+        stage.scenarioId,
+        campaignProgressView.profile.completedScenarios,
+      ) ?? stage.contentVersion,
       randomSeed: session.startRecord.randomSeed,
       difficulty: requestedDifficulty,
       mode: 'formal',
@@ -3954,7 +4155,10 @@ async function openFreePlayStage(scenarioId: string, difficulty: GameDifficulty)
   try {
     const opened = await replaceSession({
       scenarioId: stage.scenarioId,
-      contentVersion: stage.contentVersion,
+      contentVersion: getBrowserScenarioContentVersion(
+        stage.scenarioId,
+        campaignProgressView?.profile.completedScenarios ?? [],
+      ) ?? stage.contentVersion,
       randomSeed: session.startRecord.randomSeed,
       difficulty,
       mode: 'free',
@@ -3992,7 +4196,10 @@ function requestScenarioOpen(
 ): SessionOpenRequest {
   return {
     scenarioId,
-    contentVersion: getBrowserScenarioContentVersion(scenarioId),
+    contentVersion: getBrowserScenarioContentVersion(
+      scenarioId,
+      campaignProgressView?.profile.completedScenarios ?? [],
+    ),
     randomSeed: session.startRecord.randomSeed,
     difficulty,
     mode,
@@ -4025,13 +4232,27 @@ async function exportCurrentReplay(): Promise<void> {
 function gameForReplay(serialized: string) {
   try {
     const parsed = JSON.parse(serialized) as {
-      startRecord?: { scenarioId?: unknown };
+      startRecord?: { scenarioId?: unknown; contentVersion?: unknown };
     };
     if (parsed.startRecord?.scenarioId === techTownLevelFourCampaignContent.id) {
       const completedScenarioIds = campaignProgressView?.profile.completedScenarios ?? [];
       // Map04's mandatory type 1–4 player pool is available on map entry; later special units still
       // follow the current profile's actual milestone unlocks.
       return createBrowserGame([...new Set([...completedScenarioIds, fortKaboomLevelThreeContent.id])]);
+    }
+    if (parsed.startRecord?.scenarioId === billyHillsCampaignId) {
+      return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
+    }
+    if (parsed.startRecord?.scenarioId === murdockMountainsCampaignId) {
+      return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
+    }
+    if (parsed.startRecord?.scenarioId === luckyLakeCampaignId) {
+      return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
+    }
+    if (parsed.startRecord?.scenarioId === cactusvilleCampaignId) {
+      return createBrowserGameForCactusvilleReplay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
     }
   } catch {
     // Let Game.replay report the authoritative malformed-file error.

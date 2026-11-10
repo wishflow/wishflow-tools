@@ -14,6 +14,32 @@
 
 修复未完成的问题可以先登记为“待验证”；实现和运行验证结束后，应在同一条记录中补充结论。记录根因时优先引用稳定的文件/选择器/测试名称，不抄录冗长日志、日期或散列值。
 
+## DEX 伪代码分支与路线优先级复核
+
+**状态：分析经验已验证；用于 map05 内容接入。**
+
+- **风险表现：**直接照搬 JADX 输出可能把新开局与读取未完成存档的对象创建分支看反；只凭一张地图预览断言路线正确，也可能漏掉不同入口和随机转向组合。
+- **证据与核实：**`GameObjectManager.createGameObjectsFromBasicMap` 的 JADX 伪代码在 map-load 布尔分支处存在控制流重建歧义。比较 `GameObjectManager.smali` 的真实跳转条件后，确认新开局会从 TDM 创建睡眠/活动单位和列车，存档加载则恢复已保存对象。该结论以 APK 的 smali 分支为准，不把伪代码描述成原始源码。
+- **路线复核：**解析 `EnemyDirectorField` 方向表和 `PriorityMap.recursiveLengthTracking` 后，用明确的具体路径独立计算所有路线格优先级，再与网页 TypeScript 算法逐格比较；map05 的 5 个路线变体、142 个路线格均匹配。属于静态算法交叉校验，不是 Android 或浏览器运行观察。
+- **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
+
+## 波次请求向量是生成权重，不是固定出敌顺序
+
+**状态：已在 map05 短时模拟测试中验证。**
+
+- **表现与复现：**测试把波次请求向量的第一列当作第一个生成敌人，并据此断言其血量；实际首敌可能是马车等其他类型，测试失败。
+- **根因与证据：**`GameSession` 将请求向量作为各敌人类型的剩余生成数量，并通过带种子的随机选择决定下一次生成类型。向量列号不代表逐个生成的时间顺序。实际短时模拟和引擎选择逻辑确认了这一点。
+- **漏测点：**测试只核对了请求向量静态内容，却把静态列顺序误当成运行事件顺序，没有检查生成器的随机选择。
+- **修复与防回归：**测试按实际敌人类型核对血量和速度，并独立检查波次延迟后的生成、路线入口及请求向量。需要固定顺序时必须显式注入确定性随机源；否则不得断言向量第一项必然先生成。
+
+## GameSession 的 debug 模式不执行战役波次
+
+- **状态：问题已解决；下面的临时内容状态仅描述 map06 第 2 步数据切片期间。**map06 现在是正式登记关卡。
+- **表现与复现：**map06 短测已配置 `campaignWaves`，但用 `mode: 'debug'` 推进到开局延迟后仍没有敌人；debug 视图也不提供正式/自由战役的 `totalWaves`。
+- **根因与证据：**`src/game/index.ts` 只在 formal/free 会话，或其回放源模式为 formal/free 时启用 `campaignMode`；debug 模式只按普通预览波逻辑运行，不会消费 `CampaignWaveDefinition` 的请求池。内容数据正确，测试模式选错。
+- **修复与防回归：**关卡波次短测改用 `free` 会话。map06 数据切片尚未登记时，测试副本临时设置 `formalSettlementSupported: true`，当时不改变产品可玩状态；随后正式内容接入已把该标志登记到生产关卡。真实 map06 波次由静态审计期望验证；池 1 的 GameSession 入口映射另用单请求测试副本定点检查，不完整推进原版十波。
+- **避免重复：**验证 CampaignWaveDefinition 时先确认所用 GameSession mode 会启用 `campaignMode`。debug session 的初态可用于单位/渲染调试，不能当作正式波次生成证据。
+
 ## 实验室大块底板造成贴片感
 
 **状态：首轮修正已公开发布到 `3c434917`；用户复核发现材质层级反了，后续整改见下节。**
@@ -30,7 +56,36 @@
 - **表现与复现：**公开页面 `?release=3c43491#lab` 中，设置/结果/档案区没有原版破边羊皮纸；实验参数、保存比较、Profile、实验档案、回放和倍速仍分别显示浅色矩形框。
 - **证据与根因：**内置浏览器截图及只读计算样式检查显示 `.lab-workbench` 透明；`.lab-card` 的 `background-image` 为 `none`，但 CSS 变量仍指向 `gng_hud_2_textbox_large.png`；`.experiment-panel`、`.lab-saved-comparisons`、`.campaign-profile-archive`、`.lab-experiment-archive`、`.replay-panel` 和 `.lab-speed-card` 仍有浅色填充及边框。首轮改动撤掉了该放在主内容层的原版贴图，却留下了自制内层框。
 - **修复结果：**保持 `.lab-workbench` 透明，在三块 `.lab-card` 恢复 `gng_hud_2_textbox_large.png` 和避开破边的顶部、左右留白；实验设置、结果、档案、回放和倍速区域移除自制填充、边框与阴影。木按钮、输入/选择控件与表格单元格边界保留，避免操作对象黏在一起。未改 DOM、交互或数据行为。
-- **防回归与验证：**`t41-lab-workbench.spec.ts` 断言主卡片引用的图片成功解码为384×192资源、留白足以避开破边、内层面板透明无框，并覆盖桌面/平板/手机几何和横向溢出；`t29-campaign-menu.spec.ts` 也要求实验室主卡片继续使用原版贴图。两个定向 spec 共9项通过。内置浏览器查看本地页面桌面截图及档案区，确认贴图在主层、内层无矩形框，按钮可读。`CI=1 pnpm run test:ci` 通过类型检查、409项单测、生产构建及120项 Playwright E2E；构建仍有主 JS chunk 约655KB、超过500KB预算的既有提示。npm registry DNS 不可用，因此测试复用了本机同项目依赖；依赖清单与锁文件未改。发布结果与发布比例记录在实施计划。
+- **防回归与验证：**`t41-lab-workbench.spec.ts` 断言主卡片引用的图片成功解码为384×192资源、留白足以避开破边、内层面板透明无框，并覆盖桌面/平板/手机几何和横向溢出；`t29-campaign-menu.spec.ts` 也要求实验室主卡片继续使用原版贴图。两个定向 spec 共9项通过。内置浏览器检查本地与发布页面，确认贴图在主层、内层无矩形框，按钮可读。发布提交 `cd3bd51` 对应 GitHub Actions `42757255799` 全部成功；GitHub Pages 与 Cloudflare Pages 根 `build-info.json` 均匹配来源 SHA。线上首次导航后立即截图时背景图片尚未显示；切到游戏页再经站点导航返回实验室后，羊皮纸和木按钮正常显示。截图验收需确认动态背景已加载，不能把过早截图认定为素材缺失。`CI=1 pnpm run test:ci` 通过类型检查、409项单测、生产构建及120项 Playwright E2E；构建仍有主 JS chunk 约655KB、超过500KB预算的既有提示。npm registry DNS 不可用，因此测试复用了本机同项目依赖；依赖清单与锁文件未改。发布比例和下一次普通发布门槛见实施计划。
+
+## 实验档案导入按钮 hover 覆盖木按钮贴图
+
+**状态：**CSS 已修复，定向与完整本地检查通过；已合入 Guns’n’Glory 集成分支，随下一完整发布批次上线。
+
+- **表现与复现：**在实验工作台悬停“Import experiment archive”，按钮下方出现深绿色矩形；相邻导出按钮仍显示木质按钮图。
+- **根因与证据：**`.experiment-archive-actions .replay-import-label:hover` 设置纯色 `background` 简写。该悬浮选择器比 `.lab-workbench .replay-import-label` 更具体，因而清除了文件标签的木质背景图；普通按钮有较晚的木按钮规则，所以视觉上只有导入标签异常。
+- **漏测点：**之前只检查木按钮静止状态，没有把鼠标悬浮到文件导入标签并比较计算后的背景图。
+- **修复与防回归：**纯色悬浮背景只保留给普通按钮；文件导入标签沿用木按钮图，只用亮度滤镜反馈悬浮。`t41-lab-workbench.spec.ts` 对比标签悬浮前后的背景图和底色，并断言悬浮滤镜提亮，避免再出现实色方框。
+
+## 羊皮纸告示牌下露出规则黄色底
+
+**状态：**已修复并通过完整本地检查；不单独公开发布，随下一完整批次上线。
+
+- **表现与复现：**设置、结果、报告与档案三块不规则羊皮纸外沿后面还露出规整黄色矩形，削弱了破边贴图的形状。
+- **根因与证据：**`.lab-card` 的 `background` 简写同时设置了 `#ead19e` 底色和原版 `gng_hud_2_textbox_large.png`。PNG 有透明外沿，底色从透明像素露出，形成贴图外侧的规则矩形。这个颜色同时填充 PNG 的透明像素以及贴图尚未加载时的区域，因而在正常显示中也形成矩形；正常构图不需要这层纯色。
+- **漏测点：**旧测试确认了原版贴图路径和尺寸，却没有断言卡片的 `background-color` 透明，因此未发现透明撕边下面仍铺有纯色。
+- **修复与防回归：**`.lab-card` 继续绘制原版羊皮纸和投影，只移除纯色回退底色。`t41-lab-workbench.spec.ts` 对三张卡片同时断言贴图存在、底色透明，防止修图时误删贴图或重新铺回矩形。
+- **验证：**`t41-lab-workbench.spec.ts` 3项通过；`CI=1 pnpm run test:ci` 通过类型检查、409项单测、构建及120项 E2E。内置浏览器本地截图确认撕边外露出页面底色，黄色矩形消失。
+
+## 游戏内 Help 与 Options 羊皮纸外露黄色方底
+
+**状态：**已修复并通过定向检查；不单独公开发布。
+
+- **表现与复现：**主菜单 Help 与 Options 打开后，撕边羊皮纸贴图外仍有一块规则的浅黄色矩形；本地截图显示页面背景与矩形边缘清楚可辨。
+- **根因与证据：**`.campaign-help-card` 与 `.campaign-options-card` 的 `background` 简写把 `#e9cb94` 底色铺在原版 `gng_hud_2_textbox_large.png` 下方。与实验室卡片相同，贴图透明像素露出了矩形底色。对照 CSS 可见实验室 `.lab-card` 已仅绘制贴图，游戏内两个面板尚未采用该规则。
+- **漏测点：**`t40-frame-controls.spec.ts` 检查了 Help/Options 的贴图、框内几何和内容溢出，但没有断言 `background-color` 透明；先前截图复核也未覆盖这两个面板的撕边外沿。
+- **修复与防回归：**仅移除两张羊皮纸卡片的纯色回退填充，保留原版贴图与布局；扩展 `t40`，在桌面、竖屏和横屏分别确认贴图存在、底色透明、文字/按钮不溢出。`t40` 和 `t30` 共10项定向 E2E 通过。静音窗口模式下检查桌面及手机竖屏截图，撕边透明区直接显示场景背景，黄色矩形消失；未进入全屏或播放音效。此次没有运行完整 `test:ci`，完整检查留在后续产品批次收尾。
+- **遗留覆盖：**网页实验室的“导入档案”确认框 `.lab-profile-confirmation` 仍单独设置了 `#ead19e` 回退底色。移除后继续显示原版羊皮纸贴图，让透明撕边露出页面遮罩；`t38-data-archives.spec.ts` 现在断言确认框底色透明，避免修复只覆盖主卡片和游戏内面板。
 
 ## 实验室布局偏离设计稿
 
@@ -180,6 +235,44 @@
 - **根因与证据：**基础对白用顶部居中立绘和下方文本；`@media (max-width: 600px)` 将立绘尺寸放大并把文本区上移，立绘仍盖在正文上。当前 `t40` 只检查对白面板在 `.game-frame` 内，没有检查角色与正文矩形是否相交。
 - **修复与防回归：**窄屏 Pedro 立绘放入左侧槽位，正文从右侧开始。跨视口 E2E 计算立绘/文本边界，要求无交叠、无裁切且对白完整位于游戏框内。
 
+## 战役对白 E2E 的 fixture 选择与回放边界
+
+- **表现与复现：**map05 正式关卡 E2E 进入战斗后，测试断言首波对白可见，却观察到对白已关闭。
+- **根因与证据：**用例导入 `tests/e2e/auto-continue-fixtures.ts` 导出的 `test`。该 fixture 的 `MutationObserver` 会自动点击对白 Continue，目的是让普通战斗流程测试不被剧情提示阻塞；产品代码正确打开了对白，随后测试桩立即关闭它。
+- **修复与防回归：**需要检查对白内容、头像、资源或关闭后状态的专项用例直接从 `@playwright/test` 导入 `test` 和 `expect`；不检查对白且需跨过提示的普通战斗用例继续使用 auto-continue fixture。失败后先检查测试 fixture 是否主动操作目标元素，再判断产品逻辑。
+- **回放边界：**`GameSession.exportReplay()` 要求会话已经完成并形成正式结算。未完成的 map05 关卡不能直接导出回放；不要为验证内容注册或 profile 单位集合而完整模拟八波。需要覆盖 map05 回放往返时，另准备有明确来源的已结算 fixture，或单独安排经确认的完整模拟范围。
+
+## 增加正式关卡后同步阶段快照与进度摘要
+
+- **状态：已修复。**map05 加入时更新了摘要分母；map06 加入时另两处阶段列表快照仍过期。更新全部期望后完整 CI 通过。
+- **表现与复现：**map05 加入后，旧 E2E 仍期待 `/4 stages complete`，六项失败；map06 登记后，Apache Valley 与 Fort Kaboom 单测仍按五条 `officialCampaignStages` 比较，完整 CI 又失败两项。关卡选择和 Progress 实际按正式目录正确工作。
+- **根因与证据：**摘要分母取自 `officialCampaignStages.length`；阶段关系测试也有独立硬编码数组。新增正式 stage 后，这两类测试快照都需要更新，不能只修页面摘要用例。
+- **漏测点：**之前只搜索并修改 `stages complete` 和 `campaign-progress-summary`，没有一并搜索直接比较 `officialCampaignStages`、`globalLevel` 或前置 ID 的旧快照。
+- **修复与防回归：**map05 的五份 E2E 分母和 map06 的 Apache/Fort stage 快照都已同步；map06 解锁及结算通过 Progress 测试、六关三难度 Free Play 测试、E2E 和完整 `CI=1 pnpm run test:ci` 核对。以后新增或重排关卡时，搜索 `officialCampaignStages`、`globalLevel`、`requiresCompletedScenarioIds`、`stages complete` 和 `campaign-progress-summary`，检查所有静态快照及选择状态；不要为了让旧断言通过而改动正确的 Progress 逻辑。
+
+## 战役与自由模式的关卡说明按存档语义区分
+
+- **表现与复现：**map06 可同时从正式战役和 Free Play 进入；若两种模式都显示“胜利会记录战役完成与最高分”，Free Play 的提示就会误导玩家。
+- **根因与证据：**`sceneCaption` 过去只按 `scenarioId` 选文案。正式与自由会话共用 `campaign-new-mexico-06`，无法从关卡 ID 判断是否会写正式 Progress。
+- **漏测点：**既有首波 E2E 验证标题、难度和开局数值，却没有核对 Free Play 场景说明是否符合存档隔离规则。
+- **修复与防回归：**scene caption 按会话 `mode` 生成：Formal 说明正式结算；Free Play 明确说明不会改战役进度或最高分。`t43-murdock-mountains-formal.spec.ts` 对 Free Play caption 加断言，并比较进入前后 Profile。以后关卡可在多种模式启动时，说明文案应依据 session mode，而非仅凭 scenario ID。
+
+## 本地完整 E2E 使用 CI worker 数
+
+- **表现与复现：**本地默认 5-worker `test:ci` 中，t08 的地图选择、t20 的页面重载状态以及 t22 的模拟波次重载检查出现超时或模拟推进到下一波；相同三项在 `CI=1 --workers=1` 下全部通过。首次 5-worker 完整运行仅发现正式关卡计数断言问题，第二次才在高并发时复现上述时序问题。
+- **根因判断（有复现证据，机制仍属推断）：**这些测试依赖实时游戏循环和页面/画布交互；本地多个浏览器 worker 同时运行时会争用进程资源，扩大可观察时序窗口。单 worker 重跑通过，未发现同样的产品状态错误。
+- **修复与防回归：**产品逻辑未改。完整本地验收设置 `CI=1 pnpm run test:ci`，Playwright 配置会与 CI 一样使用一个 worker；若单 worker仍失败，再按具体页面状态调查，不把并行超时直接归因于游戏代码。
+
+## Free Play 关卡说明挤入高分栏
+
+**状态：待修复；不阻塞关卡内容接入。**
+
+- **表现与复现：**桌面窗口模式进入 Free Play → New Mexico → Billy Hills 关卡预览时，提示“Free play does not change the saved campaign score or progress.” 被排进右侧狭窄的高分区域，英文句子逐词窄行换行，视觉上难以阅读。
+- **证据与根因：**本地内置浏览器截图确认异常；`.campaign-overview-no-score` 在 `styles.css` 中以绝对定位复用海报高分区，仅占预览宽度的17%。该文案明显长于高分标签，现有规则没有给 Free Play 提示设置独立宽度。
+- **漏测点：**`t29-campaign-menu.spec.ts` 只断言提示文案完整存在，没有检查提示的实际宽度、换行数、与海报元素的重叠或窄屏边界。
+- **修复方向：**让 Free Play 提示使用足够宽的独立文本区域，或精简文案；保留正式战役 Wanted/高分海报的位置与样式，不通过压小字号解决。覆盖中英文、桌面及手机布局，检查文本不溢出、不逐词窄排且不遮挡海报。
+- **避免重复：**map05 内容批次只记录此项，不顺手改菜单视觉；下一次处理该 UI 时先核对 `.campaign-overview-no-score` 与正式高分元素的共用定位关系，并为两种模式分别断言几何。
+
 ## 实验工作台与游戏内设置归属
 
 **状态：已部署，后续修复批次已关闭窄屏遮挡问题。**首版发布 SHA `d92c7fc9d1754420767bc7b4e4003e15365aa2cb`；GitHub Actions `42616244687` 的应用测试、共享检查和 GitHub/Cloudflare Pages 部署均成功，两个 `build-info.json` 均匹配。实现提交 `bef0ced`、测试补强 `3652185` 和坐标 helper 修正 `c5999e4` 已包含在首版部署中。
@@ -193,3 +286,11 @@
 - **地图点击 E2E 的视口假设：**完整检查首轮中 `t36-tech-town-gatling.spec.ts` 的地图雇佣用例失败。复现后确认，Playwright 点击位于页面下方的调试样本入口会滚动页面；helper 随后读取到画布 `y=-529.69`，却仍按画布矩形发出屏幕点击，坐标落在可视区外，因此状态显示“未选择单位”。修复为点击前 `scrollIntoViewIfNeeded()`，再读取画布矩形；定向用例通过。地图坐标测试在页面滚动后必须先把画布带回视口，不能直接把负的 bounding-box 坐标交给鼠标 API。
 - **线上窄屏层级问题（已修复并验收）：**首版部署390×844竖屏中，站点 `aside.usagi-widget` 固定层为 `x=12..124, y=549..697, z-index:80`；工作台标题为 `x=22..368, y=595.6..626.9`，文字被宠物挡住。页面宽度仍为390px，根因是 `.lab-workbench` 没有建立高于共享浮层的层叠上下文，既有 Playwright 也没检查外部浮层与工作台的实际命中。
 - **修复与防回归：**窄屏 `.lab-workbench` 建立 `position:relative; z-index:81`，不改共享站点外壳及游戏框层级。`t41-lab-workbench.spec.ts` 增加390×844层级/交叠命中检查；`CI=1 pnpm run test:ci` 通过，包括409项单测、生产构建和119项 Playwright E2E。修复 squash 发布 SHA 为 `0aab63b9b85455bf97caea9f30dc2563d3de19b8`，Actions `42621072039` 成功，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器用390×844窗口模式、静音复验：页面无横向溢出；工作台层级高于宠物，宠物框内测试点均由工作台接收；Options 仅含 Help/Sound，全屏按钮使用新图像资源。未重复请求宿主已拒绝的原生全屏。
+
+## 新关卡对象映射需逐关核对
+
+- **状态：**map06 场景切片已修正并添加防回归断言。
+- **表现与复现：**构建 Murdock Mountains 场景时，初版复用了 Cow Gulch 装饰表，却漏掉 map06 的 code 72 路桩和 code 75 水塔；第一轮对象坐标测试因此失败。
+- **根因与证据：**共享 `cowGulchDecorationCodes` 只覆盖 Cow Gulch 与少量共用类型，不能代表每张 New Mexico 地图的全部对象码。map06 审计格网明确包含 code 72/75，APK 对应贴图分别是 `b_1x1_stake` 和 `b_1x1_watertower`。
+- **漏测点：**若只测试共享构造器或贴图文件存在性，不会发现特定关卡的原始标记没有被场景层消费。
+- **修复与防回归：**map06 场景显式加入 72/75 映射；测试逐项从独立 TDM 基线生成“对象码→资产→格子”期望，并检查所有资产可加载。后续新地图必须核对该关完整对象码表，再决定继承共享项或增加关卡专属映射。
