@@ -3355,10 +3355,11 @@ body.gng-game-fullscreen .usagi-widget {
 
 .lab-card {
   min-width: 0;
-  padding: 0.25rem 0;
+  padding: clamp(3.4rem, 4.4vw, 3.8rem) clamp(1rem, 1.6vw, 1.35rem) 1.25rem;
   border: 0;
   color: var(--lab-ink);
-  background: transparent;
+  background: #ead19e var(--lab-parchment-background) center / 100% 100% no-repeat;
+  filter: drop-shadow(0 0.25rem 0.32rem rgba(58, 37, 17, 0.2));
 }
 
 .lab-card > h3,
@@ -3398,10 +3399,10 @@ body.gng-game-fullscreen .usagi-widget {
 .lab-workbench .lab-speed-card {
   min-width: 0;
   padding: 0.75rem;
-  border: 1px solid rgba(105, 66, 27, 0.28);
-  border-radius: 0.35rem;
-  background: rgba(255, 249, 233, 0.76);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.72);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .lab-workbench .lab-saved-comparisons,
@@ -3476,12 +3477,12 @@ body.gng-game-fullscreen .usagi-widget {
 .lab-workbench .lab-results-card .experiment-report {
   min-width: 0;
   margin-top: 0;
-  padding: 0.8rem;
-  border: 1px solid rgba(91, 55, 24, 0.36);
-  border-radius: 0.25rem;
+  padding: 0.8rem 0;
+  border: 0;
+  border-radius: 0;
   color: var(--lab-ink);
-  background: rgba(255, 246, 222, 0.7);
-  box-shadow: inset 0 1px rgba(255, 255, 255, 0.55);
+  background: transparent;
+  box-shadow: none;
 }
 
 .lab-workbench .experiment-panel {
@@ -3510,11 +3511,11 @@ body.gng-game-fullscreen .usagi-widget {
 
 .lab-workbench .experiment-empty-state {
   margin: 0;
-  padding: 1rem 0.8rem;
-  border: 1px dashed rgba(105, 66, 27, 0.38);
-  border-radius: 0.25rem;
+  padding: 1rem 0;
+  border: 0;
+  border-radius: 0;
   color: var(--lab-muted-ink);
-  background: rgba(255, 249, 233, 0.68);
+  background: transparent;
   font-size: 0.9rem;
   line-height: 1.5;
   text-align: center;
@@ -3652,8 +3653,8 @@ body.gng-game-fullscreen .usagi-widget {
   max-width: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  border: 1px solid rgba(91, 55, 24, 0.24);
-  background: rgba(255, 250, 235, 0.74);
+  border: 0;
+  background: transparent;
 }
 
 .lab-workbench .experiment-table-scroll table {
@@ -3764,6 +3765,10 @@ body.gng-game-fullscreen .usagi-widget {
     width: calc(100% - 1rem);
     margin: 1rem auto;
     padding: 0.75rem;
+  }
+
+  .lab-card {
+    padding: 3.25rem 0.9rem 1rem;
   }
 
   .lab-layout,
