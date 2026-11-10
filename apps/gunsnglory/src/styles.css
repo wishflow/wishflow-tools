@@ -3306,17 +3306,18 @@ body.gng-game-fullscreen .usagi-widget {
 .lab-workbench {
   --lab-ink: #392817;
   --lab-muted-ink: #654b2c;
-  --lab-border: rgba(91, 55, 24, 0.48);
-  width: min(calc(100% - 2rem), 1180px);
+  --lab-border: rgba(112, 72, 31, 0.32);
+  width: min(calc(100% - 2rem), 1400px);
   margin: clamp(1.25rem, 4vw, 3rem) auto;
   padding: clamp(1rem, 3vw, 2rem);
-  border: 2px solid #8b6234;
-  border-radius: 0.65rem;
-  color: #f4dfb8;
+  border: 1px solid #c8a574;
+  border-radius: 0.9rem;
+  color: var(--lab-ink);
   color-scheme: light;
   background:
-    linear-gradient(145deg, rgba(87, 58, 31, 0.97), rgba(35, 26, 18, 0.99));
-  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.38), inset 0 0 0 1px rgba(238, 195, 128, 0.18);
+    radial-gradient(ellipse at 10% 0%, rgba(255, 251, 238, 0.8), transparent 42%),
+    linear-gradient(145deg, #f7ebd4, #ecd5ac);
+  box-shadow: 0 0.6rem 1.6rem rgba(68, 47, 24, 0.14), inset 0 1px rgba(255, 255, 255, 0.8);
   font-family: Georgia, "Noto Serif CJK SC", serif;
 }
 
@@ -3328,37 +3329,39 @@ body.gng-game-fullscreen .usagi-widget {
 
 .lab-heading .eyebrow {
   margin: 0 0 0.3rem;
-  color: #d6aa66;
+  color: #845927;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
 }
 
 .lab-heading h2 {
   margin: 0;
-  color: #ffe3b0;
+  color: #4d321b;
   font-size: clamp(1.35rem, 2.8vw, 2rem);
-  text-shadow: 0 2px 2px #28190d;
 }
 
 .lab-heading > p:last-child {
   margin: 0.45rem 0 0;
-  color: #dfc79f;
+  color: #654b2c;
   font-size: clamp(0.82rem, 1.4vw, 0.98rem);
   line-height: 1.5;
 }
 
 .lab-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(17rem, 0.85fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.3fr) minmax(0, 0.9fr);
   align-items: start;
-  gap: clamp(0.8rem, 1.8vw, 1.35rem);
+  gap: clamp(0.75rem, 1.5vw, 1.1rem);
 }
 
 .lab-card {
   min-width: 0;
-  padding: clamp(3.5rem, 5vw, 4rem) clamp(1.15rem, 2.1vw, 1.65rem) 1.35rem;
+  padding: clamp(3.4rem, 4.4vw, 3.8rem) clamp(1rem, 1.6vw, 1.35rem) 1.25rem;
   border: 0;
   color: var(--lab-ink);
   background: #ead19e var(--lab-parchment-background) center / 100% 100% no-repeat;
-  filter: drop-shadow(0 0.35rem 0.45rem rgba(13, 9, 5, 0.45));
+  filter: drop-shadow(0 0.25rem 0.32rem rgba(58, 37, 17, 0.2));
 }
 
 .lab-card > h3,
@@ -3370,9 +3373,17 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .lab-card > h3 {
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.45rem;
-  border-bottom: 1px solid var(--lab-border);
+  display: flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+  padding: 0.3rem 0.8rem;
+  color: #fff0d0;
+  background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  text-align: center;
+  text-shadow: 0 1px 2px #301b0e;
+  overflow-wrap: anywhere;
 }
 
 .lab-card p,
@@ -3383,11 +3394,50 @@ body.gng-game-fullscreen .usagi-widget {
   color: var(--lab-ink);
 }
 
+.lab-workbench .lab-saved-comparisons,
+.lab-workbench .campaign-profile-archive,
+.lab-workbench .lab-experiment-archive,
+.lab-workbench .replay-panel,
+.lab-workbench .lab-speed-card {
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid rgba(105, 66, 27, 0.28);
+  border-radius: 0.35rem;
+  background: rgba(255, 249, 233, 0.76);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.lab-workbench .lab-saved-comparisons,
+.lab-workbench .campaign-profile-archive,
+.lab-workbench .lab-experiment-archive,
+.lab-workbench .replay-panel {
+  margin-top: 0.7rem;
+}
+
+.lab-workbench .lab-saved-comparisons h4,
+.lab-workbench .campaign-profile-archive > h4,
+.lab-workbench .lab-experiment-archive > h4,
+.lab-workbench .replay-panel > h4 {
+  margin: 0 0 0.4rem;
+  color: #563919;
+  font-size: 0.96rem;
+}
+
+.lab-archive-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.lab-workbench .lab-speed-card {
+  margin-top: 0.9rem;
+}
+
 .lab-speed-setting {
   display: grid;
-  grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1.7fr) auto;
+  grid-template-columns: minmax(6rem, 0.7fr) minmax(6rem, 1.7fr) auto;
   align-items: center;
-  gap: 0.55rem 0.85rem;
+  gap: 0.45rem 0.7rem;
   font-size: 0.88rem;
   font-weight: 700;
 }
@@ -3401,6 +3451,13 @@ body.gng-game-fullscreen .usagi-widget {
   min-width: 3.2em;
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.lab-speed-note {
+  margin: 0.65rem 0 0;
+  color: var(--lab-muted-ink);
+  font-size: 0.79rem;
+  line-height: 1.4;
 }
 
 .lab-workbench [data-testid="settings-status"],
@@ -3419,12 +3476,10 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .lab-workbench .experiment-panel,
-.lab-workbench .campaign-profile-archive,
-.lab-workbench .lab-experiment-archive,
-.lab-workbench .replay-panel {
+.lab-workbench .lab-results-card .experiment-report {
   min-width: 0;
-  margin-top: 0.9rem;
-  padding: 0.85rem;
+  margin-top: 0;
+  padding: 0.8rem;
   border: 1px solid rgba(91, 55, 24, 0.36);
   border-radius: 0.25rem;
   color: var(--lab-ink);
@@ -3456,11 +3511,24 @@ body.gng-game-fullscreen .usagi-widget {
   font-size: 0.84rem;
 }
 
+.lab-workbench .experiment-empty-state {
+  margin: 0;
+  padding: 1rem 0.8rem;
+  border: 1px dashed rgba(105, 66, 27, 0.38);
+  border-radius: 0.25rem;
+  color: var(--lab-muted-ink);
+  background: rgba(255, 249, 233, 0.68);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .lab-workbench .experiment-controls,
 .lab-workbench .saved-experiment-controls,
 .lab-workbench .campaign-profile-archive-actions,
 .lab-workbench .experiment-archive-actions,
-.lab-workbench .replay-actions {
+.lab-workbench .replay-actions,
+.lab-workbench .experiment-report-actions {
   display: flex;
   align-items: end;
   flex-wrap: wrap;
@@ -3470,7 +3538,9 @@ body.gng-game-fullscreen .usagi-widget {
 
 .lab-workbench .experiment-controls label,
 .lab-workbench .saved-experiment-controls label {
-  min-width: 8rem;
+  display: grid;
+  min-width: 0;
+  gap: 0.3rem;
   color: var(--lab-ink);
   font-size: 0.82rem;
   font-weight: 700;
@@ -3494,6 +3564,7 @@ body.gng-game-fullscreen .usagi-widget {
 .lab-workbench .campaign-profile-archive-actions button,
 .lab-workbench .experiment-archive-actions button,
 .lab-workbench .replay-actions button,
+.lab-workbench .experiment-report-actions button,
 .lab-workbench .replay-import-label,
 .lab-workbench [data-action="retry-settings-save"] {
   position: relative;
@@ -3522,6 +3593,7 @@ body.gng-game-fullscreen .usagi-widget {
 .lab-workbench .saved-experiment-controls button:hover:not(:disabled),
 .lab-workbench .experiment-archive-actions button:hover,
 .lab-workbench .replay-actions button:hover:not(:disabled),
+.lab-workbench .experiment-report-actions button:hover:not(:disabled),
 .lab-workbench .replay-import-label:hover,
 .lab-workbench [data-action="retry-settings-save"]:hover {
   filter: brightness(1.08) drop-shadow(0 0.1rem 0.08rem rgba(31, 17, 8, 0.55));
@@ -3532,6 +3604,7 @@ body.gng-game-fullscreen .usagi-widget {
 .lab-workbench .campaign-profile-archive-actions button:disabled,
 .lab-workbench .experiment-archive-actions button:disabled,
 .lab-workbench .replay-actions button:disabled,
+.lab-workbench .experiment-report-actions button:disabled,
 .lab-workbench .replay-import-label:has(input:disabled),
 .lab-workbench [data-action="retry-settings-save"]:disabled {
   filter: grayscale(0.45) opacity(0.66);
@@ -3541,14 +3614,6 @@ body.gng-game-fullscreen .usagi-widget {
 .lab-workbench :is(button, input, select, .replay-import-label):focus-visible {
   outline: 2px solid #734717;
   outline-offset: 3px;
-}
-
-.lab-workbench .campaign-profile-archive > h4,
-.lab-workbench .lab-experiment-archive > h4,
-.lab-workbench .replay-panel > h4 {
-  margin-bottom: 0.4rem;
-  color: #563919;
-  font-size: 0.96rem;
 }
 
 .lab-workbench .campaign-profile-archive-actions,
@@ -3588,12 +3653,14 @@ body.gng-game-fullscreen .usagi-widget {
 
 .lab-workbench .experiment-table-scroll {
   max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
   border: 1px solid rgba(91, 55, 24, 0.24);
   background: rgba(255, 250, 235, 0.74);
 }
 
 .lab-workbench .experiment-table-scroll table {
-  min-width: 32rem;
+  min-width: 25rem;
 }
 
 .lab-workbench .experiment-table-scroll th,
@@ -3674,9 +3741,22 @@ body.gng-game-fullscreen .usagi-widget {
   filter: drop-shadow(0 0 0.2rem rgba(255, 227, 164, 0.9));
 }
 
-@media (max-width: 820px) {
+@media (min-width: 561px) and (max-width: 1080px) {
   .lab-layout {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lab-data-card {
+    grid-column: 1 / -1;
+  }
+
+  .lab-archive-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .lab-archive-grid > :is(.campaign-profile-archive, .lab-experiment-archive, .replay-panel) {
+    margin-top: 0;
   }
 }
 
@@ -3690,7 +3770,16 @@ body.gng-game-fullscreen .usagi-widget {
   }
 
   .lab-card {
-    padding: 3.5rem 1rem 1rem;
+    padding: 3.25rem 0.9rem 1rem;
+  }
+
+  .lab-layout,
+  .lab-archive-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lab-data-card {
+    grid-column: auto;
   }
 
   .lab-speed-setting {
@@ -3712,7 +3801,8 @@ body.gng-game-fullscreen .usagi-widget {
   .lab-workbench .saved-experiment-controls,
   .lab-workbench .campaign-profile-archive-actions,
   .lab-workbench .experiment-archive-actions,
-  .lab-workbench .replay-actions {
+  .lab-workbench .replay-actions,
+  .lab-workbench .experiment-report-actions {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     align-items: stretch;
@@ -3728,6 +3818,7 @@ body.gng-game-fullscreen .usagi-widget {
   .lab-workbench .campaign-profile-archive-actions button,
   .lab-workbench .experiment-archive-actions button,
   .lab-workbench .replay-actions button,
+  .lab-workbench .experiment-report-actions button,
   .lab-workbench .replay-import-label {
     width: 100%;
   }

@@ -79,6 +79,7 @@ export const messages = {
   'Export experiment archive': { en: 'Export experiment archive', zh: '导出实验数据' },
   'Import experiment archive': { en: 'Import experiment archive', zh: '导入实验数据' },
   'Saved comparisons': { en: 'Saved comparisons', zh: '已保存的比较' },
+  'Select a saved comparison': { en: 'Select a saved comparison', zh: '选择已保存的比较' },
   'No saved comparisons': { en: 'No saved comparisons', zh: '没有已保存的比较' },
   'Open saved comparison': { en: 'Open saved comparison', zh: '打开已保存比较' },
   'Load more': { en: 'Load more', zh: '加载更多' },
