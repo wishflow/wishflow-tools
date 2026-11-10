@@ -2147,8 +2147,7 @@ body.gng-game-fullscreen .usagi-widget {
   cursor: wait;
 }
 
-.experiment-archive-actions button:hover,
-.experiment-archive-actions .replay-import-label:hover {
+.experiment-archive-actions button:hover {
   background: #31584f;
 }
 

@@ -74,6 +74,20 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   await expect(lab.getByTestId('compare-schemes')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(lab.getByTestId('import-profile-archive')).toHaveCSS('color', 'rgb(255, 248, 230)');
 
+  const importExperimentArchive = lab.locator('.experiment-archive-actions .replay-import-label');
+  const idleImportAppearance = await importExperimentArchive.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor };
+  });
+  expect(idleImportAppearance.backgroundImage).toMatch(/gng_startmenu_2_menu_1_button\.png/);
+  await importExperimentArchive.hover();
+  const hoverImportAppearance = await importExperimentArchive.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor, filter: style.filter };
+  });
+  expect(hoverImportAppearance).toMatchObject(idleImportAppearance);
+  expect(hoverImportAppearance.filter).toContain('brightness(1.08)');
+
   const desktopGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();
     const heading = element.querySelector<HTMLElement>(':scope > h3')?.getBoundingClientRect();
