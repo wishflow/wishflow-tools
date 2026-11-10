@@ -3302,7 +3302,7 @@ body.gng-game-fullscreen .usagi-widget {
   }
 }
 
-/* The experiment workbench uses the game's parchment and wood materials outside the 16:9 frame. */
+/* Keep the lab directly on the site surface; use parchment for small controls and wood for section titles. */
 .lab-workbench {
   --lab-ink: #392817;
   --lab-muted-ink: #654b2c;
@@ -3310,14 +3310,12 @@ body.gng-game-fullscreen .usagi-widget {
   width: min(calc(100% - 2rem), 1400px);
   margin: clamp(1.25rem, 4vw, 3rem) auto;
   padding: clamp(1rem, 3vw, 2rem);
-  border: 1px solid #c8a574;
-  border-radius: 0.9rem;
+  border: 0;
+  border-radius: 0;
   color: var(--lab-ink);
   color-scheme: light;
-  background:
-    radial-gradient(ellipse at 10% 0%, rgba(255, 251, 238, 0.8), transparent 42%),
-    linear-gradient(145deg, #f7ebd4, #ecd5ac);
-  box-shadow: 0 0.6rem 1.6rem rgba(68, 47, 24, 0.14), inset 0 1px rgba(255, 255, 255, 0.8);
+  background: transparent;
+  box-shadow: none;
   font-family: Georgia, "Noto Serif CJK SC", serif;
 }
 
@@ -3357,11 +3355,10 @@ body.gng-game-fullscreen .usagi-widget {
 
 .lab-card {
   min-width: 0;
-  padding: clamp(3.4rem, 4.4vw, 3.8rem) clamp(1rem, 1.6vw, 1.35rem) 1.25rem;
+  padding: 0.25rem 0;
   border: 0;
   color: var(--lab-ink);
-  background: #ead19e var(--lab-parchment-background) center / 100% 100% no-repeat;
-  filter: drop-shadow(0 0.25rem 0.32rem rgba(58, 37, 17, 0.2));
+  background: transparent;
 }
 
 .lab-card > h3,
@@ -3767,10 +3764,6 @@ body.gng-game-fullscreen .usagi-widget {
     width: calc(100% - 1rem);
     margin: 1rem auto;
     padding: 0.75rem;
-  }
-
-  .lab-card {
-    padding: 3.25rem 0.9rem 1rem;
   }
 
   .lab-layout,
