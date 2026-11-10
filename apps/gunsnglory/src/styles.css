@@ -1272,7 +1272,7 @@ body.gng-game-fullscreen .usagi-widget {
   border: 0;
   border-radius: 0;
   padding: 4% 7% 8%;
-  background: #e9cb94 var(--campaign-menu-textbox-background) center / 100% 100% no-repeat;
+  background: var(--campaign-menu-textbox-background) center / 100% 100% no-repeat;
   box-shadow: none;
 }
 
@@ -1350,7 +1350,7 @@ body.gng-game-fullscreen .usagi-widget {
   border: 0;
   border-radius: 0;
   padding: 3.5% 7% 6%;
-  background: #e9cb94 var(--campaign-menu-textbox-background) center / 100% 100% no-repeat;
+  background: var(--campaign-menu-textbox-background) center / 100% 100% no-repeat;
   box-shadow: none;
   text-align: center;
 }
@@ -3674,7 +3674,7 @@ body.gng-game-fullscreen .usagi-widget {
   border: 0;
   padding: clamp(1.5rem, 4vw, 2.5rem);
   color: var(--lab-ink);
-  background: #ead19e var(--lab-parchment-background) center / 100% 100% no-repeat;
+  background: var(--lab-parchment-background) center / 100% 100% no-repeat;
   text-align: center;
 }
 

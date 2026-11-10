@@ -13,6 +13,7 @@ import {
 import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import {
   apacheValleyLevelTwoContent,
+  billyHillsLevelFiveCampaignContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
@@ -137,6 +138,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: techTownLevelFourCampaignContent.title,
     globalLevel: 4,
     requiresCompletedScenarioIds: [fortKaboomLevelThreeContent.id],
+  }, {
+    scenarioId: billyHillsLevelFiveCampaignContent.id,
+    contentVersion: billyHillsLevelFiveCampaignContent.contentVersion,
+    title: billyHillsLevelFiveCampaignContent.title,
+    globalLevel: 5,
+    requiresCompletedScenarioIds: [techTownLevelFourCampaignContent.id],
   }]);
 });
 

@@ -113,7 +113,7 @@ test('Tech Town replay unlocks placed specials from the matching completed campa
 
 test('browser registry opens the actual formal Tech Town with its original starting state', async () => {
   assert.equal(getBrowserScenarioContentVersion(techTownLevelFourContent.id), techTownLevelFourContent.contentVersion);
-  assert.deepEqual(officialCampaignStages.at(-1), {
+  assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 4), {
     scenarioId: techTownLevelFourContent.id,
     contentVersion: techTownLevelFourContent.contentVersion,
     title: techTownLevelFourContent.title,

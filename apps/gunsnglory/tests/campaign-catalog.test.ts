@@ -3,6 +3,7 @@ import test from 'node:test';
 import { campaignCatalog, campaignLevelState, campaignRegions } from '../src/content/campaign-catalog';
 import {
   apacheValleyLevelTwoContent,
+  billyHillsLevelFiveCampaignContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
@@ -103,8 +104,30 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
   });
   const afterTechTown = await progress.loadCampaign();
   assert.equal(campaignLevelState(4, afterTechTown), 'completed');
-  assert.equal(campaignLevelState(5, afterTechTown), 'unimplemented');
-  assert.equal(campaignLevelState(6, afterTechTown), 'locked', 'later levels cannot skip the unimplemented level five');
+  assert.equal(campaignLevelState(5, afterTechTown), 'available');
+  assert.equal(campaignLevelState(6, afterTechTown), 'locked', 'later levels stay locked while map05 is playable');
+  assert.deepEqual(officialCampaignStages.at(-1), {
+    scenarioId: billyHillsLevelFiveCampaignContent.id,
+    contentVersion: billyHillsLevelFiveCampaignContent.contentVersion,
+    title: billyHillsLevelFiveCampaignContent.title,
+    globalLevel: 5,
+    requiresCompletedScenarioIds: [techTownLevelFourCampaignContent.id],
+  });
+
+  await progress.applySettlement({
+    settlementId: `catalog-test:${billyHillsLevelFiveCampaignContent.id}:8`,
+    sessionId: 'catalog-test',
+    scenarioId: billyHillsLevelFiveCampaignContent.id,
+    mode: 'formal',
+    waveNumber: 8,
+    outcome: 'victory',
+    scoreBase: 500,
+    displayScore: 500,
+    highScoreCandidate: 500,
+  });
+  const afterBillyHills = await progress.loadCampaign();
+  assert.equal(campaignLevelState(5, afterBillyHills), 'completed');
+  assert.equal(campaignLevelState(6, afterBillyHills), 'unimplemented', 'progress advances, but map06 stays disabled until its content is registered');
   assert.equal(campaignLevelState(2, undefined), 'unimplemented');
   assert.equal(campaignLevelState(2, {
     ...afterCowGulch,

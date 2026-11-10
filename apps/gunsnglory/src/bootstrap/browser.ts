@@ -11,6 +11,7 @@ import { gamblerUiLowCashSampleContent, gamblerUiSampleContent } from '../conten
 import { recruitConfirmationUiSampleContent } from '../content/recruit-confirmation-ui-sample';
 import { techTownTrainTestContent } from '../content/tech-town-train-sample';
 import { createTechTownCampaignContent, techTownCampaignId, techTownLevelFourContent } from '../content/tech-town-campaign';
+import { billyHillsCampaignId, billyHillsLevelFiveContent, createBillyHillsCampaignContent } from '../content/billy-hills-campaign';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -42,6 +43,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [apacheValleyLevelTwoContent.id]: apacheValleyLevelTwoContent,
   [fortKaboomLevelThreeContent.id]: fortKaboomLevelThreeContent,
   [techTownLevelFourContent.id]: techTownLevelFourContent,
+  [billyHillsLevelFiveContent.id]: billyHillsLevelFiveContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -61,6 +63,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
   const scenarios = {
     ...browserScenarios,
     [techTownCampaignId]: createTechTownCampaignContent(completedScenarioIds),
+    [billyHillsCampaignId]: createBillyHillsCampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,

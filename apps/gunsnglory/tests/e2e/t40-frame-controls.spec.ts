@@ -157,7 +157,9 @@ test('keeps battle controls frame-local and the pause Options path stable on des
       await expect(page.getByTestId('pause-board')).toBeVisible();
       await expect(page.getByTestId('pause-board')).toHaveAttribute('aria-hidden', 'true');
       await expect(page.getByTestId('campaign-menu-screen')).toBeHidden();
-      await expect(optionsPanel.locator('.campaign-options-card')).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+      const optionsCard = optionsPanel.locator('.campaign-options-card');
+      await expect(optionsCard).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+      await expect(optionsCard).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
       const optionsFits = await optionsPanel.locator('.campaign-options-card').evaluate((card) => {
         const frame = card.closest('.game-frame')?.getBoundingClientRect();
         const bounds = card.getBoundingClientRect();
@@ -183,7 +185,10 @@ test('keeps battle controls frame-local and the pause Options path stable on des
       await expect(helpPanel).toBeVisible();
       await expect(optionsPanel).toBeHidden();
       await expect(page.getByTestId('pause-board')).toBeHidden();
-      const helpFits = await helpPanel.locator('.campaign-help-card').evaluate((card) => {
+      const helpCard = helpPanel.locator('.campaign-help-card');
+      await expect(helpCard).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+      await expect(helpCard).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+      const helpFits = await helpCard.evaluate((card) => {
         const frame = card.closest('.game-frame')?.getBoundingClientRect();
         const bounds = card.getBoundingClientRect();
         const list = card.querySelector('ol')?.getBoundingClientRect();
