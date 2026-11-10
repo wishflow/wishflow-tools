@@ -14,6 +14,7 @@ import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import {
   apacheValleyLevelTwoContent,
   billyHillsLevelFiveCampaignContent,
+  cactusvilleLevelEightCampaignContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   luckyLakeLevelSevenCampaignContent,
@@ -158,6 +159,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: luckyLakeLevelSevenCampaignContent.title,
     globalLevel: 7,
     requiresCompletedScenarioIds: [murdockMountainsLevelSixCampaignContent.id],
+  }, {
+    scenarioId: cactusvilleLevelEightCampaignContent.id,
+    contentVersion: cactusvilleLevelEightCampaignContent.contentVersion,
+    title: cactusvilleLevelEightCampaignContent.title,
+    globalLevel: 8,
+    requiresCompletedScenarioIds: [luckyLakeLevelSevenCampaignContent.id],
   }]);
 });
 

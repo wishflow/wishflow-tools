@@ -60,7 +60,7 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   for (const level of [1, 2, 3, 4, 5, 6, 7]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeEnabled();
   }
-  for (const level of [8, 9, 10]) {
+  for (const level of [9, 10]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();

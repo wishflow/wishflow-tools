@@ -18,11 +18,18 @@ import {
 } from '../content/murdock-mountains-campaign';
 import { createLuckyLakeCampaignContent, luckyLakeCampaignId } from '../content/lucky-lake-campaign';
 import {
+  cactusvilleCampaignId,
+  cactusvilleCampaignContentVersionFor,
+  cactusvilleCompletedScenarioIdsForContentVersion,
+  createCactusvilleCampaignContent,
+} from '../content/cactusville-campaign';
+import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
   luckyLakeLevelSevenCampaignContent,
+  cactusvilleLevelEightCampaignContent,
   murdockMountainsLevelSixCampaignContent,
 } from '../content/official-campaign';
 import {
@@ -53,6 +60,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [billyHillsLevelFiveContent.id]: billyHillsLevelFiveContent,
   [murdockMountainsLevelSixCampaignContent.id]: murdockMountainsLevelSixCampaignContent,
   [luckyLakeLevelSevenCampaignContent.id]: luckyLakeLevelSevenCampaignContent,
+  [cactusvilleLevelEightCampaignContent.id]: cactusvilleLevelEightCampaignContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -63,7 +71,13 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,
 };
 
-export function getBrowserScenarioContentVersion(scenarioId: string): string | undefined {
+export function getBrowserScenarioContentVersion(
+  scenarioId: string,
+  completedScenarioIds: readonly string[] = [],
+): string | undefined {
+  if (scenarioId === cactusvilleCampaignId) {
+    return cactusvilleCampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -75,6 +89,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [billyHillsCampaignId]: createBillyHillsCampaignContent(completedScenarioIds),
     [murdockMountainsCampaignId]: createMurdockMountainsCampaignContent(completedScenarioIds),
     [luckyLakeCampaignId]: createLuckyLakeCampaignContent(completedScenarioIds),
+    [cactusvilleCampaignId]: createCactusvilleCampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -85,6 +100,14 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     },
     sessionIdSource: createSessionId,
   });
+}
+
+/** Replay import uses the recorded unlock snapshot, even if the current profile has changed. */
+export function createBrowserGameForCactusvilleReplay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? cactusvilleCompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
 }
 
 export function createBrowserProgress() {

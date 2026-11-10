@@ -48,6 +48,10 @@ const highDensityMapDecorations = new Set([
   'e_1x1_rocks_water',
   'e_1x1_tree',
   'e_1x2_bones',
+  'dynamite_detonator',
+  'dynamite_detonator_pressed',
+  'dynamite_box',
+  'sfx_dynamite_box',
 ]);
 
 const highDensityVehicleAssets = new Set([

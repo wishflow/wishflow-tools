@@ -107,7 +107,7 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
   assert.equal(campaignLevelState(4, afterTechTown), 'completed');
   assert.equal(campaignLevelState(5, afterTechTown), 'available');
   assert.equal(campaignLevelState(6, afterTechTown), 'locked', 'map06 stays locked while map05 is playable');
-  assert.deepEqual(officialCampaignStages.at(-3), {
+  assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 5), {
     scenarioId: billyHillsLevelFiveCampaignContent.id,
     contentVersion: billyHillsLevelFiveCampaignContent.contentVersion,
     title: billyHillsLevelFiveCampaignContent.title,
