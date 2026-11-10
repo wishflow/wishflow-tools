@@ -107,7 +107,7 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
   assert.equal(campaignLevelState(4, afterTechTown), 'completed');
   assert.equal(campaignLevelState(5, afterTechTown), 'available');
   assert.equal(campaignLevelState(6, afterTechTown), 'locked', 'map06 stays locked while map05 is playable');
-  assert.deepEqual(officialCampaignStages.at(-2), {
+  assert.deepEqual(officialCampaignStages.at(-3), {
     scenarioId: billyHillsLevelFiveCampaignContent.id,
     contentVersion: billyHillsLevelFiveCampaignContent.contentVersion,
     title: billyHillsLevelFiveCampaignContent.title,
@@ -151,5 +151,5 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
   });
   const afterMurdockMountains = await progress.loadCampaign();
   assert.equal(campaignLevelState(6, afterMurdockMountains), 'completed');
-  assert.equal(campaignLevelState(7, afterMurdockMountains), 'unimplemented');
+  assert.equal(campaignLevelState(7, afterMurdockMountains), 'available');
 });

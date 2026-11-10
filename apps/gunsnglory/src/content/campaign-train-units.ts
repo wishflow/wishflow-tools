@@ -23,41 +23,57 @@ const gatlingUpgradeLevels = Object.freeze([
   Object.freeze({ price: 75, movementSpeedFinePer100Ms: 3000, weapon: gatlingWeapon(200, 150) }),
 ]);
 
+const frameHeightByAsset = {
+  lok_hori_1of2: 72,
+  lok_hori_2of2: 72,
+  lok_wagon_hori: 48,
+  lok_verti_1of2: 48,
+  lok_verti_2of2: 60,
+  lok_wagon_verti: 60,
+} as const;
+
 /** Creates the shared movement group used by each original horizontal TDM train. */
 export function createCampaignTrainUnits(
   placements: readonly CampaignTrainPlacement[],
   movementGroupId: string,
 ): ScenarioUnit[] {
-  return placements.map(({ unitTypeId, activity, asset, cell }) => {
-    const renderHeight = asset === 'lok_wagon_hori' ? 1 : 1.5;
-    const frame = { x: 0, y: 0, width: 48, height: renderHeight === 1 ? 48 : 72 };
+  return placements.map(({ unitTypeId, activity, movementAxis, asset, cell }) => {
+    const frameHeight = frameHeightByAsset[asset];
+    const renderHeight = frameHeight / 48;
     const render = {
       x: cell.x,
-      y: cell.y + 1 - renderHeight,
+      y: cell.y + (movementAxis === 'vertical' ? 1.25 : 1) - renderHeight,
       width: 1,
       height: renderHeight,
     };
+    const isTrainWagon = unitTypeId === 12 || unitTypeId === 22;
+    const isSteamLocomotive = unitTypeId === 10 || unitTypeId === 21;
     return {
-      id: `${movementGroupId}-${unitTypeId}-${cell.x}`,
+      id: movementAxis === 'horizontal'
+        ? `${movementGroupId}-${unitTypeId}-${cell.x}`
+        : `${movementGroupId}-${unitTypeId}-${cell.x}-${cell.y}`,
       type: `train-${unitTypeId}`,
       activity,
       movementGroupId,
-      movementAxis: 'horizontal' as const,
-      collisionBoxFine: { x: -3840, y: -4608, width: 7680, height: 4608 },
+      movementAxis,
+      collisionBoxFine: movementAxis === 'horizontal'
+        ? { x: -3840, y: -4608, width: 7680, height: 4608 }
+        : { x: -2534, y: -3840, width: 4608, height: 7680 },
       showSleepingEffect: false,
-      ...(unitTypeId === 10 ? { steamEmitter: true as const } : {}),
+      ...(isSteamLocomotive ? { steamEmitter: true as const } : {}),
       selectionSound: 'sound_train',
-      ...(unitTypeId === 12 ? {
+      ...(isTrainWagon ? {
         hirePrice: 125,
         hireSound: 'sound_train' as const,
         shotSound: 'sound_gattling_gun' as const,
         weapon: gatlingWeapon(125, 300),
         upgradeLevels: gatlingUpgradeLevels,
+        ...(movementAxis === 'vertical' ? { weaponDrawOffsetYFine: 4992 } : {}),
       } : {}),
       cell,
       movementSpeedFinePer100Ms: 3000,
       asset,
-      frame,
+      frame: { x: 0, y: 0, width: 48, height: frameHeight },
       render,
       hitArea: { ...render },
     };

@@ -16,11 +16,13 @@ import {
   createMurdockMountainsCampaignContent,
   murdockMountainsCampaignId,
 } from '../content/murdock-mountains-campaign';
+import { createLuckyLakeCampaignContent, luckyLakeCampaignId } from '../content/lucky-lake-campaign';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
+  luckyLakeLevelSevenCampaignContent,
   murdockMountainsLevelSixCampaignContent,
 } from '../content/official-campaign';
 import {
@@ -50,6 +52,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [techTownLevelFourContent.id]: techTownLevelFourContent,
   [billyHillsLevelFiveContent.id]: billyHillsLevelFiveContent,
   [murdockMountainsLevelSixCampaignContent.id]: murdockMountainsLevelSixCampaignContent,
+  [luckyLakeLevelSevenCampaignContent.id]: luckyLakeLevelSevenCampaignContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -71,6 +74,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [techTownCampaignId]: createTechTownCampaignContent(completedScenarioIds),
     [billyHillsCampaignId]: createBillyHillsCampaignContent(completedScenarioIds),
     [murdockMountainsCampaignId]: createMurdockMountainsCampaignContent(completedScenarioIds),
+    [luckyLakeCampaignId]: createLuckyLakeCampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,

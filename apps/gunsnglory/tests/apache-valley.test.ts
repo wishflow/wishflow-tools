@@ -150,6 +150,7 @@ test('official Apache Valley content exposes its six source wave schedules and u
     ['campaign-new-mexico-04', ['campaign-new-mexico-03']],
     ['campaign-new-mexico-05', ['campaign-new-mexico-04']],
     ['campaign-new-mexico-06', ['campaign-new-mexico-05']],
+    ['campaign-new-mexico-07', ['campaign-new-mexico-06']],
   ]);
 });
 

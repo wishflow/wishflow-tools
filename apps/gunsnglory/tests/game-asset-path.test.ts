@@ -8,6 +8,9 @@ test('uses the APK high-density atlases for wagon, cart, and Post Coach assets',
     'lok_hori_1of2',
     'lok_hori_2of2',
     'lok_wagon_hori',
+    'lok_verti_1of2',
+    'lok_verti_2of2',
+    'lok_wagon_verti',
     'wagon',
     'wagon_turn',
     'stagecoach',
@@ -62,4 +65,13 @@ test('maps APK horizontal train hdpi sprites to their mdpi logical dimensions', 
   assert.deepEqual(gameAssetLogicalSize('lok_hori_1of2', { width: 48, height: 72 }), { width: 32, height: 48 });
   assert.deepEqual(gameAssetLogicalSize('lok_hori_2of2', { width: 48, height: 72 }), { width: 32, height: 48 });
   assert.deepEqual(gameAssetLogicalSize('lok_wagon_hori', { width: 48, height: 48 }), { width: 32, height: 32 });
+});
+
+test('maps APK vertical train hdpi sprites to their mdpi logical dimensions', () => {
+  assert.equal(gameAssetRelativePath('lok_verti_1of2'), 'hdpi/lok_verti_1of2.png');
+  assert.equal(gameAssetRelativePath('lok_verti_2of2'), 'hdpi/lok_verti_2of2.png');
+  assert.equal(gameAssetRelativePath('lok_wagon_verti'), 'hdpi/lok_wagon_verti.png');
+  assert.deepEqual(gameAssetLogicalSize('lok_verti_1of2', { width: 48, height: 48 }), { width: 32, height: 32 });
+  assert.deepEqual(gameAssetLogicalSize('lok_verti_2of2', { width: 48, height: 60 }), { width: 32, height: 40 });
+  assert.deepEqual(gameAssetLogicalSize('lok_wagon_verti', { width: 48, height: 60 }), { width: 32, height: 40 });
 });

@@ -130,8 +130,8 @@ export interface ScenarioUnit {
   activity?: 2 | 4 | 5;
   /** Units with the same group ID share one drag target and move as a rigid row. */
   movementGroupId?: string;
-  /** Restricts a movement group to its original horizontal rail axis. */
-  movementAxis?: 'horizontal';
+  /** Restricts a movement group to one original rail axis. */
+  movementAxis?: 'horizontal' | 'vertical';
   /** Original collision bounds relative to this unit's fine position. */
   collisionBoxFine?: Rectangle;
   /** Hides the default sleeping bubble for map objects that use activity 4 for another purpose. */
@@ -160,6 +160,8 @@ export interface ScenarioUnit {
   render: Rectangle;
   hitArea: Rectangle;
   weapon?: UnitWeaponDefinition;
+  /** APK TrainVertical weapon anchor from the wagon's bottom edge, in fine units. */
+  weaponDrawOffsetYFine?: number;
   /** Upgrade rows are indexed by resulting level: entry 0 is level 1. */
   upgradeLevels?: readonly UnitUpgradeDefinition[];
 }
@@ -1132,6 +1134,10 @@ function isActivePlayerUnit(unit: MutableUnit): boolean {
   return unit.definition.activity !== 4;
 }
 
+function isTrainGatlingWagon(type: string): boolean {
+  return type === 'train-12' || type === 'train-22';
+}
+
 function unitRenderOffsetAt(definition: ScenarioUnit, positionFine: { x: number; y: number }): { x: number; y: number } {
   const initialPosition = initialUnitPosition(definition);
   return {
@@ -1238,7 +1244,7 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
       },
     } : {}),
     ...(shootingAnimation ? { shootingAnimation } : {}),
-    ...(definition.type === 'train-12' ? {
+    ...(isTrainGatlingWagon(definition.type) ? {
       weaponFacing: unit.weaponFacingDirection
         ? weaponFacingView(unit.weaponFacingDirection)
         : { row: 1, mirrored: false },
@@ -1617,13 +1623,15 @@ function moveUnitGroup(
 ): void {
   const target = leader.movementTargetFine;
   if (!target || deltaMs === 0) return;
-  if (group.some(({ definition }) => definition.movementAxis !== 'horizontal')) {
+  const movementAxis = group[0]?.definition.movementAxis;
+  if (!movementAxis || group.some(({ definition }) => definition.movementAxis !== movementAxis)) {
     clearGroupMovementTarget(group);
     return;
   }
 
-  const dx = target.x - leader.positionFine.x;
-  if (Math.abs(dx) < UNIT_STOP_TOLERANCE_FINE) {
+  const coordinate = movementAxis === 'horizontal' ? 'x' : 'y';
+  const deltaToTarget = target[coordinate] - leader.positionFine[coordinate];
+  if (Math.abs(deltaToTarget) < UNIT_STOP_TOLERANCE_FINE) {
     clearGroupMovementTarget(group);
     return;
   }
@@ -1631,22 +1639,25 @@ function moveUnitGroup(
   const speedBonusActive = leader.bonusAttribute === 3 && (leader.bonusRemainingMs ?? 0) > 0;
   const speed = Math.trunc(leader.movementSpeedFinePer100Ms
     * (speedBonusActive ? 150 : 100) / 100);
-  const requestedDelta = Math.trunc((Math.sign(dx) * speed * deltaMs) / 100);
-  const deltaX = Math.sign(requestedDelta) * Math.min(Math.abs(dx), Math.abs(requestedDelta));
-  if (deltaX === 0) return;
+  const requestedDelta = Math.trunc((Math.sign(deltaToTarget) * speed * deltaMs) / 100);
+  const delta = Math.sign(requestedDelta) * Math.min(Math.abs(deltaToTarget), Math.abs(requestedDelta));
+  if (delta === 0) return;
 
   const blocked = group.some((unit) => {
-    const nextX = unit.positionFine.x + deltaX;
-    return !playerAxisWithinOriginalMapBounds(scenario, 'x', nextX, tileSizePixels)
-      || mapBlocksUnit(scenario, nextX, unit.positionFine.y, unit.definition.collisionBoxFine);
+    const nextPosition = {
+      x: unit.positionFine.x + (coordinate === 'x' ? delta : 0),
+      y: unit.positionFine.y + (coordinate === 'y' ? delta : 0),
+    };
+    return !playerAxisWithinOriginalMapBounds(scenario, coordinate, nextPosition[coordinate], tileSizePixels)
+      || mapBlocksUnit(scenario, nextPosition.x, nextPosition.y, unit.definition.collisionBoxFine);
   });
   if (blocked) {
     clearGroupMovementTarget(group);
     return;
   }
 
-  for (const unit of group) unit.positionFine.x += deltaX;
-  if (Math.abs(target.x - leader.positionFine.x) < UNIT_STOP_TOLERANCE_FINE) {
+  for (const unit of group) unit.positionFine[coordinate] += delta;
+  if (Math.abs(target[coordinate] - leader.positionFine[coordinate]) < UNIT_STOP_TOLERANCE_FINE) {
     clearGroupMovementTarget(group);
   }
 }
@@ -3587,11 +3598,12 @@ export function createGame(options: {
                   const group = units.filter(({ definition }) => (
                     definition.movementGroupId === selectedUnit.definition.movementGroupId
                   ));
-                  const deltaX = targetX - selectedUnit.positionFine.x;
+                  const coordinate = selectedUnit.definition.movementAxis === 'vertical' ? 'y' : 'x';
+                  const delta = (coordinate === 'x' ? targetX : targetY) - selectedUnit.positionFine[coordinate];
                   for (const member of group) {
                     member.movementTargetFine = {
-                      x: member.positionFine.x + deltaX,
-                      y: member.positionFine.y,
+                      x: member.positionFine.x + (coordinate === 'x' ? delta : 0),
+                      y: member.positionFine.y + (coordinate === 'y' ? delta : 0),
                     };
                   }
                 } else {
@@ -3897,7 +3909,7 @@ export function createGame(options: {
                 y: Math.sign(target.positionFine.y - genericStartFine.y) as -1 | 0 | 1,
               };
               unit.shootingDirection = firingDirection;
-              if (unit.definition.type === 'train-12') unit.weaponFacingDirection = firingDirection;
+              if (isTrainGatlingWagon(unit.definition.type)) unit.weaponFacingDirection = firingDirection;
               unit.weaponCooldownMs = weapon.reloadTimeMs;
               let specialReload = false;
               if (weapon.specialReloadFrequency !== undefined && weapon.specialReloadFrequency > 0) {

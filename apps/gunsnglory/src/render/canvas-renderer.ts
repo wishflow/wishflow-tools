@@ -127,7 +127,7 @@ function drawUnit(
   const width = unit.render.width * viewport.tileSize;
   const height = unit.render.height * viewport.tileSize;
 
-  const gatlingWagon = unit.type === 'train-12';
+  const gatlingWagon = unit.type === 'train-12' || unit.type === 'train-22';
   const firing = gatlingWagon ? undefined : unit.shootingAnimation;
   const walking = unit.walkingAnimation;
   const asset = firing?.asset ?? unit.asset;
@@ -161,7 +161,8 @@ function drawUnit(
     const weaponMirrored = firingWeapon?.mirrored ?? unit.weaponFacing?.mirrored ?? false;
     const weaponSize = viewport.tileSize;
     const weaponCenterX = left + (width / 2);
-    const weaponCenterY = top + height - ((6912 / FINE_UNITS_PER_CELL) * viewport.tileSize);
+    const weaponCenterY = top + height
+      - (((unit.weaponDrawOffsetYFine ?? 6912) / FINE_UNITS_PER_CELL) * viewport.tileSize);
     context.save();
     if (weaponMirrored) {
       context.translate(weaponCenterX * 2, 0);

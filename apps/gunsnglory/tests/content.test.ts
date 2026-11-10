@@ -16,6 +16,7 @@ import {
   billyHillsLevelFiveCampaignContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
+  luckyLakeLevelSevenCampaignContent,
   murdockMountainsLevelSixCampaignContent,
   officialCampaignStages,
   techTownLevelFourCampaignContent,
@@ -151,6 +152,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: murdockMountainsLevelSixCampaignContent.title,
     globalLevel: 6,
     requiresCompletedScenarioIds: [billyHillsLevelFiveCampaignContent.id],
+  }, {
+    scenarioId: luckyLakeLevelSevenCampaignContent.id,
+    contentVersion: luckyLakeLevelSevenCampaignContent.contentVersion,
+    title: luckyLakeLevelSevenCampaignContent.title,
+    globalLevel: 7,
+    requiresCompletedScenarioIds: [murdockMountainsLevelSixCampaignContent.id],
   }]);
 });
 
