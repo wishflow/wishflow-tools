@@ -35,7 +35,7 @@ test('keeps experiments and data tools in the external lab with site navigation'
   await expect(lab).toBeInViewport();
 });
 
-test('places lab content directly on the site surface while keeping controls readable across screen sizes', async ({ page }) => {
+test('uses original parchment cards without nested boxes across screen sizes', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   const lab = page.getByTestId('lab-workbench');
@@ -47,14 +47,29 @@ test('places lab content directly on the site surface while keeping controls rea
   await expect(lab).toHaveCSS('border-radius', '0px');
   await expect(lab).toHaveCSS('box-shadow', 'none');
   for (const card of await cards.all()) {
-    await expect(card).toHaveCSS('background-image', 'none');
-    await expect(card).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await expect(card).toHaveCSS('filter', 'none');
-    await expect(card).toHaveCSS('padding-top', '4px');
+    await expect(card).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
   }
+  const parchment = await cards.first().evaluate(async (card) => {
+    const imageUrl = getComputedStyle(card).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
+    if (!imageUrl) return null;
+    const image = new Image();
+    image.src = imageUrl;
+    await image.decode();
+    return { path: new URL(imageUrl, document.baseURI).pathname, width: image.naturalWidth, height: image.naturalHeight };
+  });
+  expect(parchment).toEqual({ path: '/assets/gng_hud_2_textbox_large.png', width: 384, height: 192 });
   await expect(lab).toHaveCSS('color', 'rgb(57, 40, 23)');
-  await expect(lab.locator('.experiment-panel').first()).toHaveCSS('background-color', 'rgba(255, 246, 222, 0.7)');
-  await expect(lab.locator('.lab-saved-comparisons')).toHaveCSS('background-color', 'rgba(255, 249, 233, 0.76)');
+  const nestedPanels = lab.locator([
+    '.experiment-panel', '.experiment-empty-state', '.experiment-report', '.lab-speed-card',
+    '.lab-saved-comparisons', '.campaign-profile-archive', '.lab-experiment-archive', '.replay-panel',
+  ].join(','));
+  for (const panel of await nestedPanels.all()) {
+    await expect(panel).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(panel).toHaveCSS('border-width', '0px');
+    await expect(panel).toHaveCSS('box-shadow', 'none');
+  }
+  await expect(lab.locator('.experiment-table-scroll')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(lab.locator('.experiment-table-scroll')).toHaveCSS('border-width', '0px');
   await expect(lab.locator('.lab-card > h3').first()).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(lab.getByTestId('compare-schemes')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(lab.getByTestId('import-profile-archive')).toHaveCSS('color', 'rgb(255, 248, 230)');
@@ -67,7 +82,7 @@ test('places lab content directly on the site surface while keeping controls rea
   expect(desktopGeometry[0]!.x + desktopGeometry[0]!.width).toBeLessThanOrEqual(desktopGeometry[1]!.x + 1);
   expect(desktopGeometry[1]!.x + desktopGeometry[1]!.width).toBeLessThanOrEqual(desktopGeometry[2]!.x + 1);
   expect(desktopGeometry.every((bounds) => Math.abs(bounds.y - desktopGeometry[0]!.y) <= 1)).toBe(true);
-  expect(desktopGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y <= 16)).toBe(true);
+  expect(desktopGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
 
   await page.setViewportSize({ width: 900, height: 900 });
   const tabletGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
@@ -122,7 +137,7 @@ test('places lab content directly on the site surface while keeping controls rea
   expect(narrowGeometry[1]!.y).toBeGreaterThanOrEqual(narrowGeometry[0]!.y + narrowGeometry[0]!.height);
   expect(narrowGeometry[2]!.y).toBeGreaterThanOrEqual(narrowGeometry[1]!.y + narrowGeometry[1]!.height);
   expect(narrowGeometry.every((bounds) => bounds.x >= 0 && bounds.x + bounds.width <= 390)).toBe(true);
-  expect(narrowGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y <= 16)).toBe(true);
+  expect(narrowGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
   const archiveStack = await lab.locator('.lab-archive-grid > section').evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();
     return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
