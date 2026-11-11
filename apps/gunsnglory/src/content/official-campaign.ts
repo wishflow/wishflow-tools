@@ -13,6 +13,11 @@ import { billyHillsLevelFiveContent } from './billy-hills-campaign';
 import { createMurdockMountainsCampaignContent } from './murdock-mountains-campaign';
 import { createLuckyLakeCampaignContent } from './lucky-lake-campaign';
 import { createCactusvilleCampaignContent } from './cactusville-campaign';
+import {
+  createRailroadRanchCampaignContent,
+  railroadRanchCampaignContentVersion,
+  railroadRanchCampaignId,
+} from './railroad-ranch-campaign';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -70,6 +75,9 @@ export const cactusvilleLevelEightCampaignContent = createCactusvilleCampaignCon
   luckyLakeLevelSevenCampaignContent.id,
 ]);
 
+/** Formal New Mexico level nine assembled from the researched Railroad Ranch content. */
+export const railroadRanchLevelNineCampaignContent = createRailroadRanchCampaignContent();
+
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
   contentVersion: cowGulchLevelOneContent.contentVersion,
@@ -118,4 +126,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: cactusvilleLevelEightCampaignContent.title,
   globalLevel: 8,
   requiresCompletedScenarioIds: [luckyLakeLevelSevenCampaignContent.id],
+}, {
+  scenarioId: railroadRanchCampaignId,
+  contentVersion: railroadRanchCampaignContentVersion,
+  title: railroadRanchLevelNineCampaignContent.title,
+  globalLevel: 9,
+  requiresCompletedScenarioIds: [cactusvilleLevelEightCampaignContent.id],
 }]);

@@ -245,7 +245,10 @@ export function deriveOriginalMapDrawCommands(content: CowGulchSource): {
 }
 
 /** Rebuilds the authored street layer for a map whose only input is the original TDM grid. */
-export function deriveOriginalTdmMapDrawCommands(content: Pick<CowGulchSource, 'originalTileGrid'>): {
+export function deriveOriginalTdmMapDrawCommands(
+  content: Pick<CowGulchSource, 'originalTileGrid'>,
+  options: { bridgeTileCodes?: readonly number[] } = {},
+): {
   background: RenderTile[];
   streets: RenderTile[];
 } {
@@ -397,6 +400,17 @@ export function deriveOriginalTdmMapDrawCommands(content: Pick<CowGulchSource, '
           width: 1,
           height: 1,
         });
+        // Map09's New Mexico renderer overlays a bridge on raw tile 81; other maps use it as rail only.
+        if (streetCode === 68 && options.bridgeTileCodes?.includes(raw[y]?.[x] ?? -1)) {
+          streets.push({
+            asset: 'tiles_bridge_hori',
+            source: { x: 0, y: 0, width: 48, height: 32 },
+            x: x - 0.25,
+            y,
+            width: 1.5,
+            height: 1,
+          });
+        }
       } else if (streetCode === 80 || streetCode === 84) {
         streets.push({
           asset: 'tiles_railway_verti',

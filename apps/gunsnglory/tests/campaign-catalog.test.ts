@@ -42,6 +42,7 @@ test('maps available, locked, completed, and not-yet-implemented levels from Pro
   assert.equal(campaignLevelState(3, initial), 'locked');
   assert.equal(campaignLevelState(4, initial), 'locked');
   assert.equal(campaignLevelState(5, initial), 'locked');
+  assert.equal(campaignLevelState(9, initial), 'locked');
 
   await progress.applySettlement({
     settlementId: `catalog-test:${cowGulchLevelOneContent.id}:1`,

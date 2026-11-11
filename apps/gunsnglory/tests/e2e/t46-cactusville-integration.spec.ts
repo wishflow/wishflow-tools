@@ -67,11 +67,15 @@ async function enterCactusville(
   await page.getByTestId('campaign-region-new-mexico').click();
   if (mode === 'free-play') {
     await expect(page.getByTestId('campaign-menu-progress')).toContainText(
-      '8/10 implemented levels available in Free Play',
+      '9/10 implemented levels available in Free Play',
     );
   }
   await expect(page.getByTestId('campaign-level-08')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-09')).toBeDisabled();
+  if (mode === 'free-play') {
+    await expect(page.getByTestId('campaign-level-09')).toBeEnabled();
+  } else {
+    await expect(page.getByTestId('campaign-level-09')).toBeDisabled();
+  }
   await page.getByTestId('campaign-level-08').click();
   await expect(page.getByRole('heading', { name: 'Cactusville' })).toBeVisible();
   await expect(page.locator('.campaign-overview-minimap')).toHaveJSProperty('naturalWidth', 102);

@@ -294,3 +294,12 @@
 - **根因与证据：**共享 `cowGulchDecorationCodes` 只覆盖 Cow Gulch 与少量共用类型，不能代表每张 New Mexico 地图的全部对象码。map06 审计格网明确包含 code 72/75，APK 对应贴图分别是 `b_1x1_stake` 和 `b_1x1_watertower`。
 - **漏测点：**若只测试共享构造器或贴图文件存在性，不会发现特定关卡的原始标记没有被场景层消费。
 - **修复与防回归：**map06 场景显式加入 72/75 映射；测试逐项从独立 TDM 基线生成“对象码→资产→格子”期望，并检查所有资产可加载。后续新地图必须核对该关完整对象码表，再决定继承共享项或增加关卡专属映射。
+
+## 地形图层不能只画 tile 的表面标记
+
+**状态：**Railroad Ranch 静态地形切片已修正并通过定向检查。
+
+- **表现与复现：**把 map09 原始 TDM 转成网页地形时，3 个水平桥位只出现铁轨和桥墩，缺少横跨桥面的完整木桥贴图。
+- **根因与证据：**APK 派生的 `terrain-render-index.json` 显示原始 tile 81 在 (15,3)、(26,3)、(14,17) 变为 street code 68；code 68 的绘制规则同时发出 `tiles_railway_hori` 和完整 `tiles_bridge_hori`，另有左右桥墩。旧参考生成器只为 code 68 发出铁轨与桥墩，遗漏了桥面；map08 没有这些铁路 marker，因此此前测试未覆盖这类复合地形格。
+- **修复与防回归：**参考生成器和 map09 JSON 补入桥面层，保持铁轨→桥面→桥墩的绘制顺序。`railroad-ranch-terrain.test.ts` 核对 TDM 每格、APK 派生的背景/street 命令、三段桥面和六个桥墩坐标、贴图 source rectangle 与地图边界。静态索引只证明绘制候选和源码规则，不冒充 Android 截图或逐帧随机结果。
+- **验证：**定向地形测试 2 项通过，TypeScript 类型检查通过。完整 `test:ci` 留到 map09 批次收尾运行。

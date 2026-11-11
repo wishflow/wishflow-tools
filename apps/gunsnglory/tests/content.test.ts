@@ -20,6 +20,7 @@ import {
   luckyLakeLevelSevenCampaignContent,
   murdockMountainsLevelSixCampaignContent,
   officialCampaignStages,
+  railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
 } from '../src/content/official-campaign';
 import { calculateMapViewport } from '../src/render/map-viewport';
@@ -165,6 +166,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: cactusvilleLevelEightCampaignContent.title,
     globalLevel: 8,
     requiresCompletedScenarioIds: [luckyLakeLevelSevenCampaignContent.id],
+  }, {
+    scenarioId: railroadRanchLevelNineCampaignContent.id,
+    contentVersion: railroadRanchLevelNineCampaignContent.contentVersion,
+    title: railroadRanchLevelNineCampaignContent.title,
+    globalLevel: 9,
+    requiresCompletedScenarioIds: [cactusvilleLevelEightCampaignContent.id],
   }]);
 });
 

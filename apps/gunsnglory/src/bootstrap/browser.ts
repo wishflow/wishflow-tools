@@ -24,12 +24,19 @@ import {
   createCactusvilleCampaignContent,
 } from '../content/cactusville-campaign';
 import {
+  createRailroadRanchCampaignContent,
+  railroadRanchCampaignContentVersionFor,
+  railroadRanchCampaignId,
+  railroadRanchCompletedScenarioIdsForContentVersion,
+} from '../content/railroad-ranch-campaign';
+import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   officialCampaignStages,
   luckyLakeLevelSevenCampaignContent,
   cactusvilleLevelEightCampaignContent,
+  railroadRanchLevelNineCampaignContent,
   murdockMountainsLevelSixCampaignContent,
 } from '../content/official-campaign';
 import {
@@ -61,6 +68,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [murdockMountainsLevelSixCampaignContent.id]: murdockMountainsLevelSixCampaignContent,
   [luckyLakeLevelSevenCampaignContent.id]: luckyLakeLevelSevenCampaignContent,
   [cactusvilleLevelEightCampaignContent.id]: cactusvilleLevelEightCampaignContent,
+  [railroadRanchCampaignId]: railroadRanchLevelNineCampaignContent,
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -78,6 +86,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === cactusvilleCampaignId) {
     return cactusvilleCampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === railroadRanchCampaignId) {
+    return railroadRanchCampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -90,6 +101,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [murdockMountainsCampaignId]: createMurdockMountainsCampaignContent(completedScenarioIds),
     [luckyLakeCampaignId]: createLuckyLakeCampaignContent(completedScenarioIds),
     [cactusvilleCampaignId]: createCactusvilleCampaignContent(completedScenarioIds),
+    [railroadRanchCampaignId]: createRailroadRanchCampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -106,6 +118,14 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
 export function createBrowserGameForCactusvilleReplay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? cactusvilleCompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import uses the recorded dynamite visibility snapshot, not today's profile. */
+export function createBrowserGameForRailroadRanchReplay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? railroadRanchCompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }
