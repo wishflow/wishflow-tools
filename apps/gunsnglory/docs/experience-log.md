@@ -23,6 +23,24 @@
 - **路线复核：**解析 `EnemyDirectorField` 方向表和 `PriorityMap.recursiveLengthTracking` 后，用明确的具体路径独立计算所有路线格优先级，再与网页 TypeScript 算法逐格比较；map05 的 5 个路线变体、142 个路线格均匹配。属于静态算法交叉校验，不是 Android 或浏览器运行观察。
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
 
+## TDM 单位 marker 必须验证到最终场景单位
+
+**状态：map10 切片 B 已修复并由静态 marker 对照测试验证。**
+
+- **表现与复现：**Lost City 的 tile 107 被解析成 unit type 4、activity 5，但网页场景中没有对应的活动 Indian。
+- **根因与证据：**APK DEX/Smali 的 104–109 分支按 `tile − 103` 创建 unit type 1–6 并设为 activity 5；JADX 把该分支误还原成空块。网页共享工厂此前只创建 activity 5 的 Gunslinger、Mexican 与 Gambler，type 3–6 走到“只处理 activity 4”的分支后被跳过。map10 的 107 因此漏掉；已有 Tech Town 测试只核对 marker→类型/activity 的解码，没有用包含 type 4 activity 5 的真实 TDM 验证最终场景。
+- **修复与防回归：**activity 5 的 Fort 类地图单位现在复用 APK 对应设计的 awake 素材、尺寸锚点、速度、音效与武器；map10 测试从实际 TDM 核对全部单位坐标、类型和 activity，并断言 active Indian 使用 `player_indian` 且不带 hire 状态。每张地图的检查应同时覆盖原始 marker、共享 placement 与最终 `ScenarioUnit`，不可把中间映射表测试当成对象已生成的证明。
+- **避免重复：**不需要重新反编译这条 104–109 分支；总表和 Smali/DEX 已足以定类型。后续若再遇到同类问题，应先检查共享工厂是否真的消费所有已解码的类型/activity 组合。
+
+## 出生池验证应使用来源 ID，不猜地图坐标
+
+**状态：map10 短会话测试已采用来源事件验证。**
+
+- **错误路径：**最初用第一帧敌人的 `positionFine.y` 推断出生池行。Lost City 四个入口都在 `y=0`，而敌人编组在出生标记外侧生成，因此测得的 y 行既相同又位于地图边界之外，不能区分四个 pool。
+- **根因与证据：**`GameSession` 按 `CampaignSpawnPoolDefinition.spawnPointId` 选择 `previewWave` 中对应出生场，再在该方向的地图外侧创建敌人；编组偏移与首帧移动还会改变坐标。`EnemyView.positionFine` 是运行位置，不是原始 TDM marker 或 pool ID。
+- **修正与防回归：**map10 每个波次的一帧会读取 `enemy-group-spawned` 事件中的 `spawnPointId`，与该波含请求的池编号逐项比较；出生 marker 的坐标和方向另由静态 TDM 测试验证。
+- **避免重复：**多个 spawn 共用同一地图边时，不用 positionFine 的同轴行/列猜 pool。优先断言来源事件 ID；若需要视觉位置，再验证与静态 spawn marker 的方向偏移关系。
+
 ## 波次请求向量是生成权重，不是固定出敌顺序
 
 **状态：已在 map05 短时模拟测试中验证。**
@@ -184,7 +202,8 @@
 - **表现与复现：**多个 Vite 服务同时监听默认端口时，内置浏览器可能连到旧工作树，即使测试代码来自新的隔离工作树。
 - **根因与证据：**本地已有服务占用了 5175；本轮首次检查发现被服务的源码目录与当前实现工作树不同。隔离实现改用严格端口 `5189`，并检查内置浏览器地址为 `http://localhost:5189/`，再查看实际菜单、Options 与 Help 截图。
 - **本轮补充：**`5189` 再次被占用，内置浏览器页面缺少当前工作台且仍显示旧全屏符号，说明不能只凭端口号或页面标题判断来源。未终止未知服务；改用严格端口 `5191`，并在内置浏览器确认 `#lab`、实验入口和新按钮资源均来自当前隔离工作树。
-- **防回归：**开启本地浏览器验收前先检查监听端口对应的服务来源；测试/浏览器端口使用专用端口且启用 strict 模式，确认标签 URL 对应本次工作树后再评价 UI。旧标签和旧 `dist` 不能作为新源码的证据。
+- **map10 补充：**Playwright 默认端口 `4173` 已服务于另一工作树，页面仍只显示 7 个关卡；测试命令没有检查运行实例来源时，造成旧版误报。另在 `pnpm run test:e2e -- <files>` 中，分隔符让 Playwright 忽略文件筛选并启动整套用例；输出显示 133 项，超出预期的 5 项。改为 `PLAYWRIGHT_PORT=4174 pnpm run test:e2e <files> --workers=1` 后，使用当前工作树启动严格端口服务，map09、map10、Free Play 5 项 E2E 通过。
+- **防回归：**开启本地浏览器验收前先检查监听端口对应的服务来源；测试/浏览器端口使用专用端口且启用 strict 模式，确认标签 URL 对应本次工作树后再评价 UI。传 Playwright 文件路径时不要在 pnpm 脚本与筛选参数间添加 `--`，并确认 `Running N tests` 与预期筛选数一致。旧标签和旧 `dist` 不能作为新源码的证据。
 
 ### Options 遮罩与菜单声音测试顺序
 
@@ -244,11 +263,12 @@
 
 ## 增加正式关卡后同步阶段快照与进度摘要
 
-- **状态：已修复。**map05 加入时更新了摘要分母；map06 加入时另两处阶段列表快照仍过期。更新全部期望后完整 CI 通过。
-- **表现与复现：**map05 加入后，旧 E2E 仍期待 `/4 stages complete`，六项失败；map06 登记后，Apache Valley 与 Fort Kaboom 单测仍按五条 `officialCampaignStages` 比较，完整 CI 又失败两项。关卡选择和 Progress 实际按正式目录正确工作。
-- **根因与证据：**摘要分母取自 `officialCampaignStages.length`；阶段关系测试也有独立硬编码数组。新增正式 stage 后，这两类测试快照都需要更新，不能只修页面摘要用例。
-- **漏测点：**之前只搜索并修改 `stages complete` 和 `campaign-progress-summary`，没有一并搜索直接比较 `officialCampaignStages`、`globalLevel` 或前置 ID 的旧快照。
-- **修复与防回归：**map05 的五份 E2E 分母和 map06 的 Apache/Fort stage 快照都已同步；map06 解锁及结算通过 Progress 测试、六关三难度 Free Play 测试、E2E 和完整 `CI=1 pnpm run test:ci` 核对。以后新增或重排关卡时，搜索 `officialCampaignStages`、`globalLevel`、`requiresCompletedScenarioIds`、`stages complete` 和 `campaign-progress-summary`，检查所有静态快照及选择状态；不要为了让旧断言通过而改动正确的 Progress 逻辑。
+- **状态：已修复并覆盖 map10。**map05/map06 时曾修正摘要分母和阶段列表；新增 map10 后，首轮完整单测又发现四处正式 stage 快照过期，Progress 另有结算后的状态序列少列一个 locked 关卡。
+- **表现与复现：**map10 登记后，`tests/apache-valley.test.ts`、`tests/content.test.ts`、`tests/fort-kaboom-formal.test.ts` 和 `tests/progress.test.ts` 的精确阶段列表仍停在 map09。初次更新四处列表后，Progress 的 post-settlement 状态数组仍比实际 stages 少一项。
+- **根因与证据：**摘要分母取自 `officialCampaignStages.length`；正式阶段关系和 Progress 状态测试还有独立硬编码数组。新增正式 stage 后，这些快照需要同步；关卡选择与 Progress 本身按新目录正确工作，没有修改其运行逻辑。
+- **修复与防回归：**更新四个测试文件中的五处期望，补入 level10 和其 map09 前置条件；Progress 初态与结算后均列出 level10 的 locked 状态。Apache Valley、Cow Gulch 内容身份、Fort Kaboom、Progress 和 Lost City 五个测试文件共 43 项定向测试通过，`pnpm run typecheck` 通过。完整 `test:ci` 仍需在这次快照修正后重跑。
+- **漏测点：**此前只搜索并修改 `stages complete` 和 `campaign-progress-summary`，没有一并搜索直接比较 `officialCampaignStages`、`globalLevel`、前置 ID 以及结算后完整状态数组的快照。
+- **修复与防回归：**map05 的 E2E 分母、map06 的 Apache/Fort stage 快照和 map10 相关五处期望现均同步。以后新增或重排关卡时，搜索 `officialCampaignStages`、`globalLevel`、`requiresCompletedScenarioIds`、`stages complete` 和 `campaign-progress-summary`，检查所有静态快照、结算后状态数组及选择状态；不要为了让旧断言通过而改动正确的 Progress 逻辑。
 
 ## 战役与自由模式的关卡说明按存档语义区分
 
@@ -262,6 +282,12 @@
 - **表现与复现：**本地默认 5-worker `test:ci` 中，t08 的地图选择、t20 的页面重载状态以及 t22 的模拟波次重载检查出现超时或模拟推进到下一波；相同三项在 `CI=1 --workers=1` 下全部通过。首次 5-worker 完整运行仅发现正式关卡计数断言问题，第二次才在高并发时复现上述时序问题。
 - **根因判断（有复现证据，机制仍属推断）：**这些测试依赖实时游戏循环和页面/画布交互；本地多个浏览器 worker 同时运行时会争用进程资源，扩大可观察时序窗口。单 worker 重跑通过，未发现同样的产品状态错误。
 - **修复与防回归：**产品逻辑未改。完整本地验收设置 `CI=1 pnpm run test:ci`，Playwright 配置会与 CI 一样使用一个 worker；若单 worker仍失败，再按具体页面状态调查，不把并行超时直接归因于游戏代码。
+
+## 波次语音重试 E2E 不应依赖旧角色名
+
+- **表现与复现：**map10 批次完整 E2E 中，132 项通过，波次对白语音重试一项因找不到 `Retry Pedro’s voice` 失败；产品按钮已使用统一的“Retry this voice”文案。
+- **根因与漏测：**运行时根据语言设置更新可访问名称，模板仍留着旧默认文案，测试又把角色名写死。测试没有以当前用户可见名称或稳定语义定位控件。
+- **修复与防回归：**模板默认值与通用按钮文案统一，E2E 按当前可访问名称查找；失败项定向重跑通过。后续调整本地化控件文案时，同步检查模板 fallback、运行时可访问名称和用例定位，不把过期角色名断言当成产品回归。
 
 ## Free Play 关卡说明挤入高分栏
 

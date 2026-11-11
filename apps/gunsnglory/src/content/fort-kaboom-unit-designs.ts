@@ -54,6 +54,29 @@ export function createSleepingFortKaboomUnit(
   };
 }
 
+/** Creates an already-active map unit using the same original base design as its hireable form. */
+export function createActiveFortKaboomUnit(
+  type: FortKaboomUnitType,
+  cell: { x: number; y: number },
+  index: number,
+): ScenarioUnit {
+  const design = fortKaboomUnitDesigns[type];
+  const render = createAnchoredMapRender(cell, design.awakeFrame);
+  return {
+    id: `${type}-map-${String(index).padStart(2, '0')}`,
+    type,
+    activity: 5,
+    cell,
+    movementSpeedFinePer100Ms: design.movementSpeedFinePer100Ms,
+    shotSound: design.shotSound,
+    asset: design.awakeAsset,
+    frame: design.awakeFrame,
+    render,
+    hitArea: { ...render },
+    weapon: { ...design.weapon },
+  };
+}
+
 /** Base unit rows from APK GameDesignData; frame and sound mappings use GameObjectUnit, GameDesignOptics, and SfxManager. */
 export const fortKaboomUnitDesigns: Readonly<Record<FortKaboomUnitType, FortKaboomUnitDesign>> = Object.freeze({
   cannon: Object.freeze({

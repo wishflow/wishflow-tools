@@ -136,7 +136,7 @@ export const gamePageTemplate = [
   '            <p id="campaign-wave-intro-text" data-testid="campaign-wave-intro-text"></p>',
   '          </div>',
   '          <div class="campaign-wave-intro-actions">',
-  '              <button type="button" data-action="retry-wave-intro-voice" hidden>Retry Pedro’s voice</button>',
+  '              <button type="button" data-action="retry-wave-intro-voice" hidden>Retry this voice</button>',
   '              <button type="button" data-action="continue-wave-intro"><img class="campaign-wave-intro-confirm-icon" data-testid="campaign-wave-intro-confirm-icon" alt="" width="32" height="32"><span class="campaign-wave-intro-continue-label">Continue</span></button>',
   '          </div>',
   '        </div>',

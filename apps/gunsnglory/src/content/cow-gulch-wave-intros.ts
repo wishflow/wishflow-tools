@@ -7,8 +7,8 @@ export interface CampaignWaveIntro {
   waveNumber: number;
   speaker: LocalizedCampaignCopy;
   text: LocalizedCampaignCopy;
-  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers' | 'portrait_deserter' | 'portrait_engineer' | 'portrait_sheriff';
-  voiceSound?: 'sound_deserter_yes_sir' | 'sound_indian_hugh' | 'sound_pedro' | 'sound_siedler' | 'sound_sheriff';
+  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers' | 'portrait_deserter' | 'portrait_engineer' | 'portrait_sheriff' | 'portrait_gunslinger' | 'portrait_mexican';
+  voiceSound?: 'sound_deserter_yes_sir' | 'sound_indian_hugh' | 'sound_pedro' | 'sound_siedler' | 'sound_sheriff' | 'sound_desperado_yihaa' | 'sound_mexican_arriba';
 }
 
 /** Cow Gulch wave dialogue transcribed from APK campaign strings and pointer controls. */

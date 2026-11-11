@@ -30,6 +30,12 @@ import {
   railroadRanchCompletedScenarioIdsForContentVersion,
 } from '../content/railroad-ranch-campaign';
 import {
+  createLostCityCampaignContent,
+  lostCityCampaignContentVersionFor,
+  lostCityCampaignId,
+  lostCityCompletedScenarioIdsForContentVersion,
+} from '../content/lost-city-campaign';
+import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
@@ -69,6 +75,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [luckyLakeLevelSevenCampaignContent.id]: luckyLakeLevelSevenCampaignContent,
   [cactusvilleLevelEightCampaignContent.id]: cactusvilleLevelEightCampaignContent,
   [railroadRanchCampaignId]: railroadRanchLevelNineCampaignContent,
+  [lostCityCampaignId]: createLostCityCampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -89,6 +96,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === railroadRanchCampaignId) {
     return railroadRanchCampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === lostCityCampaignId) {
+    return lostCityCampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -102,6 +112,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [luckyLakeCampaignId]: createLuckyLakeCampaignContent(completedScenarioIds),
     [cactusvilleCampaignId]: createCactusvilleCampaignContent(completedScenarioIds),
     [railroadRanchCampaignId]: createRailroadRanchCampaignContent(completedScenarioIds),
+    [lostCityCampaignId]: createLostCityCampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -126,6 +137,14 @@ export function createBrowserGameForCactusvilleReplay(contentVersion: string | u
 export function createBrowserGameForRailroadRanchReplay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? railroadRanchCompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import uses the recorded Lost City special-unit visibility snapshot. */
+export function createBrowserGameForLostCityReplay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? lostCityCompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

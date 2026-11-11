@@ -4,27 +4,23 @@
 
 ## 当前状态
 
-- 正式战役内容已实现 9/60 关：Cow Gulch、Apache Valley、Fort Kaboom、Tech Town、Billy Hills、Murdock Mountains、Lucky Lake、Cactusville、Railroad Ranch。
-- [Cactusville 静态审计](map08-static-audit.md)及五个 map08 实现切片已完成。Cactusville 已登记为 New Mexico 第 8 关，正式前置仅为 Lucky Lake；Free Play 可直接选择。
-- [Railroad Ranch 静态审计](map09-static-audit.md)已完成，地图、路线、六个列车组、四组炸药、七波、参数和对白均与 APK 研究材料交叉核对。切片 1.1 逐字节接入 770 字节、32×24 原始 TDM，生成 768 个背景格、111 条 street 绘制命令及 3 段水平桥面/6 个桥墩；切片 1.2 接入方向路线、57 个场景装饰、六组共 25 个列车组件和四组炸药；切片 2.1 接入开局参数和七波、11 个敌人请求；切片 2.2 接入双语关卡文案、七段对白、正式第 9 关登记、Free Play、进度结算与回放内容版本。map09 没有 APK 玩家生成池动作或招募建筑，因此没有补造独立玩家单位池；地图上的 11 节 activity4 货车仍由已有地图交互招募。正式战役第 9 关仅在完成 Cactusville 后开放；Free Play 不受该前置限制。map09 回放版本会保存炸药解锁快照。当前定向单测、类型检查和 map07–09 浏览器测试通过；整批检查留到本批收尾。
-- map09 炸药 tile 分派已按 `GameObjectManager` DEX 分支复核：102 是 type 7 触发器，110 是 type 8 炸药箱。研究清单的对象类型表对调了两者，已在本关审计中标明；网页共用配对实现无需修改。
-- 共享列车 marker 解码支持多组水平/垂直列车，并保留 `92`/`93` 货车 activity 差异；map09 六组现在由关卡模块按各自 movement group 接入。
-- 地形测试参考器已接受显式 `bridgeTileCodes`：Tech Town 将 tile `81` 保持为普通铁轨，Railroad Ranch 仅在自己的参考配置中将 tile `81` 覆绘为桥面。Tech Town 与 map09 定向地形测试共 12/12 通过。
-- map09 将正式战役目录扩展到 9 关后，旧 E2E 对进度分母与 Free Play 可用关卡的断言已同步；6 个受影响测试文件共 12/12 通过。
-- map09 整批 `CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 已通过：类型检查、503 项单测、生产构建及 131 项 E2E 全部通过。构建保留既有 500 KB 主 chunk 提示；Playwright 端口 4173 有现存进程，因此整批使用 4174。
-- 本地内置浏览器已进入 Free Play → New Mexico → Railroad Ranch → Hard，核对首波对白和实际战场地图；对一组横向列车做了短拖动观察。声音保持关闭，模拟速度测试时临时设为 0.25×，之后恢复原存档值 4×并重载回主菜单。空档案未达到原版炸药解锁条件，因此浏览器中炸药保持锁定；关卡内四组炸药配对、解锁条件和爆炸行为由 503 项单测覆盖。
-- map05–map08 内容与实验室羊皮纸视觉修正已作为一个批次发布，公开提交为 `757acdef4d2650bf00e2151fe5b1682892b156f3`。发布内容包括 Billy Hills、Murdock Mountains、Lucky Lake、Cactusville，以及移除羊皮纸图像下方多余的黄色规则矩形。
-- 发布工作流 `42913467245` 的共享检查、应用 CI、Cloudflare Pages 和 GitHub Pages 部署均成功。两个 Pages 的 `build-info.json` 均报告来源 SHA `757acdef4d2650bf00e2151fe5b1682892b156f3`。
-- 本批 `CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 通过：类型检查、483 项单测、生产构建和 129 项 Playwright E2E。生产构建仍有主 JS chunk 超过 500KB 的既有提示。
-- 内置浏览器已在公开 SHA 对应页面验证 Free Play 的 8/10 关可选状态、Cactusville 困难难度、首波对白和战场地图；实验室羊皮纸保留不规则外轮廓，黄色矩形底色已消失。该验证对应 map05–map08 发布，不代表 map09 已发布。验收保持窗口模式与静音，未推进完整战役。
-- 发布次数与实现切片统计：成功公开发布 12 次 / 65 个已验收实现切片，比例为 18.46%，低于 20% 目标。
-- 发布提交已通过普通 merge 合入并推送到 `gunsnglory`，同步提交为 `ad524dcfad7497c8ec9e3c5128e60630f50df672`；该提交的代码树与公开 `master` 一致。
+- 正式战役内容已实现 10/60 关：Cow Gulch、Apache Valley、Fort Kaboom、Tech Town、Billy Hills、Murdock Mountains、Lucky Lake、Cactusville、Railroad Ranch、Lost City。
+- [Cactusville 静态审计](map08-static-audit.md)及五个 map08 实现切片已完成；正式前置为 Lucky Lake，Free Play 可直接选择。该批公开提交为 `757acdef4d2650bf00e2151fe5b1682892b156f3`，工作流 `42913467245` 成功，两个 Pages 的构建 SHA 匹配。
+- [Railroad Ranch 静态审计](map09-static-audit.md)和实现已完成：原始 32×24 TDM、路线、静态对象、六组列车、四组炸药、七波、双语对白、正式第 9 关解锁、Free Play、结算和回放版本均已接入。关键关卡数据与 APK/DEX 证据交叉核对；没有为 APK 中不存在的玩家生成池补造规则。
+- map09 的完整本地检查通过：类型检查、503 项单测、生产构建和 131 项 E2E；仅保留既有主 JS chunk 超过 500 KB 的提示。两组因关卡目录扩充而过期的断言已更新。
+- map09 公开发布提交为 `9320536cccc052c7c86308d067138f24b3d7b2e1`；工作流 `42949401613` 的测试、Cloudflare Pages 和 GitHub Pages 均成功。两个 `build-info.json` 均报告该 SHA，内置浏览器已验证线上 Free Play 选关、困难难度、首波对白和战场地图。空档案下炸药按原版进度门槛保持锁定，触发器配对、解锁和爆炸行为由自动化测试覆盖。
+- map09 发布后的发布统计基线为 13 次 / 69 个已验收实现切片，比例 18.84%；Lost City 批次尚未发布，完成批次后再更新计数。
+- map05–map08 与 map09 批次均已发布。下一批从 New Mexico 第 10 关 Lost City 开始；[静态审计](map10-static-audit.md)已确认 TDM、完整路线、地图对象、十波、单位池、参数、文本与资源证据，并列出未知项。无需启动 Android 或完整通关。
+- Lost City 切片 A 已完成：从 APK 导入的 TDM 为 770 字节，SHA-256 与审计一致；新增 32×24 原始格网及 768 个背景格、157 个地形/铁路绘制命令。`node --import tsx --test tests/lost-city-map.test.ts` 通过。
+- Lost City 切片 B 已完成：实现四个出生点、两个出口、38 个方向节点及十条路线，接入两组列车、40 个静态场景对象和 23 个 TDM 单位（档案全解锁时）；补上此前遗漏的 activity 5 Indian。`pnpm run typecheck` 与 map10、map08/map09、Tech Town、Fort Kaboom 地图/单位相关的 40 项定向测试通过。
+- Lost City 切片 C 已完成：加入原版十波、29 个敌人请求池、四个玩家单位池及三个招募点、wave 1 库存/上限动作，并接入初始现金350、生命25、升级上限3、三档 HP 倍率与宝箱参数。6 项 map10 规则测试覆盖所有波次、生成入口、15秒开局延迟和无出敌结算；连同地图及相邻关卡回归共49项定向测试和类型检查通过。未完整模拟战役。
+- Lost City 切片 D 已完成：加入 APK 原版简介、胜利标题、十段双语对白、头像及语音映射；从 APK 提取 Gunslinger/Mexican 原图；组装正式 level 10，要求完成 Railroad Ranch，Free Play 可直接以任意难度进入；四种特殊单位可见性进入内容版本与回放重建。补齐正式菜单介绍/结算标题及对白音频资产预加载。定向 40 项单测和类型检查通过；map10、map09、Free Play 与总菜单共 5 项 E2E 在独立端口通过。
+- 首次 E2E 命令误连到默认端口上另一工作树的旧 Vite 服务，菜单只显示 7 个关卡并产生误报；已改用 `PLAYWRIGHT_PORT=4174`，确认本分支服务后通过。相关剪枝经验见[经验记录](experience-log.md#本地浏览器来源核对)。
+- 完整 `CI=1 pnpm run test:ci` 已通过类型检查、523 项单测、生产构建和 133 项 E2E。首轮 E2E 曾因语音重试按钮的过期名称断言失败；模板、定位器已修正，专项用例与最终完整检查均通过。剩余工作是集成发布、核对部署 SHA 并做线上验收。
 
-## 当前批次：New Mexico 第 9 关 Railroad Ranch
+## Lost City 批次收尾
 
-静态审计及实现切片 1.1、1.2、2.1、2.2 均已完成并分别通过针对性验证。正式战役仅在 Cactusville 完成后开放 map09；Free Play 可直接选择。APK 英文简介、胜利标题和七段对白已接入；Engineer 对白只显示头像，不播放未经确认的声音。正式结算、Free Play 隔离和带炸药状态快照的回放已覆盖。实验室羊皮纸底色修正属于前一批且已经发布，不并入 map09。
+1. **完整检查。**再次运行 `pnpm run test:ci`；Playwright 使用空闲的专用 `PLAYWRIGHT_PORT`，避免复用其他工作树服务。若失败，先修当前批次并复跑失败项及完整 CI。
+2. **集成发布与验收。**完整检查通过后按 Guns’n’Glory 规则 squash 集成发布，核对两个 Pages 的来源 SHA，再用内置浏览器检查 Free Play、正式解锁、开局对白、头像/声音资源及战场。窗口模式、静音，不完整通关。
 
-### 批次收尾门槛
-
-- [ ] 从最新 `origin/gunsnglory` 对齐 map09 批次，使用一个 squash commit 集成到发布路径并推送 `master`；保留逐切片提交作为来源记录，不发布其他本地工作树中的未集成修正。
-- [ ] 等待发布工作流成功，核对公开 `build-info.json` 来源 SHA；用内置浏览器在公开版本复验第 9 关入口、对白与战场地图。完成后把发布提交合并回 `gunsnglory`、推送远端并同步相关干净工作树。
+**未知项处理：**已检索反编译生产源码，未发现 `awesomeMessageMin=30000` 对应消费者；保留未知且不作为内容接入阻塞项。APK 随机贴图的每次启动结果无需逐次复刻；网页沿用已验证的固定种子策略。
