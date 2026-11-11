@@ -36,6 +36,12 @@ import {
   lostCityCompletedScenarioIdsForContentVersion,
 } from '../content/lost-city-campaign';
 import {
+  createMississippi11CampaignContent,
+  mississippi11CampaignContentVersionFor,
+  mississippi11CampaignId,
+  mississippi11CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-11-campaign';
+import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
@@ -76,6 +82,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [cactusvilleLevelEightCampaignContent.id]: cactusvilleLevelEightCampaignContent,
   [railroadRanchCampaignId]: railroadRanchLevelNineCampaignContent,
   [lostCityCampaignId]: createLostCityCampaignContent(),
+  [mississippi11CampaignId]: createMississippi11CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -99,6 +106,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === lostCityCampaignId) {
     return lostCityCampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi11CampaignId) {
+    return mississippi11CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -113,6 +123,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [cactusvilleCampaignId]: createCactusvilleCampaignContent(completedScenarioIds),
     [railroadRanchCampaignId]: createRailroadRanchCampaignContent(completedScenarioIds),
     [lostCityCampaignId]: createLostCityCampaignContent(completedScenarioIds),
+    [mississippi11CampaignId]: createMississippi11CampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -145,6 +156,14 @@ export function createBrowserGameForRailroadRanchReplay(contentVersion: string |
 export function createBrowserGameForLostCityReplay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? lostCityCompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import uses Traveller's Town's recorded special-unit unlock snapshot. */
+export function createBrowserGameForMississippi11Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi11CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

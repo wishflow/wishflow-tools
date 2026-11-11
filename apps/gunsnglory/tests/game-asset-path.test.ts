@@ -21,6 +21,17 @@ test('uses the APK high-density atlases for wagon, cart, and Post Coach assets',
     'horse_wagon_white',
     'horse_wagon_turn',
     'horse_wagon_turn_white',
+    'steamboat_1',
+    'steamboat_2',
+    'steamboat_3',
+    'steamboat_4a',
+    'steamboat_4b',
+    'steamboat_4c',
+    'player_double_cannon',
+    'player_double_cannon_shot',
+    'hud_upgrade_arrow_1',
+    'hud_upgrade_arrow_2',
+    'hud_upgrade_arrow_3',
   ]) {
     assert.equal(gameAssetRelativePath(asset), `hdpi/${asset}.png`);
   }
