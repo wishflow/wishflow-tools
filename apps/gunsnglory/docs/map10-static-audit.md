@@ -135,4 +135,4 @@ TDM 使用 `[width:u8, height:u8, y-major cell bytes]`。坐标从左上角 `(0,
 - 十条波次对白保留 APK 英文、字符串资源 ID、头像顺序和语音映射。`portrait_gunslinger.png`、`portrait_mexican.png` 已从 APK `drawable-mdpi-v4` 导入；不以其他头像替代。
 - map10 没有 dynamite marker `102/110`、Gambler marker `132`；不得从其它地图复制炸药或赌徒。
 - map10 地图随机变化只要求稳定、可复现，并与 APK 的地形生成规则相符；不要求强行复制 APK 每次启动的随机种子结果。
-- 路线、静态场景、地图单位、十波、玩家池、对白、关卡解锁及回放快照通过定向测试；完整 `CI=1 pnpm run test:ci` 已通过，公开版本视觉核对仍属于批次收尾。数据表中的 `awesomeMessageMin=30000` 消费含义仍未知，保留原始字段且不阻塞已证实内容。
+- 路线、静态场景、地图单位、十波、玩家池、对白、关卡解锁及回放快照通过定向测试；完整 `CI=1 pnpm run test:ci` 已通过，发布版内置浏览器已验证关卡目录、困难难度首波对白和战场。数据表中的 `awesomeMessageMin=30000` 消费含义仍未知，保留原始字段且不阻塞已证实内容。
