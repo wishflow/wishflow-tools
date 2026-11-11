@@ -336,7 +336,7 @@ test('offers an in-dialog retry when the browser blocks Pedro’s voice autoplay
   });
   await page.goto('/?testBattle=1');
   await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
-  const retryVoice = page.getByRole('button', { name: 'Retry Pedro’s voice' });
+  const retryVoice = page.getByRole('button', { name: 'Retry this voice' });
   await expect(retryVoice).toBeVisible();
   const retryBounds = await retryVoice.boundingBox();
   if (!retryBounds) throw new Error('Voice retry control has no layout box');

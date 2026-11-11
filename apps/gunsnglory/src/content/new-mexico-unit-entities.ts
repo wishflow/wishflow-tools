@@ -1,5 +1,10 @@
 import { createSleepingMapUnitsFromGrid } from './cow-gulch';
-import { createAnchoredMapRender, createSleepingFortKaboomUnit, type FortKaboomUnitType } from './fort-kaboom-unit-designs';
+import {
+  createActiveFortKaboomUnit,
+  createAnchoredMapRender,
+  createSleepingFortKaboomUnit,
+  type FortKaboomUnitType,
+} from './fort-kaboom-unit-designs';
 import { createCampaignMapUnitPlacements, type CampaignMapUnitTypeId } from './campaign-map-unit-placements';
 import { gunslingerWeapon, mexicanWeapon } from './player-unit-weapons';
 import type { ScenarioUnit } from '../game';
@@ -173,12 +178,14 @@ export function createNewMexicoMapUnits(
       units.push(createSleepingSalesman(placement.cell));
       continue;
     }
-    if (placement.activity !== 4 || !isFortKaboomUnitTypeId(placement.unitTypeId)) continue;
+    if (!isFortKaboomUnitTypeId(placement.unitTypeId)) continue;
 
     const type = fortUnitTypeById[placement.unitTypeId];
     const index = (counters.get(type) ?? 0) + 1;
     counters.set(type, index);
-    units.push(createSleepingFortKaboomUnit(type, placement.cell, index));
+    units.push(placement.activity === 4
+      ? createSleepingFortKaboomUnit(type, placement.cell, index)
+      : createActiveFortKaboomUnit(type, placement.cell, index));
   }
 
   return units.sort((left, right) => left.cell.y - right.cell.y || left.cell.x - right.cell.x);

@@ -18,6 +18,7 @@ import {
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
   luckyLakeLevelSevenCampaignContent,
+  lostCityLevelTenCampaignContent,
   murdockMountainsLevelSixCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
@@ -172,6 +173,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: railroadRanchLevelNineCampaignContent.title,
     globalLevel: 9,
     requiresCompletedScenarioIds: [cactusvilleLevelEightCampaignContent.id],
+  }, {
+    scenarioId: lostCityLevelTenCampaignContent.id,
+    contentVersion: lostCityLevelTenCampaignContent.contentVersion,
+    title: lostCityLevelTenCampaignContent.title,
+    globalLevel: 10,
+    requiresCompletedScenarioIds: [railroadRanchLevelNineCampaignContent.id],
   }]);
 });
 

@@ -5,6 +5,7 @@ import {
   createBrowserExperimentRepository,
   createBrowserGame,
   createBrowserGameForCactusvilleReplay,
+  createBrowserGameForLostCityReplay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -54,6 +55,9 @@ import {
   railroadRanchCampaignId,
 } from './content/railroad-ranch-campaign';
 import { railroadRanchWaveIntros } from './content/railroad-ranch-wave-intros';
+import { createLostCityCampaignContent, lostCityCampaignId } from './content/lost-city-campaign';
+import { lostCityWaveIntros } from './content/lost-city-wave-intros';
+import { lostCityCampaignCopy } from './content/lost-city-campaign-copy';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import { fortKaboomWaveIntros } from './content/fort-kaboom-wave-intros';
@@ -882,7 +886,7 @@ const languageMessages = {
     retrySettings: 'Retry saving settings',
     soundPlaybackFailed: 'Sound could not be played. You can continue silently or retry playback.',
     retrySoundPlayback: 'Retry sound playback',
-    retryWaveIntroVoice: 'Retry Pedro’s voice',
+    retryWaveIntroVoice: 'Retry this voice',
     soundOn: 'Sound: On',
     soundOff: 'Sound: Off',
     reloadProfile: 'Reload saved profile',
@@ -1107,7 +1111,7 @@ const languageMessages = {
     retrySettings: '重试保存设置',
     soundPlaybackFailed: '音效无法播放。你可以继续静音游玩，或重试播放。',
     retrySoundPlayback: '重试播放音效',
-    retryWaveIntroVoice: '重试佩德罗语音',
+    retryWaveIntroVoice: '重试这段语音',
     soundOn: '音效：开',
     soundOff: '音效：关',
     reloadProfile: '重新加载已保存档案',
@@ -1260,7 +1264,7 @@ const campaignMenuCopy = {
     closeConfirmation: 'Return to the campaign menu? The unfinished battle will not be saved.',
     confirmAction: 'YES', cancelAction: 'NO',
     freePlayMenu: 'Free Play menu', freePlayRegionHeading: 'Choose a region for Free Play',
-    freePlayRegionHint: 'Free Play opens the nine implemented campaign levels and any difficulty, without campaign unlock requirements.',
+    freePlayRegionHint: 'Free Play opens the ten implemented campaign levels and any difficulty, without campaign unlock requirements.',
     freePlayLevelHint: (available: number) => `${available}/10 implemented levels available in Free Play. Other levels are not implemented yet.`,
     freePlayScoreNote: 'Free play does not change the saved campaign score or progress.',
     freePlayDifficultyNotice: 'Free play results do not change campaign progress, high scores, unlocks, or saved difficulty.',
@@ -1281,6 +1285,8 @@ const campaignMenuCopy = {
     levelEightTitle: 'Cactusville',
     levelNineTitle: 'Railroad Ranch',
     levelNineVictoryTitle: 'The Railroad Ranch Avenger',
+    levelTenTitle: 'Lost City',
+    levelTenVictoryTitle: lostCityCampaignCopy.victoryTitle.en,
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
@@ -1290,6 +1296,7 @@ const campaignMenuCopy = {
     levelSevenInfo: 'A picture postcard lake where settlers flock in droves.',
     levelEightInfo: 'Sheriff Starforce imposes law and order here. Nowhere will you find a more relaxed and carefree place to live than Cactusville!',
     levelNineInfo: 'The birthplace of the American railroad. The east and west coasts will soon be connected by busy trains.',
+    levelTenInfo: lostCityCampaignCopy.overview.en,
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
@@ -1326,7 +1333,7 @@ const campaignMenuCopy = {
     closeConfirmation: '要返回战役菜单吗？未完成的战斗不会保存。',
     confirmAction: '是', cancelAction: '否',
     freePlayMenu: '自由游玩菜单', freePlayRegionHeading: '选择自由游玩区域',
-    freePlayRegionHint: '自由游玩可进入目前已实现的九个战役关卡和任意难度，不受战役解锁条件限制。',
+    freePlayRegionHint: '自由游玩可进入目前已实现的十个战役关卡和任意难度，不受战役解锁条件限制。',
     freePlayLevelHint: (available: number) => `自由游玩可进入 ${available}/10 个已实现关卡，其他关卡尚未实现。`,
     freePlayScoreNote: '自由游玩不会更改已保存的战役分数或进度。',
     freePlayDifficultyNotice: '自由游玩不会更改战役进度、最高分、解锁状态或已保存难度。',
@@ -1347,6 +1354,8 @@ const campaignMenuCopy = {
     levelEightTitle: '仙人掌镇',
     levelNineTitle: '铁路牧场',
     levelNineVictoryTitle: '铁路牧场复仇者',
+    levelTenTitle: '失落之城',
+    levelTenVictoryTitle: lostCityCampaignCopy.victoryTitle.zh,
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
@@ -1356,6 +1365,7 @@ const campaignMenuCopy = {
     levelSevenInfo: '这片如明信片般美丽的湖泊，吸引着成群的拓荒者。',
     levelEightInfo: '星力警长在这里维护法律与秩序。你再也找不到比仙人掌镇更悠闲自在的居住地了！',
     levelNineInfo: '这里是美国铁路的发源地。东西海岸很快就会被繁忙的列车连接起来。',
+    levelTenInfo: lostCityCampaignCopy.overview.zh,
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
@@ -1740,7 +1750,8 @@ function campaignMenuLevelScreen(): string {
       : level.level === 6 ? copy.levelSixTitle
         : level.level === 7 ? copy.levelSevenTitle
           : level.level === 8 ? copy.levelEightTitle
-            : level.level === 9 ? copy.levelNineTitle : level.title;
+            : level.level === 9 ? copy.levelNineTitle
+              : level.level === 10 ? copy.levelTenTitle : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.level).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -1814,7 +1825,8 @@ function campaignMenuOverviewScreen(): string {
             : entry.level === 6 ? createMurdockMountainsCampaignContent(completedScenarios)
                 : entry.level === 7 ? createLuckyLakeCampaignContent(completedScenarios)
                   : entry.level === 8 ? createCactusvilleCampaignContent(completedScenarios)
-                    : createRailroadRanchCampaignContent(completedScenarios);
+          : entry.level === 9 ? createRailroadRanchCampaignContent(completedScenarios)
+            : createLostCityCampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo
@@ -1822,7 +1834,8 @@ function campaignMenuOverviewScreen(): string {
           : entry.level === 5 ? copy.levelFiveInfo
             : entry.level === 6 ? copy.levelSixInfo
               : entry.level === 7 ? copy.levelSevenInfo
-                : entry.level === 8 ? copy.levelEightInfo : copy.levelNineInfo;
+                : entry.level === 8 ? copy.levelEightInfo
+                  : entry.level === 9 ? copy.levelNineInfo : copy.levelTenInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -1840,7 +1853,8 @@ function campaignMenuOverviewScreen(): string {
         : entry.level === 6 ? copy.levelSixTitle
           : entry.level === 7 ? copy.levelSevenTitle
             : entry.level === 8 ? copy.levelEightTitle
-              : entry.level === 9 ? copy.levelNineTitle : entry.title)}</h2>
+                    : entry.level === 9 ? copy.levelNineTitle
+                      : entry.level === 10 ? copy.levelTenTitle : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -2995,8 +3009,12 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
         : activeSettlementRecord?.mode === 'replay' ? 'replay'
           : activeSettlementRecord?.mode === 'free' ? 'free' : 'debug';
     }
-    settlementTitle.textContent = settlement.outcome === 'victory' && view.scenarioId === railroadRanchCampaignId
-      ? campaignMenuCopy[language].levelNineVictoryTitle
+    settlementTitle.textContent = settlement.outcome === 'victory'
+      ? view.scenarioId === railroadRanchCampaignId
+        ? campaignMenuCopy[language].levelNineVictoryTitle
+        : view.scenarioId === lostCityCampaignId
+          ? campaignMenuCopy[language].levelTenVictoryTitle
+          : messages.result
       : messages.result;
     settlementOutcome.textContent = messages[settlement.outcome];
     settlementSummary.textContent = messages.settlementSummary(
@@ -3504,6 +3522,8 @@ const assetNames = new Set([
   'gng_hud_1_top_star_0',
   'hud_font_numbers_scaled',
   'portrait_pedro',
+  'portrait_gunslinger',
+  'portrait_mexican',
   'portrait_indian',
   'portrait_settlers',
   'portrait_deserter',
@@ -3680,6 +3700,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === luckyLakeCampaignId) return luckyLakeWaveIntros;
   if (scenarioId === cactusvilleCampaignId) return cactusvilleWaveIntros;
   if (scenarioId === railroadRanchCampaignId) return railroadRanchWaveIntros;
+  if (scenarioId === lostCityCampaignId) return lostCityWaveIntros;
   return [];
 }
 
@@ -4283,6 +4304,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === railroadRanchCampaignId) {
       return createBrowserGameForRailroadRanchReplay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === lostCityCampaignId) {
+      return createBrowserGameForLostCityReplay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }

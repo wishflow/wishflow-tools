@@ -18,6 +18,11 @@ import {
   railroadRanchCampaignContentVersion,
   railroadRanchCampaignId,
 } from './railroad-ranch-campaign';
+import {
+  createLostCityCampaignContent,
+  lostCityCampaignContentVersion,
+  lostCityCampaignId,
+} from './lost-city-campaign';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -78,6 +83,9 @@ export const cactusvilleLevelEightCampaignContent = createCactusvilleCampaignCon
 /** Formal New Mexico level nine assembled from the researched Railroad Ranch content. */
 export const railroadRanchLevelNineCampaignContent = createRailroadRanchCampaignContent();
 
+/** Formal New Mexico level ten assembled from the researched Lost City content. */
+export const lostCityLevelTenCampaignContent = createLostCityCampaignContent();
+
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
   contentVersion: cowGulchLevelOneContent.contentVersion,
@@ -132,4 +140,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: railroadRanchLevelNineCampaignContent.title,
   globalLevel: 9,
   requiresCompletedScenarioIds: [cactusvilleLevelEightCampaignContent.id],
+}, {
+  scenarioId: lostCityCampaignId,
+  contentVersion: lostCityCampaignContentVersion,
+  title: lostCityLevelTenCampaignContent.title,
+  globalLevel: 10,
+  requiresCompletedScenarioIds: [railroadRanchCampaignId],
 }]);

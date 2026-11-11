@@ -67,7 +67,7 @@ async function enterCactusville(
   await page.getByTestId('campaign-region-new-mexico').click();
   if (mode === 'free-play') {
     await expect(page.getByTestId('campaign-menu-progress')).toContainText(
-      '9/10 implemented levels available in Free Play',
+      '10/10 implemented levels available in Free Play',
     );
   }
   await expect(page.getByTestId('campaign-level-08')).toBeEnabled();
