@@ -29,6 +29,8 @@ const EXPLOSION_FRAME = Object.freeze({ width: 48, height: 52, count: 8 });
 const ROCKET_FRAME = Object.freeze({ width: 16, height: 16, count: 16 });
 const ROCKET_EXPLOSION_FRAME = Object.freeze({ width: 56, height: 52, count: 8 });
 const ROCKET_SPARKLES_FRAME = Object.freeze({ width: 28, height: 28, count: 3 });
+const CANNON_OVERLAY_FRAME_SIZE = 48;
+const CANNON_UPGRADE_ARROW_FRAME_ORDER = Object.freeze([0, 1, 2, 1]);
 const SELECTION_RANGE_CIRCLE_COLOR = 'rgba(255, 255, 255, 0.1568627450980392)';
 const SELECTION_CURSOR_FRAMES = 4;
 
@@ -204,8 +206,10 @@ function drawUnit(
   const width = unit.render.width * viewport.tileSize;
   const height = unit.render.height * viewport.tileSize;
 
+  const doubleCannon = unit.type === 'steamer-32';
   const gatlingWagon = unit.type === 'train-12' || unit.type === 'train-22';
-  const firing = gatlingWagon ? undefined : unit.shootingAnimation;
+  const weaponOverlayUnit = doubleCannon || gatlingWagon;
+  const firing = weaponOverlayUnit ? undefined : unit.shootingAnimation;
   const walking = unit.walkingAnimation;
   const asset = firing?.asset ?? unit.asset;
   const image = images[asset];
@@ -228,18 +232,19 @@ function drawUnit(
   context.drawImage(image, frame.x, frame.y, frame.width, frame.height, left, top, width, height);
   context.restore();
 
-  if (gatlingWagon && unit.activity === 5 && unit.weapon) {
-    const firingWeapon = unit.shootingAnimation;
-    const weaponAsset = firingWeapon?.asset ?? 'player_gatling';
+  if (weaponOverlayUnit && unit.activity === 5 && unit.weapon) {
+    const firingWeapon = doubleCannon ? unit.weaponAnimation : unit.shootingAnimation;
+    const weaponAsset = firingWeapon?.asset ?? (doubleCannon ? 'player_double_cannon' : 'player_gatling');
     const weaponImage = images[weaponAsset];
     if (!weaponImage) throw new Error('Missing game image: ' + weaponAsset);
     const weaponFrame = firingWeapon?.frame ?? 0;
-    const weaponRow = firingWeapon?.row ?? unit.weaponFacing?.row ?? 1;
+    const weaponRow = firingWeapon?.row ?? unit.weaponFacing?.row ?? (doubleCannon ? 3 : 1);
     const weaponMirrored = firingWeapon?.mirrored ?? unit.weaponFacing?.mirrored ?? false;
+    const sourceFrameSize = doubleCannon ? CANNON_OVERLAY_FRAME_SIZE : 32;
     const weaponSize = viewport.tileSize;
     const weaponCenterX = left + (width / 2);
     const weaponCenterY = top + height
-      - (((unit.weaponDrawOffsetYFine ?? 6912) / FINE_UNITS_PER_CELL) * viewport.tileSize);
+      - (((unit.weaponDrawOffsetYFine ?? (doubleCannon ? 7_680 : 6_912)) / FINE_UNITS_PER_CELL) * viewport.tileSize);
     context.save();
     if (weaponMirrored) {
       context.translate(weaponCenterX * 2, 0);
@@ -247,16 +252,42 @@ function drawUnit(
     }
     context.drawImage(
       weaponImage,
-      weaponFrame * 32,
-      weaponRow * 32,
-      32,
-      32,
+      weaponFrame * sourceFrameSize,
+      weaponRow * sourceFrameSize,
+      sourceFrameSize,
+      sourceFrameSize,
       Math.trunc(weaponCenterX - weaponSize / 2),
       Math.trunc(weaponCenterY - weaponSize / 2),
       Math.trunc(weaponSize),
       Math.trunc(weaponSize),
     );
     context.restore();
+
+    if (doubleCannon && unit.upgradeLevel > 0) {
+      const arrowAsset = `hud_upgrade_arrow_${unit.upgradeLevel}`;
+      const arrowImage = images[arrowAsset];
+      if (!arrowImage) throw new Error('Missing game image: ' + arrowAsset);
+      const sourceFrameWidth = arrowImage.naturalWidth / 3;
+      const densityScale = (2 / 3) * viewport.scaleFactor;
+      const arrowWidth = sourceFrameWidth * densityScale;
+      const arrowHeight = arrowImage.naturalHeight * densityScale;
+      const animationFrame = CANNON_UPGRADE_ARROW_FRAME_ORDER[
+        Math.floor(elapsedMs / 100) % CANNON_UPGRADE_ARROW_FRAME_ORDER.length
+      ]!;
+      const arrowCenterX = weaponCenterX + (viewport.tileSize * 1.5);
+      const arrowCenterY = weaponCenterY + viewport.tileSize;
+      context.drawImage(
+        arrowImage,
+        animationFrame * sourceFrameWidth,
+        0,
+        sourceFrameWidth,
+        arrowImage.naturalHeight,
+        Math.trunc(arrowCenterX - (arrowWidth / 2)),
+        Math.trunc(arrowCenterY - (arrowHeight / 2)),
+        Math.trunc(arrowWidth),
+        Math.trunc(arrowHeight),
+      );
+    }
   }
 
   if (unit.steamClouds?.length) {

@@ -72,7 +72,7 @@ test('Free Play exposes Lucky Lake with no progress prerequisite', async ({ page
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-new-mexico').click();
   await expect(page.getByTestId('campaign-level-07')).toBeEnabled();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('10/10 implemented levels available in Free Play');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('10 implemented levels available in this region');
   await page.getByTestId('campaign-level-07').click();
   await expect(page.getByRole('heading', { name: 'Lucky Lake' })).toBeVisible();
   await expect(page.locator('.campaign-overview-minimap')).toHaveJSProperty('naturalWidth', 192);

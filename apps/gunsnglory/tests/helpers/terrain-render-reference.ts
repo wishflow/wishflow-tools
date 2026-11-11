@@ -147,6 +147,10 @@ function deriveOriginalBackgroundCodes(content: CowGulchSource, random: SeededJa
   return background;
 }
 
+export function deriveOriginalBackgroundCodesForTest(content: CowGulchSource): number[][] {
+  return deriveOriginalBackgroundCodes(content, new SeededJavaRandom(VARIATION_SEED));
+}
+
 function backgroundAsset(value: number): string {
   if (value === 0) return 'tiles_desert';
   if (value > 0 && value < 16) return 'tiles_canyon';

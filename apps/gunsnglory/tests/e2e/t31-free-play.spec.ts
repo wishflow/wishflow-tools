@@ -62,7 +62,9 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  for (const level of [11, 12, 13, 14, 15, 16, 17, 18, 19, 20]) {
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('1 implemented level available in this region');
+  await expect(page.getByTestId('campaign-level-11')).toBeEnabled();
+  for (const level of [12, 13, 14, 15, 16, 17, 18, 19, 20]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();

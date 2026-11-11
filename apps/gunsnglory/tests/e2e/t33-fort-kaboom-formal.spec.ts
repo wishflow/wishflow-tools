@@ -434,7 +434,7 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
   await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
   await expect(status).toContainText('Wave 10/10');
   expect(await readLives(page)).toBeGreaterThan(0);
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('3/10 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('3/11 stages complete');
   await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
 
   const profile = await readProfile(page);

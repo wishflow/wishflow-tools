@@ -84,10 +84,25 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   await importExperimentArchive.hover();
   const hoverImportAppearance = await importExperimentArchive.evaluate((element) => {
     const style = getComputedStyle(element);
-    return { backgroundImage: style.backgroundImage, backgroundColor: style.backgroundColor, filter: style.filter };
+    return {
+      backgroundImage: style.backgroundImage,
+      backgroundColor: style.backgroundColor,
+      filter: style.filter,
+    };
   });
   expect(hoverImportAppearance).toMatchObject(idleImportAppearance);
   expect(hoverImportAppearance.filter).toContain('brightness(1.08)');
+  expect(hoverImportAppearance.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+
+  await importExperimentArchive.locator('input[type="file"]').focus();
+  const focusedImportAppearance = await importExperimentArchive.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundColor: style.backgroundColor, outlineStyle: style.outlineStyle, filter: style.filter };
+  });
+  expect(focusedImportAppearance.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(focusedImportAppearance.outlineStyle).toBe('none');
+  expect(focusedImportAppearance.filter).toContain('drop-shadow');
+  expect(focusedImportAppearance.filter).toContain('rgba(255, 226, 138');
 
   const desktopGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();

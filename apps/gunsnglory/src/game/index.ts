@@ -151,12 +151,18 @@ export interface ScenarioUnit {
   movementGroupId?: string;
   /** Restricts a movement group to one original rail axis. */
   movementAxis?: 'horizontal' | 'vertical';
+  /** Selects APK water movement collision rules; omitted units use ground rules. */
+  movementSurface?: 'water';
   /** Original collision bounds relative to this unit's fine position. */
   collisionBoxFine?: Rectangle;
   /** Hides the default sleeping bubble for map objects that use activity 4 for another purpose. */
   showSleepingEffect?: boolean;
-  /** Original LokSteam emitter, present only on Tech Town's lead locomotive. */
+  /** Original LokSteam emitter used by map locomotives and the Mississippi Steamer. */
   steamEmitter?: true;
+  /** APK-specific LokSteam spawn offset from the unit fine position. */
+  steamEmitterOffsetFine?: { x: number; y: number };
+  /** APK drawable sequence selected from fineX / xStepFine modulo the sequence length. */
+  positionAssetSequence?: { xStepFine: number; assets: readonly string[] };
   /** Original greeting sound played when selecting this map unit. */
   selectionSound?: UnitSelectionSound;
   type: string;
@@ -369,6 +375,8 @@ export interface ScenarioContent {
     background: readonly RenderTile[];
     streets: readonly RenderTile[];
     decorations?: readonly MapDecoration[];
+    /** APK BackgroundMap collision codes, indexed as [row][column], after terrain shaping. */
+    backgroundCollisionCodes?: readonly (readonly number[])[];
     /** Original TDM terrain values for source-faithful HUD minimap rendering. */
     originalTileGrid?: readonly (readonly number[])[];
   };
@@ -450,7 +458,14 @@ export interface UnitView extends ScenarioUnit {
     row: number;
     mirrored: boolean;
   };
-  /** Persistent facing used by the Tech Town Gatling overlay between shots. */
+  /** Separate firing frame for a weapon overlay that does not replace the unit body. */
+  weaponAnimation?: {
+    asset: string;
+    frame: number;
+    row: number;
+    mirrored: boolean;
+  };
+  /** Persistent facing used by map-mounted and train weapon overlays between shots. */
   weaponFacing?: { row: number; mirrored: boolean };
   steamClouds?: readonly SteamCloudView[];
 }
@@ -1005,6 +1020,12 @@ const PLAYER_SHOOTING_ANIMATIONS: Readonly<Record<string, {
   salesman: { asset: 'player_salesman_shot', frames: [[0, 100], [1, 300], [0, 1500]] },
   'train-12': { asset: 'player_gatling_shot', frames: [[0, 50], [1, 100]] },
 };
+const PLAYER_WEAPON_OVERLAY_SHOOTING_ANIMATIONS: Readonly<Record<string, {
+  asset: string;
+  frames: readonly ShootingAnimationFrame[];
+}>> = {
+  'steamer-32': { asset: 'player_double_cannon_shot', frames: [[0, 100]] },
+};
 const ENEMY_WALK_ANIMATION_CYCLE_FINE = 3072;
 const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (readonly [frame: number, inclusiveDistanceFine: number])[]>> = {
   1: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
@@ -1199,12 +1220,24 @@ function isTrainGatlingWagon(type: string): boolean {
   return type === 'train-12' || type === 'train-22';
 }
 
+function isDoubleCannonUnit(type: string): boolean {
+  return type === 'steamer-32';
+}
+
 function unitRenderOffsetAt(definition: ScenarioUnit, positionFine: { x: number; y: number }): { x: number; y: number } {
   const initialPosition = initialUnitPosition(definition);
   return {
     x: (positionFine.x - initialPosition.x) / FINE_UNITS_PER_CELL,
     y: (positionFine.y - initialPosition.y) / FINE_UNITS_PER_CELL,
   };
+}
+
+function unitAssetAt(definition: ScenarioUnit, positionFine: { x: number; y: number }): string {
+  const sequence = definition.positionAssetSequence;
+  if (!sequence || sequence.assets.length === 0 || sequence.xStepFine <= 0) return definition.asset;
+  const index = Math.trunc(positionFine.x / sequence.xStepFine);
+  const frame = ((index % sequence.assets.length) + sequence.assets.length) % sequence.assets.length;
+  return sequence.assets[frame] ?? definition.asset;
 }
 
 function nextUpgrade(unit: MutableUnit, maxUpgrades: number): UnitUpgradeDefinition | undefined {
@@ -1223,8 +1256,8 @@ function updateSteamEmitter(unit: MutableUnit, deltaMs: number, utilRandom: Java
     emitter.clouds.push({
       id: `${unit.definition.id}-steam-${emitter.nextCloudNumber}`,
       positionFine: {
-        x: unit.positionFine.x + TRAIN_STEAM_CLOUD_OFFSET_X_FINE,
-        y: unit.positionFine.y + TRAIN_STEAM_CLOUD_OFFSET_Y_FINE,
+        x: unit.positionFine.x + (unit.definition.steamEmitterOffsetFine?.x ?? TRAIN_STEAM_CLOUD_OFFSET_X_FINE),
+        y: unit.positionFine.y + (unit.definition.steamEmitterOffsetFine?.y ?? TRAIN_STEAM_CLOUD_OFFSET_Y_FINE),
       },
       remainingMs: TRAIN_STEAM_CLOUD_LIFETIME_MS,
       animationFrame: 0,
@@ -1247,12 +1280,14 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
   const { definition, positionFine } = unit;
   const upgrade = nextUpgrade(unit, maxUpgrades);
   const shootingAnimation = shootingAnimationView(unit);
+  const weaponAnimation = weaponOverlayAnimationView(unit);
   const { x: offsetX, y: offsetY } = unitRenderOffsetAt(definition, positionFine);
   const render = { ...definition.render, x: definition.render.x + offsetX, y: definition.render.y + offsetY };
   const hitArea = { ...definition.hitArea, x: definition.hitArea.x + offsetX, y: definition.hitArea.y + offsetY };
 
   return {
     ...clone(definition),
+    asset: unitAssetAt(definition, positionFine),
     ...(definition.activity === 4 && definition.showSleepingEffect !== false
       ? { sleepingAnimationFrame: Math.floor(elapsedMs / 200) % 3 }
       : {}),
@@ -1305,7 +1340,12 @@ function unitView(unit: MutableUnit, maxUpgrades: number, elapsedMs: number): Un
       },
     } : {}),
     ...(shootingAnimation ? { shootingAnimation } : {}),
-    ...(isTrainGatlingWagon(definition.type) ? {
+    ...(weaponAnimation ? { weaponAnimation } : {}),
+    ...(isDoubleCannonUnit(definition.type) ? {
+      weaponFacing: unit.weaponFacingDirection
+        ? weaponFacingView(unit.weaponFacingDirection)
+        : { row: 3, mirrored: false },
+    } : isTrainGatlingWagon(definition.type) ? {
       weaponFacing: unit.weaponFacingDirection
         ? weaponFacingView(unit.weaponFacingDirection)
         : { row: 1, mirrored: false },
@@ -1392,6 +1432,20 @@ function shootingAnimationView(unit: MutableUnit): UnitView['shootingAnimation']
   };
 }
 
+function weaponOverlayAnimationView(unit: MutableUnit): UnitView['weaponAnimation'] {
+  const direction = unit.shootingDirection;
+  if (unit.shootingAnimationElapsedMs === undefined || unit.shootingAnimationFrame === undefined || !direction) return undefined;
+
+  const animation = PLAYER_WEAPON_OVERLAY_SHOOTING_ANIMATIONS[unit.definition.type];
+  if (!animation) return undefined;
+
+  return {
+    asset: animation.asset,
+    frame: unit.shootingAnimationFrame,
+    ...weaponFacingView(direction),
+  };
+}
+
 function advanceShootingAnimation(unit: MutableUnit, deltaMs: number, didMove: boolean): void {
   if (unit.shootingAnimationElapsedMs === undefined) return;
   if (didMove) {
@@ -1401,7 +1455,8 @@ function advanceShootingAnimation(unit: MutableUnit, deltaMs: number, didMove: b
     return;
   }
 
-  const animation = PLAYER_SHOOTING_ANIMATIONS[unit.definition.type];
+  const animation = PLAYER_SHOOTING_ANIMATIONS[unit.definition.type]
+    ?? PLAYER_WEAPON_OVERLAY_SHOOTING_ANIMATIONS[unit.definition.type];
   if (!animation) {
     unit.shootingAnimationElapsedMs = undefined;
     unit.shootingAnimationFrame = undefined;
@@ -1478,6 +1533,14 @@ function isBackgroundCollisionCode(code: number): boolean {
     || code === 96;
 }
 
+function isWaterBackgroundCollisionCode(code: number): boolean {
+  return (code >= 12 && code <= 14)
+    || (code >= 16 && code <= 23)
+    || (code >= 48 && code <= 75)
+    || (code >= 97 && code < 128)
+    || (code >= 160 && code < 164);
+}
+
 function backgroundCollisionCode(rawTile: number, grid: ScenarioContent['originalTileGrid'], x: number, y: number): number {
   if (rawTile >= 120 && rawTile <= 126) return 96;
   if (BACKGROUND_BLOCKING_TILES.has(rawTile)) return 48;
@@ -1493,6 +1556,7 @@ function mapBlocksUnit(
   fineX: number,
   fineY: number,
   collisionBoxFine?: Rectangle,
+  movementSurface?: ScenarioUnit['movementSurface'],
 ): boolean {
   const grid = scenario.originalTileGrid;
   const width = scenario.map.width;
@@ -1515,11 +1579,20 @@ function mapBlocksUnit(
     const y = Math.floor(corner.y / FINE_UNITS_PER_CELL);
     // BackgroundMap.getBackground() returns -1 outside the map; -1 is not a blocking tile.
     if (x < 0 || y < 0 || x >= width || y >= height) continue;
+    if (movementSurface === 'water' && scenario.map.backgroundCollisionCodes) {
+      const collisionCode = scenario.map.backgroundCollisionCodes[y]?.[x];
+      if (collisionCode === undefined || isWaterBackgroundCollisionCode(collisionCode)) return true;
+      continue;
+    }
     if (!grid) continue;
     const rawTile = grid[y]?.[x];
     if (rawTile === undefined) return true;
     const streetLayerCode = STREET_LAYER_TILES.has(rawTile) ? 16 : 0;
-    if (isBackgroundCollisionCode(backgroundCollisionCode(rawTile, grid, x, y)) && streetLayerCode === 0) return true;
+    const code = backgroundCollisionCode(rawTile, grid, x, y);
+    const backgroundBlocked = movementSurface === 'water'
+      ? isWaterBackgroundCollisionCode(code)
+      : isBackgroundCollisionCode(code);
+    if (backgroundBlocked && (movementSurface === 'water' || streetLayerCode === 0)) return true;
   }
 
   const unitLeft = fineX + collider.x;
@@ -1658,15 +1731,18 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number,
   const moveY = Math.trunc((directionY * deltaMs) / 100);
   const nextX = unit.positionFine.x + moveX;
   const nextY = unit.positionFine.y + moveY;
+  const movementCollisionBox = unit.definition.movementSurface === 'water'
+    ? unit.definition.collisionBoxFine
+    : undefined;
 
   if (moveX !== 0
     && playerAxisWithinOriginalMapBounds(scenario, 'x', nextX, tileSizePixels)
-    && !mapBlocksUnit(scenario, nextX, unit.positionFine.y)) {
+    && !mapBlocksUnit(scenario, nextX, unit.positionFine.y, movementCollisionBox, unit.definition.movementSurface)) {
     unit.positionFine.x = nextX;
   }
   if (moveY !== 0
     && playerAxisWithinOriginalMapBounds(scenario, 'y', nextY, tileSizePixels)
-    && !mapBlocksUnit(scenario, unit.positionFine.x, nextY)) {
+    && !mapBlocksUnit(scenario, unit.positionFine.x, nextY, movementCollisionBox, unit.definition.movementSurface)) {
     unit.positionFine.y = nextY;
   }
 }
@@ -1710,7 +1786,7 @@ function moveUnitGroup(
       y: unit.positionFine.y + (coordinate === 'y' ? delta : 0),
     };
     return !playerAxisWithinOriginalMapBounds(scenario, coordinate, nextPosition[coordinate], tileSizePixels)
-      || mapBlocksUnit(scenario, nextPosition.x, nextPosition.y, unit.definition.collisionBoxFine);
+      || mapBlocksUnit(scenario, nextPosition.x, nextPosition.y, unit.definition.collisionBoxFine, unit.definition.movementSurface);
   });
   if (blocked) {
     clearGroupMovementTarget(group);
@@ -4084,7 +4160,9 @@ export function createGame(options: {
                 y: Math.sign(target.positionFine.y - genericStartFine.y) as -1 | 0 | 1,
               };
               unit.shootingDirection = firingDirection;
-              if (isTrainGatlingWagon(unit.definition.type)) unit.weaponFacingDirection = firingDirection;
+              if (isTrainGatlingWagon(unit.definition.type) || isDoubleCannonUnit(unit.definition.type)) {
+                unit.weaponFacingDirection = firingDirection;
+              }
               unit.weaponCooldownMs = weapon.reloadTimeMs;
               let specialReload = false;
               if (weapon.specialReloadFrequency !== undefined && weapon.specialReloadFrequency > 0) {

@@ -1,26 +1,20 @@
 # 实施计划
 
-规则见[产品规格](spec.md)、[架构](architecture.md)和[模拟与自动化契约](simulation-and-automation.md)。每轮先核对当前代码与专题审计，再细化接下来可独立验收的切片；每完成一个切片就更新本计划、移除已完成项并本地提交。
+规则见[产品规格](spec.md)、[架构](architecture.md)、[存储契约](storage-contracts.md)、[模拟与自动化契约](simulation-and-automation.md)和[经验记录](experience-log.md)。每轮先核对当前代码与证据，再细化接下来几个可独立验收的切片；每完成一个切片就更新本计划、移除已完成项并本地提交。
 
 ## 当前状态
 
-- 正式战役内容已实现 10/60 关：Cow Gulch、Apache Valley、Fort Kaboom、Tech Town、Billy Hills、Murdock Mountains、Lucky Lake、Cactusville、Railroad Ranch、Lost City。
-- [Cactusville 静态审计](map08-static-audit.md)及五个 map08 实现切片已完成；正式前置为 Lucky Lake，Free Play 可直接选择。该批公开提交为 `757acdef4d2650bf00e2151fe5b1682892b156f3`，工作流 `42913467245` 成功，两个 Pages 的构建 SHA 匹配。
-- [Railroad Ranch 静态审计](map09-static-audit.md)和实现已完成：原始 32×24 TDM、路线、静态对象、六组列车、四组炸药、七波、双语对白、正式第 9 关解锁、Free Play、结算和回放版本均已接入。关键关卡数据与 APK/DEX 证据交叉核对；没有为 APK 中不存在的玩家生成池补造规则。
-- map09 的完整本地检查通过：类型检查、503 项单测、生产构建和 131 项 E2E；仅保留既有主 JS chunk 超过 500 KB 的提示。两组因关卡目录扩充而过期的断言已更新。
-- map09 公开发布提交为 `9320536cccc052c7c86308d067138f24b3d7b2e1`；工作流 `42949401613` 的测试、Cloudflare Pages 和 GitHub Pages 均成功。两个 `build-info.json` 均报告该 SHA，内置浏览器已验证线上 Free Play 选关、困难难度、首波对白和战场地图。空档案下炸药按原版进度门槛保持锁定，触发器配对、解锁和爆炸行为由自动化测试覆盖。
-- Lost City 发布前的统计基线为 13 次 / 69 个已验收实现切片，比例 18.84%。本批 A–D 共 4 个实现切片，发布后为 14 次 / 73 个切片，比例 19.18%。
-- map05–map08 与 map09 批次均已发布。下一批从 New Mexico 第 10 关 Lost City 开始；[静态审计](map10-static-audit.md)已确认 TDM、完整路线、地图对象、十波、单位池、参数、文本与资源证据，并列出未知项。无需启动 Android 或完整通关。
-- Lost City 切片 A 已完成：从 APK 导入的 TDM 为 770 字节，SHA-256 与审计一致；新增 32×24 原始格网及 768 个背景格、157 个地形/铁路绘制命令。`node --import tsx --test tests/lost-city-map.test.ts` 通过。
-- Lost City 切片 B 已完成：实现四个出生点、两个出口、38 个方向节点及十条路线，接入两组列车、40 个静态场景对象和 23 个 TDM 单位（档案全解锁时）；补上此前遗漏的 activity 5 Indian。`pnpm run typecheck` 与 map10、map08/map09、Tech Town、Fort Kaboom 地图/单位相关的 40 项定向测试通过。
-- Lost City 切片 C 已完成：加入原版十波、29 个敌人请求池、四个玩家单位池及三个招募点、wave 1 库存/上限动作，并接入初始现金350、生命25、升级上限3、三档 HP 倍率与宝箱参数。6 项 map10 规则测试覆盖所有波次、生成入口、15秒开局延迟和无出敌结算；连同地图及相邻关卡回归共49项定向测试和类型检查通过。未完整模拟战役。
-- Lost City 切片 D 已完成：加入 APK 原版简介、胜利标题、十段双语对白、头像及语音映射；从 APK 提取 Gunslinger/Mexican 原图；组装正式 level 10，要求完成 Railroad Ranch，Free Play 可直接以任意难度进入；四种特殊单位可见性进入内容版本与回放重建。补齐正式菜单介绍/结算标题及对白音频资产预加载。定向 40 项单测和类型检查通过；map10、map09、Free Play 与总菜单共 5 项 E2E 在独立端口通过。
-- 首次 E2E 命令误连到默认端口上另一工作树的旧 Vite 服务，菜单只显示 7 个关卡并产生误报；已改用 `PLAYWRIGHT_PORT=4174`，确认本分支服务后通过。相关剪枝经验见[经验记录](experience-log.md#本地浏览器来源核对)。
-- Lost City 批次已完成集成发布：公开提交 `9e4b41fd7b4d0002b8c794a2fe7ec47aa44a4b4a`，Actions `42963501481` 全部成功。GitHub Pages 与 Cloudflare Pages 的根 `build-info.json` 均匹配该 SHA。内置浏览器已验证 Free Play 的 New Mexico 10/10 目录、Lost City 困难难度首波对白和战场，并确认实验室三张羊皮纸卡片保留原版贴图、底色透明，没有额外黄色矩形。
-- 完整 `CI=1 pnpm run test:ci` 通过类型检查、523 项单测、生产构建和 133 项 E2E。首轮 E2E 曾因语音重试按钮的过期名称断言失败；模板、定位器已修正，专项用例与最终完整检查均通过。Lost City 批次没有剩余发布门槛。
+- 正式战役已接入 11/60 关。Traveller’s Town 是 Mississippi 区域第 11 关；其 TDM 来源为 `res/raw/td_map_14.tdm`，不能根据关卡编号推测地图文件编号。
+- Traveller’s Town 批次已发布到 `master`：提交 `b6e05ca20a2d04bc1939ea82d4656842404ce9db`，Actions `43018344472` 成功。GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均与该 SHA 一致。
+- 最终 `CI=1 PLAYWRIGHT_PORT=4195 pnpm run test:ci` 通过：561 项单测、生产构建和 134 项 E2E。构建仍有 1.385 MB JavaScript chunk 超过 500 KB 的既有提示。
+- 内置浏览器静音、窗口模式验证 Free Play → Mississippi → Traveller’s Town → Hard；地图、Settlers 首波对白正常，继续后无缺图错误。没有进入全屏、开启声音或完整通关。
+- 发布后普通发布比例为 15 次 / 80 个已验收实现切片（18.75%），低于 20% 目标。
 
-## Lost City 批次收尾
+## 下一步：Mississippi 第 12 关静态审计
 
-已完成：完整本地 CI、集成与发布 squash、Actions 检查、双 Pages 来源 SHA 核对及内置浏览器代表性验收。保持静音、窗口模式；未推进完整战役。
+下一关入口显示为 Steam Valley。先完成静态审计，再细化实现计划；不得根据关卡顺序假设对应的 TDM 编号或复制 Traveller’s Town 参数。
 
-**未知项处理：**已检索反编译生产源码，未发现 `awesomeMessageMin=30000` 对应消费者；保留未知且不作为内容接入阻塞项。APK 随机贴图的每次启动结果无需逐次复刻；网页沿用已验证的固定种子策略。
+1. 从 APK/REA 静态材料确认第 12 关的正式名称、实际 TDM 文件、完整地图尺寸与图层、路径、地图对象和资源引用。
+2. 交叉核对敌人请求与波次、玩家单位池、难度数值、对白与音频、解锁条件、结算和回放兼容行为；未知项标出代码/资源入口及所需证据。
+3. 产出主题化审计结果，并核对所有引用材料。审计通过门槛：地图文件对应关系明确；可实现内容清单与规则数据可追溯；关键未知项已解决或明确阻塞原因。
+4. 审计通过后，再把第 12 关拆成独立实现与验收切片，列明依赖、定向测试和批次门槛；计划可判定前不开始写关卡代码。

@@ -21,6 +21,7 @@
 - **风险表现：**直接照搬 JADX 输出可能把新开局与读取未完成存档的对象创建分支看反；只凭一张地图预览断言路线正确，也可能漏掉不同入口和随机转向组合。
 - **证据与核实：**`GameObjectManager.createGameObjectsFromBasicMap` 的 JADX 伪代码在 map-load 布尔分支处存在控制流重建歧义。比较 `GameObjectManager.smali` 的真实跳转条件后，确认新开局会从 TDM 创建睡眠/活动单位和列车，存档加载则恢复已保存对象。该结论以 APK 的 smali 分支为准，不把伪代码描述成原始源码。
 - **路线复核：**解析 `EnemyDirectorField` 方向表和 `PriorityMap.recursiveLengthTracking` 后，用明确的具体路径独立计算所有路线格优先级，再与网页 TypeScript 算法逐格比较；map05 的 5 个路线变体、142 个路线格均匹配。属于静态算法交叉校验，不是 Android 或浏览器运行观察。
+- **路线方向字段：**`WaveRouteDefinition.redirects[n].directions` 表示从该控制点离开的方向，不是从前一个节点进入该点的方向。map14 首次编写时把图边的方向误记在目标节点上；从原始 TDM 重新解出的方向图测试立即失败。修正后比较全部 13 条完整路径及 59 条有向边。新增地图路线时按控制点的出边填写，并用原始 TDM 独立展开每个分支；只检查路线经过了哪些格子不足以验证方向。
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
 
 ## TDM 单位 marker 必须验证到最终场景单位
@@ -31,6 +32,7 @@
 - **根因与证据：**APK DEX/Smali 的 104–109 分支按 `tile − 103` 创建 unit type 1–6 并设为 activity 5；JADX 把该分支误还原成空块。网页共享工厂此前只创建 activity 5 的 Gunslinger、Mexican 与 Gambler，type 3–6 走到“只处理 activity 4”的分支后被跳过。map10 的 107 因此漏掉；已有 Tech Town 测试只核对 marker→类型/activity 的解码，没有用包含 type 4 activity 5 的真实 TDM 验证最终场景。
 - **修复与防回归：**activity 5 的 Fort 类地图单位现在复用 APK 对应设计的 awake 素材、尺寸锚点、速度、音效与武器；map10 测试从实际 TDM 核对全部单位坐标、类型和 activity，并断言 active Indian 使用 `player_indian` 且不带 hire 状态。每张地图的检查应同时覆盖原始 marker、共享 placement 与最终 `ScenarioUnit`，不可把中间映射表测试当成对象已生成的证明。
 - **避免重复：**不需要重新反编译这条 104–109 分支；总表和 Smali/DEX 已足以定类型。后续若再遇到同类问题，应先检查共享工厂是否真的消费所有已解码的类型/activity 组合。
+- **map14 特殊边界：**标记 96–101 在该地图只属于读档恢复路径。直接调用会扫描整张 TDM 的通用 New Mexico 工厂，会错误地在新开局出现休眠雇佣单位；map14 应由专用工厂只取 104/105，并仅在里程碑解锁后创建 130/131。`mississippi-11-entities-and-routes.test.ts` 与 `mississippi-11-campaign.test.ts` 分别验证新开局只有两个活动单位、特殊单位按里程碑显隐。
 
 ## 出生池验证应使用来源 ID，不猜地图坐标
 
@@ -78,12 +80,19 @@
 
 ## 实验档案导入按钮 hover 覆盖木按钮贴图
 
-**状态：**CSS 已修复，定向与完整本地检查通过；已合入 Guns’n’Glory 集成分支，随下一完整发布批次上线。
+**状态：**纯 hover 的实色背景问题已修复；后续发现的焦点矩形也已修复并通过定向 E2E。
 
 - **表现与复现：**在实验工作台悬停“Import experiment archive”，按钮下方出现深绿色矩形；相邻导出按钮仍显示木质按钮图。
 - **根因与证据：**`.experiment-archive-actions .replay-import-label:hover` 设置纯色 `background` 简写。该悬浮选择器比 `.lab-workbench .replay-import-label` 更具体，因而清除了文件标签的木质背景图；普通按钮有较晚的木按钮规则，所以视觉上只有导入标签异常。
 - **漏测点：**之前只检查木按钮静止状态，没有把鼠标悬浮到文件导入标签并比较计算后的背景图。
 - **修复与防回归：**纯色悬浮背景只保留给普通按钮；文件导入标签沿用木按钮图，只用亮度滤镜反馈悬浮。`t41-lab-workbench.spec.ts` 对比标签悬浮前后的背景图和底色，并断言悬浮滤镜提亮，避免再出现实色方框。
+
+### 焦点状态不能伪装成 hover 缺陷
+
+- **复现与观察：**当前代码中，Playwright 纯鼠标 hover 后木按钮贴图仍在、底色透明；点击文件导入标签后，隐藏文件输入获得焦点，旧 `:focus-within` 规则会给标签加矩形轮廓。指针留在标签上时，焦点轮廓容易被误认为 hover 时新增的深色矩形。
+- **根因与漏测：**`.experiment-archive-actions .replay-import-label:focus-within` 使用矩形 outline，和其他木按钮的美术反馈不一致。原 `t41-lab-workbench.spec.ts` 只验证纯 hover，没有单独覆盖文件输入焦点，也没有区分“hover-only”与“focus-within”。
+- **修复与验证：**移除导入标签的矩形焦点 outline；文件输入聚焦时用暖金色滤镜高亮木按钮贴图，并显式保持底色透明。`t41-lab-workbench.spec.ts` 分别检查 hover 背景/贴图和 focus-within 轮廓/高亮；该 spec 3 项通过。内置浏览器截图确认焦点矩形已消失，按钮外观与同组木按钮一致。
+- **防回归：**文件导入标签应分别验证 hover、focus-within 和 hover+focus 状态；不要仅因指针位于控件上就把焦点轮廓归因于 hover。标签背景始终透明，视觉反馈贴合按钮图案，不铺矩形实色底或矩形 outline。
 
 ## 羊皮纸告示牌下露出规则黄色底
 
@@ -329,3 +338,22 @@
 - **根因与证据：**APK 派生的 `terrain-render-index.json` 显示原始 tile 81 在 (15,3)、(26,3)、(14,17) 变为 street code 68；code 68 的绘制规则同时发出 `tiles_railway_hori` 和完整 `tiles_bridge_hori`，另有左右桥墩。旧参考生成器只为 code 68 发出铁轨与桥墩，遗漏了桥面；map08 没有这些铁路 marker，因此此前测试未覆盖这类复合地形格。
 - **修复与防回归：**参考生成器和 map09 JSON 补入桥面层，保持铁轨→桥面→桥墩的绘制顺序。`railroad-ranch-terrain.test.ts` 核对 TDM 每格、APK 派生的背景/street 命令、三段桥面和六个桥墩坐标、贴图 source rectangle 与地图边界。静态索引只证明绘制候选和源码规则，不冒充 Android 截图或逐帧随机结果。
 - **验证：**定向地形测试 2 项通过，TypeScript 类型检查通过。完整 `test:ci` 留到 map09 批次收尾运行。
+
+## Playwright 不应复用其他 worktree 的本地服务器
+
+- **表现与复现：**不带 `CI=1` 在当前 worktree 运行多个 Playwright spec 时，测试复用了端口 4173 上已运行的开发服务器。错误页面仍显示旧版 `7/10` Free Play 文案和旧关卡可用状态，因此多项用例看似与当前改动冲突。
+- **根因与证据：**`playwright.config.ts` 设置 `reuseExistingServer: !process.env.CI`。Playwright 可以连接任意已占用该端口的服务，不会确认服务属于当前 worktree；失败上下文与当前 `src/main.ts` 的新文案不一致。使用 `CI=1` 并指定独立 `PLAYWRIGHT_PORT=4183` 后，浏览器测试由当前 worktree 的 Vite 服务运行，受影响 10 项通过；独立端口上新增 M11 E2E 也通过。
+- **修复与防回归：**产品代码无需为该测试环境问题调整。验证源码行为时使用 `CI=1`；并行 worktree 手动运行 Playwright 时使用各自独立端口。出现与当前源码不一致的页面状态时，先确认服务进程和端口，再改产品代码或断言。
+
+## 战役进度快照断言要跟随正式关卡目录
+
+- **表现与复现：**加入全球第 11 关后，完整单测中 `progress.test.ts` 的“旧 Cow Gulch 档案保持隔离”用例和六项 E2E 仍期望 10 个正式阶段；实际摘要已按目录显示 11 关。
+- **根因与证据：**`officialCampaignStages` 已登记 Traveller’s Town，但单测初态对象、结算后状态数组及 `t20`、`t22`、`t25`、`t28`、`t33` 的 E2E 文案断言仍硬编码为十项。进度与存档逻辑正确，差异来自全局测试快照遗漏新阶段。
+- **修复与防回归：**单测快照明确加入 `campaign-mississippi-11` 的锁定状态；六项 E2E 的进度分母改为 11。每次登记正式战役关卡后，应搜索依赖 `officialCampaignStages` 数量或完整状态序列的单测、浏览器测试与菜单文案。
+
+## 正式关卡的专属资源必须加入启动预加载
+
+- **表现与复现：**Free Play 打开 Traveller’s Town 后，对白、标题和规则正常，但 Canvas 被错误恢复画面替换，并出现“必需游戏图片未加载”的提示；按下对白 Continue 后仍无法绘制地图。
+- **根因与证据：**`main.ts` 的 `assetNames` 是应用启动时加载游戏图像的唯一清单，原清单只收集到 Lucky Lake 等已有内容，没有收集 `createMississippi11CampaignContent()`。Mississippi 专属 `miss_tiles_*` 地形、`steamboat_*` 及该地图引用的列车/装饰资产因此不在 `images` 中；`drawGame()` 遇到首个缺失资源便绘制黑色错误恢复画面。逐项检查确认关卡引用的贴图文件均在 `public/assets`，问题是未预加载而非资源文件缺失。原 `t49` 只检查菜单、对白和波次文本，没有检查 Canvas 资源错误面板，因而该缺陷可在测试通过时漏出。
+- **修复与防回归：**把所有解锁状态下的 Traveller’s Town 内容加入资源收集集合，使地图、静态对象、列车、蒸汽船和单位资源一并预加载；`t49-mississippi-11-integration.spec.ts` 在对白显示后及继续进入战场后断言 `asset-load-error` 隐藏。若新关卡首屏内容正确而地图是黑色，先核对地图对象/单位对资源清单的引用，不要用占位贴图或吞掉 renderer 错误掩盖问题。
+- **验证：**Node 22 对地图背景、道路、装饰和单位资源做路径存在性核对，所有引用文件存在；`pnpm run typecheck` 通过；`CI=1 PLAYWRIGHT_PORT=4192 pnpm exec playwright test tests/e2e/t49-mississippi-11-integration.spec.ts --workers=1` 通过（1 项）。内置浏览器在本地窗口模式、静音下确认 Mississippi 地形、静态对象、铁路和两列列车正常显示，错误面板未出现。新增 390×844 窄屏布局断言后，最终 `CI=1 PLAYWRIGHT_PORT=4195 pnpm run test:ci` 通过：类型检查、561 项单测、生产构建和 134 项 Playwright E2E；构建保留既有 1.385 MB JS chunk 警告。线上发布提交 `b6e05ca` 的 Actions `43018344472` 成功，GitHub Pages 与 Cloudflare Pages 均报告匹配来源 SHA；内置浏览器再确认 Free Play 第 11 关对白、地图和继续进入首波正常。全程未进入全屏或播放声音。

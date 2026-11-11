@@ -23,6 +23,11 @@ import {
   lostCityCampaignContentVersion,
   lostCityCampaignId,
 } from './lost-city-campaign';
+import {
+  createMississippi11CampaignContent,
+  mississippi11CampaignContentVersion,
+  mississippi11CampaignId,
+} from './mississippi-11-campaign';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -86,6 +91,9 @@ export const railroadRanchLevelNineCampaignContent = createRailroadRanchCampaign
 /** Formal New Mexico level ten assembled from the researched Lost City content. */
 export const lostCityLevelTenCampaignContent = createLostCityCampaignContent();
 
+/** Formal Mississippi level eleven assembled from the researched Traveller's Town content. */
+export const mississippi11LevelElevenCampaignContent = createMississippi11CampaignContent();
+
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
   contentVersion: cowGulchLevelOneContent.contentVersion,
@@ -146,4 +154,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: lostCityLevelTenCampaignContent.title,
   globalLevel: 10,
   requiresCompletedScenarioIds: [railroadRanchCampaignId],
+}, {
+  scenarioId: mississippi11CampaignId,
+  contentVersion: mississippi11CampaignContentVersion,
+  title: { en: "Traveller's Town · Level 11", zh: '旅行者小镇 · 第 11 关' },
+  globalLevel: 11,
+  requiresCompletedScenarioIds: [lostCityCampaignId],
 }]);

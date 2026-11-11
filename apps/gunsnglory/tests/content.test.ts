@@ -20,6 +20,7 @@ import {
   luckyLakeLevelSevenCampaignContent,
   lostCityLevelTenCampaignContent,
   murdockMountainsLevelSixCampaignContent,
+  mississippi11LevelElevenCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -179,6 +180,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: lostCityLevelTenCampaignContent.title,
     globalLevel: 10,
     requiresCompletedScenarioIds: [railroadRanchLevelNineCampaignContent.id],
+  }, {
+    scenarioId: mississippi11LevelElevenCampaignContent.id,
+    contentVersion: mississippi11LevelElevenCampaignContent.contentVersion,
+    title: { en: "Traveller's Town · Level 11", zh: '旅行者小镇 · 第 11 关' },
+    globalLevel: 11,
+    requiresCompletedScenarioIds: [lostCityLevelTenCampaignContent.id],
   }]);
 });
 
