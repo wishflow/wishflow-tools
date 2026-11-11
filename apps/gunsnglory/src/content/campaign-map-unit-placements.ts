@@ -8,7 +8,7 @@ export interface CampaignMapUnitPlacement {
 }
 
 export interface CampaignTrainPlacement {
-  sourceCode: 83 | 84 | 91 | 92;
+  sourceCode: 83 | 84 | 91 | 92 | 93;
   unitTypeId: 10 | 11 | 12 | 20 | 21 | 22;
   activity: 4 | 5;
   movementAxis: 'horizontal' | 'vertical';
@@ -42,93 +42,144 @@ export function createCampaignMapUnitPlacements(
   }));
 }
 
-/** Decodes the original two-engine horizontal train followed by one or more wagons. */
+/** Decodes every independent two-engine horizontal train encoded in a campaign TDM. */
+export function createHorizontalTrainPlacementGroups(
+  tileGrid: readonly (readonly number[])[],
+): CampaignTrainPlacement[][] {
+  const groups: CampaignTrainPlacement[][] = [];
+
+  for (const [y, row] of tileGrid.entries()) {
+    let x = 0;
+    while (x < row.length) {
+      if (row[x] === 84) {
+        throw new Error('Campaign TDM horizontal train has an isolated wagon marker');
+      }
+      if (row[x] !== 83) {
+        x += 1;
+        continue;
+      }
+      if (row[x + 1] !== 83 || row[x + 2] !== 84) {
+        throw new Error('Campaign TDM horizontal train must start with two engines and at least one wagon');
+      }
+
+      let endX = x + 2;
+      while (row[endX] === 84) endX += 1;
+
+      const placements: CampaignTrainPlacement[] = [];
+      for (let index = x; index < endX; index += 1) {
+        const groupIndex = index - x;
+        const unitTypeId: CampaignTrainPlacement['unitTypeId'] = groupIndex === 0 ? 10 : groupIndex === 1 ? 11 : 12;
+        const asset: CampaignTrainPlacement['asset'] = groupIndex === 0
+          ? 'lok_hori_1of2'
+          : groupIndex === 1 ? 'lok_hori_2of2' : 'lok_wagon_hori';
+        placements.push({
+          sourceCode: groupIndex < 2 ? 83 : 84,
+          unitTypeId,
+          activity: groupIndex < 2 ? 5 : 4,
+          movementAxis: 'horizontal',
+          asset,
+          cell: { x: index, y },
+        });
+      }
+      groups.push(placements);
+      x = endX;
+    }
+  }
+
+  if (groups.length === 0) {
+    throw new Error('Campaign TDM must contain at least one horizontal train with two engines and a wagon');
+  }
+  return groups;
+}
+
+/** Decodes every independent horizontal train; legacy callers require exactly one. */
 export function createHorizontalTrainPlacements(
   tileGrid: readonly (readonly number[])[],
 ): CampaignTrainPlacement[] {
-  const starts = tileGrid.flatMap((row, y) => row.flatMap((code, x) => (
-    code === 83 && row[x + 1] === 83 && row[x + 2] === 84 ? [{ x, y }] : []
-  )));
-  const engineCount = tileGrid.reduce((count, row) => count + row.filter((code) => code === 83).length, 0);
-  const wagonCount = tileGrid.reduce((count, row) => count + row.filter((code) => code === 84).length, 0);
-
-  if (starts.length !== 1 || engineCount !== 2 || wagonCount < 1) {
-    throw new Error('Campaign TDM must contain one horizontal train with two engines and at least one wagon');
+  const groups = createHorizontalTrainPlacementGroups(tileGrid);
+  if (groups.length !== 1) {
+    throw new Error(`Campaign TDM must contain one horizontal train; found ${groups.length}`);
   }
-
-  const { x: startX, y } = starts[0]!;
-  const row = tileGrid[y]!;
-  const endX = startX + 2 + wagonCount;
-  if (row.slice(startX, endX).some((code, offset) => code !== (offset < 2 ? 83 : 84))) {
-    throw new Error('Campaign TDM train markers must form one contiguous horizontal group');
-  }
-
-  const placements: CampaignTrainPlacement[] = [];
-  for (let index = 0; index < 2 + wagonCount; index += 1) {
-    const unitTypeId: CampaignTrainPlacement['unitTypeId'] = index === 0 ? 10 : index === 1 ? 11 : 12;
-    const asset: CampaignTrainPlacement['asset'] = index === 0
-      ? 'lok_hori_1of2'
-      : index === 1 ? 'lok_hori_2of2' : 'lok_wagon_hori';
-    placements.push({
-      sourceCode: index < 2 ? 83 : 84,
-      unitTypeId,
-      activity: index < 2 ? 5 : 4,
-      movementAxis: 'horizontal',
-      asset,
-      cell: { x: startX + index, y },
-    });
-  }
-  return placements;
+  return groups[0]!;
 }
 
-/** Decodes the original vertical train, whose wagons precede its two locomotive pieces. */
+/** Decodes every vertical train, whose wagons precede its two locomotive pieces. */
+export function createVerticalTrainPlacementGroups(
+  tileGrid: readonly (readonly number[])[],
+): CampaignTrainPlacement[][] {
+  const isWagon = (code: number | undefined) => code === 92 || code === 93;
+  const isTrainMarker = (code: number | undefined) => isWagon(code) || code === 91;
+  const consumed = new Set<string>();
+  const groups: CampaignTrainPlacement[][] = [];
+
+  for (let y = 0; y < tileGrid.length; y += 1) {
+    const row = tileGrid[y]!;
+    for (let x = 0; x < row.length; x += 1) {
+      if (!isWagon(row[x]) || isWagon(tileGrid[y - 1]?.[x])) continue;
+
+      let endY = y;
+      while (isWagon(tileGrid[endY]?.[x])) endY += 1;
+      if (tileGrid[endY]?.[x] !== 91 || tileGrid[endY + 1]?.[x] !== 91) {
+        throw new Error('Campaign TDM vertical train must have contiguous wagons followed by two engines');
+      }
+
+      const placements: CampaignTrainPlacement[] = [];
+      for (let wagonY = y; wagonY < endY; wagonY += 1) {
+        const sourceCode = tileGrid[wagonY]![x] as 92 | 93;
+        placements.push({
+          sourceCode,
+          unitTypeId: 22,
+          activity: sourceCode === 92 ? 4 : 5,
+          movementAxis: 'vertical',
+          asset: 'lok_wagon_verti',
+          cell: { x, y: wagonY },
+        });
+      }
+      placements.push({
+        sourceCode: 91,
+        unitTypeId: 20,
+        activity: 5,
+        movementAxis: 'vertical',
+        asset: 'lok_verti_2of2',
+        cell: { x, y: endY },
+      });
+      placements.push({
+        sourceCode: 91,
+        unitTypeId: 21,
+        activity: 5,
+        movementAxis: 'vertical',
+        asset: 'lok_verti_1of2',
+        cell: { x, y: endY + 1 },
+      });
+
+      for (let consumedY = y; consumedY <= endY + 1; consumedY += 1) {
+        consumed.add(`${x},${consumedY}`);
+      }
+      groups.push(placements);
+    }
+  }
+
+  for (let y = 0; y < tileGrid.length; y += 1) {
+    for (let x = 0; x < tileGrid[y]!.length; x += 1) {
+      if (isTrainMarker(tileGrid[y]![x]) && !consumed.has(`${x},${y}`)) {
+        throw new Error('Campaign TDM vertical train has an isolated or invalid train marker');
+      }
+    }
+  }
+
+  if (groups.length === 0) {
+    throw new Error('Campaign TDM must contain at least one vertical train with wagons and two engines');
+  }
+  return groups;
+}
+
+/** Decodes the original vertical train; legacy callers require exactly one. */
 export function createVerticalTrainPlacements(
   tileGrid: readonly (readonly number[])[],
 ): CampaignTrainPlacement[] {
-  const wagonCount = tileGrid.reduce((count, row) => count + row.filter((code) => code === 92).length, 0);
-  const locomotiveCount = tileGrid.reduce((count, row) => count + row.filter((code) => code === 91).length, 0);
-  const starts = tileGrid.flatMap((row, y) => row.flatMap((code, x) => (
-    code === 92 && (y === 0 || tileGrid[y - 1]?.[x] !== 92) ? [{ x, y }] : []
-  )));
-
-  if (starts.length !== 1 || wagonCount < 1 || locomotiveCount !== 2) {
-    throw new Error('Campaign TDM must contain one vertical train with wagons and two locomotive markers');
+  const groups = createVerticalTrainPlacementGroups(tileGrid);
+  if (groups.length !== 1) {
+    throw new Error(`Campaign TDM must contain one vertical train; found ${groups.length}`);
   }
-
-  const { x, y: startY } = starts[0]!;
-  const trainCodes = Array.from({ length: wagonCount + locomotiveCount }, (_, index) => (
-    tileGrid[startY + index]?.[x]
-  ));
-  if (trainCodes.some((code, index) => code !== (index < wagonCount ? 92 : 91))) {
-    throw new Error('Campaign TDM vertical train markers must form one contiguous wagon-to-locomotive column');
-  }
-
-  const placements: CampaignTrainPlacement[] = [];
-  for (let index = 0; index < wagonCount; index += 1) {
-    placements.push({
-      sourceCode: 92,
-      unitTypeId: 22,
-      activity: 4,
-      movementAxis: 'vertical',
-      asset: 'lok_wagon_verti',
-      cell: { x, y: startY + index },
-    });
-  }
-  placements.push({
-    sourceCode: 91,
-    unitTypeId: 20,
-    activity: 5,
-    movementAxis: 'vertical',
-    asset: 'lok_verti_2of2',
-    cell: { x, y: startY + wagonCount },
-  });
-  placements.push({
-    sourceCode: 91,
-    unitTypeId: 21,
-    activity: 5,
-    movementAxis: 'vertical',
-    asset: 'lok_verti_1of2',
-    cell: { x, y: startY + wagonCount + 1 },
-  });
-  return placements;
+  return groups[0]!;
 }
