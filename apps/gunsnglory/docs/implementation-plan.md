@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- 公开版正式战役仍为 17/60 关；Shadow Town（第18关）的 M18-A–F 已在功能分支完成并通过本地完整 CI，尚未 squash 发布。Mississippi 区域第 11–18 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace、Dead Rocks、Shadow Town，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_21.tdm`；不能根据关卡编号推测地图文件编号。
+- 公开版正式战役已接入至第18/60关；Shadow Town（第18关）的 M18-A–F 已完成本地完整 CI、squash 发布、双 Pages 部署 SHA 核对和公开浏览器验收。Mississippi 区域第 11–18 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace、Dead Rocks、Shadow Town，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_21.tdm`；不能根据关卡编号推测地图文件编号。
 - Mississippi 第17关 Dead Rocks 已完成并发布。地图、路线、对象/单位、八波、双语内容、正式战役、Free Play、结算和回放均已接入；M11–M16 的新局可招募标记语义及旧回放兼容也已修正。静态证据见 [M17 静态审计](map17-static-audit.md)。
 - M17 发布提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5`；GitHub Actions `43246826051` 成功，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该来源 SHA。内置浏览器静音、窗口模式从 Free Play → Mississippi → Dead Rocks → Medium 进入，地图、Settlers 开场对白和 `1/8` 波次 HUD 正常；未完整手动通关、启动 Android、进入全屏或播放声音。
 - M17 批次完整检查 `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过：TypeScript、661 项单测、生产构建及147项 E2E。发布后累计普通发布比例为21次/105个已验收实现切片（20.0%）。回同步已完成：合并提交 `fcf622e376c34ab0efff7a4c5a6705f0f4fa4c24` 已推送至 `origin/gunsnglory`；下一批为 Mississippi 第18关 Shadow Town。
@@ -83,7 +83,7 @@ Dead Rocks 使用 APK 的 `res/raw/td_map_20.tdm`，作为 Mississippi 第17关�
 
 M17 发布后累计普通发布比例为21/105（20.0%）。批次已关闭：`master` 与 `origin/master` 为 M17 发布提交，`gunsnglory` 与 `origin/gunsnglory` 均包含该发布提交和回同步合并提交。
 
-## 当前活动批次：Shadow Town（M18）
+## 最近完成批次：Shadow Town（M18）
 
 目标是将 APK 的 Mississippi 第18关 Shadow Town（`res/raw/td_map_21.tdm`）接入现有地图、规则、关卡目录和回放契约。先完成静态数据审计，再按下表顺序逐片实现；每片运行针对性检查、本地提交并同步更新本计划。
 
@@ -94,7 +94,10 @@ M17 发布后累计普通发布比例为21/105（20.0%）。批次已关闭：`m
 | M18-C（已完成） | 地图对象、单位与解锁 | 接入三名初始 Gunslinger、两处 Saloon 和 Fort、Dynamite 配对；修复 Mississippi 共用场景表遗漏的4个 `116` 双格木屋及其碰撞；按全局进度快照显示 marker 130/131。新局忽略 marker 96–101；修复共享单位工厂对多名同类初始角色生成重复 ID 的问题。 | 坐标、数量、贴图、锚点/占格与 TDM/Smali 一致；三名 Gunslinger ID 唯一；Dynamite 完成 global level 20/30 才解锁；Pyromaniac/Salesman 分别遵守第50/60关解锁；不生成存档恢复单位或伪造初始 Cannon。21项 M14–M18 实体/地图定向测试及 TypeScript 检查通过。 |
 | M18-D（已完成） | 波次、炮池与数值规则 | 接入 `$425`、20条生命、3级升级上限、三档敌人 HP 倍率、八波/37个敌人生成请求及 wave 2 的 Saloon/Fort 玩家单位池动作。Cannon 与地图没有新局 marker 的 Mexican 使用已有 `template` 契约，不在地图上伪造单位；Mexican 模板由共享 New Mexico 单位工厂导出。 | `GameSession` 初态及全部 wave metadata、APK action ID 到 `spawnPointId` 映射、十槽请求向量、池类型/计数/上限与 `GameDesignWaves` 源调用逐项一致；短会话验证 wave 2 单位池真实生成、Saloon/Fort 坐标和 pool-only Cannon 激活。M18规则5项、地图/实体回归7项及 TypeScript 检查通过。 |
 | M18-E（已完成） | 关卡目录、双语与回放 | 新建 `mississippi-18-identity/copy/wave-intros/content-version/campaign` 模块，接入八波对白与肖像、英文原版/中文项目译文、Map 21 图标、正式关卡18及 level17 前置、Free Play、结算与解锁快照回放。沿用 `template` 池契约；不改 `campaignCatalog` 已有的 level18/map21 条目。并修复选关、概览和难度地图按 global level 而非 `mapFileNumber` 取缩略图的问题。 | 正式关卡目录共18项且 Shadow Town 依赖 Dead Rocks；无进度时锁定，完成17解锁；Free Play三档可进入。文本/对白/肖像/声音及 `gng_levelmap_21` 离线资源可用。正式胜利写入 level18，Free Play 不写正式档案；特殊单位与 Dynamite 回放快照通过。M18 内容、正式进度/回放、规则、地图/实体定向测试共18项及 TypeScript 检查通过。 |
-| M18-F（本地验收已完成；整批发布待执行） | 入口回归与批次验收 | 添加 Shadow Town 真实入口 E2E；更新只因新增正式关卡或 Mississippi Free Play 可玩关卡数变化而过期的目录/Progress 测试；回归 M17 入口与内容，不重测无关地图功能。通过后进入整批集成发布。 | Free Play 与正式战役分别从选关进入 Shadow Town，检查锁定/解锁、map21 图标、标题、首波对白和 `1/8` HUD；目录计数与阶段快照一致。完整 `CI=1 PLAYWRIGHT_PORT=43125 pnpm run test:ci` 通过：TypeScript、679项单测、生产构建和149项 E2E；本地内置浏览器静音、窗口模式验证 Free Play → Mississippi → Shadow Town → Medium，开场对白和 `01/08` HUD 正常。M18五个实现/回归切片加一次发布后预计为22/110（20.0%）。 |
+| M18-F（已完成） | 入口回归与批次验收 | 添加 Shadow Town 真实入口 E2E；更新只因新增正式关卡或 Mississippi Free Play 可玩关卡数变化而过期的目录/Progress 测试；回归 M17 入口与内容，不重测无关地图功能。 | Free Play 与正式战役分别从选关进入 Shadow Town，检查锁定/解锁、map21 图标、标题、首波对白和 `1/8` HUD；目录计数与阶段快照一致。完整 `CI=1 PLAYWRIGHT_PORT=43125 pnpm run test:ci` 通过：TypeScript、679项单测、生产构建和149项 E2E；本地内置浏览器静音、窗口模式验证 Free Play → Mississippi → Shadow Town → Medium，开场对白和 `01/08` HUD 正常。 |
+| M18-R1（已完成） | squash 集成与发布 | 将 M18-A–F 合并为一个发布提交并推送 `master`。 | 发布提交 `5bb027186ea34eec06468c0fb365238c6e33a053`；GitHub Actions `43270314726` 全部适用工作通过，GitHub Pages 与 Cloudflare Pages 均完成部署。 |
+| M18-R2（已完成） | 来源 SHA 与公开浏览器验收 | 核对两个 Pages 的 `build-info.json`，并以静音、窗口模式完成 Shadow Town 代表性流程。 | 两个 Pages 的 `sourceSha` 均为 `5bb027186ea34eec06468c0fb365238c6e33a053`；内置浏览器确认 Shadow Town、地图、Pedro 开场对白与 `01/08` HUD 正常。首次加载曾提示一项必需图片失败，重试后恢复；失败资源名称及首次失败原因未知。 |
+| M18-R3（已完成） | 发布回同步至集成分支 | 将已发布 master 与最终计划更新合并回 `gunsnglory` 并推送。 | 合并提交 `482cbdd` 将 M18 发布 SHA 纳入 `gunsnglory`；最终计划随本次同步提交，两分支远端均与同一发布历史对齐。 |
 
 ### M18-E 完成结果
 
@@ -108,15 +111,14 @@ M17 发布后累计普通发布比例为21/105（20.0%）。批次已关闭：`m
 - **入口 E2E（已完成）：**新增 Shadow Town Free Play 与正式战役入口流程；验证选关、map21 缩略图、概览、难度、首波对白与 `1/8` HUD，不推进完整关卡。IndexedDB fixture 证明完成到第16关时第18关锁定，记录第17关完成后开放；Free Play 不要求战役进度。
 - **目录与回归（已完成）：**将旧正式目录长度断言从17更新为18，补齐 Apache Valley、Cow Gulch、Progress 与 Fort Kaboom 的第18关目录/状态快照；将 Mississippi Free Play 可玩数断言从7更新为8，并调整其第18关禁用断言。59项战役目录相关单测通过；修正完整检查发现的3处遗留快照后，Apache Valley、内容清单和 Progress 定向测试共35项通过。M17 及其他 Mississippi 入口回归与 M18 新入口共15项 E2E 通过。
 - **批次完整检查（本地已完成）：**最终 `CI=1 PLAYWRIGHT_PORT=43125 pnpm run test:ci` 通过 TypeScript、679项单测、生产构建及149项 E2E。构建仍提示主 JS chunk 为2.137 MB（gzip 251.14 KB），本批没有引入无关拆包改动。首次全量检查暴露了3处单测快照和6项 E2E 进度摘要仍期望17关；已补齐，相关35项单测和6项 E2E 定向复跑通过后，完整检查再次全绿。
-- **本地内置浏览器（已完成）：**静音、窗口模式从 Free Play → Mississippi → Shadow Town → Medium 进入；核对 map21 关卡入口和概览、Pedro 第1波对白、地图与 `01/08` HUD。未完整通关、未启动 Android、未全屏或播放声音。当前仍待 squash 到 `master`、推送部署、来源 SHA 核对、公开页面验收及回同步。
+- **本地与公开浏览器（已完成）：**静音、窗口模式从 Free Play → Mississippi → Shadow Town → Medium 进入；核对 map21 关卡入口和概览、Pedro 第1波对白、地图与 `01/08` HUD。公开版首次载入提示一项必需图片失败；点击重试后资源加载完成并自动进入 Cow Gulch，之后 Shadow Town 可正常进入。失败资源名称和首次失败原因未能从页面观察中确定，作为部署观察项保留；未完整通关、未启动 Android、未全屏或播放声音。
 - 测试默认窗口模式、静音；不完整通关、不启动 Android。完整检查通过后才进入 squash 集成与发布流程。
 
 ### M18 批次收尾
 
-- 发布前确认五个实现切片均有对应定向测试和提交；批次末尾完整检查只运行一次，若失败仅重跑受影响项及最终完整检查。
-- 完整检查与本地内置浏览器验收已通过。下一步将本批以单个 squash commit 集成至 `master` 并按项目规则推送；部署后核对 GitHub/Cloudflare Pages 来源 SHA，再用内置浏览器在公开版静音、窗口模式复核 Free Play → Mississippi → Shadow Town → Medium、地图、开场对白和首波 HUD；不完整手动通关、不启动 Android、不主动启用全屏或声音。
-- 发布完成后将发布提交合并回 `gunsnglory` 并同步相关工作树。网络或部署检查不可用时如实保留发布未完成状态，不以本地测试代替。
-
+- M18-A–F 的实现和本地验收已完成；整批以单个 squash commit 发布至 `master`，GitHub Actions 和两个 Pages 部署均成功。
+- 发布来源 SHA 已核对：GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均为 `5bb027186ea34eec06468c0fb365238c6e33a053`。内置浏览器以静音、窗口模式验证 Free Play → Mississippi → Shadow Town → Medium、地图、Pedro 开场对白和 `01/08` HUD。首次页面载入提示一项必需图片加载失败；手动重试后加载成功并自动进入 Cow Gulch，之后 Shadow Town 正常。失败资源和首次失败原因未知，需留作后续部署观察，不影响本次地图已成功显示的结论。
+- 发布提交和最终计划已回同步至 `gunsnglory`；`master` 与 `gunsnglory` 远端均包含 M18 发布历史，M18 批次关闭。全程未完整通关、未启动 Android、未进入全屏或播放声音。
 ## 已完成批次
 
 ### M13 Golden River 接入批次
