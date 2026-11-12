@@ -24,6 +24,7 @@
 - M14 批次完整检查 `CI=1 PLAYWRIGHT_PORT=4204 pnpm run test:ci` 通过：TypeScript、614 项单测、生产构建和141项 Playwright E2E；主 JS chunk 约1.70 MB（gzip 221.45 KB）的预算提示不阻塞验收。
 - M14 发布提交 `ebf35d38356d622b2f3e6427e36ff0eea68e84a9`，Actions `43184402532` 全部成功；GitHub Pages 与 Cloudflare Pages 的根 `build-info.json` 均报告该来源 SHA。内置浏览器静音、窗口模式实测 Free Play → Mississippi → Riverside Mountains（14）→ Easy，能显示 Settlers 开场对白、地图及第1/7波；未完整手动通关或启动 Android。新档正式战役中第14关因前置未完成保持锁定，符合解锁规则，正式解锁与结算由自动化覆盖。
 - M14 发布后累计发布比例为18/90（20.0%）；下一关尚未排期，新一轮先基于当前代码和证据细化实施步骤。
+- M14 回同步已完成：集成提交 `86548d1` 已推送到 `origin/gunsnglory`，并已快进原主工作树；`master` 与 `origin/master` 均为发布提交 `ebf35d3`，gunsnglory 本地与远端均含 M14。主工作树原有未跟踪研究文档保留未改。
 
 ## 已完成批次
 
