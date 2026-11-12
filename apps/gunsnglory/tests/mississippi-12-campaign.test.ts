@@ -29,18 +29,19 @@ test('Steam Valley only creates marker130 Pyromaniac after the original global l
 });
 
 test('Steam Valley contentVersion round-trips only the unlock that changes map15 units', () => {
-  const lockedVersion = 'gng-free-1.8.6-mississippi-12-formal-v1-pyro0';
-  const unlockedVersion = 'gng-free-1.8.6-mississippi-12-formal-v1-pyro1';
+  const lockedVersion = 'gng-free-1.8.6-mississippi-12-formal-v2-grandpa0-sniper0-pyro0-salesman0';
+  const unlockedVersion = 'gng-free-1.8.6-mississippi-12-formal-v2-grandpa0-sniper0-pyro1-salesman0';
   assert.equal(mississippi12CampaignContentVersionFor([]), lockedVersion);
   assert.equal(mississippi12CampaignContentVersionFor([pyromaniacUnlockScenarioId]), unlockedVersion);
   assert.deepEqual(mississippi12CompletedScenarioIdsForContentVersion(lockedVersion), []);
   assert.deepEqual(mississippi12CompletedScenarioIdsForContentVersion(unlockedVersion), [pyromaniacUnlockScenarioId]);
   for (const invalid of [
     '',
-    lockedVersion.replace('formal-v1', 'formal-v2'),
+    lockedVersion.replace('formal-v2', 'formal-v3'),
     lockedVersion.replace('pyro0', 'pyro2'),
     `${lockedVersion}-extra`,
   ]) assert.equal(mississippi12CompletedScenarioIdsForContentVersion(invalid), undefined);
+  assert.deepEqual(mississippi12CompletedScenarioIdsForContentVersion('gng-free-1.8.6-mississippi-12-formal-v1-pyro1'), [pyromaniacUnlockScenarioId]);
 
   const content = createMississippi12CampaignContent([pyromaniacUnlockScenarioId]);
   assert.equal(content.id, mississippi12CampaignId);

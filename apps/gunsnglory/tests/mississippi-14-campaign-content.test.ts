@@ -53,7 +53,7 @@ function waveShape(wave: CampaignWaveDefinition) {
 test('Riverside Mountains campaign rules retain APK start values and shared enemy data', async () => {
   const scenario = createMississippi14CampaignContent();
   assert.equal(scenario.id, mississippi14CampaignId);
-  assert.equal(scenario.contentVersion, 'gng-free-1.8.6-mississippi-14-formal-v1-pyro0-salesman0');
+  assert.equal(scenario.contentVersion, 'gng-free-1.8.6-mississippi-14-formal-v2-grandpa0-sniper0-pyro0-salesman0');
   assert.equal(scenario.formalSettlementSupported, true);
   assert.deepEqual(scenario.title, mississippi14CampaignCopy.title);
   assert.equal(scenario.maxUpgrades, 3);
@@ -191,10 +191,13 @@ test('Riverside Mountains copy and seven dialogue records match APK English reso
   ]);
   assert.ok(mississippi14WaveIntros.every(({ speaker, text }) => speaker.zh.length > 0 && text.zh.length > 0));
   assert.deepEqual(mississippi14CampaignContentVersionFor(['campaign-nevada-10', 'campaign-alaska-10']),
-    'gng-free-1.8.6-mississippi-14-formal-v1-pyro1-salesman1');
+    'gng-free-1.8.6-mississippi-14-formal-v2-grandpa0-sniper0-pyro1-salesman1');
   assert.deepEqual(mississippi14CompletedScenarioIdsForContentVersion(
     'gng-free-1.8.6-mississippi-14-formal-v1-pyro1-salesman0',
   ), ['campaign-nevada-10']);
+  assert.deepEqual(mississippi14CompletedScenarioIdsForContentVersion(
+    'gng-free-1.8.6-mississippi-14-formal-v2-grandpa1-sniper1-pyro1-salesman0',
+  ), ['campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10']);
   assert.equal(mississippi14CompletedScenarioIdsForContentVersion('not-an-m14-replay-version'), undefined);
 });
 

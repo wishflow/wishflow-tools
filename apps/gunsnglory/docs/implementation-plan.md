@@ -4,13 +4,15 @@
 
 ## 当前状态
 
-- 正式战役已接入 16/60 关。Mississippi 区域第 11–16 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_19.tdm`；不能根据关卡编号推测地图文件编号。
-- Mississippi 第16关 Highpoint Terrace 已完成并发布，实际地图为 res/raw/td_map_19.tdm；地图、路线、对象、八波、Cannon 炮池与 Dynamite、双语内容、正式战役、Free Play、结算和回放均已接入。静态证据见 [M16 静态审计](map16-static-audit.md)。发布与回同步结果见下方 M16 完成记录。
+- 正式战役已接入 17/60 关。Mississippi 区域第 11–17 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace、Dead Rocks，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_20.tdm`；不能根据关卡编号推测地图文件编号。
+- Mississippi 第17关 Dead Rocks 已完成并发布。地图、路线、对象/单位、八波、双语内容、正式战役、Free Play、结算和回放均已接入；M11–M16 的新局可招募标记语义及旧回放兼容也已修正。静态证据见 [M17 静态审计](map17-static-audit.md)。
+- M17 发布提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5`；GitHub Actions `43246826051` 成功，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该来源 SHA。内置浏览器静音、窗口模式从 Free Play → Mississippi → Dead Rocks → Medium 进入，地图、Settlers 开场对白和 `1/8` 波次 HUD 正常；未完整手动通关、启动 Android、进入全屏或播放声音。
+- M17 批次完整检查 `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过：TypeScript、661 项单测、生产构建及147项 E2E。发布后累计普通发布比例为21次/105个已验收实现切片（20.0%）。本轮回同步至 `gunsnglory` 正在完成；其余后续关卡尚未排期。
 - Traveller’s Town 批次已发布到 `master`：提交 `b6e05ca20a2d04bc1939ea82d4656842404ce9db`，Actions `43018344472` 成功。GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均与该 SHA 一致。
 - Steam Valley 已完成并发布：真实 map15、路线/桥和静态对象、单位/汽船、七波、对白与资源、正式关卡 12、Free Play 三种难度，以及按录制解锁状态还原的回放。发布提交 `8baa286ed32f4266e0636e1cfd1152a42c42caf1`，Actions `43152356792` 成功；GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
 - 最终 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过：584 项单测、TypeScript 检查、生产构建和 137 项 E2E。构建有 1.488 MB JavaScript chunk 超过 500 KB 的提示。
 - 内置浏览器在静音、窗口模式分别检查实验室告示牌样式，以及公开版 Free Play → Mississippi → Steam Valley → Easy → Captain 开场对白 → 第一波。地图、两艘汽船与 `01/07` HUD 正常显示；未完整手动通关。
-- 本次普通发布后比例为 16 次 / 81 个已验收实现切片（19.75%），低于 20% 目标。
+- M15 发布后累计普通发布比例为 19 次 / 95 个已验收实现切片（20.0%）；M16 发布后为 20/100（20.0%）。
 - Golden River（M13）静态审计通过：对应 `td_map_16.tdm`；完整内容、路线、船组、单位解锁和对话证据见 [M13 静态审计](map13-static-audit.md)。无需 Android 定点运行。
 - M13-A 地图切片通过：map16 网格、Mississippi 地形和桥层、code76 bush、4 条实际路线均与 APK 派生证据一致；M12 路线回归通过。
 - M13-B 对象与解锁快照切片通过：创建 2 组 Steamer（12 部件）、code107 Indian、按第50/60关里程碑出现的 Pyromaniac/Salesman；新开局忽略 map16 的存档专用 marker 96–101。回放版本可往返记录两个解锁位。定向测试与 M12 汽船/单位回归共 9 项通过。
@@ -63,6 +65,21 @@ Highpoint Terrace（Mississippi 第16关）已接入正式战役、Free Play 和
 | M16-R3 | 回同步至集成分支 | 已完成；合并提交 412605c 将发布提交并回 gunsnglory，且已推送至 origin/gunsnglory。原主工作树已与远端一致，未跟踪研究文档原样保留。 |
 
 M16 发布后累计普通发布比例为20/100（20.0%）。批次已关闭：master 与 origin/master 为发布提交 f0ea306，gunsnglory 与 origin/gunsnglory 均包含该发布提交；回同步提交为 412605c，原主工作树未跟踪研究文档已保留。
+
+## 最近完成：Dead Rocks（M17）
+
+Dead Rocks 使用 APK 的 `res/raw/td_map_20.tdm`，作为 Mississippi 第17关接入正式战役、Free Play 和回放。静态数据、路线与关卡参数见 [M17 静态审计](map17-static-audit.md)。
+
+| 顺序 | 切片 | 实施范围与结果 |
+| --- | --- | --- |
+| M17-A | 地图、地形与路线 | 接入32×24地图、Mississippi地形/桥面、静态对象，以及6个出生点、53个转向点、4个出口；74条有向路线边与 APK 派生图逐项核对。 |
+| M17-B | 初始实体与解锁 | 按新局 marker 创建地图单位和可招募单位；恢复 M11–M16 的 code96–101 新局单位，旧 v1 回放仍按录制单位列表重建。 |
+| M17-C | 规则与关卡内容 | 接入初始经济、生命、升级上限、三档难度、8波/35个生成请求、双语介绍与对白、音乐路由及资源预加载；未创建 APK 不存在的 Fort/Cannon 或赌场对象。 |
+| M17-D/E | 正式登记与入口回归 | 登记为 global level 17，接入正式解锁、Free Play、结算和回放解锁快照；同步全局关卡目录、Progress 快照及旧关卡回归。 |
+| M17-F1 | 完整检查中的快照修复 | 修复四处旧测试目录/Progress 期望仍停在16关的问题；不改运行时进度逻辑。 |
+| M17-F2 | 批次发布与验收 | `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过 TypeScript、661项单测、构建及147项 E2E。发布提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5` 的 Actions `43246826051` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器静音、窗口模式进入 Free Play → Mississippi → Dead Rocks → Medium，地图、开场对白及 `1/8` HUD 正常；未完整通关、启动 Android、进入全屏或播放声音。 |
+
+M17 发布后累计普通发布比例为21/105（20.0%）。发布已完成；本次正在将 master 发布提交及 M17 文档回同步到 `gunsnglory`。
 
 ## 已完成批次
 

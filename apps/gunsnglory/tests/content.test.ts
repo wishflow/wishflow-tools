@@ -221,6 +221,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Highpoint Terrace · Level 16', zh: '高台露台 · 第 16 关' },
     globalLevel: 16,
     requiresCompletedScenarioIds: [mississippi15LevelFifteenCampaignContent.id],
+  }, {
+    scenarioId: 'campaign-mississippi-17',
+    contentVersion: 'gng-free-1.8.6-mississippi-17-formal-v1-grandpa0-sniper0-pyro0-salesman0',
+    title: { en: 'Dead Rocks · Level 17', zh: '死亡岩地 · 第 17 关' },
+    globalLevel: 17,
+    requiresCompletedScenarioIds: ['campaign-mississippi-16'],
   }]);
 });
 

@@ -226,9 +226,10 @@ test('places map14 static scenery at every APK cell with the original rail-buffe
   }
 });
 
-test('creates only the two fresh-game map14 player units', () => {
+test('creates all fresh map14 recruit markers and the two active player units', () => {
   const units = createMississippi11MapUnits();
-  assert.deepEqual(units.map(({ id, type, activity, cell, asset, movementSpeedFinePer100Ms }) => ({
+  const activeUnits = units.filter(({ activity }) => activity === 5);
+  assert.deepEqual(activeUnits.map(({ id, type, activity, cell, asset, movementSpeedFinePer100Ms }) => ({
     id, type, activity, cell, asset, movementSpeedFinePer100Ms,
   })), [
     {
@@ -240,7 +241,10 @@ test('creates only the two fresh-game map14 player units', () => {
       cell: { x: 18, y: 12 }, asset: 'player_gunslinger', movementSpeedFinePer100Ms: 1500,
     },
   ]);
-  for (const unit of units) {
+  const expectedBaseHireMarkers = map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 99).length;
+  assert.equal(units.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length, expectedBaseHireMarkers);
+  for (const unit of activeUnits) {
     assert.ok(unit.weapon);
     assert.deepEqual(unit.frame, { x: 0, y: 0, width: 32, height: 44 });
     assert.deepEqual(unit.render, unit.hitArea);

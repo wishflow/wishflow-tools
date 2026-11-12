@@ -161,12 +161,15 @@ test('Railroad Canyon Steamer and active map units follow fresh-game markers', (
   ]);
   assert.ok(steamers.every(({ movementSurface }) => movementSurface === 'water'));
 
-  assert.deepEqual(createMississippi15MapUnits().map(({ type, activity, cell, asset }) => [
+  const mapUnits = createMississippi15MapUnits();
+  assert.deepEqual(mapUnits.filter(({ activity }) => activity === 5).map(({ type, activity, cell, asset }) => [
     type, activity, cell.x, cell.y, asset,
   ]), [
     ['mexican', 5, 20, 5, 'player_mexican'],
     ['gunslinger', 5, 16, 6, 'player_gunslinger'],
     ['indian', 5, 17, 17, 'player_indian'],
   ]);
-  assert.ok(createMississippi15MapUnits().every(({ activity }) => activity === 5));
+  assert.equal(mapUnits.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length,
+  map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 99).length);
 });

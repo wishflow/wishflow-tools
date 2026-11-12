@@ -1,5 +1,4 @@
 import type { ScenarioContent } from '../game';
-import { campaignCatalog } from './campaign-catalog';
 import type { CampaignMapUnitTypeId } from './campaign-map-unit-placements';
 import map from './mississippi-11.json';
 import { createMississippi11MapScene } from './mississippi-11-scene';
@@ -7,6 +6,13 @@ import { createMississippi11MapUnits } from './mississippi-11-units';
 import { createMississippi11TrainUnits } from './mississippi-11-trains';
 import { createMississippi11SteamerUnits } from './mississippi-11-steamer';
 import { mississippi11CampaignWaves } from './mississippi-11-campaign-waves';
+import {
+  completedScenarioIdsForMississippiUnitUnlockSnapshot,
+  mississippiUnitUnlocked,
+  mississippiUnitUnlockSnapshotFor,
+  mississippiUnitUnlockSnapshotFromVersionSuffix,
+  mississippiUnitUnlockVersionSuffix,
+} from './mississippi-unit-unlocks';
 import {
   mississippi11BaseEnemy,
   mississippi11BonusCratePool,
@@ -17,65 +23,50 @@ import {
 } from './mississippi-11-campaign-rules';
 
 export const mississippi11CampaignId = 'campaign-mississippi-11';
-const mississippi11ContentVersionPrefix = 'gng-free-1.8.6-mississippi-11-formal-v1';
+const mississippi11ContentVersionPrefix = 'gng-free-1.8.6-mississippi-11-formal-v2';
+const mississippi11LegacyContentVersionPrefix = 'gng-free-1.8.6-mississippi-11-formal-v1';
 
-interface Mississippi11UnlockSnapshot {
-  pyromaniac: boolean;
-  salesman: boolean;
+function contentVersionForSnapshot(snapshot: ReturnType<typeof mississippiUnitUnlockSnapshotFor>): string {
+  return `${mississippi11ContentVersionPrefix}-${mississippiUnitUnlockVersionSuffix(snapshot)}`;
 }
 
-function campaignScenarioIdForLevel(globalLevel: number): string {
-  const entry = campaignCatalog.find(({ level }) => level === globalLevel);
-  if (!entry) throw new Error(`Campaign level ${globalLevel} is missing from the catalog`);
-  const localLevel = ((globalLevel - 1) % 10) + 1;
-  return `campaign-${entry.regionId}-${String(localLevel).padStart(2, '0')}`;
-}
-
-function unlockSnapshotFor(completedScenarioIds: readonly string[]): Mississippi11UnlockSnapshot {
-  const completed = new Set(completedScenarioIds);
-  return {
-    pyromaniac: completed.has(campaignScenarioIdForLevel(50)),
-    salesman: completed.has(campaignScenarioIdForLevel(60)),
-  };
-}
-
-function contentVersionForSnapshot(snapshot: Mississippi11UnlockSnapshot): string {
-  return `${mississippi11ContentVersionPrefix}-pyro${Number(snapshot.pyromaniac)}`
-    + `-sales${Number(snapshot.salesman)}`;
-}
-
-/** Stable replay identity includes both global milestones that change this map's unit list. */
+/** Stable replay identity includes every global milestone that changes this map's unit list. */
 export function mississippi11CampaignContentVersionFor(completedScenarioIds: readonly string[]): string {
-  return contentVersionForSnapshot(unlockSnapshotFor(completedScenarioIds));
+  return contentVersionForSnapshot(mississippiUnitUnlockSnapshotFor(completedScenarioIds));
 }
 
 /** Reconstructs the profile milestones represented by a Traveller’s Town replay. */
 export function mississippi11CompletedScenarioIdsForContentVersion(contentVersion: string): string[] | undefined {
-  const match = /^gng-free-1\.8\.6-mississippi-11-formal-v1-pyro([01])-sales([01])$/.exec(contentVersion);
-  if (!match) return undefined;
+  const legacyMatch = /^gng-free-1\.8\.6-mississippi-11-formal-v1-pyro([01])-sales([01])$/.exec(contentVersion);
+  if (legacyMatch) {
+    const snapshot = {
+      grandpa: false,
+      sniper: false,
+      pyromaniac: legacyMatch[1] === '1',
+      salesman: legacyMatch[2] === '1',
+    };
+    return `${mississippi11LegacyContentVersionPrefix}-pyro${Number(snapshot.pyromaniac)}`
+      + `-sales${Number(snapshot.salesman)}` === contentVersion
+      ? completedScenarioIdsForMississippiUnitUnlockSnapshot(snapshot)
+      : undefined;
+  }
 
-  const [pyromaniac, salesman] = match.slice(1).map((flag) => flag === '1');
-  const completedScenarioIds = [
-    ...(pyromaniac ? [campaignScenarioIdForLevel(50)] : []),
-    ...(salesman ? [campaignScenarioIdForLevel(60)] : []),
-  ];
-  return mississippi11CampaignContentVersionFor(completedScenarioIds) === contentVersion
-    ? completedScenarioIds
+  const prefix = `${mississippi11ContentVersionPrefix}-`;
+  if (!contentVersion.startsWith(prefix)) return undefined;
+  const snapshot = mississippiUnitUnlockSnapshotFromVersionSuffix(contentVersion.slice(prefix.length));
+  return snapshot && contentVersionForSnapshot(snapshot) === contentVersion
+    ? completedScenarioIdsForMississippiUnitUnlockSnapshot(snapshot)
     : undefined;
 }
 
 export const mississippi11CampaignContentVersion = mississippi11CampaignContentVersionFor([]);
 
-/** Builds map14 content using the profile's researched Pyromaniac and Salesman unlocks. */
+/** Builds map14 content from the profile's global unlock snapshot. */
 export function createMississippi11CampaignContent(
   completedScenarioIds: readonly string[] = [],
 ): ScenarioContent {
-  const snapshot = unlockSnapshotFor(completedScenarioIds);
-  const isUnitUnlocked = (unitTypeId: CampaignMapUnitTypeId): boolean => {
-    if (unitTypeId === 35) return snapshot.pyromaniac;
-    if (unitTypeId === 36) return snapshot.salesman;
-    return false;
-  };
+  const snapshot = mississippiUnitUnlockSnapshotFor(completedScenarioIds);
+  const isUnitUnlocked = (unitTypeId: CampaignMapUnitTypeId): boolean => mississippiUnitUnlocked(unitTypeId, snapshot);
 
   return {
     id: mississippi11CampaignId,

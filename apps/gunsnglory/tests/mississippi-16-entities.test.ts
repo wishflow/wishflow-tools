@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { createMississippi16MapUnits } from '../src/content/mississippi-16-units';
 import { createMississippi16SteamerUnits } from '../src/content/mississippi-16-steamer';
+import map from '../src/content/mississippi-16.json';
 import { gameAssetRelativePath } from '../src/render/game-asset-path';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
@@ -16,13 +17,15 @@ function assertUnitAssetsAreBundled(units: ReturnType<typeof createMississippi16
 
 test('Highpoint Terrace fresh-game map units follow activity-5 and special-unit markers', () => {
   const units = createMississippi16MapUnits();
-  assert.deepEqual(units.map(({ type, activity, cell, asset }) => [type, activity, cell.x, cell.y, asset]), [
+  assert.deepEqual(units.filter(({ activity }) => activity === 5).map(({ type, activity, cell, asset }) => [type, activity, cell.x, cell.y, asset]), [
     ['gunslinger', 5, 13, 8, 'player_gunslinger'],
     ['cannon', 5, 8, 13, 'player_cannon'],
     ['mexican', 5, 17, 16, 'player_mexican'],
   ]);
-  assert.equal(new Set(units.map(({ id }) => id)).size, 3);
-  assert.ok(units.every(({ activity }) => activity === 5));
+  assert.equal(new Set(units.map(({ id }) => id)).size, units.length);
+  assert.equal(units.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length,
+  map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 99).length);
   assertUnitAssetsAreBundled(units);
 });
 

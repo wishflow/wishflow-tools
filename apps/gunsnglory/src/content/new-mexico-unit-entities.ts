@@ -58,11 +58,11 @@ function createActiveMexican(cell: { x: number; y: number }): ScenarioUnit {
   };
 }
 
-export function createSleepingPyromaniac(cell: { x: number; y: number }): ScenarioUnit {
+export function createSleepingPyromaniac(cell: { x: number; y: number }, index = 1): ScenarioUnit {
   const frame = { x: 0, y: 0, width: 32, height: 44 };
   const render = createAnchoredMapRender(cell, frame);
   return {
-    id: 'pyromaniac-hire-01',
+    id: `pyromaniac-hire-${String(index).padStart(2, '0')}`,
     type: 'pyromaniac',
     activity: 4,
     hirePrice: 130,
@@ -94,11 +94,11 @@ export function createSleepingPyromaniac(cell: { x: number; y: number }): Scenar
   };
 }
 
-export function createSleepingSalesman(cell: { x: number; y: number }): ScenarioUnit {
+export function createSleepingSalesman(cell: { x: number; y: number }, index = 1): ScenarioUnit {
   const frame = { x: 0, y: 0, width: 32, height: 44 };
   const render = createAnchoredMapRender(cell, frame);
   return {
-    id: 'salesman-hire-01',
+    id: `salesman-hire-${String(index).padStart(2, '0')}`,
     type: 'salesman',
     activity: 4,
     hirePrice: 110,
@@ -157,6 +157,7 @@ export function createNewMexicoMapUnits(
     });
 
   const counters = new Map<FortKaboomUnitType, number>();
+  const specialHireCounters = new Map<'pyromaniac' | 'salesman', number>();
   for (const placement of placements) {
     if (placement.activity === 5 && placement.unitTypeId === 1) {
       units.push(createActiveGunslinger(placement.cell));
@@ -171,11 +172,15 @@ export function createNewMexicoMapUnits(
       continue;
     }
     if (placement.activity === 4 && placement.unitTypeId === 35) {
-      units.push(createSleepingPyromaniac(placement.cell));
+      const index = (specialHireCounters.get('pyromaniac') ?? 0) + 1;
+      specialHireCounters.set('pyromaniac', index);
+      units.push(createSleepingPyromaniac(placement.cell, index));
       continue;
     }
     if (placement.activity === 4 && placement.unitTypeId === 36) {
-      units.push(createSleepingSalesman(placement.cell));
+      const index = (specialHireCounters.get('salesman') ?? 0) + 1;
+      specialHireCounters.set('salesman', index);
+      units.push(createSleepingSalesman(placement.cell, index));
       continue;
     }
     if (!isFortKaboomUnitTypeId(placement.unitTypeId)) continue;

@@ -25,14 +25,14 @@
 
 ## DEX 伪代码分支与路线优先级复核
 
-**状态：分析经验已验证；用于 map05 内容接入。**
+**状态：**Smali 判读规则已验证；M11–M16 均已修复并通过回归。
 
 - **风险表现：**直接照搬 JADX 输出可能把新开局与读取未完成存档的对象创建分支看反；只凭一张地图预览断言路线正确，也可能漏掉不同入口和随机转向组合。
-- **证据与核实：**`GameObjectManager.createGameObjectsFromBasicMap` 的 JADX 伪代码在 map-load 布尔分支处存在控制流重建歧义。比较 `GameObjectManager.smali` 的真实跳转条件后，确认新开局会从 TDM 创建睡眠/活动单位和列车，存档加载则恢复已保存对象。该结论以 APK 的 smali 分支为准，不把伪代码描述成原始源码。
+- **证据与核实：**`GameObjectManager.createGameObjectsFromBasicMap` 的 JADX 伪代码在 map-load 布尔分支处存在控制流重建歧义。Smali 中 code 96–101 与130/131都进入 `fromLoadGame == false` 的创建分支：前者按 type1–6 创建 activity 4 可招募单位，后者按 type35/36创建特殊招募单位；加载存档时跳过 TDM 的新局初始对象。网页先前误把96–101当作只在读档恢复的 marker，继而在 M11–M16 手工工厂中将其跳过。静态审计纠正了判断；六关现复用 TDM 单位构造器，v2 内容版本记录四种全局单位解锁位，M16 另记录 Dynamite 解锁位。旧 v1 回放仍按原单位列表重建，123项六关关联测试和类型检查通过。结论以 APK Smali 条件跳转和字段赋值为准，不把伪代码描述成原始源码。
 - **路线复核：**解析 `EnemyDirectorField` 方向表和 `PriorityMap.recursiveLengthTracking` 后，用明确的具体路径独立计算所有路线格优先级，再与网页 TypeScript 算法逐格比较；map05 的 5 个路线变体、142 个路线格均匹配。属于静态算法交叉校验，不是 Android 或浏览器运行观察。
 - **路线方向字段：**`WaveRouteDefinition.redirects[n].directions` 表示从该控制点离开的方向，不是从前一个节点进入该点的方向。map14 首次编写时把图边的方向误记在目标节点上；从原始 TDM 重新解出的方向图测试立即失败。修正后比较全部 13 条完整路径及 59 条有向边。新增地图路线时按控制点的出边填写，并用原始 TDM 独立展开每个分支；只检查路线经过了哪些格子不足以验证方向。
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
-- **关卡对象摘要也要回到分支证据：**研究汇总表曾将 tile `130/131` 概述为读档恢复对象，但 `GameObjectManager.smali` 中该 switch 分支在 `fromLoadGame == false` 时才创建 type35/36；读档恢复的是 `96–101`。M16 静态审计据 Smali 校正了这一点。复用旧关卡/证据报告时，如果结论影响新局对象或解锁，必须检查对象分派的实际条件跳转，并把冲突标清，不能照抄摘要表。
+- **审计结论也要反向核对实现：**M16 审计虽改正了 `130/131` 的新局语义，却再次错误地将 `96–101` 写成仅读档创建；代码随后照此省略了 M11–M16 的可招募单位。只把报告更新到正确结论仍不够，必须检查消费该结论的每张地图工厂和最终 `ScenarioContent.units`，再以真实地图标记测试验证行为。不能把“网页不支持续玩”误推成“APK 新局不创建这些单位”。当前 M11–M16 测试逐张地图核对 marker 坐标、activity 和全部解锁组合，并验证旧 v1 回放不多出新单位；扩展新关卡时仍需沿用此流程。
 
 ## TDM Dynamite marker 与对象角色不能混写
 
@@ -50,7 +50,15 @@
 - **根因与证据：**APK DEX/Smali 的 104–109 分支按 `tile − 103` 创建 unit type 1–6 并设为 activity 5；JADX 把该分支误还原成空块。网页共享工厂此前只创建 activity 5 的 Gunslinger、Mexican 与 Gambler，type 3–6 走到“只处理 activity 4”的分支后被跳过。map10 的 107 因此漏掉；已有 Tech Town 测试只核对 marker→类型/activity 的解码，没有用包含 type 4 activity 5 的真实 TDM 验证最终场景。
 - **修复与防回归：**activity 5 的 Fort 类地图单位现在复用 APK 对应设计的 awake 素材、尺寸锚点、速度、音效与武器；map10 测试从实际 TDM 核对全部单位坐标、类型和 activity，并断言 active Indian 使用 `player_indian` 且不带 hire 状态。每张地图的检查应同时覆盖原始 marker、共享 placement 与最终 `ScenarioUnit`，不可把中间映射表测试当成对象已生成的证明。
 - **避免重复：**不需要重新反编译这条 104–109 分支；总表和 Smali/DEX 已足以定类型。后续若再遇到同类问题，应先检查共享工厂是否真的消费所有已解码的类型/activity 组合。
-- **map14 特殊边界：**标记 96–101 在该地图只属于读档恢复路径。直接调用会扫描整张 TDM 的通用 New Mexico 工厂，会错误地在新开局出现休眠雇佣单位；map14 应由专用工厂只取 104/105，并仅在里程碑解锁后创建 130/131。`mississippi-11-entities-and-routes.test.ts` 与 `mississippi-11-campaign.test.ts` 分别验证新开局只有两个活动单位、特殊单位按里程碑显隐。
+- **地图范围：**不要为 Mississippi 单独过滤 code96–101。map14–20 的真实 TDM 数量和解锁状态应驱动新局单位；新内容测试逐格比较 TDM marker 与最终单位。旧回放需按旧 contentVersion 重建其原单位列表，不能为兼容回放而继续让新局内容漏单位。
+
+## 同类型可招募 marker 必须生成唯一单位 ID
+
+**状态：Dead Rocks 已修复并由全解锁场景测试验证。**
+
+- **表现与复现：**Dead Rocks 有两个 code130 Pyromaniac 招募点。全局 Pyromaniac 解锁后打开 Free Play，Game 初始化因重复路径 `units/pyromaniac-hire-01/movementSpeedFinePer100Ms` 拒绝场景。
+- **根因与漏测：**共享 New Mexico 单位工厂的 Pyromaniac 和 Salesman 构造器固定使用 `hire-01` ID；同类 Fort 单位已有按类型计数，而特殊招募单位没有。仅以默认锁定快照创建场景时，这些 marker 不生成，所以既有唯一性断言没覆盖真实解锁场景。
+- **修复与防回归：**特殊招募单位也按同类型 marker 递增 ID；Dead Rocks 全解锁测试要求全部单位 ID 唯一，并逐 marker 核对对应类型和数量。以后添加解锁或重复 marker 时，应在至少一个包含全部解锁的实际地图场景上初始化 Game，不能只检查默认锁定场景。
 
 ## 出生池验证应使用来源 ID，不猜地图坐标
 
@@ -69,6 +77,7 @@
 - **根因与证据：**`GameSession` 将请求向量作为各敌人类型的剩余生成数量，并通过带种子的随机选择决定下一次生成类型。向量列号不代表逐个生成的时间顺序。实际短时模拟和引擎选择逻辑确认了这一点。
 - **漏测点：**测试只核对了请求向量静态内容，却把静态列顺序误当成运行事件顺序，没有检查生成器的随机选择。
 - **修复与防回归：**测试按实际敌人类型核对血量和速度，并独立检查波次延迟后的生成、路线入口及请求向量。需要固定顺序时必须显式注入确定性随机源；否则不得断言向量第一项必然先生成。
+- **新关卡数据交叉核验：**Dead Rocks 的8条波次元数据与35条生成请求已从 APK 派生配置独立提取，再与网页波次定义逐项比较；比较时保留每波10个请求槽位及末尾零值，并将 APK 整数常量解析为语义字段后比较。不要把资源中的整数枚举直接当成网页运行顺序，也不要用请求向量推断敌人出现先后。对白资源 ID、头像和角色映射分别与对应资源表核对；静态核对不等同于试听音频或完整实战。
 
 ## GameSession 的 debug 模式不执行战役波次
 
@@ -287,6 +296,7 @@
 - **根因与证据：**用例导入 `tests/e2e/auto-continue-fixtures.ts` 导出的 `test`。该 fixture 的 `MutationObserver` 会自动点击对白 Continue，目的是让普通战斗流程测试不被剧情提示阻塞；产品代码正确打开了对白，随后测试桩立即关闭它。
 - **修复与防回归：**需要检查对白内容、头像、资源或关闭后状态的专项用例直接从 `@playwright/test` 导入 `test` 和 `expect`；不检查对白且需跨过提示的普通战斗用例继续使用 auto-continue fixture。失败后先检查测试 fixture 是否主动操作目标元素，再判断产品逻辑。
 - **回放边界：**`GameSession.exportReplay()` 要求会话已经完成并形成正式结算。未完成的 map05 关卡不能直接导出回放；不要为验证内容注册或 profile 单位集合而完整模拟八波。需要覆盖 map05 回放往返时，另准备有明确来源的已结算 fixture，或单独安排经确认的完整模拟范围。
+- **内容版本边界：**若测试为快速结算而把波次请求替换为零，源回放与重放端必须使用同一份零请求 fixture。不可用正式浏览器场景工厂重放该 fixture，即便 `contentVersion` 相同；该版本标识的是正式内容，fixture 修改后的波次仍会在首个状态校验点造成回放差异。生产解锁快照工厂应另行按版本验证。
 
 ## 增加正式关卡后同步阶段快照与进度摘要
 
@@ -297,6 +307,8 @@
 - **漏测点：**此前只搜索并修改 `stages complete` 和 `campaign-progress-summary`，没有一并搜索直接比较 `officialCampaignStages`、`globalLevel`、前置 ID 以及结算后完整状态数组的快照。
 - **M14 复现：**新增 level14 后，首轮完整单测发现 `tests/apache-valley.test.ts` 的正式关卡关系数组遗漏 M14，`tests/progress.test.ts` 的初始阶段列表和结算后状态数组也各少一个 locked stage。目录和 Progress 运行结果正确，修正的是这三处旧测试快照；Apache Valley 与 Progress 共25项定向测试通过；随后完整 CI 通过614项单测、生产构建和141项 E2E。
 - **修复与防回归：**map05 的 E2E 分母、map06 的 Apache/Fort stage 快照和 map10 相关五处期望现均同步。以后新增或重排关卡时，搜索 `officialCampaignStages`、`globalLevel`、`requiresCompletedScenarioIds`、`stages complete` 和 `campaign-progress-summary`，检查所有静态快照、结算后状态数组及选择状态；不要为了让旧断言通过而改动正确的 Progress 逻辑。
+- **M17 复现：**正式目录增加 Dead Rocks 后，首轮 `test:ci` 的单测阶段又发现 Apache Valley 前置关系、Cow Gulch 完整目录快照、Fort Kaboom 阶段目录和 Progress 初态/结算后状态四处仍停在第16关。失败均为显式期望遗漏第17关及其 `campaign-mississippi-16` 前置，Progress 实际状态正确。
+- **M17 修复与验证：**四处测试快照现补入 level17；Progress 在初始和既有关卡结算后均把 level17 列为 locked。最终 `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过类型检查、661项单测、生产构建和147项 E2E。新增正式关卡时，除逐关测试外还要审查这些跨关卡目录和进度快照。
 
 ## 战役与自由模式的关卡说明按存档语义区分
 
@@ -357,6 +369,7 @@
 - **根因与证据：**APK 派生的 `terrain-render-index.json` 显示原始 tile 81 在 (15,3)、(26,3)、(14,17) 变为 street code 68；code 68 的绘制规则同时发出 `tiles_railway_hori` 和完整 `tiles_bridge_hori`，另有左右桥墩。旧参考生成器只为 code 68 发出铁轨与桥墩，遗漏了桥面；map08 没有这些铁路 marker，因此此前测试未覆盖这类复合地形格。
 - **修复与防回归：**参考生成器和 map09 JSON 补入桥面层，保持铁轨→桥面→桥墩的绘制顺序。`railroad-ranch-terrain.test.ts` 核对 TDM 每格、APK 派生的背景/street 命令、三段桥面和六个桥墩坐标、贴图 source rectangle 与地图边界。静态索引只证明绘制候选和源码规则，不冒充 Android 截图或逐帧随机结果。
 - **验证：**定向地形测试 2 项通过，TypeScript 类型检查通过。完整 `test:ci` 留到 map09 批次收尾运行。
+- **Dead Rocks 延伸验证：**Mississippi 关卡沿用同一套 TDM 地形规则，但要逐格校验背景随机候选和桥墩，不用一张预览图代替路线证据。M17 测试从 map20 TDM 核对全部网格、背景与桥面绘制数据、对象 marker 坐标；路线另与 APK 派生的74条有向边逐项比较。固定 Java Random seed 只为网页复现 APK 候选，不声称复现 APK 每次启动的时间随机结果。
 
 ## 波次炮池模板应与地图初始单位分离
 
@@ -373,6 +386,16 @@
 - **根因与证据：**`playwright.config.ts` 设置 `reuseExistingServer: !process.env.CI`。Playwright 可以连接任意已占用该端口的服务，不会确认服务属于当前 worktree；失败上下文与当前 `src/main.ts` 的新文案不一致。使用 `CI=1` 并指定独立 `PLAYWRIGHT_PORT=4183` 后，浏览器测试由当前 worktree 的 Vite 服务运行，受影响 10 项通过；独立端口上新增 M11 E2E 也通过。
 - **修复与防回归：**产品代码无需为该测试环境问题调整。验证源码行为时使用 `CI=1`；并行 worktree 手动运行 Playwright 时使用各自独立端口。出现与当前源码不一致的页面状态时，先确认服务进程和端口，再改产品代码或断言。
 - **本轮复发记录：**第一次定向运行未指定 `PLAYWRIGHT_PORT`，又连到旧的 `4173` 服务，两个样式断言仍读到旧背景图。改用 `PLAYWRIGHT_PORT=4196` 后，当前工作树启动了独立服务，相关 9 项 E2E 全部通过。跑 Playwright 前必须先选独立端口，不能因之前已有同类记录就省略环境核对。
+- **Dead Rocks 复发：**非 CI 的首轮测试再次复用了旧 `4173` 进程，关卡状态与本次代码不符。以 `CI=1 PLAYWRIGHT_PORT=4177` 启动严格隔离服务后，Dead Rocks 两项浏览器测试通过；不结束来源不明的旧服务器，直接换独立端口，并确保 `CI=1` 关闭服务器复用。
+- **本地监听权限：**M17 最终整套检查时，即使端口空闲，沙箱仍以 `EPERM` 拒绝 Playwright 的本地 Vite 监听；换端口仍失败。获得仅限本地测试服务器监听的提权后，147 项 E2E 通过。遇到该错误先确认端口空闲，再申请只覆盖本地测试监听的权限；不改 Playwright 主机配置、不停掉不明进程，也不把环境限制当成产品故障。
+
+## 关卡发布需同时核对部署来源与真实入口
+
+**状态：M17 Dead Rocks 已发布并完成公开入口验收；回同步至 `gunsnglory` 正在收尾。**
+
+- **本批发布：**提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5` 的 GitHub Actions `43246826051` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回该来源 SHA。
+- **入口观察：**内置浏览器在静音、窗口模式进入 Free Play → Mississippi → Dead Rocks → Medium，确认关卡标题、地图、Settlers 开场对白和 `1/8` 波次 HUD 显示正常；随后仅继续到首波准备状态，没有完整手动通关。未启动 Android、进入全屏或播放音效。
+- **防回归：**关卡发布只有在 Actions 成功且两个公开部署端的来源 SHA 与预期发布提交一致后才算部署完成；浏览器使用对应 release SHA 的 URL，并检查从菜单到实际关卡内容的代表流程。截图或单纯菜单可见不足以证明新关卡已加载。
 
 ## 战役进度快照断言要跟随正式关卡目录
 

@@ -71,6 +71,12 @@ import {
   mississippi16CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-16-content-version';
 import { mississippi16CampaignId } from '../content/mississippi-16-identity';
+import { createMississippi17CampaignContent } from '../content/mississippi-17-campaign';
+import {
+  mississippi17CampaignContentVersionFor,
+  mississippi17CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-17-content-version';
+import { mississippi17CampaignId } from '../content/mississippi-17-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -118,6 +124,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi14CampaignId]: createMississippi14CampaignContent(),
   [mississippi15CampaignId]: createMississippi15CampaignContent(),
   [mississippi16CampaignId]: createMississippi16CampaignContent(),
+  [mississippi17CampaignId]: createMississippi17CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -127,6 +134,15 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [campaignProgressSampleOne.id]: campaignProgressSampleOne,
   [campaignProgressSampleTwo.id]: campaignProgressSampleTwo,
 };
+
+const mississippiLegacyBaseHireTypes = new Set([
+  'gunslinger', 'mexican', 'cannon', 'indian', 'sniper', 'grandpa',
+]);
+
+interface LegacyMississippiReplayContent {
+  scenarioId: string;
+  contentVersion: string;
+}
 
 export function getBrowserScenarioContentVersion(
   scenarioId: string,
@@ -159,12 +175,18 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi16CampaignId) {
     return mississippi16CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi17CampaignId) {
+    return mississippi17CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
 
-export function createBrowserGame(completedScenarioIds: readonly string[] = ['campaign-new-mexico-03']) {
-  const scenarios = {
+export function createBrowserGame(
+  completedScenarioIds: readonly string[] = ['campaign-new-mexico-03'],
+  legacyMississippiReplay?: LegacyMississippiReplayContent,
+) {
+  const scenarios: Record<string, ScenarioContent> = {
     ...browserScenarios,
     [techTownCampaignId]: createTechTownCampaignContent(completedScenarioIds),
     [billyHillsCampaignId]: createBillyHillsCampaignContent(completedScenarioIds),
@@ -179,7 +201,20 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [mississippi14CampaignId]: createMississippi14CampaignContent(completedScenarioIds),
     [mississippi15CampaignId]: createMississippi15CampaignContent(completedScenarioIds),
     [mississippi16CampaignId]: createMississippi16CampaignContent(completedScenarioIds),
+    [mississippi17CampaignId]: createMississippi17CampaignContent(completedScenarioIds),
   };
+  if (legacyMississippiReplay) {
+    const scenario = scenarios[legacyMississippiReplay.scenarioId];
+    if (scenario) {
+      scenarios[legacyMississippiReplay.scenarioId] = {
+        ...scenario,
+        contentVersion: legacyMississippiReplay.contentVersion,
+        units: scenario.units.filter(({ activity, type }) => (
+          activity !== 4 || !mississippiLegacyBaseHireTypes.has(type)
+        )),
+      };
+    }
+  }
   return createGame({
     scenarios,
     randomSeedSource: () => {
@@ -220,7 +255,10 @@ export function createBrowserGameForMississippi11Replay(contentVersion: string |
   const completedScenarioIds = contentVersion
     ? mississippi11CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
-  return createBrowserGame(completedScenarioIds ?? []);
+  const legacyReplay = completedScenarioIds && contentVersion?.includes('-formal-v1-')
+    ? { scenarioId: mississippi11CampaignId, contentVersion }
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? [], legacyReplay);
 }
 
 /** Replay import restores the Pyromaniac visibility recorded for Steam Valley, not today's profile. */
@@ -228,7 +266,10 @@ export function createBrowserGameForMississippi12Replay(contentVersion: string |
   const completedScenarioIds = contentVersion
     ? mississippi12CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
-  return createBrowserGame(completedScenarioIds ?? []);
+  const legacyReplay = completedScenarioIds && contentVersion?.includes('-formal-v1-')
+    ? { scenarioId: mississippi12CampaignId, contentVersion }
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? [], legacyReplay);
 }
 
 /** Replay import restores both Golden River special-unit unlocks recorded in its content version. */
@@ -236,7 +277,10 @@ export function createBrowserGameForMississippi13Replay(contentVersion: string |
   const completedScenarioIds = contentVersion
     ? mississippi13CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
-  return createBrowserGame(completedScenarioIds ?? []);
+  const legacyReplay = completedScenarioIds && contentVersion?.includes('-formal-v1-')
+    ? { scenarioId: mississippi13CampaignId, contentVersion }
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? [], legacyReplay);
 }
 
 /** Replay import restores both Riverside Mountains special-unit unlocks from the recording. */
@@ -244,7 +288,10 @@ export function createBrowserGameForMississippi14Replay(contentVersion: string |
   const completedScenarioIds = contentVersion
     ? mississippi14CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
-  return createBrowserGame(completedScenarioIds ?? []);
+  const legacyReplay = completedScenarioIds && contentVersion?.includes('-formal-v1-')
+    ? { scenarioId: mississippi14CampaignId, contentVersion }
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? [], legacyReplay);
 }
 
 /** Replay import restores both Railroad Canyon special-unit unlocks from the recorded snapshot. */
@@ -252,13 +299,27 @@ export function createBrowserGameForMississippi15Replay(contentVersion: string |
   const completedScenarioIds = contentVersion
     ? mississippi15CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
-  return createBrowserGame(completedScenarioIds ?? []);
+  const legacyReplay = completedScenarioIds && contentVersion?.includes('-formal-v1-')
+    ? { scenarioId: mississippi15CampaignId, contentVersion }
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? [], legacyReplay);
 }
 
 /** Replay import restores Highpoint Terrace's special-unit and Dynamite snapshot, not today's profile. */
 export function createBrowserGameForMississippi16Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi16CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  const legacyReplay = completedScenarioIds && contentVersion?.includes('-formal-v1-')
+    ? { scenarioId: mississippi16CampaignId, contentVersion }
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? [], legacyReplay);
+}
+
+/** Replay import restores Dead Rocks' recorded global map-unit unlock snapshot. */
+export function createBrowserGameForMississippi17Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi17CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

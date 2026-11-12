@@ -43,7 +43,7 @@ test('Traveller’s Town is level 11, locked until Lost City is complete, and la
     globalLevel: 11,
     requiresCompletedScenarioIds: [lostCityCampaignId],
   });
-  assert.equal(officialCampaignStages.length, 16);
+  assert.equal(officialCampaignStages.length, 17);
   assert.equal(createMississippi11CampaignContent().formalSettlementSupported, true);
 
   const progress = createProgress(createMemoryProfileRepository({
@@ -81,7 +81,7 @@ test('Traveller’s Town is level 11, locked until Lost City is complete, and la
   assert.equal(campaignLevelState(15, await progress.loadCampaign()), 'locked');
   assert.equal(
     getBrowserScenarioContentVersion(mississippi12CampaignId),
-    'gng-free-1.8.6-mississippi-12-formal-v1-pyro0',
+    'gng-free-1.8.6-mississippi-12-formal-v2-grandpa0-sniper0-pyro0-salesman0',
     'the browser can construct Steam Valley content before its formal stage is registered',
   );
 });

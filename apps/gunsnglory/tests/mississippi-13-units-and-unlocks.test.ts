@@ -18,28 +18,30 @@ function unitSummary(completedScenarioIds: readonly string[]) {
     cell,
     ...(hirePrice === undefined ? {} : { hirePrice }),
     asset,
-  }));
+  })).filter(({ type }) => type === 'pyromaniac' || type === 'salesman');
 }
 
-test('creates map16 Indian and gates the Pyromaniac/Salesman with their independent global milestones', () => {
-  const indian = { type: 'indian', activity: 5, cell: { x: 10, y: 6 }, asset: 'player_indian' };
-  assert.deepEqual(unitSummary([]), [indian]);
+test('creates TDM hire markers and gates Pyromaniac/Salesman by independent global milestones', () => {
+  const baseUnits = createMississippi13MapUnits([]);
+  assert.deepEqual(baseUnits.filter(({ activity }) => activity === 5).map(({ type, cell, asset }) => ({
+    type, cell, asset,
+  })), [{ type: 'indian', cell: { x: 10, y: 6 }, asset: 'player_indian' }]);
+  const mapHireMarkers = map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 99).length;
+  assert.equal(baseUnits.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length, mapHireMarkers);
   assert.deepEqual(unitSummary([pyromaniacUnlockScenarioId]), [
-    indian,
     {
       type: 'pyromaniac', activity: 4, cell: { x: 23, y: 22 },
       hirePrice: 130, asset: 'player_pyromaniac_sleep',
     },
   ]);
   assert.deepEqual(unitSummary([salesmanUnlockScenarioId]), [
-    indian,
     {
       type: 'salesman', activity: 4, cell: { x: 12, y: 7 },
       hirePrice: 110, asset: 'player_salesman_sleep',
     },
   ]);
   assert.deepEqual(unitSummary([pyromaniacUnlockScenarioId, salesmanUnlockScenarioId]), [
-    indian,
     {
       type: 'salesman', activity: 4, cell: { x: 12, y: 7 },
       hirePrice: 110, asset: 'player_salesman_sleep',
@@ -52,20 +54,29 @@ test('creates map16 Indian and gates the Pyromaniac/Salesman with their independ
   assert.equal(createMississippi13MapUnits([]).find(({ type }) => type === 'indian')?.weapon?.damage, 400);
 });
 
-test('does not turn save-only markers 96–101 into fresh map16 hireable units', () => {
-  const saveOnlyCount = map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 101).length;
-  assert.equal(saveOnlyCount, 21);
-  assert.deepEqual(createMississippi13MapUnits([]).map(({ type }) => type), ['indian']);
+test('map16 hides only globally locked code100/101 units', () => {
+  const markerCounts = map.originalTileGrid.flat().reduce((counts, code) => {
+    counts.set(code, (counts.get(code) ?? 0) + 1);
+    return counts;
+  }, new Map<number, number>());
+  const lockedUnits = createMississippi13MapUnits([]);
+  assert.equal(lockedUnits.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length,
+  [96, 97, 98, 99].reduce((count, code) => count + (markerCounts.get(code) ?? 0), 0));
+  assert.equal(lockedUnits.filter(({ type }) => type === 'sniper' || type === 'grandpa').length, 0);
+  const unlockedUnits = createMississippi13MapUnits(['campaign-oregon-10', 'campaign-dakota-10']);
+  assert.equal(unlockedUnits.filter(({ type }) => type === 'grandpa').length, markerCounts.get(101));
+  assert.equal(unlockedUnits.filter(({ type }) => type === 'sniper').length, 0, 'map16 has no code100 sniper marker');
 });
 
 test('M13 replay content version round-trips both independent unlock bits and rejects malformed values', () => {
   const combinations = [
-    { completed: [], version: 'gng-free-1.8.6-mississippi-13-formal-v1-pyro0-salesman0' },
-    { completed: [pyromaniacUnlockScenarioId], version: 'gng-free-1.8.6-mississippi-13-formal-v1-pyro1-salesman0' },
-    { completed: [salesmanUnlockScenarioId], version: 'gng-free-1.8.6-mississippi-13-formal-v1-pyro0-salesman1' },
+    { completed: [], version: 'gng-free-1.8.6-mississippi-13-formal-v2-grandpa0-sniper0-pyro0-salesman0' },
+    { completed: [pyromaniacUnlockScenarioId], version: 'gng-free-1.8.6-mississippi-13-formal-v2-grandpa0-sniper0-pyro1-salesman0' },
+    { completed: [salesmanUnlockScenarioId], version: 'gng-free-1.8.6-mississippi-13-formal-v2-grandpa0-sniper0-pyro0-salesman1' },
     {
       completed: [pyromaniacUnlockScenarioId, salesmanUnlockScenarioId],
-      version: 'gng-free-1.8.6-mississippi-13-formal-v1-pyro1-salesman1',
+      version: 'gng-free-1.8.6-mississippi-13-formal-v2-grandpa0-sniper0-pyro1-salesman1',
     },
   ];
   for (const { completed, version } of combinations) {
@@ -74,11 +85,14 @@ test('M13 replay content version round-trips both independent unlock bits and re
   }
   for (const invalid of [
     '',
-    combinations[0]!.version.replace('formal-v1', 'formal-v2'),
+    combinations[0]!.version.replace('formal-v2', 'formal-v3'),
     combinations[0]!.version.replace('pyro0', 'pyro2'),
     combinations[0]!.version.replace('salesman0', 'salesman2'),
     `${combinations[0]!.version}-extra`,
   ]) assert.equal(mississippi13CompletedScenarioIdsForContentVersion(invalid), undefined);
+  assert.deepEqual(mississippi13CompletedScenarioIdsForContentVersion(
+    'gng-free-1.8.6-mississippi-13-formal-v1-pyro1-salesman1',
+  ), [pyromaniacUnlockScenarioId, salesmanUnlockScenarioId]);
 });
 
 test('creates exactly two independent M13 Steamers with the original active/sleeping cannon markers', () => {

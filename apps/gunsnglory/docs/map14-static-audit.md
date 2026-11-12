@@ -55,12 +55,12 @@ TDM marker 使用零起点坐标。以下位置与数量直接从 map17 原始�
 | `113` | `(14,4)`，1个 | `GameObjectSpawnLocation` type 2，即 Fort 生成位置。地图只有 Fort，没有 Saloon 或 Tipi 生成位置。 |
 | `120`、`121`、`123` | 起点 `(2,13)`、`(22,14)`；4个 `121` 分在两组中；尾标记 `(6,13)`、`(26,14)` | 两组互相独立的蒸汽船，每组 2 个船体件、2 个休眠 type32 炮件、1 个尾件，共10个组件。没有 code122，船上没有活动炮件。 |
 | `130`、`131` | `(18,3)`、`(5,20)` | 新地图创建分支尝试创建 type35 Pyromaniac 和 type36 Salesman，并分别受 `GameObjectUnit.create/isUnlocked` 里程碑规则控制；内容版本须记录两个解锁位，以免回放受导入者档案影响。 |
-| `96–101` | 18个保存格：96×6、97×5、99×3、100×1、101×3 | 保存战局的玩家单位恢复标记。网页未完成关卡续玩，新的关卡初态不把它们当作新单位。 |
+| `96–101` | 18格：96×6、97×5、99×3、100×1、101×3 | 新局创建 activity 4 可招募单位：Gunslinger、Mexican、Indian，以及受全局 level 30/40 条件限制的 Grandpa/Sniper。 |
 | `124`、`125` | 共48格 | 水域标记；背景层映射到 Mississippi water atlas，`isFreeToWalk` 将其判为不可走。不是 GameObject 单位或新装饰。 |
 
 原始 DEX 中 `createGameObjectsFromBasicMap` 位于 `0x407cd0`。`130/131` 的 switch 目标按 `fromLoadGame == false` 创建 type35/36；反编译 Java 对应分支存在空块表现，不能据该 Java 伪码把它误判为“仅存档恢复”。研究内容清单目前对此分支的文字说明与 DEX 不一致；本实现以 DEX switch、`GameObjectUnit.create/isUnlocked` 及 M13 已使用的解锁快照契约为准，并避免把该分歧扩展成新的玩法假设。
 
-同一份 DEX 区分了普通新局与存档恢复：96–101 的普通单位只有恢复时创建；130/131 则走相反的 `fromLoadGame` 条件并在新局尝试创建。因此“忽略保存格”不意味着“忽略特殊单位”。map17 没有 `132` 赌徒或 `150` 赌场 spawn marker，不创建 Gambler/Casino；虽然 level-config 有 `gamblerTime`，不能仅凭该字段生成对象。
+`GameObjectManager.smali` 中96–101与130/131均进入新局对象创建分支：`fromLoadGame == false` 时创建 activity 4 单位，读档时跳过这些 TDM 初始对象并恢复存档状态。网页继续按产品约定将未完成关卡从初态重开，但不能因此从新局内容中删除这些 APK 单位。`td_map_17.tdm` 没有 `132` Gambler 或 `150` Casino spawn marker，不创建 Gambler/Casino；虽然 level-config 有 `gamblerTime`，不能仅凭该字段生成对象。
 
 代码和图片资源状态：应用已有 `gng_levelmap_17.png`、五种波次头像（Settlers、Gunslinger、Mexican、Pedro、Indian）、Mississippi 地形图集、桥面/桥墩、三种新增装饰图片、Fort 建筑图及 `music_loop2_mississippi.ogg`。code113 在 APK 中是位于 `(14,4)` 的 type-2 Fort 出生位置；网页用已有 `b_3x2_fort` 图像、锚点和碰撞范围表现这个位置，这是复用其他 Fort 关卡的网页渲染映射，不表示 APK 又创建了一个独立地图对象。当前 M14 场景 decoder 已补上 code68、73、77 装饰、code113 Fort 表现及 map17 场景数据。运行时预加载是否完整由应用测试验证；本批保持静音，不测试声音播放。
 
@@ -133,7 +133,7 @@ poolType 3 对应单位 `cannon` 和 spawn type 2（Fort），唯一 spawn marke
 - 正式内容标识使用 `campaign-mississippi-14`，前置依赖 `campaign-mississippi-13`。只有正式胜利推进 campaign 进度。
 - Free Play 继续可直接选择已实现关卡和三种难度，不写正式完成度或高分；从当前 profile 快照读取 Pyromaniac/Salesman 解锁，但不覆盖正式战役难度。
 - 回放 `contentVersion` 必须编码 type35/36 是否已解锁并还原该快照，不能读取导入者当前 profile 代替录制环境。
-- 未完成战局仍按产品规格从关卡初态重开；96–101 的 APK 战局恢复 marker 不变成网页续玩功能。
+- 未完成战局仍按产品规格从关卡初态重开；网页不实现 APK 的存档续玩，但这不改变新局应从 TDM 创建96–101单位的事实。
 
 ## 非阻塞边界
 
