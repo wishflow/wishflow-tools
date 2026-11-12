@@ -22,6 +22,7 @@ import {
   murdockMountainsLevelSixCampaignContent,
   mississippi11LevelElevenCampaignContent,
   mississippi12LevelTwelveCampaignContent,
+  mississippi13LevelThirteenCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -193,6 +194,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Steam Valley · Level 12', zh: '蒸汽谷 · 第 12 关' },
     globalLevel: 12,
     requiresCompletedScenarioIds: [mississippi11LevelElevenCampaignContent.id],
+  }, {
+    scenarioId: mississippi13LevelThirteenCampaignContent.id,
+    contentVersion: mississippi13LevelThirteenCampaignContent.contentVersion,
+    title: { en: 'Golden River · Level 13', zh: '黄金河 · 第 13 关' },
+    globalLevel: 13,
+    requiresCompletedScenarioIds: [mississippi12LevelTwelveCampaignContent.id],
   }]);
 });
 

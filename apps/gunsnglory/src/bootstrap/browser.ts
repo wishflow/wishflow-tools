@@ -47,6 +47,12 @@ import {
   mississippi12CampaignContentVersionFor,
 } from '../content/mississippi-12-campaign';
 import { mississippi12CampaignId } from '../content/mississippi-12-identity';
+import { createMississippi13CampaignContent } from '../content/mississippi-13-campaign';
+import {
+  mississippi13CampaignContentVersionFor,
+  mississippi13CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-13-content-version';
+import { mississippi13CampaignId } from '../content/mississippi-13-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -90,6 +96,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [lostCityCampaignId]: createLostCityCampaignContent(),
   [mississippi11CampaignId]: createMississippi11CampaignContent(),
   [mississippi12CampaignId]: createMississippi12CampaignContent(),
+  [mississippi13CampaignId]: createMississippi13CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -119,6 +126,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi12CampaignId) {
     return mississippi12CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi13CampaignId) {
+    return mississippi13CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -135,6 +145,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [lostCityCampaignId]: createLostCityCampaignContent(completedScenarioIds),
     [mississippi11CampaignId]: createMississippi11CampaignContent(completedScenarioIds),
     [mississippi12CampaignId]: createMississippi12CampaignContent(completedScenarioIds),
+    [mississippi13CampaignId]: createMississippi13CampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -183,6 +194,14 @@ export function createBrowserGameForMississippi11Replay(contentVersion: string |
 export function createBrowserGameForMississippi12Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi12CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores both Golden River special-unit unlocks recorded in its content version. */
+export function createBrowserGameForMississippi13Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi13CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }
