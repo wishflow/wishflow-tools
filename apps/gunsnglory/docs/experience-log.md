@@ -391,7 +391,7 @@
 
 ## 关卡发布需同时核对部署来源与真实入口
 
-**状态：M17 Dead Rocks 已发布并完成公开入口验收；回同步至 `gunsnglory` 正在收尾。**
+**状态：M17 Dead Rocks 已发布、完成公开入口验收并回同步至 `gunsnglory`。**合并提交 `fcf622e` 已推送，集成分支现包含发布 SHA。
 
 - **本批发布：**提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5` 的 GitHub Actions `43246826051` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回该来源 SHA。
 - **入口观察：**内置浏览器在静音、窗口模式进入 Free Play → Mississippi → Dead Rocks → Medium，确认关卡标题、地图、Settlers 开场对白和 `1/8` 波次 HUD 显示正常；随后仅继续到首波准备状态，没有完整手动通关。未启动 Android、进入全屏或播放音效。

@@ -78,8 +78,9 @@ Dead Rocks 使用 APK 的 `res/raw/td_map_20.tdm`，作为 Mississippi 第17关�
 | M17-D/E | 正式登记与入口回归 | 登记为 global level 17，接入正式解锁、Free Play、结算和回放解锁快照；同步全局关卡目录、Progress 快照及旧关卡回归。 |
 | M17-F1 | 完整检查中的快照修复 | 修复四处旧测试目录/Progress 期望仍停在16关的问题；不改运行时进度逻辑。 |
 | M17-F2 | 批次发布与验收 | `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过 TypeScript、661项单测、构建及147项 E2E。发布提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5` 的 Actions `43246826051` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器静音、窗口模式进入 Free Play → Mississippi → Dead Rocks → Medium，地图、开场对白及 `1/8` HUD 正常；未完整通关、启动 Android、进入全屏或播放声音。 |
+| M17-F3 | 发布回同步至集成分支 | 将 `master` 发布提交并回 `gunsnglory`，保留 M13–M16 既有集成历史。 | 合并提交 `fcf622e376c34ab0efff7a4c5a6705f0f4fa4c24` 已推送至 `origin/gunsnglory`；本地与远端分支一致，并包含 M17 发布提交。 |
 
-M17 发布后累计普通发布比例为21/105（20.0%）。发布已完成；本次正在将 master 发布提交及 M17 文档回同步到 `gunsnglory`。
+M17 发布后累计普通发布比例为21/105（20.0%）。批次已关闭：`master` 与 `origin/master` 为 M17 发布提交，`gunsnglory` 与 `origin/gunsnglory` 均包含该发布提交和回同步合并提交。
 
 ## 已完成批次
 
