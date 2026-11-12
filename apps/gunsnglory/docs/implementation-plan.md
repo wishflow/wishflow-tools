@@ -4,7 +4,8 @@
 
 ## 当前状态
 
-- 公开版正式战役仍为第18/60关。M19-A–F 已在当前开发分支完成 Dust Falls（`res/raw/td_map_22.tdm`）静态审计、地图/路线、地图对象/初始单位/Tipi、初态/波次/Indian 池规则、双语内容、正式/自由模式、回放和菜单入口回归；批次完整本地检查通过，尚待 M19-R1–R3 集成发布、部署验收和回同步。Mississippi 第 11–19 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace、Dead Rocks、Shadow Town、Dust Falls，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_22.tdm`；不能根据关卡编号推测地图文件编号。
+- 公开版正式战役已开放至第19/60关。Dust Falls（`res/raw/td_map_22.tdm`）已完成静态审计、地图/路线、对象/单位/Tipi、初态/波次/Indian 池规则、双语内容、正式/自由模式、回放和菜单入口；整批检查、发布、两个 Pages 来源 SHA 核对、内置浏览器验收及回同步均已完成。Mississippi 第11–19关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace、Dead Rocks、Shadow Town、Dust Falls，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_22.tdm`；不能根据关卡编号推测地图文件编号。
+- M19 squash 发布 SHA 为 `824680a1ce88dd3d222f812ef1728925019be067`，GitHub Actions `43294305789` 成功；GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器静音、窗口模式确认 Free Play 的 Dust Falls 首波对白与正式战役 0/10 时第19关锁定；回同步提交 `ecd422c59bbe24114b599242bece5aeb5d32763d` 已推送到 `origin/gunsnglory`，主工作树已快进并保留未跟踪研究文档。发布后普通发布比例为23/115（20.0%）。
 - Mississippi 第17关 Dead Rocks 已完成并发布。地图、路线、对象/单位、八波、双语内容、正式战役、Free Play、结算和回放均已接入；M11–M16 的新局可招募标记语义及旧回放兼容也已修正。静态证据见 [M17 静态审计](map17-static-audit.md)。
 - M17 发布提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5`；GitHub Actions `43246826051` 成功，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该来源 SHA。内置浏览器静音、窗口模式从 Free Play → Mississippi → Dead Rocks → Medium 进入，地图、Settlers 开场对白和 `1/8` 波次 HUD 正常；未完整手动通关、启动 Android、进入全屏或播放声音。
 - M17 批次完整检查 `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过：TypeScript、661 项单测、生产构建及147项 E2E。发布后累计普通发布比例为21次/105个已验收实现切片（20.0%）。回同步已完成：合并提交 `fcf622e376c34ab0efff7a4c5a6705f0f4fa4c24` 已推送至 `origin/gunsnglory`；M18 后续结果见 Shadow Town 完成条目。
@@ -38,9 +39,9 @@
 - 内置浏览器静音、窗口模式验证公开版 `?release=62905bb`：Free Play → Mississippi → Railroad Canyon（15）→ Medium；Settlers 开场对白及 `01/09` HUD 正常显示。仅检查关卡入口和首波状态，未完整通关或启动 Android。
 - M15 发布后累计普通发布比例为19/95（20.0%）。回同步提交 `3abedce` 已推送至 `origin/gunsnglory`，包含发布提交 `62905bb`。
 
-## 活动批次：Dust Falls（M19）
+## 最近完成批次：Dust Falls（M19）
 
-目标是将 APK 的 Mississippi 第19关 Dust Falls 接入既有地图、规则、正式战役、Free Play 与回放。公开版仍为18/60；不能仅因目录已预留 `mapFileNumber: 22` 就认为关卡已实现。依据与未解决边界见 [M19 静态审计](map19-static-audit.md)。每片按顺序实现、跑定向检查、本地提交并更新本计划；除非证据或回归要求，不重做 M11–M18 已通过的地图和共享规则。
+本批次已将 APK 的 Mississippi 第19关 Dust Falls 接入既有地图、规则、正式战役、Free Play 与回放，并完成整批发布、部署验收及回同步。实现证据和适用边界见 [M19 静态审计](map19-static-audit.md)。
 
 | 顺序 | 切片 | 实施范围 | 可判定验收 |
 | --- | --- | --- | --- |
@@ -50,16 +51,16 @@
 | M19-D（已完成） | 初态、8波与单位池规则 | 加入 `$365`、15生命、3级升级、三档 HP 倍率及 level-config 的奖励箱参数；逐行录入8波、24个请求、间隔/延迟/倍率，以及 wave4 Indian 池 count2/max4 和共享15秒派发周期。 | `GameSession` 初态与奖励箱设置、全部 wave metadata、24条8类型请求向量、4个 APK action ID 映射及两个 pool action 与 APK 派生数据逐项相等；短会话真实生成 Indian，并证明模板不进入初始场景单位列表。M18/M19 内容、规则、实体、正式回放及地图定向测试29项通过；`pnpm run typecheck` 通过。 |
 | M19-E（已完成） | 文案、目录、正式/自由模式与回放 | 加入 Dust Falls 身份、双语简介/胜利标题、8段对白及头像/声音资源；开放正式 level19（依赖18）和 Mississippi Free Play；建立记录 Grandpa、Sniper、Pyromaniac、Salesman 四个全局解锁状态的内容版本及回放工厂。 | map22 缩略图、对白头像/音频均可离线读取；正式第19关依赖 Shadow Town；Free Play 三档难度可进入，且结算不改正式档案；正式胜利写入第19关；四个解锁位的16种组合均经内容版本往返并通过 GameSession 核对招募单位；未知版本不解析为已解锁状态。M19 内容与正式/回放定向测试5项通过，`pnpm run typecheck` 通过。 |
 | M19-F（已完成） | 入口回归与批次收尾 | 新增 Dust Falls Free Play 与正式战役菜单 E2E：Free Play 检查 19 可进入、20 禁用；正式模式先以仅完成 M17 的档案验证 19 锁定，再以完成 M18 的档案验证 19 解锁。只更新 M19 引起的 Mississippi Free Play 数（8→9）、目录长度和进度摘要分母（18→19）、19/20 关按钮状态及正式目录快照，不改不相关内容。E2E 保持静音、窗口模式，不完整通关、不启动 Android。 | 两条 E2E 都从真实菜单开始；核对 M19 标题、`gng_levelmap_22.png` 缩略图、16:9 游戏画布、192×144 minimap、开场对白/头像、已加载地图资源与 `1/8` HUD；正式模式分别断言 19 锁定与解锁，Free Play 断言 19 启用、20 禁用。完整 `CI=1 PLAYWRIGHT_PORT=43129 pnpm run test:ci` 通过：TypeScript、695 项单测、生产构建和151项 E2E；构建提示主 JS chunk 为2.239 MB（gzip 258.12 KB），本批未加入无关拆包改动。 |
-| M19-R1 | squash 集成与发布 | 将通过完整检查的 M19 批次 squash 集成到 `master` 并按现有静态站流程推送。 | Actions 适用检查和部署成功；本地 `master`、远端 `origin/master` 与预期发布提交一致。 |
-| M19-R2 | 部署与浏览器验收 | 核对部署 `build-info.json` 来源 SHA；使用 Codex 内置浏览器静音、窗口模式验收一条 Free Play 入口和一条正式进度状态。 | GitHub Pages、Cloudflare Pages 来源 SHA 均与 M19 发布提交一致；线上 Dust Falls 地图、Tipi、对白和 `01/08` HUD 正常；不手动通关或启用全屏/声音。 |
-| M19-R3 | 回同步至集成分支 | 将已发布 master 合并回 `gunsnglory` 并推送，核对相关工作树与远端。 | `origin/gunsnglory` 包含发布 SHA；主工作树与该远端同步，未覆盖其他工作树现场。 |
+| M19-R1（已完成） | squash 集成与发布 | 将通过完整检查的 M19 批次 squash 集成到 `master` 并按现有静态站流程推送。 | 发布提交 `824680a1ce88dd3d222f812ef1728925019be067` 已推送；GitHub Actions `43294305789` 的应用测试和两个 Pages 部署全部成功，本地 `master` 与 `origin/master` 指向该提交。 |
+| M19-R2（已完成） | 部署与浏览器验收 | 核对部署 `build-info.json` 来源 SHA；使用 Codex 内置浏览器静音、窗口模式验收 Free Play 入口和正式战役进度状态。 | GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告 `824680a1ce88dd3d222f812ef1728925019be067`。内置浏览器进入 Free Play → Mississippi → Dust Falls → Easy，核对 Mexican 的 Wave 1 of 8 对白，继续后进入活动战场；正式战役 0/10 时第19关保持锁定。入口 E2E 另核对 `01/08` HUD 和地图资源。未完整通关、未进入全屏，声音保持关闭。 |
+| M19-R3（已完成） | 回同步至集成分支 | 将已发布 master 合并回 `gunsnglory` 并推送，核对相关工作树与远端。 | 回同步合并提交 `ecd422c59bbe24114b599242bece5aeb5d32763d` 已推送至 `origin/gunsnglory`，包含 M19 发布 SHA；本地 `gunsnglory` 主工作树已快进至同一合并提交，原有未跟踪研究文档保留。 |
 
 ### M19-F 完成结果
 
 - Free Play 与正式战役均从真实菜单进入 Dust Falls；正式关卡在仅完成第17关时保持锁定，完成第18关后开放；Free Play 可选择第19关且第20关禁用。
 - 两条入口 E2E 核对关卡标题、Map 22 缩略图、16:9 游戏画布、192×144 minimap、首波对白/头像、地图资源加载和 `1/8` HUD；未完整通关、未启动 Android，测试保持静音与窗口模式。
 - 批次检查命令 `CI=1 PLAYWRIGHT_PORT=43129 pnpm run test:ci` 通过 TypeScript、695 项单测、生产构建和151项 E2E。构建报告主 JS chunk 为2.239 MB（gzip 258.12 KB），超过500 KB chunk 提示；本批不包含代码拆包范围。
-- 当前完成范围仅覆盖 M19-A–F；公开版仍为18/60。M19-R1–R3 的集成发布、线上来源 SHA 核验、内置浏览器验收及回同步尚未完成。
+- M19-A–F 与 M19-R1–R3 均已完成；公开正式战役已开放至第19关（共60关），批次发布后累计普通发布比例为23/115（20.0%）。静音、窗口模式完成线上入口检查；没有完整通关、启动 Android、进入全屏或试听音频。
 
 ## 最近完成：Railroad Canyon（M15）
 
