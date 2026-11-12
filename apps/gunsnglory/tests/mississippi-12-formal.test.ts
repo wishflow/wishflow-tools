@@ -33,7 +33,7 @@ function emptyRequestContent(completedScenarioIds: readonly string[]): ScenarioC
   };
 }
 
-test('Steam Valley is level 12, unlocks after Traveller’s Town, and leaves level 13 unavailable', async () => {
+test('Steam Valley is level 12, unlocks after Traveller’s Town, and gates Golden River behind its completion', async () => {
   const stage = officialCampaignStages.find(({ globalLevel }) => globalLevel === 12);
   assert.deepEqual(stage, {
     scenarioId: mississippi12CampaignId,
@@ -42,8 +42,8 @@ test('Steam Valley is level 12, unlocks after Traveller’s Town, and leaves lev
     globalLevel: 12,
     requiresCompletedScenarioIds: [mississippi11CampaignId],
   });
-  assert.equal(officialCampaignStages.length, 12);
-  assert.equal(officialCampaignStages.some(({ globalLevel }) => globalLevel === 13), false);
+  assert.equal(officialCampaignStages.length, 13);
+  assert.equal(officialCampaignStages.some(({ globalLevel }) => globalLevel === 13), true);
 
   const progress = createProgress(createMemoryProfileRepository({
     completedScenarios: completedThroughLevelTen,
@@ -95,7 +95,7 @@ test('formal Steam Valley victory completes level 12 and saves its score exactly
   assert.ok(saved.profile.completedScenarios.includes(mississippi12CampaignId));
   assert.equal(saved.profile.highScores[mississippi12CampaignId], victory?.highScoreCandidate);
   assert.equal(campaignLevelState(12, await progress.loadCampaign()), 'completed');
-  assert.equal(campaignLevelState(13, await progress.loadCampaign()), 'unimplemented');
+  assert.equal(campaignLevelState(13, await progress.loadCampaign()), 'available');
   assert.deepEqual((await progress.applySettlement(victory!)).profile, saved.profile);
   session.close();
 
