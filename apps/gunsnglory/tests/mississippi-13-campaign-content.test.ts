@@ -48,7 +48,7 @@ function waveShape(wave: CampaignWaveDefinition) {
 test('Golden River exposes the APK start state, global enemy design, and no absent map systems', () => {
   const scenario = createMississippi13CampaignContent();
   assert.equal(scenario.id, mississippi13CampaignId);
-  assert.equal(scenario.contentVersion, 'gng-free-1.8.6-mississippi-13-formal-v1-pyro0-salesman0');
+  assert.equal(scenario.contentVersion, 'gng-free-1.8.6-mississippi-13-formal-v2-grandpa0-sniper0-pyro0-salesman0');
   assert.equal(scenario.formalSettlementSupported, true);
   assert.deepEqual(scenario.title, mississippi13CampaignCopy.title);
   assert.equal(scenario.map.width, 32);

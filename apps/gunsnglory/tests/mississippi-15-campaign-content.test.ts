@@ -9,6 +9,7 @@ import {
   mississippi15CompletedScenarioIdsForContentVersion,
 } from '../src/content/mississippi-15-content-version';
 import { mississippi15CampaignId } from '../src/content/mississippi-15-identity';
+import map from '../src/content/mississippi-15.json';
 import { mississippi15WaveIntros } from '../src/content/mississippi-15-wave-intros';
 import { collectScenarioImageAssetNames } from '../src/content/scenario-image-assets';
 import { gameAssetRelativePath } from '../src/render/game-asset-path';
@@ -46,7 +47,7 @@ test('Railroad Canyon copy preserves APK English and supplies complete Chinese t
   assert.ok(mississippi15WaveIntros.every(({ speaker, text }) => speaker.zh.length > 0 && text.zh.length > 0));
 });
 
-test('Railroad Canyon creates only fresh-game units plus the saved global unlock snapshot', () => {
+test('Railroad Canyon creates all fresh map hires plus the global unlock snapshot', () => {
   const locked = createMississippi15CampaignContent([]);
   assert.equal(locked.id, mississippi15CampaignId);
   assert.equal(locked.formalSettlementSupported, true);
@@ -54,14 +55,17 @@ test('Railroad Canyon creates only fresh-game units plus the saved global unlock
   assert.equal(locked.map.width, 32);
   assert.equal(locked.map.height, 24);
   assert.ok(!locked.units.some(({ type }) => type === 'pyromaniac' || type === 'salesman'));
-  assert.equal(locked.units.filter(({ type }) => type === 'gunslinger').length, 1);
-  assert.equal(locked.units.filter(({ type }) => type === 'mexican').length, 1);
+  assert.equal(locked.units.filter(({ type, activity }) => type === 'gunslinger' && activity === 5).length, 1);
+  assert.equal(locked.units.filter(({ type, activity }) => type === 'mexican' && activity === 5).length, 1);
+  assert.equal(locked.units.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length,
+  map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 99).length);
   assert.ok(!locked.units.some(({ type }) => type === 'cannon'), 'spawn-pool inventory is not a placed map Cannon');
 
   const unlocked = createMississippi15CampaignContent(['campaign-nevada-10', 'campaign-alaska-10']);
   assert.deepEqual(unlocked.units.filter(({ type }) => type === 'pyromaniac' || type === 'salesman')
     .map(({ type }) => type), ['salesman', 'pyromaniac']);
-  assert.equal(unlocked.contentVersion, 'gng-free-1.8.6-mississippi-15-formal-v1-pyro1-salesman1');
+  assert.equal(unlocked.contentVersion, 'gng-free-1.8.6-mississippi-15-formal-v2-grandpa0-sniper0-pyro1-salesman1');
   assert.deepEqual(mississippi15CompletedScenarioIdsForContentVersion(unlocked.contentVersion!), [
     'campaign-nevada-10', 'campaign-alaska-10',
   ]);

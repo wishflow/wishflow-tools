@@ -187,22 +187,23 @@ test('covers every APK map15 route edge, branch, spawn-to-exit path, and action 
   }
 });
 
-test('creates only fresh map15 units and gates its Pyromaniac marker by the global unlock', () => {
+test('creates all fresh map15 hire markers and gates locked units by their global unlock', () => {
   const flatGrid = map.originalTileGrid.flat();
   const markerCount = (code: number) => flatGrid.filter((value) => value === code).length;
   assert.equal(markerCount(104), 1);
   assert.equal(markerCount(130), 1);
-  assert.equal(flatGrid.filter((code) => code >= 96 && code <= 101).length, 12, 'these are load-save markers, not fresh units');
+  assert.equal(flatGrid.filter((code) => code >= 96 && code <= 101).length, 12, 'these markers create fresh-game hire units');
   assert.equal(flatGrid.some((code) => code === 83 || code === 84 || (code >= 112 && code <= 114)), false);
   assert.equal(flatGrid.includes(132), false, 'map15 has no fresh Gatling marker');
   assert.equal(createMississippi12MapScene().decorations?.some(({ asset }) => asset === 'b_3x2_casino'), false);
 
   const lockedUnits = createMississippi12MapUnits();
-  assert.deepEqual(lockedUnits.map(({ id, type, activity, cell }) => ({ id, type, activity, cell })), [
-    { id: 'gunslinger-1', type: 'gunslinger', activity: 5, cell: { x: 11, y: 11 } },
-  ]);
-  assert.equal(lockedUnits[0]?.movementSpeedFinePer100Ms, 1500);
-  assert.deepEqual(lockedUnits[0]?.weapon, {
+  const activeGunslinger = lockedUnits.find(({ type, activity }) => type === 'gunslinger' && activity === 5);
+  assert.deepEqual(activeGunslinger && { id: activeGunslinger.id, type: activeGunslinger.type, activity: activeGunslinger.activity, cell: activeGunslinger.cell }, {
+    id: 'gunslinger-1', type: 'gunslinger', activity: 5, cell: { x: 11, y: 11 },
+  });
+  assert.equal(activeGunslinger?.movementSpeedFinePer100Ms, 1500);
+  assert.deepEqual(activeGunslinger?.weapon, {
     damage: 140,
     damageType: 'light',
     rangeFine: 38400,
@@ -212,10 +213,12 @@ test('creates only fresh map15 units and gates its Pyromaniac marker by the glob
     specialReloadTimeMs: 1500,
     specialReloadFrequency: 6,
   });
+  assert.equal(lockedUnits.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length, 9);
 
-  const unlockedUnits = createMississippi12MapUnits((unitTypeId) => unitTypeId === 35);
-  assert.deepEqual(unlockedUnits.map(({ type, activity, cell }) => ({ type, activity, cell })), [
-    { type: 'gunslinger', activity: 5, cell: { x: 11, y: 11 } },
-    { type: 'pyromaniac', activity: 4, cell: { x: 18, y: 16 } },
-  ]);
+  const unlockedUnits = createMississippi12MapUnits((unitTypeId) => unitTypeId <= 4 || unitTypeId === 35);
+  assert.deepEqual(unlockedUnits.find(({ type, activity }) => type === 'gunslinger' && activity === 5)?.cell, { x: 11, y: 11 });
+  assert.deepEqual(unlockedUnits.find(({ type }) => type === 'pyromaniac')?.cell, { x: 18, y: 16 });
+  assert.equal(unlockedUnits.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length, 9);
 });

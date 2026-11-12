@@ -67,8 +67,14 @@ test('Traveller’s Town only exposes TDM special hire units after their origina
 test('contentVersion round-trips only the unlock milestones that affect replay units', () => {
   assert.equal(
     mississippi11CampaignContentVersionFor([]),
-    'gng-free-1.8.6-mississippi-11-formal-v1-pyro0-sales0',
+    'gng-free-1.8.6-mississippi-11-formal-v2-grandpa0-sniper0-pyro0-salesman0',
   );
+  assert.equal(mississippi11CampaignContentVersionFor([pyromaniacUnlockScenarioId]),
+    'gng-free-1.8.6-mississippi-11-formal-v2-grandpa0-sniper0-pyro1-salesman0');
+  assert.equal(mississippi11CampaignContentVersionFor([salesmanUnlockScenarioId]),
+    'gng-free-1.8.6-mississippi-11-formal-v2-grandpa0-sniper0-pyro0-salesman1');
+  assert.equal(mississippi11CampaignContentVersionFor([pyromaniacUnlockScenarioId, salesmanUnlockScenarioId]),
+    'gng-free-1.8.6-mississippi-11-formal-v2-grandpa0-sniper0-pyro1-salesman1');
   assert.deepEqual(
     mississippi11CompletedScenarioIdsForContentVersion(
       'gng-free-1.8.6-mississippi-11-formal-v1-pyro1-sales0',
@@ -89,6 +95,12 @@ test('contentVersion round-trips only the unlock milestones that affect replay u
     mississippi11CompletedScenarioIdsForContentVersion('gng-free-1.8.6-mississippi-11-formal-v1-pyro0-sales0-extra'),
     undefined,
   );
+  assert.deepEqual(mississippi11CompletedScenarioIdsForContentVersion(
+    'gng-free-1.8.6-mississippi-11-formal-v2-grandpa1-sniper1-pyro0-salesman0',
+  ), ['campaign-oregon-10', 'campaign-dakota-10']);
+  assert.equal(mississippi11CompletedScenarioIdsForContentVersion(
+    'gng-free-1.8.6-mississippi-11-formal-v2-grandpa2-sniper0-pyro0-salesman0',
+  ), undefined);
 
   const replaySnapshot = mississippi11CompletedScenarioIdsForContentVersion(
     'gng-free-1.8.6-mississippi-11-formal-v1-pyro1-sales0',

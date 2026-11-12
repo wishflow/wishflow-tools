@@ -51,7 +51,7 @@ APK 包含 63 个 TDM 文件、正式战役有 60 关；本关使用 map18，不
 | `120/121/123` | `(19,22)` 起始，`121` 位于 x=21..23，`123` 位于 `(24,22)` | 一组横向 Steamer：type30/31 机车、三个 activity-4 type32 部件和 type33 尾件；沿用 `createMississippiSteamerPart` 和 Mississippi 水上移动规则。 |
 | `104`、`105`、`107` | `(16,6)` Gunslinger、`(20,5)` Mexican、`(17,17)` Indian | 新局创建的活动单位，分别映射 unit type 1、2、4；使用地图单位原版配置。 |
 | `130`、`131` | `(24,20)`、`(6,11)` | 新局分别尝试创建 type35 Pyromaniac、type36 Salesman；按 level50/60 解锁状态出现。回放 contentVersion 必须记录两个状态。 |
-| `96/97/99/100/101` | 共13个 | 已保存战局的单位恢复 marker；新关卡不应把它们变成额外初始单位。 |
+| `96/97/99/100/101` | 共13个 | 新局 activity 4 招募单位 marker：Gunslinger、Mexican、Indian、Sniper、Grandpa；Sniper/Grandpa受全局第40/30关解锁限制。 |
 | `124`、`126` | 58格水域、2个水边岩石 | 水域由背景/不可行走层表达；126 为 `e_1x1_rocks_water` 装饰。 |
 
 地图缩略图 `gng_levelmap_18.png`、Saloon、Mississippi 地形/桥梁/轨道、普通列车、Steamer、玩家单位和对白头像已在应用资源目录中。静态资源存在不等于预加载正确；由内容切片资源测试检查。音频不作为本批重点，不试听。

@@ -55,7 +55,7 @@ REA/JADX 重建代码不是原始源码。`R/data/map-inventory.json` 和路线�
 
 map19 没有列车 marker、Saloon 或 Tipi。Fort 是唯一招募地点。关卡图标 `public/assets/menu/gng_levelmap_19.png`、Fort/Dynamite/Steamer/Mississippi 图集及对白头像已存在于应用资源中；实现仍需验证它们进入资源预加载集合。
 
-**证据冲突提醒：**研究资料中的旧版内容汇总把 `130/131` 描述为读档恢复 marker；这与 `GameObjectManager.smali` 的实际 `fromLoadGame` 条件相反。对 map19 应遵循 Smali：`130/131` 是新局 type35/36，存档专用 marker 是 `96–101`。不能只复制旧汇总表结论。
+**证据冲突更正：**研究资料中的旧版内容汇总把 `130/131` 描述为读档恢复 marker；随后 M16 审计又误把 `96–101` 反向归为仅读档创建。`GameObjectManager.smali` 表明两组 marker 都在 `fromLoadGame == false` 的新局分支创建 activity 4 单位；读档时跳过地图初始对象并恢复存档状态。对 map19，应将 `96–101` 与 `130/131` 都按各自单位类型、解锁条件纳入新局对象。不能只复制旧汇总表或旧地图实现结论。
 
 ## 关卡数值、敌人波次与炮池
 

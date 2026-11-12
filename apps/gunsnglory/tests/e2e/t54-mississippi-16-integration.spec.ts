@@ -42,9 +42,9 @@ test('Free Play opens Highpoint Terrace with the map, first dialogue, and eight-
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-16')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-17')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-17')).toBeEnabled();
   await page.getByTestId('campaign-level-16').click();
 
   await expect(page.getByRole('heading', { name: 'Highpoint Terrace' })).toBeVisible();

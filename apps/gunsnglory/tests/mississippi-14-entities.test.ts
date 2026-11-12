@@ -100,25 +100,28 @@ test('Riverside Mountains starts with the Mexican and Indian and gates map units
   assert.deepEqual(markerCells(131), [[5, 20]]);
 
   const fresh = createMississippi14MapUnits();
-  assert.deepEqual(fresh.map(({ type, activity, cell }) => [type, activity, cell.x, cell.y]), [
+  assert.deepEqual(fresh.filter(({ activity }) => activity === 5).map(({ type, activity, cell }) => [type, activity, cell.x, cell.y]), [
     ['indian', 5, 24, 7],
     ['mexican', 5, 16, 13],
   ]);
   assert.ok(fresh.every(({ type }) => type !== 'pyromaniac' && type !== 'salesman'));
+  assert.equal(fresh.filter(({ activity, type }) => activity === 4
+    && ['gunslinger', 'mexican', 'cannon', 'indian'].includes(type)).length,
+  map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 99).length);
 
-  const unlocked = createMississippi14MapUnits(['campaign-nevada-10', 'campaign-alaska-10']);
-  assert.deepEqual(unlocked.map(({ type, activity, cell }) => [type, activity, cell.x, cell.y]), [
-    ['pyromaniac', 4, 18, 3],
+  const unlocked = createMississippi14MapUnits([
+    'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
+  ]);
+  assert.deepEqual(unlocked.filter(({ activity }) => activity === 5).map(({ type, activity, cell }) => [type, activity, cell.x, cell.y]), [
     ['indian', 5, 24, 7],
     ['mexican', 5, 16, 13],
-    ['salesman', 4, 5, 20],
   ]);
+  assert.equal(unlocked.filter(({ activity }) => activity === 4).length,
+    map.originalTileGrid.flat().filter((code) => code >= 96 && code <= 101 || code === 130 || code === 131).length);
+  assert.deepEqual(unlocked.filter(({ type }) => type === 'pyromaniac' || type === 'salesman')
+    .map(({ type }) => type).sort(), ['pyromaniac', 'salesman']);
   assert.equal(new Set(unlocked.map(({ id }) => id)).size, unlocked.length);
   assert.ok(unlocked.every(({ activity }) => activity === 4 || activity === 5));
-  const saveOnlyCells = new Set(map.originalTileGrid.flatMap((row, y) => row.flatMap((code, x) => (
-    code >= 96 && code <= 101 ? [x + ',' + y] : []
-  ))));
-  assert.ok(unlocked.every(({ cell }) => !saveOnlyCells.has(cell.x + ',' + cell.y)));
 });
 
 
