@@ -65,6 +65,10 @@ import { mississippi11CampaignCopy } from './content/mississippi-11-campaign-cop
 import { mississippi12CampaignId } from './content/mississippi-12-identity';
 import { createMississippi12CampaignContent } from './content/mississippi-12-campaign';
 import { mississippi12CampaignCopy } from './content/mississippi-12-campaign-copy';
+import { mississippi13CampaignId } from './content/mississippi-13-identity';
+import { createMississippi13CampaignContent } from './content/mississippi-13-campaign';
+import { mississippi13WaveIntros } from './content/mississippi-13-wave-intros';
+import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
 import { mississippi12WaveIntros } from './content/mississippi-12-wave-intros';
@@ -3466,7 +3470,7 @@ const assetNames = new Set([
     ...(positionAssetSequence?.assets ?? []),
   ]),
   ...(view.units.some((unit) => unit.activity === 4) ? ['sfx_sleeping'] : []),
-  ...[
+  ...collectScenarioImageAssetNames([
     cowGulchLevelOneContent,
     apacheValleyContent,
     fortKaboomLevelThreeContent,
@@ -3483,14 +3487,7 @@ const assetNames = new Set([
     ]),
     createMississippi11CampaignContent(['campaign-nevada-10', 'campaign-alaska-10']),
     createMississippi12CampaignContent(['campaign-nevada-10']),
-  ].flatMap((content) => [
-    ...content.map.background.map((tile) => tile.asset),
-    ...content.map.streets.map((tile) => tile.asset),
-    ...(content.map.decorations ?? []).map((decoration) => decoration.asset),
-    ...content.units.flatMap(({ asset, positionAssetSequence }) => [
-      asset,
-      ...(positionAssetSequence?.assets ?? []),
-    ]),
+    createMississippi13CampaignContent(['campaign-nevada-10', 'campaign-alaska-10']),
   ]),
   'pioneer_male',
   'pioneer_female',
@@ -3748,7 +3745,8 @@ function isOfficialNewMexicoMusicSession(): boolean {
 function isOfficialMississippiMusicSession(): boolean {
   return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
     && (session.startRecord.scenarioId === mississippi11CampaignId
-      || session.startRecord.scenarioId === mississippi12CampaignId);
+      || session.startRecord.scenarioId === mississippi12CampaignId
+      || session.startRecord.scenarioId === mississippi13CampaignId);
 }
 
 function isOfficialCampaignMusicSession(): boolean {
@@ -3768,6 +3766,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === lostCityCampaignId) return lostCityWaveIntros;
   if (scenarioId === mississippi11CampaignId) return mississippi11WaveIntros;
   if (scenarioId === mississippi12CampaignId) return mississippi12WaveIntros;
+  if (scenarioId === mississippi13CampaignId) return mississippi13WaveIntros;
   return [];
 }
 
