@@ -14,6 +14,7 @@ import {
   createBrowserGameForMississippi16Replay,
   createBrowserGameForMississippi17Replay,
   createBrowserGameForMississippi18Replay,
+  createBrowserGameForMississippi19Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -95,6 +96,10 @@ import { createMississippi18CampaignContent } from './content/mississippi-18-cam
 import { mississippi18CampaignCopy } from './content/mississippi-18-campaign-copy';
 import { mississippi18CampaignId } from './content/mississippi-18-identity';
 import { mississippi18WaveIntros } from './content/mississippi-18-wave-intros';
+import { createMississippi19CampaignContent } from './content/mississippi-19-campaign';
+import { mississippi19CampaignCopy } from './content/mississippi-19-campaign-copy';
+import { mississippi19CampaignId } from './content/mississippi-19-identity';
+import { mississippi19WaveIntros } from './content/mississippi-19-wave-intros';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -803,6 +808,9 @@ const languageMessages = {
       if (scenarioId === mississippi18CampaignId) return mode === 'free'
         ? 'Free Play does not change campaign progress or best score.'
         : 'Official Shadow Town level 18: eight original waves across six routes. Victory records campaign completion and best score.';
+      if (scenarioId === mississippi19CampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Dust Falls level 19: eight original waves across seven routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -1044,6 +1052,9 @@ const languageMessages = {
       if (scenarioId === mississippi18CampaignId) return mode === 'free'
         ? '自由游玩不会更改战役进度或最高分。'
         : '正式关卡：影镇，第 18 关。包含六条路线上的原版八波；胜利后记录战役完成与最高分。';
+      if (scenarioId === mississippi19CampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：尘瀑镇，第 19 关。包含七条路线上的原版八波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -1380,6 +1391,8 @@ const campaignMenuCopy = {
     levelSeventeenVictoryTitle: mississippi17CampaignCopy.victoryTitle.en,
     levelEighteenTitle: mississippi18CampaignCopy.title.en,
     levelEighteenVictoryTitle: mississippi18CampaignCopy.victoryTitle.en,
+    levelNineteenTitle: mississippi19CampaignCopy.title.en,
+    levelNineteenVictoryTitle: mississippi19CampaignCopy.victoryTitle.en,
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
@@ -1398,6 +1411,7 @@ const campaignMenuCopy = {
     levelSixteenInfo: mississippi16CampaignCopy.overview.en,
     levelSeventeenInfo: mississippi17CampaignCopy.overview.en,
     levelEighteenInfo: mississippi18CampaignCopy.overview.en,
+    levelNineteenInfo: mississippi19CampaignCopy.overview.en,
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
@@ -1473,6 +1487,8 @@ const campaignMenuCopy = {
     levelSeventeenVictoryTitle: mississippi17CampaignCopy.victoryTitle.zh,
     levelEighteenTitle: mississippi18CampaignCopy.title.zh,
     levelEighteenVictoryTitle: mississippi18CampaignCopy.victoryTitle.zh,
+    levelNineteenTitle: mississippi19CampaignCopy.title.zh,
+    levelNineteenVictoryTitle: mississippi19CampaignCopy.victoryTitle.zh,
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
@@ -1491,6 +1507,7 @@ const campaignMenuCopy = {
     levelSixteenInfo: mississippi16CampaignCopy.overview.zh,
     levelSeventeenInfo: mississippi17CampaignCopy.overview.zh,
     levelEighteenInfo: mississippi18CampaignCopy.overview.zh,
+    levelNineteenInfo: mississippi19CampaignCopy.overview.zh,
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
@@ -1884,7 +1901,8 @@ function campaignMenuLevelScreen(): string {
                           : level.level === 15 ? copy.levelFifteenTitle
                             : level.level === 16 ? copy.levelSixteenTitle
                               : level.level === 17 ? copy.levelSeventeenTitle
-                                : level.level === 18 ? copy.levelEighteenTitle : level.title;
+                                : level.level === 18 ? copy.levelEighteenTitle
+                                  : level.level === 19 ? copy.levelNineteenTitle : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.mapFileNumber).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -1967,7 +1985,8 @@ function campaignMenuOverviewScreen(): string {
               : entry.level === 15 ? createMississippi15CampaignContent(completedScenarios)
                 : entry.level === 16 ? createMississippi16CampaignContent(completedScenarios)
                   : entry.level === 17 ? createMississippi17CampaignContent(completedScenarios)
-                    : createMississippi18CampaignContent(completedScenarios);
+                    : entry.level === 18 ? createMississippi18CampaignContent(completedScenarios)
+                      : createMississippi19CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo
@@ -1984,11 +2003,13 @@ function campaignMenuOverviewScreen(): string {
                             : entry.level === 14 ? copy.levelFourteenInfo
                               : entry.level === 15 ? copy.levelFifteenInfo
                                 : entry.level === 16 ? copy.levelSixteenInfo
-                                  : entry.level === 17 ? copy.levelSeventeenInfo : copy.levelEighteenInfo;
+                                  : entry.level === 17 ? copy.levelSeventeenInfo
+                                    : entry.level === 18 ? copy.levelEighteenInfo : copy.levelNineteenInfo;
   const levelDescription = entry.level === 15 ? copy.levelFifteenInfo
     : entry.level === 16 ? copy.levelSixteenInfo
       : entry.level === 17 ? copy.levelSeventeenInfo
-        : entry.level === 18 ? copy.levelEighteenInfo : description;
+        : entry.level === 18 ? copy.levelEighteenInfo
+          : entry.level === 19 ? copy.levelNineteenInfo : description;
   const artName = `gng_levelmap_${String(entry.mapFileNumber).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -2015,7 +2036,8 @@ function campaignMenuOverviewScreen(): string {
                                 : entry.level === 15 ? copy.levelFifteenTitle
                                   : entry.level === 16 ? copy.levelSixteenTitle
                                   : entry.level === 17 ? copy.levelSeventeenTitle
-                                    : entry.level === 18 ? copy.levelEighteenTitle : entry.title)}</h2>
+                                    : entry.level === 18 ? copy.levelEighteenTitle
+                                      : entry.level === 19 ? copy.levelNineteenTitle : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -3082,6 +3104,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       || officialStage?.scenarioId === mississippi16CampaignId
       || officialStage?.scenarioId === mississippi17CampaignId
       || officialStage?.scenarioId === mississippi18CampaignId
+      || officialStage?.scenarioId === mississippi19CampaignId
     ? language === 'zh' ? '密西西比' : 'MISSISSIPPI'
     : 'NEW MEXICO';
   const displayedCampaignStage = activeCampaignStage ?? officialStage;
@@ -3201,6 +3224,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
                 ? campaignMenuCopy[language].levelSeventeenVictoryTitle
               : view.scenarioId === mississippi18CampaignId
                 ? campaignMenuCopy[language].levelEighteenVictoryTitle
+              : view.scenarioId === mississippi19CampaignId
+                ? campaignMenuCopy[language].levelNineteenVictoryTitle
                 : messages.result
       : messages.result;
     settlementOutcome.textContent = messages[settlement.outcome];
@@ -3904,7 +3929,8 @@ function isOfficialMississippiMusicSession(): boolean {
       || session.startRecord.scenarioId === mississippi15CampaignId
       || session.startRecord.scenarioId === mississippi16CampaignId
       || session.startRecord.scenarioId === mississippi17CampaignId
-      || session.startRecord.scenarioId === mississippi18CampaignId);
+      || session.startRecord.scenarioId === mississippi18CampaignId
+      || session.startRecord.scenarioId === mississippi19CampaignId);
 }
 
 function isOfficialCampaignMusicSession(): boolean {
@@ -3930,6 +3956,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === mississippi16CampaignId) return mississippi16WaveIntros;
   if (scenarioId === mississippi17CampaignId) return mississippi17WaveIntros;
   if (scenarioId === mississippi18CampaignId) return mississippi18WaveIntros;
+  if (scenarioId === mississippi19CampaignId) return mississippi19WaveIntros;
   return [];
 }
 
@@ -4364,7 +4391,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             || request.scenarioId === mississippi15CampaignId
             || request.scenarioId === mississippi16CampaignId
             || request.scenarioId === mississippi17CampaignId
-            || request.scenarioId === mississippi18CampaignId)
+            || request.scenarioId === mississippi18CampaignId
+            || request.scenarioId === mississippi19CampaignId)
             && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
             : game;
@@ -4591,6 +4619,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === mississippi18CampaignId) {
       return createBrowserGameForMississippi18Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === mississippi19CampaignId) {
+      return createBrowserGameForMississippi19Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }

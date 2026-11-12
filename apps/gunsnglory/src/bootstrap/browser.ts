@@ -83,6 +83,12 @@ import {
   mississippi18CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-18-content-version';
 import { mississippi18CampaignId } from '../content/mississippi-18-identity';
+import { createMississippi19CampaignContent } from '../content/mississippi-19-campaign';
+import {
+  mississippi19CampaignContentVersionFor,
+  mississippi19CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-19-content-version';
+import { mississippi19CampaignId } from '../content/mississippi-19-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -132,6 +138,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi16CampaignId]: createMississippi16CampaignContent(),
   [mississippi17CampaignId]: createMississippi17CampaignContent(),
   [mississippi18CampaignId]: createMississippi18CampaignContent(),
+  [mississippi19CampaignId]: createMississippi19CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -188,6 +195,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi18CampaignId) {
     return mississippi18CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi19CampaignId) {
+    return mississippi19CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -213,6 +223,7 @@ export function createBrowserGame(
     [mississippi16CampaignId]: createMississippi16CampaignContent(completedScenarioIds),
     [mississippi17CampaignId]: createMississippi17CampaignContent(completedScenarioIds),
     [mississippi18CampaignId]: createMississippi18CampaignContent(completedScenarioIds),
+    [mississippi19CampaignId]: createMississippi19CampaignContent(completedScenarioIds),
   };
   if (legacyMississippiReplay) {
     const scenario = scenarios[legacyMississippiReplay.scenarioId];
@@ -335,10 +346,21 @@ export function createBrowserGameForMississippi17Replay(contentVersion: string |
   return createBrowserGame(completedScenarioIds ?? []);
 }
 
-/** Replay import restores Shadow Town's special-unit and Dynamite unlock snapshots. */
+/** Replay import restores Shadow Town's recorded unlock snapshot and preserves v1 base-unit state. */
 export function createBrowserGameForMississippi18Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi18CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  const legacyReplay = completedScenarioIds && contentVersion?.includes('-formal-v1-')
+    ? { scenarioId: mississippi18CampaignId, contentVersion }
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? [], legacyReplay);
+}
+
+/** Replay import restores Dust Falls' four recorded global hire unlocks. */
+export function createBrowserGameForMississippi19Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi19CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

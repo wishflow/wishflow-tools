@@ -53,7 +53,7 @@ test('Riverside Mountains is formal level 14 and unlocks only after Golden River
     globalLevel: 14,
     requiresCompletedScenarioIds: [mississippi13CampaignId],
   });
-  assert.equal(officialCampaignStages.length, 18);
+  assert.equal(officialCampaignStages.length, 19);
 
   const progress = createProgress(createMemoryProfileRepository({
     completedScenarios: completedThroughLevelTwelve,

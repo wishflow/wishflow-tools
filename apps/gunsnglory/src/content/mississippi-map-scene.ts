@@ -37,6 +37,7 @@ const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = 
     fieldBlockBounds: { left: 0, right: 0, top: -1, bottom: 0 },
   },
   113: { asset: 'b_3x2_fort', anchorOffsetY: -0.3, collisionBoxFine: fortCollision },
+  114: { asset: 'b_2x1_tipi', anchorOffsetX: -0.5, anchorOffsetY: -0.3 },
   112: { asset: 'b_3x2_saloon', anchorOffsetY: -0.3 },
   116: {
     asset: 'b_2x1_shack',
