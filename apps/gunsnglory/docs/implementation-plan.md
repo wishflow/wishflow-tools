@@ -16,7 +16,7 @@
 - M15 发布后累计普通发布比例为 19 次 / 95 个已验收实现切片（20.0%）；M16 发布后为 20/100（20.0%）。
 - M18 静态证据已复核：Shadow Town 是正式战役第18关，使用 `res/raw/td_map_21.tdm`；地图含六个敌人入口、六个出口、两个 Saloon、一个 Fort、一对 Dynamite 对象及 wave 2 玩家单位池动作。来源与实施门槛见 [M18 静态审计](map18-static-audit.md)。
 - M19 静态审计已完成；Dust Falls 使用 `res/raw/td_map_22.tdm`，空间、地图对象、8波、Indian Tipi 单位池、双语内容与解锁证据见 [M19 静态审计](map19-static-audit.md)。
-- 当前批次是 Mississippi 第20关 Horse Hills。M20-A 静态审计、M20-B 地图/地形/路线、M20-C 地图对象/单位/Tipi 池模板、M20-D 初态/波次/Indian 池动作、M20-E 双语文案与离线资源映射、M20-F 正式/自由/回放入口均已完成并通过完整本地检查；下一步仅剩 squash 集成、发布核验、内置浏览器验收及回同步。
+- Horse Hills（M20）已 squash 发布到 `master`：发布提交 `7963d0e1644b753b5a3df4b198b0c203faa894b7`，GitHub Actions `43312652418` 的 Guns’n’Glory 完整检查和 GitHub Pages、Cloudflare Pages 部署均成功。两端 `build-info.json` 均匹配发布 SHA。内置浏览器静音、窗口模式从 Free Play → Mississippi → Horse Hills → Medium 进入，关卡地图和 Mexican 首波对白正常显示；正式解锁/锁定由集成 E2E 覆盖，未推进战斗。M20 后累计普通发布比例为24/120（20.0%）；仅剩回同步到 `gunsnglory` 及相关工作树。
 - Golden River（M13）静态审计通过：对应 `td_map_16.tdm`；完整内容、路线、船组、单位解锁和对话证据见 [M13 静态审计](map13-static-audit.md)。无需 Android 定点运行。
 - M13-A 地图切片通过：map16 网格、Mississippi 地形和桥层、code76 bush、4 条实际路线均与 APK 派生证据一致；M12 路线回归通过。
 - M13-B 对象与解锁快照切片通过：创建 2 组 Steamer（12 部件）、code107 Indian、按第50/60关里程碑出现的 Pyromaniac/Salesman；新开局忽略 map16 的存档专用 marker 96–101。回放版本可往返记录两个解锁位。定向测试与 M12 汽船/单位回归共 9 项通过。
@@ -40,9 +40,9 @@
 - 内置浏览器静音、窗口模式验证公开版 `?release=62905bb`：Free Play → Mississippi → Railroad Canyon（15）→ Medium；Settlers 开场对白及 `01/09` HUD 正常显示。仅检查关卡入口和首波状态，未完整通关或启动 Android。
 - M15 发布后累计普通发布比例为19/95（20.0%）。回同步提交 `3abedce` 已推送至 `origin/gunsnglory`，包含发布提交 `62905bb`。
 
-## 当前实现批次：Horse Hills（M20）
+## 最近完成批次：Horse Hills（M20）
 
-目标是基于 APK 静态证据接入 Mississippi 第20关；不完整通关、不启动 Android，浏览器默认为窗口模式并静音。所有切片通过后作为一个普通功能批次发布。本地发布比例当前为23/115；计划包含5个实现切片和1次发布，收尾为24/120（20.0%）。文档审计不计入实现分母。
+本批基于 APK 静态证据接入 Mississippi 第20关，并完成本地检查、squash 发布、部署 SHA 核对和内置浏览器代表流程验收；未完整通关、不启动 Android。5个实现切片和1次普通功能发布已计入累计发布比例24/120（20.0%）。文档审计不计入实现分母。
 
 研究输入来自 `codex/gunsnglory-spec` 的 `apps/gunsnglory/docs/research/`：`content-inventory.md`、`data/map-inventory.json`、`data/level-config.json`、`data/waves.json`、`data/string-resources.json`、`data/wave-reference-resolution.json`、`data/resource-inventory.json` 及其中列出的 DEX/REA 证据。研究资料不加入页面构建依赖；M20 审计需摘录实现和测试真正需要的证据，并标明推导边界。
 
@@ -54,7 +54,9 @@
 | M20-D（已完成） | 初态、8波与单位池规则 | 接入 `$450`/1生命/3级升级、三档 HP 倍率、奖励箱数量/时限/场上上限、已确认的反馈阈值、8波 metadata、16个按源顺序排列的生成调用，以及第2波 Indian pool 的 `set 2` / `set-max 4` 动作和已确认的全局派发周期。未确认的 `awesomeMessageMin`、`gamblerTime` 不映射为猜测行为。 | `GameSession` 初态和奖励箱（999/25秒/12/4类）、难度、阈值5、8条波次 metadata、16条生成向量、APK action ID 到网页出生点映射、池动作及 wave 2 Indian 从唯一 Tipi 实际生成逐项匹配 M20 审计；池模板没有进入初始场景单位。M20规则/实体/地图与 M19 规则/地图共17项定向测试通过；`pnpm run typecheck` 通过。 |
 | M20-E（已完成） | 关卡文案和离线资源 | 新增 Horse Hills 稳定身份、APK 英文标题/简介/胜利标题、8段英文对白和中文项目译文；按已核实角色映射头像与语音。Captain 仅确认头像、不推断独立语音。不复制已存在的缩略图、肖像、音频或 Mississippi 音乐资产。 | APK 英文原文、资源键、说话人和头像逐项匹配 M20 审计；中文文本非空；Captain `voiceSound` 保持未设置；map23 PNG、全部头像/已映射语音以及8波 Mississippi 音乐可离线读取。M19 文案/资源回归在内共4项定向测试及 `pnpm run typecheck` 通过；未播放声音。 |
 | M20-F（已完成） | 正式、自由、回放与批次收尾 | 将 M20 纳入 Mississippi Free Play 与正式关卡目录，正式关卡依赖 M19；为 M20 建独立 contentVersion 并按录制解锁状态还原单位；新增真实入口 E2E，只更新受 M20 影响的目录计数和快照。模块导入暴露 Tech Town 对关卡访问和单位里程碑复用同一 marker 路径的既有错误；在 Tech Town 构造器区分 mapAccessible 与 unit unlock，并让需 milestone 的 Gambler 始终遵守单位门槛，保留其它关卡的 activity 5 对象。 | 正式模式在 M19 未完成时锁定、完成后开放；Free Play 三种难度可进 M20；两个入口显示 map23 标题图、开场对白和 `1/8`；正式/自由结算语义及回放内容版本往返通过。Tech Town 地图锁定时不实例化单位 marker，开放时原活动单位正常、Gambler 与 Casino 同步受里程碑控制；M20 activity 5 单位不回归。静音、窗口模式，不推进整关。完整 `CI=1 PLAYWRIGHT_PORT=43181 pnpm run test:ci` 通过：TypeScript、710项单测、生产构建和153项 E2E。主 JS chunk 为2.342 MB（gzip 264.76 KB），保留既有大 chunk 警告。 |
-| M20-R | 集成、发布与回同步 | 完整检查通过后，将本批以单个 squash commit 集成到 `master` 并发布；核对 Pages 构建来源 SHA，内置浏览器验收代表流程，再把发布提交和计划更新回同步到 `gunsnglory`。 | Actions 成功；GitHub Pages 与 Cloudflare Pages `build-info.json` 均匹配发布 SHA；内置浏览器从 Free Play 和正式战役分别进入 Horse Hills，地图、首波对白及HUD正常；`gunsnglory` 与相关工作树已包含发布提交。任何 SHA、CI 或浏览器验收未完成时不得报告发布完成。 |
+| M20-R1（已完成） | squash 集成与发布 | 将完整检查通过的批次以一个 squash commit 集成到 `master` 并推送，等待现有工作流。 | 发布提交 `7963d0e1644b753b5a3df4b198b0c203faa894b7` 已推送到 `origin/master`；GitHub Actions `43312652418` 的应用完整检查和两个 Pages 部署均成功。 |
+| M20-R2（已完成） | 部署来源 SHA 与浏览器验收 | 核对两个 Pages 的构建 SHA，并在内置浏览器从真实菜单进入 M20，保持静音和窗口模式。 | GitHub Pages 与 Cloudflare Pages 的根 `build-info.json` 均报告 `7963d0e1644b753b5a3df4b198b0c203faa894b7`。内置浏览器进入 Free Play → Mississippi → Horse Hills → Medium，关卡地图和 Mexican 首波对白可见；没有推进整关。正式解锁/锁定由 M20 集成 E2E 验证。 |
+| M20-R3 | 发布回同步至集成分支 | 将发布提交和本计划更新合并回 `gunsnglory`，推送并更新相关工作树；保留主工作树已有未提交文件。 | `origin/gunsnglory` 和本地 `gunsnglory` 均包含 M20 发布提交；原主工作树无既有改动丢失，且所有 M20 工作树状态与各自上游一致。 |
 
 ## 最近完成批次：Dust Falls（M19）
 
