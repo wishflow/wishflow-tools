@@ -241,6 +241,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Dust Falls · Level 19', zh: '尘瀑镇 · 第 19 关' },
     globalLevel: 19,
     requiresCompletedScenarioIds: ['campaign-mississippi-18'],
+  }, {
+    scenarioId: 'campaign-mississippi-20',
+    contentVersion: 'gng-free-1.8.6-mississippi-20-formal-v1-grandpa0-sniper0-pyro0-salesman0',
+    title: { en: 'Horse Hills · Level 20', zh: '马丘陵 · 第 20 关' },
+    globalLevel: 20,
+    requiresCompletedScenarioIds: ['campaign-mississippi-19'],
   }]);
 });
 

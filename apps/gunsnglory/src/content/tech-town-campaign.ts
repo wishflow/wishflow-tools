@@ -128,7 +128,10 @@ export function createTechTownCampaignContent(completedScenarioIds: readonly str
       : campaignScenarioIdForLevel(completionLevel);
     return completionScenarioId !== undefined && completedScenarios.has(completionScenarioId);
   };
-  const mapContent = createTechTownMapContent((unitTypeId) => isUnitUnlocked(unitTypeId));
+  const mapContent = createTechTownMapContent(
+    (unitTypeId) => isUnitUnlocked(unitTypeId),
+    { mapAccessible: hasUnlockedMap04 },
+  );
   const gambler = mapContent.units.some(({ type }) => type === 'gambler');
 
   return {

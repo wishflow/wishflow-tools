@@ -76,9 +76,9 @@ test('Free Play opens Dust Falls from its map22 overview into the first wave', a
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('10 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-19')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-20')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-20')).toBeEnabled();
   await page.getByTestId('campaign-level-19').click();
   await expectDustFallsOverview(page);
 

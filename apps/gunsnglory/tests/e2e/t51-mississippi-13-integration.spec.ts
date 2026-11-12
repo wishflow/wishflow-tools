@@ -39,7 +39,7 @@ test('Free Play opens Golden River directly with its researched intro and first 
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('10 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-13')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-14')).toBeEnabled();
   await page.getByTestId('campaign-level-13').click();

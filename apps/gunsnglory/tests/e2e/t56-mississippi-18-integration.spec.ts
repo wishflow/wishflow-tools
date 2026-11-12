@@ -65,10 +65,10 @@ test('Free Play opens Shadow Town from its map21 overview into the first wave', 
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('10 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-18')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-19')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-20')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-20')).toBeEnabled();
   await page.getByTestId('campaign-level-18').click();
   await expectShadowTownOverview(page);
 

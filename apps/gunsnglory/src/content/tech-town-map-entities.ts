@@ -20,12 +20,13 @@ export function assertTechTownGamblerCasinoPair(
 /** Builds both sides of the conditional map entity pair from one unlock snapshot. */
 export function createTechTownMapContent(
   isUnitUnlocked: (unitTypeId: CampaignMapUnitTypeId) => boolean,
+  options: { mapAccessible?: boolean } = {},
 ): { units: ScenarioUnit[]; scene: TechTownScene } {
   const gamblerUnlocked = isUnitUnlocked(9);
+  const mapAccessible = options.mapAccessible ?? true;
   const units = [
-    ...createTechTownBaseUnits((unitTypeId) => (
-      unitTypeId === 9 ? gamblerUnlocked : isUnitUnlocked(unitTypeId)
-    )),
+    ...createTechTownBaseUnits((unitTypeId) => (unitTypeId === 9 ? gamblerUnlocked : isUnitUnlocked(unitTypeId)))
+      .filter(({ activity }) => mapAccessible || activity !== 5),
     ...createTechTownTrainUnits(),
   ];
   const scene = createTechTownMapScene({ gamblerUnlocked });

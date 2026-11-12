@@ -149,7 +149,9 @@ export function createNewMexicoMapUnits(
   isUnitUnlocked: (unitTypeId: CampaignMapUnitTypeId) => boolean,
 ): ScenarioUnit[] {
   const placements = createCampaignMapUnitPlacements(tileGrid)
-    .filter(({ unitTypeId }) => isUnitUnlocked(unitTypeId));
+    .filter(({ unitTypeId, activity }) => (
+      (activity === 5 && unitTypeId !== 9) || isUnitUnlocked(unitTypeId)
+    ));
   const units = createSleepingMapUnitsFromGrid(tileGrid)
     .filter(({ type }) => {
       const unitTypeId = standardTypeIdForUnit(type);

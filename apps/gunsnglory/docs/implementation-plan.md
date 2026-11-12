@@ -16,6 +16,7 @@
 - M15 发布后累计普通发布比例为 19 次 / 95 个已验收实现切片（20.0%）；M16 发布后为 20/100（20.0%）。
 - M18 静态证据已复核：Shadow Town 是正式战役第18关，使用 `res/raw/td_map_21.tdm`；地图含六个敌人入口、六个出口、两个 Saloon、一个 Fort、一对 Dynamite 对象及 wave 2 玩家单位池动作。来源与实施门槛见 [M18 静态审计](map18-static-audit.md)。
 - M19 静态审计已完成；Dust Falls 使用 `res/raw/td_map_22.tdm`，空间、地图对象、8波、Indian Tipi 单位池、双语内容与解锁证据见 [M19 静态审计](map19-static-audit.md)。
+- Horse Hills（M20）已 squash 发布到 `master`：发布提交 `7963d0e1644b753b5a3df4b198b0c203faa894b7`，GitHub Actions `43312652418` 的 Guns’n’Glory 完整检查和 GitHub Pages、Cloudflare Pages 部署均成功。两端 `build-info.json` 均匹配发布 SHA。内置浏览器静音、窗口模式从 Free Play → Mississippi → Horse Hills → Medium 进入，关卡地图和 Mexican 首波对白正常显示；正式解锁/锁定由集成 E2E 覆盖，未推进战斗。M20 后累计普通发布比例为24/120（20.0%）；仅剩回同步到 `gunsnglory` 及相关工作树。
 - Golden River（M13）静态审计通过：对应 `td_map_16.tdm`；完整内容、路线、船组、单位解锁和对话证据见 [M13 静态审计](map13-static-audit.md)。无需 Android 定点运行。
 - M13-A 地图切片通过：map16 网格、Mississippi 地形和桥层、code76 bush、4 条实际路线均与 APK 派生证据一致；M12 路线回归通过。
 - M13-B 对象与解锁快照切片通过：创建 2 组 Steamer（12 部件）、code107 Indian、按第50/60关里程碑出现的 Pyromaniac/Salesman；新开局忽略 map16 的存档专用 marker 96–101。回放版本可往返记录两个解锁位。定向测试与 M12 汽船/单位回归共 9 项通过。
@@ -39,8 +40,25 @@
 - 内置浏览器静音、窗口模式验证公开版 `?release=62905bb`：Free Play → Mississippi → Railroad Canyon（15）→ Medium；Settlers 开场对白及 `01/09` HUD 正常显示。仅检查关卡入口和首波状态，未完整通关或启动 Android。
 - M15 发布后累计普通发布比例为19/95（20.0%）。回同步提交 `3abedce` 已推送至 `origin/gunsnglory`，包含发布提交 `62905bb`。
 
-## 最近完成批次：Dust Falls（M19）
+## 最近完成批次：Horse Hills（M20）
 
+本批基于 APK 静态证据接入 Mississippi 第20关，并完成本地检查、squash 发布、部署 SHA 核对和内置浏览器代表流程验收；未完整通关、不启动 Android。5个实现切片和1次普通功能发布已计入累计发布比例24/120（20.0%）。文档审计不计入实现分母。
+
+研究输入来自 `codex/gunsnglory-spec` 的 `apps/gunsnglory/docs/research/`：`content-inventory.md`、`data/map-inventory.json`、`data/level-config.json`、`data/waves.json`、`data/string-resources.json`、`data/wave-reference-resolution.json`、`data/resource-inventory.json` 及其中列出的 DEX/REA 证据。研究资料不加入页面构建依赖；M20 审计需摘录实现和测试真正需要的证据，并标明推导边界。
+
+| 顺序 | 切片 | 实施范围 | 可判定验收 |
+| --- | --- | --- | --- |
+| M20-A（已完成） | 静态审计与参数核对 | 新建 [M20 静态审计](map20-static-audit.md)，记录地图身份、标记/路线、对象与解锁、完整关卡配置、波次和池动作、对白/资源、正式与回放边界；注明 APK 派生资料出处和 DEX 语义依据。 | `td_map_23.tdm` 为32×24、770字节，APK 摘要为 `4c8fb4fa0481fb3a7e3a848d756c4042e2f3648f5722176b360a5575228aa302`；配置中 $450、1生命、3次升级、75/100/110% HP、999总奖励箱、25秒间隔、12个场上上限、4类奖励、8条 `newWave`、16条 `addToWave`、2个 pool 动作及标题/简介/胜利标题/8段对白均可追溯；`awesomeMessageMin=30000` 与 `gamblerTime=119000` 的消费边界已标为未知，不凭字段名猜语义。链接和 `git diff --check` 通过。 |
+| M20-B（已完成） | 地图、地形与路线 | 从 APK 派生网格还原原始 TDM 和 `mississippi-20.json`；复用 Mississippi 地形、桥/道路渲染、场景碰撞和控制点路线生成器。不得按编号推测路线或手工挪动节点。 | `td_map_23.tdm` 长770字节，SHA-256 与 M20 审计一致，头部为32×24且768格逐字节匹配；背景/街道绘制命令由现有 APK 网格复算器重算一致；2个入口、2个出口、46个 redirector、50条有向边及4条完整分支路线均被覆盖；M19 地图回归在内的定向测试7项通过。 |
+| M20-C（已完成） | 地图对象、单位与生成池 | 按 TDM 对象构造规则实例化 Mississippi 装饰物、activity 4 招募对象、activity 5 活动对象、六节 Steamer 和 Indian Tipi 池模板。共享 New Mexico 单位工厂仅对 activity 4 应用全局招募解锁，已激活的 activity 5 对象不受睡眠招募门槛过滤；保留现有 `ScenarioUnit` 与可选 pool template 契约，不伪造 Cannon。 | M20 审计中的装饰 marker、单位类别/坐标/activity、Steamer 6 个部件与3门可招募 Cannon、Tipi 位置和池模板逐项匹配；Grandpa/Sniper/Pyromaniac/Salesman 锁定与全部解锁两组状态及 ID 唯一性通过；Indian 模板不进入初始单位。M20 实体与 M18/M19/M15 回归共22项定向测试通过；`pnpm run typecheck` 通过。 |
+| M20-D（已完成） | 初态、8波与单位池规则 | 接入 `$450`/1生命/3级升级、三档 HP 倍率、奖励箱数量/时限/场上上限、已确认的反馈阈值、8波 metadata、16个按源顺序排列的生成调用，以及第2波 Indian pool 的 `set 2` / `set-max 4` 动作和已确认的全局派发周期。未确认的 `awesomeMessageMin`、`gamblerTime` 不映射为猜测行为。 | `GameSession` 初态和奖励箱（999/25秒/12/4类）、难度、阈值5、8条波次 metadata、16条生成向量、APK action ID 到网页出生点映射、池动作及 wave 2 Indian 从唯一 Tipi 实际生成逐项匹配 M20 审计；池模板没有进入初始场景单位。M20规则/实体/地图与 M19 规则/地图共17项定向测试通过；`pnpm run typecheck` 通过。 |
+| M20-E（已完成） | 关卡文案和离线资源 | 新增 Horse Hills 稳定身份、APK 英文标题/简介/胜利标题、8段英文对白和中文项目译文；按已核实角色映射头像与语音。Captain 仅确认头像、不推断独立语音。不复制已存在的缩略图、肖像、音频或 Mississippi 音乐资产。 | APK 英文原文、资源键、说话人和头像逐项匹配 M20 审计；中文文本非空；Captain `voiceSound` 保持未设置；map23 PNG、全部头像/已映射语音以及8波 Mississippi 音乐可离线读取。M19 文案/资源回归在内共4项定向测试及 `pnpm run typecheck` 通过；未播放声音。 |
+| M20-F（已完成） | 正式、自由、回放与批次收尾 | 将 M20 纳入 Mississippi Free Play 与正式关卡目录，正式关卡依赖 M19；为 M20 建独立 contentVersion 并按录制解锁状态还原单位；新增真实入口 E2E，只更新受 M20 影响的目录计数和快照。模块导入暴露 Tech Town 对关卡访问和单位里程碑复用同一 marker 路径的既有错误；在 Tech Town 构造器区分 mapAccessible 与 unit unlock，并让需 milestone 的 Gambler 始终遵守单位门槛，保留其它关卡的 activity 5 对象。 | 正式模式在 M19 未完成时锁定、完成后开放；Free Play 三种难度可进 M20；两个入口显示 map23 标题图、开场对白和 `1/8`；正式/自由结算语义及回放内容版本往返通过。Tech Town 地图锁定时不实例化单位 marker，开放时原活动单位正常、Gambler 与 Casino 同步受里程碑控制；M20 activity 5 单位不回归。静音、窗口模式，不推进整关。完整 `CI=1 PLAYWRIGHT_PORT=43181 pnpm run test:ci` 通过：TypeScript、710项单测、生产构建和153项 E2E。主 JS chunk 为2.342 MB（gzip 264.76 KB），保留既有大 chunk 警告。 |
+| M20-R1（已完成） | squash 集成与发布 | 将完整检查通过的批次以一个 squash commit 集成到 `master` 并推送，等待现有工作流。 | 发布提交 `7963d0e1644b753b5a3df4b198b0c203faa894b7` 已推送到 `origin/master`；GitHub Actions `43312652418` 的应用完整检查和两个 Pages 部署均成功。 |
+| M20-R2（已完成） | 部署来源 SHA 与浏览器验收 | 核对两个 Pages 的构建 SHA，并在内置浏览器从真实菜单进入 M20，保持静音和窗口模式。 | GitHub Pages 与 Cloudflare Pages 的根 `build-info.json` 均报告 `7963d0e1644b753b5a3df4b198b0c203faa894b7`。内置浏览器进入 Free Play → Mississippi → Horse Hills → Medium，关卡地图和 Mexican 首波对白可见；没有推进整关。正式解锁/锁定由 M20 集成 E2E 验证。 |
+| M20-R3 | 发布回同步至集成分支 | 将发布提交和本计划更新合并回 `gunsnglory`，推送并更新相关工作树；保留主工作树已有未提交文件。 | `origin/gunsnglory` 和本地 `gunsnglory` 均包含 M20 发布提交；原主工作树无既有改动丢失，且所有 M20 工作树状态与各自上游一致。 |
+
+## 最近完成批次：Dust Falls（M19）
 本批次已将 APK 的 Mississippi 第19关 Dust Falls 接入既有地图、规则、正式战役、Free Play 与回放，并完成整批发布、部署验收及回同步。实现证据和适用边界见 [M19 静态审计](map19-static-audit.md)。
 
 | 顺序 | 切片 | 实施范围 | 可判定验收 |
