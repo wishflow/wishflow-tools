@@ -7,7 +7,7 @@ export interface CampaignWaveIntro {
   waveNumber: number;
   speaker: LocalizedCampaignCopy;
   text: LocalizedCampaignCopy;
-  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers' | 'portrait_deserter' | 'portrait_engineer' | 'portrait_sheriff' | 'portrait_gunslinger' | 'portrait_mexican';
+  portraitAsset: 'portrait_indian' | 'portrait_pedro' | 'portrait_settlers' | 'portrait_deserter' | 'portrait_engineer' | 'portrait_sheriff' | 'portrait_gunslinger' | 'portrait_mexican' | 'portrait_captain';
   voiceSound?: 'sound_deserter_yes_sir' | 'sound_indian_hugh' | 'sound_pedro' | 'sound_siedler' | 'sound_sheriff' | 'sound_desperado_yihaa' | 'sound_mexican_arriba';
 }
 

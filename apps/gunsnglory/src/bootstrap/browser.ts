@@ -42,6 +42,12 @@ import {
   mississippi11CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-11-campaign';
 import {
+  createMississippi12CampaignContent,
+  mississippi12CompletedScenarioIdsForContentVersion,
+  mississippi12CampaignContentVersionFor,
+} from '../content/mississippi-12-campaign';
+import { mississippi12CampaignId } from '../content/mississippi-12-identity';
+import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
   fortKaboomLevelThreeContent,
@@ -83,6 +89,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [railroadRanchCampaignId]: railroadRanchLevelNineCampaignContent,
   [lostCityCampaignId]: createLostCityCampaignContent(),
   [mississippi11CampaignId]: createMississippi11CampaignContent(),
+  [mississippi12CampaignId]: createMississippi12CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -109,6 +116,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi11CampaignId) {
     return mississippi11CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi12CampaignId) {
+    return mississippi12CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -124,6 +134,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [railroadRanchCampaignId]: createRailroadRanchCampaignContent(completedScenarioIds),
     [lostCityCampaignId]: createLostCityCampaignContent(completedScenarioIds),
     [mississippi11CampaignId]: createMississippi11CampaignContent(completedScenarioIds),
+    [mississippi12CampaignId]: createMississippi12CampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -164,6 +175,14 @@ export function createBrowserGameForLostCityReplay(contentVersion: string | unde
 export function createBrowserGameForMississippi11Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi11CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores the Pyromaniac visibility recorded for Steam Valley, not today's profile. */
+export function createBrowserGameForMississippi12Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi12CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

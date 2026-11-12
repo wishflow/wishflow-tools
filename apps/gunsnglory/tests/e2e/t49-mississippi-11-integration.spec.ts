@@ -10,9 +10,10 @@ test('Free Play opens Traveller’s Town with its APK copy, first dialogue, and 
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('1 implemented level available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('2 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-11')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-12')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-12')).toBeEnabled();
+  await expect(page.getByTestId('campaign-level-13')).toBeDisabled();
   await page.getByTestId('campaign-level-11').click();
 
   await expect(page.getByRole('heading', { name: "Traveller's Town" })).toBeVisible();

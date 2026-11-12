@@ -344,12 +344,13 @@
 - **表现与复现：**不带 `CI=1` 在当前 worktree 运行多个 Playwright spec 时，测试复用了端口 4173 上已运行的开发服务器。错误页面仍显示旧版 `7/10` Free Play 文案和旧关卡可用状态，因此多项用例看似与当前改动冲突。
 - **根因与证据：**`playwright.config.ts` 设置 `reuseExistingServer: !process.env.CI`。Playwright 可以连接任意已占用该端口的服务，不会确认服务属于当前 worktree；失败上下文与当前 `src/main.ts` 的新文案不一致。使用 `CI=1` 并指定独立 `PLAYWRIGHT_PORT=4183` 后，浏览器测试由当前 worktree 的 Vite 服务运行，受影响 10 项通过；独立端口上新增 M11 E2E 也通过。
 - **修复与防回归：**产品代码无需为该测试环境问题调整。验证源码行为时使用 `CI=1`；并行 worktree 手动运行 Playwright 时使用各自独立端口。出现与当前源码不一致的页面状态时，先确认服务进程和端口，再改产品代码或断言。
+- **本轮复发记录：**第一次定向运行未指定 `PLAYWRIGHT_PORT`，又连到旧的 `4173` 服务，两个样式断言仍读到旧背景图。改用 `PLAYWRIGHT_PORT=4196` 后，当前工作树启动了独立服务，相关 9 项 E2E 全部通过。跑 Playwright 前必须先选独立端口，不能因之前已有同类记录就省略环境核对。
 
 ## 战役进度快照断言要跟随正式关卡目录
 
-- **表现与复现：**加入全球第 11 关后，完整单测中 `progress.test.ts` 的“旧 Cow Gulch 档案保持隔离”用例和六项 E2E 仍期望 10 个正式阶段；实际摘要已按目录显示 11 关。
-- **根因与证据：**`officialCampaignStages` 已登记 Traveller’s Town，但单测初态对象、结算后状态数组及 `t20`、`t22`、`t25`、`t28`、`t33` 的 E2E 文案断言仍硬编码为十项。进度与存档逻辑正确，差异来自全局测试快照遗漏新阶段。
-- **修复与防回归：**单测快照明确加入 `campaign-mississippi-11` 的锁定状态；六项 E2E 的进度分母改为 11。每次登记正式战役关卡后，应搜索依赖 `officialCampaignStages` 数量或完整状态序列的单测、浏览器测试与菜单文案。
+- **表现与复现：**新增全球第 11、12 关后，完整单测曾因旧阶段快照缺少新关而失败；map12 批次中 `apache-valley.test.ts`、`fort-kaboom-formal.test.ts` 和 `progress.test.ts` 的固定目录/状态期望只列到第 11 关。
+- **根因与证据：**`officialCampaignStages` 已正确登记 Steam Valley 为 global level 12、以前置 `campaign-mississippi-11` 解锁；失败来自测试仍硬编码 11 项，与关卡注册或 Progress 运行逻辑无关。
+- **修复与防回归：**加入正式关卡时同步更新目录快照、Progress 初态和结算后的状态数组；本次仅补入第 12 关及 locked 状态，三个文件的 29 项定向测试通过。每次登记正式关卡后，搜索完整 `officialCampaignStages` 列表、globalLevel、解锁前置、结算后状态数组及进度文案；不要为了迎合旧快照改动正确的进度逻辑。
 
 ## 正式关卡的专属资源必须加入启动预加载
 
@@ -357,3 +358,10 @@
 - **根因与证据：**`main.ts` 的 `assetNames` 是应用启动时加载游戏图像的唯一清单，原清单只收集到 Lucky Lake 等已有内容，没有收集 `createMississippi11CampaignContent()`。Mississippi 专属 `miss_tiles_*` 地形、`steamboat_*` 及该地图引用的列车/装饰资产因此不在 `images` 中；`drawGame()` 遇到首个缺失资源便绘制黑色错误恢复画面。逐项检查确认关卡引用的贴图文件均在 `public/assets`，问题是未预加载而非资源文件缺失。原 `t49` 只检查菜单、对白和波次文本，没有检查 Canvas 资源错误面板，因而该缺陷可在测试通过时漏出。
 - **修复与防回归：**把所有解锁状态下的 Traveller’s Town 内容加入资源收集集合，使地图、静态对象、列车、蒸汽船和单位资源一并预加载；`t49-mississippi-11-integration.spec.ts` 在对白显示后及继续进入战场后断言 `asset-load-error` 隐藏。若新关卡首屏内容正确而地图是黑色，先核对地图对象/单位对资源清单的引用，不要用占位贴图或吞掉 renderer 错误掩盖问题。
 - **验证：**Node 22 对地图背景、道路、装饰和单位资源做路径存在性核对，所有引用文件存在；`pnpm run typecheck` 通过；`CI=1 PLAYWRIGHT_PORT=4192 pnpm exec playwright test tests/e2e/t49-mississippi-11-integration.spec.ts --workers=1` 通过（1 项）。内置浏览器在本地窗口模式、静音下确认 Mississippi 地形、静态对象、铁路和两列列车正常显示，错误面板未出现。新增 390×844 窄屏布局断言后，最终 `CI=1 PLAYWRIGHT_PORT=4195 pnpm run test:ci` 通过：类型检查、561 项单测、生产构建和 134 项 Playwright E2E；构建保留既有 1.385 MB JS chunk 警告。线上发布提交 `b6e05ca` 的 Actions `43018344472` 成功，GitHub Pages 与 Cloudflare Pages 均报告匹配来源 SHA；内置浏览器再确认 Free Play 第 11 关对白、地图和继续进入首波正常。全程未进入全屏或播放声音。
+
+## 实验室告示牌下不应重复铺整张羊皮纸
+
+- **状态：本地已修复，尚未发布。**
+- **表现：**实验室各区的木质告示牌标题下方还铺着大张黄色羊皮纸，整体读成“告示牌叠在规则黄矩形上”。
+- **根因与证据：**`styles.css` 的 `.lab-card` 同时绘制 `gng_hud_2_textbox_large.png` 和阴影，`.lab-card > h3` 再叠原版木按钮图。输入框及实验报告已有独立表面，外层羊皮纸只是重复装饰。旧 `t29`、`t41` 还把整卡羊皮纸断言为设计要求，没有验证叠层是否必要。
+- **修复与防回归：**`.lab-card` 改为透明并移除阴影，缩小标题上方留白；木牌标题、浅色输入控件、报告表格及游戏内确认弹窗保留各自外观。`t29-campaign-menu.spec.ts` 与 `t41-lab-workbench.spec.ts` 断言卡片无背景图、标题继续使用木按钮贴图，并覆盖导入按钮 hover/focus 与 1280px、900px、390px 布局。定向 E2E 9 项通过；内置浏览器当前工作树截图确认视觉结果。后续不要为了保留“木牌”而给父卡片再加规则底色；需要分组时优先用间距和标题层级，只有具体内容对比度不足时才增加局部表面。
