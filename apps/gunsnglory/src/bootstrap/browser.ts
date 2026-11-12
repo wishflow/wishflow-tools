@@ -89,6 +89,12 @@ import {
   mississippi19CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-19-content-version';
 import { mississippi19CampaignId } from '../content/mississippi-19-identity';
+import { createMississippi20CampaignContent } from '../content/mississippi-20-campaign';
+import {
+  mississippi20CampaignContentVersionFor,
+  mississippi20CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-20-content-version';
+import { mississippi20CampaignId } from '../content/mississippi-20-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -139,6 +145,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi17CampaignId]: createMississippi17CampaignContent(),
   [mississippi18CampaignId]: createMississippi18CampaignContent(),
   [mississippi19CampaignId]: createMississippi19CampaignContent(),
+  [mississippi20CampaignId]: createMississippi20CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -198,6 +205,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi19CampaignId) {
     return mississippi19CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi20CampaignId) {
+    return mississippi20CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -224,6 +234,7 @@ export function createBrowserGame(
     [mississippi17CampaignId]: createMississippi17CampaignContent(completedScenarioIds),
     [mississippi18CampaignId]: createMississippi18CampaignContent(completedScenarioIds),
     [mississippi19CampaignId]: createMississippi19CampaignContent(completedScenarioIds),
+    [mississippi20CampaignId]: createMississippi20CampaignContent(completedScenarioIds),
   };
   if (legacyMississippiReplay) {
     const scenario = scenarios[legacyMississippiReplay.scenarioId];
@@ -361,6 +372,14 @@ export function createBrowserGameForMississippi18Replay(contentVersion: string |
 export function createBrowserGameForMississippi19Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi19CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores Horse Hills' four recorded global hire unlocks. */
+export function createBrowserGameForMississippi20Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi20CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

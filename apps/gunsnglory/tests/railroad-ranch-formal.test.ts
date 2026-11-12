@@ -32,7 +32,7 @@ test('Railroad Ranch is registered as level nine and unlocks only after Cactusvi
     globalLevel: 9,
     requiresCompletedScenarioIds: ['campaign-new-mexico-08'],
   });
-  assert.equal(officialCampaignStages.length, 19);
+  assert.equal(officialCampaignStages.length, 20);
   assert.equal(railroadRanchLevelNineCampaignContent.formalSettlementSupported, true);
   assert.equal(getBrowserScenarioContentVersion(railroadRanchCampaignId), railroadRanchCampaignContentVersion);
 

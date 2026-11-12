@@ -43,7 +43,7 @@ test('Free Play opens Railroad Canyon with its map, first intro and nine-wave HU
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('10 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-15')).toBeEnabled();
   await page.getByTestId('campaign-level-15').click();
 

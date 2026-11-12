@@ -424,3 +424,10 @@
 - **表现：**实验室各区的木质告示牌标题下方还铺着大张黄色羊皮纸，整体读成“告示牌叠在规则黄矩形上”。
 - **根因与证据：**`styles.css` 的 `.lab-card` 同时绘制 `gng_hud_2_textbox_large.png` 和阴影，`.lab-card > h3` 再叠原版木按钮图。输入框及实验报告已有独立表面，外层羊皮纸只是重复装饰。旧 `t29`、`t41` 还把整卡羊皮纸断言为设计要求，没有验证叠层是否必要。
 - **修复与防回归：**`.lab-card` 改为透明并移除阴影，缩小标题上方留白；木牌标题、浅色输入控件、报告表格及游戏内确认弹窗保留各自外观。`t29-campaign-menu.spec.ts` 与 `t41-lab-workbench.spec.ts` 断言卡片无背景图、标题继续使用木按钮贴图，并覆盖导入按钮 hover/focus 与 1280px、900px、390px 布局。定向 E2E 9 项通过；批次完整 `test:ci` 通过 584 项单测和 137 项 E2E。内置浏览器对发布页截图确认视觉结果。后续不要为了保留“木牌”而给父卡片再加规则底色；需要分组时优先用间距和标题层级，只有具体内容对比度不足时才增加局部表面。
+
+## 关卡访问与活动地图单位解锁必须分开处理
+
+- **状态：已关闭。**M20-F 完整检查通过；Tech Town 正式/地图测试与 M20 单位/正式测试共同覆盖本修复。
+- **表现与复现：**Horse Hills 接入正式关卡目录时，Tech Town 的单位/Casino 配对断言在模块加载阶段失败；既有 Tech Town 正式内容测试也发现未解锁地图仍含活动 Mexican。
+- **根因与证据：**New Mexico marker 工厂为保留原版 activity 5 活动单位，会跳过普通单位解锁回调；但 Tech Town 的 Gambler marker 也属于 activity 5，必须遵守全局里程碑，而未解锁 Tech Town 的活动 marker 还必须服从关卡访问条件。把关卡访问与 unit milestone 混成一条过滤规则，或全局过滤所有 activity 5，分别会导致 Gambler/Casino 不配对，或误删 Horse Hills 活动 Grandpa。既有 Tech Town 与 M20 实体测试明确覆盖这两组边界。
+- **修复与防回归：**New Mexico 工厂只对需 milestone 的 Gambler marker 使用 unit unlock；Tech Town 构造器用独立 `mapAccessible` 决定是否生成该地图的活动 marker。M20 activity 5 marker 继续不受招募 milestone 过滤。新地图需分别验证 stage access、activity 和全局 unit unlock，不应互相替代。
