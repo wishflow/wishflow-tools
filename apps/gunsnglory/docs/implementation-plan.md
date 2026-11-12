@@ -15,7 +15,7 @@
 - M13-B 对象与解锁快照切片通过：创建 2 组 Steamer（12 部件）、code107 Indian、按第50/60关里程碑出现的 Pyromaniac/Salesman；新开局忽略 map16 的存档专用 marker 96–101。回放版本可往返记录两个解锁位。定向测试与 M12 汽船/单位回归共 9 项通过。
 - M13-C 关卡内容切片通过：初始参数、全局敌人表、九波/20 个生成请求、九段对白与 Mississippi 音乐路由已接入；场景图片加入启动预加载集合。13 项内容/地图/单位/音乐定向测试和 TypeScript 检查通过。声音保持关闭；音频只核对文件格式和引用，未作试听。
 - M13-D 正式入口切片通过：Golden River 登记为 level 13 并依赖 Steam Valley；正式战役、Free Play 与回放均使用已保存的解锁快照，正式胜利写入进度，Free Play 不写入正式档案。英文/中文关卡说明、胜利标题、对白与资源错误状态已接通。定向 TypeScript 检查、115 项相关单测及 6 项受影响浏览器测试通过；后者覆盖自由模式直达、正式解锁状态、首波对白和资源加载。
-- M13 四个实现切片均已完成。首次完整检查在 599 项单测中通过 598 项后发现 `progress.test.ts` 仍只列到第 12 关；该锁定状态断言已补上第 13 关。首次运行未进入构建和 E2E，须在该修正后重跑完整检查。
+- M13 批次完整检查通过：`CI=1 PLAYWRIGHT_PORT=4206 pnpm run test:ci` 完成 TypeScript 检查、599 项单测、生产构建及 139 项 E2E。构建仍提示 1.59 MB JavaScript chunk 超过 500 KB（gzip 213.57 KB）；未为本批加入无关代码拆分。
 
 ## 后续工作
 
@@ -25,7 +25,9 @@
 
 | 顺序 | 切片 | 实施范围 | 定向验收 |
 | --- | --- | --- | --- |
-| M13 批次收尾（当前） | 完整检查与发布 | 修复锁定关卡清单断言后运行 `CI=1 PLAYWRIGHT_PORT=4206 pnpm run test:ci`；若通过，将 M13-A 至 M13-D squash 为一个 `master` 发布提交并触发站点部署。 | 全部单测、TypeScript 检查、生产构建、E2E 通过；部署来源 SHA 与 squash 提交一致；内置浏览器静音、窗口模式验证 Golden River 选关、首波与资源加载。不完整手动通关。 |
+| M13-R1（当前） | Squash 集成并推送 | 将 M13-A 至 M13-D 相对 `origin/master` 的全部成品 squash 为一个 `master` 提交，并执行 `git push origin master`。 | 本地 `master` 仅多一个 M13 批次提交，推送成功；不把单切片提交逐个发布。 |
+| M13-R2 | 部署与浏览器验收 | 等待 Pages workflow 成功；核对公开 `build-info.json` 来源 SHA；使用 Codex 内置浏览器打开公开游戏，静音、窗口模式检查 Mississippi 第 13 关的菜单、开场对白、首波和资源错误状态。 | workflow 成功；部署 SHA 与 squash 提交完全一致；在线选关和首波验收通过。 |
+| M13-R3 | 回同步集成分支 | 将已发布提交合并至 `gunsnglory`，推送远端，并核对相关工作树分支和上游状态。 | `master`、`origin/master` 与 `gunsnglory` 均包含发布提交；工作树无意外脏改动。 |
 
 #### 批次门槛与发布
 
