@@ -24,6 +24,7 @@ import {
   mississippi12LevelTwelveCampaignContent,
   mississippi13LevelThirteenCampaignContent,
   mississippi14LevelFourteenCampaignContent,
+  mississippi15LevelFifteenCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -207,6 +208,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Riverside Mountains · Level 14', zh: '河畔群山 · 第 14 关' },
     globalLevel: 14,
     requiresCompletedScenarioIds: [mississippi13LevelThirteenCampaignContent.id],
+  }, {
+    scenarioId: mississippi15LevelFifteenCampaignContent.id,
+    contentVersion: mississippi15LevelFifteenCampaignContent.contentVersion,
+    title: { en: 'Railroad Canyon · Level 15', zh: '铁路峡谷 · 第 15 关' },
+    globalLevel: 15,
+    requiresCompletedScenarioIds: [mississippi14LevelFourteenCampaignContent.id],
   }]);
 });
 

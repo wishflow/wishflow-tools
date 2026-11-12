@@ -59,6 +59,12 @@ import {
   mississippi14CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-14-content-version';
 import { mississippi14CampaignId } from '../content/mississippi-14-identity';
+import { createMississippi15CampaignContent } from '../content/mississippi-15-campaign';
+import {
+  mississippi15CampaignContentVersionFor,
+  mississippi15CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-15-content-version';
+import { mississippi15CampaignId } from '../content/mississippi-15-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -104,6 +110,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi12CampaignId]: createMississippi12CampaignContent(),
   [mississippi13CampaignId]: createMississippi13CampaignContent(),
   [mississippi14CampaignId]: createMississippi14CampaignContent(),
+  [mississippi15CampaignId]: createMississippi15CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -139,6 +146,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi14CampaignId) {
     return mississippi14CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi15CampaignId) {
+    return mississippi15CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -157,6 +167,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [mississippi12CampaignId]: createMississippi12CampaignContent(completedScenarioIds),
     [mississippi13CampaignId]: createMississippi13CampaignContent(completedScenarioIds),
     [mississippi14CampaignId]: createMississippi14CampaignContent(completedScenarioIds),
+    [mississippi15CampaignId]: createMississippi15CampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -221,6 +232,14 @@ export function createBrowserGameForMississippi13Replay(contentVersion: string |
 export function createBrowserGameForMississippi14Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi14CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores both Railroad Canyon special-unit unlocks from the recorded snapshot. */
+export function createBrowserGameForMississippi15Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi15CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

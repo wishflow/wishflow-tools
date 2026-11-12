@@ -53,7 +53,7 @@ test('Riverside Mountains is formal level 14 and unlocks only after Golden River
     globalLevel: 14,
     requiresCompletedScenarioIds: [mississippi13CampaignId],
   });
-  assert.equal(officialCampaignStages.length, 14);
+  assert.equal(officialCampaignStages.length, 15);
 
   const progress = createProgress(createMemoryProfileRepository({
     completedScenarios: completedThroughLevelTwelve,
@@ -161,7 +161,7 @@ test('formal Riverside Mountains victory unlocks the next stage; Free Play resul
   const saved = await progress.applySettlement(victory!);
   assert.ok(saved.profile.completedScenarios.includes(mississippi14CampaignId));
   assert.equal(campaignLevelState(14, await progress.loadCampaign()), 'completed');
-  assert.equal(campaignLevelState(15, await progress.loadCampaign()), 'unimplemented');
+  assert.equal(campaignLevelState(15, await progress.loadCampaign()), 'available');
   session.close();
 
   const freeContent = emptyRequestContent(completed);

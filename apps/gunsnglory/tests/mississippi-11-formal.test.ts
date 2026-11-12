@@ -34,7 +34,7 @@ function emptyRequestContent(completedScenarioIds: readonly string[]): ScenarioC
   };
 }
 
-test('Traveller’s Town is level 11, locked until Lost City is complete, and later levels stay unimplemented', async () => {
+test('Traveller’s Town is level 11, locked until Lost City is complete, and later levels stay gated', async () => {
   const stage = officialCampaignStages.find(({ globalLevel }) => globalLevel === 11);
   assert.deepEqual(stage, {
     scenarioId: mississippi11CampaignId,
@@ -43,7 +43,7 @@ test('Traveller’s Town is level 11, locked until Lost City is complete, and la
     globalLevel: 11,
     requiresCompletedScenarioIds: [lostCityCampaignId],
   });
-  assert.equal(officialCampaignStages.length, 14);
+  assert.equal(officialCampaignStages.length, 15);
   assert.equal(createMississippi11CampaignContent().formalSettlementSupported, true);
 
   const progress = createProgress(createMemoryProfileRepository({
@@ -78,6 +78,7 @@ test('Traveller’s Town is level 11, locked until Lost City is complete, and la
   });
   assert.equal(campaignLevelState(12, await progress.loadCampaign()), 'available');
   assert.equal(campaignLevelState(13, await progress.loadCampaign()), 'locked');
+  assert.equal(campaignLevelState(15, await progress.loadCampaign()), 'locked');
   assert.equal(
     getBrowserScenarioContentVersion(mississippi12CampaignId),
     'gng-free-1.8.6-mississippi-12-formal-v1-pyro0',

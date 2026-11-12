@@ -26,7 +26,7 @@ test('Lucky Lake is registered as level seven and unlocks only after Murdock Mou
     globalLevel: 7,
     requiresCompletedScenarioIds: [murdockMountainsCampaignId],
   });
-  assert.equal(officialCampaignStages.length, 14);
+  assert.equal(officialCampaignStages.length, 15);
   assert.equal(luckyLakeLevelSevenCampaignContent.formalSettlementSupported, true);
   assert.equal(getBrowserScenarioContentVersion(luckyLakeCampaignId), luckyLakeCampaignContentVersion);
 

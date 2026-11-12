@@ -28,12 +28,15 @@ const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = 
   75: { asset: 'b_1x1_watertower' },
   86: { asset: 'tiles_railway_buffers_hori_left', collisionBoxFine: railBufferCollision },
   87: { asset: 'tiles_railway_buffers_hori_right', collisionBoxFine: railBufferCollision },
+  94: { asset: 'tiles_railway_buffers_verti_up' },
+  95: { asset: 'tiles_railway_buffers_verti_down' },
   77: {
     asset: 'e_1x2_bones',
     collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 },
     fieldBlockBounds: { left: 0, right: 0, top: -1, bottom: 0 },
   },
   113: { asset: 'b_3x2_fort', anchorOffsetY: -0.3, collisionBoxFine: fortCollision },
+  112: { asset: 'b_3x2_saloon', anchorOffsetY: -0.3 },
   126: {
     asset: 'e_1x1_rocks_water',
     collisionBoxFine: { x: 1920, y: 2612, width: 3840, height: 2534 },
