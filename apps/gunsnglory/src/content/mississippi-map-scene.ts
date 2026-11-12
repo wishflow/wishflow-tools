@@ -19,6 +19,7 @@ const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = 
   69: { asset: 'e_1x1_rocks_a' },
   70: { asset: 'e_1x1_rocks_b' },
   71: { asset: 'e_1x1_tree' },
+  76: { asset: 'e_1x1_bush' },
   74: { asset: 'b_1x1_windmill' },
   75: { asset: 'b_1x1_watertower' },
   86: { asset: 'tiles_railway_buffers_hori_left', collisionBoxFine: railBufferCollision },
