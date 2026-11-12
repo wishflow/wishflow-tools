@@ -65,6 +65,12 @@ import {
   mississippi15CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-15-content-version';
 import { mississippi15CampaignId } from '../content/mississippi-15-identity';
+import { createMississippi16CampaignContent } from '../content/mississippi-16-campaign';
+import {
+  mississippi16CampaignContentVersionFor,
+  mississippi16CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-16-content-version';
+import { mississippi16CampaignId } from '../content/mississippi-16-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -111,6 +117,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi13CampaignId]: createMississippi13CampaignContent(),
   [mississippi14CampaignId]: createMississippi14CampaignContent(),
   [mississippi15CampaignId]: createMississippi15CampaignContent(),
+  [mississippi16CampaignId]: createMississippi16CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -149,6 +156,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi15CampaignId) {
     return mississippi15CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi16CampaignId) {
+    return mississippi16CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -168,6 +178,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [mississippi13CampaignId]: createMississippi13CampaignContent(completedScenarioIds),
     [mississippi14CampaignId]: createMississippi14CampaignContent(completedScenarioIds),
     [mississippi15CampaignId]: createMississippi15CampaignContent(completedScenarioIds),
+    [mississippi16CampaignId]: createMississippi16CampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -240,6 +251,14 @@ export function createBrowserGameForMississippi14Replay(contentVersion: string |
 export function createBrowserGameForMississippi15Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi15CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores Highpoint Terrace's special-unit and Dynamite snapshot, not today's profile. */
+export function createBrowserGameForMississippi16Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi16CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

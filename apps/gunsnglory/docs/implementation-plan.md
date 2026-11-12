@@ -4,7 +4,8 @@
 
 ## 当前状态
 
-- 正式战役已接入 15/60 关。Mississippi 区域第 11–15 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_18.tdm`；不能根据关卡编号推测地图文件编号。
+- 正式战役已接入 16/60 关。Mississippi 区域第 11–16 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_19.tdm`；不能根据关卡编号推测地图文件编号。
+- Mississippi 第16关 Highpoint Terrace 已完成并发布，实际地图为 res/raw/td_map_19.tdm；地图、路线、对象、八波、Cannon 炮池与 Dynamite、双语内容、正式战役、Free Play、结算和回放均已接入。静态证据见 [M16 静态审计](map16-static-audit.md)。发布与回同步结果见下方 M16 完成记录。
 - Traveller’s Town 批次已发布到 `master`：提交 `b6e05ca20a2d04bc1939ea82d4656842404ce9db`，Actions `43018344472` 成功。GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均与该 SHA 一致。
 - Steam Valley 已完成并发布：真实 map15、路线/桥和静态对象、单位/汽船、七波、对白与资源、正式关卡 12、Free Play 三种难度，以及按录制解锁状态还原的回放。发布提交 `8baa286ed32f4266e0636e1cfd1152a42c42caf1`，Actions `43152356792` 成功；GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
 - 最终 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过：584 项单测、TypeScript 检查、生产构建和 137 项 E2E。构建有 1.488 MB JavaScript chunk 超过 500 KB 的提示。
@@ -47,7 +48,21 @@ M15 已完成本地实现、整批检查、squash 发布、部署 SHA 核验和�
 | M15-R2 | 部署来源 SHA 与浏览器验收 | 已完成；两处 Pages 的 `build-info.json` 与发布 SHA 一致；内置浏览器看到 Railroad Canyon 的 Settlers 开场对白及 `01/09` HUD。 |
 | M15-R3 | 发布回同步至 `gunsnglory` | 已完成；集成提交 `3abedce` 已推送至 `origin/gunsnglory`，并包含发布提交 `62905bb`。 |
 
-M15 批次已发布。本计划不预排下一关；开始下一批前先依据当前代码和静态证据细化若干可独立验收步骤。
+## 最近完成：Highpoint Terrace（M16）
+
+Highpoint Terrace（Mississippi 第16关）已接入正式战役、Free Play 和回放。预期数据以 [M16 静态审计](map16-static-audit.md) 及应用实际消费代码为准；无需 Android 运行或完整手动通关。
+
+| 顺序 | 切片 | 实施范围与结果 |
+| --- | --- | --- |
+| M16-A | 地图、路线与实体 | 接入 APK 对应的 map19、地形、路线、静态对象和初始单位；与静态审计及路线测试核对通过。 |
+| M16-B | 波次、炮池与单位 | 接入八波生成、关卡炮池、Dynamite 与关卡单位；Cannon 使用现有单位池模板契约生成，没有伪造地图单位。定向规则和实体测试通过。 |
+| M16-C | 关卡内容与正式入口 | 接入双语关卡信息、对白、正式解锁和结算、Free Play 与回放；正式进度与自由模式档案边界通过测试。 |
+| M16-D | 入口回归与完整检查 | 正式战役第16关依赖第15关，Mississippi Free Play 开放六关，第17关及之后保持禁用。CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci 通过 TypeScript、645 项单测、生产构建和145项 E2E；构建有主 JS chunk 超过500 KB的预算提示，本批未做无关拆包。 |
+| M16-R1 | 集成发布 | 已 squash 推送至 master：f0ea3060de5fadc9cd337ee782581a50d73fef26。GitHub Actions 43211885210 的适用 CI 与 Pages 部署均成功。 |
+| M16-R2 | 部署与浏览器验收 | GitHub Pages 与 Cloudflare Pages 根 build-info.json 均报告来源 SHA f0ea3060de5fadc9cd337ee782581a50d73fef26。内置浏览器以静音、窗口模式从 Free Play → Mississippi → Highpoint Terrace → Easy 进入，显示开场对白、地图及第1/8波；未完整通关或启动 Android。 |
+| M16-R3 | 回同步至集成分支 | 正在将发布提交合并回 gunsnglory 并同步主工作树；保留现有未跟踪研究文档，完成后记录集成提交。 |
+
+M16 发布后累计普通发布比例为20/100（20.0%）。本批已完成发布验收；仅待 M16-R3 回同步收尾。
 
 ## 已完成批次
 
