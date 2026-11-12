@@ -335,6 +335,8 @@ export interface CampaignUnitPoolUnitDefinition {
   unitType: string;
   /** Original GameObjectSpawnLocation.unit kind that accepts this pool type. */
   spawnLocationType: SpawnLocationType;
+  /** Optional spawn design for pool-only units that have no sleeping marker on this map. */
+  template?: ScenarioUnit;
 }
 
 export interface CampaignUnitSpawnLocationDefinition {
@@ -3036,9 +3038,10 @@ export function createGame(options: {
         const invalidPool = !Number.isSafeInteger(campaignUnitPool.intervalMs)
           || campaignUnitPool.intervalMs < 1
           || campaignUnitPool.units.some((entry) => {
+            const template = entry.template ?? scenario.units.find((unit) => unit.type === entry.unitType);
             if (!Number.isSafeInteger(entry.poolType) || entry.poolType < 0 || entry.poolType >= 37
               || poolTypes.has(entry.poolType)
-              || !scenario.units.some((unit) => unit.type === entry.unitType)
+              || !template || template.type !== entry.unitType
               || ![1, 2, 3].includes(entry.spawnLocationType)) return true;
             poolTypes.add(entry.poolType);
             return false;
@@ -4466,8 +4469,11 @@ export function createGame(options: {
                 (spawn) => campaignUnitSpawnBlocked(scenario, units, spawn),
               );
               for (const spawn of spawnedUnits) {
-                const template = scenario.units.find((unit) => unit.type === spawn.unitType);
-                if (!template) throw new Error('Campaign unit pool template disappeared: ' + spawn.unitType);
+                const poolEntry = scenario.campaignUnitPool.units.find(({ poolType }) => poolType === spawn.poolType);
+                const template = poolEntry?.template ?? scenario.units.find((unit) => unit.type === spawn.unitType);
+                if (!template || template.type !== spawn.unitType) {
+                  throw new Error('Campaign unit pool template disappeared: ' + spawn.unitType);
+                }
                 const spawnedUnit = campaignSpawnedUnit(template, spawn);
                 units.push(spawnedUnit);
                 drawOrderCreationOrder.push('unit:' + spawnedUnit.definition.id);

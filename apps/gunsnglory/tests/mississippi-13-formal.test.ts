@@ -46,7 +46,7 @@ test('Golden River is formal level 13 and unlocks only after Steam Valley is com
     globalLevel: 13,
     requiresCompletedScenarioIds: [mississippi12CampaignId],
   });
-  assert.equal(officialCampaignStages.length, 13);
+  assert.equal(officialCampaignStages.length, 14);
 
   const progress = createProgress(createMemoryProfileRepository({
     completedScenarios: completedThroughLevelEleven,
@@ -152,7 +152,7 @@ test('formal Golden River settlement unlocks the next stage; Free Play results s
   const saved = await progress.applySettlement(victory!);
   assert.ok(saved.profile.completedScenarios.includes(mississippi13CampaignId));
   assert.equal(campaignLevelState(13, await progress.loadCampaign()), 'completed');
-  assert.equal(campaignLevelState(14, await progress.loadCampaign()), 'unimplemented');
+  assert.equal(campaignLevelState(14, await progress.loadCampaign()), 'available');
   session.close();
 
   const freeContent = emptyRequestContent(completed);

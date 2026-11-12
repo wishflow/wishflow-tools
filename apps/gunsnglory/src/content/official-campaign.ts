@@ -37,6 +37,9 @@ import { mississippi12CampaignCopy } from './mississippi-12-campaign-copy';
 import { createMississippi13CampaignContent } from './mississippi-13-campaign';
 import { mississippi13CampaignCopy } from './mississippi-13-campaign-copy';
 import { mississippi13CampaignId } from './mississippi-13-identity';
+import { createMississippi14CampaignContent } from './mississippi-14-campaign';
+import { mississippi14CampaignCopy } from './mississippi-14-campaign-copy';
+import { mississippi14CampaignId } from './mississippi-14-identity';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -108,6 +111,9 @@ export const mississippi12LevelTwelveCampaignContent = createMississippi12Campai
 
 /** Formal Mississippi level thirteen assembled from the researched Golden River content. */
 export const mississippi13LevelThirteenCampaignContent = createMississippi13CampaignContent();
+
+/** Formal Mississippi level fourteen assembled from the researched Riverside Mountains content. */
+export const mississippi14LevelFourteenCampaignContent = createMississippi14CampaignContent();
 
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
@@ -187,4 +193,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: { en: `${mississippi13CampaignCopy.title.en} · Level 13`, zh: `${mississippi13CampaignCopy.title.zh} · 第 13 关` },
   globalLevel: 13,
   requiresCompletedScenarioIds: [mississippi12CampaignId],
+}, {
+  scenarioId: mississippi14CampaignId,
+  contentVersion: mississippi14LevelFourteenCampaignContent.contentVersion!,
+  title: { en: `${mississippi14CampaignCopy.title.en} · Level 14`, zh: `${mississippi14CampaignCopy.title.zh} · 第 14 关` },
+  globalLevel: 14,
+  requiresCompletedScenarioIds: [mississippi13CampaignId],
 }]);

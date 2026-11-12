@@ -272,11 +272,12 @@
 
 ## 增加正式关卡后同步阶段快照与进度摘要
 
-- **状态：已修复并覆盖 map10。**map05/map06 时曾修正摘要分母和阶段列表；新增 map10 后，首轮完整单测又发现四处正式 stage 快照过期，Progress 另有结算后的状态序列少列一个 locked 关卡。
+- **状态：map10 快照问题已关闭；M14 复现并正在修正。**map05/map06 时曾修正摘要分母和阶段列表；新增 map10 后，首轮完整单测又发现四处正式 stage 快照过期，Progress 另有结算后的状态序列少列一个 locked 关卡。M14 首轮完整 CI 再次发现两处新增关卡快照未同步；已修正并通过25项定向测试，随后完整 CI 通过614项单测和141项 E2E。
 - **表现与复现：**map10 登记后，`tests/apache-valley.test.ts`、`tests/content.test.ts`、`tests/fort-kaboom-formal.test.ts` 和 `tests/progress.test.ts` 的精确阶段列表仍停在 map09。初次更新四处列表后，Progress 的 post-settlement 状态数组仍比实际 stages 少一项。
 - **根因与证据：**摘要分母取自 `officialCampaignStages.length`；正式阶段关系和 Progress 状态测试还有独立硬编码数组。新增正式 stage 后，这些快照需要同步；关卡选择与 Progress 本身按新目录正确工作，没有修改其运行逻辑。
-- **修复与防回归：**更新四个测试文件中的五处期望，补入 level10 和其 map09 前置条件；Progress 初态与结算后均列出 level10 的 locked 状态。Apache Valley、Cow Gulch 内容身份、Fort Kaboom、Progress 和 Lost City 五个测试文件共 43 项定向测试通过，`pnpm run typecheck` 通过。完整 `test:ci` 仍需在这次快照修正后重跑。
+- **修复与防回归：**map10 时更新四个测试文件中的五处期望，补入 level10 和其 map09 前置条件；Progress 初态与结算后均列出 level10 的 locked 状态。相关定向测试与类型检查通过，后续批次完整检查通过。M14 新增关卡后，完整单测重新暴露两处旧快照遗漏（见下项）。
 - **漏测点：**此前只搜索并修改 `stages complete` 和 `campaign-progress-summary`，没有一并搜索直接比较 `officialCampaignStages`、`globalLevel`、前置 ID 以及结算后完整状态数组的快照。
+- **M14 复现：**新增 level14 后，首轮完整单测发现 `tests/apache-valley.test.ts` 的正式关卡关系数组遗漏 M14，`tests/progress.test.ts` 的初始阶段列表和结算后状态数组也各少一个 locked stage。目录和 Progress 运行结果正确，修正的是这三处旧测试快照；Apache Valley 与 Progress 共25项定向测试通过；随后完整 CI 通过614项单测、生产构建和141项 E2E。
 - **修复与防回归：**map05 的 E2E 分母、map06 的 Apache/Fort stage 快照和 map10 相关五处期望现均同步。以后新增或重排关卡时，搜索 `officialCampaignStages`、`globalLevel`、`requiresCompletedScenarioIds`、`stages complete` 和 `campaign-progress-summary`，检查所有静态快照、结算后状态数组及选择状态；不要为了让旧断言通过而改动正确的 Progress 逻辑。
 
 ## 战役与自由模式的关卡说明按存档语义区分

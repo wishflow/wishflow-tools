@@ -12,18 +12,28 @@ interface MississippiMapSource {
 }
 
 const railBufferCollision = Object.freeze({ x: 0, y: -3840, width: 7680, height: 7680 });
+const commonCactusCollision = Object.freeze({ x: 1920, y: -1228, width: 3840, height: 2534 });
+const fortCollision = Object.freeze({ x: -9408, y: -9600, width: 18048, height: 7680 });
 const canyonImageRemap = [-1, 9, 6, 0, 8, 3, -1, 10, 7, -1, 1, 5, 2, 11, 4, -1] as const;
 const waterImageRemap = canyonImageRemap;
 
 const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
+  68: { asset: 'e_1x1_cactus_a', collisionBoxFine: commonCactusCollision },
   69: { asset: 'e_1x1_rocks_a' },
   70: { asset: 'e_1x1_rocks_b' },
   71: { asset: 'e_1x1_tree' },
+  73: { asset: 'e_1x1_cactus_b', collisionBoxFine: commonCactusCollision },
   76: { asset: 'e_1x1_bush' },
   74: { asset: 'b_1x1_windmill' },
   75: { asset: 'b_1x1_watertower' },
   86: { asset: 'tiles_railway_buffers_hori_left', collisionBoxFine: railBufferCollision },
   87: { asset: 'tiles_railway_buffers_hori_right', collisionBoxFine: railBufferCollision },
+  77: {
+    asset: 'e_1x2_bones',
+    collisionBoxFine: { x: 0, y: -9600, width: 7680, height: 11520 },
+    fieldBlockBounds: { left: 0, right: 0, top: -1, bottom: 0 },
+  },
+  113: { asset: 'b_3x2_fort', anchorOffsetY: -0.3, collisionBoxFine: fortCollision },
   126: {
     asset: 'e_1x1_rocks_water',
     collisionBoxFine: { x: 1920, y: 2612, width: 3840, height: 2534 },

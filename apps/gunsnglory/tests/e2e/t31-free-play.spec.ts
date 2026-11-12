@@ -62,11 +62,11 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('3 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('4 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-11')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-12')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-13')).toBeEnabled();
-  for (const level of [14, 15, 16, 17, 18, 19, 20]) {
+  for (const level of [15, 16, 17, 18, 19, 20]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
@@ -123,7 +123,7 @@ test('Free Play opens Steam Valley from its localized overview without changing 
   if (await soundToggle.getAttribute('aria-pressed') !== 'false') await soundToggle.click();
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('3 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('4 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-12')).toBeEnabled();
   await page.getByTestId('campaign-level-12').click();
 
