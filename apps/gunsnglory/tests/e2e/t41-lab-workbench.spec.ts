@@ -35,7 +35,7 @@ test('keeps experiments and data tools in the external lab with site navigation'
   await expect(lab).toBeInViewport();
 });
 
-test('uses original parchment cards without nested boxes across screen sizes', async ({ page }) => {
+test('keeps wood signboard headings without large parchment cards across screen sizes', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto('/');
   const lab = page.getByTestId('lab-workbench');
@@ -47,18 +47,10 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   await expect(lab).toHaveCSS('border-radius', '0px');
   await expect(lab).toHaveCSS('box-shadow', 'none');
   for (const card of await cards.all()) {
-    await expect(card).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+    await expect(card).toHaveCSS('background-image', 'none');
     await expect(card).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await expect(card).toHaveCSS('filter', 'none');
   }
-  const parchment = await cards.first().evaluate(async (card) => {
-    const imageUrl = getComputedStyle(card).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
-    if (!imageUrl) return null;
-    const image = new Image();
-    image.src = imageUrl;
-    await image.decode();
-    return { path: new URL(imageUrl, document.baseURI).pathname, width: image.naturalWidth, height: image.naturalHeight };
-  });
-  expect(parchment).toEqual({ path: '/assets/gng_hud_2_textbox_large.png', width: 384, height: 192 });
   await expect(lab).toHaveCSS('color', 'rgb(57, 40, 23)');
   const nestedPanels = lab.locator([
     '.experiment-panel', '.experiment-empty-state', '.experiment-report', '.lab-speed-card',
@@ -112,7 +104,7 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   expect(desktopGeometry[0]!.x + desktopGeometry[0]!.width).toBeLessThanOrEqual(desktopGeometry[1]!.x + 1);
   expect(desktopGeometry[1]!.x + desktopGeometry[1]!.width).toBeLessThanOrEqual(desktopGeometry[2]!.x + 1);
   expect(desktopGeometry.every((bounds) => Math.abs(bounds.y - desktopGeometry[0]!.y) <= 1)).toBe(true);
-  expect(desktopGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
+  expect(desktopGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 8)).toBe(true);
 
   await page.setViewportSize({ width: 900, height: 900 });
   const tabletGeometry = await cards.evaluateAll((elements) => elements.map((element) => {
@@ -167,7 +159,7 @@ test('uses original parchment cards without nested boxes across screen sizes', a
   expect(narrowGeometry[1]!.y).toBeGreaterThanOrEqual(narrowGeometry[0]!.y + narrowGeometry[0]!.height);
   expect(narrowGeometry[2]!.y).toBeGreaterThanOrEqual(narrowGeometry[1]!.y + narrowGeometry[1]!.height);
   expect(narrowGeometry.every((bounds) => bounds.x >= 0 && bounds.x + bounds.width <= 390)).toBe(true);
-  expect(narrowGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 48)).toBe(true);
+  expect(narrowGeometry.every((bounds) => bounds.headingTop !== undefined && bounds.headingTop - bounds.y >= 6)).toBe(true);
   const archiveStack = await lab.locator('.lab-archive-grid > section').evaluateAll((elements) => elements.map((element) => {
     const bounds = element.getBoundingClientRect();
     return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };

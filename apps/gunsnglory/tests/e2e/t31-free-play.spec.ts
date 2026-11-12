@@ -62,9 +62,10 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('1 implemented level available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('2 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-11')).toBeEnabled();
-  for (const level of [12, 13, 14, 15, 16, 17, 18, 19, 20]) {
+  await expect(page.getByTestId('campaign-level-12')).toBeEnabled();
+  for (const level of [13, 14, 15, 16, 17, 18, 19, 20]) {
     await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
@@ -110,5 +111,39 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   await expect(page.locator('#scene-title')).toHaveText('Billy Hills · Level 5');
   await expect(page.getByTestId('scene-difficulty')).toContainText('HARD');
   await expect(page.getByTestId('wave-status')).toContainText('1/8');
+  expect(await readSavedProfile(page)).toEqual(profileBefore);
+});
+
+test('Free Play opens Steam Valley from its localized overview without changing campaign data', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+
+  const soundToggle = page.getByTestId('menu-sound');
+  if (await soundToggle.getAttribute('aria-pressed') !== 'false') await soundToggle.click();
+  await page.getByTestId('menu-free-play').click();
+  await page.getByTestId('campaign-region-mississippi').click();
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('2 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-level-12')).toBeEnabled();
+  await page.getByTestId('campaign-level-12').click();
+
+  await expect(page.getByRole('heading', { name: 'Steam Valley' })).toBeVisible();
+  await expect(page.locator('.campaign-level-description')).toHaveText(
+    'In Steam Valley, the beautiful sounds of the steamboats ring out at daybreak!',
+  );
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(page.getByRole('heading', { name: '蒸汽谷' })).toBeVisible();
+  await expect(page.locator('.campaign-level-description')).toHaveText('在蒸汽谷，汽船悦耳的声音每天清晨都会响起！');
+  await page.getByRole('button', { name: '切换界面语言为英文' }).click();
+  const profileBefore = await readSavedProfile(page);
+
+  await page.getByTestId('campaign-stage-play').click();
+  for (const difficulty of ['easy', 'medium', 'hard']) {
+    await expect(page.getByTestId(`campaign-difficulty-${difficulty}`)).toBeEnabled();
+  }
+  await page.getByTestId('campaign-difficulty-medium').click();
+  await expect(page.locator('#scene-title')).toHaveText('Steam Valley · Level 12');
+  await expect(page.getByTestId('scene-context')).toHaveText('FREE PLAY · MISSISSIPPI · 12');
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/7');
+  await expect(page.getByTestId('asset-load-error')).toBeHidden();
   expect(await readSavedProfile(page)).toEqual(profileBefore);
 });

@@ -12,6 +12,7 @@ import {
   mississippi11CampaignId,
 } from '../src/content/mississippi-11-campaign';
 import { lostCityCampaignId } from '../src/content/lost-city-campaign';
+import { mississippi12CampaignId } from '../src/content/mississippi-12-identity';
 import { officialCampaignStages } from '../src/content/official-campaign';
 import { createGame, type CampaignWaveDefinition, type ScenarioContent } from '../src/game';
 import { createProgress } from '../src/progress';
@@ -42,7 +43,7 @@ test('Traveller’s Town is level 11, locked until Lost City is complete, and la
     globalLevel: 11,
     requiresCompletedScenarioIds: [lostCityCampaignId],
   });
-  assert.equal(officialCampaignStages.length, 11);
+  assert.equal(officialCampaignStages.length, 12);
   assert.equal(createMississippi11CampaignContent().formalSettlementSupported, true);
 
   const progress = createProgress(createMemoryProfileRepository({
@@ -75,8 +76,13 @@ test('Traveller’s Town is level 11, locked until Lost City is complete, and la
     displayScore: 900,
     highScoreCandidate: 900,
   });
-  assert.equal(campaignLevelState(12, await progress.loadCampaign()), 'unimplemented');
-  assert.equal(getBrowserScenarioContentVersion('campaign-mississippi-12'), undefined);
+  assert.equal(campaignLevelState(12, await progress.loadCampaign()), 'available');
+  assert.equal(campaignLevelState(13, await progress.loadCampaign()), 'locked');
+  assert.equal(
+    getBrowserScenarioContentVersion(mississippi12CampaignId),
+    'gng-free-1.8.6-mississippi-12-formal-v1-pyro0',
+    'the browser can construct Steam Valley content before its formal stage is registered',
+  );
 });
 
 test('Traveller’s Town opens in Free Play at all three difficulties without prior campaign progress', async () => {

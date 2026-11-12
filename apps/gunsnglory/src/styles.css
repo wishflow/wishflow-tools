@@ -3353,11 +3353,11 @@ body.gng-game-fullscreen .usagi-widget {
 
 .lab-card {
   min-width: 0;
-  padding: clamp(3.4rem, 4.4vw, 3.8rem) clamp(1rem, 1.6vw, 1.35rem) 1.25rem;
+  padding: 0.65rem clamp(1rem, 1.6vw, 1.35rem) 1.25rem;
   border: 0;
   color: var(--lab-ink);
-  background: var(--lab-parchment-background) center / 100% 100% no-repeat;
-  filter: drop-shadow(0 0.25rem 0.32rem rgba(58, 37, 17, 0.2));
+  background: transparent;
+  filter: none;
 }
 
 .lab-card > h3,
@@ -3777,7 +3777,7 @@ body.gng-game-fullscreen .usagi-widget {
   }
 
   .lab-card {
-    padding: 3.25rem 0.9rem 1rem;
+    padding: 0.45rem 0.9rem 1rem;
   }
 
   .lab-layout,

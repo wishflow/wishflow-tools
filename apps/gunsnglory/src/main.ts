@@ -7,6 +7,7 @@ import {
   createBrowserGameForCactusvilleReplay,
   createBrowserGameForLostCityReplay,
   createBrowserGameForMississippi11Replay,
+  createBrowserGameForMississippi12Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -61,12 +62,12 @@ import { lostCityWaveIntros } from './content/lost-city-wave-intros';
 import { lostCityCampaignCopy } from './content/lost-city-campaign-copy';
 import { createMississippi11CampaignContent, mississippi11CampaignId } from './content/mississippi-11-campaign';
 import { mississippi11CampaignCopy } from './content/mississippi-11-campaign-copy';
-import {
-  mississippi11AmbientMusic,
-  mississippi11BattleMusicForWave,
-  type Mississippi11MusicTrack,
-} from './content/mississippi-11-music';
+import { mississippi12CampaignId } from './content/mississippi-12-identity';
+import { createMississippi12CampaignContent } from './content/mississippi-12-campaign';
+import { mississippi12CampaignCopy } from './content/mississippi-12-campaign-copy';
+import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
+import { mississippi12WaveIntros } from './content/mississippi-12-wave-intros';
 import { campaignCatalog, campaignLevelState, campaignRegions, type CampaignRegionId } from './content/campaign-catalog';
 import { apacheValleyWaveIntros, CampaignWaveIntroCursor, cowGulchWaveIntros, type CampaignWaveIntro } from './content/cow-gulch-wave-intros';
 import { fortKaboomWaveIntros } from './content/fort-kaboom-wave-intros';
@@ -1298,6 +1299,8 @@ const campaignMenuCopy = {
     levelTenVictoryTitle: lostCityCampaignCopy.victoryTitle.en,
     levelElevenTitle: mississippi11CampaignCopy.title.en,
     levelElevenVictoryTitle: mississippi11CampaignCopy.victoryTitle.en,
+    levelTwelveTitle: mississippi12CampaignCopy.title.en,
+    levelTwelveVictoryTitle: mississippi12CampaignCopy.victoryTitle.en,
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
@@ -1309,6 +1312,7 @@ const campaignMenuCopy = {
     levelNineInfo: 'The birthplace of the American railroad. The east and west coasts will soon be connected by busy trains.',
     levelTenInfo: lostCityCampaignCopy.overview.en,
     levelElevenInfo: mississippi11CampaignCopy.overview.en,
+    levelTwelveInfo: mississippi12CampaignCopy.overview.en,
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
@@ -1370,6 +1374,8 @@ const campaignMenuCopy = {
     levelTenVictoryTitle: lostCityCampaignCopy.victoryTitle.zh,
     levelElevenTitle: mississippi11CampaignCopy.title.zh,
     levelElevenVictoryTitle: mississippi11CampaignCopy.victoryTitle.zh,
+    levelTwelveTitle: mississippi12CampaignCopy.title.zh,
+    levelTwelveVictoryTitle: mississippi12CampaignCopy.victoryTitle.zh,
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
@@ -1381,6 +1387,7 @@ const campaignMenuCopy = {
     levelNineInfo: '这里是美国铁路的发源地。东西海岸很快就会被繁忙的列车连接起来。',
     levelTenInfo: lostCityCampaignCopy.overview.zh,
     levelElevenInfo: mississippi11CampaignCopy.overview.zh,
+    levelTwelveInfo: mississippi12CampaignCopy.overview.zh,
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
@@ -1767,7 +1774,8 @@ function campaignMenuLevelScreen(): string {
           : level.level === 8 ? copy.levelEightTitle
             : level.level === 9 ? copy.levelNineTitle
               : level.level === 10 ? copy.levelTenTitle
-                : level.level === 11 ? copy.levelElevenTitle : level.title;
+                : level.level === 11 ? copy.levelElevenTitle
+                  : level.level === 12 ? copy.levelTwelveTitle : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.level).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -1843,7 +1851,8 @@ function campaignMenuOverviewScreen(): string {
                   : entry.level === 8 ? createCactusvilleCampaignContent(completedScenarios)
           : entry.level === 9 ? createRailroadRanchCampaignContent(completedScenarios)
             : entry.level === 10 ? createLostCityCampaignContent(completedScenarios)
-              : createMississippi11CampaignContent(completedScenarios);
+              : entry.level === 11 ? createMississippi11CampaignContent(completedScenarios)
+                : createMississippi12CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo
@@ -1853,7 +1862,8 @@ function campaignMenuOverviewScreen(): string {
               : entry.level === 7 ? copy.levelSevenInfo
                 : entry.level === 8 ? copy.levelEightInfo
                   : entry.level === 9 ? copy.levelNineInfo
-                    : entry.level === 10 ? copy.levelTenInfo : copy.levelElevenInfo;
+                    : entry.level === 10 ? copy.levelTenInfo
+                      : entry.level === 11 ? copy.levelElevenInfo : copy.levelTwelveInfo;
   const artName = `gng_levelmap_${String(entry.level).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -1873,7 +1883,8 @@ function campaignMenuOverviewScreen(): string {
             : entry.level === 8 ? copy.levelEightTitle
                     : entry.level === 9 ? copy.levelNineTitle
                       : entry.level === 10 ? copy.levelTenTitle
-                        : entry.level === 11 ? copy.levelElevenTitle : entry.title)}</h2>
+                        : entry.level === 11 ? copy.levelElevenTitle
+                          : entry.level === 12 ? copy.levelTwelveTitle : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -2933,6 +2944,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
   const activeCampaignStage = campaignProgressView?.stages.find(({ scenarioId }) => scenarioId === view.scenarioId);
   const officialStage = officialCampaignStages.find(({ scenarioId }) => scenarioId === view.scenarioId);
   const campaignRegionLabel = officialStage?.scenarioId === mississippi11CampaignId
+    || officialStage?.scenarioId === mississippi12CampaignId
     ? language === 'zh' ? '密西西比' : 'MISSISSIPPI'
     : 'NEW MEXICO';
   const displayedCampaignStage = activeCampaignStage ?? officialStage;
@@ -3038,6 +3050,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
             ? campaignMenuCopy[language].levelTenVictoryTitle
             : view.scenarioId === mississippi11CampaignId
               ? campaignMenuCopy[language].levelElevenVictoryTitle
+              : view.scenarioId === mississippi12CampaignId
+                ? campaignMenuCopy[language].levelTwelveVictoryTitle
               : messages.result
       : messages.result;
     settlementOutcome.textContent = messages[settlement.outcome];
@@ -3468,6 +3482,7 @@ const assetNames = new Set([
       'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
     ]),
     createMississippi11CampaignContent(['campaign-nevada-10', 'campaign-alaska-10']),
+    createMississippi12CampaignContent(['campaign-nevada-10']),
   ].flatMap((content) => [
     ...content.map.background.map((tile) => tile.asset),
     ...content.map.streets.map((tile) => tile.asset),
@@ -3570,13 +3585,14 @@ const assetNames = new Set([
   'portrait_sheriff',
   'portrait_pyromaniac',
   'portrait_salesman',
+  'portrait_captain',
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
 let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
 const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
-let backgroundMusicTrack: CowGulchMusicTrack | Mississippi11MusicTrack | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
 const blockedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let audioUserGestureObserved = false;
@@ -3729,13 +3745,14 @@ function isOfficialNewMexicoMusicSession(): boolean {
     && campaignCatalog.find(({ level }) => level === stage.globalLevel)?.regionId === 'new-mexico';
 }
 
-function isOfficialMississippi11MusicSession(): boolean {
+function isOfficialMississippiMusicSession(): boolean {
   return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
-    && session.startRecord.scenarioId === mississippi11CampaignId;
+    && (session.startRecord.scenarioId === mississippi11CampaignId
+      || session.startRecord.scenarioId === mississippi12CampaignId);
 }
 
 function isOfficialCampaignMusicSession(): boolean {
-  return isOfficialNewMexicoMusicSession() || isOfficialMississippi11MusicSession();
+  return isOfficialNewMexicoMusicSession() || isOfficialMississippiMusicSession();
 }
 
 function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[] {
@@ -3750,6 +3767,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === railroadRanchCampaignId) return railroadRanchWaveIntros;
   if (scenarioId === lostCityCampaignId) return lostCityWaveIntros;
   if (scenarioId === mississippi11CampaignId) return mississippi11WaveIntros;
+  if (scenarioId === mississippi12CampaignId) return mississippi12WaveIntros;
   return [];
 }
 
@@ -3907,7 +3925,7 @@ function pauseBackgroundMusic(resetPosition = false): void {
   if (resetPosition) backgroundMusic.currentTime = 0;
 }
 
-function setCampaignBackgroundMusic(track: CowGulchMusicTrack | Mississippi11MusicTrack): void {
+function setCampaignBackgroundMusic(track: CowGulchMusicTrack | MississippiMusicTrack): void {
   if (!isOfficialCampaignMusicSession()) return;
   if (backgroundMusicTrack === track && backgroundMusic) {
     playBackgroundMusic();
@@ -4019,14 +4037,14 @@ function playRequestedSounds(
     if (event.type === 'unit-fired' && eventWaveNumber !== undefined && battleMusicWaveNumber !== eventWaveNumber) {
       battleMusicWaveNumber = eventWaveNumber;
       // GameView numbers waves from 1; the APK's GunsAndGloryThread.wave counter starts at 0.
-      setCampaignBackgroundMusic(isOfficialMississippi11MusicSession()
-        ? mississippi11BattleMusicForWave(eventWaveNumber - 1)
+      setCampaignBackgroundMusic(isOfficialMississippiMusicSession()
+        ? mississippiBattleMusicForWave(eventWaveNumber - 1)
         : cowGulchBattleMusicForWave(eventWaveNumber - 1));
     }
     if (event.type === 'wave-settled') {
       setCampaignBackgroundMusic(event.settlement.outcome === 'victory'
         ? cowGulchVictoryMusic
-        : isOfficialMississippi11MusicSession() ? mississippi11AmbientMusic : cowGulchAmbientMusic);
+        : isOfficialMississippiMusicSession() ? mississippiAmbientMusic : cowGulchAmbientMusic);
     }
   }
 }
@@ -4070,7 +4088,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   if (!intro) return false;
   battleMusicWaveNumber = undefined;
   if (isOfficialNewMexicoMusicSession()) setCampaignBackgroundMusic(cowGulchAmbientMusic);
-  else if (isOfficialMississippi11MusicSession()) setCampaignBackgroundMusic(mississippi11AmbientMusic);
+  else if (isOfficialMississippiMusicSession()) setCampaignBackgroundMusic(mississippiAmbientMusic);
   pendingCampaignWaveIntro = intro;
   stopGameLoop();
   pauseReason = 'wave-intro';
@@ -4177,7 +4195,10 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             ? createBrowserGame(completedScenarioIds)
           : request.scenarioId === railroadRanchCampaignId && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
-          : game;
+          : (request.scenarioId === mississippi11CampaignId || request.scenarioId === mississippi12CampaignId)
+            && (campaignProgressView || request.mode === 'free')
+            ? createBrowserGame(completedScenarioIds)
+            : game;
     const nextSession = await sessionGame.open(request);
     sceneOpenFailure = undefined;
     activateSession(nextSession);
@@ -4366,6 +4387,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === mississippi11CampaignId) {
       return createBrowserGameForMississippi11Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === mississippi12CampaignId) {
+      return createBrowserGameForMississippi12Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }

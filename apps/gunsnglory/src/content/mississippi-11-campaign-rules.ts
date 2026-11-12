@@ -1,48 +1,15 @@
-import type { CampaignEnemyType, PreviewEnemyDefinition, PreviewWaveDefinition } from '../game';
+import type { PreviewWaveDefinition } from '../game';
+import {
+  mississippiBaseEnemy,
+  mississippiCampaignAwesomeEnemyTypeThreshold,
+  mississippiEnemyByType,
+} from './mississippi-enemy-designs';
 import { mississippi11RouteDefinitions } from './mississippi-11-routes';
 
 export const mississippi11MaxUpgrades = 3;
-export const mississippi11CampaignAwesomeEnemyTypeThreshold = 5;
-
-export const mississippi11BaseEnemy: PreviewEnemyDefinition = Object.freeze({
-  hitPoints: 18,
-  cashReward: 1,
-  penetration: Object.freeze({ light: 100, fire: 50, heavy: 25, poison: 75 }),
-});
-
-/** Global APK enemy design rows used by Traveller’s Town’s campaign waves. */
-export const mississippi11EnemyByType: Partial<Readonly<Record<CampaignEnemyType, PreviewEnemyDefinition>>> = Object.freeze({
-  3: Object.freeze({
-    hitPoints: 60,
-    cashReward: 2,
-    penetration: Object.freeze({ light: 100, fire: 50, heavy: 25, poison: 75 }),
-    turningDurationMs: 100,
-  }),
-  4: Object.freeze({
-    hitPoints: 200,
-    cashReward: 10,
-    penetration: Object.freeze({ light: 50, fire: 100, heavy: 66, poison: 100 }),
-    turningDurationMs: 200,
-  }),
-  5: Object.freeze({
-    hitPoints: 300,
-    cashReward: 15,
-    penetration: Object.freeze({ light: 50, fire: 100, heavy: 66, poison: 100 }),
-    turningDurationMs: 100,
-  }),
-  6: Object.freeze({
-    hitPoints: 500,
-    cashReward: 25,
-    penetration: Object.freeze({ light: 33, fire: 25, heavy: 100, poison: 100 }),
-    turningDurationMs: 200,
-  }),
-  8: Object.freeze({
-    hitPoints: 200,
-    cashReward: 0,
-    penetration: Object.freeze({ light: 100, fire: 100, heavy: 100, poison: 100 }),
-    turningDurationMs: 100,
-  }),
-});
+export const mississippi11CampaignAwesomeEnemyTypeThreshold = mississippiCampaignAwesomeEnemyTypeThreshold;
+export const mississippi11BaseEnemy = mississippiBaseEnemy;
+export const mississippi11EnemyByType = mississippiEnemyByType;
 
 const uniqueSpawns = [...new Map(mississippi11RouteDefinitions.map(({ spawn }) => [
   `${spawn.cell.x},${spawn.cell.y}:${spawn.direction}`, spawn,
