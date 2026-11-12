@@ -42,7 +42,7 @@ test('Steam Valley is level 12, unlocks after Traveller’s Town, and gates Gold
     globalLevel: 12,
     requiresCompletedScenarioIds: [mississippi11CampaignId],
   });
-  assert.equal(officialCampaignStages.length, 15);
+  assert.equal(officialCampaignStages.length, 16);
   assert.equal(officialCampaignStages.some(({ globalLevel }) => globalLevel === 13), true);
 
   const progress = createProgress(createMemoryProfileRepository({

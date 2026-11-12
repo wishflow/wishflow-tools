@@ -32,6 +32,15 @@
 - **路线复核：**解析 `EnemyDirectorField` 方向表和 `PriorityMap.recursiveLengthTracking` 后，用明确的具体路径独立计算所有路线格优先级，再与网页 TypeScript 算法逐格比较；map05 的 5 个路线变体、142 个路线格均匹配。属于静态算法交叉校验，不是 Android 或浏览器运行观察。
 - **路线方向字段：**`WaveRouteDefinition.redirects[n].directions` 表示从该控制点离开的方向，不是从前一个节点进入该点的方向。map14 首次编写时把图边的方向误记在目标节点上；从原始 TDM 重新解出的方向图测试立即失败。修正后比较全部 13 条完整路径及 59 条有向边。新增地图路线时按控制点的出边填写，并用原始 TDM 独立展开每个分支；只检查路线经过了哪些格子不足以验证方向。
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
+- **关卡对象摘要也要回到分支证据：**研究汇总表曾将 tile `130/131` 概述为读档恢复对象，但 `GameObjectManager.smali` 中该 switch 分支在 `fromLoadGame == false` 时才创建 type35/36；读档恢复的是 `96–101`。M16 静态审计据 Smali 校正了这一点。复用旧关卡/证据报告时，如果结论影响新局对象或解锁，必须检查对象分派的实际条件跳转，并把冲突标清，不能照抄摘要表。
+
+## TDM Dynamite marker 与对象角色不能混写
+
+**状态：M16 静态审计与关卡测试已校正。**
+
+- **错误表现：**Highpoint Terrace 审计曾把 code `102` 写成炸药箱、把 `110` 写成触发器；而应用现有配对器将 `102` 作为 trigger、`110` 作为 box，导致按审计编写的坐标期望失败。
+- **根因与证据：**`GameObjectManager.smali` 的 `createGameObjectsFromBasicMap` packed-switch 中，map value `102` 命中创建并加入 `DynamiteTrigger` 列表的分支；`110` 命中创建并加入 `DynamiteBox` 列表的分支。map19 网格位置分别为 `(28,10)` 与 `(27,11)`。此前审计将 marker 坐标与对象语义对调。
+- **修正与防回归：**[M16 静态审计](map16-static-audit.md)已改为 trigger `(28,10)`、box `(27,11)`；`mississippi-16-campaign-rules.test.ts` 从真实地图网格检查配对结果和 20/30 关解锁路径。新增炸药对象时同时核对 TDM 字节、Smali 对象构造分支和运行时字段语义，不能只根据对象名称或相邻 marker 推断。
 
 ## TDM 单位 marker 必须验证到最终场景单位
 

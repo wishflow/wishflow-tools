@@ -25,6 +25,7 @@ import {
   mississippi13LevelThirteenCampaignContent,
   mississippi14LevelFourteenCampaignContent,
   mississippi15LevelFifteenCampaignContent,
+  mississippi16LevelSixteenCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -214,6 +215,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Railroad Canyon · Level 15', zh: '铁路峡谷 · 第 15 关' },
     globalLevel: 15,
     requiresCompletedScenarioIds: [mississippi14LevelFourteenCampaignContent.id],
+  }, {
+    scenarioId: mississippi16LevelSixteenCampaignContent.id,
+    contentVersion: mississippi16LevelSixteenCampaignContent.contentVersion,
+    title: { en: 'Highpoint Terrace · Level 16', zh: '高台露台 · 第 16 关' },
+    globalLevel: 16,
+    requiresCompletedScenarioIds: [mississippi15LevelFifteenCampaignContent.id],
   }]);
 });
 

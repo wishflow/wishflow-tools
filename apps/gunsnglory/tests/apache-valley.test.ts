@@ -159,6 +159,7 @@ test('official Apache Valley content exposes its six source wave schedules and u
     ['campaign-mississippi-13', ['campaign-mississippi-12']],
     ['campaign-mississippi-14', ['campaign-mississippi-13']],
     ['campaign-mississippi-15', ['campaign-mississippi-14']],
+    ['campaign-mississippi-16', ['campaign-mississippi-15']],
   ]);
 });
 
