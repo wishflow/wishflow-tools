@@ -30,7 +30,7 @@ test('Cactusville is New Mexico level eight and follows only Lucky Lake', async 
     globalLevel: 8,
     requiresCompletedScenarioIds: ['campaign-new-mexico-07'],
   });
-  assert.equal(officialCampaignStages.length, 14);
+  assert.equal(officialCampaignStages.length, 15);
   assert.equal(cactusvilleLevelEightCampaignContent.formalSettlementSupported, true);
   assert.equal(getBrowserScenarioContentVersion(cactusvilleCampaignId), cactusvilleLevelEightCampaignContent.contentVersion);
 

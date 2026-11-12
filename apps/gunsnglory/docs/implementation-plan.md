@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-- 正式战役已接入 14/60 关。Traveller’s Town、Steam Valley、Golden River、Riverside Mountains 分别是 Mississippi 区域第 11–14 关，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_17.tdm`；不能根据关卡编号推测地图文件编号。
+- 正式战役已接入 15/60 关。Mississippi 区域第 11–15 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_18.tdm`；不能根据关卡编号推测地图文件编号。
 - Traveller’s Town 批次已发布到 `master`：提交 `b6e05ca20a2d04bc1939ea82d4656842404ce9db`，Actions `43018344472` 成功。GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均与该 SHA 一致。
 - Steam Valley 已完成并发布：真实 map15、路线/桥和静态对象、单位/汽船、七波、对白与资源、正式关卡 12、Free Play 三种难度，以及按录制解锁状态还原的回放。发布提交 `8baa286ed32f4266e0636e1cfd1152a42c42caf1`，Actions `43152356792` 成功；GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
 - 最终 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过：584 项单测、TypeScript 检查、生产构建和 137 项 E2E。构建有 1.488 MB JavaScript chunk 超过 500 KB 的提示。
@@ -23,8 +23,31 @@
 - Riverside Mountains（M14，Mississippi 第14关）已接入并发布，地图来自 `td_map_17.tdm`；地图、路线、静态对象、单位、七波、Fort Cannon 炮池、双语对白、正式进度、Free Play 与回放均已完成，证据见 [M14 静态审计](map14-static-audit.md)。
 - M14 批次完整检查 `CI=1 PLAYWRIGHT_PORT=4204 pnpm run test:ci` 通过：TypeScript、614 项单测、生产构建和141项 Playwright E2E；主 JS chunk 约1.70 MB（gzip 221.45 KB）的预算提示不阻塞验收。
 - M14 发布提交 `ebf35d38356d622b2f3e6427e36ff0eea68e84a9`，Actions `43184402532` 全部成功；GitHub Pages 与 Cloudflare Pages 的根 `build-info.json` 均报告该来源 SHA。内置浏览器静音、窗口模式实测 Free Play → Mississippi → Riverside Mountains（14）→ Easy，能显示 Settlers 开场对白、地图及第1/7波；未完整手动通关或启动 Android。新档正式战役中第14关因前置未完成保持锁定，符合解锁规则，正式解锁与结算由自动化覆盖。
-- M14 发布后累计发布比例为18/90（20.0%）；下一关尚未排期，新一轮先基于当前代码和证据细化实施步骤。
+- M14 发布后累计发布比例为18/90（20.0%）；下一关已确认是 Mississippi 第15关 Railroad Canyon，使用 `res/raw/td_map_18.tdm`；静态审计见 [M15 静态审计](map15-static-audit.md)。
 - M14 回同步已完成：集成提交 `86548d1` 已推送到 `origin/gunsnglory`，并已快进原主工作树；`master` 与 `origin/master` 均为发布提交 `ebf35d3`，gunsnglory 本地与远端均含 M14。主工作树原有未跟踪研究文档保留未改。
+- M15-A 地图切片通过：map18 网格、地形、路线、出口、静态对象、铁路和初始单位均与 APK 派生索引核对；相关 M13–M15 定向地图测试9项通过。
+- M15-B 关卡规则切片通过：初始 $365、20 条生命、3 次升级、三档 HP 倍率、9波/32个生成请求及 Saloon 招募池接入；真实 `GameSession` 初态和波次推进定向测试通过。
+- M15-C 内容和正式入口切片通过：双语介绍、胜利标题、九段对白、离线肖像/语音、level15 前置解锁、Free Play 三档难度、contentVersion 与回放解锁快照接入；正式胜利写入进度，Free Play 不改战役档案。
+- M15-D 及本地批次验收通过：Free Play 与正式战役入口均显示 Railroad Canyon、开场对白和 `1/9` HUD；完整 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过 TypeScript 检查、630项单测、生产构建和143项 E2E。构建提示主 JS chunk 1.81 MB 超过500 KB（gzip 229.48 KB），未为本批加入额外拆包。
+- M15 发布提交 `62905bb5af8e387e44752dbdb8a05399bb7151df` 已推送到 `master`；GitHub Actions `43199072558` 所有适用 job 成功。GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
+- 内置浏览器静音、窗口模式验证公开版 `?release=62905bb`：Free Play → Mississippi → Railroad Canyon（15）→ Medium；Settlers 开场对白及 `01/09` HUD 正常显示。仅检查关卡入口和首波状态，未完整通关或启动 Android。
+- M15 发布后累计普通发布比例为19/95（20.0%）。回同步提交完成后将记录在下方 M15-R3。
+
+## 最近完成：Railroad Canyon（M15）
+
+M15 已完成本地实现、整批检查、squash 发布、部署 SHA 核验和内置浏览器验收。静态数据来源及关卡证据见 [M15 静态审计](map15-static-audit.md)。
+
+| 顺序 | 切片 | 结果 |
+| --- | --- | --- |
+| M15-A | map18 地图、路线、静态对象与场景单位 | 已完成；TDM 网格和 APK 派生索引核对，出生点、转向点和出口可达性通过定向测试。 |
+| M15-B | 初始数值、九波、生成请求与招募池 | 已完成；真实 `GameSession` 短会话验证初态和波次推进。 |
+| M15-C | 双语对白、关卡解锁、Free Play、结算与回放 | 已完成；正式档案边界、特殊单位解锁快照和回放路径通过测试。 |
+| M15-D | 真实入口 E2E、旧关卡计数回归与完整检查 | 已完成；630项单测、TypeScript、生产构建和143项 Playwright E2E 通过。 |
+| M15-R1 | squash 到 `master` 并发布 | 已完成；发布提交 `62905bb5af8e387e44752dbdb8a05399bb7151df`，Actions `43199072558` 成功。 |
+| M15-R2 | 部署来源 SHA 与浏览器验收 | 已完成；两处 Pages 的 `build-info.json` 与发布 SHA 一致；内置浏览器看到 Railroad Canyon 的 Settlers 开场对白及 `01/09` HUD。 |
+| M15-R3 | 发布回同步至 `gunsnglory` | 已在干净集成工作树合并发布提交；完成推送及分支核对后关闭本项。 |
+
+M15 批次已发布。本计划不预排下一关；开始下一批前先依据当前代码和静态证据细化若干可独立验收步骤。
 
 ## 已完成批次
 
