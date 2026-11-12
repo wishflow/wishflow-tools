@@ -31,7 +31,7 @@
 - M15-D 及本地批次验收通过：Free Play 与正式战役入口均显示 Railroad Canyon、开场对白和 `1/9` HUD；完整 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过 TypeScript 检查、630项单测、生产构建和143项 E2E。构建提示主 JS chunk 1.81 MB 超过500 KB（gzip 229.48 KB），未为本批加入额外拆包。
 - M15 发布提交 `62905bb5af8e387e44752dbdb8a05399bb7151df` 已推送到 `master`；GitHub Actions `43199072558` 所有适用 job 成功。GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
 - 内置浏览器静音、窗口模式验证公开版 `?release=62905bb`：Free Play → Mississippi → Railroad Canyon（15）→ Medium；Settlers 开场对白及 `01/09` HUD 正常显示。仅检查关卡入口和首波状态，未完整通关或启动 Android。
-- M15 发布后累计普通发布比例为19/95（20.0%）。回同步提交完成后将记录在下方 M15-R3。
+- M15 发布后累计普通发布比例为19/95（20.0%）。回同步提交 `3abedce` 已推送至 `origin/gunsnglory`，包含发布提交 `62905bb`。
 
 ## 最近完成：Railroad Canyon（M15）
 
@@ -45,7 +45,7 @@ M15 已完成本地实现、整批检查、squash 发布、部署 SHA 核验和�
 | M15-D | 真实入口 E2E、旧关卡计数回归与完整检查 | 已完成；630项单测、TypeScript、生产构建和143项 Playwright E2E 通过。 |
 | M15-R1 | squash 到 `master` 并发布 | 已完成；发布提交 `62905bb5af8e387e44752dbdb8a05399bb7151df`，Actions `43199072558` 成功。 |
 | M15-R2 | 部署来源 SHA 与浏览器验收 | 已完成；两处 Pages 的 `build-info.json` 与发布 SHA 一致；内置浏览器看到 Railroad Canyon 的 Settlers 开场对白及 `01/09` HUD。 |
-| M15-R3 | 发布回同步至 `gunsnglory` | 已在干净集成工作树合并发布提交；完成推送及分支核对后关闭本项。 |
+| M15-R3 | 发布回同步至 `gunsnglory` | 已完成；集成提交 `3abedce` 已推送至 `origin/gunsnglory`，并包含发布提交 `62905bb`。 |
 
 M15 批次已发布。本计划不预排下一关；开始下一批前先依据当前代码和静态证据细化若干可独立验收步骤。
 
