@@ -43,7 +43,7 @@ test('Free Play opens Riverside Mountains at all difficulties with its original 
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-14')).toBeEnabled();
   await page.getByTestId('campaign-level-14').click();
 

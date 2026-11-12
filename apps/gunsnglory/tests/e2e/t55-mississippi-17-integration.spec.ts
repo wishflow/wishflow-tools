@@ -44,7 +44,7 @@ test('Free Play opens Dead Rocks with the registered scene, first dialogue, and 
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-17')).toBeEnabled();
   await page.getByTestId('campaign-level-17').click();
 

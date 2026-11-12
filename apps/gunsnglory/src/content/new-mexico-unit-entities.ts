@@ -26,10 +26,10 @@ function isFortKaboomUnitTypeId(unitTypeId: CampaignMapUnitTypeId): unitTypeId i
   return unitTypeId >= 3 && unitTypeId <= 6;
 }
 
-function createActiveGunslinger(cell: { x: number; y: number }): ScenarioUnit {
+function createActiveGunslinger(cell: { x: number; y: number }, index = 1): ScenarioUnit {
   const render = { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 };
   return {
-    id: 'gunslinger-1',
+    id: `gunslinger-${index}`,
     type: 'gunslinger',
     activity: 5,
     cell,
@@ -42,10 +42,10 @@ function createActiveGunslinger(cell: { x: number; y: number }): ScenarioUnit {
   };
 }
 
-function createActiveMexican(cell: { x: number; y: number }): ScenarioUnit {
+export function createActiveMexicanUnit(cell: { x: number; y: number }, index = 1): ScenarioUnit {
   const render = { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 };
   return {
-    id: 'mexican-1',
+    id: `mexican-${index}`,
     type: 'mexican',
     activity: 5,
     cell,
@@ -157,14 +157,19 @@ export function createNewMexicoMapUnits(
     });
 
   const counters = new Map<FortKaboomUnitType, number>();
+  const activeUnitCounters = new Map<'gunslinger' | 'mexican', number>();
   const specialHireCounters = new Map<'pyromaniac' | 'salesman', number>();
   for (const placement of placements) {
     if (placement.activity === 5 && placement.unitTypeId === 1) {
-      units.push(createActiveGunslinger(placement.cell));
+      const index = (activeUnitCounters.get('gunslinger') ?? 0) + 1;
+      activeUnitCounters.set('gunslinger', index);
+      units.push(createActiveGunslinger(placement.cell, index));
       continue;
     }
     if (placement.activity === 5 && placement.unitTypeId === 2) {
-      units.push(createActiveMexican(placement.cell));
+      const index = (activeUnitCounters.get('mexican') ?? 0) + 1;
+      activeUnitCounters.set('mexican', index);
+      units.push(createActiveMexicanUnit(placement.cell, index));
       continue;
     }
     if (placement.activity === 5 && placement.unitTypeId === 9) {
