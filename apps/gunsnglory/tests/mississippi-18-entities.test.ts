@@ -53,13 +53,20 @@ test('Shadow Town static buildings and decorations follow their TDM markers', ()
   )), 'the wide shack keeps its original anchor and occupied cells');
 });
 
-test('Shadow Town fresh-game units ignore save-only markers and gate special hires', () => {
+test('Shadow Town fresh-game units follow hire markers and gate global milestone units', () => {
   const fresh = createMississippi18MapUnits();
   assert.deepEqual(unitCells(fresh, 'gunslinger', 5), [[9, 10], [17, 10], [22, 13]]);
-  const saveOnlyCells = [96, 97, 98, 99, 100, 101].flatMap(markerCells);
-  assert.ok(fresh.every(({ cell }) => !saveOnlyCells.some(([x, y]) => cell.x === x && cell.y === y)));
+  assert.deepEqual(unitCells(fresh, 'mexican', 4), markerCells(97));
+  assert.deepEqual(unitCells(fresh, 'indian', 4), markerCells(99));
+  assert.deepEqual(unitCells(fresh, 'sniper', 4), []);
+  assert.deepEqual(unitCells(fresh, 'grandpa', 4), []);
   assert.deepEqual(unitCells(fresh, 'pyromaniac', 4), []);
   assert.deepEqual(unitCells(fresh, 'salesman', 4), []);
+
+  const sniperUnlocked = createMississippi18MapUnits(['campaign-dakota-10']);
+  assert.deepEqual(unitCells(sniperUnlocked, 'sniper', 4), markerCells(100));
+  const grandpaUnlocked = createMississippi18MapUnits(['campaign-oregon-10']);
+  assert.deepEqual(unitCells(grandpaUnlocked, 'grandpa', 4), markerCells(101));
 
   const pyromaniacUnlocked = createMississippi18MapUnits(['campaign-nevada-10']);
   assert.deepEqual(unitCells(pyromaniacUnlocked, 'pyromaniac', 4), markerCells(130));
@@ -68,7 +75,13 @@ test('Shadow Town fresh-game units ignore save-only markers and gate special hir
   assert.deepEqual(unitCells(salesmanUnlocked, 'salesman', 4), markerCells(131));
   assert.deepEqual(unitCells(salesmanUnlocked, 'pyromaniac', 4), []);
 
-  const allUnlocked = createMississippi18MapUnits(['campaign-nevada-10', 'campaign-alaska-10']);
+  const allUnlocked = createMississippi18MapUnits([
+    'campaign-oregon-10', 'campaign-dakota-10', 'campaign-nevada-10', 'campaign-alaska-10',
+  ]);
+  assert.deepEqual(unitCells(allUnlocked, 'mexican', 4), markerCells(97));
+  assert.deepEqual(unitCells(allUnlocked, 'indian', 4), markerCells(99));
+  assert.deepEqual(unitCells(allUnlocked, 'sniper', 4), markerCells(100));
+  assert.deepEqual(unitCells(allUnlocked, 'grandpa', 4), markerCells(101));
   assert.deepEqual(unitCells(allUnlocked, 'pyromaniac', 4), [[28, 17]]);
   assert.deepEqual(unitCells(allUnlocked, 'salesman', 4), [[26, 2]]);
   assert.equal(new Set(allUnlocked.map(({ id }) => id)).size, allUnlocked.length);

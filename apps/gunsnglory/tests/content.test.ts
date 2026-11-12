@@ -27,6 +27,7 @@ import {
   mississippi15LevelFifteenCampaignContent,
   mississippi16LevelSixteenCampaignContent,
   mississippi18LevelEighteenCampaignContent,
+  mississippi19LevelNineteenCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -234,6 +235,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Shadow Town · Level 18', zh: '影镇 · 第 18 关' },
     globalLevel: 18,
     requiresCompletedScenarioIds: ['campaign-mississippi-17'],
+  }, {
+    scenarioId: mississippi19LevelNineteenCampaignContent.id,
+    contentVersion: mississippi19LevelNineteenCampaignContent.contentVersion,
+    title: { en: 'Dust Falls · Level 19', zh: '尘瀑镇 · 第 19 关' },
+    globalLevel: 19,
+    requiresCompletedScenarioIds: ['campaign-mississippi-18'],
   }]);
 });
 

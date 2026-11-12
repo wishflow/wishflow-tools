@@ -52,6 +52,9 @@ import { mississippi17CampaignId } from './mississippi-17-identity';
 import { createMississippi18CampaignContent } from './mississippi-18-campaign';
 import { mississippi18CampaignCopy } from './mississippi-18-campaign-copy';
 import { mississippi18CampaignId } from './mississippi-18-identity';
+import { createMississippi19CampaignContent } from './mississippi-19-campaign';
+import { mississippi19CampaignCopy } from './mississippi-19-campaign-copy';
+import { mississippi19CampaignId } from './mississippi-19-identity';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -138,6 +141,9 @@ export const mississippi17LevelSeventeenCampaignContent = createMississippi17Cam
 
 /** Formal Mississippi level eighteen assembled from the researched Shadow Town content. */
 export const mississippi18LevelEighteenCampaignContent = createMississippi18CampaignContent();
+
+/** Formal Mississippi level nineteen assembled from the researched Dust Falls content. */
+export const mississippi19LevelNineteenCampaignContent = createMississippi19CampaignContent();
 
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
@@ -247,4 +253,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: { en: `${mississippi18CampaignCopy.title.en} · Level 18`, zh: `${mississippi18CampaignCopy.title.zh} · 第 18 关` },
   globalLevel: 18,
   requiresCompletedScenarioIds: [mississippi17CampaignId],
+}, {
+  scenarioId: mississippi19CampaignId,
+  contentVersion: mississippi19LevelNineteenCampaignContent.contentVersion!,
+  title: { en: `${mississippi19CampaignCopy.title.en} · Level 19`, zh: `${mississippi19CampaignCopy.title.zh} · 第 19 关` },
+  globalLevel: 19,
+  requiresCompletedScenarioIds: [mississippi18CampaignId],
 }]);

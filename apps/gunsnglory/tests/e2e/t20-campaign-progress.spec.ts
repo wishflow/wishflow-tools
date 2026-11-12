@@ -37,7 +37,7 @@ test('defaults to the real Cow Gulch level and keeps historical sample records i
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/?testBattle=1');
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/18 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/19 stages complete');
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
 
   const legacyProfile = {
@@ -65,7 +65,7 @@ test('defaults to the real Cow Gulch level and keeps historical sample records i
   await page.reload();
 
   await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/18 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/19 stages complete');
   await expect(page.getByTestId('campaign-stage-button-1')).toBeEnabled();
   await expect(page.getByTestId('campaign-stage-list')).toContainText('Cow Gulch · Level 1');
   await expect(page.getByTestId('campaign-stage-list')).not.toContainText('Progress sample');
@@ -81,7 +81,7 @@ test('defaults to the real Cow Gulch level and keeps historical sample records i
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8 · Lives 50');
   await expect(page.getByTestId('wave-status')).not.toContainText('ready');
   await expect(page.getByTestId('settlement')).toBeHidden();
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/18 stages complete');
+  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('0/19 stages complete');
   expect(await readProfile(page)).toEqual(legacyProfile);
   expect(legacyProfile.completedScenarios).not.toContain(officialLevelId);
 });

@@ -62,16 +62,15 @@ test('free play bypasses campaign and Hard locks while keeping the campaign prof
   }
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-11')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-12')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-13')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-16')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-17')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-18')).toBeEnabled();
-  for (const level of [19, 20]) {
-    await expect(page.getByTestId(`campaign-level-${String(level).padStart(2, '0')}`)).toBeDisabled();
-  }
+  await expect(page.getByTestId('campaign-level-19')).toBeEnabled();
+  await expect(page.getByTestId('campaign-level-20')).toBeDisabled();
   await page.getByTestId('campaign-menu-view').getByTestId('campaign-menu-back').click();
   await page.getByTestId('campaign-region-new-mexico').click();
   await page.getByTestId('campaign-level-02').click();
@@ -126,7 +125,7 @@ test('Free Play opens Steam Valley from its localized overview without changing 
   if (await soundToggle.getAttribute('aria-pressed') !== 'false') await soundToggle.click();
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-mississippi').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available in this region');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available in this region');
   await expect(page.getByTestId('campaign-level-12')).toBeEnabled();
   await page.getByTestId('campaign-level-12').click();
 

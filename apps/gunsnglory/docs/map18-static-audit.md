@@ -2,7 +2,7 @@
 
 ## 结论
 
-**静态证据足以开始实现。**Shadow Town 是正式战役第18关，使用 `res/raw/td_map_21.tdm`。关卡有六个敌人入口、59个转向点、六个出口，包含两个 Saloon、一个 Fort、一组 Dynamite 对象、三名初始 Gunslinger，以及 wave 2 的 Saloon/Fort 玩家单位池动作。关卡有八波、37个敌人生成请求。无需启动 Android 或完整手动通关。
+**静态证据足以开始实现。**Shadow Town 是正式战役第18关，使用 `res/raw/td_map_21.tdm`。关卡有六个敌人入口、59个转向点、六个出口，包含两个 Saloon、一个 Fort、一组 Dynamite 对象、三名初始 Gunslinger、四名 Mexican 和五名 Indian 招募单位，以及 wave 2 的 Saloon/Fort 玩家单位池动作；Sniper 与 Grandpa 招募点按全局解锁门控。关卡有八波、37个敌人生成请求。无需启动 Android 或完整手动通关。
 
 本审计基于本机 `Guns’n’Glory FREE 1.8.6` APK，SHA-256：`49a04818e58a411d90f907a6e4ed2d278484dc38bbfab178302c51a3a1fb56`。`res/raw/td_map_21.tdm` 为770字节，SHA-256：`8f1609f3ef8f5a46b77f240c35ed775b0c5623bcbbcfebde8018e42fe43d7a99`；与提取文件和派生地图清单摘要一致。研究工作树中的 `apps/gunsnglory/docs/research/` 下文简称 `R/`；派生 JSON 是审计材料，不是原始 APK 文件或原始源码。JADX Java 为重建伪代码，涉及地图 marker 的分支以 Smali 条件和 switch 为准。
 
@@ -13,7 +13,7 @@
 | APK 版本、地图文件、尺寸和字节摘要 | APK；`R/data/map-inventory.json`、`resource-inventory.json`；`BasicMap.loadMap` | 地图文件号21对应战役第18关，不是第21关。 |
 | 地形贴图、变体和桥墩绘制位置 | `R/data/terrain-render-index.json`、`terrain-render-rules.json`；`BackgroundMap` 的 Mississippi 绘制分支 | 背景变体按 APK 候选表复现；网页固定随机种子只保证稳定，不复现 APK 每次启动的时间随机结果。 |
 | 路线节点、连接和出口可达性 | `R/data/static-route-graph.json`；`EnemyDirector.createEnemyDirectorFieldsFromBasicMap`、`EnemyDirectorField`、`PriorityMap` | 这是静态路线控制图，不涵盖逐帧移动、动画和设备碰撞。 |
-| 新局单位、Dynamite、Saloon/Fort 和存档 marker 语义 | DEX/Smali `GameObjectManager.createGameObjectsFromBasicMap`；`GameObjectUnit.create`；`GameObjectSpawnLocation`；项目已有 `campaign-map-unit-placements.ts`、`dynamite.ts` | 96–101 是从存档恢复的玩家单位 marker；不得把它们当作新局初始单位。 |
+| 新局单位、Dynamite、Saloon/Fort 和存档 marker 语义 | DEX/Smali `GameObjectManager.createGameObjectsFromBasicMap`；`GameObjectUnit.create`；`GameObjectSpawnLocation`；项目已有 `campaign-map-unit-placements.ts`、`dynamite.ts` | 96–101 在 `fromLoadGame == false` 分支创建新局招募单位；读档时跳过地图 marker。以 Smali 分支和 activity setter 为准。 |
 | 起始参数、敌人请求和炮池动作 | `R/data/level-config.json`、`waves.json`、`wave-constant-resolution.json`；DEX `GameDesignWaves.setWaves`、`WaveManager.addToWave`、`SpawnPoolManager.addActionForSpawnPool/performActionsForWave/update` | `addToWave` 的10参数重载把最后两个请求槽补零；请求顺序按源调用次序保存。 |
 | 标题、关卡说明、胜利标题、对白与头像 | `R/data/string-resources.json`、`wave-reference-resolution.json`、`drawable-use-index.json` | APK default 文本为英文基线；中文是网页翻译。不得把资源名 `T_CAMPAIGN_17_*` 当成战役第17关。 |
 
@@ -48,10 +48,15 @@
 | `110` | `(22,17)` | DynamiteBox；与唯一的 marker 102 配对。 |
 | `130` | `(28,17)` | Pyromaniac hire marker（unit type 35）；仅全局第50关解锁后出现。 |
 | `131` | `(26,2)` | Snake Oil Salesman hire marker（unit type 36）；仅全局第60关解锁后出现。 |
-| `97`、`99`、`100`、`101` | 共12个 | 存档恢复用 marker（96–101）；新局必须忽略。读取存档时由存档单位列表还原。 |
+| `97` | `(10,8)`、`(16,8)`、`(8,12)`、`(12,13)` | 四名 unit type 2、activity 4 的 Mexican 招募单位。 |
+| `99` | `(6,1)`、`(29,2)`、`(1,13)`、`(28,20)`、`(6,22)` | 五名 unit type 4、activity 4 的 Indian 招募单位。 |
+| `100` | `(14,14)` | 一名 unit type 5、activity 4 的 Sniper；global level 40 解锁后出现。 |
+| `101` | `(24,8)`、`(15,16)` | 两名 unit type 6、activity 4 的 Grandpa；global level 30 解锁后出现。 |
 | `116` | `(10,9)`、`(17,9)`、`(13,12)`、`(22,12)` | 装饰对象编号12，对应 `b_2x1_shack`；横向双格锚点偏移 `-0.5`，占用左右相邻格。原 Mississippi 装饰表此前漏映射该 marker。 |
 
 Dynamite 显示和可用状态沿用现有全局解锁规则：完成 global level 20 或30后开放。该关处于第18关，因此新档默认锁定；Free Play 只有在导入的正式进度满足条件时才显示。关卡内容版本和回放必须记录并恢复 Dynamite 与特殊单位的解锁快照。
+
+96–101 是 APK 新局地图中创建 activity 4 单位的 marker，不是存档单位恢复 marker。`GameObjectManager.createGameObjectsFromBasicMap` 的 Smali 分支在 `fromLoadGame == false` 时创建它们；读取存档时跳过这些 TDM marker。Shadow Town 的 code97、99、100、101 因此应在新局生成 Mexican、Indian、Sniper、Grandpa 招募单位；Sniper/Grandpa 仍按全局解锁状态门控。旧 M18 v1 回放沿用其录制时未含这些基础招募单位的集合，新内容版本须与旧版本区分。
 
 其他装饰 marker 由 TDM 与现有 Mississippi 装饰表直接映射：68×6、71×4、73×6、74×2、75×2、76×6、77×2。marker 80/88 是地图绘制/结构输入，不创建独立游戏对象。地图上没有新局 Cannon marker；炮池生成 Cannon 时应使用 `CampaignUnitPoolDefinition` 的独立 `template`，不得添加假单位来满足模板查找。
 
