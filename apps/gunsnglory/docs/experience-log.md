@@ -272,11 +272,12 @@
 
 ## 增加正式关卡后同步阶段快照与进度摘要
 
-- **状态：已修复并覆盖 map10。**map05/map06 时曾修正摘要分母和阶段列表；新增 map10 后，首轮完整单测又发现四处正式 stage 快照过期，Progress 另有结算后的状态序列少列一个 locked 关卡。
+- **状态：map10 快照问题已关闭；M14 复现并正在修正。**map05/map06 时曾修正摘要分母和阶段列表；新增 map10 后，首轮完整单测又发现四处正式 stage 快照过期，Progress 另有结算后的状态序列少列一个 locked 关卡。M14 首轮完整 CI 再次发现两处新增关卡快照未同步；已修正并通过25项定向测试，随后完整 CI 通过614项单测和141项 E2E。
 - **表现与复现：**map10 登记后，`tests/apache-valley.test.ts`、`tests/content.test.ts`、`tests/fort-kaboom-formal.test.ts` 和 `tests/progress.test.ts` 的精确阶段列表仍停在 map09。初次更新四处列表后，Progress 的 post-settlement 状态数组仍比实际 stages 少一项。
 - **根因与证据：**摘要分母取自 `officialCampaignStages.length`；正式阶段关系和 Progress 状态测试还有独立硬编码数组。新增正式 stage 后，这些快照需要同步；关卡选择与 Progress 本身按新目录正确工作，没有修改其运行逻辑。
-- **修复与防回归：**更新四个测试文件中的五处期望，补入 level10 和其 map09 前置条件；Progress 初态与结算后均列出 level10 的 locked 状态。Apache Valley、Cow Gulch 内容身份、Fort Kaboom、Progress 和 Lost City 五个测试文件共 43 项定向测试通过，`pnpm run typecheck` 通过。完整 `test:ci` 仍需在这次快照修正后重跑。
+- **修复与防回归：**map10 时更新四个测试文件中的五处期望，补入 level10 和其 map09 前置条件；Progress 初态与结算后均列出 level10 的 locked 状态。相关定向测试与类型检查通过，后续批次完整检查通过。M14 新增关卡后，完整单测重新暴露两处旧快照遗漏（见下项）。
 - **漏测点：**此前只搜索并修改 `stages complete` 和 `campaign-progress-summary`，没有一并搜索直接比较 `officialCampaignStages`、`globalLevel`、前置 ID 以及结算后完整状态数组的快照。
+- **M14 复现：**新增 level14 后，首轮完整单测发现 `tests/apache-valley.test.ts` 的正式关卡关系数组遗漏 M14，`tests/progress.test.ts` 的初始阶段列表和结算后状态数组也各少一个 locked stage。目录和 Progress 运行结果正确，修正的是这三处旧测试快照；Apache Valley 与 Progress 共25项定向测试通过；随后完整 CI 通过614项单测、生产构建和141项 E2E。
 - **修复与防回归：**map05 的 E2E 分母、map06 的 Apache/Fort stage 快照和 map10 相关五处期望现均同步。以后新增或重排关卡时，搜索 `officialCampaignStages`、`globalLevel`、`requiresCompletedScenarioIds`、`stages complete` 和 `campaign-progress-summary`，检查所有静态快照、结算后状态数组及选择状态；不要为了让旧断言通过而改动正确的 Progress 逻辑。
 
 ## 战役与自由模式的关卡说明按存档语义区分
@@ -338,6 +339,15 @@
 - **根因与证据：**APK 派生的 `terrain-render-index.json` 显示原始 tile 81 在 (15,3)、(26,3)、(14,17) 变为 street code 68；code 68 的绘制规则同时发出 `tiles_railway_hori` 和完整 `tiles_bridge_hori`，另有左右桥墩。旧参考生成器只为 code 68 发出铁轨与桥墩，遗漏了桥面；map08 没有这些铁路 marker，因此此前测试未覆盖这类复合地形格。
 - **修复与防回归：**参考生成器和 map09 JSON 补入桥面层，保持铁轨→桥面→桥墩的绘制顺序。`railroad-ranch-terrain.test.ts` 核对 TDM 每格、APK 派生的背景/street 命令、三段桥面和六个桥墩坐标、贴图 source rectangle 与地图边界。静态索引只证明绘制候选和源码规则，不冒充 Android 截图或逐帧随机结果。
 - **验证：**定向地形测试 2 项通过，TypeScript 类型检查通过。完整 `test:ci` 留到 map09 批次收尾运行。
+
+## 波次炮池模板应与地图初始单位分离
+
+**状态：已关闭。**
+
+- **表现与复现：**Riverside Mountains 的 Fort 炮池需要在第2波生成 Cannon，但新局地图没有摆放 Cannon 初始单位。旧运行接口只能从地图已摆放单位里找同类型模板；若为满足接口而伪造一个地图 Cannon，会错误地把波次单位显示为初始单位。
+- **证据与根因：**[M14 静态审计](map14-static-audit.md)区分地图 Fort 出生点与 Cannon 波次池。关卡内容中的 `template` 是生成所需的单位定义，不代表地图上已有一个该单位；原接口没有表达这种区分的字段。
+- **修复：**在战役单位池定义增加可选独立 `template`，生成时仍校验池类型并沿用正常单位规则；未指定时保留从地图单位推导模板的原行为。资源收集同时包含模板引用的图像与序列。M14 数据保留 Fort 炮池作为唯一生成位置，不添加假的初始 Cannon。
+- **验证与防回归：**M14 实体/正式关卡测试覆盖无初始 Cannon、炮池正确生成及资源预加载；完整 `CI=1 PLAYWRIGHT_PORT=4204 pnpm run test:ci` 通过614项单测、构建和141项 E2E。发布 SHA `ebf35d3` 的 Actions `43184402532` 与两处 Pages 来源 SHA 均通过核对；内置浏览器确认 Free Play 开场与首波地图正常。今后遇到只在波次中出现、未摆在地图上的单位，先明确“生成模板”和“地图实体”边界，不添加伪造初始对象。
 
 ## Playwright 不应复用其他 worktree 的本地服务器
 

@@ -53,6 +53,12 @@ import {
   mississippi13CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-13-content-version';
 import { mississippi13CampaignId } from '../content/mississippi-13-identity';
+import { createMississippi14CampaignContent } from '../content/mississippi-14-campaign';
+import {
+  mississippi14CampaignContentVersionFor,
+  mississippi14CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-14-content-version';
+import { mississippi14CampaignId } from '../content/mississippi-14-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -97,6 +103,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi11CampaignId]: createMississippi11CampaignContent(),
   [mississippi12CampaignId]: createMississippi12CampaignContent(),
   [mississippi13CampaignId]: createMississippi13CampaignContent(),
+  [mississippi14CampaignId]: createMississippi14CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -129,6 +136,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi13CampaignId) {
     return mississippi13CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi14CampaignId) {
+    return mississippi14CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -146,6 +156,7 @@ export function createBrowserGame(completedScenarioIds: readonly string[] = ['ca
     [mississippi11CampaignId]: createMississippi11CampaignContent(completedScenarioIds),
     [mississippi12CampaignId]: createMississippi12CampaignContent(completedScenarioIds),
     [mississippi13CampaignId]: createMississippi13CampaignContent(completedScenarioIds),
+    [mississippi14CampaignId]: createMississippi14CampaignContent(completedScenarioIds),
   };
   return createGame({
     scenarios,
@@ -202,6 +213,14 @@ export function createBrowserGameForMississippi12Replay(contentVersion: string |
 export function createBrowserGameForMississippi13Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi13CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores both Riverside Mountains special-unit unlocks from the recording. */
+export function createBrowserGameForMississippi14Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi14CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

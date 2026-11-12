@@ -6,9 +6,15 @@ export function collectScenarioImageAssetNames(scenarios: readonly ScenarioConte
     ...scenario.map.background.map(({ asset }) => asset),
     ...scenario.map.streets.map(({ asset }) => asset),
     ...(scenario.map.decorations ?? []).map(({ asset }) => asset),
-    ...scenario.units.flatMap(({ asset, positionAssetSequence }) => [
+    ...scenario.units.flatMap(({ asset, awakeAsset, positionAssetSequence }) => [
       asset,
+      ...(awakeAsset ? [awakeAsset] : []),
       ...(positionAssetSequence?.assets ?? []),
     ]),
+    ...(scenario.campaignUnitPool?.units ?? []).flatMap(({ template }) => template ? [
+      template.asset,
+      ...(template.awakeAsset ? [template.awakeAsset] : []),
+      ...(template.positionAssetSequence?.assets ?? []),
+    ] : []),
   ]))];
 }
