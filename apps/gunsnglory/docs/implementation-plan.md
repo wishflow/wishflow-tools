@@ -1,34 +1,140 @@
 # 实施计划
 
-规则见[产品规格](spec.md)、[架构](architecture.md)、[存储契约](storage-contracts.md)、[模拟与自动化契约](simulation-and-automation.md)和[经验记录](experience-log.md)。每轮先核对代码与 APK 派生证据，细化后续几个可独立验收的步骤；每步完成后更新本计划、关闭已完成项并本地提交。
+规则见[产品规格](spec.md)、[架构](architecture.md)、[存储契约](storage-contracts.md)、[模拟与自动化契约](simulation-and-automation.md)和[经验记录](experience-log.md)。每轮先核对当前代码与证据，再细化接下来几个可独立验收的切片；每完成一个切片就更新本计划、移除已完成项并本地提交。
 
 ## 当前状态
 
-- 最新公开内容仍为 16/60 关：Mississippi 第16关 Highpoint Terrace，公开 `master` 提交 `f0ea306`；回同步提交 `412605c` 已将其纳入 `gunsnglory`。当前隔离批次已在开发分支接入第17关，但尚未集成或发布。
-- 下一关为 Mississippi 第17关 **Dead Rocks**，对应 `res/raw/td_map_20.tdm`，不是 map17 文件。静态证据和未知项见[Dead Rocks 静态审计](map17-static-audit.md)。
-- 工作分支为 `codex/gng-map17-dead-rocks`，从已同步的 `gunsnglory` 提交 `b1bb1f0` 开始；本轮在隔离克隆中工作，保留其他工作树上的未提交 UI 改动。
-- M17 静态复核发现 M11–M16 均有 code96–101 新局可招募标记，现有网页地图工厂却跳过了它们；旧审计及经验记录把该分支误写成仅存档恢复。本批先纠正内容和回放兼容，再接入 M17，避免沿用此差异。 Smali 分支证据及各地图数量见[静态审计](map17-static-audit.md)。
-- M17-A/B/C/D/E 和 F1 已完成：M11–M16 现按全部96–101标记创建新局可招募单位，旧 v1 回放继续按录制时单位列表重建；Dead Rocks 已接入32×24 TDM、地形与路线、对象/单位、初始参数、8波/35个请求、对白、正式目录、Free Play、正式结算和回放解锁快照。M17-D 的23项内容/地图定向回归通过；M17-E 正式/回放与 M15/M16 进度回归53项单测通过；受目录变化影响的24项选关 E2E 最终全部通过；F1 修复了四处停在 level16 的目录/Progress 测试快照。最终 `test:ci` 通过类型检查、661项单测、生产构建和147项 E2E；APK 派生关卡数据已独立交叉核对。当前只剩 M17-F2 的分支集成、发布、SHA 核对、内置浏览器验收和回同步。
-- Dead Rocks 没有 `113` Fort、`98` Cannon 或 `spawnPoolActions`，因此不为本关创建炮池或假 Cannon。波次炮池可选独立模板契约已由先前 Riverside Mountains 修复提供；M17 不使用，因为没有对应消费者。
-- 发布比例基线为 20 次普通发布 / 100 个已验收切片（20%）。本批完成后按实际切片数更新；整批完成前不单独发布。
+- 公开版正式战役仍为 17/60 关；Shadow Town（第18关）的 M18-A–F 已在功能分支完成并通过本地完整 CI，尚未 squash 发布。Mississippi 区域第 11–18 关依次为 Traveller’s Town、Steam Valley、Golden River、Riverside Mountains、Railroad Canyon、Highpoint Terrace、Dead Rocks、Shadow Town，对应 `res/raw/td_map_14.tdm` 至 `res/raw/td_map_21.tdm`；不能根据关卡编号推测地图文件编号。
+- Mississippi 第17关 Dead Rocks 已完成并发布。地图、路线、对象/单位、八波、双语内容、正式战役、Free Play、结算和回放均已接入；M11–M16 的新局可招募标记语义及旧回放兼容也已修正。静态证据见 [M17 静态审计](map17-static-audit.md)。
+- M17 发布提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5`；GitHub Actions `43246826051` 成功，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该来源 SHA。内置浏览器静音、窗口模式从 Free Play → Mississippi → Dead Rocks → Medium 进入，地图、Settlers 开场对白和 `1/8` 波次 HUD 正常；未完整手动通关、启动 Android、进入全屏或播放声音。
+- M17 批次完整检查 `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过：TypeScript、661 项单测、生产构建及147项 E2E。发布后累计普通发布比例为21次/105个已验收实现切片（20.0%）。回同步已完成：合并提交 `fcf622e376c34ab0efff7a4c5a6705f0f4fa4c24` 已推送至 `origin/gunsnglory`；下一批为 Mississippi 第18关 Shadow Town。
+- Traveller’s Town 批次已发布到 `master`：提交 `b6e05ca20a2d04bc1939ea82d4656842404ce9db`，Actions `43018344472` 成功。GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均与该 SHA 一致。
+- Steam Valley 已完成并发布：真实 map15、路线/桥和静态对象、单位/汽船、七波、对白与资源、正式关卡 12、Free Play 三种难度，以及按录制解锁状态还原的回放。发布提交 `8baa286ed32f4266e0636e1cfd1152a42c42caf1`，Actions `43152356792` 成功；GitHub Pages 和 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
+- 最终 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过：584 项单测、TypeScript 检查、生产构建和 137 项 E2E。构建有 1.488 MB JavaScript chunk 超过 500 KB 的提示。
+- 内置浏览器在静音、窗口模式分别检查实验室告示牌样式，以及公开版 Free Play → Mississippi → Steam Valley → Easy → Captain 开场对白 → 第一波。地图、两艘汽船与 `01/07` HUD 正常显示；未完整手动通关。
+- M15 发布后累计普通发布比例为 19 次 / 95 个已验收实现切片（20.0%）；M16 发布后为 20/100（20.0%）。
+- M18 静态证据已复核：Shadow Town 是正式战役第18关，使用 `res/raw/td_map_21.tdm`；地图含六个敌人入口、六个出口、两个 Saloon、一个 Fort、一对 Dynamite 对象及 wave 2 玩家单位池动作。来源与实施门槛见 [M18 静态审计](map18-static-audit.md)。
+- Golden River（M13）静态审计通过：对应 `td_map_16.tdm`；完整内容、路线、船组、单位解锁和对话证据见 [M13 静态审计](map13-static-audit.md)。无需 Android 定点运行。
+- M13-A 地图切片通过：map16 网格、Mississippi 地形和桥层、code76 bush、4 条实际路线均与 APK 派生证据一致；M12 路线回归通过。
+- M13-B 对象与解锁快照切片通过：创建 2 组 Steamer（12 部件）、code107 Indian、按第50/60关里程碑出现的 Pyromaniac/Salesman；新开局忽略 map16 的存档专用 marker 96–101。回放版本可往返记录两个解锁位。定向测试与 M12 汽船/单位回归共 9 项通过。
+- M13-C 关卡内容切片通过：初始参数、全局敌人表、九波/20 个生成请求、九段对白与 Mississippi 音乐路由已接入；场景图片加入启动预加载集合。13 项内容/地图/单位/音乐定向测试和 TypeScript 检查通过。声音保持关闭；音频只核对文件格式和引用，未作试听。
+- M13-D 正式入口切片通过：Golden River 登记为 level 13 并依赖 Steam Valley；正式战役、Free Play 与回放均使用已保存的解锁快照，正式胜利写入进度，Free Play 不写入正式档案。英文/中文关卡说明、胜利标题、对白与资源错误状态已接通。定向 TypeScript 检查、115 项相关单测及 6 项受影响浏览器测试通过；后者覆盖自由模式直达、正式解锁状态、首波对白和资源加载。
+- M13 批次完整检查通过：`CI=1 PLAYWRIGHT_PORT=4206 pnpm run test:ci` 完成 TypeScript 检查、599 项单测、生产构建及 139 项 E2E。构建仍提示 1.59 MB JavaScript chunk 超过 500 KB（gzip 213.57 KB）；未为本批加入无关代码拆分。
+- M13 已 squash 发布到 `master`：提交 `d35678a7c4cdbed699a1e8cc73dc3a424385d5d5`，GitHub Actions `43165717255` 成功。GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
+- 内置浏览器在静音、窗口模式验收公开版 `?release=d35678a`：Free Play → Mississippi → Golden River（13）→ Easy 可进入；标题、地图、`FREE PLAY · MISSISSIPPI · 13` 标识和 Settlers 第 1/9 波开场对白正常显示。未手动推进战斗或完整通关。
+- M13 发布后累计发布比例为 17 次 / 85 个已验收实现切片（20.0%）。
+- 发布回同步已完成：合并提交 `08a68b7` 将 `d35678a` 纳入 `gunsnglory` 历史并已推送；本地主工作树已快进至远端状态，原有未跟踪研究文档保留且未改动。
+- Riverside Mountains（M14，Mississippi 第14关）已接入并发布，地图来自 `td_map_17.tdm`；地图、路线、静态对象、单位、七波、Fort Cannon 炮池、双语对白、正式进度、Free Play 与回放均已完成，证据见 [M14 静态审计](map14-static-audit.md)。
+- M14 批次完整检查 `CI=1 PLAYWRIGHT_PORT=4204 pnpm run test:ci` 通过：TypeScript、614 项单测、生产构建和141项 Playwright E2E；主 JS chunk 约1.70 MB（gzip 221.45 KB）的预算提示不阻塞验收。
+- M14 发布提交 `ebf35d38356d622b2f3e6427e36ff0eea68e84a9`，Actions `43184402532` 全部成功；GitHub Pages 与 Cloudflare Pages 的根 `build-info.json` 均报告该来源 SHA。内置浏览器静音、窗口模式实测 Free Play → Mississippi → Riverside Mountains（14）→ Easy，能显示 Settlers 开场对白、地图及第1/7波；未完整手动通关或启动 Android。新档正式战役中第14关因前置未完成保持锁定，符合解锁规则，正式解锁与结算由自动化覆盖。
+- M14 发布后累计发布比例为18/90（20.0%）；下一关已确认是 Mississippi 第15关 Railroad Canyon，使用 `res/raw/td_map_18.tdm`；静态审计见 [M15 静态审计](map15-static-audit.md)。
+- M14 回同步已完成：集成提交 `86548d1` 已推送到 `origin/gunsnglory`，并已快进原主工作树；`master` 与 `origin/master` 均为发布提交 `ebf35d3`，gunsnglory 本地与远端均含 M14。主工作树原有未跟踪研究文档保留未改。
+- M15-A 地图切片通过：map18 网格、地形、路线、出口、静态对象、铁路和初始单位均与 APK 派生索引核对；相关 M13–M15 定向地图测试9项通过。
+- M15-B 关卡规则切片通过：初始 $365、20 条生命、3 次升级、三档 HP 倍率、9波/32个生成请求及 Saloon 招募池接入；真实 `GameSession` 初态和波次推进定向测试通过。
+- M15-C 内容和正式入口切片通过：双语介绍、胜利标题、九段对白、离线肖像/语音、level15 前置解锁、Free Play 三档难度、contentVersion 与回放解锁快照接入；正式胜利写入进度，Free Play 不改战役档案。
+- M15-D 及本地批次验收通过：Free Play 与正式战役入口均显示 Railroad Canyon、开场对白和 `1/9` HUD；完整 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过 TypeScript 检查、630项单测、生产构建和143项 E2E。构建提示主 JS chunk 1.81 MB 超过500 KB（gzip 229.48 KB），未为本批加入额外拆包。
+- M15 发布提交 `62905bb5af8e387e44752dbdb8a05399bb7151df` 已推送到 `master`；GitHub Actions `43199072558` 所有适用 job 成功。GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告该 SHA。
+- 内置浏览器静音、窗口模式验证公开版 `?release=62905bb`：Free Play → Mississippi → Railroad Canyon（15）→ Medium；Settlers 开场对白及 `01/09` HUD 正常显示。仅检查关卡入口和首波状态，未完整通关或启动 Android。
+- M15 发布后累计普通发布比例为19/95（20.0%）。回同步提交 `3abedce` 已推送至 `origin/gunsnglory`，包含发布提交 `62905bb`。
 
-## 剩余步骤：接入 Dead Rocks
+## 最近完成：Railroad Canyon（M15）
 
-| 顺序 | 切片 | 实施范围与前置 | 可判定验收 | 定向验证 |
-| --- | --- | --- | --- | --- |
-| M17-F1 | 同步正式关卡目录快照 | 首轮完整检查发现四处静态目录/Progress 期望仍停在16关；仅修复测试期望，不改正确的运行时进度逻辑。 | Apache Valley 前置列表、Cow Gulch 完整目录、Fort Kaboom 目录和 Progress 初态/结算状态都包含 level17；四个相关测试文件通过。 | `node --import tsx --test tests/apache-valley.test.ts tests/content.test.ts tests/fort-kaboom-formal.test.ts tests/progress.test.ts`；更新经验记录。 |
-| M17-F2 | 整批验收、集成发布与回同步 | 前置为 M17-A–E 和 F1 均已提交且定向测试通过。完整检查通过后再 squash 到 `master`，发布并回同步到 `gunsnglory`。 | `pnpm run test:ci` 全通过；Pages 构建来源 SHA 与发布提交一致；Codex 内置浏览器静音、窗口模式进入 Dead Rocks 并确认地图、对白、波次 HUD；未完整手动通关。`gunsnglory` 本地/远端包含发布 SHA，其他脏工作树保持不变。 | `CI=1 PLAYWRIGHT_PORT=<空闲端口> pnpm run test:ci`；其后核对 Actions/Pages SHA 并完成内置浏览器验收。 |
+M15 已完成本地实现、整批检查、squash 发布、部署 SHA 核验和内置浏览器验收。静态数据来源及关卡证据见 [M15 静态审计](map15-static-audit.md)。
 
-### 证据和边界
+| 顺序 | 切片 | 结果 |
+| --- | --- | --- |
+| M15-A | map18 地图、路线、静态对象与场景单位 | 已完成；TDM 网格和 APK 派生索引核对，出生点、转向点和出口可达性通过定向测试。 |
+| M15-B | 初始数值、九波、生成请求与招募池 | 已完成；真实 `GameSession` 短会话验证初态和波次推进。 |
+| M15-C | 双语对白、关卡解锁、Free Play、结算与回放 | 已完成；正式档案边界、特殊单位解锁快照和回放路径通过测试。 |
+| M15-D | 真实入口 E2E、旧关卡计数回归与完整检查 | 已完成；630项单测、TypeScript、生产构建和143项 Playwright E2E 通过。 |
+| M15-R1 | squash 到 `master` 并发布 | 已完成；发布提交 `62905bb5af8e387e44752dbdb8a05399bb7151df`，Actions `43199072558` 成功。 |
+| M15-R2 | 部署来源 SHA 与浏览器验收 | 已完成；两处 Pages 的 `build-info.json` 与发布 SHA 一致；内置浏览器看到 Railroad Canyon 的 Settlers 开场对白及 `01/09` HUD。 |
+| M15-R3 | 发布回同步至 `gunsnglory` | 已完成；集成提交 `3abedce` 已推送至 `origin/gunsnglory`，并包含发布提交 `62905bb`。 |
 
-- 关卡号从 `campaignCatalog` 与 `GameDesignWaves.setWaves` 的实际消费关系确认；不按 TDM 文件号推断关卡号。TDM 全集有63个文件，只有60个映射到可玩战役关卡；map20 对应第17关。
-- APK 的新局/读档分支以 `GameObjectManager.smali` 为准；JADX Java 对该 switch 的控制流曾产生相反结论。96–101 在新局分支创建 activity 4 单位，读档时跳过；重启关卡也走新局分支。网页未实现未完成关卡续玩，不改变这个 APK 语义。
-- 不启动 Android，不进行全关手动通关；仅在静态代码或数据不能回答具体规则问题时再计划一次定点观察。声音默认关闭。
-- `awesomeMessageMin=30000` 与 `awesomeMessageUnit=5` 的网页消费者语义尚未确认；不得据此臆造内容。本关沿用经验证的 Mississippi 通用规则映射，并单独记录未知项。
+## 最近完成：Highpoint Terrace（M16）
 
-## 批次完成与发布门槛
+Highpoint Terrace（Mississippi 第16关）已接入正式战役、Free Play 和回放。预期数据以 [M16 静态审计](map16-static-audit.md) 及应用实际消费代码为准；无需 Android 运行或完整手动通关。
 
-- 每个切片只跑其针对性测试并本地提交，提交说明记录行为变化、测试结果及未验证限制；关闭已完成计划项，不重复重跑已通过检查。
-- 所有切片完成后运行一次应用完整检查及适用共享检查。若失败，将失败转为本批修复任务，修复后重跑失败项和最终完整检查。
-- 完整检查通过后以一个 squash commit 集成到 `master` 并裸 `git push origin master`。等待既有 Pages workflow 成功，核对公开 `build-info.json` 来源 SHA，再用 Codex 内置浏览器检查发布页面。发布未核验完成前不得标记批次关闭。
-- 发布后将发布提交合并回 `gunsnglory` 并推送；确认 `master`、`origin/master`、`gunsnglory` 与 `origin/gunsnglory` 的包含关系及相关工作树状态。不得覆盖或清理其他工作树中的未提交改动。
+| 顺序 | 切片 | 实施范围与结果 |
+| --- | --- | --- |
+| M16-A | 地图、路线与实体 | 接入 APK 对应的 map19、地形、路线、静态对象和初始单位；与静态审计及路线测试核对通过。 |
+| M16-B | 波次、炮池与单位 | 接入八波生成、关卡炮池、Dynamite 与关卡单位；Cannon 使用现有单位池模板契约生成，没有伪造地图单位。定向规则和实体测试通过。 |
+| M16-C | 关卡内容与正式入口 | 接入双语关卡信息、对白、正式解锁和结算、Free Play 与回放；正式进度与自由模式档案边界通过测试。 |
+| M16-D | 入口回归与完整检查 | 正式战役第16关依赖第15关，Mississippi Free Play 开放六关，第17关及之后保持禁用。CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci 通过 TypeScript、645 项单测、生产构建和145项 E2E；构建有主 JS chunk 超过500 KB的预算提示，本批未做无关拆包。 |
+| M16-R1 | 集成发布 | 已 squash 推送至 master：f0ea3060de5fadc9cd337ee782581a50d73fef26。GitHub Actions 43211885210 的适用 CI 与 Pages 部署均成功。 |
+| M16-R2 | 部署与浏览器验收 | GitHub Pages 与 Cloudflare Pages 根 build-info.json 均报告来源 SHA f0ea3060de5fadc9cd337ee782581a50d73fef26。内置浏览器以静音、窗口模式从 Free Play → Mississippi → Highpoint Terrace → Easy 进入，显示开场对白、地图及第1/8波；未完整通关或启动 Android。 |
+| M16-R3 | 回同步至集成分支 | 已完成；合并提交 412605c 将发布提交并回 gunsnglory，且已推送至 origin/gunsnglory。原主工作树已与远端一致，未跟踪研究文档原样保留。 |
+
+M16 发布后累计普通发布比例为20/100（20.0%）。批次已关闭：master 与 origin/master 为发布提交 f0ea306，gunsnglory 与 origin/gunsnglory 均包含该发布提交；回同步提交为 412605c，原主工作树未跟踪研究文档已保留。
+
+## 最近完成：Dead Rocks（M17）
+
+Dead Rocks 使用 APK 的 `res/raw/td_map_20.tdm`，作为 Mississippi 第17关接入正式战役、Free Play 和回放。静态数据、路线与关卡参数见 [M17 静态审计](map17-static-audit.md)。
+
+| 顺序 | 切片 | 实施范围与结果 |
+| --- | --- | --- |
+| M17-A | 地图、地形与路线 | 接入32×24地图、Mississippi地形/桥面、静态对象，以及6个出生点、53个转向点、4个出口；74条有向路线边与 APK 派生图逐项核对。 |
+| M17-B | 初始实体与解锁 | 按新局 marker 创建地图单位和可招募单位；恢复 M11–M16 的 code96–101 新局单位，旧 v1 回放仍按录制单位列表重建。 |
+| M17-C | 规则与关卡内容 | 接入初始经济、生命、升级上限、三档难度、8波/35个生成请求、双语介绍与对白、音乐路由及资源预加载；未创建 APK 不存在的 Fort/Cannon 或赌场对象。 |
+| M17-D/E | 正式登记与入口回归 | 登记为 global level 17，接入正式解锁、Free Play、结算和回放解锁快照；同步全局关卡目录、Progress 快照及旧关卡回归。 |
+| M17-F1 | 完整检查中的快照修复 | 修复四处旧测试目录/Progress 期望仍停在16关的问题；不改运行时进度逻辑。 |
+| M17-F2 | 批次发布与验收 | `CI=1 PLAYWRIGHT_PORT=43027 pnpm run test:ci` 通过 TypeScript、661项单测、构建及147项 E2E。发布提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5` 的 Actions `43246826051` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均匹配。内置浏览器静音、窗口模式进入 Free Play → Mississippi → Dead Rocks → Medium，地图、开场对白及 `1/8` HUD 正常；未完整通关、启动 Android、进入全屏或播放声音。 |
+| M17-F3 | 发布回同步至集成分支 | 将 `master` 发布提交并回 `gunsnglory`，保留 M13–M16 既有集成历史。 | 合并提交 `fcf622e376c34ab0efff7a4c5a6705f0f4fa4c24` 已推送至 `origin/gunsnglory`；本地与远端分支一致，并包含 M17 发布提交。 |
+
+M17 发布后累计普通发布比例为21/105（20.0%）。批次已关闭：`master` 与 `origin/master` 为 M17 发布提交，`gunsnglory` 与 `origin/gunsnglory` 均包含该发布提交和回同步合并提交。
+
+## 当前活动批次：Shadow Town（M18）
+
+目标是将 APK 的 Mississippi 第18关 Shadow Town（`res/raw/td_map_21.tdm`）接入现有地图、规则、关卡目录和回放契约。先完成静态数据审计，再按下表顺序逐片实现；每片运行针对性检查、本地提交并同步更新本计划。
+
+| 顺序 | 切片 | 实施范围 | 可判定验收 |
+| --- | --- | --- | --- |
+| M18-A | 静态审计（已完成） | 整理 map21 的 TDM 身份、地形与路线图、初始实体、地图对象、解锁条件、起始数值、八波、玩家单位池动作、英文字串和资源引用，见 [M18 静态审计](map18-static-audit.md)。 | TDM 摘要与提取字节 SHA 匹配；路由/波次/对象和规则均已交叉核对；action ID 到网页出生点数组下标的差异已明确；Markdown 链接及 `git diff --check` 通过。 |
+| M18-B（已完成） | 地图、地形、路线 | 加入原始32×24 TDM 网格、Mississippi 背景与街道、桥层及全部路线控制点；新增 `actionID → row-major spawnPointId` 映射，不改公共 Game 接口。 | 770字节 TDM、768个背景格和73条街道/桥绘制指令匹配 APK 派生数据；768个背景格及道路/桥绘制候选按共享随机流与 terrain index 一致；六个入口、59个转向点、六个出口及72条有向边逐项匹配；验证 `actionID 4/0/1/2/3/5 → spawnPointId 0/1/2/3/4/5`。4项地图测试与 TypeScript 检查通过。 |
+| M18-C（已完成） | 地图对象、单位与解锁 | 接入三名初始 Gunslinger、两处 Saloon 和 Fort、Dynamite 配对；修复 Mississippi 共用场景表遗漏的4个 `116` 双格木屋及其碰撞；按全局进度快照显示 marker 130/131。新局忽略 marker 96–101；修复共享单位工厂对多名同类初始角色生成重复 ID 的问题。 | 坐标、数量、贴图、锚点/占格与 TDM/Smali 一致；三名 Gunslinger ID 唯一；Dynamite 完成 global level 20/30 才解锁；Pyromaniac/Salesman 分别遵守第50/60关解锁；不生成存档恢复单位或伪造初始 Cannon。21项 M14–M18 实体/地图定向测试及 TypeScript 检查通过。 |
+| M18-D（已完成） | 波次、炮池与数值规则 | 接入 `$425`、20条生命、3级升级上限、三档敌人 HP 倍率、八波/37个敌人生成请求及 wave 2 的 Saloon/Fort 玩家单位池动作。Cannon 与地图没有新局 marker 的 Mexican 使用已有 `template` 契约，不在地图上伪造单位；Mexican 模板由共享 New Mexico 单位工厂导出。 | `GameSession` 初态及全部 wave metadata、APK action ID 到 `spawnPointId` 映射、十槽请求向量、池类型/计数/上限与 `GameDesignWaves` 源调用逐项一致；短会话验证 wave 2 单位池真实生成、Saloon/Fort 坐标和 pool-only Cannon 激活。M18规则5项、地图/实体回归7项及 TypeScript 检查通过。 |
+| M18-E（已完成） | 关卡目录、双语与回放 | 新建 `mississippi-18-identity/copy/wave-intros/content-version/campaign` 模块，接入八波对白与肖像、英文原版/中文项目译文、Map 21 图标、正式关卡18及 level17 前置、Free Play、结算与解锁快照回放。沿用 `template` 池契约；不改 `campaignCatalog` 已有的 level18/map21 条目。并修复选关、概览和难度地图按 global level 而非 `mapFileNumber` 取缩略图的问题。 | 正式关卡目录共18项且 Shadow Town 依赖 Dead Rocks；无进度时锁定，完成17解锁；Free Play三档可进入。文本/对白/肖像/声音及 `gng_levelmap_21` 离线资源可用。正式胜利写入 level18，Free Play 不写正式档案；特殊单位与 Dynamite 回放快照通过。M18 内容、正式进度/回放、规则、地图/实体定向测试共18项及 TypeScript 检查通过。 |
+| M18-F（本地验收已完成；整批发布待执行） | 入口回归与批次验收 | 添加 Shadow Town 真实入口 E2E；更新只因新增正式关卡或 Mississippi Free Play 可玩关卡数变化而过期的目录/Progress 测试；回归 M17 入口与内容，不重测无关地图功能。通过后进入整批集成发布。 | Free Play 与正式战役分别从选关进入 Shadow Town，检查锁定/解锁、map21 图标、标题、首波对白和 `1/8` HUD；目录计数与阶段快照一致。完整 `CI=1 PLAYWRIGHT_PORT=43125 pnpm run test:ci` 通过：TypeScript、679项单测、生产构建和149项 E2E；本地内置浏览器静音、窗口模式验证 Free Play → Mississippi → Shadow Town → Medium，开场对白和 `01/08` HUD 正常。M18五个实现/回归切片加一次发布后预计为22/110（20.0%）。 |
+
+### M18-E 完成结果
+
+- 新增关卡身份、双语文案、八波对白、解锁快照版本与关卡组装；接通正式目录、Free Play、结算和 Shadow Town replay factory。
+- Campaign 列表、概览和难度页的地图图标统一按目录 `mapFileNumber` 选择；Shadow Town 使用 `gng_levelmap_21.png`，不错误显示 global level 18 对应的图片。
+- 验证英文原文、中文译文、八波资源键/肖像/语音、离线 Map 21 图片、正式解锁、三档 Free Play、正式结算、Free Play 档案隔离、四种 Mississippi 解锁位和 Dynamite 回放恢复。
+- 定向命令：`node --import tsx --test tests/mississippi-18-campaign-content.test.ts tests/mississippi-18-formal.test.ts tests/mississippi-18-campaign-rules.test.ts tests/mississippi-18-entities.test.ts tests/mississippi-18-map.test.ts`（18项通过）；`pnpm run typecheck` 通过。完整 `test:ci` 留至 M18-F 批次收尾。
+
+### M18-F 实施清单与进度
+
+- **入口 E2E（已完成）：**新增 Shadow Town Free Play 与正式战役入口流程；验证选关、map21 缩略图、概览、难度、首波对白与 `1/8` HUD，不推进完整关卡。IndexedDB fixture 证明完成到第16关时第18关锁定，记录第17关完成后开放；Free Play 不要求战役进度。
+- **目录与回归（已完成）：**将旧正式目录长度断言从17更新为18，补齐 Apache Valley、Cow Gulch、Progress 与 Fort Kaboom 的第18关目录/状态快照；将 Mississippi Free Play 可玩数断言从7更新为8，并调整其第18关禁用断言。59项战役目录相关单测通过；修正完整检查发现的3处遗留快照后，Apache Valley、内容清单和 Progress 定向测试共35项通过。M17 及其他 Mississippi 入口回归与 M18 新入口共15项 E2E 通过。
+- **批次完整检查（本地已完成）：**最终 `CI=1 PLAYWRIGHT_PORT=43125 pnpm run test:ci` 通过 TypeScript、679项单测、生产构建及149项 E2E。构建仍提示主 JS chunk 为2.137 MB（gzip 251.14 KB），本批没有引入无关拆包改动。首次全量检查暴露了3处单测快照和6项 E2E 进度摘要仍期望17关；已补齐，相关35项单测和6项 E2E 定向复跑通过后，完整检查再次全绿。
+- **本地内置浏览器（已完成）：**静音、窗口模式从 Free Play → Mississippi → Shadow Town → Medium 进入；核对 map21 关卡入口和概览、Pedro 第1波对白、地图与 `01/08` HUD。未完整通关、未启动 Android、未全屏或播放声音。当前仍待 squash 到 `master`、推送部署、来源 SHA 核对、公开页面验收及回同步。
+- 测试默认窗口模式、静音；不完整通关、不启动 Android。完整检查通过后才进入 squash 集成与发布流程。
+
+### M18 批次收尾
+
+- 发布前确认五个实现切片均有对应定向测试和提交；批次末尾完整检查只运行一次，若失败仅重跑受影响项及最终完整检查。
+- 完整检查与本地内置浏览器验收已通过。下一步将本批以单个 squash commit 集成至 `master` 并按项目规则推送；部署后核对 GitHub/Cloudflare Pages 来源 SHA，再用内置浏览器在公开版静音、窗口模式复核 Free Play → Mississippi → Shadow Town → Medium、地图、开场对白和首波 HUD；不完整手动通关、不启动 Android、不主动启用全屏或声音。
+- 发布完成后将发布提交合并回 `gunsnglory` 并同步相关工作树。网络或部署检查不可用时如实保留发布未完成状态，不以本地测试代替。
+
+## 已完成批次
+
+### M13 Golden River 接入批次
+
+APK 的 map16 关卡已接入正式战役、Free Play 和回放。四个实现切片、批次级完整检查、squash 发布、Pages 来源 SHA 核对、公开浏览器代表流程和集成分支回同步均已通过。
+
+| 顺序 | 切片 | 实施范围 | 定向验收 |
+| --- | --- | --- | --- |
+| M13-R1 | Squash 集成并推送（已完成） | 将 M13-A 至 M13-D 相对 `origin/master` 的全部成品 squash 为一个 `master` 提交，并执行 `git push origin master`。 | 发布提交 `d35678a7c4cdbed699a1e8cc73dc3a424385d5d5` 已推送；不把单切片提交逐个发布。 |
+| M13-R2 | 部署与浏览器验收（已完成） | 等待 Pages workflow；核对公开 `build-info.json` 来源 SHA；使用 Codex 内置浏览器以静音、窗口模式检查 Mississippi 第 13 关入口和开场状态。 | Actions `43165717255` 成功；两个 Pages 来源 SHA 与发布提交一致；Golden River 可进入并显示第 1 波对白。 |
+| M13-R3 | 回同步集成分支（已完成） | 将已发布提交及本计划更新合并至 `gunsnglory`，推送远端，并核对相关工作树分支和上游状态。 | `gunsnglory` 本地与远端包含发布 SHA 和本计划；主工作树已快进，既有未跟踪研究文档未改动。 |
+
+#### 批次门槛与发布
+
+- M13-A 到 M13-D 的内容预期均来自 [M13 静态审计](map13-static-audit.md) 和应用消费代码。若发现数据冲突，先追到 APK 的实际消费者并更新审计，不得以地图相邻编号猜参数。
+- 每个切片只运行其定向测试并提交；批次收尾运行 `CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci`。若共享调用测试需要独立端口，记录实际端口并保持串行。
+- 4 个 M13 实现切片加一次普通发布后，累计比例为 17/85（20.0%）；不得额外增加无范围切片。静态文档审计不计入实现分母。
+- 发布与回同步门槛均已通过；M13 批次关闭。后续关卡尚未排期，新一轮开始时先按当前代码和证据细化可执行步骤。
+- 本批默认窗口模式、静音，不启动 Android，不完整手动通关；浏览器只进行选关和首波代表流程验收。
+
+M13 上游关卡数据以 map16 清单为准。`awesomeMessageMin=30000` 的消费者仍未知，M13 不新增依赖其语义的功能；前一关来源与边界见 [M12 静态审计](map12-static-audit.md)。

@@ -26,6 +26,7 @@ import {
   mississippi14LevelFourteenCampaignContent,
   mississippi15LevelFifteenCampaignContent,
   mississippi16LevelSixteenCampaignContent,
+  mississippi18LevelEighteenCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -227,6 +228,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Dead Rocks · Level 17', zh: '死亡岩地 · 第 17 关' },
     globalLevel: 17,
     requiresCompletedScenarioIds: ['campaign-mississippi-16'],
+  }, {
+    scenarioId: mississippi18LevelEighteenCampaignContent.id,
+    contentVersion: mississippi18LevelEighteenCampaignContent.contentVersion,
+    title: { en: 'Shadow Town · Level 18', zh: '影镇 · 第 18 关' },
+    globalLevel: 18,
+    requiresCompletedScenarioIds: ['campaign-mississippi-17'],
   }]);
 });
 

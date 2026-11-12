@@ -389,6 +389,14 @@
 - **Dead Rocks 复发：**非 CI 的首轮测试再次复用了旧 `4173` 进程，关卡状态与本次代码不符。以 `CI=1 PLAYWRIGHT_PORT=4177` 启动严格隔离服务后，Dead Rocks 两项浏览器测试通过；不结束来源不明的旧服务器，直接换独立端口，并确保 `CI=1` 关闭服务器复用。
 - **本地监听权限：**M17 最终整套检查时，即使端口空闲，沙箱仍以 `EPERM` 拒绝 Playwright 的本地 Vite 监听；换端口仍失败。获得仅限本地测试服务器监听的提权后，147 项 E2E 通过。遇到该错误先确认端口空闲，再申请只覆盖本地测试监听的权限；不改 Playwright 主机配置、不停掉不明进程，也不把环境限制当成产品故障。
 
+## 关卡发布需同时核对部署来源与真实入口
+
+**状态：M17 Dead Rocks 已发布、完成公开入口验收并回同步至 `gunsnglory`。**合并提交 `fcf622e` 已推送，集成分支现包含发布 SHA。
+
+- **本批发布：**提交 `4ca738c2bf01d2bc6d6e565cfd2a117d33b37aa5` 的 GitHub Actions `43246826051` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回该来源 SHA。
+- **入口观察：**内置浏览器在静音、窗口模式进入 Free Play → Mississippi → Dead Rocks → Medium，确认关卡标题、地图、Settlers 开场对白和 `1/8` 波次 HUD 显示正常；随后仅继续到首波准备状态，没有完整手动通关。未启动 Android、进入全屏或播放音效。
+- **防回归：**关卡发布只有在 Actions 成功且两个公开部署端的来源 SHA 与预期发布提交一致后才算部署完成；浏览器使用对应 release SHA 的 URL，并检查从菜单到实际关卡内容的代表流程。截图或单纯菜单可见不足以证明新关卡已加载。
+
 ## 战役进度快照断言要跟随正式关卡目录
 
 - **表现与复现：**新增全球第 11、12 关后，完整单测曾因旧阶段快照缺少新关而失败；map12 批次中 `apache-valley.test.ts`、`fort-kaboom-formal.test.ts` 和 `progress.test.ts` 的固定目录/状态期望只列到第 11 关。

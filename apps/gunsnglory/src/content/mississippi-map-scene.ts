@@ -14,6 +14,7 @@ interface MississippiMapSource {
 const railBufferCollision = Object.freeze({ x: 0, y: -3840, width: 7680, height: 7680 });
 const commonCactusCollision = Object.freeze({ x: 1920, y: -1228, width: 3840, height: 2534 });
 const fortCollision = Object.freeze({ x: -9408, y: -9600, width: 18048, height: 7680 });
+const shackCollision = Object.freeze({ x: -3840, y: -1228, width: 15360, height: 3840 });
 const canyonImageRemap = [-1, 9, 6, 0, 8, 3, -1, 10, 7, -1, 1, 5, 2, 11, 4, -1] as const;
 const waterImageRemap = canyonImageRemap;
 
@@ -37,6 +38,12 @@ const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = 
   },
   113: { asset: 'b_3x2_fort', anchorOffsetY: -0.3, collisionBoxFine: fortCollision },
   112: { asset: 'b_3x2_saloon', anchorOffsetY: -0.3 },
+  116: {
+    asset: 'b_2x1_shack',
+    anchorOffsetX: -0.5,
+    collisionBoxFine: shackCollision,
+    fieldBlockBounds: { left: -1, right: 1, top: 0, bottom: 0 },
+  },
   126: {
     asset: 'e_1x1_rocks_water',
     collisionBoxFine: { x: 1920, y: 2612, width: 3840, height: 2534 },

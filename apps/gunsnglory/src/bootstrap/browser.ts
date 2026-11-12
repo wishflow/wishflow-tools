@@ -77,6 +77,12 @@ import {
   mississippi17CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-17-content-version';
 import { mississippi17CampaignId } from '../content/mississippi-17-identity';
+import { createMississippi18CampaignContent } from '../content/mississippi-18-campaign';
+import {
+  mississippi18CampaignContentVersionFor,
+  mississippi18CompletedScenarioIdsForContentVersion,
+} from '../content/mississippi-18-content-version';
+import { mississippi18CampaignId } from '../content/mississippi-18-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -125,6 +131,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi15CampaignId]: createMississippi15CampaignContent(),
   [mississippi16CampaignId]: createMississippi16CampaignContent(),
   [mississippi17CampaignId]: createMississippi17CampaignContent(),
+  [mississippi18CampaignId]: createMississippi18CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -178,6 +185,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi17CampaignId) {
     return mississippi17CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === mississippi18CampaignId) {
+    return mississippi18CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -202,6 +212,7 @@ export function createBrowserGame(
     [mississippi15CampaignId]: createMississippi15CampaignContent(completedScenarioIds),
     [mississippi16CampaignId]: createMississippi16CampaignContent(completedScenarioIds),
     [mississippi17CampaignId]: createMississippi17CampaignContent(completedScenarioIds),
+    [mississippi18CampaignId]: createMississippi18CampaignContent(completedScenarioIds),
   };
   if (legacyMississippiReplay) {
     const scenario = scenarios[legacyMississippiReplay.scenarioId];
@@ -320,6 +331,14 @@ export function createBrowserGameForMississippi16Replay(contentVersion: string |
 export function createBrowserGameForMississippi17Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi17CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores Shadow Town's special-unit and Dynamite unlock snapshots. */
+export function createBrowserGameForMississippi18Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? mississippi18CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }
