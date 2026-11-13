@@ -98,9 +98,13 @@ import { mississippi20CampaignId } from '../content/mississippi-20-identity';
 import { createOregon01CampaignContent } from '../content/oregon-01-campaign';
 import {
   oregon01CampaignContentVersionFor,
-  oregon01CompletedScenarioIdsForContentVersion,
+  parseOregon01ReplayContentVersion,
 } from '../content/oregon-01-content-version';
 import { oregon01CampaignId } from '../content/oregon-01-identity';
+import {
+  newMexicoCampaignContentVersionFor,
+  parseNewMexicoReplayContentVersion,
+} from '../content/new-mexico-replay-content-version';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -166,15 +170,24 @@ const mississippiLegacyBaseHireTypes = new Set([
   'gunslinger', 'mexican', 'cannon', 'indian', 'sniper', 'grandpa',
 ]);
 
-interface LegacyMississippiReplayContent {
+interface LegacyReplayContentOverride {
   scenarioId: string;
   contentVersion: string;
+  activity4HireBehavior?: 'keep' | 'filter-known-base-types' | 'filter-all';
 }
 
 export function getBrowserScenarioContentVersion(
   scenarioId: string,
   completedScenarioIds: readonly string[] = [],
 ): string | undefined {
+  if (
+    scenarioId === techTownCampaignId
+    || scenarioId === billyHillsCampaignId
+    || scenarioId === murdockMountainsCampaignId
+    || scenarioId === luckyLakeCampaignId
+  ) {
+    return newMexicoCampaignContentVersionFor(scenarioId, completedScenarioIds);
+  }
   if (scenarioId === cactusvilleCampaignId) {
     return cactusvilleCampaignContentVersionFor(completedScenarioIds);
   }
@@ -223,7 +236,8 @@ export function getBrowserScenarioContentVersion(
 
 export function createBrowserGame(
   completedScenarioIds: readonly string[] = ['campaign-new-mexico-03'],
-  legacyMississippiReplay?: LegacyMississippiReplayContent,
+  legacyReplayContentOverride?: LegacyReplayContentOverride,
+  unavailableReplayScenarioId?: string,
 ) {
   const scenarios: Record<string, ScenarioContent> = {
     ...browserScenarios,
@@ -246,18 +260,23 @@ export function createBrowserGame(
     [mississippi20CampaignId]: createMississippi20CampaignContent(completedScenarioIds),
     [oregon01CampaignId]: createOregon01CampaignContent(completedScenarioIds),
   };
-  if (legacyMississippiReplay) {
-    const scenario = scenarios[legacyMississippiReplay.scenarioId];
+  if (legacyReplayContentOverride) {
+    const scenario = scenarios[legacyReplayContentOverride.scenarioId];
     if (scenario) {
-      scenarios[legacyMississippiReplay.scenarioId] = {
+      scenarios[legacyReplayContentOverride.scenarioId] = {
         ...scenario,
-        contentVersion: legacyMississippiReplay.contentVersion,
-        units: scenario.units.filter(({ activity, type }) => (
-          activity !== 4 || !mississippiLegacyBaseHireTypes.has(type)
-        )),
+        contentVersion: legacyReplayContentOverride.contentVersion,
+        ...(legacyReplayContentOverride.activity4HireBehavior === 'keep' ? {} : {
+          units: scenario.units.filter(({ activity, type }) => (
+            activity !== 4
+            || (legacyReplayContentOverride.activity4HireBehavior !== 'filter-all'
+              && !mississippiLegacyBaseHireTypes.has(type))
+          )),
+        }),
       };
     }
   }
+  if (unavailableReplayScenarioId) delete scenarios[unavailableReplayScenarioId];
   return createGame({
     scenarios,
     randomSeedSource: () => {
@@ -266,6 +285,35 @@ export function createBrowserGame(
       return seed[0]!;
     },
     sessionIdSource: createSessionId,
+  });
+}
+
+/**
+ * Rebuilds M4–M7 replay content from the recorded profile snapshot. Fixed v1
+ * recordings predate snapshots and intentionally use the importing profile.
+ */
+export function createBrowserGameForNewMexicoReplay(
+  scenarioId: string,
+  contentVersion: string | undefined,
+  currentCompletedScenarioIds: readonly string[] = [],
+) {
+  const parsed = parseNewMexicoReplayContentVersion(scenarioId, contentVersion);
+  if (typeof contentVersion !== 'string' || !parsed) {
+    // An unsupported replay version must not run against today's scenario content.
+    return createBrowserGame([], undefined, scenarioId);
+  }
+
+  if (parsed.kind === 'snapshot-v2') {
+    return createBrowserGame(parsed.completedScenarioIds);
+  }
+
+  const legacyCompletedScenarioIds = scenarioId === techTownCampaignId
+    ? [...new Set([...currentCompletedScenarioIds, 'campaign-new-mexico-03'])]
+    : currentCompletedScenarioIds;
+  return createBrowserGame(legacyCompletedScenarioIds, {
+    scenarioId,
+    contentVersion,
+    activity4HireBehavior: 'keep',
   });
 }
 
@@ -396,10 +444,16 @@ export function createBrowserGameForMississippi20Replay(contentVersion: string |
 
 /** Replay import restores Eastwood's recorded global unlocks, including its Gambler prize set. */
 export function createBrowserGameForOregon01Replay(contentVersion: string | undefined) {
-  const completedScenarioIds = contentVersion
-    ? oregon01CompletedScenarioIdsForContentVersion(contentVersion)
+  const parsed = parseOregon01ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon01CampaignId);
+  const legacyReplay = parsed.kind === 'legacy-v1'
+    ? {
+      scenarioId: oregon01CampaignId,
+      contentVersion: contentVersion!,
+      activity4HireBehavior: 'filter-all' as const,
+    }
     : undefined;
-  return createBrowserGame(completedScenarioIds ?? []);
+  return createBrowserGame(parsed.completedScenarioIds, legacyReplay);
 }
 
 export function createBrowserProgress() {

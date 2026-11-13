@@ -58,7 +58,7 @@ flowchart LR
 
 游戏自有内容包括 campaign、共享定义、关卡数据和表现元数据；静态发布资产由 `public/assets` 管理。引用使用稳定逻辑 ID；文件名、density、平台变体和 URL 由 Content/Render Adapter 解析。一次战局固定不可变内容版本；缺少地图、波次、必需图像或数值时拒绝创建可操作的半成品战局。音频可按产品规则静音降级。
 
-Gambler 等规则事件可引用 template-only 单位定义：模板不属于开局 `units`，只在对应事件发生时实例化。此能力放在对应规则配置（如 `ScenarioContent.gambler.prizeTemplates`），与战役波次 `campaignUnitPool` 分离；不得为了提供实例化设计而把存档恢复 marker 变成新局单位。
+Gambler 等规则事件可引用 template-only 单位定义：模板不属于开局 `units`，只在对应事件发生时实例化。此能力放在对应规则配置（如 `ScenarioContent.gambler.prizeTemplates`），与战役波次 `campaignUnitPool` 分离；奖品模板不能冒充地图摆放的初始单位。TDM marker 是否在新局创建单位，必须以 APK `fromLoadGame` 分支为准，并由关卡最终 `ScenarioContent.units` 测试验证。
 
 Game 每步维护规则和绘制所需只读状态；Renderer 依据对象状态、动画元数据与图层绘制。动画描述绑定素材、裁切、方向/镜像、帧驱动、阈值、锚点和结束条件。渲染省略不能跳过会改变共享随机状态的表现事件。图片/音频句柄由表现侧按资源生命周期创建与释放，不能写入游戏定义。
 

@@ -10,10 +10,12 @@ import {
 import { murdockMountainsCampaignWaves } from './murdock-mountains-campaign-waves';
 import { murdockMountainsUnitPool } from './murdock-mountains-unit-pool';
 import { createMurdockMountainsUnits } from './murdock-mountains-units';
+import { newMexicoCampaignContentVersionFor } from './new-mexico-replay-content-version';
 import type { CampaignEnemyType, PreviewEnemyDefinition, PreviewWaveDefinition, ScenarioContent } from '../game';
 import type { CampaignMapUnitTypeId } from './campaign-map-unit-placements';
 
 export const murdockMountainsCampaignId = 'campaign-new-mexico-06';
+/** Fixed content version used by replays recorded before profile snapshots were added. */
 export const murdockMountainsCampaignContentVersion = 'gng-free-1.8.6-new-mexico-06-formal-v1';
 
 const baseEnemy: PreviewEnemyDefinition = Object.freeze({
@@ -103,7 +105,7 @@ export function createMurdockMountainsCampaignContent(completedScenarioIds: read
   return {
     ...map,
     id: murdockMountainsCampaignId,
-    contentVersion: murdockMountainsCampaignContentVersion,
+    contentVersion: newMexicoCampaignContentVersionFor(murdockMountainsCampaignId, completedScenarioIds),
     formalSettlementSupported: true,
     title: { en: 'Murdock Mountains · Level 6', zh: '默多克山脉 · 第 6 关' },
     map: createMurdockMountainsMapScene(),

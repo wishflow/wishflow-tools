@@ -10,7 +10,7 @@ Eastwood Forest 是全局第21关、Oregon 区第1关，使用 `res/raw/td_map_2
 | --- | --- |
 | 已证实 | global level 21 使用 map24；地图尺寸32×24，770字节；地形、路线 marker、初始对象和8波参数均有 APK 数据或 DEX 消费代码支持。 |
 | 静态推导 | 按 `EnemyDirectorField` 的方向规则展开，地图有4个出生点、2个出口、42个唯一转向点、6条完整路径和47条有向控制边。 |
-| 关键实现约束 | 新局不实例化存档恢复 marker 96–101、130、131。新局构造 `GameObjectManager(..., false)`；这些 marker 的 DEX 构造路径要求 `fromLoadGame == true`。 |
+| 关键实现约束 | marker 96–101、130、131 在新局路径（`fromLoadGame == false`）创建 activity 4 招募单位；读档路径跳过这些 TDM 初始对象。该语义以 APK Smali 条件跳转为准，JADX 对应伪代码存在分支重建错误。 |
 | 未确认 | `awesomeMessageMin=30000` 的网页消费语义，以及对白头像之外的角色语音映射。不得据字段名或头像猜测。 |
 
 ## 证据入口
@@ -19,10 +19,10 @@ Eastwood Forest 是全局第21关、Oregon 区第1关，使用 `res/raw/td_map_2
 | --- | --- | --- |
 | APK 地图编号、维度、网格和原始长度 | `apps/gunsnglory/docs/research/data/map-inventory.json`，`maps[index=24]` | 网格按 y-major 保存；本地 `~/Downloads/gunsnglory-1-8-6.apk` 中 `td_map_24.tdm` 的 `[width,height,grid...]` 字节与记录完全相同。 |
 | 地形、街道、碰撞值和图集选择 | `data/terrain-render-index.json` 的 `map_index=24`；REA `Oregon.drawBackgroundLayer`；反编译 `levelpacks/Oregon.java` | 地形索引是派生绘图资料，不是原始 REA Evidence；APK 绘制方法和 TDM 才是语义来源。 |
-| 路线方向和实体 marker | DEX `EnemyDirector.createEnemyDirectorFieldsFromBasicMap`、`GameObjectManager.createGameObjectsFromBasicMap`；反编译 `gamelogic/GameObjectManager.java` | marker 解释结合原始网格和 `fromLoadGame` 分支，不把恢复状态当新局对象。 |
+| 路线方向和实体 marker | `evidence/dex/EnemyDirector.dexdump.txt`、`GameObjectManager.dexdump.txt:createGameObjectsFromBasicMap`；`GunsAndGloryThread.dexdump.txt:onLoadGame` 与 `restartLevel` | DEX 中 `fromLoadGame` 条件跳转及构造参数确认新局/读档路径；JADX Java 仅用于定位，遇到与 DEX 控制流不符时以 DEX 为准。 |
 | 初态、敌人请求、波次和赌场冷却 | `data/level-config.json` 的 `tables.levels[index=20]`；`recovered-source/java/com/hg/gunsandglory/datastorage/GameDesignWaves.java` 的 `i == 21`；`units/Gambler.java` | `waves.json` 的聚合 `rawCalls` 不保留 `newWave` / `addToWave` 交错顺序，以 Java 源调用顺序为准。`Gambler` 构造器将关卡数据索引11设为最大冷却；M21 可将299000毫秒映射到网页 `cooldownMs`。 |
 | 文案、头像、音频 | `data/string-resources.json`、`data/resource-inventory.json`；`levelpacks/Oregon.java` | 字符串默认语言是 APK 英文。`newWave` 的头像引用不证明角色语音。 |
-| 现有网页接入点 | `apps/gunsnglory/src/content/campaign-catalog.ts`、地图渲染辅助和关卡目录 | 目录已经登记 level21 / map24 / title resource24；本轮需要补齐可玩内容和正式注册。 |
+| 现有网页接入点 | `apps/gunsnglory/src/content/oregon-01-map-entities.ts`、`oregon-01-content-version.ts` 与回放工厂 | 目录已经登记 level21 / map24 / title resource24；M22-E 已让最终 `ScenarioContent.units` 匹配新局 marker，并明确 v1/v2 回放边界。 |
 
 ## 关卡身份与地图
 
@@ -72,13 +72,13 @@ TDM 出生点代码40–43各1个，出口代码48共2个，转向代码52–65�
 
 APK `GameObjectUnit.isUnlocked(9)` 检查全单位解锁、当前关卡等级或里程碑完成。Gambler 的原始解锁行是 `[41,50]`；M21 当前关卡等级21未达到第一门槛，因此此关只在完成全局第50关或全单位解锁时出现。网页应使用存档/回放快照并保证 Gambler 与 Casino 同生同灭。
 
-`Gambler.CARD_UNITS` 包含单位类型1–6、35、36及现金结果；可抽到哪些单位仍受各自原版解锁判断限制。现有网页 `ScenarioContent.gambler` 要求奖品类型在初始 `scenario.units` 中有设计，但 M21 对应的部分角色只出现在存档恢复 marker 96–101、130、131。M21 必须把这些对象保留为 template-only 奖品定义，不能将它们加入开局单位列表；该模板能力独立于 `campaignUnitPool`，不等于新增池动作。
+`Gambler.CARD_UNITS` 包含单位类型1–6、35、36及现金结果；可抽到哪些单位仍受各自原版解锁判断限制。M21 的部分同类型单位也由 marker 96–101、130、131在新局创建为 activity 4 招募单位。奖品生成仍需独立 template-only 定义，不能把奖品模板实例加入地图开局单位；该模板能力独立于 `campaignUnitPool`，不等于新增池动作。
 
-### 仅用于存档恢复的 marker
+### 新局招募 marker 与回放版本边界
 
-新关卡初始化 `restartLevel()` 传 `false` 给 `GameObjectManager`；无有效存档的 `onLoadGame()` 也设置 `fromLoadGame=false`。DEX 在 `fromLoadGame==true` 分支才构造 marker 96–101、130、131 对应的 activity 4 单位。它们不是新局可招募点。
+新关卡初始化 `restartLevel()` 传 `false` 给 `GameObjectManager`；无有效存档的 `onLoadGame()` 也设置 `fromLoadGame=false`。Smali/DEX 在 `fromLoadGame==false` 分支构造 marker 96–101、130、131 对应的 activity 4 招募单位；读档为 `true` 时跳过 TDM 初始对象，由存档恢复对象状态。此前依 JADX 伪代码把条件方向读反，M21 实现因此只接入了 activity 5 单位。M22-E 已让新局使用 APK 对应单位并将 M21 内容版本升为 v2；v1 回放仍保留已发布 M21 的旧 activity 5 单位列表。
 
-| marker | 数量和坐标 | 恢复时对应类型 |
+| marker | 数量和坐标 | 新局对应类型 |
 | ---: | --- | --- |
 | 96 | 12：`(9,1)`、`(18,1)`、`(1,2)`、`(21,3)`、`(18,6)`、`(29,6)`、`(8,10)`、`(15,15)`、`(2,18)`、`(26,18)`、`(17,21)`、`(30,22)` | Gunslinger |
 | 97 | 12：`(4,1)`、`(23,2)`、`(15,4)`、`(7,9)`、`(30,9)`、`(1,15)`、`(17,15)`、`(1,21)`、`(7,21)`、`(12,21)`、`(29,21)`、`(15,22)` | Mexican |
@@ -86,7 +86,7 @@ APK `GameObjectUnit.isUnlocked(9)` 检查全单位解锁、当前关卡等级或
 | 101 | 4：`(26,7)`、`(1,12)`、`(10,12)`、`(22,13)` | Grandpa |
 | 130 / 131 | `(4,23)` / `(30,16)` | Pyromaniac / Salesman |
 
-当前网页共享工厂 `createNewMexicoMapUnits()` 会按解锁状态把部分上述 marker 作为新局 activity 4 单位；这和 APK 的 `fromLoadGame` 分支不一致。M21 不得使用该路径生成这些 marker。已发布 M1–M20 的历史行为、旧回放内容版本和测试需要另立兼容性修复，不在本关里悄悄改写。
+现有共享工厂 `createNewMexicoMapUnits()` 按解锁状态处理这些新局 activity 4 单位；该行为与 APK 一致。M21 的定制工厂曾绕开该共享路径，导致本关 96–101、130、131 marker 遗漏。M22-E 已改由 M21 工厂复用共享单位生成逻辑，并以 v2 描述新单位集；v1 回放工厂过滤新加入的 activity 4 单位，重建已发布列表。M1–M20 和共享工厂本身未因本次审计修改。
 
 ### 静态装饰与其他 marker
 
@@ -181,7 +181,7 @@ APK `GameDesignData` 的 level-config 行索引20对应全局关卡21：
 ## 实现验收清单
 
 - 原始 TDM 身份、地图尺寸、路线坐标/边、图层绘图命令、图源边界和碰撞逐格相符。
-- 新局实体与 `GameObjectManager` 的 marker 和 `fromLoadGame` 语义相符；Gambler/Casino 解锁门槛、299000ms 冷却和八种卡牌奖品解锁状态一致，存档恢复 marker 只可作为 template-only 奖品数据，不能成为新关招募点。
+- 新局实体与 `GameObjectManager` 的 marker 和 `fromLoadGame` 语义相符；Gambler/Casino 解锁门槛、299000ms 冷却和八种卡牌奖品解锁状态一致。marker 96–101、130、131 对应新局招募单位；Gambler 奖品模板仍与地图初始单位分离。
 - 八波参数和20条 `addToWave` 调用按 DEX/Java 顺序与八种敌人槽逐值匹配；无单位池动作，无新 Cannon 模板或虚构炮位。
 - 双语内容、头像、音乐文件和 atlas 离线可读取；无依据的胜利标题或对白语音不新增。
 - 正式/自由入口、三档难度、结算隔离、回放内容版本通过自动化和内置浏览器代表流程。静音、窗口模式、不完整通关、不启动 Android。

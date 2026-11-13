@@ -34,6 +34,24 @@
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
 - **审计结论也要反向核对实现：**M16 审计虽改正了 `130/131` 的新局语义，却再次错误地将 `96–101` 写成仅读档创建；代码随后照此省略了 M11–M16 的可招募单位。M19 接入时，同一错误又进入 M19 审计和 M18 的专用工厂：TDM 96–101 实际在 `fromLoadGame == false` 时创建 activity 4 招募单位，读档时才跳过；仅更新报告或只测共享工厂都不够，必须检查每张地图工厂与最终 `ScenarioContent.units`。本轮已恢复 M18/M19 的 Mexican、Indian、Sniper、Grandpa marker 行为；M18 新内容升为 v2，旧 v1 回放继续使用原单位列表。后续逐图测试需从真实 TDM 核对坐标、activity、解锁门控和唯一 ID，并至少覆盖一条对应关卡的回放入口。
 
+## 内容版本必须覆盖所有影响开局的档案状态
+
+**状态：M22 修复中；M4–M7 回放工厂和 Eastwood 新局单位修复已完成，实际回放入口矩阵待验。**
+
+- **表现与复现：**M4–M7 的部分地图单位受全局关卡里程碑解锁影响，但四关长期使用固定 `contentVersion`。同一回放在不同档案下可能重建出不同初始单位。M21 Eastwood 的定制实体工厂又误将 map24 的 96–101、130、131 marker 排除在新局之外；APK 实际在 `fromLoadGame == false` 时创建 activity 4 招募单位。
+- **根因与证据：**M4–M7 内容构造器读取当前 `completedScenarioIds`，回放入口却没有把这些解锁状态编码进版本或重建快照。Eastwood 审计曾依赖错误重建的 JADX 伪代码，未根据 Smali 条件跳转和最终单位列表反核；Smali/DEX 及 `Guns’n’GloryThread` 调用点已确认新局/读档语义。
+- **修复与防回归：**M22-D 为 M4–M7 新版本记录实际影响内容的全局解锁位，并按录制版本构建 replay factory；v1 保留导入时档案语义，Tech Town 继续补入 M3。M22-E 让 M21 新局通过共享 TDM 单位工厂生成 marker 96、97、100、101、130、131 的 activity 4 单位，M21 v2 记录新单位集，v1 replay 过滤 activity 4 并保留已发布版本的活动单位列表。M22-F 覆盖了实际导入路由、v1/v2 版本识别、未知版本拒绝、Free Play 与正式入口；M4–M7 的16种解锁组合和地图访问位另由工厂单测覆盖。
+- **测试夹具边界：**M4–M7 v1 沿用导入时档案，因此生成带 `preparedSetup` 的 v1 探针时，录制档案必须与导入档案相同；否则数字参数路径集合可能不同，错误表现为 `prepared-setup-invalid`，不是内容版本路由失败。v2 探针则故意使用不同档案，验证录制快照。M4 `map-access=0` 表示不可进入状态，真实 Free Play 新局会补入 M3 并记录开放快照；关闭状态检查版本解析和 `prepare`，不伪造一场可回放战斗。
+- **避免重复：**本轮不改 APK 已核实正确的共享 `createNewMexicoMapUnits()`，也不重新分析 marker 96–101 的 Smali。后续新增关卡时，从真实 TDM marker、最终 `ScenarioContent.units`、内容版本解析和不同当前档案下的 replay factory 四处闭环；不能仅凭固定版本字符串或单测中间映射通过判定。
+
+## 档案驱动的关卡测试必须使用同一档案生成内容版本
+
+**状态：**M22-G 首轮完整 CI 中发现并修复。
+
+- **表现与复现：**`browser-bootstrap.test.ts` 用含关卡解锁的 completed IDs 创建 Billy Hills Game，但请求版本来自默认空档案；`Game.open` 以 `content-version-unavailable` 正确拒绝。该项在 M22-C 的内容版本快照改造后成为过时测试夹具。
+- **根因与修复：**关卡 builder 根据输入档案生成内容版本；测试调用 `getBrowserScenarioContentVersion` 时省略了同一组 completed IDs。开局请求现将该档案传给版本解析器，避免用不同快照组装请求。
+- **防回归：**任何测试若以档案构建 Game，`contentVersion` 必须从相同的 completed IDs 生成；若有意测试跨档案回放，需通过 replay factory 并明确记录 v1/v2 的不同语义，不能复用正式新局请求的默认版本。
+
 ## TDM Dynamite marker 与对象角色不能混写
 
 **状态：M16 静态审计与关卡测试已校正。**

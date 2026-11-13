@@ -4,6 +4,7 @@ import { createTechTownMapContent } from './tech-town-map-entities';
 import { techTownRouteDefinitions } from './tech-town-routes';
 import { techTownCampaignWaves } from './tech-town-campaign-waves';
 import { techTownUnitPool } from './tech-town-unit-pool';
+import { newMexicoCampaignContentVersionFor } from './new-mexico-replay-content-version';
 import type {
   CampaignEnemyType,
   GamblerUnitType,
@@ -14,6 +15,7 @@ import type {
 } from '../game';
 
 export const techTownCampaignId = 'campaign-new-mexico-04';
+/** Fixed content version used by replays recorded before profile snapshots were added. */
 export const techTownCampaignContentVersion = 'gng-free-1.8.6-new-mexico-04-formal-v1';
 
 const baseEnemy: PreviewEnemyDefinition = Object.freeze({
@@ -137,7 +139,7 @@ export function createTechTownCampaignContent(completedScenarioIds: readonly str
   return {
     ...map,
     id: techTownCampaignId,
-    contentVersion: techTownCampaignContentVersion,
+    contentVersion: newMexicoCampaignContentVersionFor(techTownCampaignId, completedScenarioIds),
     formalSettlementSupported: true,
     title: { en: 'Tech Town · Level 4', zh: '科技镇 · 第 4 关' },
     map: mapContent.scene,

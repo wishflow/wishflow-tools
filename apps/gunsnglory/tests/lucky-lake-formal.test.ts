@@ -8,6 +8,7 @@ import { createMemoryProfileRepository } from '../src/progress/memory-profile-re
 import { murdockMountainsCampaignId } from '../src/content/murdock-mountains-campaign';
 import { luckyLakeLevelSevenCampaignContent, officialCampaignStages } from '../src/content/official-campaign';
 import { createGame, type CampaignWaveDefinition, type ScenarioContent } from '../src/game';
+import { newMexicoCampaignContentVersionFor } from '../src/content/new-mexico-replay-content-version';
 
 const completedThroughMapFive = [
   'campaign-new-mexico-01',
@@ -21,14 +22,16 @@ test('Lucky Lake is registered as level seven and unlocks only after Murdock Mou
   const stage = officialCampaignStages.find(({ globalLevel }) => globalLevel === 7);
   assert.deepEqual(stage, {
     scenarioId: luckyLakeCampaignId,
-    contentVersion: luckyLakeCampaignContentVersion,
+    contentVersion: luckyLakeLevelSevenCampaignContent.contentVersion,
     title: { en: 'Lucky Lake · Level 7', zh: '幸运湖 · 第 7 关' },
     globalLevel: 7,
     requiresCompletedScenarioIds: [murdockMountainsCampaignId],
   });
   assert.equal(officialCampaignStages.length, 21);
   assert.equal(luckyLakeLevelSevenCampaignContent.formalSettlementSupported, true);
-  assert.equal(getBrowserScenarioContentVersion(luckyLakeCampaignId), luckyLakeCampaignContentVersion);
+  assert.equal(luckyLakeCampaignContentVersion, 'gng-free-1.8.6-new-mexico-07-formal-v1');
+  assert.equal(getBrowserScenarioContentVersion(luckyLakeCampaignId), newMexicoCampaignContentVersionFor(luckyLakeCampaignId, []));
+  assert.equal(luckyLakeLevelSevenCampaignContent.contentVersion, newMexicoCampaignContentVersionFor(luckyLakeCampaignId, []));
 
   const noProgress = await createProgress(createMemoryProfileRepository(), officialCampaignStages).loadCampaign();
   assert.equal(campaignLevelState(7, noProgress), 'locked');
@@ -130,11 +133,12 @@ test('Lucky Lake formal defeat can improve its score without completing the leve
 });
 
 test('Lucky Lake replay preserves its registered content version through export and replay', async () => {
-  assert.equal(getBrowserScenarioContentVersion(luckyLakeCampaignId), luckyLakeCampaignContentVersion);
+  const currentContentVersion = newMexicoCampaignContentVersionFor(luckyLakeCampaignId, []);
+  assert.equal(getBrowserScenarioContentVersion(luckyLakeCampaignId), currentContentVersion);
 
   // Keep the real map and campaign identity, but clear requests so this only exercises replay
   // version routing and deterministic serialization; it is not a gameplay or balance test.
-  const fixtureVersion = `${luckyLakeCampaignContentVersion}-replay-fixture`;
+  const fixtureVersion = `${currentContentVersion}-replay-fixture`;
   const fixtureContent: ScenarioContent = {
     ...luckyLakeLevelSevenCampaignContent,
     contentVersion: fixtureVersion,

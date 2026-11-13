@@ -35,7 +35,7 @@ test('browser registry opens Billy Hills with the unit set for the supplied camp
   const game = createBrowserGame(completedScenarioIds);
   const session = await game.open({
     scenarioId: billyHillsLevelFiveCampaignContent.id,
-    contentVersion: getBrowserScenarioContentVersion(billyHillsLevelFiveCampaignContent.id),
+    contentVersion: getBrowserScenarioContentVersion(billyHillsLevelFiveCampaignContent.id, completedScenarioIds),
     randomSeed: 7,
     difficulty: 'easy',
     mode: 'formal',
