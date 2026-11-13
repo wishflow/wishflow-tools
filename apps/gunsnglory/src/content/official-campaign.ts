@@ -64,6 +64,15 @@ import { oregon01CampaignId } from './oregon-01-identity';
 import { createOregon02CampaignContent } from './oregon-02-campaign';
 import { oregon02CampaignCopy } from './oregon-02-campaign-copy';
 import { oregon02CampaignId } from './oregon-02-identity';
+import { createOregon03CampaignContent } from './oregon-03-campaign';
+import { oregon03CampaignCopy } from './oregon-03-campaign-copy';
+import { oregon03CampaignId } from './oregon-03-identity';
+import { createOregon04CampaignContent } from './oregon-04-campaign';
+import { oregon04CampaignCopy } from './oregon-04-campaign-copy';
+import { oregon04CampaignId } from './oregon-04-identity';
+import { createOregon05CampaignContent } from './oregon-05-campaign';
+import { oregon05CampaignCopy } from './oregon-05-campaign-copy';
+import { oregon05CampaignId } from './oregon-05-identity';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -162,6 +171,9 @@ export const oregon01LevelTwentyOneCampaignContent = createOregon01CampaignConte
 
 /** Formal Oregon level twenty-two assembled from the researched Cashcow Canyon content. */
 export const oregon02LevelTwentyTwoCampaignContent = createOregon02CampaignContent();
+export const oregon03LevelTwentyThreeCampaignContent = createOregon03CampaignContent();
+export const oregon04LevelTwentyFourCampaignContent = createOregon04CampaignContent();
+export const oregon05LevelTwentyFiveCampaignContent = createOregon05CampaignContent();
 
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
@@ -295,4 +307,22 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: { en: `${oregon02CampaignCopy.title.en} · Level 22`, zh: `${oregon02CampaignCopy.title.zh} · 第 22 关` },
   globalLevel: 22,
   requiresCompletedScenarioIds: [oregon01CampaignId],
+}, {
+  scenarioId: oregon03CampaignId,
+  contentVersion: oregon03LevelTwentyThreeCampaignContent.contentVersion!,
+  title: { en: `${oregon03CampaignCopy.title.en} · Level 23`, zh: `${oregon03CampaignCopy.title.zh} · 第 23 关` },
+  globalLevel: 23,
+  requiresCompletedScenarioIds: [oregon02CampaignId],
+}, {
+  scenarioId: oregon04CampaignId,
+  contentVersion: oregon04LevelTwentyFourCampaignContent.contentVersion!,
+  title: { en: `${oregon04CampaignCopy.title.en} · Level 24`, zh: `${oregon04CampaignCopy.title.zh} · 第 24 关` },
+  globalLevel: 24,
+  requiresCompletedScenarioIds: [oregon03CampaignId],
+}, {
+  scenarioId: oregon05CampaignId,
+  contentVersion: oregon05LevelTwentyFiveCampaignContent.contentVersion!,
+  title: { en: `${oregon05CampaignCopy.title.en} · Level 25`, zh: `${oregon05CampaignCopy.title.zh} · 第 25 关` },
+  globalLevel: 25,
+  requiresCompletedScenarioIds: [oregon04CampaignId],
 }]);

@@ -29,6 +29,9 @@ import {
   mississippi18LevelEighteenCampaignContent,
   mississippi19LevelNineteenCampaignContent,
   oregon02LevelTwentyTwoCampaignContent,
+  oregon03LevelTwentyThreeCampaignContent,
+  oregon04LevelTwentyFourCampaignContent,
+  oregon05LevelTwentyFiveCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -260,6 +263,24 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Cashcow Canyon · Level 22', zh: '金牛峡谷 · 第 22 关' },
     globalLevel: 22,
     requiresCompletedScenarioIds: ['campaign-oregon-01'],
+  }, {
+    scenarioId: oregon03LevelTwentyThreeCampaignContent.id,
+    contentVersion: oregon03LevelTwentyThreeCampaignContent.contentVersion,
+    title: { en: 'Chinook Woods · Level 23', zh: '奇努克森林 · 第 23 关' },
+    globalLevel: 23,
+    requiresCompletedScenarioIds: ['campaign-oregon-02'],
+  }, {
+    scenarioId: oregon04LevelTwentyFourCampaignContent.id,
+    contentVersion: oregon04LevelTwentyFourCampaignContent.contentVersion,
+    title: { en: 'Fort Echo · Level 24', zh: '回声堡 · 第 24 关' },
+    globalLevel: 24,
+    requiresCompletedScenarioIds: ['campaign-oregon-03'],
+  }, {
+    scenarioId: oregon05LevelTwentyFiveCampaignContent.id,
+    contentVersion: oregon05LevelTwentyFiveCampaignContent.contentVersion,
+    title: { en: 'Dynamite Plains · Level 25', zh: '炸药平原 · 第 25 关' },
+    globalLevel: 25,
+    requiresCompletedScenarioIds: ['campaign-oregon-04'],
   }]);
 });
 

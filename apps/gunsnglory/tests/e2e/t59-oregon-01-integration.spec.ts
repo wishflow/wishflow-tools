@@ -61,7 +61,7 @@ async function expectEastwoodOpening(page: import('@playwright/test').Page, cont
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
 }
 
-test('Free Play opens both implemented Oregon levels and leaves later levels unavailable', async ({ page }) => {
+test('Free Play opens the five implemented Oregon levels and leaves later levels unavailable', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   await keepSoundOff(page);
@@ -70,7 +70,10 @@ test('Free Play opens both implemented Oregon levels and leaves later levels una
   await page.getByTestId('campaign-region-oregon').click();
   await expect(page.getByTestId('campaign-level-21')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-22')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-23')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-23')).toBeEnabled();
+  await expect(page.getByTestId('campaign-level-24')).toBeEnabled();
+  await expect(page.getByTestId('campaign-level-25')).toBeEnabled();
+  await expect(page.getByTestId('campaign-level-26')).toBeDisabled();
   await page.getByTestId('campaign-level-21').click();
   await expectEastwoodOverview(page);
 

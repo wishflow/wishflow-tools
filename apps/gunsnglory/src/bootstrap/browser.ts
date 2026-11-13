@@ -107,6 +107,24 @@ import {
   parseOregon02ReplayContentVersion,
 } from '../content/oregon-02-content-version';
 import { oregon02CampaignId } from '../content/oregon-02-identity';
+import { createOregon03CampaignContent } from '../content/oregon-03-campaign';
+import {
+  oregon03CampaignContentVersionFor,
+  parseOregon03ReplayContentVersion,
+} from '../content/oregon-03-content-version';
+import { oregon03CampaignId } from '../content/oregon-03-identity';
+import { createOregon04CampaignContent } from '../content/oregon-04-campaign';
+import {
+  oregon04CampaignContentVersionFor,
+  parseOregon04ReplayContentVersion,
+} from '../content/oregon-04-content-version';
+import { oregon04CampaignId } from '../content/oregon-04-identity';
+import { createOregon05CampaignContent } from '../content/oregon-05-campaign';
+import {
+  oregon05CampaignContentVersionFor,
+  parseOregon05ReplayContentVersion,
+} from '../content/oregon-05-content-version';
+import { oregon05CampaignId } from '../content/oregon-05-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -239,6 +257,15 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === oregon02CampaignId) {
     return oregon02CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === oregon03CampaignId) {
+    return oregon03CampaignContentVersionFor(completedScenarioIds);
+  }
+  if (scenarioId === oregon04CampaignId) {
+    return oregon04CampaignContentVersionFor(completedScenarioIds);
+  }
+  if (scenarioId === oregon05CampaignId) {
+    return oregon05CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -269,6 +296,9 @@ export function createBrowserGame(
     [mississippi20CampaignId]: createMississippi20CampaignContent(completedScenarioIds),
     [oregon01CampaignId]: createOregon01CampaignContent(completedScenarioIds),
     [oregon02CampaignId]: createOregon02CampaignContent(completedScenarioIds),
+    [oregon03CampaignId]: createOregon03CampaignContent(completedScenarioIds),
+    [oregon04CampaignId]: createOregon04CampaignContent(completedScenarioIds),
+    [oregon05CampaignId]: createOregon05CampaignContent(completedScenarioIds),
   };
   if (legacyReplayContentOverride) {
     const scenario = scenarios[legacyReplayContentOverride.scenarioId];
@@ -470,6 +500,27 @@ export function createBrowserGameForOregon01Replay(contentVersion: string | unde
 export function createBrowserGameForOregon02Replay(contentVersion: string | undefined) {
   const parsed = parseOregon02ReplayContentVersion(contentVersion);
   if (!parsed) return createBrowserGame([], undefined, oregon02CampaignId);
+  return createBrowserGame(parsed.completedScenarioIds);
+}
+
+/** Replay import restores Chinook Woods' recorded global hire unlocks. */
+export function createBrowserGameForOregon03Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon03ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon03CampaignId);
+  return createBrowserGame(parsed.completedScenarioIds);
+}
+
+/** Replay import restores Fort Echo's recorded global hire unlock snapshot. */
+export function createBrowserGameForOregon04Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon04ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon04CampaignId);
+  return createBrowserGame(parsed.completedScenarioIds);
+}
+
+/** Replay import restores Dynamite Plains' recorded unit and Dynamite unlock snapshots. */
+export function createBrowserGameForOregon05Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon05ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon05CampaignId);
   return createBrowserGame(parsed.completedScenarioIds);
 }
 
