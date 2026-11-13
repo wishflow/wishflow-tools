@@ -26,7 +26,7 @@ function isFortKaboomUnitTypeId(unitTypeId: CampaignMapUnitTypeId): unitTypeId i
   return unitTypeId >= 3 && unitTypeId <= 6;
 }
 
-function createActiveGunslinger(cell: { x: number; y: number }, index = 1): ScenarioUnit {
+export function createActiveGunslinger(cell: { x: number; y: number }, index = 1): ScenarioUnit {
   const render = { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 };
   return {
     id: `gunslinger-${index}`,
@@ -127,7 +127,7 @@ export function createSleepingSalesman(cell: { x: number; y: number }, index = 1
   };
 }
 
-function createGambler(cell: { x: number; y: number }): ScenarioUnit {
+export function createGambler(cell: { x: number; y: number }): ScenarioUnit {
   const frame = { x: 0, y: 0, width: 32, height: 44 };
   const render = createAnchoredMapRender(cell, frame);
   return {

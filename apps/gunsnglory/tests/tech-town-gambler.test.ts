@@ -147,6 +147,38 @@ test('GameSession rejects Gambler maps without explicit rules or an unlocked pri
   );
 });
 
+test('Gambler prize templates can spawn a unit without adding it to the starting map', async () => {
+  const scenario = createGamblerScenario();
+  const gunslingerTemplate = scenario.units.find(({ type }) => type === 'gunslinger');
+  assert.ok(gunslingerTemplate);
+  const templateOnlyScenario: ScenarioContent = {
+    ...scenario,
+    units: scenario.units.filter(({ type }) => type !== 'gunslinger'),
+    gambler: {
+      ...scenario.gambler!,
+      unlockedPrizeUnitTypes: [1],
+      prizeTemplates: { 1: gunslingerTemplate },
+    },
+  };
+
+  const { session, gambler } = await openSelectedGambler(templateOnlyScenario, 0);
+  try {
+    assert.equal(session.advance({ deltaMs: 0 }).units.some(({ type }) => type === 'gunslinger'), false);
+    assert.equal(session.submitIntent({
+      type: 'play-gambler',
+      unitId: gambler.id,
+      commandId: 'template-only-prize',
+    }), true);
+    session.advance({ deltaMs: 0 });
+    const view = session.advance({ deltaMs: 1 });
+    const prize = view.units.find(({ id }) => id === `${gambler.id}-prize-1`);
+    assert.equal(prize?.type, 'gunslinger');
+    assert.equal(prize?.activity, 5);
+  } finally {
+    session.close();
+  }
+});
+
 test('loads the APK Gambler and Casino images from the declared asset manifest', () => {
   assert.deepEqual(techTownMapEntityAssets, ['player_gambler', 'portrait_gambler', 'b_3x2_casino']);
   assert.deepEqual(dimensions('player_gambler'), { width: 32, height: 44 });

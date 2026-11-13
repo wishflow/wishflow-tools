@@ -16,6 +16,7 @@ import {
   createBrowserGameForMississippi18Replay,
   createBrowserGameForMississippi19Replay,
   createBrowserGameForMississippi20Replay,
+  createBrowserGameForOregon01Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -105,6 +106,11 @@ import { createMississippi20CampaignContent } from './content/mississippi-20-cam
 import { mississippi20CampaignCopy } from './content/mississippi-20-campaign-copy';
 import { mississippi20CampaignId } from './content/mississippi-20-identity';
 import { mississippi20WaveIntros } from './content/mississippi-20-wave-intros';
+import { createOregon01CampaignContent } from './content/oregon-01-campaign';
+import { oregon01CampaignCopy } from './content/oregon-01-campaign-copy';
+import { oregon01CampaignId } from './content/oregon-01-identity';
+import { oregon01AmbientMusic, oregon01BattleMusicForWave, type Oregon01MusicTrack } from './content/oregon-01-music';
+import { oregon01WaveIntros } from './content/oregon-01-wave-intros';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -819,6 +825,9 @@ const languageMessages = {
       if (scenarioId === mississippi20CampaignId) return mode === 'free'
         ? 'Free Play does not change campaign progress or best score.'
         : 'Official Horse Hills level 20: eight original waves across four routes. Victory records campaign completion and best score.';
+      if (scenarioId === oregon01CampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Eastwood Forest level 21: eight original waves across six routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -1066,6 +1075,9 @@ const languageMessages = {
       if (scenarioId === mississippi20CampaignId) return mode === 'free'
         ? '自由游玩不会更改战役进度或最高分。'
         : '正式关卡：马丘陵，第 20 关。包含四条路线上的原版八波；胜利后记录战役完成与最高分。';
+      if (scenarioId === oregon01CampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：东林地，第 21 关。包含六条路线上的原版八波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -1406,6 +1418,7 @@ const campaignMenuCopy = {
     levelNineteenVictoryTitle: mississippi19CampaignCopy.victoryTitle.en,
     levelTwentyTitle: mississippi20CampaignCopy.title.en,
     levelTwentyVictoryTitle: mississippi20CampaignCopy.victoryTitle.en,
+    levelTwentyOneTitle: oregon01CampaignCopy.title.en,
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
@@ -1426,6 +1439,7 @@ const campaignMenuCopy = {
     levelEighteenInfo: mississippi18CampaignCopy.overview.en,
     levelNineteenInfo: mississippi19CampaignCopy.overview.en,
     levelTwentyInfo: mississippi20CampaignCopy.overview.en,
+    levelTwentyOneInfo: oregon01CampaignCopy.overview.en,
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
@@ -1505,6 +1519,7 @@ const campaignMenuCopy = {
     levelNineteenVictoryTitle: mississippi19CampaignCopy.victoryTitle.zh,
     levelTwentyTitle: mississippi20CampaignCopy.title.zh,
     levelTwentyVictoryTitle: mississippi20CampaignCopy.victoryTitle.zh,
+    levelTwentyOneTitle: oregon01CampaignCopy.title.zh,
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
@@ -1525,6 +1540,7 @@ const campaignMenuCopy = {
     levelEighteenInfo: mississippi18CampaignCopy.overview.zh,
     levelNineteenInfo: mississippi19CampaignCopy.overview.zh,
     levelTwentyInfo: mississippi20CampaignCopy.overview.zh,
+    levelTwentyOneInfo: oregon01CampaignCopy.overview.zh,
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
@@ -1920,7 +1936,8 @@ function campaignMenuLevelScreen(): string {
                               : level.level === 17 ? copy.levelSeventeenTitle
                                 : level.level === 18 ? copy.levelEighteenTitle
                                   : level.level === 19 ? copy.levelNineteenTitle
-                                    : level.level === 20 ? copy.levelTwentyTitle : level.title;
+                                    : level.level === 20 ? copy.levelTwentyTitle
+                                      : level.level === 21 ? copy.levelTwentyOneTitle : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.mapFileNumber).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -2005,7 +2022,8 @@ function campaignMenuOverviewScreen(): string {
                   : entry.level === 17 ? createMississippi17CampaignContent(completedScenarios)
                     : entry.level === 18 ? createMississippi18CampaignContent(completedScenarios)
                       : entry.level === 19 ? createMississippi19CampaignContent(completedScenarios)
-                        : createMississippi20CampaignContent(completedScenarios);
+                        : entry.level === 20 ? createMississippi20CampaignContent(completedScenarios)
+                          : createOregon01CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo
@@ -2024,13 +2042,16 @@ function campaignMenuOverviewScreen(): string {
                                 : entry.level === 16 ? copy.levelSixteenInfo
                                   : entry.level === 17 ? copy.levelSeventeenInfo
                                     : entry.level === 18 ? copy.levelEighteenInfo
-                                      : entry.level === 19 ? copy.levelNineteenInfo : copy.levelTwentyInfo;
+                                      : entry.level === 19 ? copy.levelNineteenInfo
+                                        : entry.level === 20 ? copy.levelTwentyInfo
+                                          : entry.level === 21 ? copy.levelTwentyOneInfo : '';
   const levelDescription = entry.level === 15 ? copy.levelFifteenInfo
     : entry.level === 16 ? copy.levelSixteenInfo
       : entry.level === 17 ? copy.levelSeventeenInfo
         : entry.level === 18 ? copy.levelEighteenInfo
           : entry.level === 19 ? copy.levelNineteenInfo
-            : entry.level === 20 ? copy.levelTwentyInfo : description;
+            : entry.level === 20 ? copy.levelTwentyInfo
+              : entry.level === 21 ? copy.levelTwentyOneInfo : description;
   const artName = `gng_levelmap_${String(entry.mapFileNumber).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -2059,7 +2080,8 @@ function campaignMenuOverviewScreen(): string {
                                   : entry.level === 17 ? copy.levelSeventeenTitle
                                     : entry.level === 18 ? copy.levelEighteenTitle
                                       : entry.level === 19 ? copy.levelNineteenTitle
-                                        : entry.level === 20 ? copy.levelTwentyTitle : entry.title)}</h2>
+                                        : entry.level === 20 ? copy.levelTwentyTitle
+                                          : entry.level === 21 ? copy.levelTwentyOneTitle : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -3129,6 +3151,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       || officialStage?.scenarioId === mississippi19CampaignId
       || officialStage?.scenarioId === mississippi20CampaignId
     ? language === 'zh' ? '密西西比' : 'MISSISSIPPI'
+    : officialStage?.scenarioId === oregon01CampaignId
+      ? language === 'zh' ? '俄勒冈' : 'OREGON'
     : 'NEW MEXICO';
   const displayedCampaignStage = activeCampaignStage ?? officialStage;
   const techTownTrainSample = view.scenarioId === techTownTrainTestContent.id;
@@ -3692,6 +3716,7 @@ const assetNames = new Set([
     createMississippi17CampaignContent(allMississippiUnitUnlocks),
     createMississippi18CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createMississippi20CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
+    createOregon01CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
   ]),
   'pioneer_male',
   'pioneer_female',
@@ -3781,6 +3806,7 @@ const assetNames = new Set([
   'portrait_mexican',
   'portrait_indian',
   'portrait_settlers',
+  'oregon_dakota_portrait_geezer',
   'portrait_deserter',
   'portrait_engineer',
   'portrait_sheriff',
@@ -3793,7 +3819,7 @@ const audioElements = new Map<string, HTMLAudioElement[]>();
 let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
 const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
-let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
 const blockedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let audioUserGestureObserved = false;
@@ -3960,8 +3986,13 @@ function isOfficialMississippiMusicSession(): boolean {
       || session.startRecord.scenarioId === mississippi20CampaignId);
 }
 
+function isOfficialOregonMusicSession(): boolean {
+  return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
+    && session.startRecord.scenarioId === oregon01CampaignId;
+}
+
 function isOfficialCampaignMusicSession(): boolean {
-  return isOfficialNewMexicoMusicSession() || isOfficialMississippiMusicSession();
+  return isOfficialNewMexicoMusicSession() || isOfficialMississippiMusicSession() || isOfficialOregonMusicSession();
 }
 
 function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[] {
@@ -3985,6 +4016,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === mississippi18CampaignId) return mississippi18WaveIntros;
   if (scenarioId === mississippi19CampaignId) return mississippi19WaveIntros;
   if (scenarioId === mississippi20CampaignId) return mississippi20WaveIntros;
+  if (scenarioId === oregon01CampaignId) return oregon01WaveIntros;
   return [];
 }
 
@@ -4142,7 +4174,7 @@ function pauseBackgroundMusic(resetPosition = false): void {
   if (resetPosition) backgroundMusic.currentTime = 0;
 }
 
-function setCampaignBackgroundMusic(track: CowGulchMusicTrack | MississippiMusicTrack): void {
+function setCampaignBackgroundMusic(track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack): void {
   if (!isOfficialCampaignMusicSession()) return;
   if (backgroundMusicTrack === track && backgroundMusic) {
     playBackgroundMusic();
@@ -4256,12 +4288,15 @@ function playRequestedSounds(
       // GameView numbers waves from 1; the APK's GunsAndGloryThread.wave counter starts at 0.
       setCampaignBackgroundMusic(isOfficialMississippiMusicSession()
         ? mississippiBattleMusicForWave(eventWaveNumber - 1)
-        : cowGulchBattleMusicForWave(eventWaveNumber - 1));
+        : isOfficialOregonMusicSession()
+          ? oregon01BattleMusicForWave(eventWaveNumber - 1)
+          : cowGulchBattleMusicForWave(eventWaveNumber - 1));
     }
     if (event.type === 'wave-settled') {
       setCampaignBackgroundMusic(event.settlement.outcome === 'victory'
         ? cowGulchVictoryMusic
-        : isOfficialMississippiMusicSession() ? mississippiAmbientMusic : cowGulchAmbientMusic);
+        : isOfficialMississippiMusicSession() ? mississippiAmbientMusic
+          : isOfficialOregonMusicSession() ? oregon01AmbientMusic : cowGulchAmbientMusic);
     }
   }
 }
@@ -4306,6 +4341,7 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   battleMusicWaveNumber = undefined;
   if (isOfficialNewMexicoMusicSession()) setCampaignBackgroundMusic(cowGulchAmbientMusic);
   else if (isOfficialMississippiMusicSession()) setCampaignBackgroundMusic(mississippiAmbientMusic);
+  else if (isOfficialOregonMusicSession()) setCampaignBackgroundMusic(oregon01AmbientMusic);
   pendingCampaignWaveIntro = intro;
   stopGameLoop();
   pauseReason = 'wave-intro';
@@ -4421,7 +4457,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             || request.scenarioId === mississippi17CampaignId
             || request.scenarioId === mississippi18CampaignId
             || request.scenarioId === mississippi19CampaignId
-            || request.scenarioId === mississippi20CampaignId)
+            || request.scenarioId === mississippi20CampaignId
+            || request.scenarioId === oregon01CampaignId)
             && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
             : game;
@@ -4658,6 +4695,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === mississippi20CampaignId) {
       return createBrowserGameForMississippi20Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === oregon01CampaignId) {
+      return createBrowserGameForOregon01Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }

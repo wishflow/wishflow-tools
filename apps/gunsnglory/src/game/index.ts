@@ -363,6 +363,8 @@ export interface GamblerScenarioDefinition {
   unlockedPrizeUnitTypes: readonly GamblerUnitType[];
   /** GameDesignData.LEVEL_DATA_GAMBLER_TIME, in simulation milliseconds. */
   cooldownMs: number;
+  /** Unit designs used only when a Gambler prize is spawned, never as starting map units. */
+  prizeTemplates?: Partial<Readonly<Record<GamblerUnitType, ScenarioUnit>>>;
 }
 
 export interface ScenarioContent {
@@ -992,6 +994,16 @@ const GAMBLER_UNIT_TYPE_NAMES: Readonly<Record<GamblerUnitType, string>> = Objec
   35: 'pyromaniac',
   36: 'salesman',
 });
+
+function gamblerPrizeTemplateFor(
+  scenario: ScenarioContent,
+  unitType: GamblerUnitType,
+): ScenarioUnit | undefined {
+  const expectedType = GAMBLER_UNIT_TYPE_NAMES[unitType];
+  return scenario.gambler?.prizeTemplates?.[unitType]
+    ?? scenario.units.find((unit) => unit.type === expectedType);
+}
+
 const UNIT_COLLIDER_START_X = -2534;
 const UNIT_COLLIDER_START_Y = -5376;
 const UNIT_COLLIDER_WIDTH = 5068;
@@ -1198,7 +1210,7 @@ function resolveGamblerCasinoCells(scenario: ScenarioContent): Map<string, { x: 
     || prizeTypes.some((unitType, index) => (
       !isValidPrizeType(unitType)
       || prizeTypes.indexOf(unitType) !== index
-      || !scenario.units.some((unit) => unit.type === GAMBLER_UNIT_TYPE_NAMES[unitType])
+      || gamblerPrizeTemplateFor(scenario, unitType)?.type !== GAMBLER_UNIT_TYPE_NAMES[unitType]
     ))
     || gamblers.length === 0
     || casinos.length !== gamblers.length
@@ -3900,7 +3912,7 @@ export function createGame(options: {
             pendingPrize.remainingMs = Math.trunc(pendingPrize.remainingMs - deltaMs);
             if (pendingPrize.remainingMs >= 500) continue;
 
-            const template = scenario.units.find(({ type }) => type === GAMBLER_UNIT_TYPE_NAMES[pendingPrize.unitType]);
+            const template = gamblerPrizeTemplateFor(scenario, pendingPrize.unitType);
             if (!template) throw new Error(`Gambler prize template is missing for unit type ${pendingPrize.unitType}`);
             const spawned = gamblerPrizeUnit(template, pendingPrize.unitType, pendingPrize.unitId, gambler.casinoCell);
             spawnedGamblerPrizes.push(spawned);

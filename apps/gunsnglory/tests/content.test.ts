@@ -247,6 +247,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Horse Hills · Level 20', zh: '马丘陵 · 第 20 关' },
     globalLevel: 20,
     requiresCompletedScenarioIds: ['campaign-mississippi-19'],
+  }, {
+    scenarioId: 'campaign-oregon-01',
+    contentVersion: 'gng-free-1.8.6-oregon-01-formal-v1-grandpa0-sniper0-pyro0-salesman0',
+    title: { en: 'Eastwood Forest · Level 21', zh: '东林地 · 第 21 关' },
+    globalLevel: 21,
+    requiresCompletedScenarioIds: ['campaign-mississippi-20'],
   }]);
 });
 
