@@ -20,7 +20,7 @@ const milestoneScenarioIds = [
 async function createReplayCases(page: import('@playwright/test').Page): Promise<ReplayProbeRequest[]> {
   return page.evaluate(async () => {
     const loadModule = (specifier: string) => import(specifier);
-    const [techTown, billyHills, murdockMountains, luckyLake, newMexicoVersion, oregonVersion, oregonIdentity] = await Promise.all([
+    const [techTown, billyHills, murdockMountains, luckyLake, newMexicoVersion, oregonVersion, oregonIdentity, oregon02Version, oregon02Identity] = await Promise.all([
       loadModule('/src/content/tech-town-campaign.ts') as Promise<typeof import('../../src/content/tech-town-campaign')>,
       loadModule('/src/content/billy-hills-campaign.ts') as Promise<typeof import('../../src/content/billy-hills-campaign')>,
       loadModule('/src/content/murdock-mountains-campaign.ts') as Promise<typeof import('../../src/content/murdock-mountains-campaign')>,
@@ -28,6 +28,8 @@ async function createReplayCases(page: import('@playwright/test').Page): Promise
       loadModule('/src/content/new-mexico-replay-content-version.ts') as Promise<typeof import('../../src/content/new-mexico-replay-content-version')>,
       loadModule('/src/content/oregon-01-content-version.ts') as Promise<typeof import('../../src/content/oregon-01-content-version')>,
       loadModule('/src/content/oregon-01-identity.ts') as Promise<typeof import('../../src/content/oregon-01-identity')>,
+      loadModule('/src/content/oregon-02-content-version.ts') as Promise<typeof import('../../src/content/oregon-02-content-version')>,
+      loadModule('/src/content/oregon-02-identity.ts') as Promise<typeof import('../../src/content/oregon-02-identity')>,
     ]);
     const milestones = [
       'campaign-oregon-10',
@@ -79,6 +81,19 @@ async function createReplayCases(page: import('@playwright/test').Page): Promise
       importCompletedScenarioIds: importingProfile,
       seed: 61_002,
     });
+    for (let mask = 0; mask < 4; mask += 1) {
+      const cashcowSnapshot = [
+        ...(mask & 1 ? ['campaign-nevada-10'] : []),
+        ...(mask & 2 ? ['campaign-alaska-10'] : []),
+      ];
+      cases.push({
+        scenarioId: oregon02Identity.oregon02CampaignId,
+        contentVersion: oregon02Version.oregon02CampaignContentVersionFor(cashcowSnapshot),
+        sourceCompletedScenarioIds: cashcowSnapshot,
+        importCompletedScenarioIds: importingProfile,
+        seed: 62_001 + mask,
+      });
+    }
     return cases;
   });
 }
@@ -114,18 +129,22 @@ async function createReplayProbe(
 ): Promise<string> {
   return page.evaluate(async (probe) => {
     const loadModule = (specifier: string) => import(specifier);
-    const [bootstrap, replay, oregonIdentity] = await Promise.all([
+    const [bootstrap, replay, oregonIdentity, oregon02Identity] = await Promise.all([
       loadModule('/src/bootstrap/browser.ts') as Promise<typeof import('../../src/bootstrap/browser')>,
       loadModule('/src/game/replay.ts') as Promise<typeof import('../../src/game/replay')>,
       loadModule('/src/content/oregon-01-identity.ts') as Promise<typeof import('../../src/content/oregon-01-identity')>,
+      loadModule('/src/content/oregon-02-identity.ts') as Promise<typeof import('../../src/content/oregon-02-identity')>,
     ]);
-    const game = probe.scenarioId === oregonIdentity.oregon01CampaignId
-      ? bootstrap.createBrowserGameForOregon01Replay(probe.contentVersion)
-      : bootstrap.createBrowserGameForNewMexicoReplay(
+    const replayFactory = (contentVersion: string, completedScenarioIds: string[]) => probe.scenarioId === oregonIdentity.oregon01CampaignId
+      ? bootstrap.createBrowserGameForOregon01Replay(contentVersion)
+      : probe.scenarioId === oregon02Identity.oregon02CampaignId
+        ? bootstrap.createBrowserGameForOregon02Replay(contentVersion)
+        : bootstrap.createBrowserGameForNewMexicoReplay(
         probe.scenarioId,
-        probe.contentVersion,
-        probe.sourceCompletedScenarioIds,
+        contentVersion,
+        completedScenarioIds,
       );
+    const game = replayFactory(probe.contentVersion, probe.sourceCompletedScenarioIds);
     const session = await game.open({
       scenarioId: probe.scenarioId,
       contentVersion: probe.contentVersion,
@@ -155,13 +174,10 @@ async function createReplayProbe(
         },
       });
       await replay.parseReplay(serialized);
-      const importerGame = probe.scenarioId === oregonIdentity.oregon01CampaignId
-        ? bootstrap.createBrowserGameForOregon01Replay(probe.importContentVersion ?? probe.contentVersion)
-        : bootstrap.createBrowserGameForNewMexicoReplay(
-          probe.scenarioId,
-          probe.importContentVersion ?? probe.contentVersion,
-          probe.importCompletedScenarioIds,
-        );
+      const importerGame = replayFactory(
+        probe.importContentVersion ?? probe.contentVersion,
+        probe.importCompletedScenarioIds,
+      );
       try {
         const result = await importerGame.replay(serialized);
         result.session.close();
@@ -179,7 +195,7 @@ async function createReplayProbe(
   }, request);
 }
 
-test('replay import recognizes M4–M7 and Eastwood recorded content versions', async ({ page }) => {
+test('replay import recognizes M4–M7 and Oregon recorded content versions', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   await writeProfile(page, [...milestoneScenarioIds, 'campaign-new-mexico-03']);
@@ -215,6 +231,22 @@ test('replay import recognizes M4–M7 and Eastwood recorded content versions', 
     name: 'unsupported-tech-town.replay.json',
     mimeType: 'application/json',
     buffer: Buffer.from(unknownVersionProbe),
+  });
+  await expect(page.getByTestId('replay-status')).toHaveText('Replay content version is unavailable in this build.');
+
+  const cashcowCase = replayCases.find(({ scenarioId }) => scenarioId === 'campaign-oregon-02');
+  expect(cashcowCase).toBeDefined();
+  const unknownCashcowVersion = await createReplayProbe(page, {
+    ...cashcowCase!,
+    importContentVersion: 'future-unknown-cashcow-version',
+    expectedImportErrorCode: 'content-unavailable',
+    importCompletedScenarioIds: [...milestoneScenarioIds, 'campaign-new-mexico-03'],
+    seed: 62_499,
+  });
+  await page.getByTestId('import-replay').setInputFiles({
+    name: 'unsupported-cashcow-canyon.replay.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(unknownCashcowVersion),
   });
   await expect(page.getByTestId('replay-status')).toHaveText('Replay content version is unavailable in this build.');
 });

@@ -42,7 +42,7 @@ function emptyRequestContent(completedScenarioIds: readonly string[]): ScenarioC
 }
 
 test('Horse Hills is formal level 20 and unlocks after Dust Falls', async () => {
-  assert.equal(officialCampaignStages.length, 21);
+  assert.equal(officialCampaignStages.length, 22);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 20), {
     scenarioId: mississippi20CampaignId,
     contentVersion: mississippi20CampaignContentVersionFor([]),

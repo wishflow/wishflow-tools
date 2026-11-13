@@ -68,7 +68,7 @@ test('Highpoint Terrace preserves APK English campaign copy and all eight dialog
 });
 
 test('Highpoint Terrace is formal level 16 and requires completion of Railroad Canyon', async () => {
-  assert.equal(officialCampaignStages.length, 21);
+  assert.equal(officialCampaignStages.length, 22);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 16), {
     scenarioId: mississippi16CampaignId,
     contentVersion: mississippi16CampaignContentVersionFor([]),

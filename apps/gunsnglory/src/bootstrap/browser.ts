@@ -101,6 +101,12 @@ import {
   parseOregon01ReplayContentVersion,
 } from '../content/oregon-01-content-version';
 import { oregon01CampaignId } from '../content/oregon-01-identity';
+import { createOregon02CampaignContent } from '../content/oregon-02-campaign';
+import {
+  oregon02CampaignContentVersionFor,
+  parseOregon02ReplayContentVersion,
+} from '../content/oregon-02-content-version';
+import { oregon02CampaignId } from '../content/oregon-02-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -230,6 +236,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === oregon01CampaignId) {
     return oregon01CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === oregon02CampaignId) {
+    return oregon02CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -259,6 +268,7 @@ export function createBrowserGame(
     [mississippi19CampaignId]: createMississippi19CampaignContent(completedScenarioIds),
     [mississippi20CampaignId]: createMississippi20CampaignContent(completedScenarioIds),
     [oregon01CampaignId]: createOregon01CampaignContent(completedScenarioIds),
+    [oregon02CampaignId]: createOregon02CampaignContent(completedScenarioIds),
   };
   if (legacyReplayContentOverride) {
     const scenario = scenarios[legacyReplayContentOverride.scenarioId];
@@ -454,6 +464,13 @@ export function createBrowserGameForOregon01Replay(contentVersion: string | unde
     }
     : undefined;
   return createBrowserGame(parsed.completedScenarioIds, legacyReplay);
+}
+
+/** Replay import restores Cashcow's recorded global hire unlocks. */
+export function createBrowserGameForOregon02Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon02ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon02CampaignId);
+  return createBrowserGame(parsed.completedScenarioIds);
 }
 
 export function createBrowserProgress() {

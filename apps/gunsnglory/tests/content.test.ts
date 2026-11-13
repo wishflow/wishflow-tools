@@ -28,6 +28,7 @@ import {
   mississippi16LevelSixteenCampaignContent,
   mississippi18LevelEighteenCampaignContent,
   mississippi19LevelNineteenCampaignContent,
+  oregon02LevelTwentyTwoCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -253,6 +254,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Eastwood Forest · Level 21', zh: '东林地 · 第 21 关' },
     globalLevel: 21,
     requiresCompletedScenarioIds: ['campaign-mississippi-20'],
+  }, {
+    scenarioId: oregon02LevelTwentyTwoCampaignContent.id,
+    contentVersion: oregon02LevelTwentyTwoCampaignContent.contentVersion,
+    title: { en: 'Cashcow Canyon · Level 22', zh: '金牛峡谷 · 第 22 关' },
+    globalLevel: 22,
+    requiresCompletedScenarioIds: ['campaign-oregon-01'],
   }]);
 });
 

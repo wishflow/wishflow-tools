@@ -54,7 +54,8 @@ test('uses APK hdpi atlases for Cow Gulch terrain, road, bridge, and scenery', (
     'tiles_path_var', 'tiles_bridge_verti', 'tiles_bridge_hori', 'tiles_bridge_pier_left',
     'tiles_bridge_pier_right', 'b_1x1_windmill', 'e_1x1_bush', 'e_1x1_cactus_a',
     'e_1x1_cactus_b', 'e_1x1_rocks_a', 'e_1x1_rocks_b', 'e_1x1_rocks_water',
-    'e_1x1_tree', 'e_1x1_tree_green_a', 'e_1x2_bones',
+    'e_1x1_tree', 'e_1x1_tree_green_a', 'e_1x1_tree_green_b', 'e_1x1_tree_green_c',
+    'e_1x1_tree_stump', 'e_1x2_bones',
   ]) {
     assert.equal(gameAssetRelativePath(asset), `hdpi/${asset}.png`);
   }
@@ -68,6 +69,9 @@ test('maps the hdpi Cow Gulch cart back to its 64×48 logical footprint', () => 
 test('maps hdpi Cow Gulch scenery back to the APK mdpi logical dimensions', () => {
   assert.deepEqual(gameAssetLogicalSize('e_1x1_cactus_a', { width: 48, height: 66 }), { width: 32, height: 44 });
   assert.deepEqual(gameAssetLogicalSize('e_1x1_tree_green_a', { width: 48, height: 78 }), { width: 32, height: 52 });
+  assert.deepEqual(gameAssetLogicalSize('e_1x1_tree_green_b', { width: 48, height: 84 }), { width: 32, height: 56 });
+  assert.deepEqual(gameAssetLogicalSize('e_1x1_tree_stump', { width: 48, height: 48 }), { width: 32, height: 32 });
+  assert.deepEqual(gameAssetLogicalSize('e_1x1_tree_green_c', { width: 48, height: 84 }), { width: 32, height: 56 });
   assert.deepEqual(gameAssetLogicalSize('b_1x1_windmill', { width: 48, height: 96 }), { width: 32, height: 64 });
   assert.equal(gameAssetSourceScale('tiles_desert_var'), 1.5, 'tile source coordinates scale to hdpi atlas pixels');
   assert.equal(gameAssetSourceScale('pioneer_male'), 1, 'non-map sprite crop coordinates remain unchanged');

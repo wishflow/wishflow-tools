@@ -61,6 +61,9 @@ import { mississippi20CampaignId } from './mississippi-20-identity';
 import { createOregon01CampaignContent } from './oregon-01-campaign';
 import { oregon01CampaignCopy } from './oregon-01-campaign-copy';
 import { oregon01CampaignId } from './oregon-01-identity';
+import { createOregon02CampaignContent } from './oregon-02-campaign';
+import { oregon02CampaignCopy } from './oregon-02-campaign-copy';
+import { oregon02CampaignId } from './oregon-02-identity';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -156,6 +159,9 @@ export const mississippi20LevelTwentyCampaignContent = createMississippi20Campai
 
 /** Formal Oregon level twenty-one assembled from the researched Eastwood Forest content. */
 export const oregon01LevelTwentyOneCampaignContent = createOregon01CampaignContent();
+
+/** Formal Oregon level twenty-two assembled from the researched Cashcow Canyon content. */
+export const oregon02LevelTwentyTwoCampaignContent = createOregon02CampaignContent();
 
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
@@ -283,4 +289,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: { en: `${oregon01CampaignCopy.title.en} · Level 21`, zh: `${oregon01CampaignCopy.title.zh} · 第 21 关` },
   globalLevel: 21,
   requiresCompletedScenarioIds: [mississippi20CampaignId],
+}, {
+  scenarioId: oregon02CampaignId,
+  contentVersion: oregon02LevelTwentyTwoCampaignContent.contentVersion!,
+  title: { en: `${oregon02CampaignCopy.title.en} · Level 22`, zh: `${oregon02CampaignCopy.title.zh} · 第 22 关` },
+  globalLevel: 22,
+  requiresCompletedScenarioIds: [oregon01CampaignId],
 }]);
