@@ -23,6 +23,14 @@
 - **修复与防回归：**将进度期望更新为15关，Mississippi 已实现数更新为5，并将未实现范围从16关开始。修复后相关定向测试通过，完整 `test:ci` 通过 630 项单测和143项 E2E。
 - **避免重复：**登记新战役关卡时，搜索并核对全仓所有 `*/N stages`、区域“已实现关卡数”、可用/禁用关卡范围及阶段快照断言；不要只检查新关卡自己的测试。
 
+M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败，包括16个旧正式关卡断言仍期待21关、Apache Valley/Cow Gulch/Fort Kaboom的完整目录快照缺少第22关，以及 Progress 快照少了锁定的 Cashcow Canyon；修正后20个单测定向复跑全部通过。全量 E2E 随后发现7项旧断言：6处仍期待 `*/21 stages complete`，另有 Eastwood Free Play 测试仍把可选的 Level 22 当成禁用关；对应断言已更新，相关6个 spec 共13项定向用例全部通过。最终 `CI=1 PLAYWRIGHT_PORT=43217 pnpm run test:ci` 通过类型检查、748项单测、生产构建和158项 E2E。构建 JS chunk 2.559 MB（gzip 281.36 KB），有超过500 KB的既有 chunk 警告；本批没有修改拆包架构。
+
+## 新增关卡时同步战斗 HUD 的地区标签
+
+- **表现与复现：**Cashcow Canyon 已出现在 Oregon 选关和正式战役中，但 Free Play 与正式开局后的战斗 HUD 仍显示 `NEW MEXICO`。从 Oregon 选择 Level 22 并开始战斗即可复现。
+- **根因与证据：**`main.ts` 的 `campaignRegionLabel` 使用逐关 ID 判断地区，只列出 Oregon 的 Eastwood Forest；遇到 Cashcow 的 `officialStage` 时回退到默认 New Mexico。`t61-oregon-02-integration.spec.ts` 首次对 HUD 区域断言时捕获了该错误。
+- **修复与防回归：**将 `oregon02CampaignId` 纳入 Oregon 标签判断。新增正式关卡时，除了检查选关所属地区，也要检查战斗 HUD 在正式和 Free Play 两种入口下显示的地区与关卡目录一致；`t61` 分别断言 `OREGON · 22` 和 `FREE PLAY · OREGON · 22`。
+
 ## DEX 伪代码分支与路线优先级复核
 
 **状态：**Smali 判读规则已验证；M11–M16 均已修复并通过回归。
