@@ -86,7 +86,7 @@ export function isInsideDynamiteRadius(
 ): boolean {
   const dx = centerFine.x - targetFine.x;
   const dy = centerFine.y - targetFine.y;
-  return (dx * dx) + (dy * dy) < (DYNAMITE_RADIUS_FINE * DYNAMITE_RADIUS_FINE);
+  return (dx * dx) + (dy * dy) <= (DYNAMITE_RADIUS_FINE * DYNAMITE_RADIUS_FINE);
 }
 
 function squaredCellDistance(left: DynamiteCell, right: DynamiteCell): number {

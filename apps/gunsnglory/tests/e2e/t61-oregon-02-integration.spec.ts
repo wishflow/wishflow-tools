@@ -74,7 +74,7 @@ test('Free Play opens Cashcow Canyon on desktop and narrow mobile viewports', as
 
     await page.getByTestId('menu-free-play').click();
     await page.getByTestId('campaign-region-oregon').click();
-    await expect(page.getByTestId('campaign-menu-progress')).toContainText('2 implemented levels available');
+    await expect(page.getByTestId('campaign-menu-progress')).toContainText('5 implemented levels available');
     await expect(page.getByTestId('campaign-level-22')).toBeEnabled();
     await page.getByTestId('campaign-level-22').click();
     await expectCashcowOverview(page);
@@ -100,7 +100,14 @@ test('formal Cashcow Canyon stays locked until Eastwood Forest is completed', as
   await expect(page.getByTestId('campaign-level-21')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-22')).toBeDisabled();
 
-  await writeProfile(page, [...completedThroughLevelTwenty, 'campaign-oregon-01']);
+  await writeProfile(page, [
+    ...completedThroughLevelTwenty,
+    'campaign-oregon-01',
+    'campaign-oregon-10',
+    'campaign-dakota-10',
+    'campaign-nevada-10',
+    'campaign-alaska-10',
+  ]);
   await page.reload();
   await keepSoundOff(page);
   await page.getByTestId('menu-start').click();

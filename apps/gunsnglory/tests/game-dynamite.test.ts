@@ -83,6 +83,40 @@ test('clicking an unlocked trigger blasts its paired box once without changing u
   assert.equal(view.dynamites?.[0]?.cooldownRemainingMs, DYNAMITE_COOLDOWN_MS);
 });
 
+test('an enemy exactly three tiles from the box is damaged at the inclusive APK radius boundary', async () => {
+  const boundaryScenario: ScenarioContent = {
+    ...scenario,
+    id: 'dynamite-radius-boundary-fixture',
+    dynamite: {
+      unlocked: true,
+      pairs: [{ id: 'dynamite-boundary', triggerCell: { x: 2, y: 2 }, boxCell: { x: 4, y: 2 } }],
+    },
+    previewWave: {
+      ...scenario.previewWave!,
+      spawn: { cell: { x: 9, y: 2 }, direction: 'west' },
+      additionalSpawns: [],
+      baseEnemySpeed: 0,
+      redirects: [],
+      exit: { x: 0, y: 2 },
+    },
+  };
+  const session = await openDynamiteSession(boundaryScenario);
+  session.submitIntent({ type: 'start-wave' });
+  let view = session.advance({ deltaMs: 0 });
+  const enemy = view.enemies[0]!;
+  assert.deepEqual(enemy.positionFine, { x: 57_600, y: 19_200 });
+  assert.equal(enemy.hitPoints, 5_000);
+
+  session.submitIntent({ type: 'select-at', x: 2.5, y: 2.5 });
+  view = session.advance({ deltaMs: 0 });
+  assert.equal(view.enemies[0]?.hitPoints, 3_750);
+  assert.deepEqual(view.events.find((event) => event.type === 'dynamite-exploded'), {
+    type: 'dynamite-exploded',
+    dynamiteId: 'dynamite-boundary',
+    affectedEnemyIds: [enemy.id],
+  });
+});
+
 test('paired box stays absent until its final 500 ms, then plays all five respawn frames', async () => {
   const session = await openDynamiteSession();
   session.submitIntent({ type: 'select-at', x: 2.5, y: 2.5 });

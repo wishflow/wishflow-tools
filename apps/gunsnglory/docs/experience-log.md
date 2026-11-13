@@ -25,11 +25,22 @@
 
 M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败，包括16个旧正式关卡断言仍期待21关、Apache Valley/Cow Gulch/Fort Kaboom的完整目录快照缺少第22关，以及 Progress 快照少了锁定的 Cashcow Canyon；修正后20个单测定向复跑全部通过。全量 E2E 随后发现7项旧断言：6处仍期待 `*/21 stages complete`，另有 Eastwood Free Play 测试仍把可选的 Level 22 当成禁用关；对应断言已更新，相关6个 spec 共13项定向用例全部通过。最终 `CI=1 PLAYWRIGHT_PORT=43217 pnpm run test:ci` 通过类型检查、748项单测、生产构建和158项 E2E。构建 JS chunk 2.559 MB（gzip 281.36 KB），有超过500 KB的既有 chunk 警告；本批没有修改拆包架构。
 
+M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley、Cow Gulch 主目录、Fort Kaboom 目录快照和 Progress 状态投影仍固定在22关；添加 level 23 及其前置/锁定关系后，相关5个 spec 共42项定向测试通过。另3项 Node worker CLI 子进程当时未解析隔离 worktree 中的 `tsx`；重建现有依赖链接后，`serial-batch-parallel.test.ts` 3项单独通过。完整检查未进入构建或 E2E 阶段；第二次完整运行用于确认子进程问题是否仅由 worktree 依赖链接造成。新增关卡时除了搜索数字断言，还要检查整份 stage 数组、Progress 投影和目录映射快照。
+
 ## 新增关卡时同步战斗 HUD 的地区标签
 
 - **表现与复现：**Cashcow Canyon 已出现在 Oregon 选关和正式战役中，但 Free Play 与正式开局后的战斗 HUD 仍显示 `NEW MEXICO`。从 Oregon 选择 Level 22 并开始战斗即可复现。
 - **根因与证据：**`main.ts` 的 `campaignRegionLabel` 使用逐关 ID 判断地区，只列出 Oregon 的 Eastwood Forest；遇到 Cashcow 的 `officialStage` 时回退到默认 New Mexico。`t61-oregon-02-integration.spec.ts` 首次对 HUD 区域断言时捕获了该错误。
 - **修复与防回归：**将 `oregon02CampaignId` 纳入 Oregon 标签判断。新增正式关卡时，除了检查选关所属地区，也要检查战斗 HUD 在正式和 Free Play 两种入口下显示的地区与关卡目录一致；`t61` 分别断言 `OREGON · 22` 和 `FREE PLAY · OREGON · 22`。
+
+## 正式关卡登记后仍须接通菜单内容路由
+
+**状态：**Fort Echo 的主页面接线已修复；菜单与 Free Play 的定向浏览器验收通过，正式解锁和回放入口继续由后续集成测试覆盖。
+
+- **表现与复现：**正式目录已经包含 Oregon 第 24 关及 map27，但从 Oregon 选择 Fort Echo 时，菜单详情的内容工厂仍以 Chinook Woods 作为最后兜底；该路径会让地图预览使用错关内容。Level title、简介、HUD 地区判断及档案驱动的 `replaceSession()` 也各自使用显式关卡判断，单独注册 `officialCampaignStages` 不会自动接通它们。
+- **根因与漏测：**`campaignMenuOverviewScreen()`、`campaignMenuLevelScreen()`、`renderStatus()`、`isOfficialOregonMusicSession()` 和 `replaceSession()` 是彼此独立的消费点。Fort Echo 的 builder、路线、波次、进度规则测试只覆盖内容层，因此无法发现网页入口仍缺少 level 24 分支；此前 Oregon E2E 又把关卡 24 预期为未实现。
+- **修复与防回归：**为 Fort Echo 补齐菜单双语标题/简介、map27 预览 builder、战斗说明、Oregon 地区标签、档案快照驱动的场景重建，以及复用 Oregon 曲目的识别分支。`t63-oregon-04-integration.spec.ts` 从真实菜单路径检查 Free Play 可玩数量、map27 关卡图与缩略图尺寸、双语文案、Fort Echo 的地区/关卡上下文及首波对白头像。测试拦截媒体 `load()` 记录环境音乐资源地址；音效保持关闭，不加载或播放声音。
+- **避免重复：**新增关卡不能以“目录和 Progress 已登记”作为 UI 集成完成标准。逐项搜索消费 `CampaignCatalog` / `officialCampaignStages` 的页面路由、标题/说明、缩略图 builder、HUD 分类、场景重建、音乐和 replay 工厂；至少从菜单实际进入新关卡，并验证预览身份、开局 ID/地区/波次。目录已有静态地图图并不能证明预览使用了正确的 `ScenarioContent`。
 
 ## DEX 伪代码分支与路线优先级复核
 
@@ -52,6 +63,16 @@ M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败
 - **测试夹具边界：**M4–M7 v1 沿用导入时档案，因此生成带 `preparedSetup` 的 v1 探针时，录制档案必须与导入档案相同；否则数字参数路径集合可能不同，错误表现为 `prepared-setup-invalid`，不是内容版本路由失败。v2 探针则故意使用不同档案，验证录制快照。M4 `map-access=0` 表示不可进入状态，真实 Free Play 新局会补入 M3 并记录开放快照；关闭状态检查版本解析和 `prepare`，不伪造一场可回放战斗。
 - **避免重复：**本轮不改 APK 已核实正确的共享 `createNewMexicoMapUnits()`，也不重新分析 marker 96–101 的 Smali。后续新增关卡时，从真实 TDM marker、最终 `ScenarioContent.units`、内容版本解析和不同当前档案下的 replay factory 四处闭环；不能仅凭固定版本字符串或单测中间映射通过判定。
 
+## 正式开局必须使用与档案版本匹配的场景 builder
+
+**状态：**M24-F2 接入 Chinook Woods 时发现并修复；浏览器正式入口已覆盖完整单位解锁快照。
+
+- **表现与复现：**若当前档案解锁了会改变关卡初始单位的全局单位，而正式关卡选择仍复用页面初始化时的默认 `Game`，提交给 `Game.open` 的档案 `contentVersion` 会和默认场景版本不一致，开局以 `content-version-unavailable` 拒绝。当前代码通过解锁完整的正式 Chinook Woods 档案走真实菜单入口验证该条件。
+- **根因与证据：**`main.ts` 的 `replaceSession()` 需要对依赖用户档案快照的正式/自由关卡创建 `createBrowserGame(completedScenarioIds)`。此前 Oregon 分支只包含 Eastwood，Cashcow 与 Chinook Woods 未全部列入；两关 builder 会根据 Grandpa、Sniper、Pyromaniac、Salesman 里程碑改变初始单位及内容版本。`GameSession.open()` 会比较请求版本与选中场景的 `contentVersion`，不匹配时按 `content-version-unavailable` 拒绝；对应的内容版本由 `bootstrap/browser.ts` 计算。
+- **漏测点：**内容工厂和直接 `createBrowserGame(completedIds)` 测试可以通过，但它们绕过了主页面 `replaceSession()` 的场景选择。只有以具有不同解锁快照的档案从真实菜单进入，才能验证生产 UI 路径也选中了匹配 builder。
+- **修复与防回归：**在 `replaceSession()` 将 Oregon 2、3 与已有档案依赖关卡一并路由到档案驱动的 browser game。`t62-oregon-03-integration.spec.ts` 的正式开局夹具包含四种解锁里程碑，确认第 23 关仍能打开；builder/回放测试覆盖全部16种组合，回放导入使用录制版本而不是导入档案。
+- **避免重复：**增加正式或 Free Play 关卡时，不止测 builder 和 `GameSession`；从主菜单到 `replaceSession()` 检查 content builder 路由，再用至少一个与页面默认场景版本不同的用户档案进入。记录 snapshot 的关卡还需验证回放工厂忽略当前档案并从录制版本恢复。
+
 ## 档案驱动的关卡测试必须使用同一档案生成内容版本
 
 **状态：**M22-G 首轮完整 CI 中发现并修复。
@@ -60,6 +81,15 @@ M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败
 - **根因与修复：**关卡 builder 根据输入档案生成内容版本；测试调用 `getBrowserScenarioContentVersion` 时省略了同一组 completed IDs。开局请求现将该档案传给版本解析器，避免用不同快照组装请求。
 - **防回归：**任何测试若以档案构建 Game，`contentVersion` 必须从相同的 completed IDs 生成；若有意测试跨档案回放，需通过 replay factory 并明确记录 v1/v2 的不同语义，不能复用正式新局请求的默认版本。
 
+## 内容版本快照位序不等于地图单位枚举顺序
+
+**状态：**M24-F1 测试期望已修正；运行时代码符合共享快照契约。
+
+- **表现与复现：**为 Chinook Woods 写 16 种解锁矩阵时，按地图 marker 顺序将 mask bit 0 解释为 Sniper，第一组测试与内容工厂结果不一致。
+- **根因与证据：**共享 `mississippi-unit-unlocks.ts` 的 canonical suffix 固定按 `grandpa`、`sniper`、`pyro`、`salesman` 编码；TDM marker 清单通常按 Sniper、Grandpa、Pyromaniac、Salesman 排列。两种顺序不同，不能把枚举下标直接当作版本位。实际 `CampaignCatalog` milestone ID 和 builder 生成的活动单位才是行为基线。
+- **修复与防回归：**修正测试矩阵，将 `campaign-oregon-10` / `campaign-dakota-10` 等 milestone ID 分别映射到对应单位类型；16 种状态均通过内容版本 round-trip 与 `GameSession` 初态核对。生产快照编码没有修改。
+- **避免重复：**复用全局 unlock suffix 时，按 named snapshot field 或对应 milestone ID 生成测试数据；单独测试编码/解析顺序与最终地图单位，不从 marker 列表位置推导 bit order。
+
 ## TDM Dynamite marker 与对象角色不能混写
 
 **状态：M16 静态审计与关卡测试已校正。**
@@ -67,6 +97,14 @@ M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败
 - **错误表现：**Highpoint Terrace 审计曾把 code `102` 写成炸药箱、把 `110` 写成触发器；而应用现有配对器将 `102` 作为 trigger、`110` 作为 box，导致按审计编写的坐标期望失败。
 - **根因与证据：**`GameObjectManager.smali` 的 `createGameObjectsFromBasicMap` packed-switch 中，map value `102` 命中创建并加入 `DynamiteTrigger` 列表的分支；`110` 命中创建并加入 `DynamiteBox` 列表的分支。map19 网格位置分别为 `(28,10)` 与 `(27,11)`。此前审计将 marker 坐标与对象语义对调。
 - **修正与防回归：**[M16 静态审计](map16-static-audit.md)已改为 trigger `(28,10)`、box `(27,11)`；`mississippi-16-campaign-rules.test.ts` 从真实地图网格检查配对结果和 20/30 关解锁路径。新增炸药对象时同时核对 TDM 字节、Smali 对象构造分支和运行时字段语义，不能只根据对象名称或相邻 marker 推断。
+
+## 炸药爆炸半径要包含精确边界
+
+- **表现与复现：**地图炸药中心到敌人的距离恰好为 3 格时，网页没有造成伤害；距离略小的目标会受伤。
+- **根因与证据：**`src/game/dynamite.ts` 的 `isInsideDynamiteRadius()` 使用严格 `<`。APK `DynamiteBox.detonate` 对未量化的 fine-unit 距离平方使用 `<= radius²`，半径为 23,040 fine units。静态证据与网页函数可直接证明边界单位被排除。
+- **漏测点：**旧辅助函数测试只覆盖半径减一和加一，没有断言等于半径；既有 `GameSession` 炸药测试目标位于半径内部，因此未发现边界差异。
+- **修正与防回归：**比较改为 `<=`；单测同时检查 `radius−1`、`radius`、`radius+1`，并用真实 Dynamite Plains TDM 配对启动 `GameSession`，验证位于 3 格边界的敌人确实受伤。M26-C 定向回归 179 项通过，类型检查通过。
+- **避免重复：**炸药以二维距离平方比较，保留 fine-unit 坐标精度；不要用格数取整、曼哈顿距离或 `<` 替代 APK 的边界规则。
 
 ## TDM 单位 marker 必须验证到最终场景单位
 
@@ -112,6 +150,15 @@ M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败
 - **根因与证据：**`src/game/index.ts` 只在 formal/free 会话，或其回放源模式为 formal/free 时启用 `campaignMode`；debug 模式只按普通预览波逻辑运行，不会消费 `CampaignWaveDefinition` 的请求池。内容数据正确，测试模式选错。
 - **修复与防回归：**关卡波次短测改用 `free` 会话。map06 数据切片尚未登记时，测试副本临时设置 `formalSettlementSupported: true`，当时不改变产品可玩状态；随后正式内容接入已把该标志登记到生产关卡。真实 map06 波次由静态审计期望验证；池 1 的 GameSession 入口映射另用单请求测试副本定点检查，不完整推进原版十波。
 - **避免重复：**验证 CampaignWaveDefinition 时先确认所用 GameSession mode 会启用 `campaignMode`。debug session 的初态可用于单位/渲染调试，不能当作正式波次生成证据。
+
+## GameSession 地图雇佣前必须选中单位
+
+**状态：**Fort Echo 浏览器 Cannon pool 集成探针已修正并通过。
+
+- **表现与复现：**直接从 `GameSession.observe()` 取到 Fort Echo 的休眠 Cannon 后立刻提交 `hire-map-unit`，`submitIntent()` 返回 `false`。这不是 Cannon 池或价格配置故障。
+- **根因与证据：**`src/game/index.ts` 的 `GameSession.submitIntent()` 只接受已选中且 `activity === 4` 的地图单位雇佣请求；浏览器/UI 先通过 `select-at` 选择地图单位，后续才发送雇佣意图。E2E 第一轮探针遗漏了这一步，调用预条件与真实用户流程不一致。
+- **修复与防回归：**测试先对 Cannon 格中心提交 `select-at` 并推进一帧，确认单位进入 selected 状态后才提交雇佣意图；再断言 `$150` 扣款、`map-unit-hired` 事件及 Fort `(10,12)` 的活动 Cannon。G2 的 5 项 Fort Echo 定向 E2E 全部通过。
+- **避免重复：**用 `GameSession` API 直接模拟地图操作时，按“选择单位 → 推进命令 → 确认 selected → 雇佣”的顺序构造输入。只断言单位 ID 存在，不代表它已满足 `hire-map-unit` 的状态前提。
 
 ## 快速推进到中途波次时不能把所有敌人池清空
 
@@ -444,6 +491,13 @@ M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败
 - **表现与复现：**新增全球第 11、12 关后，完整单测曾因旧阶段快照缺少新关而失败；map12 批次中 `apache-valley.test.ts`、`fort-kaboom-formal.test.ts` 和 `progress.test.ts` 的固定目录/状态期望只列到第 11 关。
 - **根因与证据：**`officialCampaignStages` 已正确登记 Steam Valley 为 global level 12、以前置 `campaign-mississippi-11` 解锁；失败来自测试仍硬编码 11 项，与关卡注册或 Progress 运行逻辑无关。
 - **修复与防回归：**加入正式关卡时同步更新目录快照、Progress 初态和结算后的状态数组；本次仅补入第 12 关及 locked 状态，三个文件的 29 项定向测试通过。每次登记正式关卡后，搜索完整 `officialCampaignStages` 列表、globalLevel、解锁前置、结算后状态数组及进度文案；不要为了迎合旧快照改动正确的进度逻辑。
+
+### 新正式关卡要同步更新目录快照、E2E 与 Free Play 可用性
+
+- **M24 复现：**新增 global level 23 后，第二次完整 `test:ci` 中 6 项 E2E 仍断言战役摘要总数为 22；另 1 项 Oregon Free Play 测试仍将已实现的 level 23 判为禁用。
+- **M25 复现：**新增正式 level 24 后，旧 E2E 摘要和 Free Play 可用性断言未全部更新；第一次完整检查还发现 Apache Valley 的正式目录依赖快照和 Progress 初始状态快照缺少 Fort Echo。
+- **根因：**单测的完整目录快照与浏览器摘要/关卡按钮断言分散在不同文件。只搜索一类固定字符串会漏掉其他目录消费者；定向 E2E 通过也不能覆盖未运行的单测快照。
+- **修复与防回归：**M24 将摘要更新为 23/23，并让 Oregon 测试检查 21–23 可用、24 禁用；M25 更新 8 个旧 E2E spec 的 23→24 摘要及 Free Play 四关可用、level 25 禁用断言，并在 `apache-valley.test.ts`、`progress.test.ts` 补齐第 24 关的解锁前置和 locked 状态。M25 受影响的 9 个 spec 共 22 项 E2E 通过，失败的 2 个单测文件 25 项复跑通过；最终 `test:ci` 全绿：779 项单测和 165 项 E2E，构建仅有大 JS chunk 提示。以后登记关卡，需同时检查正式目录及解锁链、Progress 初态/结算快照、战役进度摘要、Free Play 可玩/禁用范围；先定向覆盖修改文件，再运行一次最终完整检查。
 
 ## 正式关卡的专属资源必须加入启动预加载
 

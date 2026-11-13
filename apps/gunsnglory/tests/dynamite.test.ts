@@ -37,12 +37,12 @@ test('dynamite unlock follows global level 21 or completed level 30', () => {
   assert.equal(createDynamiteScenarioDefinition([[102, 110]], []).unlocked, false);
 });
 
-test('dynamite applies heavy penetration, ignores tow type 8, and uses a strict fine-unit radius', () => {
+test('dynamite applies heavy penetration, ignores tow type 8, and includes the fine-unit radius boundary', () => {
   assert.equal(dynamiteDamageForEnemy(1, 25), 1_250);
   assert.equal(dynamiteDamageForEnemy(4, 66), 3_300);
   assert.equal(dynamiteDamageForEnemy(1, 33), 1_650);
   assert.equal(dynamiteDamageForEnemy(8, 100), 0);
   assert.equal(isInsideDynamiteRadius({ x: 0, y: 0 }, { x: DYNAMITE_RADIUS_FINE - 1, y: 0 }), true);
-  assert.equal(isInsideDynamiteRadius({ x: 0, y: 0 }, { x: DYNAMITE_RADIUS_FINE, y: 0 }), false);
+  assert.equal(isInsideDynamiteRadius({ x: 0, y: 0 }, { x: DYNAMITE_RADIUS_FINE, y: 0 }), true);
   assert.equal(isInsideDynamiteRadius({ x: 0, y: 0 }, { x: DYNAMITE_RADIUS_FINE + 1, y: 0 }), false);
 });

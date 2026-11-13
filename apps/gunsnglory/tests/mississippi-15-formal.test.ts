@@ -50,7 +50,7 @@ test('Railroad Canyon is formal level 15 and stays locked until Riverside Mounta
     globalLevel: 15,
     requiresCompletedScenarioIds: [mississippi14CampaignId],
   });
-  assert.equal(officialCampaignStages.length, 22);
+  assert.equal(officialCampaignStages.length, 25);
 
   const progress = createProgress(createMemoryProfileRepository({
     completedScenarios: completedThroughLevelThirteen,
