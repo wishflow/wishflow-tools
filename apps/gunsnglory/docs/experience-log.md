@@ -423,6 +423,14 @@
 - **入口观察：**内置浏览器在静音、窗口模式进入 Free Play → Mississippi → Dead Rocks → Medium，确认关卡标题、地图、Settlers 开场对白和 `1/8` 波次 HUD 显示正常；随后仅继续到首波准备状态，没有完整手动通关。未启动 Android、进入全屏或播放音效。
 - **防回归：**关卡发布只有在 Actions 成功且两个公开部署端的来源 SHA 与预期发布提交一致后才算部署完成；浏览器使用对应 release SHA 的 URL，并检查从菜单到实际关卡内容的代表流程。截图或单纯菜单可见不足以证明新关卡已加载。
 
+## 内置浏览器 provider 不可用时不得替代线上交互验收
+
+**状态：M22 发布构建与来源 SHA 已通过；线上交互验收待补。**
+
+- **表现与证据：**M22 squash 发布提交 `b5dec97` 的 GitHub Actions 全绿，GitHub Pages 与 Cloudflare Pages 的公开 `build-info.json` 均返回该提交 SHA；但本次 Computer Use 的 `getState()` 显示 `browsers: []`，创建 `iab` 标签返回 `Browser is not available`，按 URL 获取 browser 也返回 `No browser is available`。
+- **根因与边界：**这是当前会话没有可用内置浏览器 provider 的环境问题，不是游戏页面已通过视觉验收。公开构建信息只能证明部署来源，自动化 E2E 只能证明其覆盖的行为；二者都不能代替人工可见的线上交互检查。
+- **防回归：**保持 M22-G 浏览器验收未完成；恢复内置浏览器后，打开与部署 SHA 一致的页面，在窗口模式、静音状态验证 M4–M7 replay 导入及 Eastwood Free Play 入口。遵守仓库规则，不改用外部浏览器或 DevTools，并在观察到实际页面状态后才关闭该项。
+
 ## 战役进度快照断言要跟随正式关卡目录
 
 - **表现与复现：**新增全球第 11、12 关后，完整单测曾因旧阶段快照缺少新关而失败；map12 批次中 `apache-valley.test.ts`、`fort-kaboom-formal.test.ts` 和 `progress.test.ts` 的固定目录/状态期望只列到第 11 关。
