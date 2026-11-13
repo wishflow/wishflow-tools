@@ -43,7 +43,7 @@ test('Traveller’s Town is level 11, locked until Lost City is complete, and la
     globalLevel: 11,
     requiresCompletedScenarioIds: [lostCityCampaignId],
   });
-  assert.equal(officialCampaignStages.length, 20);
+  assert.equal(officialCampaignStages.length, 21);
   assert.equal(createMississippi11CampaignContent().formalSettlementSupported, true);
 
   const progress = createProgress(createMemoryProfileRepository({

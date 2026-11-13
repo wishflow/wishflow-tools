@@ -95,6 +95,12 @@ import {
   mississippi20CompletedScenarioIdsForContentVersion,
 } from '../content/mississippi-20-content-version';
 import { mississippi20CampaignId } from '../content/mississippi-20-identity';
+import { createOregon01CampaignContent } from '../content/oregon-01-campaign';
+import {
+  oregon01CampaignContentVersionFor,
+  oregon01CompletedScenarioIdsForContentVersion,
+} from '../content/oregon-01-content-version';
+import { oregon01CampaignId } from '../content/oregon-01-identity';
 import {
   apacheValleyLevelTwoContent,
   cowGulchLevelOneContent,
@@ -208,6 +214,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === mississippi20CampaignId) {
     return mississippi20CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === oregon01CampaignId) {
+    return oregon01CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -235,6 +244,7 @@ export function createBrowserGame(
     [mississippi18CampaignId]: createMississippi18CampaignContent(completedScenarioIds),
     [mississippi19CampaignId]: createMississippi19CampaignContent(completedScenarioIds),
     [mississippi20CampaignId]: createMississippi20CampaignContent(completedScenarioIds),
+    [oregon01CampaignId]: createOregon01CampaignContent(completedScenarioIds),
   };
   if (legacyMississippiReplay) {
     const scenario = scenarios[legacyMississippiReplay.scenarioId];
@@ -380,6 +390,14 @@ export function createBrowserGameForMississippi19Replay(contentVersion: string |
 export function createBrowserGameForMississippi20Replay(contentVersion: string | undefined) {
   const completedScenarioIds = contentVersion
     ? mississippi20CompletedScenarioIdsForContentVersion(contentVersion)
+    : undefined;
+  return createBrowserGame(completedScenarioIds ?? []);
+}
+
+/** Replay import restores Eastwood's recorded global unlocks, including its Gambler prize set. */
+export function createBrowserGameForOregon01Replay(contentVersion: string | undefined) {
+  const completedScenarioIds = contentVersion
+    ? oregon01CompletedScenarioIdsForContentVersion(contentVersion)
     : undefined;
   return createBrowserGame(completedScenarioIds ?? []);
 }

@@ -55,6 +55,7 @@ const highDensityMapDecorations = new Set([
   'e_1x1_rocks_b',
   'e_1x1_rocks_water',
   'e_1x1_tree',
+  'e_1x1_tree_green_a',
   'e_1x2_bones',
   'dynamite_detonator',
   'dynamite_detonator_pressed',
