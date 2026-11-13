@@ -5,18 +5,32 @@
 ## 当前状态
 
 - Horse Hills（M20）已发布并回同步；发布 SHA、完整检查和入口验收见下方 M20 批次记录。当前 `origin/gunsnglory` 已包含 `origin/master`，本轮开发分支从该集成头创建。
-- M21 静态审计已完成，见[Eastwood Forest 静态审计](map21-static-audit.md)。本关使用 `td_map_24.tdm`，有6条路线、8波、20条敌人生成请求，且无单位池动作。新局必须遵守 APK `fromLoadGame` 语义；审计发现的 M1–M20 共用招募 marker 偏差另列为 M22 前修复，不在 M21 中顺手改变旧关卡或旧回放。
-- 本轮普通发布比例按24/120（20.0%）起算；M21 计划为5个实现切片加1次普通发布，批次完成后预计25/125（20.0%）。静态审计文档不计入实现切片。
+- M21 Eastwood Forest 已发布；回放审计确认 M21 新局漏掉 map24 招募 marker，M4–M7 的 profile-dependent 初始单位没有进入回放内容版本。M22-D/E 已实现修复，M22-F/G 负责实际回放入口、批次检查和发布；证据见[Eastwood Forest 静态审计](map21-static-audit.md)。
+- 普通发布比例按25/125（20.0%）起算。本批规划5个实现切片及1次普通发布，完成后预计26/130（20.0%）；文档切片不计入实现数。
 
-## 当前批次：Eastwood Forest（M21）
+## 当前批次：回放内容快照补全（M22）
+
+目标是使回放内容版本完整标识影响开局场景的档案状态，并修复 M21 新局遗漏的 map24 招募单位。APK 证据和修正后的 marker 语义见[Eastwood Forest 静态审计](map21-static-audit.md)。测试默认窗口模式、静音；不完整通关、不启动 Android。
+
+| 顺序 | 切片 | 范围与验收 | 状态 |
+| --- | --- | --- | --- |
+| M22-A | 证据与计划纠正 | 以 Smali 条件跳转和 `Guns’n’GloryThread` 调用点确认 `fromLoadGame` 语义；改正 M21 静态审计、架构约束、经验记录及历史计划描述。链接有效、事实/历史结论可区分，`git diff --check` 通过，Markdown 按相对路径复制归档。 | 已完成 |
+| M22-B | 全局解锁快照契约 | 新增 M4–M7 共用 v2 版本编解码器，编码四个全局单位里程碑位，另为 M4 编码 `mapAccessible`；精确识别各关固定 v1 版本，并拒绝畸形/跨关版本。 | 已完成；`new-mexico-replay-content-version.test.ts` 3项通过（16种解锁组合、M4访问位、v1及非法版本）。 |
+| M22-C | M4–M7 内容版本生成 | 四关内容 builder 从有效档案快照生成 v2；将实际影响场景的单位门控和 Tech Town map-access 位纳入版本。正式及 Free Play 入口传入同一有效 completed IDs；各 milestone 与内容实体逐项对应。 | 已完成；4关 builder/浏览器版本组合矩阵与相关正式测试21项通过；`t31-free-play`、`t37-tech-town-formal` 定向 E2E 3项通过；`pnpm run typecheck` 通过。 |
+| M22-D | M4–M7 回放工厂 | 为四关增加按录制版本还原场景的 factory，并接入导入路由。v2 replay 必须忽略导入时当前档案；v1 replay 继续按现有历史行为使用当前档案构造。未知/畸形版本不得退回当前内容。 | 已完成；v2 对四关全部16种解锁快照在不同导入档案下还原单位；v1 对空档案/全解锁档案保持原语义，Tech Town 保留旧路由补入 M3；未知和畸形版本均以 `content-unavailable` 拒绝。新增回放工厂测试及版本编解码测试共7项通过，`pnpm run typecheck` 通过。 |
+| M22-E | Eastwood 新局招募与版本升级 | 按 map24 marker 96、97、100、101、130、131 从真实 TDM 生成 activity 4 招募单位并应用 APK 解锁门槛；保留 activity 5、Gambler/Casino 和奖品模板行为。升级至 v2；v1 replay 保持 M21 已发布的旧单位列表。核对坐标、类型、activity、唯一 ID、16种全局解锁组合及 v1/v2 分支。 | 已完成；31个 activity 4 marker 的坐标/类型/activity 按 TDM 对照，16种解锁组合及唯一 ID 通过；v2 使用新单位集，v1 恢复旧 activity 5 单位集且保留原快照门控。Eastwood/内容回归19项通过，M4–M7 与 Mississippi 兼容定向测试15项通过，`pnpm run typecheck` 通过。 |
+| M22-F | 回放矩阵与入口回归 | 在录制档案和导入档案不同的条件下验证 M4–M7 每种快照、M4 map-access 状态和 Eastwood v1/v2 replay factory；验证未知版本拒绝。补足正式与 Free Play 入口的定向 E2E，不推进完整关卡。 | 已完成；M4–M7 的16种快照组合由工厂单测遍历，v1 与导入档案一致时保持旧内容；M4 `map-access=0` 即使当前档案已解锁 M3 仍由版本解析/prepare 保持关闭，开放状态的真实 replay 由浏览器导入覆盖。E2E 用短探针覆盖 M4–M7 与 Eastwood v1/v2 共10个可生成内容版本，frame 0 由真实 `GameSession` 摘要校验，frame 1 使用故意不匹配摘要以避免推进战斗；未知版本返回 `content-unavailable`。`t60`、两项 `t31-free-play`、`t37-tech-town-formal` 共4项 E2E 通过；M4–M7 工厂及 Eastwood 内容/规则单测共10项通过；`pnpm run typecheck` 通过。 |
+| M22-G | 批次检查、发布与回同步 | 先运行 M22 定向测试并修复失败；整批结束后运行 `CI=1 PLAYWRIGHT_PORT=<空闲端口> pnpm run test:ci`。通过后以单个 squash commit 集成至 `master`，推送并等待 Pages 工作流；核对 GitHub Pages 与 Cloudflare Pages `build-info.json` 的 `sourceSha`，再用内置浏览器静音、窗口模式验证 M4–M7 replay 与 Eastwood Free Play 代表流程；最终合并已发布提交回 `gunsnglory` 并核对远端。不得完整通关、进入全屏或播放音频。 | 本地检查已完成，发布待进行；`CI=1 PLAYWRIGHT_PORT=43247 pnpm run test:ci` 通过：类型检查、734项单测、生产构建、156项E2E。首轮 CI 的 Billy Hills 测试夹具版本不匹配已修复，并新增经验记录。生产构建仅保留既有约2.45 MB JS chunk 警告。 |
+
+## 最近完成批次：Eastwood Forest（M21；M22 复核更正）
 
 目标是将 Oregon 的全局第21关接入地图、规则、关卡目录、Free Play 和回放。完整静态依据见[Eastwood Forest 静态审计](map21-static-audit.md)。测试保持窗口模式与静音；只做代表性关卡入口验收，不完整通关、不启动 Android。
 
 | 顺序 | 切片 | 范围与验收 | 状态 |
 | --- | --- | --- | --- |
-| M21-A | 静态审计与计划 | 核对 APK 地图、路线、marker、8波、初态、文本和资源；记录现有 M1–M20 新局 marker 偏差与后续兼容修复边界。Markdown 链接、证据路径与 `git diff --check` 通过。 | 已完成 |
+| M21-A | 静态审计与计划 | 核对 APK 地图、路线、marker、8波、初态、文本和资源；当时将96–101、130、131误判为读档专用，并据此安排兼容修复。M22-A 已依据 Smali 和调用点纠正该结论；链接、证据路径及 `git diff --check` 通过。 | 已完成，审计结论由 M22-A 更正 |
 | M21-B | 地图、地形与路线 | 接入 map24 原始网格、Oregon 地形/街道图层、6个入口、2个出口和全部控制点；由测试逐格比较 TDM、绘制图层与路线边，不以截图目测替代。 | 已完成；770字节 TDM SHA 与 APK 一致，768个背景格、76个街道绘制项；碰撞层与固定随机渲染逐格匹配，背景变体与静态索引候选零差异；6条路线、42个转向点、47条有向边逐点匹配。地图定向测试2项和 `pnpm run typecheck` 通过。 |
-| M21-C | 地图对象与新局单位 | 按 Oregon marker 规则接入树木/岩石装饰、Gunslinger、Mexican、Gambler/Casino；新局不实例化 96–101、130、131 存档恢复 marker。为 Gambler 仅添加独立的奖品模板字段，保持模板不进入初始单位、不配置池动作；Gambler/Casino 同步遵守解锁快照并回归 M20 单位。 | 已完成；Eastwood 只从 activity 5 marker 创建2名 Gunslinger、2名 Mexican；10个 code79 树木使用 APK `e_1x1_tree_green_a` 高清资源，按 level50 Gambler 解锁同步显示 Casino。存档恢复 marker 均不进入新局；8种 Gambler 解锁奖励可由隔离模板提供，不进入初始单位。Gambler/地图实体/地图/资源路径定向测试27项与 `pnpm run typecheck` 通过。 |
+| M21-C | 地图对象与新局单位 | 按 Oregon marker 规则接入树木/岩石装饰、活动单位、Gambler/Casino 和奖品模板。原实现误排除96–101、130、131。 | 已发布版本只由 activity 5 marker 创建2名 Gunslinger、2名 Mexican；10个 code79 树木与 Gambler/Casino、奖品模板均通过当时测试。M22 已确认其漏掉新局 activity 4 招募单位；M22-E 补回并保留 v1 replay 的已发布列表。 |
 | M21-D | 初态、难度与8波 | 分别在 `oregon-01-campaign-rules.ts`、`oregon-01-campaign-waves.ts` 保存规则和波次。按 APK 接入 `$75`、25生命、3次升级、86/115/140% HP 倍率、999/25,000ms/15/4类奖励箱、Gambler 299,000ms 冷却；按 DEX 源调用顺序录入8波的延迟、HP/速度倍率、20条 action 0–3 请求和2500ms间隔，敌人向量保留10槽（末两槽为0）。测试完整参数/向量并用真实 `GameSession` 触发一个实际请求，验证出生点、敌型与初态；不添加不存在的单位池/Cannon。 | 已完成；完整8波/20个请求与10槽向量逐项匹配审计表，action 0–3 映射正确；真实 `GameSession` 验证 `$75`、25生命、999个奖励箱及首波 Settler 从 action0 的真实出生坐标生成，Medium HP 为185。无单位池；没有新增 `awesomeMessageMin` 行为。7项 Oregon 地图/实体/规则测试与 `pnpm run typecheck` 通过。 |
 | M21-E | 双语内容与离线资源 | 接入简介、8段 APK 英文对白和中文译文、已确认头像；从用户提供的 APK 提取 Geezer 头像和 `music_oregon.ogg`，补齐 Oregon 音乐路由并核对文件格式/大小。未知胜利标题和专属语音不补造，声音不播放。 | 已完成；接入 Eastwood Forest 双语简介及8段对白，保留 APK 英文、项目中文译文和对应肖像；专属 Geezer 头像与 APK 文件逐字节一致，96×96。补入 APK 的 `music_oregon.ogg` 原文件（787,340字节），与 APK 提取文件逐字节一致；环境循环与三首战斗循环均有离线文件，按波次轮换。无未证实语音、无专属胜利标题。4项内容/资源/音乐测试和 `pnpm run typecheck` 通过。 |
 | M21-F | 正式关卡、Free Play 与回放 | 1) 新建 `oregon-01-campaign.ts` 与 `oregon-01-content-version.ts`，从已核实的 map/rules/waves/entities 组装正式 `ScenarioContent`；版本快照复用 30/40/50/60 级解锁位，因为它们分别影响 Grandpa、Sniper、Gambler/Pyromaniac、Salesman 及 Gambler 奖品模板。2) 在 `official-campaign.ts` 将既有 level21/map24 目录条目登记为 `campaign-oregon-01`，前置 `campaign-mississippi-20`；在 browser bootstrap、内容版本解析、Free Play 入口和 replay 导入中注册同一构建器/快照恢复器。3) 仅补 M21 必要的 Campaign 概览构建、Oregon 区域标签和关卡标题路由；不改既有 level1–20 行为，不添加 APK 未提供的胜利标题。 | 已完成；正式关卡第21关依赖 Horse Hills，未完成第20关时锁定；正式胜利记录第21关，Free Play 三档都可启动且不改变档案。独立内容版本往返恢复30/40/50/60级快照；16种组合均核对 Gambler/Casino 可见性及奖品模板，replay factory 按录制版本重建。Campaign 概览、Oregon 标记、map24 缩略图、Pedro 首波对白/头像及未实现第22关禁用通过真实入口 E2E；Geezer 的 APK 头像用于其对应的后续波次，不是首波。`oregon-01-formal.test.ts` 3项、M21/M20 定向测试17项、既有战役注册回归60项、入口E2E 2项与 `pnpm run typecheck` 通过；完整 `test:ci` 留至 M21-G。 |
@@ -26,9 +40,10 @@
 
 批次 squash 发布提交为 `bf843595e7f4bcbc53d6afa06797f4d7169e5fc3`；GitHub Actions `43336290171` 的共享检查、Guns’n’Glory CI、GitHub Pages 和 Cloudflare Pages 均成功，两个 Pages 的 `build-info.json` `sourceSha` 都为 `bf843595e7f4bcbc53d6afa06797f4d7169e5fc3`。内置浏览器保持窗口模式和静音，从 Free Play → Oregon → Eastwood Forest → Medium 进入，确认第21关标题、Pedro 首波英文对白及头像、地图图像和 `Wave 1 of 8` 开场状态；继续后进入战场，没有推进完整关卡。浏览器截图接口对该标签返回零宽度，故像素外观未由截图单独确认；全量 E2E 已断言首波 HUD 状态。未进全屏、未播放音频、未启动 Android。发布内容已合并回 `gunsnglory`，本地与远端通过合并提交 `0372775526a21860d7e50fe7e564668b4280aadd` 对齐；该工作树原有未跟踪研究文档仍保留。
 
-### M21 后续门槛
+### M21 复核结果（由 M22 接手）
 
-- 静态审计发现现有 `createNewMexicoMapUnits()` 将 DEX 仅在 `fromLoadGame=true` 创建的 marker 96–101、130、131 当作新局招募单位。M21 将绕开该共享路径，按本关 marker 语义实现；下一批 M22 开工前必须另立兼容修复切片，审查 M1–M20 各关新局实体与回放 `contentVersion`，不得直接全局改 helper 导致旧回放行为变更。
+- Smali/DEX 与 `onLoadGame()` 调用点证明 marker 96–101、130、131 在 `fromLoadGame=false` 新局创建 activity 4 招募单位，读档时才跳过 TDM 初始对象。M21 审计和专用工厂把条件读反，故已发布 M21 省略这批招募单位；共享 `createNewMexicoMapUnits()` 与 M1–M20 不需要因此全局更改。M22-E 恢复 Eastwood 新局对象并升为 v2，v1 replay 精确保留已发布旧内容。
+- M4–M7 的单位解锁受全局里程碑影响，但当时固定的 v1 `contentVersion` 未描述这些 profile-dependent 初始单位；M22-B–D 为新版本增加快照，保持 v1 导入语义。
 - M21 的 TDM 没有 `spawnPoolActions`，故不扩展 `campaignUnitPool`、不新建 Cannon 模板，也不放置虚构炮位。只有后续 APK 关卡证据出现无地图 marker 的池单位时，才使用经用户批准的可选独立生成模板契约。
 
 ## 最近完成批次：Horse Hills（M20）

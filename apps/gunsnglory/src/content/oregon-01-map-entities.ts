@@ -1,4 +1,4 @@
-import type { CampaignMapUnitPlacement, CampaignMapUnitTypeId } from './campaign-map-unit-placements';
+import type { CampaignMapUnitTypeId } from './campaign-map-unit-placements';
 import { createCampaignMapUnitPlacements } from './campaign-map-unit-placements';
 import { createActiveFortKaboomUnit } from './fort-kaboom-unit-designs';
 import map from './oregon-01.json';
@@ -6,7 +6,7 @@ import { createOregon01MapScene } from './oregon-01-scene';
 import {
   createActiveGunslinger,
   createActiveMexicanUnit,
-  createGambler,
+  createNewMexicoMapUnits,
   createSleepingPyromaniac,
   createSleepingSalesman,
 } from './new-mexico-unit-entities';
@@ -48,21 +48,9 @@ export function createOregon01MapContent(
   gambler?: GamblerScenarioDefinition;
 } {
   const gamblerUnlocked = isUnitUnlocked(9);
-  const activePlacements = createCampaignMapUnitPlacements(map.originalTileGrid)
-    .filter((placement): placement is CampaignMapUnitPlacement & { activity: 5; unitTypeId: 1 | 2 } => (
-      placement.activity === 5 && (placement.unitTypeId === 1 || placement.unitTypeId === 2)
-    ));
-  const activeCounters = new Map<1 | 2, number>();
-  const units = activePlacements.map(({ unitTypeId, cell }) => {
-    const index = (activeCounters.get(unitTypeId) ?? 0) + 1;
-    activeCounters.set(unitTypeId, index);
-    return unitTypeId === 1
-      ? createActiveGunslinger(cell, index)
-      : createActiveMexicanUnit(cell, index);
-  });
+  const units = createNewMexicoMapUnits(map.originalTileGrid, isUnitUnlocked);
   const gamblerPlacement = createCampaignMapUnitPlacements(map.originalTileGrid)
     .find(({ activity, unitTypeId }) => activity === 5 && unitTypeId === 9);
-  if (gamblerUnlocked && gamblerPlacement) units.push(createGambler(gamblerPlacement.cell));
 
   const scene = createOregon01MapScene(gamblerUnlocked && gamblerPlacement !== undefined);
   assertOregon01GamblerCasinoPair(units, scene.decorations ?? []);

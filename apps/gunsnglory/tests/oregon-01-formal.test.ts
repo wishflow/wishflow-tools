@@ -7,9 +7,13 @@ import {
 } from '../src/bootstrap/browser';
 import { campaignLevelState } from '../src/content/campaign-catalog';
 import { createOregon01CampaignContent } from '../src/content/oregon-01-campaign';
+import { createCampaignMapUnitPlacements } from '../src/content/campaign-map-unit-placements';
+import map from '../src/content/oregon-01.json';
 import {
   oregon01CampaignContentVersionFor,
   oregon01CompletedScenarioIdsForContentVersion,
+  oregon01LegacyCampaignContentVersionFor,
+  parseOregon01ReplayContentVersion,
 } from '../src/content/oregon-01-content-version';
 import { oregon01CampaignId } from '../src/content/oregon-01-identity';
 import {
@@ -54,6 +58,26 @@ function expectedPrizeTypes(mask: number): number[] {
   ];
 }
 
+function expectedFreshMapUnits(mask: number, activity5Only = false): { type: string; activity: number; cell: { x: number; y: number } }[] {
+  const typeById = new Map([
+    [1, 'gunslinger'], [2, 'mexican'], [3, 'cannon'], [4, 'indian'], [5, 'sniper'],
+    [6, 'grandpa'], [9, 'gambler'], [35, 'pyromaniac'], [36, 'salesman'],
+  ]);
+  const isUnlocked = (unitTypeId: number) => (
+    (unitTypeId >= 1 && unitTypeId <= 4)
+    || (unitTypeId === 5 && (mask & 2) !== 0)
+    || (unitTypeId === 6 && (mask & 1) !== 0)
+    || ((unitTypeId === 9 || unitTypeId === 35) && (mask & 4) !== 0)
+    || (unitTypeId === 36 && (mask & 8) !== 0)
+  );
+  return createCampaignMapUnitPlacements(map.originalTileGrid)
+    .filter(({ activity, unitTypeId }) => (
+      (activity === 5 && unitTypeId !== 9)
+      || (activity5Only ? activity === 5 && unitTypeId === 9 && isUnlocked(unitTypeId) : isUnlocked(unitTypeId))
+    ))
+    .map(({ activity, unitTypeId, cell }) => ({ type: typeById.get(unitTypeId)!, activity, cell }));
+}
+
 test('Eastwood is formal level 21 and unlocks only after Horse Hills', async () => {
   assert.equal(officialCampaignStages.length, 21);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 21), {
@@ -95,6 +119,12 @@ test('Eastwood content versions restore Gambler, Casino and prize availability f
 
     const content = createOregon01CampaignContent(completed);
     const gamblerUnlocked = (mask & 4) !== 0;
+    assert.deepEqual(
+      content.units.map(({ type, activity, cell }) => ({ type, activity, cell })),
+      expectedFreshMapUnits(mask),
+      `M21 TDM markers for unlock mask ${mask}`,
+    );
+    assert.equal(new Set(content.units.map(({ id }) => id)).size, content.units.length, 'fresh unit IDs are unique');
     assert.equal(content.units.some(({ type }) => type === 'gambler'), gamblerUnlocked);
     assert.equal(content.map.decorations?.some(({ asset }) => asset === 'b_3x2_casino'), gamblerUnlocked);
     assert.deepEqual(content.gambler?.unlockedPrizeUnitTypes ?? [], gamblerUnlocked ? expectedPrizeTypes(mask) : []);
@@ -109,6 +139,11 @@ test('Eastwood content versions restore Gambler, Casino and prize availability f
     });
     try {
       assert.equal(session.startRecord.contentVersion, contentVersion);
+      assert.deepEqual(
+        session.observe().units.map(({ type, activity, cell }) => ({ type, activity, cell })),
+        expectedFreshMapUnits(mask),
+        `M21 replay factory marker set for unlock mask ${mask}`,
+      );
       assert.equal(session.observe().units.some(({ type }) => type === 'gambler'), gamblerUnlocked);
       assert.deepEqual(
         replayGameScenarioPrizeTypes(completed),
@@ -127,6 +162,37 @@ test('Eastwood content versions restore Gambler, Casino and prize availability f
     completedScenarioIdsForMississippiUnitUnlockSnapshot(mississippiUnitUnlockSnapshotFor(unlockScenarioIds)),
     unlockScenarioIds,
   );
+});
+
+test('published Eastwood v1 replay versions retain their original activity-5-only map units', async () => {
+  for (let mask = 0; mask < 16; mask += 1) {
+    const completed = completedForMask(mask);
+    const contentVersion = oregon01LegacyCampaignContentVersionFor(completed);
+    const parsedVersion = parseOregon01ReplayContentVersion(contentVersion);
+    assert.equal(parsedVersion?.kind, 'legacy-v1');
+    assert.deepEqual(parsedVersion?.completedScenarioIds.sort(), completed.slice().sort());
+    assert.deepEqual(oregon01CompletedScenarioIdsForContentVersion(contentVersion)?.sort(), completed.slice().sort());
+
+    const session = await createBrowserGameForOregon01Replay(contentVersion).open({
+      scenarioId: oregon01CampaignId,
+      contentVersion,
+      mode: 'free',
+      difficulty: 'easy',
+      randomSeed: 21_100 + mask,
+    });
+    try {
+      assert.equal(session.startRecord.contentVersion, contentVersion);
+      assert.equal(session.observe().units.some(({ activity }) => activity === 4), false);
+      assert.deepEqual(
+        session.observe().units.map(({ type, activity, cell }) => ({ type, activity, cell })),
+        expectedFreshMapUnits(mask, true),
+        `M21 legacy replay marker set for unlock mask ${mask}`,
+      );
+      assert.equal(session.observe().units.some(({ type }) => type === 'gambler'), (mask & 4) !== 0);
+    } finally {
+      session.close();
+    }
+  }
 });
 
 function replayGameScenarioPrizeTypes(completedScenarioIds: readonly string[]): number[] {

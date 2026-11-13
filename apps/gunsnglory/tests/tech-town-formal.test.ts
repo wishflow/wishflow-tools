@@ -6,11 +6,12 @@ import { techTownCampaignWaves } from '../src/content/tech-town-campaign-waves';
 import { techTownRouteDefinitions } from '../src/content/tech-town-routes';
 import { techTownUnitPool } from '../src/content/tech-town-unit-pool';
 import { officialCampaignStages, techTownLevelFourCampaignContent } from '../src/content/official-campaign';
+import { newMexicoCampaignContentVersionFor } from '../src/content/new-mexico-replay-content-version';
 
 test('formal Tech Town content connects the researched map, routes and all level parameters', () => {
   const content = techTownLevelFourCampaignContent;
   assert.equal(content.id, 'campaign-new-mexico-04');
-  assert.equal(content.contentVersion, 'gng-free-1.8.6-new-mexico-04-formal-v1');
+  assert.equal(content.contentVersion, newMexicoCampaignContentVersionFor(content.id, ['campaign-new-mexico-03']));
   assert.equal(content.formalSettlementSupported, true);
   assert.equal(content.title.en, 'Tech Town · Level 4');
   assert.equal(content.title.zh, '科技镇 · 第 4 关');
@@ -112,7 +113,10 @@ test('Tech Town replay unlocks placed specials from the matching completed campa
 });
 
 test('browser registry opens the actual formal Tech Town with its original starting state', async () => {
-  assert.equal(getBrowserScenarioContentVersion(techTownLevelFourContent.id), techTownLevelFourContent.contentVersion);
+  assert.equal(getBrowserScenarioContentVersion(
+    techTownLevelFourContent.id,
+    ['campaign-new-mexico-03'],
+  ), techTownLevelFourContent.contentVersion);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 4), {
     scenarioId: techTownLevelFourContent.id,
     contentVersion: techTownLevelFourContent.contentVersion,

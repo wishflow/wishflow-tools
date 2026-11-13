@@ -6,6 +6,7 @@ import {
   createBrowserGame,
   createBrowserGameForCactusvilleReplay,
   createBrowserGameForLostCityReplay,
+  createBrowserGameForNewMexicoReplay,
   createBrowserGameForMississippi11Replay,
   createBrowserGameForMississippi12Replay,
   createBrowserGameForMississippi13Replay,
@@ -4431,13 +4432,14 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
     && (view.wave?.phase === 'active' || view.units.some((unit) => unit.moving));
   stopGameLoop();
   try {
-    const techTownFreePlayUnlocks = request.mode === 'free'
-      ? [...new Set([...(campaignProgressView?.profile.completedScenarios ?? []), fortKaboomLevelThreeContent.id])]
-      : campaignProgressView?.profile.completedScenarios;
-    const completedScenarioIds = campaignProgressView?.profile.completedScenarios ?? [];
+    const completedScenarioIds = completedScenarioIdsForScenarioOpen(
+      request.scenarioId,
+      request.mode,
+      campaignProgressView?.profile.completedScenarios ?? [],
+    );
     const sessionGame = request.scenarioId === techTownLevelFourCampaignContent.id
       && (campaignProgressView || request.mode === 'free')
-      ? createBrowserGame(techTownFreePlayUnlocks)
+      ? createBrowserGame(completedScenarioIds)
       : request.scenarioId === billyHillsCampaignId && (campaignProgressView || request.mode === 'free')
         ? createBrowserGame(completedScenarioIds)
         : request.scenarioId === murdockMountainsCampaignId && (campaignProgressView || request.mode === 'free')
@@ -4479,6 +4481,17 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
   }
 }
 
+function completedScenarioIdsForScenarioOpen(
+  scenarioId: string,
+  mode: GameMode,
+  completedScenarioIds: readonly string[],
+): string[] {
+  if (scenarioId !== techTownLevelFourCampaignContent.id || mode !== 'free') {
+    return [...completedScenarioIds];
+  }
+  return [...new Set([...completedScenarioIds, fortKaboomLevelThreeContent.id])];
+}
+
 async function openCampaignStage(scenarioId: string): Promise<boolean> {
   if (assetLoadFailureNames.length > 0 || campaignSelectionBusy || settingsSaveBusy) return false;
   const requestedDifficulty = selectedDifficulty;
@@ -4511,7 +4524,11 @@ async function openCampaignStage(scenarioId: string): Promise<boolean> {
       scenarioId: stage.scenarioId,
       contentVersion: getBrowserScenarioContentVersion(
         stage.scenarioId,
-        campaignProgressView.profile.completedScenarios,
+        completedScenarioIdsForScenarioOpen(
+          stage.scenarioId,
+          'formal',
+          campaignProgressView.profile.completedScenarios,
+        ),
       ) ?? stage.contentVersion,
       randomSeed: session.startRecord.randomSeed,
       difficulty: requestedDifficulty,
@@ -4541,7 +4558,11 @@ async function openFreePlayStage(scenarioId: string, difficulty: GameDifficulty)
       scenarioId: stage.scenarioId,
       contentVersion: getBrowserScenarioContentVersion(
         stage.scenarioId,
-        campaignProgressView?.profile.completedScenarios ?? [],
+        completedScenarioIdsForScenarioOpen(
+          stage.scenarioId,
+          'free',
+          campaignProgressView?.profile.completedScenarios ?? [],
+        ),
       ) ?? stage.contentVersion,
       randomSeed: session.startRecord.randomSeed,
       difficulty,
@@ -4582,7 +4603,11 @@ function requestScenarioOpen(
     scenarioId,
     contentVersion: getBrowserScenarioContentVersion(
       scenarioId,
-      campaignProgressView?.profile.completedScenarios ?? [],
+      completedScenarioIdsForScenarioOpen(
+        scenarioId,
+        mode,
+        campaignProgressView?.profile.completedScenarios ?? [],
+      ),
     ),
     randomSeed: session.startRecord.randomSeed,
     difficulty,
@@ -4619,19 +4644,32 @@ function gameForReplay(serialized: string) {
       startRecord?: { scenarioId?: unknown; contentVersion?: unknown };
     };
     if (parsed.startRecord?.scenarioId === techTownLevelFourCampaignContent.id) {
-      const completedScenarioIds = campaignProgressView?.profile.completedScenarios ?? [];
-      // Map04's mandatory type 1–4 player pool is available on map entry; later special units still
-      // follow the current profile's actual milestone unlocks.
-      return createBrowserGame([...new Set([...completedScenarioIds, fortKaboomLevelThreeContent.id])]);
+      return createBrowserGameForNewMexicoReplay(
+        techTownLevelFourCampaignContent.id,
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+        campaignProgressView?.profile.completedScenarios ?? [],
+      );
     }
     if (parsed.startRecord?.scenarioId === billyHillsCampaignId) {
-      return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
+      return createBrowserGameForNewMexicoReplay(
+        billyHillsCampaignId,
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+        campaignProgressView?.profile.completedScenarios ?? [],
+      );
     }
     if (parsed.startRecord?.scenarioId === murdockMountainsCampaignId) {
-      return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
+      return createBrowserGameForNewMexicoReplay(
+        murdockMountainsCampaignId,
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+        campaignProgressView?.profile.completedScenarios ?? [],
+      );
     }
     if (parsed.startRecord?.scenarioId === luckyLakeCampaignId) {
-      return createBrowserGame(campaignProgressView?.profile.completedScenarios ?? []);
+      return createBrowserGameForNewMexicoReplay(
+        luckyLakeCampaignId,
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+        campaignProgressView?.profile.completedScenarios ?? [],
+      );
     }
     if (parsed.startRecord?.scenarioId === cactusvilleCampaignId) {
       return createBrowserGameForCactusvilleReplay(

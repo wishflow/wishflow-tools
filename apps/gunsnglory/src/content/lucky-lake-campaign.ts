@@ -5,10 +5,12 @@ import { luckyLakeExits, luckyLakeRedirects, luckyLakeRouteDefinitions, luckyLak
 import { luckyLakeCampaignWaves } from './lucky-lake-campaign-waves';
 import { luckyLakeUnitPool } from './lucky-lake-unit-pool';
 import { createLuckyLakeUnits } from './lucky-lake-units';
+import { newMexicoCampaignContentVersionFor } from './new-mexico-replay-content-version';
 import type { CampaignEnemyType, PreviewEnemyDefinition, PreviewWaveDefinition, ScenarioContent } from '../game';
 import type { CampaignMapUnitTypeId } from './campaign-map-unit-placements';
 
 export const luckyLakeCampaignId = 'campaign-new-mexico-07';
+/** Fixed content version used by replays recorded before profile snapshots were added. */
 export const luckyLakeCampaignContentVersion = 'gng-free-1.8.6-new-mexico-07-formal-v1';
 
 const baseEnemy: PreviewEnemyDefinition = Object.freeze({
@@ -97,7 +99,7 @@ export function createLuckyLakeCampaignContent(completedScenarioIds: readonly st
   return {
     ...map,
     id: luckyLakeCampaignId,
-    contentVersion: luckyLakeCampaignContentVersion,
+    contentVersion: newMexicoCampaignContentVersionFor(luckyLakeCampaignId, completedScenarioIds),
     formalSettlementSupported: true,
     title: { en: 'Lucky Lake · Level 7', zh: '幸运湖 · 第 7 关' },
     map: createLuckyLakeMapScene(),

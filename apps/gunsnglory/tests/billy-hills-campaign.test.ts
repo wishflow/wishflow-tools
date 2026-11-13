@@ -12,6 +12,7 @@ import {
 import { billyHillsCampaignWaves } from '../src/content/billy-hills-campaign-waves';
 import { billyHillsUnitPool } from '../src/content/billy-hills-unit-pool';
 import { billyHillsWaveIntros } from '../src/content/billy-hills-wave-intros';
+import { newMexicoCampaignContentVersionFor } from '../src/content/new-mexico-replay-content-version';
 import { applyCampaignUnitPoolActions, createCampaignUnitPoolRuntime } from '../src/game/campaign-unit-pool';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
@@ -121,6 +122,7 @@ test('Billy Hills content uses the audited map parameters and milestone-gated un
   assert.equal(billyHillsCampaignContentVersion, 'gng-free-1.8.6-new-mexico-05-formal-v1');
 
   const noProgress = createBillyHillsCampaignContent([]);
+  assert.equal(noProgress.contentVersion, newMexicoCampaignContentVersionFor(billyHillsCampaignId, []));
   assert.equal(noProgress.map.width, 32);
   assert.equal(noProgress.map.height, 24);
   assert.equal(noProgress.maxUpgrades, 1);

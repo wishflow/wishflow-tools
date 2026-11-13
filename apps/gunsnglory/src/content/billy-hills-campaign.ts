@@ -5,6 +5,7 @@ import { billyHillsRedirects, billyHillsRouteDefinitions, billyHillsSpawnPoints,
 import { billyHillsCampaignWaves } from './billy-hills-campaign-waves';
 import { billyHillsUnitPool } from './billy-hills-unit-pool';
 import { createBillyHillsUnits } from './billy-hills-units';
+import { newMexicoCampaignContentVersionFor } from './new-mexico-replay-content-version';
 import type { CampaignMapUnitTypeId } from './campaign-map-unit-placements';
 import type {
   CampaignEnemyType,
@@ -14,6 +15,7 @@ import type {
 } from '../game';
 
 export const billyHillsCampaignId = 'campaign-new-mexico-05';
+/** Fixed content version used by replays recorded before profile snapshots were added. */
 export const billyHillsCampaignContentVersion = 'gng-free-1.8.6-new-mexico-05-formal-v1';
 
 const baseEnemy: PreviewEnemyDefinition = Object.freeze({
@@ -105,7 +107,7 @@ export function createBillyHillsCampaignContent(completedScenarioIds: readonly s
   return {
     ...map,
     id: billyHillsCampaignId,
-    contentVersion: billyHillsCampaignContentVersion,
+    contentVersion: newMexicoCampaignContentVersionFor(billyHillsCampaignId, completedScenarioIds),
     formalSettlementSupported: true,
     title: { en: 'Billy Hills · Level 5', zh: '比利山丘 · 第 5 关' },
     map: createBillyHillsMapScene(),

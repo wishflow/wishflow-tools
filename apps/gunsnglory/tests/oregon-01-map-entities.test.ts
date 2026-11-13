@@ -9,22 +9,33 @@ import { gameAssetRelativePath } from '../src/render/game-asset-path';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 
-test('Eastwood creates only its activity-5 hires and gates the Gambler with its Casino', () => {
-  const unlockedTypes = new Set([1, 2, 3, 4, 9]);
+test('Eastwood creates every unlocked fresh-game unit marker with its APK activity and cell', () => {
+  const unlockedTypes = new Set([1, 2, 3, 4]);
   const content = createOregon01MapContent((typeId) => unlockedTypes.has(typeId));
-  const freshPlacements = createCampaignMapUnitPlacements(map.originalTileGrid)
-    .filter(({ activity, unitTypeId }) => activity === 5 && (unitTypeId === 1 || unitTypeId === 2));
-  const activeUnits = content.units.filter(({ type }) => type !== 'gambler');
+  const freshPlacements = createCampaignMapUnitPlacements(map.originalTileGrid).filter(({ activity, unitTypeId }) => (
+    (activity === 5 && unitTypeId !== 9) || unlockedTypes.has(unitTypeId)
+  ));
+  const unitTypeById = new Map([
+    [1, 'gunslinger'], [2, 'mexican'], [3, 'cannon'], [4, 'indian'], [5, 'sniper'],
+    [6, 'grandpa'], [9, 'gambler'], [35, 'pyromaniac'], [36, 'salesman'],
+  ]);
 
-  assert.deepEqual(activeUnits.map(({ type, cell }) => ({ type, cell })), freshPlacements.map(({ unitTypeId, cell }) => ({
-    type: unitTypeId === 1 ? 'gunslinger' : 'mexican',
+  assert.deepEqual(content.units.map(({ type, activity, cell }) => ({ type, activity, cell })), freshPlacements.map(({
+    unitTypeId,
+    activity,
+    cell,
+  }) => ({
+    type: unitTypeById.get(unitTypeId),
+    activity,
     cell,
   })));
-  assert.ok(content.units.every(({ activity }) => activity === 5));
-  assert.equal(content.units.filter(({ type }) => type === 'gambler').length, 1);
-  assert.equal(content.scene.decorations?.filter(({ asset }) => asset === 'b_3x2_casino').length, 1);
-  assert.deepEqual(content.gambler?.unlockedPrizeUnitTypes, [1, 2, 3, 4]);
-  assert.equal(content.units.some(({ type }) => ['cannon', 'indian', 'sniper', 'grandpa', 'pyromaniac', 'salesman'].includes(type)), false);
+  assert.equal(content.units.some(({ type }) => type === 'gambler'), false);
+  assert.equal(content.scene.decorations?.some(({ asset }) => asset === 'b_3x2_casino'), false);
+
+  const gamblerContent = createOregon01MapContent((typeId) => unlockedTypes.has(typeId) || typeId === 9);
+  assert.equal(gamblerContent.units.filter(({ type }) => type === 'gambler').length, 1);
+  assert.equal(gamblerContent.scene.decorations?.filter(({ asset }) => asset === 'b_3x2_casino').length, 1);
+  assert.deepEqual(gamblerContent.gambler?.unlockedPrizeUnitTypes, [1, 2, 3, 4]);
 });
 
 test('Eastwood hides both Gambler entities until unlocked and maps the APK tree marker', () => {
@@ -45,7 +56,7 @@ test('Eastwood hides both Gambler entities until unlocked and maps the APK tree 
   assert.deepEqual([png.readUInt32BE(16), png.readUInt32BE(20)], [48, 78]);
 });
 
-test('Eastwood Gambler prize templates cover only the unlocked prizes without becoming map units', () => {
+test('Eastwood Gambler templates do not add duplicate map hires', () => {
   const unlockedTypes = new Set([1, 2, 3, 4, 5, 6, 9, 35, 36]);
   const content = createOregon01MapContent((typeId) => unlockedTypes.has(typeId));
   const templates = content.gambler?.prizeTemplates;
@@ -61,6 +72,10 @@ test('Eastwood Gambler prize templates cover only the unlocked prizes without be
     [35, 'pyromaniac'],
     [36, 'salesman'],
   ]);
-  assert.equal(content.units.some(({ type }) => ['cannon', 'indian', 'sniper', 'grandpa', 'pyromaniac', 'salesman'].includes(type)), false);
+  assert.deepEqual(content.units.filter(({ type }) => type === 'sniper').length, 1);
+  assert.deepEqual(content.units.filter(({ type }) => type === 'grandpa').length, 4);
+  assert.deepEqual(content.units.filter(({ type }) => type === 'pyromaniac').length, 1);
+  assert.deepEqual(content.units.filter(({ type }) => type === 'salesman').length, 1);
+  assert.equal(content.units.some(({ type }) => type === 'cannon' || type === 'indian'), false);
   assert.equal(content.units.filter(({ type }) => type === 'gambler').length, 1);
 });
