@@ -6,9 +6,9 @@
 
 - M20 Horse Hills、M21 Eastwood Forest 均已发布并回同步；对应批次记录保留来源 SHA、检查和入口证据。
 - M22 代码已发布到 `master`（`b5dec97`），并回同步到 `gunsnglory`（`ebb52b8`）。本地及 GitHub CI、两个 Pages 来源 SHA 均通过；M22-G 的内置浏览器验收仍待 Computer Use browser provider 恢复，不能声称批次验收完全关闭。M22 修复依据见[Eastwood Forest 静态审计](map21-static-audit.md)。
-- 普通发布比例为26/130（20.0%）。M23 计划5个实现切片及1次普通发布，完成后为27/135（20.0%）；静态审计和其他文档切片不计入实现数。
+- 普通发布比例为27/135（20.0%）；M23 完成5个实现切片和1次普通发布。静态审计和其他文档切片不计入实现数。
 
-## 当前批次：回放内容快照补全（M22）
+## 最近完成批次：回放内容快照补全（M22）
 
 目标是使回放内容版本完整标识影响开局场景的档案状态，并修复 M21 新局遗漏的 map24 招募单位。APK 证据和修正后的 marker 语义见[Eastwood Forest 静态审计](map21-static-audit.md)。测试默认窗口模式、静音；不完整通关、不启动 Android。
 
@@ -22,7 +22,7 @@
 | M22-F | 回放矩阵与入口回归 | 在录制档案和导入档案不同的条件下验证 M4–M7 每种快照、M4 map-access 状态和 Eastwood v1/v2 replay factory；验证未知版本拒绝。补足正式与 Free Play 入口的定向 E2E，不推进完整关卡。 | 已完成；M4–M7 的16种快照组合由工厂单测遍历，v1 与导入档案一致时保持旧内容；M4 `map-access=0` 即使当前档案已解锁 M3 仍由版本解析/prepare 保持关闭，开放状态的真实 replay 由浏览器导入覆盖。E2E 用短探针覆盖 M4–M7 与 Eastwood v1/v2 共10个可生成内容版本，frame 0 由真实 `GameSession` 摘要校验，frame 1 使用故意不匹配摘要以避免推进战斗；未知版本返回 `content-unavailable`。`t60`、两项 `t31-free-play`、`t37-tech-town-formal` 共4项 E2E 通过；M4–M7 工厂及 Eastwood 内容/规则单测共10项通过；`pnpm run typecheck` 通过。 |
 | M22-G | 批次检查、发布与回同步 | 先运行 M22 定向测试并修复失败；整批结束后运行 `CI=1 PLAYWRIGHT_PORT=<空闲端口> pnpm run test:ci`。通过后以单个 squash commit 集成至 `master`，推送并等待 Pages 工作流；核对 GitHub Pages 与 Cloudflare Pages `build-info.json` 的 `sourceSha`，再用内置浏览器静音、窗口模式验证 M4–M7 replay 与 Eastwood Free Play 代表流程；最终合并已发布提交回 `gunsnglory` 并核对远端。不得完整通关、进入全屏或播放音频。 | 本地 `test:ci` 通过（类型检查、734项单测、生产构建、156项 E2E）；GitHub Actions run [43357707974](https://github.com/wishflow/wishflow-tools/actions/runs/43357707974) 全绿；squash 发布提交 [b5dec97](https://github.com/wishflow/wishflow-tools/commit/b5dec97926b7ebfb2643922809eeb2660ebcd071) 已部署，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回相同 `sourceSha`；发布内容已合并回 `gunsnglory`。内置浏览器验收仍未完成：Computer Use 当前没有 browser provider，`getState()` 返回空浏览器列表，`createBrowserTab("iab", …)` 与 URL 绑定均报告不可用；未以外部浏览器替代，因此 M22-G 保持待补浏览器验收。构建保留约 2.45 MB JS chunk 警告。 |
 
-## 下一批：Cashcow Canyon（M23，Oregon 第2关／全局第22关）
+## 当前批次：Cashcow Canyon（M23，Oregon 第2关／全局第22关）
 
 目标是把 APK 已登记但网页仍禁用的 Cashcow Canyon 接入当前规则、地图、内容版本、正式战役与 Free Play。内容清单将其映射为 `td_map_25.tdm`：32×24、初始 `$250`/25生命、86/115/140 HP倍率、9个 `newWave` 行、33个 `addToWave` 行、0个炮池动作。逐项静态审计已完成，基线见[Cashcow Canyon静态审计](map22-static-audit.md)；不完整通关、不启动 Android，验收默认窗口模式和静音。M22-G 的内置浏览器门槛仍单独保持未关闭。
 
@@ -30,8 +30,8 @@
 
 | 顺序 | 切片 | 范围与验收 | 状态 |
 | --- | --- | --- | --- |
-| M23-F | 正式关卡、Free Play 与回放 | 新建 `oregon-02-identity.ts`、内容版本编解码和 `oregon-02-campaign.ts`；版本沿用已验证的全球单位解锁位，仅将实际改变 Cashcow 开局 activity 4 单位的 Pyromaniac/Salesman 两位作为内容差异测试依据。复用 `campaignCatalog` 已有的 level22/map25 条目，在 `official-campaign.ts` 登记 level22 并以前一关 Eastwood 为前置；把同一builder接入正式、Free Play、replay factory、主菜单中英文标题/简介、9段对白、Oregon音乐和启动资源预加载。新增 `oregon-02-formal.test.ts`；扩展 `t60-replay-content-snapshots.spec.ts` 并新增 `t61-oregon-02-integration.spec.ts`。验收：无进度时正式22锁定、完成21后开放；正式胜利记录22，Free Play 的三档难度均不污染档案；2×2个Pyromaniac/Salesman解锁组合和不同导入档案下均按录制快照还原开局单位，未知/非法版本以 `content-unavailable` 拒绝；桌面/移动E2E检查选关、map25简介与预览、首波对白、音乐/资源接线和真实开局摘要，不手动通关。 | 已完成；正式、Free Play、内容版本快照回放及入口 E2E 均通过，详情见下方完成结果。完整 CI 留至 M23-G。 |
-| M23-G | 批次检查、发布与回同步 | 在确认空闲端口 `43217` 后运行一次 `CI=1 PLAYWRIGHT_PORT=43217 pnpm run test:ci`；失败时修复当前失败并重跑失败项及最终完整检查。通过后 fetch 并核对最新 `origin/gunsnglory`、`origin/master`，把本批相对集成基线的改动 squash 到 `master`，再裸 `git push origin master`；用 GitHub CLI 等待适用 job 成功，核对 GitHub Pages 与 Cloudflare Pages `build-info.json` 来源 SHA；内置浏览器静音、窗口模式验证 Cashcow Canyon 正式/Free Play 代表入口；最后回同步 `gunsnglory` 并检查远端和工作树。不得完整通关、进全屏或播放音频。M22 未完成的浏览器验收若 provider 仍不可用，继续明确保留，不得以 M23 自动化测试冒充 M22 线上视觉验收。 | 本地完整 `test:ci` 已通过：类型检查、748项单测、构建及158项E2E；远端核对、squash发布、部署SHA、浏览器验收和回同步待完成。 |
+| M23-F | 正式关卡、Free Play 与回放 | 新建 `oregon-02-identity.ts`、内容版本编解码和 `oregon-02-campaign.ts`；版本沿用已验证的全球单位解锁位，仅将实际改变 Cashcow 开局 activity 4 单位的 Pyromaniac/Salesman 两位作为内容差异测试依据。复用 `campaignCatalog` 已有的 level22/map25 条目，在 `official-campaign.ts` 登记 level22 并以前一关 Eastwood 为前置；把同一builder接入正式、Free Play、replay factory、主菜单中英文标题/简介、9段对白、Oregon音乐和启动资源预加载。新增 `oregon-02-formal.test.ts`；扩展 `t60-replay-content-snapshots.spec.ts` 并新增 `t61-oregon-02-integration.spec.ts`。验收：无进度时正式22锁定、完成21后开放；正式胜利记录22，Free Play 的三档难度均不污染档案；2×2个Pyromaniac/Salesman解锁组合和不同导入档案下均按录制快照还原开局单位，未知/非法版本以 `content-unavailable` 拒绝；桌面/移动E2E检查选关、map25简介与预览、首波对白、音乐/资源接线和真实开局摘要，不手动通关。 | 已完成；正式、Free Play、内容版本快照回放及入口 E2E 均通过，详情见下方完成结果；批次检查和发布状态见 M23-G。 |
+| M23-G | 批次检查、发布与回同步 | 在确认空闲端口 `43217` 后运行一次 `CI=1 PLAYWRIGHT_PORT=43217 pnpm run test:ci`；失败时修复当前失败并重跑失败项及最终完整检查。通过后 fetch 并核对最新 `origin/gunsnglory`、`origin/master`，把本批相对集成基线的改动 squash 到 `master`，再裸 `git push origin master`；用 GitHub CLI 等待适用 job 成功，核对 GitHub Pages 与 Cloudflare Pages `build-info.json` 来源 SHA；内置浏览器静音、窗口模式验证 Cashcow Canyon 正式/Free Play 代表入口；最后回同步 `gunsnglory` 并检查远端和工作树。不得完整通关、进全屏或播放音频。M22 未完成的浏览器验收若 provider 仍不可用，继续明确保留，不得以 M23 自动化测试冒充 M22 线上视觉验收。 | 本地 `CI=1 PLAYWRIGHT_PORT=43217 pnpm run test:ci` 通过：类型检查、748项单测、生产构建、158项E2E。GitHub Actions [43374309294](https://github.com/wishflow/wishflow-tools/actions/runs/43374309294) 的应用/共享测试及两个 Pages 部署均成功；squash 发布提交为 [55ef7f5](https://github.com/wishflow/wishflow-tools/commit/55ef7f5fe6d64dd6ee2e18d358b1485c4410c01c)，GitHub Pages deployment `7758372664` 的 SHA 与其一致。Cloudflare Pages 部署成功，但本机 Wrangler 4.94.0 缺少 `CLOUDFLARE_API_TOKEN`，未能读取其 `build-info.json` 来源 SHA。回同步提交 `9007172` 已推送到 `origin/gunsnglory`；远端 `master` 与 `gunsnglory` 文件树一致，主工作树已快进并保留未跟踪研究文档。Computer Use 当前 `getState()` 的浏览器列表为空，`createBrowserTab("iab", …)` 返回 `Browser is not available: iab`；未改用外部浏览器，因此 M23-G 尚待 Cloudflare 来源 SHA 与内置浏览器交互验收。M22-G 的浏览器验收仍独立待补。 |
 
 ### M23-B 完成结果
 
@@ -62,7 +62,7 @@
 - 将 Cashcow Canyon 登记为 Oregon 正式第22关，前置为 Eastwood Forest；同一内容构建器接入 Free Play、正式战役、回放导入、英文/中文选关文案、9段波次对白、Oregon 音乐和启动资源预加载。正式模式胜利写入第22关进度；Free Play 三档难度可开局且不写入正式进度。
 - 回放内容版本保存全局招募解锁快照；四种 Pyromaniac/Salesman 组合和与录制档案不同的导入档案均恢复相同开局招募对象。非法/未知版本不回退到当前内容，并由真实回放入口以 `content-unavailable` 拒绝。
 - 定向检查通过：`pnpm run typecheck`；16项 Cashcow/目录单测；`t60-replay-content-snapshots.spec.ts` 与 `t61-oregon-02-integration.spec.ts` 共3项 E2E。E2E 覆盖桌面与390×844窄屏 Free Play、地图预览和首波对白、正式关卡解锁/锁定及资源加载；未通关、未进全屏、未播放音频。
-- 浏览器集成测试发现 Level 22 的战斗 HUD 区域标签仍回退为 New Mexico，已在 `main.ts` 将第二个 Oregon 正式关卡纳入区域映射，并在两种入口的首屏断言 Oregon 标签。完整 `test:ci`、发布和部署验收留至 M23-G；M22 内置浏览器待补项仍独立保持未关闭。
+- 浏览器集成测试发现 Level 22 的战斗 HUD 区域标签仍回退为 New Mexico，已在 `main.ts` 将第二个 Oregon 正式关卡纳入区域映射，并在两种入口的首屏断言 Oregon 标签。M23-G 已通过本地与远端完整检查并完成发布、GitHub Pages SHA 核对及分支回同步；Cloudflare 来源 SHA 与内置浏览器交互验收仍待补，M22 内置浏览器待补项也独立保持未关闭。
 
 ## 最近完成批次：Eastwood Forest（M21；M22 复核更正）
 
