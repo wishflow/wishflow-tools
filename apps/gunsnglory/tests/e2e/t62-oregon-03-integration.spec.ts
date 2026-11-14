@@ -74,7 +74,7 @@ test('Free Play opens Chinook Woods with map 26, bilingual copy, and its first q
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-oregon').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available');
   await expect(page.getByTestId('campaign-level-23')).toBeEnabled();
   await page.getByTestId('campaign-level-23').click();
   await expectChinookOverview(page);

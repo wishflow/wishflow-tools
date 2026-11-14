@@ -74,7 +74,7 @@ test('Free Play opens Cashcow Canyon on desktop and narrow mobile viewports', as
 
     await page.getByTestId('menu-free-play').click();
     await page.getByTestId('campaign-region-oregon').click();
-    await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
+    await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available');
     await expect(page.getByTestId('campaign-level-22')).toBeEnabled();
     await page.getByTestId('campaign-level-22').click();
     await expectCashcowOverview(page);
