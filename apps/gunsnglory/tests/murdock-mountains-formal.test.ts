@@ -14,7 +14,7 @@ test('Murdock Mountains is the registered New Mexico sixth stage and follows Bil
     globalLevel: 6,
     requiresCompletedScenarioIds: ['campaign-new-mexico-05'],
   });
-  assert.equal(officialCampaignStages.length, 25);
+  assert.equal(officialCampaignStages.length, 26);
   assert.equal(murdockMountainsLevelSixCampaignContent.formalSettlementSupported, true);
   assert.equal(murdockMountainsCampaignContentVersion, 'gng-free-1.8.6-new-mexico-06-formal-v1');
   assert.equal(getBrowserScenarioContentVersion(murdockMountainsCampaignId), newMexicoCampaignContentVersionFor(murdockMountainsCampaignId, []));

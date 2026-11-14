@@ -19,7 +19,7 @@ test('Free Play opens Fort Echo with map 27, bilingual copy, and its first wave'
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-oregon').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('5 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
   await expect(page.getByTestId('campaign-level-24')).toBeEnabled();
   await page.getByTestId('campaign-level-24').click();
 

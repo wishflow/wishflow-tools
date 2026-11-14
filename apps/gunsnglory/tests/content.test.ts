@@ -32,6 +32,7 @@ import {
   oregon03LevelTwentyThreeCampaignContent,
   oregon04LevelTwentyFourCampaignContent,
   oregon05LevelTwentyFiveCampaignContent,
+  oregon06LevelTwentySixCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -281,6 +282,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Dynamite Plains · Level 25', zh: '炸药平原 · 第 25 关' },
     globalLevel: 25,
     requiresCompletedScenarioIds: ['campaign-oregon-04'],
+  }, {
+    scenarioId: oregon06LevelTwentySixCampaignContent.id,
+    contentVersion: oregon06LevelTwentySixCampaignContent.contentVersion,
+    title: { en: 'Columbia River · Level 26', zh: '哥伦比亚河 · 第 26 关' },
+    globalLevel: 26,
+    requiresCompletedScenarioIds: [oregon05LevelTwentyFiveCampaignContent.id],
   }]);
 });
 

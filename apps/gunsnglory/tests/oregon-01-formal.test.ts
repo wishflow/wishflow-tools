@@ -79,7 +79,7 @@ function expectedFreshMapUnits(mask: number, activity5Only = false): { type: str
 }
 
 test('Eastwood is formal level 21 and unlocks only after Horse Hills', async () => {
-  assert.equal(officialCampaignStages.length, 25);
+  assert.equal(officialCampaignStages.length, 26);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 21), {
     scenarioId: oregon01CampaignId,
     contentVersion: oregon01CampaignContentVersionFor([]),
