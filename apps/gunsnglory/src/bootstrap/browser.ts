@@ -125,6 +125,12 @@ import {
   parseOregon05ReplayContentVersion,
 } from '../content/oregon-05-content-version';
 import { oregon05CampaignId } from '../content/oregon-05-identity';
+import { createOregon06CampaignContent } from '../content/oregon-06-campaign';
+import {
+  oregon06CampaignContentVersionFor,
+  parseOregon06ReplayContentVersion,
+} from '../content/oregon-06-content-version';
+import { oregon06CampaignId } from '../content/oregon-06-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -266,6 +272,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === oregon05CampaignId) {
     return oregon05CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === oregon06CampaignId) {
+    return oregon06CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -299,6 +308,7 @@ export function createBrowserGame(
     [oregon03CampaignId]: createOregon03CampaignContent(completedScenarioIds),
     [oregon04CampaignId]: createOregon04CampaignContent(completedScenarioIds),
     [oregon05CampaignId]: createOregon05CampaignContent(completedScenarioIds),
+    [oregon06CampaignId]: createOregon06CampaignContent(completedScenarioIds),
   };
   if (legacyReplayContentOverride) {
     const scenario = scenarios[legacyReplayContentOverride.scenarioId];
@@ -521,6 +531,13 @@ export function createBrowserGameForOregon04Replay(contentVersion: string | unde
 export function createBrowserGameForOregon05Replay(contentVersion: string | undefined) {
   const parsed = parseOregon05ReplayContentVersion(contentVersion);
   if (!parsed) return createBrowserGame([], undefined, oregon05CampaignId);
+  return createBrowserGame(parsed.completedScenarioIds);
+}
+
+/** Replay import restores Columbia River's recorded unit and Dynamite unlock snapshots. */
+export function createBrowserGameForOregon06Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon06ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon06CampaignId);
   return createBrowserGame(parsed.completedScenarioIds);
 }
 

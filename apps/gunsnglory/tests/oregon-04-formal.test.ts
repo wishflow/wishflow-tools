@@ -220,7 +220,7 @@ test('Fort Echo content builder opens a short GameSession with its source map an
 });
 
 test('Fort Echo is formal level 24 after Chinook Woods; Free Play stays isolated from campaign progress', async () => {
-  assert.equal(officialCampaignStages.length, 25);
+  assert.equal(officialCampaignStages.length, 26);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 24), {
     scenarioId: oregon04CampaignId,
     contentVersion: oregon04CampaignContentVersionFor([]),

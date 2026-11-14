@@ -48,7 +48,7 @@ function hireCounts(content: ScenarioContent): { pyromaniac: number; salesman: n
 }
 
 test('Cashcow Canyon is formal level 22 and unlocks after Eastwood Forest', async () => {
-  assert.equal(officialCampaignStages.length, 25);
+  assert.equal(officialCampaignStages.length, 26);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 22), {
     scenarioId: oregon02CampaignId,
     contentVersion: oregon02CampaignContentVersionFor([]),

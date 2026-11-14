@@ -39,7 +39,7 @@ function emptyRequestContent(completedScenarioIds: readonly string[]): ScenarioC
 }
 
 test('Dead Rocks is formal level 17 and requires Highpoint Terrace completion', async () => {
-  assert.equal(officialCampaignStages.length, 25);
+  assert.equal(officialCampaignStages.length, 26);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 17), {
     scenarioId: mississippi17CampaignId,
     contentVersion: mississippi17CampaignContentVersionFor([]),

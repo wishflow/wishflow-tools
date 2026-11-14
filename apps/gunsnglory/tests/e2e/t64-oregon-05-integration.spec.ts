@@ -74,11 +74,11 @@ test('Free Play opens Dynamite Plains on desktop and narrow mobile, with map 28 
 
     await page.getByTestId('menu-free-play').click();
     await page.getByTestId('campaign-region-oregon').click();
-    await expect(page.getByTestId('campaign-menu-progress')).toContainText('5 implemented levels available');
-    for (const level of [21, 22, 23, 24, 25]) {
+    await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
+    for (const level of [21, 22, 23, 24, 25, 26]) {
       await expect(page.getByTestId(`campaign-level-${level}`)).toBeEnabled();
     }
-    await expect(page.getByTestId('campaign-level-26')).toBeDisabled();
+    await expect(page.getByTestId('campaign-level-27')).toBeDisabled();
     await page.getByTestId('campaign-level-25').click();
     await expectDynamiteOverview(page);
 
