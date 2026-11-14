@@ -4,9 +4,9 @@
 
 ## 当前状态
 
-- M27 Columbia River（Oregon 第 6 关／全局第 26 关）已发布。代码 squash 提交为 `b858ca91dafdf9d61deb5d7e5bf0beff4567fe98`；GitHub Actions、GitHub Pages 与 Cloudflare Pages 均成功，两个站点来源 SHA 一致。完整检查通过 816 项单测、构建和 172 项 E2E；内置浏览器核对 Free Play 六关列表、Level 26 开局、真实地图和 390×844 窄屏布局，窗口模式、静音，未结算关卡。完整记录见下方 M27 批次。
-- M27 最终计划更新为纯文档提交 `bbf216dd0861f554ceeeea222c8769137886badb`，未触发重新部署；因此线上代码来源仍为 `b858ca9`。该文档提交已并入 `master` 和 `gunsnglory`。目前 `master`/`origin/master` 均为 `bbf216d`，`gunsnglory`/`origin/gunsnglory` 均为 `074d077`，集成分支包含最新发布和计划。主工作树现有未跟踪研究笔记保留。
-- M22-G 中 M4–M7 回放的公开页面导入探针仍是历史未确认项；不影响 M27，但后续如修改回放公共路由应纳入针对性回归，不重复无关浏览器测试。M27 后普通发布比例按 29/164（17.7%）记录。
+- M28 Mount Hood（Oregon 第 7 关／全局第 27 关）已完成并发布。唯一 squash 发布提交为 `516b79315c133e1dbc80d3a4a3e42d39b4c69e4a`；GitHub Actions `43609831648` 的共享检查、Guns’n’Glory 测试和 GitHub/Cloudflare Pages 部署均成功，两个站点来源 SHA 与发布提交一致。完整检查通过类型检查、832 项单测、生产构建和 175 项 E2E；内置浏览器窗口模式、静音进入 Free Play → Oregon → Mount Hood → Medium，确认开场对白、头像、真实地图和 `01/10` HUD。没有完整通关、进入全屏或启动 Android。
+- M28 已回同步到 `gunsnglory`：本地/远端集成分支指向包含发布 SHA 的合并提交 `0132e3384b6cbdd7154a6a717082259c199230b2`。主工作树原有未跟踪研究笔记 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 未改动。当前 `master`/`origin/master` 为 `516b793`，`gunsnglory`/`origin/gunsnglory` 为 `0132e33`。
+- M22-G 中 M4–M7 回放的公开页面导入探针仍是历史未确认项；不影响 M28，但后续如修改回放公共路由应纳入针对性回归，不重复无关浏览器测试。M28 后普通发布比例按 30/171（17.5%）记录。
 
 ## 当前批次：Mount Hood（M28，Oregon 第 7 关／全局第 27 关）
 
@@ -23,7 +23,7 @@
 | M28-F2 | 正式、自由入口与目录回归 | level27 以前置正式 level26 解锁；Free Play 开放三档难度，未实现 level28 保持禁用。接通 Oregon 预览、英中文案、对白、头像、音乐、HUD、资源预载和回放导入。验证正式胜利只记录 level27，Free Play 不写入档案；恢复 32 个 replay snapshot。加入桌面与窄屏真实入口 E2E，不完整通关。 | **已完成**；正式目录登记 Mount Hood 为全局 level27，并要求 Columbia River（level26）完成；Free Play 与正式入口均使用同一关卡内容，三档难度可选，level28 保持禁用。接入 map30 预览、英中文案、十段波次对白/头像、Oregon 音乐、HUD、启动预载及按录制快照分派的回放。正式结算写入 level27 完成/最高分，Free Play 不改档案；32 种回放快照已在 F1 覆盖。桌面与 390×844 窄屏入口 E2E 3/3、Mount Hood/Oregon 06 定向测试 7/7、`pnpm run typecheck` 通过。E2E 覆盖 Free Play 七关及难度、正式解锁门槛、双语概览、地图与首波对白、静音状态和回放派发；未完整通关。更新 Oregon 06 正式目录长度断言至 27；其他历史目录计数留到 M28-G1 集中校准。 |
 | M28-G1 | 历史目录与回归断言 | 更新新增第27关影响的正式目录长度/前置关系、Fort Kaboom 顺序、Oregon Free Play 数量、Progress 摘要和历史 E2E。按失败证据逐条关闭旧固定数量断言，确保 level26 未完成时第27关锁定、完成后开放且第28关禁用。只重跑受影响的关卡目录与进度用例。 | **已完成**；20 个既有正式关卡测试的目录长度改为 27；完整正式目录快照、Oregon 21–27 目录预期、Fort Kaboom 全局顺序及 Progress 状态快照加入 Mount Hood。T59–T65 的 Oregon Free Play 数量更新为 7，level27 可玩，level28 未实现；M28-F2 验证 level26 未完成时 level27 锁定、完成后开放。类型检查通过，正式目录/Progress/内容定向单测 167/167 通过，受影响 Oregon E2E 21/21 通过。 |
 | M28-G2 | 批次完整检查 | 定向检查 M28 地图/实体/规则/内容/回放/目录后，运行一次 `CI=1 PLAYWRIGHT_PORT=<空闲端口> pnpm run test:ci`，覆盖类型检查、全部单测、生产构建和 E2E。修复失败根因并定向复跑，再运行最终整套检查；不重复 APK/Android 观察。 | **已完成**；首轮 6 个 E2E 失败均是旧 Progress 摘要断言仍固定总数 26；更新 T20、T22、T25、T28、T33 后，定向 E2E 11/11 通过。最终 `CI=1 PLAYWRIGHT_PORT=43029 pnpm run test:ci` 全部通过：TypeScript、832 项单测、生产构建、175 项 E2E。构建仅输出既有的大 JS chunk 提示；无测试失败。 |
-| M28-H | 发布、公开验证与回同步 | 全量检查通过后将 M28 一次 squash 到最新 `master` 并推送；等待 Pages workflow 成功，核对两个 `build-info.json` 来源 SHA。用内置浏览器静音、窗口模式检查正式解锁/Free Play、Mount Hood 开场对白和真实地图；窄屏检查无横向溢出。通过后合并发布历史和最终计划回 `gunsnglory`，更新 worktree 并核对本地/远端分支；保存主 worktree 的未跟踪研究文件。 | **进行中**；M28-G2 已完成，准备核对发布分支并执行单个 squash 集成。 |
+| M28-H | 发布、公开验证与回同步 | 全量检查通过后将 M28 一次 squash 到最新 `master` 并推送；等待 Pages workflow 成功，核对两个 `build-info.json` 来源 SHA。用内置浏览器静音、窗口模式检查正式解锁/Free Play、Mount Hood 开场对白和真实地图；窄屏检查无横向溢出。通过后合并发布历史和最终计划回 `gunsnglory`，更新 worktree 并核对本地/远端分支；保存主 worktree 的未跟踪研究文件。 | **已完成**；M28 squash 提交 `516b79315c133e1dbc80d3a4a3e42d39b4c69e4a` 已推送至 `master`。GitHub Actions `43609831648` 的共享检查、Guns’n’Glory 全量 CI、GitHub Pages 与 Cloudflare Pages 均成功；两处根 `build-info.json` 的 `sourceSha` 均为该 SHA。内置浏览器保持窗口模式和静音，进入 Free Play → Oregon，看到七关已实现且 level28 禁用；进入 Mount Hood → Medium，确认英文首波 Dynamite 对白/头像、真实地图、两列列车及 `01/10` HUD。窄屏 390×844 的入口/布局 E2E 通过；未完整通关、未进入全屏、未启动 Android。发布提交已合并并推送回 `gunsnglory`，本地与远端均为 `0132e3384b6cbdd7154a6a717082259c199230b2`；主工作树未跟踪研究文件保留。 |
 
 ## 最近完成批次：Columbia River（M27，Oregon 第 6 关／全局第 26 关）
 
