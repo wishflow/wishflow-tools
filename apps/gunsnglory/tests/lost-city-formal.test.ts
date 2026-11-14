@@ -82,7 +82,7 @@ test('Lost City level 10 is formally gated by level 9 and is available in Free P
     globalLevel: 10,
     requiresCompletedScenarioIds: ['campaign-new-mexico-09'],
   });
-  assert.equal(officialCampaignStages.length, 26);
+  assert.equal(officialCampaignStages.length, 27);
   assert.equal(lostCityLevelTenCampaignContent.formalSettlementSupported, true);
   assert.equal(getBrowserScenarioContentVersion(lostCityCampaignId), lostCityCampaignContentVersionFor([]));
 

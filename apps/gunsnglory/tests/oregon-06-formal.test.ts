@@ -159,7 +159,7 @@ test('Columbia River replay parser rejects missing, malformed, cross-level, and 
 });
 
 test('Columbia River unlocks after level 25, keeps Free Play outside profile progress, and records formal victory', async () => {
-  assert.equal(officialCampaignStages.length, 26);
+  assert.equal(officialCampaignStages.length, 27);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 26), {
     scenarioId: oregon06CampaignId,
     contentVersion: oregon06CampaignContentVersionFor([]),

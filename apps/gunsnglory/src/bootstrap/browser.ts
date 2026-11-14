@@ -131,6 +131,12 @@ import {
   parseOregon06ReplayContentVersion,
 } from '../content/oregon-06-content-version';
 import { oregon06CampaignId } from '../content/oregon-06-identity';
+import { createOregon07CampaignContent, createOregon07CampaignContentFromSnapshot } from '../content/oregon-07-campaign';
+import {
+  oregon07CampaignContentVersionFor,
+  parseOregon07ReplayContentVersion,
+} from '../content/oregon-07-content-version';
+import { oregon07CampaignId } from '../content/oregon-07-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -275,6 +281,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === oregon06CampaignId) {
     return oregon06CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === oregon07CampaignId) {
+    return oregon07CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -283,6 +292,7 @@ export function createBrowserGame(
   completedScenarioIds: readonly string[] = ['campaign-new-mexico-03'],
   legacyReplayContentOverride?: LegacyReplayContentOverride,
   unavailableReplayScenarioId?: string,
+  scenarioContentOverrides: Readonly<Record<string, ScenarioContent>> = {},
 ) {
   const scenarios: Record<string, ScenarioContent> = {
     ...browserScenarios,
@@ -309,6 +319,8 @@ export function createBrowserGame(
     [oregon04CampaignId]: createOregon04CampaignContent(completedScenarioIds),
     [oregon05CampaignId]: createOregon05CampaignContent(completedScenarioIds),
     [oregon06CampaignId]: createOregon06CampaignContent(completedScenarioIds),
+    [oregon07CampaignId]: createOregon07CampaignContent(completedScenarioIds),
+    ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {
     const scenario = scenarios[legacyReplayContentOverride.scenarioId];
@@ -539,6 +551,15 @@ export function createBrowserGameForOregon06Replay(contentVersion: string | unde
   const parsed = parseOregon06ReplayContentVersion(contentVersion);
   if (!parsed) return createBrowserGame([], undefined, oregon06CampaignId);
   return createBrowserGame(parsed.completedScenarioIds);
+}
+
+/** Replay import rebuilds Mount Hood from its recorded unlock snapshot, not the current profile. */
+export function createBrowserGameForOregon07Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon07ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon07CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [oregon07CampaignId]: createOregon07CampaignContentFromSnapshot(parsed.snapshot),
+  });
 }
 
 export function createBrowserProgress() {

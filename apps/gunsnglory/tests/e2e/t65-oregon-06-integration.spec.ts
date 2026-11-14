@@ -75,11 +75,11 @@ test('Free Play opens Columbia River on desktop and narrow mobile with the origi
 
     await page.getByTestId('menu-free-play').click();
     await page.getByTestId('campaign-region-oregon').click();
-    await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
-    for (const level of [21, 22, 23, 24, 25, 26]) {
+    await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available');
+    for (const level of [21, 22, 23, 24, 25, 26, 27]) {
       await expect(page.getByTestId(`campaign-level-${level}`)).toBeEnabled();
     }
-    await expect(page.getByTestId('campaign-level-27')).toBeDisabled();
+    await expect(page.getByTestId('campaign-level-28')).toBeDisabled();
     await page.getByTestId('campaign-level-26').click();
     await expectColumbiaOverview(page);
 
@@ -99,7 +99,7 @@ test('Free Play opens Columbia River on desktop and narrow mobile with the origi
   }
 });
 
-test('formal Columbia River unlocks after Dynamite Plains and level 27 remains unavailable', async ({ page }) => {
+test('formal Columbia River unlocks after Dynamite Plains while Mount Hood waits for Columbia River completion', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   await keepSoundOff(page);
@@ -112,6 +112,7 @@ test('formal Columbia River unlocks after Dynamite Plains and level 27 remains u
   await expect(page.getByTestId('campaign-level-25')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-26')).toBeDisabled();
   await expect(page.getByTestId('campaign-level-27')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-28')).toBeDisabled();
 
   await writeCompletedProfile(page, [...completedThroughLevelTwentyFour, 'campaign-oregon-05']);
   await page.reload();
@@ -120,6 +121,7 @@ test('formal Columbia River unlocks after Dynamite Plains and level 27 remains u
   await page.getByTestId('campaign-region-oregon').click();
   await expect(page.getByTestId('campaign-level-26')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-27')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-28')).toBeDisabled();
   await page.getByTestId('campaign-level-26').click();
   await expectColumbiaOverview(page);
   await page.getByTestId('campaign-stage-play').click();

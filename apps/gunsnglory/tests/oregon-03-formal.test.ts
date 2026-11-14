@@ -129,7 +129,7 @@ test('Chinook Woods replay content version rejects unknown, malformed, and cross
 });
 
 test('Chinook Woods is formal level 23, unlocks after Cashcow, and Free Play does not write progress', async () => {
-  assert.equal(officialCampaignStages.length, 26);
+  assert.equal(officialCampaignStages.length, 27);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 23), {
     scenarioId: oregon03CampaignId,
     contentVersion: oregon03CampaignContentVersionFor([]),

@@ -23,6 +23,7 @@ import {
   createBrowserGameForOregon04Replay,
   createBrowserGameForOregon05Replay,
   createBrowserGameForOregon06Replay,
+  createBrowserGameForOregon07Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -137,6 +138,10 @@ import { createOregon06CampaignContent } from './content/oregon-06-campaign';
 import { oregon06CampaignCopy } from './content/oregon-06-campaign-copy';
 import { oregon06CampaignId } from './content/oregon-06-identity';
 import { oregon06CampaignPortraitAssets, oregon06WaveIntros } from './content/oregon-06-wave-intros';
+import { createOregon07CampaignContent } from './content/oregon-07-campaign';
+import { oregon07CampaignCopy } from './content/oregon-07-campaign-copy';
+import { oregon07CampaignId } from './content/oregon-07-identity';
+import { oregon07CampaignPortraitAssets, oregon07WaveIntros } from './content/oregon-07-wave-intros';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -866,6 +871,9 @@ const languageMessages = {
       if (scenarioId === oregon06CampaignId) return mode === 'free'
         ? 'Free Play does not change campaign progress or best score.'
         : 'Official Columbia River level 26: eight original waves across four entrances. Victory records campaign completion and best score.';
+      if (scenarioId === oregon07CampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Mount Hood level 27: ten original waves across four entrances. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -1128,6 +1136,9 @@ const languageMessages = {
       if (scenarioId === oregon06CampaignId) return mode === 'free'
         ? '自由游玩不会更改战役进度或最高分。'
         : '正式关卡：哥伦比亚河，第 26 关。包含四个入口上的原版八波；胜利后记录战役完成与最高分。';
+      if (scenarioId === oregon07CampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：胡德山，第 27 关。包含四个入口上的原版十波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -1474,6 +1485,7 @@ const campaignMenuCopy = {
     levelTwentyFourTitle: oregon04CampaignCopy.title.en,
     levelTwentyFiveTitle: oregon05CampaignCopy.title.en,
     levelTwentySixTitle: oregon06CampaignCopy.title.en,
+    levelTwentySevenTitle: oregon07CampaignCopy.title.en,
     levelOneInfo: 'The peaceful and serene hills of Cow Gulch are the destination for many hopeful settlers.',
     levelTwoInfo: 'The idyllic Death Valley provides unforgettable impressions of an unspoiled landscape.',
     levelThreeInfo: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
@@ -1500,6 +1512,7 @@ const campaignMenuCopy = {
     levelTwentyFourInfo: oregon04CampaignCopy.overview.en,
     levelTwentyFiveInfo: oregon05CampaignCopy.overview.en,
     levelTwentySixInfo: oregon06CampaignCopy.overview.en,
+    levelTwentySevenInfo: oregon07CampaignCopy.overview.en,
     regionProgress: (completed: number) => `${completed}/10 levels complete`,
     helpPrevious: 'Previous page', helpNext: 'Next page', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: 'HOW TO PLAY',
@@ -1585,6 +1598,7 @@ const campaignMenuCopy = {
     levelTwentyFourTitle: oregon04CampaignCopy.title.zh,
     levelTwentyFiveTitle: oregon05CampaignCopy.title.zh,
     levelTwentySixTitle: oregon06CampaignCopy.title.zh,
+    levelTwentySevenTitle: oregon07CampaignCopy.title.zh,
     levelOneInfo: '宁静祥和的牛溪谷山丘，是许多怀抱希望的拓荒者的目的地。',
     levelTwoInfo: '风景如画的死亡谷，将为你留下未受破坏的自然风光印象。',
     levelThreeInfo: '军队把补给箱藏在了这里。让队员收集它们，就能获得丰厚奖励！',
@@ -1611,6 +1625,7 @@ const campaignMenuCopy = {
     levelTwentyFourInfo: oregon04CampaignCopy.overview.zh,
     levelTwentyFiveInfo: oregon05CampaignCopy.overview.zh,
     levelTwentySixInfo: oregon06CampaignCopy.overview.zh,
+    levelTwentySevenInfo: oregon07CampaignCopy.overview.zh,
     regionProgress: (completed: number) => `已完成 ${completed}/10 关`,
     helpPrevious: '上一页', helpNext: '下一页', helpPage: (page: number, total: number) => `${page} / ${total}`,
     helpTitle: '游戏说明',
@@ -2012,7 +2027,8 @@ function campaignMenuLevelScreen(): string {
                                           : level.level === 23 ? copy.levelTwentyThreeTitle
                                             : level.level === 24 ? copy.levelTwentyFourTitle
                                               : level.level === 25 ? copy.levelTwentyFiveTitle
-                                                : level.level === 26 ? copy.levelTwentySixTitle : level.title;
+                                                : level.level === 26 ? copy.levelTwentySixTitle
+                                                  : level.level === 27 ? copy.levelTwentySevenTitle : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.mapFileNumber).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -2103,7 +2119,8 @@ function campaignMenuOverviewScreen(): string {
                               : entry.level === 23 ? createOregon03CampaignContent(completedScenarios)
                               : entry.level === 24 ? createOregon04CampaignContent(completedScenarios)
                                 : entry.level === 25 ? createOregon05CampaignContent(completedScenarios)
-                                  : createOregon06CampaignContent(completedScenarios);
+                                  : entry.level === 26 ? createOregon06CampaignContent(completedScenarios)
+                                    : createOregon07CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
       : entry.level === 3 ? copy.levelThreeInfo
@@ -2129,7 +2146,8 @@ function campaignMenuOverviewScreen(): string {
                                               : entry.level === 23 ? copy.levelTwentyThreeInfo
                                                 : entry.level === 24 ? copy.levelTwentyFourInfo
                                                   : entry.level === 25 ? copy.levelTwentyFiveInfo
-                                                    : entry.level === 26 ? copy.levelTwentySixInfo : '';
+                                                    : entry.level === 26 ? copy.levelTwentySixInfo
+                                                      : entry.level === 27 ? copy.levelTwentySevenInfo : '';
   const levelDescription = entry.level === 15 ? copy.levelFifteenInfo
     : entry.level === 16 ? copy.levelSixteenInfo
       : entry.level === 17 ? copy.levelSeventeenInfo
@@ -2141,7 +2159,8 @@ function campaignMenuOverviewScreen(): string {
                   : entry.level === 23 ? copy.levelTwentyThreeInfo
                     : entry.level === 24 ? copy.levelTwentyFourInfo
                       : entry.level === 25 ? copy.levelTwentyFiveInfo
-                        : entry.level === 26 ? copy.levelTwentySixInfo : description;
+                        : entry.level === 26 ? copy.levelTwentySixInfo
+                          : entry.level === 27 ? copy.levelTwentySevenInfo : description;
   const artName = `gng_levelmap_${String(entry.mapFileNumber).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -2176,7 +2195,8 @@ function campaignMenuOverviewScreen(): string {
                                               : entry.level === 23 ? copy.levelTwentyThreeTitle
                                                 : entry.level === 24 ? copy.levelTwentyFourTitle
                                                   : entry.level === 25 ? copy.levelTwentyFiveTitle
-                                                    : entry.level === 26 ? copy.levelTwentySixTitle : entry.title)}</h2>
+                                                    : entry.level === 26 ? copy.levelTwentySixTitle
+                                                      : entry.level === 27 ? copy.levelTwentySevenTitle : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" data-testid="campaign-overview-minimap" data-scenario-id="${escapeMenuText(content.id)}" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -3252,6 +3272,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       || officialStage?.scenarioId === oregon04CampaignId
       || officialStage?.scenarioId === oregon05CampaignId
       || officialStage?.scenarioId === oregon06CampaignId
+      || officialStage?.scenarioId === oregon07CampaignId
       ? language === 'zh' ? '俄勒冈' : 'OREGON'
     : 'NEW MEXICO';
   const displayedCampaignStage = activeCampaignStage ?? officialStage;
@@ -3919,6 +3940,7 @@ const assetNames = new Set([
   ...oregon04CampaignPortraitAssets,
   ...oregon05CampaignPortraitAssets,
   ...oregon06CampaignPortraitAssets,
+  ...oregon07CampaignPortraitAssets,
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
@@ -4099,7 +4121,8 @@ function isOfficialOregonMusicSession(): boolean {
       || session.startRecord.scenarioId === oregon03CampaignId
       || session.startRecord.scenarioId === oregon04CampaignId
       || session.startRecord.scenarioId === oregon05CampaignId
-      || session.startRecord.scenarioId === oregon06CampaignId);
+      || session.startRecord.scenarioId === oregon06CampaignId
+      || session.startRecord.scenarioId === oregon07CampaignId);
 }
 
 function isOfficialCampaignMusicSession(): boolean {
@@ -4133,6 +4156,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === oregon04CampaignId) return oregon04WaveIntros;
   if (scenarioId === oregon05CampaignId) return oregon05WaveIntros;
   if (scenarioId === oregon06CampaignId) return oregon06WaveIntros;
+  if (scenarioId === oregon07CampaignId) return oregon07WaveIntros;
   return [];
 }
 
@@ -4580,7 +4604,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             || request.scenarioId === oregon03CampaignId
             || request.scenarioId === oregon04CampaignId
             || request.scenarioId === oregon05CampaignId
-            || request.scenarioId === oregon06CampaignId)
+            || request.scenarioId === oregon06CampaignId
+            || request.scenarioId === oregon07CampaignId)
             && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
             : game;
@@ -4883,6 +4908,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === oregon06CampaignId) {
       return createBrowserGameForOregon06Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === oregon07CampaignId) {
+      return createBrowserGameForOregon07Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }
