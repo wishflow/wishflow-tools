@@ -28,7 +28,7 @@ const scenario: ScenarioContent = {
     ...cowGulchPreviewWave,
     initialLives: 10,
     initialCash: 0,
-    spawn: { cell: { x: 6, y: 2 }, direction: 'west' },
+    spawn: { cell: { x: 2, y: 2 }, direction: 'west' },
     additionalSpawns: [],
     baseEnemySpeed: 0,
     speedMultiplierMin: 100,
@@ -93,7 +93,7 @@ test('an enemy exactly three tiles from the box is damaged at the inclusive APK 
     },
     previewWave: {
       ...scenario.previewWave!,
-      spawn: { cell: { x: 9, y: 2 }, direction: 'west' },
+      spawn: { cell: { x: 5, y: 2 }, direction: 'west' },
       additionalSpawns: [],
       baseEnemySpeed: 0,
       redirects: [],

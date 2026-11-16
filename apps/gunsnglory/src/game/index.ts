@@ -49,6 +49,7 @@ import {
   type CampaignBonusRewardType,
 } from './campaign-bonus-crates';
 import { createRoutePriorityMap, normalizedRoutePriority, type RoutePriorityMap } from './route-priority';
+import { runtimeWaveRedirects } from './wave-routes';
 import {
   DYNAMITE_BOX_RESPAWN_WINDOW_MS,
   DYNAMITE_COOLDOWN_MS,
@@ -1892,6 +1893,7 @@ function createPreviewEnemy(
 ): MutableEnemy {
   const enemyDefinition = definition.enemy;
   const hitPoints = enemyDefinition?.hitPoints ?? 1;
+  const vector = directionVector(spawn.direction);
   return {
     id,
     type: 1,
@@ -1900,8 +1902,8 @@ function createPreviewEnemy(
     direction: spawn.direction,
     mirrored: false,
     positionFine: {
-      x: ((spawn.cell.x - 2) * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
-      y: (spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF,
+      x: (spawn.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF - (vector.x * 2 * FINE_UNITS_PER_CELL),
+      y: (spawn.cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF - (vector.y * 2 * FINE_UNITS_PER_CELL),
     },
     drawingOffsetFine: { x: 0, y: 0 },
     groupId: id,
@@ -2777,6 +2779,7 @@ function moveEnemy(
   enemy: MutableEnemy,
   deltaMs: number,
   scenario: ScenarioContent,
+  redirects: readonly WaveRedirect[],
   random: JavaUtilRandom,
   enemies: readonly MutableEnemy[],
   movementBlocked = false,
@@ -2824,7 +2827,7 @@ function moveEnemy(
       if (exits.some((exit) => cell.x === exit.x && cell.y === exit.y)) {
         enemy.despawnOnNextFieldCounter = 2;
       } else {
-        const redirect = definition.redirects.find((candidate) =>
+        const redirect = redirects.find((candidate) =>
           candidate.cell.x === cell.x && candidate.cell.y === cell.y);
         if (redirect) {
           const nextDirection = redirect.directions[random.nextInt(redirect.directions.length)]!;
@@ -2992,6 +2995,10 @@ export function createGame(options: {
       const setup = preparedSetup ?? await prepare({ scenarioId });
       const resolved = await resolvePreparedSetup(sourceScenario, setup);
       const scenario = resolved.scenario;
+      const redirects = runtimeWaveRedirects(
+        scenario.previewWave,
+        scenario.originalTileGrid ?? scenario.map.originalTileGrid,
+      );
       const gamblerCasinoCells = resolveGamblerCasinoCells(scenario);
       const gamblerPrizeUnitTypes = new Set(scenario.gambler?.unlockedPrizeUnitTypes ?? []);
       const difficulty = requestedDifficulty ?? 'easy';
@@ -3234,8 +3241,8 @@ export function createGame(options: {
         }] : [];
       const routes: RoutePoint[][] = routeDefinitions.map((routeDefinition) => [
         {
-          x: routeDefinition.spawn.cell.x - 1.5,
-          y: routeDefinition.spawn.cell.y + 0.5,
+          x: routeDefinition.spawn.cell.x + 0.5 - (directionVector(routeDefinition.spawn.direction).x * 2),
+          y: routeDefinition.spawn.cell.y + 0.5 - (directionVector(routeDefinition.spawn.direction).y * 2),
         },
         ...routeDefinition.redirects.map(({ cell }) => ({ x: cell.x + 0.5, y: cell.y + 0.5 })),
         { x: routeDefinition.exit.x + 0.5, y: routeDefinition.exit.y + 0.5 },
@@ -4063,7 +4070,7 @@ export function createGame(options: {
               }
               const movementBlocked = movementBlockedEnemyId === enemy.id;
               movementBlockedEnemyId = undefined;
-              const result = moveEnemy(enemy, deltaMs, scenario, utilRandom, wave.enemies, movementBlocked);
+              const result = moveEnemy(enemy, deltaMs, scenario, redirects, utilRandom, wave.enemies, movementBlocked);
               if (result.collisionBlocked) {
                 const nextEnemy = movingEnemies[enemyIndex + 1];
                 if (nextEnemy?.groupId === enemy.groupId) movementBlockedEnemyId = nextEnemy.id;

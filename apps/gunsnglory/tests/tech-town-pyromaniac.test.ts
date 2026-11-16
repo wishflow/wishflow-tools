@@ -40,7 +40,7 @@ function pyromaniacFixture(unit: ScenarioUnit, initialCash: number): ScenarioCon
     previewWave: {
       ...cowGulchPreviewWave,
       initialCash,
-      spawn: { cell: { x: 12, y: 8 }, direction: 'west' },
+      spawn: { cell: { x: 8, y: 8 }, direction: 'west' },
       routes: undefined,
       baseEnemySpeed: 0,
       speedMultiplierMin: 100,

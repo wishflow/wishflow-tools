@@ -72,7 +72,10 @@ function cannonScenario(initialCash = 365, spawnX = 12, direction: 'east' | 'wes
 }
 
 async function startScenario(initialCash = 365, spawnX = 12, direction: 'east' | 'west' = 'west') {
-  const scenario = cannonScenario(initialCash, spawnX, direction);
+  // `spawnX` names the intended enemy start position for these combat fixtures.
+  // Westbound APK spawns are two fields east of their marker.
+  const markerX = direction === 'west' ? spawnX - 4 : spawnX;
+  const scenario = cannonScenario(initialCash, markerX, direction);
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id });
   return { scenario, session };
 }
