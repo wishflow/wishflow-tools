@@ -5,10 +5,10 @@
 ## 当前状态
 
 - M28 Mount Hood（Oregon 第 7 关／全局第 27 关）已完成并发布。唯一 squash 发布提交为 `516b79315c133e1dbc80d3a4a3e42d39b4c69e4a`；GitHub Actions `43609831648` 的共享检查、Guns’n’Glory 测试和 GitHub/Cloudflare Pages 部署均成功，两个站点来源 SHA 与发布提交一致。完整检查通过类型检查、832 项单测、生产构建和 175 项 E2E；内置浏览器窗口模式、静音进入 Free Play → Oregon → Mount Hood → Medium，确认开场对白、头像、真实地图和 `01/10` HUD。没有完整通关、进入全屏或启动 Android。
-- M28 已回同步到 `gunsnglory`：本地/远端集成分支指向包含发布 SHA 的合并提交 `0132e3384b6cbdd7154a6a717082259c199230b2`。主工作树原有未跟踪研究笔记 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 未改动。当前 `master`/`origin/master` 为 `516b793`，`gunsnglory`/`origin/gunsnglory` 为 `0132e33`。
+- 最新 ROUTE 修复批次已部署并回同步至 `gunsnglory`；发布 SHA、Actions 与浏览器验收记录见下方。主工作树原有未跟踪研究笔记 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 未改动。
 - M22-G 中 M4–M7 回放的公开页面导入探针仍是历史未确认项；不影响 M28，但后续如修改回放公共路由应纳入针对性回归，不重复无关浏览器测试。M28 后普通发布比例按 30/171（17.5%）记录。
 
-## 当前修复批次：战役路线与道路贴合
+## 最近完成修复批次：战役路线与道路贴合
 
 本批先区分三个问题，不能仅凭路线节点存在就说敌人走对了：
 
@@ -34,7 +34,7 @@
 | ROUTE-C | 全关路线与移动回归 | 对 level 1–27 逐关将运行时方向表与原始 TDM action-2 方向比较；覆盖 routes/legacy redirects、共享路口、多出生/多出口。以短 `GameSession` 轨迹核对 Riverside Mountains 底部出生口转南，以及 Apache Valley 敌人进入原始桥面。 | **完成**；27 关每个 action-2 格和方向与 TDM 一致；两个具体移动轨迹测试通过，无需完整通关。 |
 | ROUTE-D | 道路/桥面绘制层复核 | 按每张地图专属 APK 绘制规则与独立参考生成器对照 27 关 `map.streets`；只修有原始证据支持的缺图，不偏移路线点掩盖问题。 | **完成**；Apache Valley 补齐 5 段 `tiles_bridge_hori` 和 3 对桥墩，共11条绘制指令；逐关绘制数据审计未发现其他缺失，Apache Valley 地图测试锁定 TDM 网格、桥层和路线。 |
 | ROUTE-E | 代表性画面实测 | 使用当前分支本地构建、窗口模式、静音检查 Apache Valley 与 Riverside Mountains；观察实际敌人转弯、桥面显示和路线/地图对齐。 | **完成（代表性检查）**；内置浏览器检查两关实时移动和桥面/路线；不是逐关人工观察所有随机路径。27关静态逐格核对与定向轨迹测试补足其余数据覆盖。 |
-| ROUTE-F | 批次验收与发布 | 运行应用完整检查；通过后将整个修复批次集成到应用发布路径，核对部署 SHA 并在线验收，再回同步 `gunsnglory`。 | **本地验收完成，集成/发布未做**；839项单测、175项 E2E、类型检查及生产构建通过。修复已在 `codex/gng-route-runtime-fix` 本地提交 `c9df5f4`；尚未合并至 `master`、部署或完成线上核验。 |
+| ROUTE-F | 批次验收与发布 | 运行应用完整检查；通过后将整个修复批次集成到应用发布路径，核对部署 SHA 并在线验收，再回同步 `gunsnglory`。 | **完成并发布**；本地 `pnpm run test:ci` 通过类型检查、839项单测、生产构建和175项 E2E；Actions `43790402076` 全绿。squash 发布提交 `575f928257748dba63947ce90cac427dabe6ed9a` 已推送 `master`，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回该 SHA。内置浏览器以静音、窗口模式进入 Free Play → New Mexico → Death Valley（地图内 Apache Valley），选择 Medium 并检查桥面与地图；未完整通关、未进入全屏。发布提交已合入并推送 `gunsnglory`；本地研究笔记未改动。 |
 
 ## 当前批次：Mount Hood（M28，Oregon 第 7 关／全局第 27 关）
 

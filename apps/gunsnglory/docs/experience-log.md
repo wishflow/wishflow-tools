@@ -55,13 +55,13 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 多分岔运行转向与地图道路图层必须一起核对
 
-**状态：**level 1–27 的路线方向遗漏和 Apache Valley 桥层缺失已在当前本地修复批次中修正；尚未集成或发布。
+**状态：**level 1–27 的路线方向遗漏和 Apache Valley 桥层缺失已修正并发布。发布 SHA 为 `575f928257748dba63947ce90cac427dabe6ed9a`；Actions `43790402076` 成功，两处 Pages 的 `build-info.json` 均匹配。
 
 - **表现与复现：**多个关卡的敌人看起来沿直线离开路面，甚至穿过峡谷。只看菜单预览、路线节点或单个出生口无法稳定复现；Riverside Mountains 的底部出生口最明确：敌人到 `(16,17)` 后应向南，却继续向东。Apache Valley 另有敌人沿峡谷底色经过桥位、但桥面贴图缺失的视觉错误。
 - **根因与证据：**level 11–27 的 `previewWave.routes` 保存了完整多出口路线，但 `previewWave.redirects` 只保留第一条路线；[`moveEnemy()`](../src/game/index.ts) 只读 `redirects`，使17关遗漏每关16–61个合法转向方向。APK 的 TDM action-2 格定义真实可选方向；[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 把27张地图逐格与这些 marker 比较，确认运行时集合不完整。另一个独立问题是 Apache Valley 的 [`new-mexico-02.json`](../src/content/new-mexico-02.json) 少画5段水平桥面和3对桥墩：TDM 派生绘制结果与网页地图指令不一致。
 - **漏测点：**过去的路线检查主要验证控制节点/边界是否存在，未将“完整路线集合”与“运行时真正消费的转向表”逐格比较；单入口关卡或第一条路线不会覆盖其他出生口在共享路口的选择。道路图层测试也未把每个关卡的地图指令与 APK 派生绘制规则对照，因此地图数据里有路线却不代表玩家看得到正确的道路。
 - **修复与防回归：**[`runtimeWaveRedirects()`](../src/game/wave-routes.ts) 从完整路线重建共享转向表，并以原始 TDM action-2 方向码补全合法选择；关卡显式覆盖仍优先，无路线定义的 legacy 场景继续使用原 `redirects`。敌人预览出生位置根据实际行进方向计算，避免所有边缘出生点被假定为向左进入。Apache Valley 补齐5段桥面和3对桥墩，不挪动路线点。后续每张地图必须同时核对：TDM marker→运行时方向表、所有 spawn→redirect→exit 分支、路径实际经过的道路/桥层、角色脚底锚点；不能只检查画出的路线折线，也不能为掩盖数据错位而手动偏移路线。
-- **验证与边界：**[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 逐项比较27关所有 action-2 格及方向；Riverside Mountains 的底部出生口通过短 `GameSession` 轨迹确认向南，[`apache-valley.test.ts`](../tests/apache-valley.test.ts) 确认敌人可到达原始桥面，且 Apache Valley 绘制命令与独立 TDM 参考生成器逐条一致。内置浏览器本地源码窗口模式、静音实看 Apache Valley 与 Riverside Mountains 的代表性移动；没有人工逐关观察全部随机路径，也没有完整通关或启动 Android。当前完整本地检查通过类型检查、839项单测、生产构建和175项 E2E；发布及线上 SHA 核验尚未进行。
+- **验证与边界：**[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 逐项比较27关所有 action-2 格及方向；Riverside Mountains 的底部出生口通过短 `GameSession` 轨迹确认向南，[`apache-valley.test.ts`](../tests/apache-valley.test.ts) 确认敌人可到达原始桥面，且 Apache Valley 绘制命令与独立 TDM 参考生成器逐条一致。本地内置浏览器静音、窗口模式实看 Apache Valley 与 Riverside Mountains 的代表性移动；公开版内置浏览器进入 Free Play → New Mexico → Death Valley，在 Medium 下确认实际地图、桥面贴图和游戏状态可加载。测试模拟速度临时调至 `4×` 后恢复为 `1×`，声音保持关闭；全程未手动通关或启动 Android。GitHub Pages 与 Cloudflare Pages 的 `sourceSha` 均匹配发布 SHA。没有人工逐关观察全部随机路径，浏览器观察为代表性检查，不声称全关逐帧目视通过。
 
 ## 内容版本必须覆盖所有影响开局的档案状态
 
