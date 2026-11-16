@@ -529,3 +529,14 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **表现与复现：**Horse Hills 接入正式关卡目录时，Tech Town 的单位/Casino 配对断言在模块加载阶段失败；既有 Tech Town 正式内容测试也发现未解锁地图仍含活动 Mexican。
 - **根因与证据：**New Mexico marker 工厂为保留原版 activity 5 活动单位，会跳过普通单位解锁回调；但 Tech Town 的 Gambler marker 也属于 activity 5，必须遵守全局里程碑，而未解锁 Tech Town 的活动 marker 还必须服从关卡访问条件。把关卡访问与 unit milestone 混成一条过滤规则，或全局过滤所有 activity 5，分别会导致 Gambler/Casino 不配对，或误删 Horse Hills 活动 Grandpa。既有 Tech Town 与 M20 实体测试明确覆盖这两组边界。
 - **修复与防回归：**New Mexico 工厂只对需 milestone 的 Gambler marker 使用 unit unlock；Tech Town 构造器用独立 `mapAccessible` 决定是否生成该地图的活动 marker。M20 activity 5 marker 继续不受招募 milestone 过滤。新地图需分别验证 stage access、activity 和全局 unit unlock，不应互相替代。
+
+## 我方单位绘制脚底与地形碰撞锚点错开
+
+**状态：根因已确认，修复待完成。**
+
+- **表现与复现：**用户在多关卡截图中看到我方角色脚底落到峡谷/河道贴图外；在 Cow Gulch 窄桥上沿纵向移动时，角色看起来超出桥面可走范围。窗口模式悬停右上角全屏按钮时，金属图标消失。
+- **根因与证据：**APK `GameObjectUnit.createCollisionObject()` 的碰撞框与网页相同，为 `x=-2534、y=-5376、宽5068、高4608` 个细单位。APK `GameObjectUnit.draw()` 将活动单位帧的底边绘制在 `fineY`；网页 `initialUnitPosition()` 的锚点是 `cell.y+0.75`，但 Gunslinger/Mexican 活动贴图和部分可招募单位的醒来贴图底边是 `cell.y+1.0`，所以人物相对正确的碰撞坐标向下偏 `0.25` 格。逐个打开 27 个正式关卡的网页会话，发现 47 个活动可移动单位中 37 个、分布于 19 关存在此偏差；另有 374 个睡眠单位的醒来贴图有相同偏差。APK `BackgroundMap.isReachableXGround/YGround()` 和网页 `mapBlocksUnit()` 都用同一矩形四角检查地形，街道层覆盖桥面，因此现有证据指向绘制锚点，不支持全图碰撞平移。
+- **全屏按钮复现：**纯 hover 时 `.game-frame-fullscreen-toggle:hover` 的旧 `background` 简写覆盖了后续定义的背景精灵图并将其清空为 `none`；较后的 hover 规则只重设背景色，没有重设精灵。窗口模式内置浏览器已复现该计算样式。
+- **漏测点：**既有道路检查主要核对敌方 TDM 路线与地图图层，没有在每个正式关卡比较我方 `positionFine` 和活动/醒来贴图底边；单位几何断言未检查 Awake sprite。全屏控件测试检查静止及按下状态，却未在 hover 状态检查背景图和帧位置。
+- **修复要求：**活动和醒来单位贴图及命中区统一使用 `createAnchoredMapRender` 的脚底锚点；不得为掩盖贴图错位而移动地图碰撞网格。Cow Gulch 原始桥格须有定向移动测试，27 关活动/醒来单位须有内容扫描。按钮 hover 样式只改颜色/滤镜，不得用 `background` 简写覆盖双态图片；E2E 覆盖按下与未按下两帧的 hover/focus。
+- **避免重复：**先区分逻辑碰撞锚点、人物贴图脚底和背景图层；敌人路线通过不能作为我方移动验收。后续如再见角色“走进”峡谷，先检查 `render.y + render.height` 是否等于 `positionFine.y / 7680`，再检查相应 TDM raw tile 与街道层，勿先整体平移地图或改碰撞常量。
