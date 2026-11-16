@@ -27,7 +27,8 @@ function isFortKaboomUnitTypeId(unitTypeId: CampaignMapUnitTypeId): unitTypeId i
 }
 
 export function createActiveGunslinger(cell: { x: number; y: number }, index = 1): ScenarioUnit {
-  const render = { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 };
+  const frame = { x: 0, y: 0, width: 32, height: 44 };
+  const render = createAnchoredMapRender(cell, frame);
   return {
     id: `gunslinger-${index}`,
     type: 'gunslinger',
@@ -35,7 +36,7 @@ export function createActiveGunslinger(cell: { x: number; y: number }, index = 1
     cell,
     movementSpeedFinePer100Ms: 1500,
     asset: 'player_gunslinger',
-    frame: { x: 0, y: 0, width: 32, height: 44 },
+    frame,
     render,
     hitArea: { ...render },
     weapon: gunslingerWeapon,
@@ -43,7 +44,8 @@ export function createActiveGunslinger(cell: { x: number; y: number }, index = 1
 }
 
 export function createActiveMexicanUnit(cell: { x: number; y: number }, index = 1): ScenarioUnit {
-  const render = { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 };
+  const frame = { x: 0, y: 0, width: 32, height: 44 };
+  const render = createAnchoredMapRender(cell, frame);
   return {
     id: `mexican-${index}`,
     type: 'mexican',
@@ -51,7 +53,7 @@ export function createActiveMexicanUnit(cell: { x: number; y: number }, index = 
     cell,
     movementSpeedFinePer100Ms: 1500,
     asset: 'player_mexican',
-    frame: { x: 0, y: 0, width: 32, height: 44 },
+    frame,
     render,
     hitArea: { ...render },
     weapon: mexicanWeapon,

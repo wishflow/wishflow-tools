@@ -55,13 +55,13 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 多分岔运行转向与地图道路图层必须一起核对
 
-**状态：**level 1–27 的路线方向遗漏和 Apache Valley 桥层缺失已在当前本地修复批次中修正；尚未集成或发布。
+**状态：**level 1–27 的路线方向遗漏和 Apache Valley 桥层缺失已修正并发布。发布 SHA 为 `575f928257748dba63947ce90cac427dabe6ed9a`；Actions `43790402076` 成功，两处 Pages 的 `build-info.json` 均匹配。
 
 - **表现与复现：**多个关卡的敌人看起来沿直线离开路面，甚至穿过峡谷。只看菜单预览、路线节点或单个出生口无法稳定复现；Riverside Mountains 的底部出生口最明确：敌人到 `(16,17)` 后应向南，却继续向东。Apache Valley 另有敌人沿峡谷底色经过桥位、但桥面贴图缺失的视觉错误。
 - **根因与证据：**level 11–27 的 `previewWave.routes` 保存了完整多出口路线，但 `previewWave.redirects` 只保留第一条路线；[`moveEnemy()`](../src/game/index.ts) 只读 `redirects`，使17关遗漏每关16–61个合法转向方向。APK 的 TDM action-2 格定义真实可选方向；[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 把27张地图逐格与这些 marker 比较，确认运行时集合不完整。另一个独立问题是 Apache Valley 的 [`new-mexico-02.json`](../src/content/new-mexico-02.json) 少画5段水平桥面和3对桥墩：TDM 派生绘制结果与网页地图指令不一致。
 - **漏测点：**过去的路线检查主要验证控制节点/边界是否存在，未将“完整路线集合”与“运行时真正消费的转向表”逐格比较；单入口关卡或第一条路线不会覆盖其他出生口在共享路口的选择。道路图层测试也未把每个关卡的地图指令与 APK 派生绘制规则对照，因此地图数据里有路线却不代表玩家看得到正确的道路。
 - **修复与防回归：**[`runtimeWaveRedirects()`](../src/game/wave-routes.ts) 从完整路线重建共享转向表，并以原始 TDM action-2 方向码补全合法选择；关卡显式覆盖仍优先，无路线定义的 legacy 场景继续使用原 `redirects`。敌人预览出生位置根据实际行进方向计算，避免所有边缘出生点被假定为向左进入。Apache Valley 补齐5段桥面和3对桥墩，不挪动路线点。后续每张地图必须同时核对：TDM marker→运行时方向表、所有 spawn→redirect→exit 分支、路径实际经过的道路/桥层、角色脚底锚点；不能只检查画出的路线折线，也不能为掩盖数据错位而手动偏移路线。
-- **验证与边界：**[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 逐项比较27关所有 action-2 格及方向；Riverside Mountains 的底部出生口通过短 `GameSession` 轨迹确认向南，[`apache-valley.test.ts`](../tests/apache-valley.test.ts) 确认敌人可到达原始桥面，且 Apache Valley 绘制命令与独立 TDM 参考生成器逐条一致。内置浏览器本地源码窗口模式、静音实看 Apache Valley 与 Riverside Mountains 的代表性移动；没有人工逐关观察全部随机路径，也没有完整通关或启动 Android。当前完整本地检查通过类型检查、839项单测、生产构建和175项 E2E；发布及线上 SHA 核验尚未进行。
+- **验证与边界：**[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 逐项比较27关所有 action-2 格及方向；Riverside Mountains 的底部出生口通过短 `GameSession` 轨迹确认向南，[`apache-valley.test.ts`](../tests/apache-valley.test.ts) 确认敌人可到达原始桥面，且 Apache Valley 绘制命令与独立 TDM 参考生成器逐条一致。本地内置浏览器静音、窗口模式实看 Apache Valley 与 Riverside Mountains 的代表性移动；公开版内置浏览器进入 Free Play → New Mexico → Death Valley，在 Medium 下确认实际地图、桥面贴图和游戏状态可加载。测试模拟速度临时调至 `4×` 后恢复为 `1×`，声音保持关闭；全程未手动通关或启动 Android。GitHub Pages 与 Cloudflare Pages 的 `sourceSha` 均匹配发布 SHA。没有人工逐关观察全部随机路径，浏览器观察为代表性检查，不声称全关逐帧目视通过。
 
 ## 内容版本必须覆盖所有影响开局的档案状态
 
@@ -529,3 +529,15 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **表现与复现：**Horse Hills 接入正式关卡目录时，Tech Town 的单位/Casino 配对断言在模块加载阶段失败；既有 Tech Town 正式内容测试也发现未解锁地图仍含活动 Mexican。
 - **根因与证据：**New Mexico marker 工厂为保留原版 activity 5 活动单位，会跳过普通单位解锁回调；但 Tech Town 的 Gambler marker 也属于 activity 5，必须遵守全局里程碑，而未解锁 Tech Town 的活动 marker 还必须服从关卡访问条件。把关卡访问与 unit milestone 混成一条过滤规则，或全局过滤所有 activity 5，分别会导致 Gambler/Casino 不配对，或误删 Horse Hills 活动 Grandpa。既有 Tech Town 与 M20 实体测试明确覆盖这两组边界。
 - **修复与防回归：**New Mexico 工厂只对需 milestone 的 Gambler marker 使用 unit unlock；Tech Town 构造器用独立 `mapAccessible` 决定是否生成该地图的活动 marker。M20 activity 5 marker 继续不受招募 milestone 过滤。新地图需分别验证 stage access、activity 和全局 unit unlock，不应互相替代。
+
+## 我方单位绘制脚底与地形碰撞锚点错开
+
+**状态：代码修复和定向验证已完成；整批验收与发布待完成。**
+
+- **表现与复现：**用户在多关卡截图中看到我方角色脚底落到峡谷/河道贴图外；在 Cow Gulch 窄桥上沿纵向移动时，角色看起来超出桥面可走范围。窗口模式悬停右上角全屏按钮时，金属图标消失。
+- **根因与证据：**APK `GameObjectUnit.createCollisionObject()` 的碰撞框与网页相同，为 `x=-2534、y=-5376、宽5068、高4608` 个细单位。APK `GameObjectUnit.draw()` 将活动单位帧的底边绘制在 `fineY`；网页 `initialUnitPosition()` 的锚点是 `cell.y+0.75`，但 Gunslinger/Mexican 活动贴图和部分可招募单位的醒来贴图底边是 `cell.y+1.0`，所以人物相对正确的碰撞坐标向下偏 `0.25` 格。逐个打开 27 个正式关卡的网页会话，发现 47 个活动可移动单位中 37 个、分布于 19 关存在此偏差；另有 374 个睡眠单位的醒来贴图有相同偏差。APK `BackgroundMap.isReachableXGround/YGround()` 和网页 `mapBlocksUnit()` 都用同一矩形四角检查地形，街道层覆盖桥面，因此现有证据指向绘制锚点，不支持全图碰撞平移。
+- **全屏按钮复现：**纯 hover 时 `.game-frame-fullscreen-toggle:hover` 的旧 `background` 简写覆盖了后续定义的背景精灵图并将其清空为 `none`；较后的 hover 规则只重设背景色，没有重设精灵。窗口模式内置浏览器已复现该计算样式。
+- **漏测点：**既有道路检查主要核对敌方 TDM 路线与地图图层，没有在每个正式关卡比较我方 `positionFine` 和活动/醒来贴图底边；单位几何断言未检查 Awake sprite。全屏控件测试检查静止及按下状态，却未在 hover 状态检查背景图和帧位置。
+- **修复结果：**活动 Gunslinger/Mexican、Apache Valley 地图单位、374个醒来贴图与命中区、Cow Gulch 初始单位及 Gambler 样例统一使用 `createAnchoredMapRender`。全关扫描覆盖27关的47个活动可移动单位和374个醒来贴图；Cow Gulch 原始TDM桥行9及相邻阻挡行8/10由短 `GameSession` 核对。57项定向单测、类型检查通过。内置浏览器在窗口/静音下检查本地地图和单位画面；没有逐关进行人工移动，也没有完成完整桥面视觉路径。全屏 hover 规则已移除背景简写，定向 E2E 9项通过，覆盖未按下悬停与已按下图帧。批次 `CI=1 pnpm run test:ci` 通过841项单测、175项 E2E、类型检查和生产构建；主 JS chunk 体积提示仍存在且与本次改动无关。集成发布尚未核验。
+- **防回归要求：**后续新增我方单位构造时，逐关扫描活动贴图、醒来贴图和命中区，确保脚底锚点与 `positionFine.y` 一致。若报告地图边界错位，先对照该关原始 TDM、逻辑位置与渲染脚底，再决定是否涉及碰撞层；不可仅凭敌方路线或贴图边缘推断碰撞网格。全屏双态按钮的 hover/focus 反馈只用滤镜或颜色属性，不使用会清除背景精灵的 `background` 简写，并在两个 `aria-pressed` 状态都运行悬停测试。
+- **避免重复：**先区分逻辑碰撞锚点、人物贴图脚底和背景图层；敌人路线通过不能作为我方移动验收。后续如再见角色“走进”峡谷，先检查 `render.y + render.height` 是否等于 `positionFine.y / 7680`，再检查相应 TDM raw tile 与街道层，勿先整体平移地图或改碰撞常量。

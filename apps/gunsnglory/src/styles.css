@@ -457,10 +457,6 @@ body {
   touch-action: manipulation;
 }
 
-.game-frame-fullscreen-toggle:hover {
-  background: rgba(58, 43, 27, 0.96);
-}
-
 .game-frame-fullscreen-toggle:focus-visible {
   outline: 2px solid #fff0a7;
   outline-offset: 2px;

@@ -5,10 +5,28 @@
 ## 当前状态
 
 - M28 Mount Hood（Oregon 第 7 关／全局第 27 关）已完成并发布。唯一 squash 发布提交为 `516b79315c133e1dbc80d3a4a3e42d39b4c69e4a`；GitHub Actions `43609831648` 的共享检查、Guns’n’Glory 测试和 GitHub/Cloudflare Pages 部署均成功，两个站点来源 SHA 与发布提交一致。完整检查通过类型检查、832 项单测、生产构建和 175 项 E2E；内置浏览器窗口模式、静音进入 Free Play → Oregon → Mount Hood → Medium，确认开场对白、头像、真实地图和 `01/10` HUD。没有完整通关、进入全屏或启动 Android。
-- M28 已回同步到 `gunsnglory`：本地/远端集成分支指向包含发布 SHA 的合并提交 `0132e3384b6cbdd7154a6a717082259c199230b2`。主工作树原有未跟踪研究笔记 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 未改动。当前 `master`/`origin/master` 为 `516b793`，`gunsnglory`/`origin/gunsnglory` 为 `0132e33`。
+- 最新 ROUTE 修复批次已部署并回同步至 `gunsnglory`；发布 SHA、Actions 与浏览器验收记录见下方。主工作树原有未跟踪研究笔记 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 未改动。
 - M22-G 中 M4–M7 回放的公开页面导入探针仍是历史未确认项；不影响 M28，但后续如修改回放公共路由应纳入针对性回归，不重复无关浏览器测试。M28 后普通发布比例按 30/171（17.5%）记录。
 
-## 当前修复批次：战役路线与道路贴合
+## 当前修复批次：我方移动贴图锚点与全屏按钮悬浮
+
+目标是修复用户截图中我方单位脚底越过峡谷边缘、桥面可达范围看似与贴图错位，以及右上角全屏图标悬停后消失的问题。已确认的证据要求只修绘制锚点和 CSS hover，不先改 TDM、地图相机或碰撞网格：
+
+- APK `GameObjectUnit.createCollisionObject()` 使用相对逻辑位置 `(-2534, -5376, 5068, 4608)` 的碰撞框；网页同值。
+- APK `GameObjectUnit.draw()` 将活动单位帧的下边缘绘制到 `fineY`。网页移动单位逻辑锚点是 `cell.y + 0.75` 格，但 Gunslinger/Mexican 活动贴图及醒来贴图下边缘是 `cell.y + 1.0`，统一向下错开 `0.25` 格。
+- 对现有 27 个正式关卡逐个打开静态会话后发现：47 个活动可移动单位中，37 个在 19 个关卡中存在该偏移；另有 374 个睡眠单位的醒来贴图同样偏移。
+- APK `BackgroundMap.isReachableXGround/YGround()` 与网页 `mapBlocksUnit()` 都按同一碰撞框采样四角，并用街道覆盖层允许桥面通过。Cow Gulch 原始 TDM 的桥格行9、上下阻挡行8/10已由短 `GameSession` 移动测试核对；边界由碰撞框限制在可走桥格。当前证据不支持全局平移地图碰撞。
+- 全屏按钮悬停时旧 CSS `background` 简写将精灵背景重置为 `none`；较后的 hover 规则只恢复背景色，没有恢复精灵图。
+
+| 顺序 | 切片 | 实施范围与可判定验收 | 状态 |
+| --- | --- | --- | --- |
+| 1 | 统一我方单位脚底锚点 | **完成。**27个正式关卡中扫描到47个活动可移动单位、374个可招募单位醒来贴图；活动贴图与醒来贴图/命中区统一用 `createAnchoredMapRender`，脚底对齐逻辑 `positionFine.y`，初始锚点为 `cell.y + 0.75`。修正 Cow Gulch 初始单位，并让 Apache Valley 活动单位复用相同工厂。原始 Cow Gulch TDM 桥格的短 `GameSession` 测试确认碰撞范围留在第9行桥格、贴图脚底跟随逻辑锚点。12个相关测试文件共57项通过，`pnpm run typecheck` 通过；内置浏览器窗口/静音检查确认本地地图与单位画面正常。未在浏览器里完成一段完整桥面移动，因此不把这一项记为逐像素视觉验收。 | **完成** |
+| 2 | 保持全屏控件双态图悬停可见 | **完成。**移除会把背景图重置为 `none` 的旧 hover 简写；E2E 在未按下 hover 和已按下状态断言精灵图及帧位置。`t30-fullscreen.spec.ts` 9项通过。 | **完成** |
+| 3 | 批次验收与集成 | **本地完整检查完成。**`CI=1 pnpm run test:ci` 通过：类型检查、841项单测、生产构建、175项 E2E。内置浏览器以窗口模式、静音检查本地地图画面和控件；没有完成整关或逐关人工移动。构建有既存主 JS chunk 超过500KB的提示。剩余为将修复批次 squash 集成至 `gunsnglory`/`master`，推送后核对部署 SHA 并线上复验；本地分支还未与最新远程核对。 | 集成待办 |
+
+本批不重做敌方路线、地图贴图和地形碰撞检查；若真实关卡行为测试证明碰撞网格与 APK 不一致，再把该差异细化为有证据支持的独立修复。
+
+## 最近完成修复批次：战役路线与道路贴合
 
 本批先区分三个问题，不能仅凭路线节点存在就说敌人走对了：
 
@@ -34,7 +52,7 @@
 | ROUTE-C | 全关路线与移动回归 | 对 level 1–27 逐关将运行时方向表与原始 TDM action-2 方向比较；覆盖 routes/legacy redirects、共享路口、多出生/多出口。以短 `GameSession` 轨迹核对 Riverside Mountains 底部出生口转南，以及 Apache Valley 敌人进入原始桥面。 | **完成**；27 关每个 action-2 格和方向与 TDM 一致；两个具体移动轨迹测试通过，无需完整通关。 |
 | ROUTE-D | 道路/桥面绘制层复核 | 按每张地图专属 APK 绘制规则与独立参考生成器对照 27 关 `map.streets`；只修有原始证据支持的缺图，不偏移路线点掩盖问题。 | **完成**；Apache Valley 补齐 5 段 `tiles_bridge_hori` 和 3 对桥墩，共11条绘制指令；逐关绘制数据审计未发现其他缺失，Apache Valley 地图测试锁定 TDM 网格、桥层和路线。 |
 | ROUTE-E | 代表性画面实测 | 使用当前分支本地构建、窗口模式、静音检查 Apache Valley 与 Riverside Mountains；观察实际敌人转弯、桥面显示和路线/地图对齐。 | **完成（代表性检查）**；内置浏览器检查两关实时移动和桥面/路线；不是逐关人工观察所有随机路径。27关静态逐格核对与定向轨迹测试补足其余数据覆盖。 |
-| ROUTE-F | 批次验收与发布 | 运行应用完整检查；通过后将整个修复批次集成到应用发布路径，核对部署 SHA 并在线验收，再回同步 `gunsnglory`。 | **本地验收完成，集成/发布未做**；839项单测、175项 E2E、类型检查及生产构建通过。修复已在 `codex/gng-route-runtime-fix` 本地提交 `c9df5f4`；尚未合并至 `master`、部署或完成线上核验。 |
+| ROUTE-F | 批次验收与发布 | 运行应用完整检查；通过后将整个修复批次集成到应用发布路径，核对部署 SHA 并在线验收，再回同步 `gunsnglory`。 | **完成并发布**；本地 `pnpm run test:ci` 通过类型检查、839项单测、生产构建和175项 E2E；Actions `43790402076` 全绿。squash 发布提交 `575f928257748dba63947ce90cac427dabe6ed9a` 已推送 `master`，GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回该 SHA。内置浏览器以静音、窗口模式进入 Free Play → New Mexico → Death Valley（地图内 Apache Valley），选择 Medium 并检查桥面与地图；未完整通关、未进入全屏。发布提交已合入并推送 `gunsnglory`；本地研究笔记未改动。 |
 
 ## 当前批次：Mount Hood（M28，Oregon 第 7 关／全局第 27 关）
 

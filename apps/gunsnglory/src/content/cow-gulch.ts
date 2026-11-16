@@ -1,6 +1,7 @@
 import cowGulchMap from './cow-gulch.json';
 import { cowGulchCampaignWaves, cowGulchCampaignWavesP1c, cowGulchCampaignWavesP1d } from './cow-gulch-campaign-waves';
 import { cowGulchPreviewWave } from './cow-gulch-preview-wave';
+import { createAnchoredMapRender } from './fort-kaboom-unit-designs';
 import { gunslingerWeapon, mexicanWeapon } from './player-unit-weapons';
 import type { MapDecoration, ScenarioContent, ScenarioUnit } from '../game';
 
@@ -82,8 +83,8 @@ export function createSleepingMapUnitsFromGrid(
         frame: { x: 0, y: 0, width: 32, height: 32 },
         render,
         hitArea: { ...render },
-        awakeRender: { x, y: y - 0.375, width: 1, height: 1.375 },
-        awakeHitArea: { x, y: y - 0.375, width: 1, height: 1.375 },
+        awakeRender: createAnchoredMapRender({ x, y }, marker.awakeFrame),
+        awakeHitArea: createAnchoredMapRender({ x, y }, marker.awakeFrame),
         weapon: marker.weapon,
       });
     }
