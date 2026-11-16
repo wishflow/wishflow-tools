@@ -48,10 +48,10 @@ function salesmanScenario(): ScenarioContent {
     previewWave: {
       ...cowGulchPreviewWave,
       initialCash: 0,
-      spawn: { cell: { x: 12, y: 8 }, direction: 'west' },
+      spawn: { cell: { x: 8, y: 8 }, direction: 'west' },
       additionalSpawns: [
-        { cell: { x: 13, y: 8 }, direction: 'west' },
-        { cell: { x: 14, y: 8 }, direction: 'west' },
+        { cell: { x: 9, y: 8 }, direction: 'west' },
+        { cell: { x: 10, y: 8 }, direction: 'west' },
       ],
       routes: undefined,
       baseEnemySpeed: 0,
@@ -318,7 +318,7 @@ test('a later weaker poison mark does not replace a stronger active poison value
     units: [strong, weak],
     previewWave: {
       ...salesmanScenario().previewWave!,
-      spawn: { cell: { x: 14, y: 8 }, direction: 'west' },
+      spawn: { cell: { x: 10, y: 8 }, direction: 'west' },
       additionalSpawns: [],
       enemy: {
         hitPoints: 100_000,

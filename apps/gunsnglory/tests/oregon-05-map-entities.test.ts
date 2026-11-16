@@ -140,7 +140,7 @@ test('Dynamite Plains trigger damages an enemy exactly three tiles from its pair
       ...cowGulchPreviewWave,
       initialLives: 1,
       initialCash: 65,
-      spawn: { cell: { x: 12, y: 6 }, direction: 'west' },
+      spawn: { cell: { x: 8, y: 6 }, direction: 'west' },
       additionalSpawns: [],
       baseEnemySpeed: 0,
       speedMultiplierMin: 100,

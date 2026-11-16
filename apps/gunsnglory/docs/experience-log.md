@@ -53,6 +53,16 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
 - **审计结论也要反向核对实现：**M16 审计虽改正了 `130/131` 的新局语义，却再次错误地将 `96–101` 写成仅读档创建；代码随后照此省略了 M11–M16 的可招募单位。M19 接入时，同一错误又进入 M19 审计和 M18 的专用工厂：TDM 96–101 实际在 `fromLoadGame == false` 时创建 activity 4 招募单位，读档时才跳过；仅更新报告或只测共享工厂都不够，必须检查每张地图工厂与最终 `ScenarioContent.units`。本轮已恢复 M18/M19 的 Mexican、Indian、Sniper、Grandpa marker 行为；M18 新内容升为 v2，旧 v1 回放继续使用原单位列表。后续逐图测试需从真实 TDM 核对坐标、activity、解锁门控和唯一 ID，并至少覆盖一条对应关卡的回放入口。
 
+## 多分岔运行转向与地图道路图层必须一起核对
+
+**状态：**level 1–27 的路线方向遗漏和 Apache Valley 桥层缺失已在当前本地修复批次中修正；尚未集成或发布。
+
+- **表现与复现：**多个关卡的敌人看起来沿直线离开路面，甚至穿过峡谷。只看菜单预览、路线节点或单个出生口无法稳定复现；Riverside Mountains 的底部出生口最明确：敌人到 `(16,17)` 后应向南，却继续向东。Apache Valley 另有敌人沿峡谷底色经过桥位、但桥面贴图缺失的视觉错误。
+- **根因与证据：**level 11–27 的 `previewWave.routes` 保存了完整多出口路线，但 `previewWave.redirects` 只保留第一条路线；[`moveEnemy()`](../src/game/index.ts) 只读 `redirects`，使17关遗漏每关16–61个合法转向方向。APK 的 TDM action-2 格定义真实可选方向；[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 把27张地图逐格与这些 marker 比较，确认运行时集合不完整。另一个独立问题是 Apache Valley 的 [`new-mexico-02.json`](../src/content/new-mexico-02.json) 少画5段水平桥面和3对桥墩：TDM 派生绘制结果与网页地图指令不一致。
+- **漏测点：**过去的路线检查主要验证控制节点/边界是否存在，未将“完整路线集合”与“运行时真正消费的转向表”逐格比较；单入口关卡或第一条路线不会覆盖其他出生口在共享路口的选择。道路图层测试也未把每个关卡的地图指令与 APK 派生绘制规则对照，因此地图数据里有路线却不代表玩家看得到正确的道路。
+- **修复与防回归：**[`runtimeWaveRedirects()`](../src/game/wave-routes.ts) 从完整路线重建共享转向表，并以原始 TDM action-2 方向码补全合法选择；关卡显式覆盖仍优先，无路线定义的 legacy 场景继续使用原 `redirects`。敌人预览出生位置根据实际行进方向计算，避免所有边缘出生点被假定为向左进入。Apache Valley 补齐5段桥面和3对桥墩，不挪动路线点。后续每张地图必须同时核对：TDM marker→运行时方向表、所有 spawn→redirect→exit 分支、路径实际经过的道路/桥层、角色脚底锚点；不能只检查画出的路线折线，也不能为掩盖数据错位而手动偏移路线。
+- **验证与边界：**[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 逐项比较27关所有 action-2 格及方向；Riverside Mountains 的底部出生口通过短 `GameSession` 轨迹确认向南，[`apache-valley.test.ts`](../tests/apache-valley.test.ts) 确认敌人可到达原始桥面，且 Apache Valley 绘制命令与独立 TDM 参考生成器逐条一致。内置浏览器本地源码窗口模式、静音实看 Apache Valley 与 Riverside Mountains 的代表性移动；没有人工逐关观察全部随机路径，也没有完整通关或启动 Android。当前完整本地检查通过类型检查、839项单测、生产构建和175项 E2E；发布及线上 SHA 核验尚未进行。
+
 ## 内容版本必须覆盖所有影响开局的档案状态
 
 **状态：M22 修复中；M4–M7 回放工厂和 Eastwood 新局单位修复已完成，实际回放入口矩阵待验。**

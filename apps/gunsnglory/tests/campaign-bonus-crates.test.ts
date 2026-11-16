@@ -73,7 +73,9 @@ function createBonusCrateScenario(
       number: 1,
       initialLives: 50,
       initialCash: 65,
-      spawn: { cell: spawnCell, direction: 'west' },
+      // Keep the synthetic enemy at the intended test coordinate now that
+      // preview spawns are placed two fields behind their travel direction.
+      spawn: { cell: { x: spawnCell.x - 4, y: spawnCell.y }, direction: 'west' },
       baseEnemySpeed: 0,
       speedMultiplierMin: 100,
       speedMultiplierCount: 1,

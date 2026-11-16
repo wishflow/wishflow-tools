@@ -15,6 +15,7 @@ import { apacheValleyWaveIntros } from '../src/content/cow-gulch-wave-intros';
 import { createGame, type CampaignWaveDefinition, type ScenarioContent } from '../src/game';
 import { createRoutePriorityMap } from '../src/game/route-priority';
 import { gameAssetRelativePath } from '../src/render/game-asset-path';
+import { deriveOriginalTdmMapDrawCommands } from './helpers/terrain-render-reference';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 const spawnCodes = [40, 41, 42];
@@ -69,6 +70,18 @@ test('Apache Valley map content exactly matches the 20×18 raw TDM grid and thre
     [{ x: 4, y: 0 }, { x: 6, y: 17 }],
     [{ x: 17, y: 0 }, { x: 15, y: 17 }],
   ]);
+});
+
+test('Apache Valley draws all five original bridge spans and their piers over the canyon floor', () => {
+  const expected = deriveOriginalTdmMapDrawCommands(map);
+  const bridges = expected.streets.filter(({ asset }) => asset === 'tiles_bridge_hori');
+  const bridgeCells = bridges.map(({ x, y }) => [x + 0.25, y]).sort(([leftX, leftY], [rightX, rightY]) =>
+    (leftY ?? 0) - (rightY ?? 0) || (leftX ?? 0) - (rightX ?? 0));
+
+  assert.deepEqual(bridgeCells, [[5, 6], [6, 6], [12, 7], [8, 12], [9, 12]]);
+  assert.equal(expected.streets.filter(({ asset }) => asset === 'tiles_bridge_pier_left').length, 3);
+  assert.equal(expected.streets.filter(({ asset }) => asset === 'tiles_bridge_pier_right').length, 3);
+  assert.deepEqual(map.map.streets, expected.streets);
 });
 
 test('Apache Valley reconstructs fresh units, static objects, weapon stats and original sprite resources', () => {
@@ -126,6 +139,52 @@ test('Apache Valley route priority keeps independent paths and converges on each
     { spawn: 231, exit: 255 },
   ]);
   assert.equal(priority.getTargetPriority(-1, 0), -1);
+});
+
+test('Apache Valley enemy follows the turn table onto the original bridge', async () => {
+  const route = apacheValleyContent.previewWave!.routes![0]!;
+  const scenario = {
+    ...apacheValleyContent,
+    id: 'route-test-apache-valley',
+    units: [],
+    previewWave: {
+      ...apacheValleyContent.previewWave!,
+      spawn: route.spawn,
+      redirects: route.redirects,
+      routes: [route],
+      exit: route.exit,
+      baseEnemySpeed: 400,
+      speedMultiplierMin: 100,
+      speedMultiplierCount: 1,
+    },
+  };
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    mode: 'debug',
+    randomSeed: 2042,
+  });
+
+  try {
+    assert.equal(session.submitIntent({ type: 'start-wave' }), true);
+    let view = session.observe();
+    for (let frame = 0; frame < 240; frame += 1) {
+      view = session.advance({ deltaMs: 100 });
+      const enemy = view.enemies[0];
+      if (!enemy) continue;
+      const tileX = Math.floor(enemy.positionFine.x / 7_680);
+      const tileY = Math.floor(enemy.positionFine.y / 7_680);
+      if (tileX === 5 && tileY === 6) break;
+    }
+
+    const enemy = view.enemies[0];
+    assert.ok(enemy, 'the first Apache Valley preview enemy remains active on the route');
+    assert.equal(Math.floor(enemy.positionFine.x / 7_680), 5);
+    assert.equal(Math.floor(enemy.positionFine.y / 7_680), 6);
+    assert.equal(enemy.direction, 'south', 'the enemy crosses bridge cell (5,6) after the TDM turn at (5,4)');
+    assert.equal(map.originalTileGrid[6]?.[5], 80, 'the bridge cell comes from the raw TDM');
+  } finally {
+    session.close();
+  }
 });
 
 test('official Apache Valley content exposes its six source wave schedules and unlock prerequisite', () => {

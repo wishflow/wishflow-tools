@@ -787,7 +787,7 @@ test('does not fire while movement remains blocked by original terrain', async (
     units: [{ ...combatScenario.units[0]!, cell: { x: 8, y: 8 } }],
     previewWave: {
       ...combatScenario.previewWave!,
-      spawn: { cell: { x: 12, y: 8 }, direction: 'west' },
+      spawn: { cell: { x: 8, y: 8 }, direction: 'west' },
       exit: { x: 0, y: 8 },
       redirects: [],
       baseEnemySpeed: 0,

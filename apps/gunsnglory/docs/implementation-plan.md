@@ -8,6 +8,34 @@
 - M28 已回同步到 `gunsnglory`：本地/远端集成分支指向包含发布 SHA 的合并提交 `0132e3384b6cbdd7154a6a717082259c199230b2`。主工作树原有未跟踪研究笔记 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 未改动。当前 `master`/`origin/master` 为 `516b793`，`gunsnglory`/`origin/gunsnglory` 为 `0132e33`。
 - M22-G 中 M4–M7 回放的公开页面导入探针仍是历史未确认项；不影响 M28，但后续如修改回放公共路由应纳入针对性回归，不重复无关浏览器测试。M28 后普通发布比例按 30/171（17.5%）记录。
 
+## 当前修复批次：战役路线与道路贴合
+
+本批先区分三个问题，不能仅凭路线节点存在就说敌人走对了：
+
+1. **已证实的运行时漏转向（已修）：**27 个正式关卡中，level 11–27 的完整 `previewWave.routes` 与旧运行时消费的 `previewWave.redirects` 不一致。17 关只把第一条路线的转向复制到 `redirects`，而 `moveEnemy` 只读该数组；逐关审计发现每关遗漏 16–61 个合法方向。多入口/分岔处敌人因此可能继续沿旧方向走，离开原路并穿过峡谷等非道路区域。现由运行时合并完整路线的 TDM 转向；尚未集成的 Colt City 在接入时须复核相同条件。
+2. **可复现的具体失效（已修）：**Riverside Mountains 有 6 个出生点、4 个出口、60 个 action-2 转向字段及 23 条完整路线。底部出生点路线经过 `(16,17)` 时应向南；旧 `redirects` 不含此方向，网页敌人会继续向东。修复后短 `GameSession` 轨迹确认该敌人在此转南。
+3. **已确认的道路贴图漏项（已修）：**Apache Valley（`td_map_02.tdm`）的 APK 道路层在 `(5,6)`、`(6,6)`、`(12,7)`、`(8,12)`、`(9,12)` 绘制 5 段水平桥面；项目 `new-mexico-02.json` 先前缺少这些桥面及 3 对桥墩，共少 11 条街道图层绘制指令。桥面格背景是峡谷底图，因此敌人经过时会显得在非道路贴图上行走。现已依 APK 派生绘制规则补齐，并有逐项回归测试。
+4. **地图图层比较边界：**不能把 `terrain-render-index.json` 中所有 `street_draw_rules` 直接当成每张图的完整期望；例如原始 tile 81 的铁路桥叠图有地图专属条件，Railroad Ranch 与其他 New Mexico 图的绘制不同。以 APK 派生逐地图结果和现有 `deriveOriginalTdmMapDrawCommands` 规则为准，不把 map04、map10、map15、map27 上的 tile81 铁路单独误报成缺桥。
+5. **验证边界：**全部 27 张地图的 action-2 坐标与方向均逐格对照原始 TDM；各地图道路绘制指令也与 APK 派生规则及独立参考生成器比较。浏览器实看覆盖 Apache Valley 和 Riverside Mountains 的代表路线，其中包含桥面和底部出生转向；没有逐张人工观察全部 27 关的每一条随机路线，故不把代表性视觉检查描述为全关目视验收。窗口模式、静音；测试速度恢复到 `1×`，未完整通关、未进入全屏或启动 Android。
+
+| 正式关卡 | 遗漏方向数 | 正式关卡 | 遗漏方向数 | 正式关卡 | 遗漏方向数 |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 11 Traveller’s Town | 50 | 17 Dead Rocks | 61 | 23 Chinook Woods | 16 |
+| 12 Steam Valley | 26 | 18 Shadow Town | 60 | 24 Fort Echo | 49 |
+| 13 Golden River | 36 | 19 Dust Falls | 30 | 25 Dynamite Plains | 24 |
+| 14 Riverside Mountains | 58 | 20 Horse Hills | 25 | 26 Columbia River | 30 |
+| 15 Railroad Canyon | 37 | 21 Eastwood Forest | 26 | 27 Mount Hood | 24 |
+| 16 Highpoint Terrace | 46 | 22 Cashcow Canyon | 37 |  |  |
+
+| 顺序 | 切片 | 实现与验收 | 状态 |
+| --- | --- | --- | --- |
+| ROUTE-A | 路线消费差异审计 | 对正式 level 1–27 汇总完整路线、出生点、出口、TDM 转向字段及运行时转向表差异；记录 Colt City 接入时的复核条件。 | **完成**；确认 level 11–27 共17关遗漏合法方向。Colt City 尚未集成，后续接入时复核。 |
+| ROUTE-B | 恢复完整 TDM 转向集合 | 从完整 `routes` 恢复每个 action-2 格的合法方向，保持 APK `directionMapping` 顺序；旧样例无 `routes` 时保留显式 `redirects` 行为。 | **完成**；新增 `runtimeWaveRedirects`，运行时在真实路口使用完整方向表；显式场景覆盖优先。 |
+| ROUTE-C | 全关路线与移动回归 | 对 level 1–27 逐关将运行时方向表与原始 TDM action-2 方向比较；覆盖 routes/legacy redirects、共享路口、多出生/多出口。以短 `GameSession` 轨迹核对 Riverside Mountains 底部出生口转南，以及 Apache Valley 敌人进入原始桥面。 | **完成**；27 关每个 action-2 格和方向与 TDM 一致；两个具体移动轨迹测试通过，无需完整通关。 |
+| ROUTE-D | 道路/桥面绘制层复核 | 按每张地图专属 APK 绘制规则与独立参考生成器对照 27 关 `map.streets`；只修有原始证据支持的缺图，不偏移路线点掩盖问题。 | **完成**；Apache Valley 补齐 5 段 `tiles_bridge_hori` 和 3 对桥墩，共11条绘制指令；逐关绘制数据审计未发现其他缺失，Apache Valley 地图测试锁定 TDM 网格、桥层和路线。 |
+| ROUTE-E | 代表性画面实测 | 使用当前分支本地构建、窗口模式、静音检查 Apache Valley 与 Riverside Mountains；观察实际敌人转弯、桥面显示和路线/地图对齐。 | **完成（代表性检查）**；内置浏览器检查两关实时移动和桥面/路线；不是逐关人工观察所有随机路径。27关静态逐格核对与定向轨迹测试补足其余数据覆盖。 |
+| ROUTE-F | 批次验收与发布 | 运行应用完整检查；通过后将整个修复批次集成到应用发布路径，核对部署 SHA 并在线验收，再回同步 `gunsnglory`。 | **本地验收完成，集成/发布未做**；839项单测、175项 E2E、类型检查及生产构建通过。修复已在 `codex/gng-route-runtime-fix` 本地提交 `c9df5f4`；尚未合并至 `master`、部署或完成线上核验。 |
+
 ## 当前批次：Mount Hood（M28，Oregon 第 7 关／全局第 27 关）
 
 目标是把 APK 已登记、网页尚未开放的 Mount Hood 接入正式战役、Free Play 和回放。对应 `res/raw/td_map_30.tdm`，32×24、770 字节；本地 APK 直接读取并与结构化地图清单摘要一致。研究清单显示 10 波、21 条敌人请求、没有玩家单位池动作；地图含两组独立横向列车以及招募单位和炸药对象。默认窗口模式、静音，不启动 Android、不完整通关。M28 普通功能计划 7 个实现切片加 1 次批次发布，预计累计普通发布比例 30/171（17.5%）；静态审计和文档切片不计入实现数。

@@ -26,10 +26,10 @@ test('removes an enemy on the frame it crosses the map boundary between field ce
   });
   session.submitIntent({ type: 'start-wave' });
   let view = session.advance({ deltaMs: 0 });
-  assert.equal(view.enemies[0]?.positionFine.x, -11520);
+  assert.equal(view.enemies[0]?.positionFine.x, 19_200, 'westbound preview spawns begin two fields east of the marker');
   assert.equal(view.enemies[0]?.speed, 500);
 
-  for (let frame = 0; frame < 30; frame += 1) {
+  for (let frame = 0; frame < 100; frame += 1) {
     const enemy = view.enemies[0];
     assert.ok(enemy, 'the enemy remains until it crosses the cleanup boundary');
     const nextX = enemy.positionFine.x - enemy.speed;
