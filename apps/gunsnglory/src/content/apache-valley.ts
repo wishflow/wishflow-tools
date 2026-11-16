@@ -1,6 +1,7 @@
 import map from './new-mexico-02.json';
 import { cowGulchDecorationCodes, createSleepingMapUnitsFromGrid } from './cow-gulch';
 import { apacheValleyCampaignWaves } from './apache-valley-waves';
+import { createActiveGunslinger, createActiveMexicanUnit } from './new-mexico-unit-entities';
 import { gunslingerWeapon, mexicanWeapon } from './player-unit-weapons';
 import type { Direction, MapDecoration, ScenarioContent, ScenarioUnit, WaveRouteDefinition } from '../game';
 
@@ -30,20 +31,9 @@ function createApacheValleyUnits(): ScenarioUnit[] {
     for (const [x, code] of row.entries()) {
       if (code !== 104 && code !== 105) continue;
       const gunslinger = code === 104;
-      const id = gunslinger ? `gunslinger-${units.filter((unit) => unit.type === 'gunslinger').length + 1}` : 'mexican-1';
-      const render = { x, y: y - 0.375, width: 1, height: 1.375 };
-      units.push({
-        id,
-        type: gunslinger ? 'gunslinger' : 'mexican',
-        activity: 5,
-        cell: { x, y },
-        movementSpeedFinePer100Ms: 1500,
-        asset: gunslinger ? 'player_gunslinger' : 'player_mexican',
-        frame: { x: 0, y: 0, width: 32, height: 44 },
-        render,
-        hitArea: { ...render },
-        weapon: gunslinger ? gunslingerWeapon : mexicanWeapon,
-      });
+      units.push(gunslinger
+        ? createActiveGunslinger({ x, y }, units.filter((unit) => unit.type === 'gunslinger').length + 1)
+        : createActiveMexicanUnit({ x, y }));
     }
   }
   return units;

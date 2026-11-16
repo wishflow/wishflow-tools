@@ -15,14 +15,14 @@
 - APK `GameObjectUnit.createCollisionObject()` 使用相对逻辑位置 `(-2534, -5376, 5068, 4608)` 的碰撞框；网页同值。
 - APK `GameObjectUnit.draw()` 将活动单位帧的下边缘绘制到 `fineY`。网页移动单位逻辑锚点是 `cell.y + 0.75` 格，但 Gunslinger/Mexican 活动贴图及醒来贴图下边缘是 `cell.y + 1.0`，统一向下错开 `0.25` 格。
 - 对现有 27 个正式关卡逐个打开静态会话后发现：47 个活动可移动单位中，37 个在 19 个关卡中存在该偏移；另有 374 个睡眠单位的醒来贴图同样偏移。
-- APK `BackgroundMap.isReachableXGround/YGround()` 与网页 `mapBlocksUnit()` 都按同一碰撞框采样四角，并用街道覆盖层允许桥面通过。当前证据不支持全局平移地图碰撞；桥面边界仍需用 Cow Gulch 的原始 TDM 做针对性行为核对。
+- APK `BackgroundMap.isReachableXGround/YGround()` 与网页 `mapBlocksUnit()` 都按同一碰撞框采样四角，并用街道覆盖层允许桥面通过。Cow Gulch 原始 TDM 的桥格行9、上下阻挡行8/10已由短 `GameSession` 移动测试核对；边界由碰撞框限制在可走桥格。当前证据不支持全局平移地图碰撞。
 - 全屏按钮悬停时旧 CSS `background` 简写将精灵背景重置为 `none`；较后的 hover 规则只恢复背景色，没有恢复精灵图。
 
 | 顺序 | 切片 | 实施范围与可判定验收 | 状态 |
 | --- | --- | --- | --- |
-| 1 | 统一我方单位脚底锚点 | 所有活动单位与可招募单位醒来后的贴图/命中区下边缘须对齐逻辑 `positionFine.y`（初始为 `cell.y + 0.75`）；共用已有 `createAnchoredMapRender` 几何规则，修正 Cow Gulch 初始单位数据。测试扫描全部 27 个正式关卡的活动与醒来贴图，并在原始 Cow Gulch 桥格上验证单位碰撞仍限制在 TDM 可走格。窗口模式实看桥面和峡谷边缘，确认脚底不再落入河道/峡谷。 | 待实现 |
-| 2 | 保持全屏控件双态图悬停可见 | 修正会清除背景图的 hover 简写；E2E 分别在 `aria-pressed=false/true` 下验证普通、hover、focus 状态均保留正确的精灵图、尺寸和帧位置。 | 待实现 |
-| 3 | 批次验收与集成 | 两个切片定向检查通过后运行一次 `CI=1 pnpm run test:ci`；用内置浏览器在窗口模式、静音下检查原始桥面边界和按钮 hover，保留截图证据。提交整个修复批次到 `gunsnglory`，再按修复批次流程 squash 发布；核对部署来源 SHA 后做线上复验。 | 待实现 |
+| 1 | 统一我方单位脚底锚点 | **完成。**27个正式关卡中扫描到47个活动可移动单位、374个可招募单位醒来贴图；活动贴图与醒来贴图/命中区统一用 `createAnchoredMapRender`，脚底对齐逻辑 `positionFine.y`，初始锚点为 `cell.y + 0.75`。修正 Cow Gulch 初始单位，并让 Apache Valley 活动单位复用相同工厂。原始 Cow Gulch TDM 桥格的短 `GameSession` 测试确认碰撞范围留在第9行桥格、贴图脚底跟随逻辑锚点。12个相关测试文件共57项通过，`pnpm run typecheck` 通过；内置浏览器窗口/静音检查确认本地地图与单位画面正常。未在浏览器里完成一段完整桥面移动，因此不把这一项记为逐像素视觉验收。 | **完成** |
+| 2 | 保持全屏控件双态图悬停可见 | 移除会把背景图重置为 `none` 的旧 hover 简写；E2E 增加未按下 hover 与已按下状态的精灵图断言。`t30-fullscreen.spec.ts` 9项已通过，待该切片本地提交。 | 待提交 |
+| 3 | 批次验收与集成 | 运行一次 `CI=1 pnpm run test:ci`，修复并重跑失败项；完成内置浏览器窗口/静音检查。随后将修复批次集成到 `gunsnglory` 并 squash 发布；核对部署来源 SHA 后做线上复验。当前因远程 DNS 不可用，集成与发布尚未开始。 | 待实现 |
 
 本批不重做敌方路线、地图贴图和地形碰撞检查；若真实关卡行为测试证明碰撞网格与 APK 不一致，再把该差异细化为有证据支持的独立修复。
 

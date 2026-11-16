@@ -1,5 +1,6 @@
 import { cowGulchP1aSampleContent } from './cow-gulch';
 import { createTechTownMapContent } from './tech-town-map-entities';
+import { createAnchoredMapRender } from './fort-kaboom-unit-designs';
 import type { ScenarioContent, ScenarioUnit } from '../game';
 
 const gamblerTemplate: ScenarioUnit = (() => {
@@ -15,7 +16,7 @@ export function createGamblerUiSample(initialCash = 50): ScenarioContent {
   }
 
   const cell = { x: 6, y: 6 };
-  const render = { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 };
+  const render = createAnchoredMapRender(cell, gamblerTemplate.frame);
   const gambler = {
     ...gamblerTemplate,
     id: 'gambler-ui-sample-unit',

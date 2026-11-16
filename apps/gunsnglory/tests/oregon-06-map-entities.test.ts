@@ -91,7 +91,7 @@ test('Columbia River active, hireable, and Steamer units match TDM markers and u
   assert.equal(allUnlocked.some(({ type, activity }) => type === 'cannon' && activity === 5), false);
   assert.deepEqual(allUnlocked.find(({ type, activity, cell }) => (
     type === 'gunslinger' && activity === 5 && cell.x === 16 && cell.y === 12
-  ))?.render, { x: 16, y: 11.625, width: 1, height: 1.375 });
+  ))?.render, { x: 16, y: 11.375, width: 1, height: 1.375 });
   assert.deepEqual(allUnlocked.find(({ type, activity, cell }) => (
     type === 'cannon' && activity === 4 && cell.x === 23 && cell.y === 3
   ))?.render, { x: 23, y: 2.75, width: 1, height: 1 });
