@@ -86,6 +86,9 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
     expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundImage)).toContain('gng-frame-fullscreen-states.png');
     expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundSize)).toBe('200% 100%');
     expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundPositionX)).toBe('0%');
+    await toggle.hover();
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundImage)).toContain('gng-frame-fullscreen-states.png');
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundPositionX)).toBe('0%');
     await toggle.focus();
     expect(await toggle.evaluate((button) => getComputedStyle(button).outlineWidth)).toBe('2px');
 
@@ -93,6 +96,7 @@ test('enters and exits fullscreen, requests landscape on touch, and keeps the co
     await expect(toggle).toHaveAccessibleName('Exit fullscreen');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     await expect(toggle).toHaveAttribute('data-fullscreen', 'true');
+    expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundImage)).toContain('gng-frame-fullscreen-states.png');
     expect(await toggle.evaluate((button) => getComputedStyle(button).backgroundPositionX)).toBe('100%');
     await expect(page.getByTestId('fullscreen-status')).toHaveText('Landscape orientation is enabled.');
     await expect(page.getByTestId('portrait-orientation-overlay')).toBeHidden();
