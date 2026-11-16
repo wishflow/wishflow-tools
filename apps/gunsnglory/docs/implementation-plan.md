@@ -7,6 +7,7 @@
 - M28 Mount Hood（Oregon 第 7 关／全局第 27 关）已完成并发布。唯一 squash 发布提交为 `516b79315c133e1dbc80d3a4a3e42d39b4c69e4a`；GitHub Actions `43609831648` 的共享检查、Guns’n’Glory 测试和 GitHub/Cloudflare Pages 部署均成功，两个站点来源 SHA 与发布提交一致。完整检查通过类型检查、832 项单测、生产构建和 175 项 E2E；内置浏览器窗口模式、静音进入 Free Play → Oregon → Mount Hood → Medium，确认开场对白、头像、真实地图和 `01/10` HUD。没有完整通关、进入全屏或启动 Android。
 - 最新 ROUTE 修复批次已部署并回同步至 `gunsnglory`；发布 SHA、Actions 与浏览器验收记录见下方。主工作树原有未跟踪研究笔记 `docs/research/blender-ai-driven-modeling-and-web-projects.md` 未改动。
 - M22-G 中 M4–M7 回放的公开页面导入探针仍是历史未确认项；不影响 M28，但后续如修改回放公共路由应纳入针对性回归，不重复无关浏览器测试。M28 后普通发布比例按 30/171（17.5%）记录。
+- 本轮地图锚点与全屏悬浮修复作为一个完整修复批次发布，包含2个实现切片、1次公开发布；累计发布比例更新为31/173（17.9%）。
 
 ## 最近完成修复批次：我方移动贴图锚点与全屏按钮悬浮
 
