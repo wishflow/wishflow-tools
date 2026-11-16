@@ -1058,7 +1058,8 @@ function enemyWalkAnimationFrame(type: CampaignEnemyType, distanceFine: number):
 }
 
 const BACKGROUND_BLOCKING_TILES = new Set([
-  32, 40, 41, 42, 43, 44, 45, 46, 48,
+  // The APK maps raw TDM tiles 32 and 36 to blocking background code 48.
+  32, 36, 40, 41, 42, 43, 44, 45, 46, 48,
   52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66,
   80, 81, 110,
 ]);
