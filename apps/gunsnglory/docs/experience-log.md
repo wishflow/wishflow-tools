@@ -14,6 +14,15 @@
 
 修复未完成的问题可以先登记为“待验证”；实现和运行验证结束后，应在同一条记录中补充结论。记录根因时优先引用稳定的文件/选择器/测试名称，不抄录冗长日志、日期或散列值。
 
+## 桥面边界与我方地图对象碰撞必须拆开核对
+
+**状态：**APK 静态几何已复核，网页对象碰撞已按该调用链修正；定向测试通过，完整 `test:ci` 和发布仍待批次收尾。
+
+- **表现与复现：**我方单位在桥边看起来越过峡谷壁；未雇佣的睡眠角色、Saloon 等地图设施无法挡路；部分单位互相穿过。单纯把桥图整体移动或缩窄，不能修复这些对象问题。
+- **根因与证据：**APK 的桥图是覆盖底图的道路层，资源字节、绘制矩形和网页一致；玩家脚底锚点和 `5068×4608` 碰撞框也与 APK `GameObjectUnit.createCollisionObject()` 一致。横桥 raw `80` 的贴图向左右各伸约 `0.25` 格，但碰撞可走范围由四角所在底图格及街道覆盖层决定；raw `36` 悬崖阻挡漏项已在前一批修复。对象碰撞的另一个调用链是 `CollisionManager.testCollision()` → `boxCheckX/Y()`：按当前碰撞框、本帧位移和正交轴重叠检测边沿穿越；`CollisionManager.boxCheck()` 不是该移动路径。静态 TDM 对象框由 `GameObjectManager.createGameObjectsFromBasicMap()`、`GameObjectDecoration`/`GameObjectSpawnLocation` 构造器和 `CollisionManager.createCollisionObject()` 的不同偏移共同决定。网页之前只查显式 `collisionBoxFine`，未包含单位列表，且测试把同一份内容框当成期望值，因此错框也能通过。睡眠单位只改状态和贴图，仍保留碰撞对象。`GameObjectSpawnLocation.update()` 使用零位移 `testBasicCollision()` 创建单位，不能把一般矩形重叠规则套用到 Fort Cannon 出生位置。
+- **修复与防回归：**以原始 TDM 码生成静态物件框，并只在特殊非静态码装饰（如水岩）或缺少 TDM 的 fixture 中使用显式框；活动、睡眠和动态生成单位都参与碰撞，船体使用自己的框，组成员不与自身同时移动组互撞；Fort 生成继续采用零位移检查。地形四角判断与静态/单位边沿穿越分开实现。`player-collision.test.ts` 覆盖睡眠/活动单位、沙龙、Fort 离开、raw `88` 竖桥、TDM 矩形表、炸药和27关静态 marker；`player-unit-anchor.test.ts` 覆盖 Cow Gulch raw `80` 横桥及27关 raw `36` 墙；Steamer 与奖励箱测试覆盖自定义船体和收集行为。
+- **避免重复：**看到脚底略超出桥面绘图边缘，先按贴图尺寸、脚底锚点、碰撞框底边分别计算，不以视觉矩形代替 walkable field。要改对象碰撞时先定位其 APK TDM 类型和构造器，再核对本帧的移动方法；不要拿独立的 `boxCheck()`、严格 AABB 或一个地图字段推测整条规则。新地图必须逐标记核对静态对象覆盖；单位状态、船体组和建筑 spawn 分别做测试。当前结论基于 APK 静态方法、资源与 `GameSession` 自动化检查，不代表 Android 实机/模拟器画面观察。
+
 ## 新增战役关卡后的进度断言
 
 **状态：**M15 接入时发现并修复既有 E2E 断言过期；完整 `test:ci` 已通过。
