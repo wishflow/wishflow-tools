@@ -51,6 +51,14 @@ import {
 import { createRoutePriorityMap, normalizedRoutePriority, type RoutePriorityMap } from './route-priority';
 import { runtimeWaveRedirects } from './wave-routes';
 import {
+  apkCollisionBlocksX,
+  apkCollisionBlocksY,
+  createPlayerMapCollisionBoxes,
+  PLAYER_UNIT_COLLIDER_FINE,
+  type PlayerCollisionMapObject,
+  type PlayerCollisionRectangle,
+} from './player-collision-geometry';
+import {
   DYNAMITE_BOX_RESPAWN_WINDOW_MS,
   DYNAMITE_COOLDOWN_MS,
   DYNAMITE_EXPLOSION_DURATION_MS,
@@ -1005,10 +1013,10 @@ function gamblerPrizeTemplateFor(
     ?? scenario.units.find((unit) => unit.type === expectedType);
 }
 
-const UNIT_COLLIDER_START_X = -2534;
-const UNIT_COLLIDER_START_Y = -5376;
-const UNIT_COLLIDER_WIDTH = 5068;
-const UNIT_COLLIDER_HEIGHT = 4608;
+const UNIT_COLLIDER_START_X = PLAYER_UNIT_COLLIDER_FINE.x;
+const UNIT_COLLIDER_START_Y = PLAYER_UNIT_COLLIDER_FINE.y;
+const UNIT_COLLIDER_WIDTH = PLAYER_UNIT_COLLIDER_FINE.width;
+const UNIT_COLLIDER_HEIGHT = PLAYER_UNIT_COLLIDER_FINE.height;
 const BONUS_CRATE_COLLIDER_START_X = -2534;
 const BONUS_CRATE_COLLIDER_START_Y = -4608;
 const BONUS_CRATE_COLLIDER_WIDTH = 5068;
@@ -1567,27 +1575,47 @@ function backgroundCollisionCode(rawTile: number, grid: ScenarioContent['origina
   return rawTile === 160 ? 160 : 0;
 }
 
+interface PlayerMovementCollisionContext {
+  mapObjects: readonly PlayerCollisionMapObject[];
+  units: readonly MutableUnit[];
+  ignoredUnitIds?: ReadonlySet<string>;
+  previousPositionFine?: { x: number; y: number };
+}
+
+function unitCollisionBoundsAt(
+  positionFine: { x: number; y: number },
+  collider: Readonly<Rectangle> = PLAYER_UNIT_COLLIDER_FINE,
+): PlayerCollisionRectangle {
+  return {
+    x: positionFine.x + collider.x,
+    y: positionFine.y + collider.y,
+    width: collider.width,
+    height: collider.height,
+  };
+}
+
 function mapBlocksUnit(
   scenario: ScenarioContent,
   fineX: number,
   fineY: number,
-  collisionBoxFine?: Rectangle,
+  terrainCollisionBoxFine?: Rectangle,
   movementSurface?: ScenarioUnit['movementSurface'],
+  collisionContext?: PlayerMovementCollisionContext,
 ): boolean {
-  const grid = scenario.originalTileGrid;
+  const grid = scenario.originalTileGrid ?? scenario.map.originalTileGrid;
   const width = scenario.map.width;
   const height = scenario.map.height;
-  const collider = collisionBoxFine ?? {
+  const terrainCollider = terrainCollisionBoxFine ?? {
     x: UNIT_COLLIDER_START_X,
     y: UNIT_COLLIDER_START_Y,
     width: UNIT_COLLIDER_WIDTH,
     height: UNIT_COLLIDER_HEIGHT,
   };
   const corners = [
-    { x: fineX + collider.x, y: fineY + collider.y },
-    { x: fineX + collider.x + collider.width, y: fineY + collider.y + collider.height },
-    { x: fineX + collider.x, y: fineY + collider.y + collider.height },
-    { x: fineX + collider.x + collider.width, y: fineY + collider.y },
+    { x: fineX + terrainCollider.x, y: fineY + terrainCollider.y },
+    { x: fineX + terrainCollider.x + terrainCollider.width, y: fineY + terrainCollider.y + terrainCollider.height },
+    { x: fineX + terrainCollider.x, y: fineY + terrainCollider.y + terrainCollider.height },
+    { x: fineX + terrainCollider.x + terrainCollider.width, y: fineY + terrainCollider.y },
   ];
 
   for (const corner of corners) {
@@ -1611,40 +1639,43 @@ function mapBlocksUnit(
     if (backgroundBlocked && (movementSurface === 'water' || streetLayerCode === 0)) return true;
   }
 
-  const unitLeft = fineX + collider.x;
-  const unitTop = fineY + collider.y;
-  const unitRight = unitLeft + collider.width;
-  const unitBottom = unitTop + collider.height;
-  return (scenario.map.decorations ?? []).some(({ cell, collisionBoxFine }) => {
-    if (!collisionBoxFine) return false;
-    const decorationLeft = (cell.x * FINE_UNITS_PER_CELL) + collisionBoxFine.x;
-    const decorationTop = (cell.y * FINE_UNITS_PER_CELL) + collisionBoxFine.y;
-    const decorationRight = decorationLeft + collisionBoxFine.width;
-    const decorationBottom = decorationTop + collisionBoxFine.height;
-    return unitLeft < decorationRight
-      && unitRight > decorationLeft
-      && unitTop < decorationBottom
-      && unitBottom > decorationTop;
-  });
+  if (!collisionContext) return false;
+
+  const previous = collisionContext.previousPositionFine;
+  const deltaX = previous ? fineX - previous.x : 0;
+  const deltaY = previous ? fineY - previous.y : 0;
+  const movingUnitBounds = unitCollisionBoundsAt(previous ?? { x: fineX, y: fineY }, terrainCollider);
+  const blocksMovement = (obstacle: Readonly<PlayerCollisionRectangle>): boolean => previous
+    ? (deltaX !== 0 && apkCollisionBlocksX(movingUnitBounds, obstacle, deltaX))
+      || (deltaY !== 0 && apkCollisionBlocksY(movingUnitBounds, obstacle, deltaY))
+    : apkCollisionBlocksX(movingUnitBounds, obstacle, 0)
+      || apkCollisionBlocksY(movingUnitBounds, obstacle, 0);
+  if (collisionContext.mapObjects.some(blocksMovement)) {
+    return true;
+  }
+  return collisionContext.units.some((unit) => (
+    !collisionContext.ignoredUnitIds?.has(unit.definition.id)
+    && blocksMovement(unitCollisionBoundsAt(
+      unit.positionFine,
+      unit.definition.collisionBoxFine ?? PLAYER_UNIT_COLLIDER_FINE,
+    ))
+  ));
 }
 
 function campaignUnitSpawnBlocked(
   scenario: ScenarioContent,
   units: readonly MutableUnit[],
   spawn: { positionFine: { x: number; y: number }; cell: { x: number; y: number } },
+  mapObjects: readonly PlayerCollisionRectangle[],
 ): boolean {
-  if (mapBlocksUnit(scenario, spawn.positionFine.x, spawn.positionFine.y)) return true;
-  const left = spawn.positionFine.x + UNIT_COLLIDER_START_X;
-  const top = spawn.positionFine.y + UNIT_COLLIDER_START_Y;
-  const right = left + UNIT_COLLIDER_WIDTH;
-  const bottom = top + UNIT_COLLIDER_HEIGHT;
-  return units.some(({ positionFine }) => {
-    const otherLeft = positionFine.x + UNIT_COLLIDER_START_X;
-    const otherTop = positionFine.y + UNIT_COLLIDER_START_Y;
-    const otherRight = otherLeft + UNIT_COLLIDER_WIDTH;
-    const otherBottom = otherTop + UNIT_COLLIDER_HEIGHT;
-    return left < otherRight && right > otherLeft && top < otherBottom && bottom > otherTop;
-  });
+  return mapBlocksUnit(
+    scenario,
+    spawn.positionFine.x,
+    spawn.positionFine.y,
+    undefined,
+    undefined,
+    { mapObjects, units },
+  );
 }
 
 function campaignBonusCrateFieldBlocked(
@@ -1727,7 +1758,14 @@ function playerAxisWithinOriginalMapBounds(
     && coordinateFine <= (scenario.map.height * FINE_UNITS_PER_CELL) + edgeMarginFine;
 }
 
-function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number, tileSizePixels: number): void {
+function moveUnit(
+  unit: MutableUnit,
+  scenario: ScenarioContent,
+  deltaMs: number,
+  tileSizePixels: number,
+  units: readonly MutableUnit[],
+  mapObjects: readonly PlayerCollisionRectangle[],
+): void {
   const target = unit.movementTargetFine;
   if (!target || deltaMs === 0) return;
 
@@ -1747,18 +1785,39 @@ function moveUnit(unit: MutableUnit, scenario: ScenarioContent, deltaMs: number,
   const moveY = Math.trunc((directionY * deltaMs) / 100);
   const nextX = unit.positionFine.x + moveX;
   const nextY = unit.positionFine.y + moveY;
+  const collisionContext: PlayerMovementCollisionContext = {
+    mapObjects,
+    units,
+    ignoredUnitIds: new Set([unit.definition.id]),
+    previousPositionFine: { ...unit.positionFine },
+  };
   const movementCollisionBox = unit.definition.movementSurface === 'water'
     ? unit.definition.collisionBoxFine
     : undefined;
 
   if (moveX !== 0
     && playerAxisWithinOriginalMapBounds(scenario, 'x', nextX, tileSizePixels)
-    && !mapBlocksUnit(scenario, nextX, unit.positionFine.y, movementCollisionBox, unit.definition.movementSurface)) {
+    && !mapBlocksUnit(
+      scenario,
+      nextX,
+      unit.positionFine.y,
+      movementCollisionBox,
+      unit.definition.movementSurface,
+      collisionContext,
+    )) {
     unit.positionFine.x = nextX;
   }
+  collisionContext.previousPositionFine = { ...unit.positionFine };
   if (moveY !== 0
     && playerAxisWithinOriginalMapBounds(scenario, 'y', nextY, tileSizePixels)
-    && !mapBlocksUnit(scenario, unit.positionFine.x, nextY, movementCollisionBox, unit.definition.movementSurface)) {
+    && !mapBlocksUnit(
+      scenario,
+      unit.positionFine.x,
+      nextY,
+      movementCollisionBox,
+      unit.definition.movementSurface,
+      collisionContext,
+    )) {
     unit.positionFine.y = nextY;
   }
 }
@@ -1773,6 +1832,8 @@ function moveUnitGroup(
   scenario: ScenarioContent,
   deltaMs: number,
   tileSizePixels: number,
+  units: readonly MutableUnit[],
+  mapObjects: readonly PlayerCollisionRectangle[],
 ): void {
   const target = leader.movementTargetFine;
   if (!target || deltaMs === 0) return;
@@ -1795,6 +1856,11 @@ function moveUnitGroup(
   const requestedDelta = Math.trunc((Math.sign(deltaToTarget) * speed * deltaMs) / 100);
   const delta = Math.sign(requestedDelta) * Math.min(Math.abs(deltaToTarget), Math.abs(requestedDelta));
   if (delta === 0) return;
+  const collisionContext: PlayerMovementCollisionContext = {
+    mapObjects,
+    units,
+    ignoredUnitIds: new Set(group.map(({ definition }) => definition.id)),
+  };
 
   const blocked = group.some((unit) => {
     const nextPosition = {
@@ -1802,7 +1868,14 @@ function moveUnitGroup(
       y: unit.positionFine.y + (coordinate === 'y' ? delta : 0),
     };
     return !playerAxisWithinOriginalMapBounds(scenario, coordinate, nextPosition[coordinate], tileSizePixels)
-      || mapBlocksUnit(scenario, nextPosition.x, nextPosition.y, unit.definition.collisionBoxFine, unit.definition.movementSurface);
+      || mapBlocksUnit(
+        scenario,
+        nextPosition.x,
+        nextPosition.y,
+        unit.definition.collisionBoxFine,
+        unit.definition.movementSurface,
+        { ...collisionContext, previousPositionFine: { ...unit.positionFine } },
+      );
   });
   if (blocked) {
     clearGroupMovementTarget(group);
@@ -3000,6 +3073,11 @@ export function createGame(options: {
         scenario.previewWave,
         scenario.originalTileGrid ?? scenario.map.originalTileGrid,
       );
+      const playerMapCollisionBoxes = createPlayerMapCollisionBoxes(
+        scenario.originalTileGrid ?? scenario.map.originalTileGrid,
+        scenario.map.decorations ?? [],
+        scenario.dynamite,
+      );
       const gamblerCasinoCells = resolveGamblerCasinoCells(scenario);
       const gamblerPrizeUnitTypes = new Set(scenario.gambler?.unlockedPrizeUnitTypes ?? []);
       const difficulty = requestedDifficulty ?? 'easy';
@@ -3948,10 +4026,20 @@ export function createGame(options: {
               const group = units.filter(({ definition }) => definition.movementGroupId === groupId);
               const leader = group.find((member) => member.selected && member.movementTargetFine)
                 ?? group.find((member) => member.movementTargetFine);
-              if (leader) moveUnitGroup(group, leader, scenario, deltaMs, tileSizePixels);
+              if (leader) {
+                moveUnitGroup(
+                  group,
+                  leader,
+                  scenario,
+                  deltaMs,
+                  tileSizePixels,
+                  units,
+                  playerMapCollisionBoxes,
+                );
+              }
               continue;
             }
-            moveUnit(unit, scenario, deltaMs, tileSizePixels);
+            moveUnit(unit, scenario, deltaMs, tileSizePixels, units, playerMapCollisionBoxes);
           }
 
           for (const unit of units) {
@@ -4486,7 +4574,7 @@ export function createGame(options: {
                 scenario.campaignUnitPool,
                 deltaMs,
                 utilRandom,
-                (spawn) => campaignUnitSpawnBlocked(scenario, units, spawn),
+                (spawn) => campaignUnitSpawnBlocked(scenario, units, spawn, playerMapCollisionBoxes),
               );
               for (const spawn of spawnedUnits) {
                 const poolEntry = scenario.campaignUnitPool.units.find(({ poolType }) => poolType === spawn.poolType);

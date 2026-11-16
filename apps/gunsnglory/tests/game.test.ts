@@ -990,6 +990,7 @@ test('blocks movement against the original static decoration collision boxes', a
       originalTileGrid,
       units: [{
         ...scenario.units[0]!,
+        ...(collisionCase.id === 'shack-collision-fixture' ? { movementSpeedFinePer100Ms: 500 } : {}),
         cell,
         render: { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 },
         hitArea: { x: cell.x, y: cell.y - 0.375, width: 1, height: 1.375 },
