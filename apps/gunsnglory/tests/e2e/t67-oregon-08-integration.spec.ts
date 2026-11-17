@@ -73,11 +73,11 @@ test('Free Play opens Colt City on desktop and narrow mobile with map 31 and the
 
     await page.getByTestId('menu-free-play').click();
     await page.getByTestId('campaign-region-oregon').click();
-    await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available');
-    for (const level of [21, 22, 23, 24, 25, 26, 27, 28]) {
+    await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available');
+    for (const level of [21, 22, 23, 24, 25, 26, 27, 28, 29]) {
       await expect(page.getByTestId(`campaign-level-${level}`)).toBeEnabled();
     }
-    await expect(page.getByTestId('campaign-level-29')).toBeDisabled();
+    await expect(page.getByTestId('campaign-level-29')).toBeEnabled();
     await page.getByTestId('campaign-level-28').click();
     await expectColtCityOverview(page);
 
