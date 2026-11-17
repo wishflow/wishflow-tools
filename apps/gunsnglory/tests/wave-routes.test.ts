@@ -26,6 +26,7 @@ import {
   oregon05LevelTwentyFiveCampaignContent,
   oregon06LevelTwentySixCampaignContent,
   oregon07LevelTwentySevenCampaignContent,
+  oregon08LevelTwentyEightCampaignContent,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
 } from '../src/content/official-campaign';
@@ -67,6 +68,7 @@ const officialScenarios: readonly ScenarioContent[] = [
   oregon05LevelTwentyFiveCampaignContent,
   oregon06LevelTwentySixCampaignContent,
   oregon07LevelTwentySevenCampaignContent,
+  oregon08LevelTwentyEightCampaignContent,
 ];
 
 function cellKey(cell: { x: number; y: number }): string {
@@ -89,7 +91,7 @@ function sortedRedirects(redirects: readonly WaveRedirect[]) {
   return redirects.map(({ cell, directions }) => `${cellKey(cell)}:${directions.join('/')}`).sort();
 }
 
-test('all 27 campaign maps consume every APK action-2 marker and direction', () => {
+test('all 28 campaign maps consume every APK action-2 marker and direction', () => {
   for (const scenario of officialScenarios) {
     const preview = scenario.previewWave;
     assert.ok(preview, `${scenario.id} has a preview wave`);
@@ -102,6 +104,51 @@ test('all 27 campaign maps consume every APK action-2 marker and direction', () 
       sortedRedirects(expectedRedirects(grid)),
       `${scenario.id} must retain every action-2 choice from the APK grid`,
     );
+  }
+});
+
+test('Colt City Wave 1 enemy follows its TDM turn through the runtime route consumer', async () => {
+  const { campaignUnitPool, gambler, ...base } = oregon08LevelTwentyEightCampaignContent;
+  void campaignUnitPool;
+  void gambler;
+  const scenario = { ...base, id: 'route-test-colt-city', units: [] };
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    mode: 'free',
+    difficulty: 'medium',
+    randomSeed: 28028,
+  });
+
+  try {
+    let view = session.observe();
+    let spawnedEnemyIds: readonly string[] | undefined;
+    for (let frame = 0; frame < 300 && spawnedEnemyIds === undefined; frame += 1) {
+      view = session.advance({ deltaMs: 100 });
+      const spawned = view.events.find((event) => event.type === 'enemy-group-spawned');
+      if (spawned?.type === 'enemy-group-spawned') {
+        assert.equal(spawned.spawnPointId, 2, 'Wave 1 action 1 maps to spawn point 2');
+        spawnedEnemyIds = spawned.enemyIds;
+      }
+    }
+    assert.ok(spawnedEnemyIds?.length, 'the real Colt City Wave 1 request spawns in a short session');
+    assert.deepEqual(scenario.previewWave?.additionalSpawns?.[1], {
+      cell: { x: 31, y: 19 }, direction: 'west',
+    }, 'spawnPointId 2 is the row-major `(31,19)` entrance');
+
+    const trackedId = spawnedEnemyIds[0]!;
+    const trackedEnemy = () => view.enemies.find(({ id }) => id === trackedId);
+    assert.equal(trackedEnemy()?.direction, 'west');
+    for (let frame = 0; frame < 800 && trackedEnemy()?.direction !== 'north'; frame += 1) {
+      view = session.advance({ deltaMs: 100 });
+    }
+
+    const turnedEnemy = trackedEnemy();
+    assert.ok(turnedEnemy, 'the tracked enemy reaches the first junction before leaving the session');
+    assert.equal(turnedEnemy.direction, 'north', 'the enemy turns north at the APK marker `(25,19)`');
+    assert.ok(Math.abs(turnedEnemy.positionFine.x - Math.trunc(25.5 * 7_680)) <= 4);
+    assert.ok(Math.abs(turnedEnemy.positionFine.y - Math.trunc(19.5 * 7_680)) <= 4);
+  } finally {
+    session.close();
   }
 });
 

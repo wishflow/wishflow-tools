@@ -76,11 +76,12 @@ test('Free Play opens Mount Hood on desktop and narrow mobile with map 30 and th
 
     await page.getByTestId('menu-free-play').click();
     await page.getByTestId('campaign-region-oregon').click();
-    await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available');
-    for (const level of [21, 22, 23, 24, 25, 26, 27]) {
+    await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available');
+    for (const level of [21, 22, 23, 24, 25, 26, 27, 28]) {
       await expect(page.getByTestId(`campaign-level-${level}`)).toBeEnabled();
     }
-    await expect(page.getByTestId('campaign-level-28')).toBeDisabled();
+    await expect(page.getByTestId('campaign-level-28')).toBeEnabled();
+    await expect(page.getByTestId('campaign-level-29')).toBeDisabled();
     await page.getByTestId('campaign-level-27').click();
     await expectMountHoodOverview(page);
 

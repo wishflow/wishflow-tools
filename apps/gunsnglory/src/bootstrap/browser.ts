@@ -137,6 +137,12 @@ import {
   parseOregon07ReplayContentVersion,
 } from '../content/oregon-07-content-version';
 import { oregon07CampaignId } from '../content/oregon-07-identity';
+import { createOregon08CampaignContent, createOregon08CampaignContentFromSnapshot } from '../content/oregon-08-campaign';
+import {
+  oregon08CampaignContentVersionFor,
+  parseOregon08ReplayContentVersion,
+} from '../content/oregon-08-content-version';
+import { oregon08CampaignId } from '../content/oregon-08-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -284,6 +290,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === oregon07CampaignId) {
     return oregon07CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === oregon08CampaignId) {
+    return oregon08CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -320,6 +329,7 @@ export function createBrowserGame(
     [oregon05CampaignId]: createOregon05CampaignContent(completedScenarioIds),
     [oregon06CampaignId]: createOregon06CampaignContent(completedScenarioIds),
     [oregon07CampaignId]: createOregon07CampaignContent(completedScenarioIds),
+    [oregon08CampaignId]: createOregon08CampaignContent(completedScenarioIds),
     ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {
@@ -559,6 +569,15 @@ export function createBrowserGameForOregon07Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, oregon07CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [oregon07CampaignId]: createOregon07CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Colt City from its recorded unit-unlock snapshot. */
+export function createBrowserGameForOregon08Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon08ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon08CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [oregon08CampaignId]: createOregon08CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 
