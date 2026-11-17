@@ -36,7 +36,7 @@ async function settleWithoutBattle(
 }
 
 test('Mount Hood unlocks only after Columbia River, Free Play does not save, and formal victory records Level 27', async () => {
-  assert.equal(officialCampaignStages.length, 27);
+  assert.equal(officialCampaignStages.length, 28);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 27), {
     scenarioId: oregon07CampaignId,
     contentVersion: oregon07CampaignContentVersionFor(completedBeforeMountHood),
@@ -93,7 +93,9 @@ test('Mount Hood unlocks only after Columbia River, Free Play does not save, and
     assert.equal(saved.highScores[oregon07CampaignId], settlement.highScoreCandidate);
     assert.ok(saved.appliedSettlementIds.includes(settlement.settlementId));
     assert.equal(campaignLevelState(27, await progress.loadCampaign()), 'completed');
-    assert.equal(campaignLevelState(28, await progress.loadCampaign()), 'unimplemented');
+    const updated = await progress.loadCampaign();
+    assert.equal(campaignLevelState(28, updated), 'available');
+    assert.equal(campaignLevelState(29, updated), 'locked');
   } finally {
     formal.close();
   }

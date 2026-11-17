@@ -34,6 +34,7 @@ import {
   oregon05LevelTwentyFiveCampaignContent,
   oregon06LevelTwentySixCampaignContent,
   oregon07LevelTwentySevenCampaignContent,
+  oregon08LevelTwentyEightCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -295,6 +296,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Mount Hood · Level 27', zh: '胡德山 · 第 27 关' },
     globalLevel: 27,
     requiresCompletedScenarioIds: ['campaign-oregon-06'],
+  }, {
+    scenarioId: oregon08LevelTwentyEightCampaignContent.id,
+    contentVersion: oregon08LevelTwentyEightCampaignContent.contentVersion,
+    title: { en: 'Colt City · Level 28', zh: '柯尔特城 · 第 28 关' },
+    globalLevel: 28,
+    requiresCompletedScenarioIds: ['campaign-oregon-07'],
   }]);
 });
 
