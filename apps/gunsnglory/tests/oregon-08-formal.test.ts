@@ -36,7 +36,7 @@ async function settleWithoutBattle(
 }
 
 test('Colt City unlocks after Mount Hood, Free Play stays isolated, and formal victory records level 28', async () => {
-  assert.equal(officialCampaignStages.length, 28);
+  assert.equal(officialCampaignStages.length, 29);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 28), {
     scenarioId: oregon08CampaignId,
     contentVersion: oregon08CampaignContentVersionFor(['campaign-oregon-07']),
@@ -94,7 +94,7 @@ test('Colt City unlocks after Mount Hood, Free Play stays isolated, and formal v
     assert.ok(saved.appliedSettlementIds.includes(settlement.settlementId));
     const updated = await progress.loadCampaign();
     assert.equal(campaignLevelState(28, updated), 'completed');
-    assert.equal(campaignLevelState(29, updated), 'unimplemented');
+    assert.equal(campaignLevelState(29, updated), 'available');
   } finally {
     formal.close();
   }

@@ -556,18 +556,26 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## TDM raw 36 悬崖墙被误判为可通行
 
-**状态：**raw `36` 阻挡映射已于完整修复批次发布；后续对象碰撞补全见本文件前面的“桥面边界与我方地图对象碰撞必须拆开核对”。
+**状态：**网页已修复 Cow Gulch 的 raw `36` 可穿越问题并发布；Snake River/map32 的陆地阻挡分类已按 APK 最终背景与街道层逐格核对，其他地图仍需逐图对照。对象碰撞补全见本文件前面的“桥面边界与我方地图对象碰撞必须拆开核对”。
 
 - **表现：**角色能被移动到 Cow Gulch 等地图的悬崖立面贴图区域；桥边界看起来也比可见桥面宽。第一张用户截图中的角色确实覆盖悬崖墙纹理，这不是可接受的站位。
-- **根因与证据：**APK 1.8.6 的 `BackgroundMap.createBackgroundMap()` 把原始 TDM 地形码 `32`、`36` 都转换为背景碰撞码 `48`。APK `isReachableXGround()` / `isReachableYGround()` 对 `48` 且 `getStreet()==0` 的格子阻挡；有道路/桥面覆盖时才按街道层放行。网页 `backgroundCollisionCode()` 的 `BACKGROUND_BLOCKING_TILES` 包含 `32`，但漏掉 `36`；因此 Cow Gulch 中渲染为 `tiles_canyon_wall_var` 的 raw `36` 格可以通过碰撞检查。前一批只把贴图脚底对齐到 fineY，没有验证单位是否能进入 raw `36` 墙格，故其结论只适用于贴图锚点，不能证明移动边界已经正确。
-- **此前漏测：**Cow Gulch 桥测试只走了 raw `80` 桥格及相邻 raw `32` 阻挡格，没有测试桥端附近 raw `36` 墙格；全关贴图锚点扫描没有把每个可见墙格与原始 TDM 碰撞语义逐格核对。
-- **修复与验证：**网页 `BACKGROUND_BLOCKING_TILES` 补入 raw `36`，映射结果与 APK 一致为阻挡背景码 `48`。真实 Cow Gulch 活动枪手会话沿 row 9–11 的原有道路向南移动，在 row 12 raw `36` 悬崖墙外停止；27 张正式地图各自找到 raw `36` 墙格并通过短会话碰撞测试。原 Cow Gulch raw `80` 桥行与 row 8/10 raw `32` 边界测试仍通过；静态扫描未发现 raw `36` 与道路绘制层重叠。原批次 `CI=1 pnpm run test:ci` 通过类型检查、843项单测、生产构建和175项 E2E；发布提交 `9cca8af` 的 Actions `43811945950` 成功，两个 Pages 来源 SHA 均匹配。内置浏览器确认公开 Cow Gulch 页面、地图和对白加载，但没有取得墙边停靠截图，因此线上移动画面不记作已验证。
-- **此前漏测与防回归：**前一轮仅修脚底锚点，并用桥面 raw `80` 和 raw `32` 邻格验证碰撞；没有检查 APK 如何将 raw `36` 映射为阻挡码，也没有把可见悬崖墙贴图格逐图关联到真实 TDM 碰撞码。后续地形问题必须同时检查原始 TDM 码、贴图映射、共享碰撞转换及一个真实关卡会话；锚点对齐或敌方路线正确不能替代我方碰撞测试。共享地形转换改动还需回归桥面通行，避免把桥行和墙格混为一类。
+- **根因与证据：**网页 `backgroundCollisionCode()` 的 `BACKGROUND_BLOCKING_TILES` 原先包含 `32`、遗漏 `36`，因此 Cow Gulch 中 raw `36` 墙格可被网页移动规则穿过。APK 的 `BackgroundMap.createBackgroundMap()` 初始阶段将 raw `32` 转为背景码 `48`，raw `36` 则走默认分支写入 `0`；之后 `shapenBackgroundMap()` 会根据邻格重塑背景。APK 的 `isReachableXGround()` / `isReachableYGround()` 检查的是最终背景码和街道覆盖层，不是 raw marker 的直接映射。此前经验记录把 raw `36` 的最终阻挡现象误写成初始映射规则，这一说法不准确。
+- **此前漏测：**Cow Gulch 桥测试只走了 raw `80` 桥格及相邻 raw `32` 阻挡格，没有测试桥端附近 raw `36` 墙格；全关贴图锚点扫描没有把每个可见墙格与最终塑形后的 TDM 碰撞语义逐格核对。之前的短会话证明网页在所测 raw `36` 格会阻挡，不能单独证明网页与 APK 的最终 shaped background 全图等价。
+- **修复与验证：**网页 `BACKGROUND_BLOCKING_TILES` 补入 raw `36`，Cow Gulch 真实枪手会话沿原道路在该关 row 12 raw `36` 悬崖墙外停止；27 张已接入地图各自的 raw `36` 短会话测试通过。该修复证明所测网页边界行为，不证明所有地图的转换算法与 APK 最终地形逐格相同。旧批次完整测试、部署 SHA 与浏览器观察记录仍有效，但不应将其表述为已验证 APK 的全图映射等价。
+- **Snake River 对照：**M30-B3 的独立参考转换显示 map32 768 个格点的陆地阻挡分类在“网页 raw tile + street overlay”与“APK shaped background + street overlay”之间 `0/768` 不同；raw `36` `(2,15)` 的最终码为 `14`，raw `80` `(4,13)` 为 `67`，raw `88` `(20,10)` 为 `23`，后两者通过道路层放行。真实 `GameSession` 又在这张图上分别验证 raw `80/88` 桥、raw `36` 墙、睡眠 Grandpa 和 shack 碰撞；10 项地图/对象/移动定向测试及类型检查通过。此结果仅适用于 map32，不代表其余 Oregon 地图已逐格对照；没有发现需要改共享碰撞行为的差异。
+- **防回归：**地形碰撞问题必须分别记录 raw TDM、`createBackgroundMap()` 初始值、`shapenBackgroundMap()` 后最终值、street 覆盖和碰撞查询结果；不能把中间阶段称为最终碰撞规则。新增地形转换参考测试应从 APK Smali 的完整转换链独立生成最终格网，并与网页逐格比较；修共享转换时回归桥行和墙格。
+
+## 新关卡数据必须以本关 APK 资源为准
+
+- **表现与复现：**Snake River 初步计划把关卡参数末项写为 `299000`，并沿用旧摘要中“Colt City/map31 含 Steamer marker”的说法；波次第 4 波第二条请求入口也被记成 action 2。
+- **根因与证据：**这些都是跨关卡摘要或 Smali 调用重建带来的错误。直接读取 Snake River 的 `GameDesignData` index 28 得到末项 `119000`；直接检查 `td_map_31.tdm`，raw `120–123` 均为 0；重新逐条模拟 `GameDesignWaves` 分支的寄存器赋值后，第 4 波入口顺序为 `0、1、2`。对应证据和边界记录在[Snake River 静态审计](map29-static-audit.md)。
+- **漏测点：**初步计划和旧摘要没有与本关参数数组、TDM 字节及 Smali 调用顺序做独立交叉核验；把相邻关卡或已生成摘要当作当前地图事实。
+- **防回归：**每关单独建立 `campaign level ↔ TDM index ↔ 参数数组 index ↔ wave 分支` 映射；参数从目标 index 读取，地图对象从目标 TDM 计数，波次按 Smali 调用实际顺序还原寄存器。旧摘要仅作为检索线索，不能覆盖 APK 原始数据。未知参数语义继续标未知，不因非零字段或相邻地图对象推断玩法。
 
 ## 新关卡必须进入共享运行时路线回归
 
-**状态：Colt City 补齐定向覆盖；本批完整检查待重跑。**
+**状态：Colt City（Oregon 第 8 关／全局第 28 关）已发布。**发布提交 `8a75d52128bc885aeb091ecc17d2875d6649bda1` 的 GitHub Actions `44001377789` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回该 SHA。发布已合并回 `gunsnglory`，回同步 merge 为 `be593d4`；验收记录已提交并推送，集成分支本地与远端一致。
 
 - **根因分类：**未发现 APK 路线反解析错误。第一处是网页测试矩阵维护遗漏：静态地图测试与共享寻路消费者测试分开维护，新地图完成自己的路线拓扑测试后，没有同步进入共用矩阵。第二处是本轮测试计划把 `spawnPointId=2` 误读成 `(31,8)`：APK action ID 先映射到网页 spawn ID，spawn ID 再按 TDM 行优先顺序对应坐标；没有核对第二段映射。静态 `oregon08SpawnPointIdByActionId`、出生点清单和路线定义本身都正确。
-- **修复与验证：**将 Colt City 正式内容加入共用集合，计数更新为28关；新增短 `GameSession` 使用真实 Wave 1 action 1，请求事件确认 `spawnPointId=2`，再核对该点是 `(31,19)`，跟踪无防守单位干扰的敌人到 `(25,19)` 并确认其按 TDM 方向转北。定向 `wave-routes.test.ts` 通过6项，`pnpm run typecheck` 通过。初稿中 `(31,8)→(23,8)` 的错误坐标假设在验收前由失败测试暴露并已更正；随后仍需按实施计划重跑批次完整 `test:ci`，再进入发布门槛。
+- **修复与验证：**将 Colt City 正式内容加入共用集合，计数更新为28关；新增短 `GameSession` 使用真实 Wave 1 action 1，请求事件确认 `spawnPointId=2`，再核对该点是 `(31,19)`，跟踪无防守单位干扰的敌人到 `(25,19)` 并确认其按 TDM 方向转北。定向 `wave-routes.test.ts` 通过6项，`pnpm run typecheck` 通过；完整 `CI=1 PLAYWRIGHT_PORT=43324 pnpm run test:ci` 通过类型检查、872项单测、生产构建和178项 E2E。反转 marker 52 的方向映射时，路线构造/测试失败，确认测试能捕捉方向错误。内置浏览器静音、窗口模式进入 Free Play → Oregon → Colt City → Medium，确认开场对白、头像及地图加载；短时4×未操作导致第一波败北，结果没有写入战役档案，随后恢复设置为1×。浏览器未目视证明连续行走或池单位战斗；这些运行时路线结论来自短 `GameSession` 与自动化测试，不描述为浏览器实测。
 - **防回归：**每个新关卡都要同时完成静态路线图、`runtimeWaveRedirects()` 对照和至少一条真实短会话转弯断言；对 `actionId → spawnPointId → TDM 坐标` 逐段核实，不从编号或数组位置猜坐标。核对共享关卡清单数量与正式目录一致。不要把静态 `routes` 完整当成运行时路线正确的证明，也不需要通过完整战役或 Android 实测来验证这个确定性分岔。

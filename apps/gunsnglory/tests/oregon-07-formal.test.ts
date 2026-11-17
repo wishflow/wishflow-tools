@@ -36,7 +36,7 @@ async function settleWithoutBattle(
 }
 
 test('Mount Hood unlocks only after Columbia River, Free Play does not save, and formal victory records Level 27', async () => {
-  assert.equal(officialCampaignStages.length, 28);
+  assert.equal(officialCampaignStages.length, 29);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 27), {
     scenarioId: oregon07CampaignId,
     contentVersion: oregon07CampaignContentVersionFor(completedBeforeMountHood),

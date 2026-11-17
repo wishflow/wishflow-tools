@@ -35,6 +35,7 @@ import {
   oregon06LevelTwentySixCampaignContent,
   oregon07LevelTwentySevenCampaignContent,
   oregon08LevelTwentyEightCampaignContent,
+  oregon09LevelTwentyNineCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -302,6 +303,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Colt City · Level 28', zh: '柯尔特城 · 第 28 关' },
     globalLevel: 28,
     requiresCompletedScenarioIds: ['campaign-oregon-07'],
+  }, {
+    scenarioId: oregon09LevelTwentyNineCampaignContent.id,
+    contentVersion: oregon09LevelTwentyNineCampaignContent.contentVersion,
+    title: { en: 'Snake River · Level 29', zh: '蛇河 · 第 29 关' },
+    globalLevel: 29,
+    requiresCompletedScenarioIds: ['campaign-oregon-08'],
   }]);
 });
 
