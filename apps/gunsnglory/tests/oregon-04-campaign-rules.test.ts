@@ -99,7 +99,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, intervalMs, counts, bossCount = 0 }) => {
       const spawnPointId = oregon04SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} APK action ${actionId} has a route`);
-      return [spawnPointId, intervalMs, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, intervalMs, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -142,8 +142,8 @@ test('Fort Echo initial rules and all 22 source-ordered wave pools match APK dat
   assert.equal(oregon04CampaignWaves.length, 10);
   assert.equal(oregon04CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 22);
   assert.ok(oregon04CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
-  assert.deepEqual(oregon04CampaignWaves[9]?.spawnPools[0]?.requests, [0, 0, 0, 2, 0, 0, 0, 0, 0, 1],
-    'final wave uses the Boss request slot after eight ordinary enemy slots and the unused slot');
+  assert.deepEqual(oregon04CampaignWaves[9]?.spawnPools[0]?.requests, [0, 0, 0, 2, 0, 0, 0, 0, 1, 0],
+    'final wave uses APK Boss slot 10 after eight ordinary enemy slots');
   assert.equal(createRulesScenario().gambler, undefined, 'Fort Echo has no Gambler marker');
 });
 

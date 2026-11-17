@@ -12,6 +12,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const horizontalBridgeImage = {} as HTMLImageElement;
   const enemyImage = {} as HTMLImageElement;
   const femaleEnemyImage = {} as HTMLImageElement;
+  const bossImage = { naturalWidth: 96, naturalHeight: 132 } as HTMLImageElement;
   const pioneerDeathImage = { naturalWidth: 96, naturalHeight: 24 } as HTMLImageElement;
   const wagonImage = {} as HTMLImageElement;
   const stagecoachImage = { naturalWidth: 144, naturalHeight: 216 } as HTMLImageElement;
@@ -207,6 +208,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     tiles_bridge_hori: horizontalBridgeImage,
     pioneer_male: enemyImage,
     pioneer_female: femaleEnemyImage,
+    boss: bossImage,
     sfx_death_pioneers: pioneerDeathImage,
     wagon: wagonImage,
     stagecoach: stagecoachImage,
@@ -310,6 +312,29 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal((femaleDraw[6] as number) + (femaleDraw[8] as number),
     femaleViewport.origin.y + (sampleEnemy.positionFine.y / 240) * femaleViewport.scaleFactor,
   'type 2 remains anchored to its feet while walking');
+
+  const bossView: GameView = {
+    ...view,
+    units: [],
+    enemies: [{ ...sampleEnemy, id: 'boss', type: 7, asset: 'boss', direction: 'north', animationFrame: 2 }],
+    shots: [],
+    wagonDebris: [],
+    drawOrder: ['enemy:boss'],
+  };
+  const bossDrawStart = drawCalls.length;
+  drawGame(context, bossView, images);
+  const bossDraw = drawCalls.slice(bossDrawStart).find(([image]) => image === bossImage);
+  assert.ok(bossDraw);
+  assert.deepEqual(bossDraw.slice(1, 5), [64, 88, 32, 44], 'Boss uses the APK 3×3 sheet with a 32×44 frame and north-facing row');
+  const bossViewport = getMapViewport(bossView);
+  const bossCenterX = bossViewport.origin.x + (sampleEnemy.positionFine.x / 240) * bossViewport.scaleFactor;
+  const bossFeetY = bossViewport.origin.y + (sampleEnemy.positionFine.y / 240) * bossViewport.scaleFactor;
+  const bossWidth = 32 * bossViewport.scaleFactor;
+  const bossHeight = 44 * bossViewport.scaleFactor;
+  assert.deepEqual(bossDraw.slice(7), [
+    Math.trunc(bossCenterX + (bossWidth / 2)) - Math.trunc(bossCenterX - (bossWidth / 2)),
+    Math.trunc(bossFeetY) - Math.trunc(bossFeetY - bossHeight),
+  ]);
 
   assert.deepEqual(
     drawCalls.slice(0, femaleDrawStart).map((args) => args[0]),

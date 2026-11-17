@@ -13,7 +13,7 @@ function createSpawnPool(
   return Object.freeze({
     spawnPointId,
     intervalMs,
-    requests: Object.freeze([...requestCounts, 0, bossCount]),
+    requests: Object.freeze([...requestCounts, bossCount, 0]),
   });
 }
 

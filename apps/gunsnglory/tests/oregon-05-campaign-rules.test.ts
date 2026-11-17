@@ -102,7 +102,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, intervalMs, counts, bossCount = 0 }) => {
       const spawnPointId = oregon05SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} APK action ${actionId} has a route`);
-      return [spawnPointId, intervalMs, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, intervalMs, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -147,8 +147,8 @@ test('Dynamite Plains initial parameters and all 23 APK spawn requests match the
   assert.equal(oregon05CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 23);
   assert.ok(oregon05CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
   assert.deepEqual(oregon05CampaignWaves[8]?.spawnPools[0]?.requests,
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    'Wave 9 puts its single Boss in the final request slot');
+    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    'Wave 9 puts its single Boss in APK slot 10/request index 8');
   assert.equal(createRulesScenario().gambler, undefined, 'Dynamite Plains has no Gambler marker');
 });
 

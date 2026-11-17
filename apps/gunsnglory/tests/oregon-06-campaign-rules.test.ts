@@ -93,7 +93,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, intervalMs, counts, bossCount = 0 }) => {
       const spawnPointId = oregon06SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} APK action ${actionId} has a route`);
-      return [spawnPointId, intervalMs, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, intervalMs, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -137,8 +137,8 @@ test('Columbia River initial rules, difficulty, and all 19 source-ordered wave p
   assert.equal(oregon06CampaignWaves.length, 8);
   assert.equal(oregon06CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 19);
   assert.ok(oregon06CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
-  assert.deepEqual(oregon06CampaignWaves[7]?.spawnPools[0]?.requests, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    'final wave uses the Boss slot after eight APK request slots and the reserved slot');
+  assert.deepEqual(oregon06CampaignWaves[7]?.spawnPools[0]?.requests, [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    'final wave puts Boss in APK slot 10 after eight regular request slots');
 });
 
 test('Columbia River Wave 1 resets all four player pools and sets their two-unit caps', () => {

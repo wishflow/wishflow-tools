@@ -90,7 +90,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, intervalMs, counts, bossCount = 0 }) => {
       const spawnPointId = oregon08SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} APK action ${actionId} has a route`);
-      return [spawnPointId, intervalMs, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, intervalMs, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -134,8 +134,8 @@ test('Colt City initial economy, difficulty, and all 19 source-ordered wave pool
   assert.equal(oregon08CampaignWaves.length, 9);
   assert.equal(oregon08CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 19);
   assert.ok(oregon08CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
-  assert.deepEqual(oregon08CampaignWaves[8]?.spawnPools[0]?.requests, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    'the final wave keeps its Boss in the original slot beyond the eight regular requests');
+  assert.deepEqual(oregon08CampaignWaves[8]?.spawnPools[0]?.requests, [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    'the final wave keeps its Boss in APK slot 10/request index 8');
 });
 
 test('Colt City Wave 1 clears all four player pools and gives each a three-unit lifetime cap', () => {

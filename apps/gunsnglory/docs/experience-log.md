@@ -115,8 +115,8 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 **状态：M16 静态审计与关卡测试已校正。**
 
 - **错误表现：**Highpoint Terrace 审计曾把 code `102` 写成炸药箱、把 `110` 写成触发器；而应用现有配对器将 `102` 作为 trigger、`110` 作为 box，导致按审计编写的坐标期望失败。
-- **根因与证据：**`GameObjectManager.smali` 的 `createGameObjectsFromBasicMap` packed-switch 中，map value `102` 命中创建并加入 `DynamiteTrigger` 列表的分支；`110` 命中创建并加入 `DynamiteBox` 列表的分支。map19 网格位置分别为 `(28,10)` 与 `(27,11)`。此前审计将 marker 坐标与对象语义对调。
-- **修正与防回归：**[M16 静态审计](map16-static-audit.md)已改为 trigger `(28,10)`、box `(27,11)`；`mississippi-16-campaign-rules.test.ts` 从真实地图网格检查配对结果和 20/30 关解锁路径。新增炸药对象时同时核对 TDM 字节、Smali 对象构造分支和运行时字段语义，不能只根据对象名称或相邻 marker 推断。
+- **根因与证据：**`GameObjectManager.smali` 的 `createGameObjectsFromBasicMap` packed-switch 中，map value `102` 命中创建并加入 `DynamiteTrigger` 列表的分支；`110` 命中创建并加入 `DynamiteBox` 列表的分支。map19 网格位置分别为 `(28,10)` 与 `(27,11)`。此前审计将 marker 坐标与对象语义对调。复查发现研究分支的 `apps/gunsnglory/docs/research/game-analysis.md` 仍保留相反说法；直接按 packed-switch key 与分支内对象构造/列表写入核对后，确认该研究报告未随 M16 更正同步，不能作为当前语义基线。
+- **修正与防回归：**[M16 静态审计](map16-static-audit.md)已改为 trigger `(28,10)`、box `(27,11)`；`mississippi-16-campaign-rules.test.ts` 从真实地图网格检查配对结果和 20/30 关解锁路径。新增炸药对象时同时核对 TDM 字节、Smali 对象构造分支和运行时字段语义，不能只根据对象名称或相邻 marker 推断。遇到研究总结、单关审计与经验记录对同一 marker 有冲突时，先回到原始 switch key 和分支副作用核对，再修正所有仍被后续 agent 读取的副本。
 
 ## 炸药爆炸半径要包含精确边界
 
@@ -162,6 +162,16 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **漏测点：**测试只核对了请求向量静态内容，却把静态列顺序误当成运行事件顺序，没有检查生成器的随机选择。
 - **修复与防回归：**测试按实际敌人类型核对血量和速度，并独立检查波次延迟后的生成、路线入口及请求向量。需要固定顺序时必须显式注入确定性随机源；否则不得断言向量第一项必然先生成。
 - **新关卡数据交叉核验：**Dead Rocks 的8条波次元数据与35条生成请求已从 APK 派生配置独立提取，再与网页波次定义逐项比较；比较时保留每波10个请求槽位及末尾零值，并将 APK 整数常量解析为语义字段后比较。不要把资源中的整数枚举直接当成网页运行顺序，也不要用请求向量推断敌人出现先后。对白资源 ID、头像和角色映射分别与对应资源表核对；静态核对不等同于试听音频或完整实战。
+
+## Boss 与 Doc 请求槽位必须追到最终敌人类型
+
+**状态：**Boss 请求槽位已校正；前30关的 Doc 请求数均为零，网页本批未实现 Doc。
+
+- **表现与复现：**Cashcow Canyon、Billy Hills、Fort Echo、Apache Valley、Railroad Ranch、Mount Hood、Colt City、Snake River 的 Boss 请求都写入网页 `requests[9]`，而共享 `GameSession` 不消费该索引；因此这些关卡的数据虽然保留了十个请求槽位，Boss 实际不会生成。Lumber Mill Hills 的末两次请求也要求生成 Boss。
+- **根因与证据：**APK `addToWave` 的重载会将请求补齐到原始槽位2–11；`Wave.setContentForSpawnPoint` 与 `WaveManager.updateWave` 将原始槽位10映射到请求类型7（Boss），槽位11映射到请求类型9（Doc）。网页请求数组从零开始，因此 Boss 是 `requests[8]`，Doc 才是 `requests[9]`。结论按 APK Smali 的槽位写入、消费分支和最终敌人构造交叉确认，不从 `bossCount` 变量名推断索引。
+- **漏测点：**旧测试只检查十槽数组长度或照抄网页 helper 的索引，没有从源槽位追踪到最终 `enemy-group-spawned` 事件。Boss 类型7此前也未进入网页的敌人类型、属性、生成和绘制链。
+- **修复与防回归：**八个 Oregon 波次 helper 改为写索引8并将索引9清零；共享 `GameSession` 增加 APK 已使用的 Boss 类型7及资源、核实属性、动画和 HUD 名称。`campaign-boss-source-slots.test.ts` 检查八关所有请求池的完整十槽及 Boss/Doc 计数；`campaign-boss-spawn.test.ts` 从真实关卡短会话确认请求索引、生成类型、属性和来源事件。新增末位敌人时必须核对“APK 槽位 → 网页索引 → 请求类型 → 最终敌人类型”，不能仅凭数组长度、名称或派生摘要判断。没有目标关卡请求的 APK 槽位只保留兼容位置，不扩展未被使用的敌人行为。
+- **M31 收尾回归：**新增 Oregon 第 10 关后，完整单测又发现旧的 Mississippi 规则测试把全局敌人注册表写死为不含 Boss 类型7。将该测试期望补齐为共享注册表的 Boss 属性；这不表示 Mississippi 地图有 Boss 请求。新增关卡若扩展共享敌人注册表，需分别核对“全局可用类型”与“各关实际请求”，不能把共享属性表当作单关投放清单。
 
 ## GameSession 的 debug 模式不执行战役波次
 
@@ -570,7 +580,14 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **表现与复现：**Snake River 初步计划把关卡参数末项写为 `299000`，并沿用旧摘要中“Colt City/map31 含 Steamer marker”的说法；波次第 4 波第二条请求入口也被记成 action 2。
 - **根因与证据：**这些都是跨关卡摘要或 Smali 调用重建带来的错误。直接读取 Snake River 的 `GameDesignData` index 28 得到末项 `119000`；直接检查 `td_map_31.tdm`，raw `120–123` 均为 0；重新逐条模拟 `GameDesignWaves` 分支的寄存器赋值后，第 4 波入口顺序为 `0、1、2`。对应证据和边界记录在[Snake River 静态审计](map29-static-audit.md)。
 - **漏测点：**初步计划和旧摘要没有与本关参数数组、TDM 字节及 Smali 调用顺序做独立交叉核验；把相邻关卡或已生成摘要当作当前地图事实。
-- **防回归：**每关单独建立 `campaign level ↔ TDM index ↔ 参数数组 index ↔ wave 分支` 映射；参数从目标 index 读取，地图对象从目标 TDM 计数，波次按 Smali 调用实际顺序还原寄存器。旧摘要仅作为检索线索，不能覆盖 APK 原始数据。未知参数语义继续标未知，不因非零字段或相邻地图对象推断玩法。
+- **防回归：**每关单独建立 `campaign level ↔ TDM index ↔ 参数数组 index ↔ wave 分支` 映射；参数从目标 index 读取，地图对象从目标 TDM 计数，波次按 Smali 调用实际顺序还原寄存器。旧摘要仅作为检索线索，不能覆盖 APK 原始数据。未知参数语义继续标未知，不因非零字段或相邻地图对象推断玩法。统计波次数时只数目标 level 条件分支内的调用，并分别计数 `newWave`、`addToWave` 和玩家池动作；M31-C2 初稿沿用此前提取摘要中的23次请求数，直接核对 map33 的 Smali 分支后确认是20次 `addToWave` 与2次池动作，已在实现前更正。
+
+## 固定随机种子说明必须由完整地形指令验证
+
+- **表现与复现：**Lumber Mill Hills 的初始 `oregon-10.json` 与 APK map33 的 770 字节 TDM 网格一致，文件说明也记录了固定 Java Random seed；但与独立地形参考逐项比较时，背景变体和道路图块仍不一致。
+- **根因与证据：**`deriveOriginalTdmMapDrawCommands()` 仅从原始 TDM 网格按固定种子和 APK 行扫描顺序重新派生背景、街道和铁路命令。逐项比较失败，证明“使用相同种子”的文字说明不足以证明随机调用顺序和每个贴图源矩形一致。初始生成脚本不在本工作树，因此不能进一步断言是其随机调用顺序、输入版本还是其他一次性生成差异导致；不能据此归因于 APK 原始数据。
+- **修复与防回归：**重建 map33 的背景及街道绘制数组；新增 `oregon-10-map.test.ts`，对768个背景格和98条街道/铁路绘制指令逐项比较独立参考，并检查素材文件、图集裁切边界及最终碰撞背景。TDM 网格、固定种子变体和 APK 每次启动的时间随机结果是三个不同概念；固定种子只用于网页可复现的合法候选，不代表逐次复现原版随机启动。
+- **避免重复：**新关卡地形不能只验网格尺寸、marker 数量或随机种子说明。必须从原始 TDM 独立重建完整绘制指令，并比较贴图、源矩形、位置、层序和碰撞结果；若一次性生成程序不在仓库，记录实际差异和未知原因，不猜生成错误机制。
 
 ## 新关卡必须进入共享运行时路线回归
 
@@ -579,3 +596,24 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **根因分类：**未发现 APK 路线反解析错误。第一处是网页测试矩阵维护遗漏：静态地图测试与共享寻路消费者测试分开维护，新地图完成自己的路线拓扑测试后，没有同步进入共用矩阵。第二处是本轮测试计划把 `spawnPointId=2` 误读成 `(31,8)`：APK action ID 先映射到网页 spawn ID，spawn ID 再按 TDM 行优先顺序对应坐标；没有核对第二段映射。静态 `oregon08SpawnPointIdByActionId`、出生点清单和路线定义本身都正确。
 - **修复与验证：**将 Colt City 正式内容加入共用集合，计数更新为28关；新增短 `GameSession` 使用真实 Wave 1 action 1，请求事件确认 `spawnPointId=2`，再核对该点是 `(31,19)`，跟踪无防守单位干扰的敌人到 `(25,19)` 并确认其按 TDM 方向转北。定向 `wave-routes.test.ts` 通过6项，`pnpm run typecheck` 通过；完整 `CI=1 PLAYWRIGHT_PORT=43324 pnpm run test:ci` 通过类型检查、872项单测、生产构建和178项 E2E。反转 marker 52 的方向映射时，路线构造/测试失败，确认测试能捕捉方向错误。内置浏览器静音、窗口模式进入 Free Play → Oregon → Colt City → Medium，确认开场对白、头像及地图加载；短时4×未操作导致第一波败北，结果没有写入战役档案，随后恢复设置为1×。浏览器未目视证明连续行走或池单位战斗；这些运行时路线结论来自短 `GameSession` 与自动化测试，不描述为浏览器实测。
 - **防回归：**每个新关卡都要同时完成静态路线图、`runtimeWaveRedirects()` 对照和至少一条真实短会话转弯断言；对 `actionId → spawnPointId → TDM 坐标` 逐段核实，不从编号或数组位置猜坐标。核对共享关卡清单数量与正式目录一致。不要把静态 `routes` 完整当成运行时路线正确的证明，也不需要通过完整战役或 Android 实测来验证这个确定性分岔。
+
+## 新关卡集成的共享断言与启动预载
+
+**状态：**Snake River（Oregon 第 9 关／全局第 29 关）相关问题已修复、完成整批检查并发布。
+
+### 正式目录变化必须同步旧进度断言
+
+- **表现与复现：**登记第 29 关后，首次完整单测发现 `apache-valley.test.ts`、`content.test.ts`、`progress.test.ts` 的阶段数或目录快照仍停在旧基线；完整 E2E 又发现六处总进度仍写 28 关，以及一个 Free Play 用例仍把已开放的关卡当作禁用。Snake River 自身内容正常，失败来自既有断言过期。
+- **根因与证据：**正式关卡登记会同时改变阶段总数、地区可玩数、未实现关卡边界和 Progress 投影。只更新新关内容及本关测试，遗漏了共享目录消费方和其他关卡的历史快照。相关旧断言经核对后均是待更新预期，不是 APK 数据或规则实现问题；这类遗漏不属于逆向证据缺失或反编译文档误读。
+- **漏测点：**实现前后只搜索了部分关卡入口，没有全仓检索固定阶段数、地区可玩数、Free Play 可用/禁用边界和 Progress 快照；受影响的旧测试直到批次完整检查才暴露。
+- **修复与防回归：**更新三个单测基线及六个 E2E 文件中的七处断言。新增正式关卡时，逐项搜索并核对阶段目录、总进度摘要、地区可玩数、Free Play 边界和所有依赖全局目录的历史 fixture；将完整 `test:ci` 留在批次收尾运行一次，不能用新关定向测试替代。
+- **M31 收尾回归：**新增第 30 关后，完整单测发现 `progress.test.ts` 的完整阶段状态快照仍只有29项。补入 `campaign-oregon-10` 的 locked 状态。正式目录增长也会影响尚未覆盖到的完整快照；更新目录时搜索所有固定阶段数组及 Progress projection 断言。
+
+### 地图场景图片必须进入启动预载集合
+
+- **表现与复现：**首波头像预载检查已通过，但代码审查发现 Snake River 的地图、装饰和单位场景图片没有通过启动资源收集器注册。只检查对白头像无法证明新关地图完整进入离线预载。
+- **根因与证据：**`src/main.ts` 把头像加入图片列表，却未把 `createOregon09CampaignContent(...)` 的完整关卡内容传给 `collectScenarioImageAssetNames(...)`。关卡 builder、资源文件存在性和对白头像测试各自通过，但它们不覆盖 `main.ts` 的预载接线。此问题是网页集成消费点遗漏，不是 APK 反解析遗漏。
+- **漏测点：**`oregon-09-wave-intros.test.ts` 原先只覆盖头像映射与预载，没有断言场景、装饰及单位所引用的图片也在启动集合中。
+- **修复与防回归：**将完整 Snake River 场景内容交给启动收集器；扩展 `oregon-09-wave-intros.test.ts`，同时核对场景/装饰/单位图片被收集且对应资源文件存在。新增关卡应分别检查目录、地图预览、`GameSession` 内容、回放工厂和启动图片收集器，不能因为 builder 可生成就假定所有消费点已接通。
+
+- **整批验证与发布：**`CI=1 PLAYWRIGHT_PORT=4180 pnpm run test:ci` 通过类型检查、892 项单测、生产构建和180项 E2E。发布提交 `9fbb26a48c6d75143aaa469ce249f70f18bc3684` 的 GitHub Actions `44023162078` 成功，GitHub Pages 与 Cloudflare Pages 来源 SHA 均匹配。内置浏览器窗口模式、静音验证 Free Play → Oregon → Snake River → 中等难度 → 首波对白与地图；390×844 窄屏画布为约 16:9，页面无横向溢出。没有完整通关、进入全屏或播放音效。
