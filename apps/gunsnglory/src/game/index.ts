@@ -272,7 +272,7 @@ export interface UnitWeaponDefinition {
   specialReloadFrequency?: number;
 }
 
-export type CampaignEnemyType = 1 | 2 | 3 | 4 | 5 | 6 | 8;
+export type CampaignEnemyType = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export interface PreviewEnemyDefinition {
   hitPoints: number;
@@ -493,7 +493,7 @@ export interface SteamCloudView {
 export interface EnemyView {
   id: string;
   type: CampaignEnemyType;
-  asset: 'pioneer_male' | 'pioneer_female' | 'horseman' | 'wagon' | 'stagecoach' | 'goldtransport' | 'horse_wagon' | 'horse_wagon_white';
+  asset: 'pioneer_male' | 'pioneer_female' | 'horseman' | 'wagon' | 'stagecoach' | 'goldtransport' | 'boss' | 'horse_wagon' | 'horse_wagon_white';
   speed: number;
   direction: Direction;
   /** APK mirror state persists through vertical movement until a horizontal leg or turn changes it. */
@@ -1057,6 +1057,7 @@ const ENEMY_WALK_ANIMATION_FRAMES: Readonly<Record<CampaignEnemyType, readonly (
   4: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   5: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   6: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
+  7: [[0, 768], [1, 1536], [0, 2304], [2, 3072]],
   8: [[0, 768], [1, 1536], [2, 2304], [3, 3072]],
 };
 
@@ -2043,7 +2044,7 @@ function campaignSpawnIndicators(
     if (!pool.requests.some((count) => count > 0)) continue;
     const previous = activePoints.get(pool.spawnPointId);
     activePoints.set(pool.spawnPointId, {
-      boss: (previous?.boss ?? false) || (pool.requests[9] ?? 0) > 0,
+      boss: (previous?.boss ?? false) || (pool.requests[8] ?? 0) > 0,
     });
   }
 
@@ -2063,6 +2064,9 @@ function campaignEnemyDefinition(scenario: ScenarioContent, type: CampaignEnemyT
   }
   if (type === 6) {
     return { hitPoints: 500, cashReward: 25, penetration: { light: 33, fire: 25, heavy: 100, poison: 100 }, turningDurationMs: 200 };
+  }
+  if (type === 7) {
+    return { hitPoints: 2_500, cashReward: 50, penetration: { light: 100, fire: 50, heavy: 25, poison: 75 }, turningDurationMs: 100 };
   }
   if (scenario.campaignEnemy) return scenario.campaignEnemy;
   if (type === 4) {
@@ -2116,6 +2120,8 @@ function createCampaignEnemy(
             ? 'stagecoach'
             : type === 6
               ? 'goldtransport'
+            : type === 7
+              ? 'boss'
               : colorVariant === 1 ? 'horse_wagon' : 'horse_wagon_white';
   return {
     id,
@@ -2330,6 +2336,32 @@ function spawnGoldTransport(
     definition,
     groupId,
     random.nextInt(2),
+  )];
+}
+
+function spawnBoss(
+  scenario: ScenarioContent,
+  spawn: WaveSpawn,
+  spawnPositionFine: { x: number; y: number },
+  groupId: string,
+  dynamicDifficulty: number,
+  waveDefinition: CampaignWaveDefinition,
+  difficulty: GameDifficulty,
+  nextEnemyId: () => string,
+): MutableEnemy[] {
+  const type = 7;
+  const definition = campaignEnemyDefinition(scenario, type);
+  return [createCampaignEnemy(
+    nextEnemyId(),
+    type,
+    spawn,
+    spawnPositionFine,
+    { x: 0, y: 0 },
+    campaignEnemySpeed(scenario, waveDefinition),
+    campaignEnemyHitPoints(scenario, waveDefinition, dynamicDifficulty, difficulty, type),
+    definition,
+    groupId,
+    0,
   )];
 }
 
@@ -3355,7 +3387,7 @@ export function createGame(options: {
             drawingOffsetFine: { ...enemy.drawingOffsetFine },
             groupId: enemy.groupId,
             damageable: enemy.damageable,
-            ...(enemy.turningImageActive ? {
+            ...(enemy.turningImageActive && enemy.type !== 7 ? {
               turningAnimation: {
                 asset: enemy.type === 3 ? 'horseman_turn' as const
                   : enemy.type === 4 ? 'wagon_turn' as const
@@ -4519,10 +4551,15 @@ export function createGame(options: {
                   continue;
                 }
 
-                const requestType = poolType === 7 ? 4 : poolType === 8 ? 5 : poolType === 9 ? 6 : poolType;
+                const requestType = poolType === 7 ? 4 : poolType === 8 ? 5 : poolType === 9 ? 6 : poolType === 10 ? 7 : poolType;
                 const nextGroupId = () => `campaign-${wave!.number}-group-${nextCampaignGroupNumber++}`;
                 const nextEnemyId = () => `campaign-${wave!.number}-enemy-${nextCampaignEnemyNumber++}`;
-                const spawned = poolType === 7
+                const spawned = poolType === 10
+                  ? spawnBoss(
+                    scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
+                    campaignDefinition, difficulty, nextEnemyId,
+                  )
+                  : poolType === 7
                   ? spawnCoveredWagonPair(
                     scenario, spawn, candidatePosition, nextGroupId(), wave.dynamicDifficulty,
                     campaignDefinition, difficulty, utilRandom, nextEnemyId,

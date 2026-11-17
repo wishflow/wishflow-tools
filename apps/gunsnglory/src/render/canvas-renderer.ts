@@ -752,10 +752,12 @@ function drawEnemy(
   const image = images[asset];
   if (!image) throw new Error('Missing game image: ' + asset);
 
-  const sourceWidth = vehicle ? 48 : enemy.type === 3 ? 32 : 16;
-  const sourceHeight = enemy.type === 5 || enemy.type === 6 ? 72 : vehicle ? 60 : enemy.type === 3 ? 40 : 24;
+  const sourceWidth = vehicle ? 48 : enemy.type === 3 || enemy.type === 7 ? 32 : 16;
+  const sourceHeight = enemy.type === 7 ? 44
+    : enemy.type === 5 || enemy.type === 6 ? 72
+      : vehicle ? 60 : enemy.type === 3 ? 40 : 24;
   const frameWidth = vehicle ? 32 : sourceWidth;
-  const frameHeight = enemy.type === 5 || enemy.type === 6 ? 48 : vehicle ? 40 : sourceHeight;
+  const frameHeight = enemy.type === 7 ? 44 : enemy.type === 5 || enemy.type === 6 ? 48 : vehicle ? 40 : sourceHeight;
   const tileScale = viewport.scaleFactor;
   const width = frameWidth * tileScale;
   const height = frameHeight * tileScale;

@@ -123,7 +123,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, intervalMs, counts, bossCount = 0 }) => {
       const spawnPointId = oregon02SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} action ${actionId} has a route`);
-      return [spawnPointId, intervalMs, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, intervalMs, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -165,7 +165,8 @@ test('Cashcow Canyon initial rules and all 33 source-ordered wave requests match
   assert.equal(oregon02CampaignWaves.length, 9);
   assert.equal(oregon02CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 33);
   assert.ok(oregon02CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
-  assert.equal(oregon02CampaignWaves[8]?.spawnPools[0]?.requests[9], 1, 'wave nine uses the Boss slot');
+  assert.equal(oregon02CampaignWaves[8]?.spawnPools[0]?.requests[8], 1, 'wave nine uses APK Boss slot 10');
+  assert.equal(oregon02CampaignWaves[8]?.spawnPools[0]?.requests[9], 0, 'wave nine does not request the APK Doc slot 11');
   assert.equal(createRulesScenario().campaignUnitPool, undefined, 'the map has no spawnPoolActions');
   assert.equal('gambler' in createRulesScenario(), false, 'the map has no Gambler marker');
 });

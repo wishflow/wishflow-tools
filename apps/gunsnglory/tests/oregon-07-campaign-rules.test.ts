@@ -94,7 +94,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, intervalMs, counts, bossCount = 0 }) => {
       const spawnPointId = oregon07SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} APK action ${actionId} has a route`);
-      return [spawnPointId, intervalMs, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, intervalMs, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -148,8 +148,8 @@ test('Mount Hood initial economy, upgrades, difficulty, route context, and all A
   assert.equal(oregon07CampaignWaves.length, 10);
   assert.equal(oregon07CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 21);
   assert.ok(oregon07CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
-  assert.deepEqual(oregon07CampaignWaves[9]?.spawnPools[0]?.requests, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-    'final wave keeps its boss in the original boss slot');
+  assert.deepEqual(oregon07CampaignWaves[9]?.spawnPools[0]?.requests, [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+    'final wave keeps its boss in APK slot 10/request index 8');
 });
 
 test('Mount Hood GameSession opens with APK economy and spawns the first source-ordered wave route', async () => {

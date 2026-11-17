@@ -32,6 +32,12 @@ export const mississippiEnemyByType: Partial<Readonly<Record<CampaignEnemyType, 
     penetration: Object.freeze({ light: 33, fire: 25, heavy: 100, poison: 100 }),
     turningDurationMs: 200,
   }),
+  7: Object.freeze({
+    hitPoints: 2_500,
+    cashReward: 50,
+    penetration: Object.freeze({ light: 100, fire: 50, heavy: 25, poison: 75 }),
+    turningDurationMs: 100,
+  }),
   8: Object.freeze({
     hitPoints: 200,
     cashReward: 0,

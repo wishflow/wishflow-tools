@@ -59,7 +59,7 @@ test('Free Play opens Snake River on desktop and narrow mobile with map 32 and t
 
     await page.getByTestId('menu-free-play').click();
     await page.getByTestId('campaign-region-oregon').click();
-    await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available');
+    await expect(page.getByTestId('campaign-menu-progress')).toContainText('10 implemented levels available');
     await expect(page.getByTestId('campaign-level-29')).toBeEnabled();
     await page.getByTestId('campaign-level-29').click();
 

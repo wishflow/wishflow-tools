@@ -149,6 +149,12 @@ import {
   parseOregon09ReplayContentVersion,
 } from '../content/oregon-09-content-version';
 import { oregon09CampaignId } from '../content/oregon-09-identity';
+import { createOregon10CampaignContent, createOregon10CampaignContentFromSnapshot } from '../content/oregon-10-campaign';
+import {
+  oregon10CampaignContentVersionFor,
+  parseOregon10ReplayContentVersion,
+} from '../content/oregon-10-content-version';
+import { oregon10CampaignId } from '../content/oregon-10-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -302,6 +308,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === oregon09CampaignId) {
     return oregon09CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === oregon10CampaignId) {
+    return oregon10CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -340,6 +349,7 @@ export function createBrowserGame(
     [oregon07CampaignId]: createOregon07CampaignContent(completedScenarioIds),
     [oregon08CampaignId]: createOregon08CampaignContent(completedScenarioIds),
     [oregon09CampaignId]: createOregon09CampaignContent(completedScenarioIds),
+    [oregon10CampaignId]: createOregon10CampaignContent(completedScenarioIds),
     ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {
@@ -597,6 +607,15 @@ export function createBrowserGameForOregon09Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, oregon09CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [oregon09CampaignId]: createOregon09CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Lumber Mill Hills from its recorded unit and Dynamite unlock snapshot. */
+export function createBrowserGameForOregon10Replay(contentVersion: string | undefined) {
+  const parsed = parseOregon10ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, oregon10CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [oregon10CampaignId]: createOregon10CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 

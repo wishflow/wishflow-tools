@@ -73,7 +73,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, counts, bossCount = 0 }) => {
       const spawnPointId = oregon09SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} APK action ${actionId} has a route`);
-      return [spawnPointId, 2_500, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, 2_500, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -117,7 +117,7 @@ test('Snake River level values, difficulty multipliers, and all six APK waves ma
   assert.equal(oregon09CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 11);
   assert.ok(oregon09CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
   assert.deepEqual(oregon09CampaignWaves[5]?.spawnPools[0]?.requests,
-    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1], 'the Boss remains in its separate final request slot');
+    [0, 0, 0, 0, 0, 0, 0, 0, 1, 0], 'Boss remains in APK slot 10/request index 8');
 
   const scenario = createRulesScenario();
   assert.equal(scenario.campaignUnitPool, undefined, 'the APK has no player spawn-pool actions for this level');

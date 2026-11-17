@@ -82,7 +82,7 @@ function expectedWaves() {
     spawnPools: pools.map(({ actionId, intervalMs, counts, bossCount = 0 }) => {
       const spawnPointId = oregon03SpawnPointIdByActionId[actionId];
       assert.notEqual(spawnPointId, undefined, `wave ${index + 1} action ${actionId} has a route`);
-      return [spawnPointId, intervalMs, [...counts, 0, bossCount]] as const;
+      return [spawnPointId, intervalMs, [...counts, bossCount, 0]] as const;
     }),
   }));
 }
@@ -125,7 +125,7 @@ test('Chinook Woods initial rules and all 14 source-ordered wave requests match 
   assert.equal(oregon03CampaignWaves.length, 9);
   assert.equal(oregon03CampaignWaves.reduce((count, { spawnPools }) => count + spawnPools.length, 0), 14);
   assert.ok(oregon03CampaignWaves.every(({ spawnPools }) => spawnPools.every(({ requests }) => requests.length === 10)));
-  assert.equal(oregon03CampaignWaves[8]?.spawnPools[0]?.requests[9], 1, 'wave nine uses the Boss slot');
+  assert.equal(oregon03CampaignWaves[8]?.spawnPools[0]?.requests[8], 1, 'wave nine uses APK Boss slot 10');
   assert.equal(createRulesScenario().gambler, undefined, 'Chinook Woods has no Gambler marker');
 });
 

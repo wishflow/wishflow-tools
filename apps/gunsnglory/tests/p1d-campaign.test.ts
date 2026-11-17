@@ -89,7 +89,7 @@ test('projects pending campaign spawn indicators with the original entrance and 
       spawnPools: [
         { spawnPointId: 0, intervalMs: 1500, requests: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
         { spawnPointId: 1, intervalMs: 1500, requests: [...emptyRequests] },
-        { spawnPointId: 2, intervalMs: 1500, requests: [0, 0, 0, 0, 0, 0, 0, 0, 0, 1] },
+        { spawnPointId: 2, intervalMs: 1500, requests: [0, 0, 0, 0, 0, 0, 0, 0, 1, 0] },
       ],
     }],
   };
