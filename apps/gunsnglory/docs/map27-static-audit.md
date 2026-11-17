@@ -4,7 +4,7 @@
 
 Mount Hood 是全局第 27 关，对应 APK `res/raw/td_map_30.tdm`。原图为 32×24、770 字节。静态路线图含 4 个入口、31 个转向点、3 个出口和 36 条有向边；四个入口覆盖全部转向点并可到达三个出口，没有越界、孤立转向点或异常路径。
 
-关卡有 10 波、21 条敌人生成请求，没有玩家单位池动作。地图有 47 个 TDM 招募单位 marker、两组独立横向列车（每组两节机车和三节可雇佣车厢）以及两组炸药触发器/炸药箱。网页已有 Oregon 预览图、地形/音频、列车图像和对白头像；目前尚未登记 level 27。完整接入步骤见[实施计划 M28](implementation-plan.md#当前批次mount-hoodm28oregon-第-7-关全局第-27-关)。
+关卡有 10 波、21 条敌人生成请求，没有玩家单位池动作。地图有 47 个 TDM 招募单位 marker、两组独立横向列车（每组两节机车和三节可雇佣车厢）以及两组炸药触发器/炸药箱。网页已有 Oregon 预览图、地形/音频、列车图像和对白头像；Mount Hood 后续已作为全局第 27 关接入并发布。当前项目状态见[实施计划](implementation-plan.md#当前状态)。
 
 | 结论类别 | 结果 |
 | --- | --- |
@@ -27,7 +27,7 @@ Mount Hood 是全局第 27 关，对应 APK `res/raw/td_map_30.tdm`。原图为 
 | `TERRAIN-30` | `BackgroundMap.createBackgroundMap/createStreetLayerMap/shapen*`、`Oregon.drawBackgroundLayer/drawStreetLayer`；地形渲染索引 | Oregon 背景、道路、铁路和碰撞各自消费的网格；随机变体按其候选集合核对，不断言一次运行的具体随机像素。 |
 | `STRINGS-30` | APK `T_LEVEL_NAME_30`、`T_LEVEL_INFO_30`、`T_CAMPAIGN_27_01..10` | 原版英文关卡文案及逐波对白。中文为网页项目译文，不属于 APK 原文。 |
 
-网页已有 `public/assets/menu/gng_levelmap_30.png`、`public/assets/music/music_oregon.ogg`、`public/assets/sounds/sound_train.ogg`，三种横向列车 PNG（`hdpi/lok_hori_1of2.png`、`lok_hori_2of2.png`、`lok_wagon_hori.png`），以及本报告对白使用的全部头像 PNG。素材接线和实际尺寸验证列入 M28-E，见[实施计划](implementation-plan.md)。
+网页已有 `public/assets/menu/gng_levelmap_30.png`、`public/assets/music/music_oregon.ogg`、`public/assets/sounds/sound_train.ogg`，三种横向列车 PNG（`hdpi/lok_hori_1of2.png`、`lok_hori_2of2.png`、`lok_wagon_hori.png`），以及本报告对白使用的全部头像 PNG。Mount Hood 已完成资源接线与实际尺寸验证；本报告继续作为 APK 和素材清单的静态证据入口。
 
 ## 原始 TDM 与 marker
 
@@ -103,7 +103,7 @@ Mount Hood 是全局第 27 关，对应 APK `res/raw/td_map_30.tdm`。原图为 
 | 126 | 1：`(7,2)` | `e_1x1_rocks_water`。 |
 | 78 | 3：`(28,0)`、`(29,0)`、`(31,0)` | 当前 ObjectManager 无构造分支；静态 BackgroundMap 输出为 0/无道路。保留原始 marker；用途未知，不补造物件。 |
 
-tile 80、81、82、88 是铁路场景/道路输入而非活动单位：地形索引中 code 82 转换为道路值 72；code 80/81 产生铁路接缝道路值 64/68；code 88 产生道路值 76 和对应背景接缝。M28-B 必须分别比较 Oregon 背景、道路和碰撞输出，不可把这些 raw code 当作绘制图集编号。
+tile 80、81、82、88 是铁路场景/道路输入而非活动单位：地形索引中 code 82 转换为道路值 72；code 80/81 产生铁路接缝道路值 64/68；code 88 产生道路值 76 和对应背景接缝。网页接入时需分别处理 Oregon 背景、道路和碰撞输出，不可把这些 raw code 当作绘制图集编号。
 
 `GameObjectManager` 的新局单位规则与 TDM 完整 marker 数量如下；96–101 映射 type = code−95、activity 4，130/131 映射 Pyromaniac/Salesman type 35/36、activity 4。最终可用单位受全局 profile 解锁位影响。
 
