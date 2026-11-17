@@ -566,8 +566,8 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 新关卡必须进入共享运行时路线回归
 
-**状态：Colt City 补齐定向覆盖；本批完整检查待重跑。**
+**状态：Colt City（Oregon 第 8 关／全局第 28 关）已发布。**发布提交 `8a75d52128bc885aeb091ecc17d2875d6649bda1` 的 GitHub Actions `44001377789` 成功；GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均返回该 SHA。发布已合并回 `gunsnglory`，回同步 merge 为 `be593d4`；验收记录已提交并推送，集成分支本地与远端一致。
 
 - **根因分类：**未发现 APK 路线反解析错误。第一处是网页测试矩阵维护遗漏：静态地图测试与共享寻路消费者测试分开维护，新地图完成自己的路线拓扑测试后，没有同步进入共用矩阵。第二处是本轮测试计划把 `spawnPointId=2` 误读成 `(31,8)`：APK action ID 先映射到网页 spawn ID，spawn ID 再按 TDM 行优先顺序对应坐标；没有核对第二段映射。静态 `oregon08SpawnPointIdByActionId`、出生点清单和路线定义本身都正确。
-- **修复与验证：**将 Colt City 正式内容加入共用集合，计数更新为28关；新增短 `GameSession` 使用真实 Wave 1 action 1，请求事件确认 `spawnPointId=2`，再核对该点是 `(31,19)`，跟踪无防守单位干扰的敌人到 `(25,19)` 并确认其按 TDM 方向转北。定向 `wave-routes.test.ts` 通过6项，`pnpm run typecheck` 通过。初稿中 `(31,8)→(23,8)` 的错误坐标假设在验收前由失败测试暴露并已更正；随后仍需按实施计划重跑批次完整 `test:ci`，再进入发布门槛。
+- **修复与验证：**将 Colt City 正式内容加入共用集合，计数更新为28关；新增短 `GameSession` 使用真实 Wave 1 action 1，请求事件确认 `spawnPointId=2`，再核对该点是 `(31,19)`，跟踪无防守单位干扰的敌人到 `(25,19)` 并确认其按 TDM 方向转北。定向 `wave-routes.test.ts` 通过6项，`pnpm run typecheck` 通过；完整 `CI=1 PLAYWRIGHT_PORT=43324 pnpm run test:ci` 通过类型检查、872项单测、生产构建和178项 E2E。反转 marker 52 的方向映射时，路线构造/测试失败，确认测试能捕捉方向错误。内置浏览器静音、窗口模式进入 Free Play → Oregon → Colt City → Medium，确认开场对白、头像及地图加载；短时4×未操作导致第一波败北，结果没有写入战役档案，随后恢复设置为1×。浏览器未目视证明连续行走或池单位战斗；这些运行时路线结论来自短 `GameSession` 与自动化测试，不描述为浏览器实测。
 - **防回归：**每个新关卡都要同时完成静态路线图、`runtimeWaveRedirects()` 对照和至少一条真实短会话转弯断言；对 `actionId → spawnPointId → TDM 坐标` 逐段核实，不从编号或数组位置猜坐标。核对共享关卡清单数量与正式目录一致。不要把静态 `routes` 完整当成运行时路线正确的证明，也不需要通过完整战役或 Android 实测来验证这个确定性分岔。
