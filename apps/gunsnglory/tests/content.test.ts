@@ -37,6 +37,7 @@ import {
   oregon08LevelTwentyEightCampaignContent,
   oregon09LevelTwentyNineCampaignContent,
   oregon10LevelThirtyCampaignContent,
+  oregon11LevelThirtyOneCampaignContent,
   officialCampaignStages,
   railroadRanchLevelNineCampaignContent,
   techTownLevelFourCampaignContent,
@@ -316,6 +317,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Lumber Mill Hills · Level 30', zh: '木材厂山岭 · 第 30 关' },
     globalLevel: 30,
     requiresCompletedScenarioIds: ['campaign-oregon-09'],
+  }, {
+    scenarioId: oregon11LevelThirtyOneCampaignContent.id,
+    contentVersion: oregon11LevelThirtyOneCampaignContent.contentVersion,
+    title: { en: 'Loot Lakes · Level 31', zh: '湖泊金矿 · 第 31 关' },
+    globalLevel: 31,
+    requiresCompletedScenarioIds: [oregon10LevelThirtyCampaignContent.id],
   }]);
 });
 
