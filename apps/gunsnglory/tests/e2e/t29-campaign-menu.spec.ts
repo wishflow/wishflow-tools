@@ -43,6 +43,72 @@ async function writeSavedProfile(page: import('@playwright/test').Page, record: 
   }), record);
 }
 
+async function logEscapeDiagnostics(page: import('@playwright/test').Page, label: string): Promise<void> {
+  const snapshot = await page.evaluate(() => {
+    const frame = document.querySelector<HTMLElement>('.game-frame');
+    const overlayHost = document.querySelector<HTMLElement>('[data-testid="overlay-host"]');
+    const activeElement = document.activeElement;
+    return {
+      label: '',
+      hidden: document.hidden,
+      visibilityState: document.visibilityState,
+      fullscreenElement: document.fullscreenElement instanceof HTMLElement
+        ? document.fullscreenElement.id || document.fullscreenElement.dataset.testid || document.fullscreenElement.tagName
+        : null,
+      uiRoute: frame?.dataset.uiRoute,
+      simulationState: frame?.dataset.simulationState,
+      activeOverlay: frame?.dataset.activeOverlay,
+      overlayHostHidden: overlayHost?.hidden,
+      waveStatus: document.querySelector<HTMLElement>('[data-testid="wave-status"]')?.textContent,
+      combatStatus: document.querySelector<HTMLElement>('[data-testid="combat-status"]')?.textContent,
+      dialogs: [...document.querySelectorAll<HTMLDialogElement>('dialog')].map((dialog) => ({
+        testId: dialog.dataset.testid,
+        open: dialog.open,
+        hidden: dialog.hidden,
+      })),
+      activeElement: activeElement instanceof HTMLElement ? {
+        tagName: activeElement.tagName,
+        id: activeElement.id,
+        testId: activeElement.dataset.testid,
+        text: activeElement.textContent?.trim().slice(0, 80),
+      } : activeElement?.nodeName,
+    };
+  });
+  console.log(`[gng-escape-diagnostic] ${JSON.stringify({ ...snapshot, label })}`);
+}
+
+async function installEscapeEventDiagnostics(page: import('@playwright/test').Page): Promise<void> {
+  page.on('console', (message) => {
+    if (message.text().startsWith('[gng-escape-key]')) console.log(message.text());
+  });
+  await page.evaluate(() => {
+    const logEvent = (phase: string, event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const target = event.target;
+      const targetSummary = target instanceof HTMLElement ? {
+        tagName: target.tagName,
+        id: target.id,
+        testId: target.dataset.testid,
+        text: target.textContent?.trim().slice(0, 80),
+      } : target instanceof Node ? target.nodeName : null;
+      console.info('[gng-escape-key]', JSON.stringify({
+        phase,
+        defaultPrevented: event.defaultPrevented,
+        target: targetSummary,
+        activeElement: document.activeElement instanceof HTMLElement
+          ? {
+            tagName: document.activeElement.tagName,
+            id: document.activeElement.id,
+            testId: document.activeElement.dataset.testid,
+          }
+          : document.activeElement?.nodeName,
+      }));
+    };
+    window.addEventListener('keydown', (event) => logEvent('window-capture', event), true);
+    document.addEventListener('keydown', (event) => logEvent('document-bubble-after-app', event));
+  });
+}
+
 test('starts in the in-game menu and opens an implemented campaign level through the original navigation flow', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -301,7 +367,10 @@ test('Escape returns through menu panels and opens the original pause board from
   if (await waveIntro.isVisible()) await waveIntro.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByTestId('overlay-host')).toBeHidden();
   await expect(page.getByTestId('wave-status')).not.toBeEmpty();
+  await installEscapeEventDiagnostics(page);
+  await logEscapeDiagnostics(page, 'before-first-escape');
   await page.keyboard.press('Escape');
+  await logEscapeDiagnostics(page, 'after-first-escape');
   const pauseBoard = page.getByTestId('pause-board');
   await expect(pauseBoard).toBeVisible();
   await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
