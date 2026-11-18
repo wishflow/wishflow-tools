@@ -34,10 +34,18 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.td
 
 ### M34-C：接入地图、路线、对象和规则数据
 
-- **范围：**新增 `dakota-03` 场景、路线、对象 placement、关卡参数、十波内容、玩家池模板、双语关卡文案、对白头像及 Dakota 音乐映射。复用当前内容工厂与 GameSession 规则；按 APK 实际 marker 创建初始对象，并将 wave unit-pool template 与地图摆放的休眠单位分离。Fort Cannon 若仅能从招募池新建，使用已批准的可选 pool-only 模板契约，不在地图伪造实体。
-- **依赖：**M34-A、M34-B 通过；若 terrain reference 找到共享转换缺陷，先修正并回归既有关卡，再接本关内容。
-- **验收：**10 个波次、20 个敌方请求调用、2 个单位池动作及所有来源参数与本关静态报告独立期望一致；marker→placement→最终 Scenario 内容数量、坐标、类型、状态及唯一 ID 闭合；池 Cannon 模板不增加开局实体；copy key、头像和资源映射完整。
-- **验证：**关卡数据单测、真实 TDM placement 单测、路线有向边/可达性/道路投影、碰撞边界、波次短 GameSession 和池雇佣发兵测试。请求向量不用于推断固定敌人出现顺序，不完整推进整关。
+- **范围：**依序完成下表中的独立切片。每项关卡期望均直接来自[Fort Knockout 静态审计](fort-knockout-static-audit.md)，不从 Dakota 前一关复制。
+- **依赖：**M34-A、M34-B 已通过；若切片发现共享地形转换回归，先修复并对既有关卡运行对应定向检查。
+- **M34-C1 已完成：**Fort Knockout 路线数据已接入。四条路线、135条相邻有向边、139个路线格和四个入口的首个 GameSession 转向均通过独立 APK 期望核对；详情见 `dakota-03-routes.test.ts` 与本关静态审计。此项不代表关卡已进入正式目录或可从菜单启动。
+
+| 切片 | 内容与依赖 | 完成门槛与定向验证 |
+| --- | --- | --- |
+| **M34-C2 场景与静态对象** | 新增 Dakota03 scene 与树、岩石、Fort、shack、tipi、trigger、dynamite、火车等静态 marker 映射；使用共享 TDM 碰撞模板。依赖 C1 与 M34-B。 | 按 marker 核对数量、坐标、类型、图集帧、锚点、层序和 APK 碰撞框；trigger/dynamite/建筑位置对象语义分开；场景对象 ID 唯一。短 GameSession 探测 Fort、shack、铁路/列车及障碍物的可走边界。 |
+| **M34-C3 初始招募单位与池模板** | 加入 raw96–101、130–131 的初始 activity 4 单位及锁定状态；给 Fort Cannon 配 pool-only 生成模板，不生成第七个开局 Cannon。依赖 C2 的 Fort 场景与现有可选 pool-template 契约。 | 61个候选 marker 的类型/坐标/状态/唯一 ID 与 TDM 闭合；已解锁和未解锁快照均符合 activity 4；六个地图 Cannon 与 pool-only Cannon 分别计数；睡眠单位碰撞按 APK 保留。短会话验证 Fort 招募入池并可生成 Cannon。 |
+| **M34-C4 关卡参数与波次规则** | 接入 global level33 参数、十波、二十个敌方请求调用及两项 Wave 1 单位池动作。依赖 C1 路线与 C3 池模板。 | 独立期望逐字段、逐波匹配静态审计；检查初始生命/现金、难度倍率、10波顺序和请求向量；短 GameSession 核对代表性首波、池动作及第十波 Boss 槽。请求向量不用于推断固定敌人出现顺序，不完整推进整关。 |
+| **M34-C5 关卡文案与表现资源** | 接入中英标题/简介、十段双语对白与头像、Dakota 音乐映射、独占资源预载和关卡内容版本。依赖 C2–C4 的场景及规则内容。 | APK 英文资源 key 与原文逐项匹配；中文翻译逐段存在；头像、音乐、地图预览、初始资源数与单关快照一致；独占资源构建后可加载且回放版本可重建。 |
+
+- **不包含：**正式关卡目录、菜单/Free Play、进度、回放恢复和全局计数属于 M34-D；仅在 C1–C5 全部通过后接线。
 
 ### M34-D：正式目录、菜单、Free Play 与回放接线
 

@@ -17,8 +17,8 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `res/raw/td_m
 | `APK186` | Guns’n’Glory FREE 1.8.6，包名 `com.hg.gunsandgloryfree`，version code 34；本地 APK `/Users/shiwei/Downloads/gunsnglory-1-8-6.apk` | 本报告唯一原版目标；静态资料不等于 Android 运行观察。 |
 | `TDM36` | APK ZIP 内 `res/raw/td_map_36.tdm`，770 字节，前两字节 `32,24` | 32×24、768 个格点；以下频次、坐标和路线均由该文件直接解码。 |
 | `OBJECT36` | `GameObjectManager.createGameObjectsFromBasicMap()` 对应 Smali switch；`GameObjectUnit.create()`、`GameObjectDecoration`、`GameObjectSpawnLocation`、`createTrainFromMap()` | marker 到对象类型、activity、列表副作用和火车分组。JADX 伪代码只作导航。 |
-| `TERRAIN36` | `BackgroundMap.createBackgroundMap()`、`createStreetLayerMap()`、`shapenBackgroundMap()`、`shapenStreetLayerMap()`、`createVariationMap()`；`Dakota.drawBackgroundLayer()` | 原始格到背景/道路图层、邻格塑形、碰撞和贴图的分层消费链。本关最终全图尚未与网页逐格比对。 |
-| `ROUTE36` | `EnemyDirector`、`EnemyDirectorField`、`PriorityMap` 的 APK 语义；TDM spawn/redirect/exit marker；本地 `createMississippiRouteDefinitions()` 通用路线解析结果 | 4个入口完整展开为135条唯一有向边；路线不进入已识别的悬崖墙、水域和铁路格。此项不是玩家寻路或碰撞证明。 |
+| `TERRAIN36` | `BackgroundMap.createBackgroundMap()`、`createStreetLayerMap()`、`shapenBackgroundMap()`、`shapenStreetLayerMap()`、`createVariationMap()`；`Dakota.drawBackgroundLayer()` | 原始格到背景/道路图层、邻格塑形、碰撞和贴图的分层消费链；M34-B 已将 map36 的768个背景命令、104个覆盖命令与最终背景碰撞格网逐项对照网页数据。 |
+| `ROUTE36` | `EnemyDirector`、`EnemyDirectorField`、`PriorityMap` 的 APK 语义；TDM spawn/redirect/exit marker；本地 `createMississippiRouteDefinitions()` 通用路线解析器 | M34-C1 已将四条 Fort Knockout 路线接入网页数据；[`dakota-03-routes.test.ts`](../tests/dakota-03-routes.test.ts) 核对 APK 路径、135条相邻有向边、139个路线格、redirect 投影及短 GameSession 首转。路线不进入已识别的悬崖墙、水域和铁路格；此项不代表玩家寻路或碰撞。 |
 | `LEVEL33` | `GameDesignData.<clinit>` 的全局等级 33−1（索引32）数组写入；开局代码按 `globalLevel−1` 读取 | 11 个原始字段值；只有追到字段消费者的语义才映射为网页行为。 |
 | `WAVES33` | `GameDesignWaves.setWaves()` 的 `i == 33` 分支及 `SpawnPoolManager` 消费者 | 10个 `newWave`、20个 `addToWave`、2个玩家池动作；逐波调用和源槽位如下。 |
 | `COPY33` | APK strings：`T_LEVEL_NAME_36`、`T_LEVEL_INFO_36`、`T_CAMPAIGN_33_01..10`；对应头像 drawable 参数 | 英文原文、波次头像。中文为网页翻译，不是 APK 资源。 |
@@ -54,7 +54,7 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `res/raw/td_m
 | `113` | Fort 建筑：`(20,3),(8,8)` | spawn-location type 2；池的生成建筑不是额外初始单位。 |
 | `116` | shack：`(14,15)` | decoration type 12，`b_2x1_shack`。 |
 | `117` | small tipi：`(4,1),(1,2)` | decoration type 13。 |
-| `124/125` | water：`124@(20,22),(21,22),(19,23),(20,23),(21,23)`；`125@(20,21),(21,21),(19,22),(22,23)` | 原始水域 marker；最终边界仍需和背景塑形结果一起核对。 |
+| `124/125` | water：`124@(20,22),(21,22),(19,23),(20,23),(21,23)`；`125@(20,21),(21,21),(19,22),(22,23)` | 原始水域 marker；M34-B 已核对相邻塑形后的最终背景格网，玩家单位边界仍按对象碰撞规则单独验收。 |
 | `102/110` | trigger `102@(16,5)`；dynamite box `110@(15,6)` | Smali 分支分别构造 type 7 trigger unit 和 DynamiteBox；不能交换角色。 |
 | `130/131` | `130@(17,3)` Pyromaniac；`131@(0,17)` Salesman | 新局可招募特殊单位，受对应解锁条件影响。 |
 
@@ -65,7 +65,7 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `res/raw/td_m
 3. `42@(15,23) N → (15,20) E → (16,20) N → (16,19) E → (17,19) N → (17,11) W → (16,11) N → (16,9) W → (15,9) N → (15,7) W → (14,7) N → (14,5) E → (15,5) N → (15,4) E → (16,4) N → exit@(16,0)`。
 4. `43@(26,23) N → (26,19) E → (28,19) N → (28,15) W → (26,15) N → (26,14) W → (22,14) N → (22,9) E → (27,9) N → (27,3) W → (24,3) N → exit@(24,0)`。
 
-展开结果共135条唯一有向边、139个路线格（包含入口和出口），路线格频次为 `raw32:78`、`raw40–43:4`、`raw48:4`、`raw52:23`、`raw54:10`、`raw55:13`、`raw80:7`。4个入口均到达出口；没有越界、悬空节点或经过 raw36 悬崖、水域、铁路格。此结论验证 TDM 控制图和网页路线解析，不代表最终 Dakota 图像、玩家单位碰撞或实际战斗移动已正确。
+展开结果共135条唯一相邻有向边、139个路线格（包含入口和出口），路线格频次为 `raw32:78`、`raw40–43:4`、`raw48:4`、`raw52:23`、`raw54:10`、`raw55:13`、`raw80:7`。4个入口均到达出口；没有越界、悬空节点或经过 raw36 悬崖、水域、铁路格。M34-C1 已将四条路线用于短 GameSession 并验证每个入口的首个转向；玩家单位碰撞仍由后续对象切片单独验证。
 
 ## 场景对象与对象语义
 
@@ -161,4 +161,4 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `res/raw/td_m
 | 单位池 | Wave 1 第三槽 Cannon 上限5；模板独立于六个初始 Cannon | 验证已雇佣单位进池、Fort Cannon 出生、模板不增加开局 `ScenarioUnit`。 |
 | Android/实战 | 目前没有必须依赖运行观察的未知参数 | 不完整通关、不因静态材料已足够而启动模拟器；仅针对静态无法判定的问题申请一次最小运行观察。 |
 
-当前无必要 Android 权限或额外工具阻塞。主要未决项是网页 map36 地形/碰撞派生结果的逐项独立对照，它可以通过现有 APK、Smali、测试 fixture 和本地工具完成。
+当前无必要 Android 权限或额外工具阻塞。map36 地形绘制与背景格碰撞投影已在 M34-B 闭合，网页敌方路线接入已在 M34-C1 闭合；尚待实现的主要事项是静态对象和玩家单位 placement/碰撞、单位池与波次规则，以及文案资源接线，详见实施计划 M34-C2–C5 与 M34-D。现有 APK、Smali、TDM fixture 和本地工具足以完成这些静态及短会话核验。
