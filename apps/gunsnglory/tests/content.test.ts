@@ -17,6 +17,7 @@ import {
   cactusvilleLevelEightCampaignContent,
   cowGulchLevelOneContent,
   dakota02LevelThirtyTwoCampaignContent,
+  dakota03LevelThirtyThreeCampaignContent,
   fortKaboomLevelThreeContent,
   luckyLakeLevelSevenCampaignContent,
   lostCityLevelTenCampaignContent,
@@ -333,6 +334,15 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     },
     globalLevel: 32,
     requiresCompletedScenarioIds: ['campaign-oregon-11'],
+  }, {
+    scenarioId: dakota03LevelThirtyThreeCampaignContent.id,
+    contentVersion: dakota03LevelThirtyThreeCampaignContent.contentVersion,
+    title: {
+      en: `${dakota03LevelThirtyThreeCampaignContent.title.en} · Level 33`,
+      zh: `${dakota03LevelThirtyThreeCampaignContent.title.zh} · 第 33 关`,
+    },
+    globalLevel: 33,
+    requiresCompletedScenarioIds: ['campaign-dakota-02'],
   }]);
 });
 

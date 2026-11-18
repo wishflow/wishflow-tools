@@ -1,46 +1,80 @@
 # 实施计划
 
-唯一活动进度见本文件。游戏规则、模块和验证边界分别见[产品规格](spec.md)、[架构](architecture.md)、[存储契约](storage-contracts.md)、[模拟与自动化契约](simulation-and-automation.md)及[经验记录](experience-log.md)。每轮先核对代码和证据，细化后续步骤；每完成一个切片即更新计划并移除已关闭任务。
+唯一活动进度见本文件。游戏规则、模块和验证边界分别见[产品规格](spec.md)、[架构](architecture.md)、[存储契约](storage-contracts.md)、[模拟与自动化契约](simulation-and-automation.md)及[经验记录](experience-log.md)。每轮先核对代码与证据，细化后续步骤；每完成一个切片即更新本计划并移除已关闭任务。
 
 ## 当前状态
 
-- M32 Loot Lakes（Dakota 第 1 关／全局第 31 关）已发布并回同步到 `gunsnglory`。发布提交 `a14edaa47058a379459e58374828ad7b8f2265d9` 的 Actions `44236563151` 通过；GitHub Pages 和 Cloudflare Pages 的来源 SHA 一致。内置浏览器以静音、窗口模式确认 Free Play → Dakota → Loot Lakes → Medium 的开场对白和地图；未完整通关。
-- 当前工作树为 `codex/gng-m33-six-grandfathers`。M33-B 地形与路线、M33-C 初始单位/静态对象/列车/碰撞、M33-D 初态/难度/八波/单位池规则均已完成；M33-E 已接入双语关卡内容、正式/自由入口、档案解锁快照回放、音乐与预载资源。M33-B 的770字节 TDM、完整绘制命令和48条唯一有向边通过独立派生夹具核对；M33-C 按 TDM 接入地图对象；M33-D 接入 level index 31 参数和13条 APK 请求。M33-E 定向内容/回放测试、TypeScript 类型检查、959项单测，以及 T70/T71 的4项正式/自由入口 E2E 均通过。M33-F 修复旧进度摘要后，完整 `test:ci` 通过类型检查、959项单测、生产构建和187项 E2E。尚未集成/发布：唯一 `gunsnglory` 本地工作树位于 `/Users/shiwei/Documents/code/wishflow-tools`，跟踪分支落后 `origin/gunsnglory` 10 个提交且含未跟踪研究文档；按工作树约束保留现场，不能在该脏工作树切分支或更新。
-- 已有 M31/M32 的详细过程从活动计划移出；参数、路线、单位与对白证据分别保留在[Snake River 静态审计](map29-static-audit.md)和[Loot Lakes 静态审计](map31-static-audit.md)。共用碰撞基线见[我方桥面与地图对象碰撞审计](player-collision-audit.md)，已复现问题的原因与防回归经验见[经验记录](experience-log.md)。
-- 独立遗留项：早期回放文件 M4–M7 的兼容行为未确认；本 M33 批次不重开此项，除非新实现出现相关回归。
+- **M33 Six Grandfathers 已完成并发布。**发布提交 `7b40074bd06c5c813ea009a67efc987b638d5a94`；GitHub Actions `44262725139` 的共享检查、Guns’n’Glory 测试、GitHub Pages 与 Cloudflare Pages 部署均成功。两处根路径 `build-info.json` 的 `sourceSha` 均与发布提交一致。
+- **线上验收通过。**内置浏览器静音、窗口模式进入 Free Play → Dakota → Six Grandfathers（Level 32）→ Medium，确认关卡可选、开场对白可继续、地图与 HUD 正常渲染；未手动完整通关。发布验证覆盖的是代表性入口和画面，不是整关逐帧实测。
+- **集成状态已同步。**发布提交已合并回 `gunsnglory` 并推送；本地 Guns’n’Glory 主工作树已快进到集成分支。其原有未跟踪研究文档仍保留，未纳入项目提交。
+- 当前关卡数据和实现证据见[Six Grandfathers 静态审计](map32-static-audit.md)、关卡测试及夹具；地图对象与碰撞共用基线见[我方桥面与地图对象碰撞审计](player-collision-audit.md)。已关闭问题的根因和防回归规则见[经验记录](experience-log.md)。
+- 独立遗留项：早期回放文件 M4–M7 的兼容行为未确认。本批没有改动该行为；只有后续任务触及回放兼容或发现相关回归时才重开。
 
-## 当前批次：Six Grandfathers（M33）
+## 下一批：M34 Fort Knockout
 
-目标为 Dakota 第 2 关、全局第 32 关，APK `res/raw/td_map_35.tdm`。静态基线见[Six Grandfathers 静态审计](map32-static-audit.md)。数据来源为 Guns’n’Glory FREE 1.8.6 APK、其 Smali/REA 反编译，以及可复核的 TDM/地形派生数据；不借用相邻关卡数值，不完整通关，不为已能由静态代码回答的问题启动 Android。测试保持窗口模式和静音。
+Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.tdm`。注意工程中的 `map33` 旧称通常指全局第 30 关 Lumber Mill Hills；本关代码和测试统一采用 `dakota-03` 命名，静态报告使用关卡名，避免把战役关卡号、TDM 文件号和旧内部 map 序号混用。完整静态基线见[Fort Knockout 静态审计](fort-knockout-static-audit.md)。
 
-### 已闭合的开工基线
+### M34-A：完成独立来源与数据核验
 
-APK 身份、map35 原始网格、Dakota 绘制链、完整路线、静态对象/列车/单位、global level 32 参数、level 分支 32 的八波与玩家池动作、英语资源和音乐调用均已交叉核对。波次统计为 **8 个 `newWave`、13 个 `addToWave`、2 个玩家池动作**；末波请求间隔使用 DEX 常量 500 ms。不可将旧摘要里的“12 次 addToWave”当成事实。
+**状态：已完成静态资料核验；最终 Dakota 绘制与碰撞逐格等价仍由 M34-B 验收，不算本步骤已证明。**
 
-### M33-B 已完成
+- **范围：**将 Fort Knockout 的 APK 身份、TDM 尺寸与 marker 频次/坐标、路线图、初始对象、参数行、玩家池动作、波次调用、对白/头像和现存未知项写入独立报告。每个关卡事实以本关原始 TDM、目标 level 条件分支、Smali 字段写入/消费者为准；报告同时区分 APK 派生数据、网页已有数据和未核对项。
+- **依赖：**无；源 APK 与 Smali 静态材料已可用。
+- **验收：**全局 Level 33 ↔ `GameDesignData` 零基索引32 ↔ TDM 文件36 ↔ `GameDesignWaves` level 33 四者逐项闭合；marker 频次覆盖对象清单；波次数、请求调用数和池动作分别计数；坐标无矛盾。不得把 JADX 伪代码当原始源码，也不得沿用前一关摘要。
+- **验证：**逐项对照 REA/Smali、APK ZIP 内 TDM、资源文本和独立派生表；`git diff --check` 与 Markdown 相对链接检查。
 
-新增 `dakota-02.json`、`dakota-02-routes.ts`、APK 原始 TDM 与独立路线图夹具，以及 `dakota-02-map-and-routes.test.ts`。地图测试逐格核对32×24网格、marker、768个背景绘制命令、道路/桥/铁路覆盖及图集边界；路线测试核对全部节点和48条唯一有向边、3个入口/出口映射与可达性；短 `GameSession` 核对三个入口的来源 ID、首个方向和转向。定向测试3项、`pnpm run typecheck` 通过。详细期望留在测试和夹具中，不在活动计划重复列出。
+### M34-B：复核 Dakota 地形、绘制和碰撞投影
 
-### M33-C 已完成
+**状态：已完成。**map36 的原始 TDM、Dakota 图层数据和独立逐格对照已接入；地形与路线数据仍分开验收，不代表玩家对象/碰撞框已集成。
 
-新增 Dakota 共享背景碰撞码解码器、Six Grandfathers 场景、TDM 单位/列车工厂和 Saloon/Tipi 来源单位池。场景覆盖33个静态装饰 marker；96–101 共46个睡眠单位 marker 按 Grandpa/Sniper 全局解锁创建，130/131 特殊招募单位也受各自解锁门控；不为 TDM 中不存在的活动 Grandpa 或 Cannon/Fort 来源池伪造地图对象。raw 82 保留为铁路背景，raw 83/84 创建2台机车和4节车厢的移动组。独立 APK 碰撞期望覆盖全部静态 marker；短 `GameSession` 验证 Saloon、Tipi、岩石、睡眠单位、列车阻挡，以及 raw 80 横桥/raw 88 竖桥的正确通行方向与侧边阻挡。抽取背景碰撞解码器后，Loot Lakes 仍逐格匹配原参考。定向测试17项、`pnpm run typecheck` 和 `git diff --check` 通过。
+- **范围：**从 map36 的原始 TDM 独立派生 Dakota 背景与道路/桥/铁路绘制命令，并从 APK `BackgroundMap` 完整转换链计算最终背景码；与网页地图数据逐格比较 768 个背景格及所有覆盖层命令。把道路绘制、敌方路线、玩家可走地形、对象碰撞分开核验。
+- **依赖：**M34-A 的 TDM 网格与静态审计；复用 M32 已验证的 Dakota 图集别名和 `dakota-background-collision` 转换约定，但重新用 map36 输入计算，不复用 map35 格点。
+- **验收：**每个背景命令的资源、source rectangle、目的格和层序均与独立参考一致；敌方路线的原始控制节点与其地图路线通道相符；桥图覆盖不替代玩家碰撞规则；最终背景碰撞码逐格等价。若 APK 输入不足以决定运行时随机变体，固定网页种子只需选择合法图块，不宣称复现每次 Android 启动。
+- **验证：**[`dakota-03-map.test.ts`](../tests/dakota-03-map.test.ts) 使用 APK TDM fixture 核对768个背景命令、104个道路/桥/铁路覆盖命令及完整碰撞格网；抽查 raw36 悬崖、raw80 桥、水域与铁路，并逐项核对7座桥的绘制偏移和尺寸。四项定向测试及 TypeScript 类型检查通过。路线与玩家地形碰撞语义不混为一谈，路线展开在 M34-A 的静态审计中单独验证；玩家脚底锚点和实际移动边界由 M34-C 的 GameSession 测试验收。只有静态转换仍无法判断的具体对象行为才安排短时运行观察。
 
-实现前还修正了静态审计中的一条错误：审计表称 raw `109@(13,1)` 会创建活动 Grandpa，但 map35 APK TDM 字节与 marker 频次表均无 raw 109，该坐标实际为 raw 32。当前场景和报告以 TDM fixture 为准；原因与防回归见[经验记录](experience-log.md)的“新关卡数据必须以本关 APK 资源为准”。
+### M34-C：接入地图、路线、对象和规则数据
 
-### M33-D 已完成
+- **范围：**依序完成独立切片。每项关卡期望均直接来自[Fort Knockout 静态审计](fort-knockout-static-audit.md)，不从 Dakota 前一关复制。C3a/C3b 闭合地图单位与玩家池；C4 接入关卡参数和敌方波次；C5 再接文本、媒体与版本。
+- **依赖：**M34-A、M34-B 已通过；若切片发现共享地形转换回归，先修复并对既有关卡运行对应定向检查。
+- **M34-C1 已完成：**Fort Knockout 路线数据已接入。四条路线、135条相邻有向边、139个路线格和四个入口的首个 GameSession 转向均通过独立 APK 期望核对；详情见 `dakota-03-routes.test.ts` 与本关静态审计。此项不代表关卡已进入正式目录或可从菜单启动。
+- **M34-C2a 已完成：**Dakota03 静态装饰与 scene 已接入。raw69/70/71/76/94/95/113/116/117 逐格匹配 APK 资产和锚点；静态碰撞使用 TDM canonical box。真实 GameSession 移动探针核对 Fort、shack、大岩石、小 tipi 和铁路挡车器的阻挡边界，详见 `dakota-03-static-scene.test.ts`。
+- **M34-C2b 已完成：**raw92/raw91 生成一组竖列火车（两节 wagon、两段 locomotive），与 APK 的 cell 顺序、activity、资产帧和单一 movement group 一致；GameSession 已验证列车实体阻挡。raw102/raw110 生成 trigger/box pair `(16,5)` + `(15,6)`，level20 或30完成后才显示并登记两个对象碰撞框。详见 `dakota-03-map-entities.test.ts`。
+- **M34-C3a 已完成：**raw96–101、130–131 的61个新局招募 marker 已复用共享单位构造器；16种单位解锁快照中的坐标、类型、activity 4、唯一 ID 和贴图资源均通过 TDM 独立期望核对。真实 GameSession 确认未雇佣的 Gunslinger 阻挡移动；详见 `dakota-03-unit-entities.test.ts`。
+- **M34-C3b 已完成：**独立 pool-only Cannon 模板与 raw98 六个开局 Cannon 分离；两个 raw113 Fort 均登记为 type 2 出生场。Wave 1 的 SET 清空全部单位库存槽，SET_MAX 只开放 Cannon 池上限5。真实 GameSession 从地图雇佣 Cannon 后确认扣款、入池，并生成 activity 2 Cannon 到实际 Fort；刷新周期仍沿用共享网页15秒缺省，未记作 APK 数值。详见 `dakota-03-unit-pool.test.ts`。
+- **M34-C4 已完成：**逐字段接入 global level33 开局参数及十波、二十个敌方请求池；独立期望逐波核对请求计数、入口、间隔、倍率和 Boss/Doc 槽。真实 GameSession 确认首波 `$300`、25生命及19个待生成请求；隔离短会话确认第十波 request index 8 生成 Boss。Wave 1 Cannon 玩家池动作仍独立生效，未被敌方波次覆盖。详见 `dakota-03-campaign-rules.test.ts`。
+- **M34-C5 已完成：**标题/简介映射 `T_LEVEL_NAME_36`、`T_LEVEL_INFO_36` 和10段 `T_CAMPAIGN_33_01..10` 英文逐字匹配静态审计；中文对白与头像顺序已补齐。Dakota ambient/三曲循环复用现有映射；地图、单位和头像进入启动预载；unlock 快照内容版本可严格解析并直接重建同版本的地图、单位。5项专题测试、`pnpm run typecheck` 及生产构建通过，构建产物含本关独占头像、音乐和地图预览资源。资源测试首次误把贴图别名当物理文件名，已按 `gameAssetRelativePath()` 修正并记入经验记录。正式目录、菜单入口、browser replay factory 与真实回放恢复仍留给 M34-D。
 
-新增规则和波次定义，并用独立期望表核对 GameDesignData index 31 的现金、生命、奖励箱、升级上限和 Easy/Medium/Hard 倍率，以及 `i == 32` 分支的8个 wave header、13个 `addToWave` 调用、全部 route action ID、间隔和请求向量。Wave 8 的 Boss 使用请求索引8（APK第9槽），Doc 索引9保持0；短 `GameSession` 分别验证 Wave 1 的 action 1 来源点、开局状态、单位池 Wave 1 reset/cap 和隔离 Boss 请求。无 Fort marker，因此不创建不可用 Cannon 生成位置；其原版零上限不产生可观察效果。共享15秒池刷新沿用网页适配值，并未标作 APK 本关计时参数。定向测试13项、`pnpm run typecheck` 通过。
+- **不包含：**正式关卡目录、菜单/Free Play、进度、浏览器回放工厂接线和全局计数属于 M34-D；仅在 C1–C5 全部通过后接线。
 
-### 有序实现步骤
+### M34-D：正式目录、菜单、Free Play 与回放接线
 
-| 顺序 | 切片 | 范围与依赖 | 验收与针对性验证 |
-| --- | --- | --- | --- |
-| 1 | M33-F：集成、发布和线上验收 | 历史进度摘要断言已同步：`t20`、`t22`、`t25`、`t28`、`t33` 五个 spec 的6条期望从31更新到32，定向复验11项通过；完整 `test:ci` 已通过类型检查、959项单测、生产构建和187项 E2E。先取得干净且最新的 Guns’n’Glory 集成工作树，保留现有含未跟踪研究文档的工作树不动；之后将 M33 整批 squash 集成到 `gunsnglory`，按应用流程同步并发布到 `master`。 | 核对 `gunsnglory`/`master` 与远端及所有相关 worktree 的上游关系。发布后检查 Actions、GitHub Pages 与 Cloudflare Pages；部署 `build-info.json` 的 SHA 必须匹配预期发布提交。用内置浏览器静音、窗口模式验收正式锁定/解锁入口、Free Play、Six Grandfathers 开局对白、地图图层和代表性交互；不手动完整通关。任一门槛失败则保持批次未完成并细化修复。 |
+**当前基线：**Level 33 已正式登记并接入浏览器菜单和可玩入口；Free Play 与正式关卡路径、档案结算和场景上下文均已通过 D1 定向检查。剩余工作从 Dakota03 的回放内容版本恢复开始；菜单入口已在 D1 E2E 中验证，最终整批 E2E 仍需回归。
 
-### 批次规则
+**M34-D1 已完成：**Fort Knockout 已登记为 Six Grandfathers 后的第33个正式关卡，27份固定阶段数断言已更新。Browser scenario 按存档中的单位解锁快照生成精确内容版本；Free Play 与正式模式均能从 Dakota 地图选择、查看双语简介/map36 预览并启动。菜单 E2E 首次发现 Level 33 场景上下文仍显示 `NEW MEXICO`：场景区域名使用手工列举关卡 ID 的分支，新增 Dakota03 时漏列。补入关卡映射后，Free Play 和正式路径的场景上下文均显示 Dakota；两条路径的开场对白、头像、HUD 和资源加载检查通过。正式模式完成 Dakota02 前锁定、完成后开放。验证：Fort Knockout 正式内容与 browser bootstrap 定向单测6项通过；受影响的阶段数/正式关卡测试98项通过；新增菜单 E2E 2项通过；TypeScript 类型检查通过。回放恢复仍由 D2 处理。
 
-- 每个切片先跑针对性测试、更新本计划、检查差异，再本地提交；不在每个切片提交后重复跑整套检查或单独发布。
-- 一组步骤完成后复核尚未完成项；整批结束时运行应用完整检查与适用共享检查一次。
-- 新增关卡数据以本关 APK 原始资源和消费分支为准。不得以相邻关卡、压缩摘要或生产数组自身建立测试期望；数值、路线、绘制、碰撞和表现分别验证。
-- 浏览器默认窗口模式、静音；Android 只在静态证据不能回答某个明确行为时做一次定点观察。
-- 发布是完整功能批次的决定，不按单个切片或文档单独发版；按[应用协作约束](../AGENTS.md)核对部署来源和集成分支。
+**M34-D2 已完成：**新增 `createBrowserGameForDakota03Replay()` 并接入回放导入分派；回放内容由严格解析的 Dakota03 内容版本重建，使用录制时的单位解锁快照，不借用导入者当前档案。缺失版本由回放格式校验以 `missing-version` 拒绝；未知或非规范快照由关卡 factory 以 `content-unavailable` 拒绝。验证：Dakota03 presentation/replay 定向单测7项、TypeScript 类型检查通过；`t72-dakota-03-integration.spec.ts` 的 Free Play、正式解锁和回放导入三项 E2E 通过。回放导入 E2E 使用空档案导入有历史解锁快照的记录，并以预期的 checkpoint mismatch 作为“已成功解析对应内容版本”的观测点；它不声称该构造记录是完整有效的战斗回放。
+
+**M34-D3 已完成：**`t72-dakota-03-integration.spec.ts` 覆盖 Free Play、正式解锁和回放导入；受影响的旧菜单流程 `t29-campaign-menu.spec.ts` 与 `t31-free-play.spec.ts` 未发现回归。窗口模式、静音下共12项 E2E 通过；无手动完整通关。
+
+- **不包含：**其他 Dakota 关卡内容与完整战役通关。正式/自由模式结算隔离由短 GameSession 断言，不用长时间手动战斗替代。
+
+### M34-E：批次收尾与发布判断
+
+**当前状态：**本地验收门槛已通过：完整 `test:ci` 包含类型检查、989项单测、生产构建和190项 E2E；共享 `pnpm run test:catalog` 18项通过。期间修复了4个完整正式阶段/进度快照、5个旧总进度数，以及 `t70`/`t71` 两个 Dakota 已实现关卡数断言；定向测试分别为41项单测与4项 E2E，通过。Vite 仍提示主 JS chunk 约3.77 MB、超过500 KB阈值；构建成功，本批未调整拆包。待完成 squash 集成、CI 部署来源 SHA 核对和内置浏览器验收。
+
+- **范围：**核对本批全部差异，更新计划、经验记录与发布说明；本地提交后按应用规则整批 squash 集成。
+- **依赖：**M34-A 至 M34-D 全部通过。
+- **验收：**先运行相关定向检查，再运行一次 `pnpm run test:ci`；构建、单测、E2E、共享检查均通过。发布时检查 CI、GitHub Pages 与 Cloudflare Pages 的来源 SHA，再用内置浏览器窗口模式、静音验证菜单、地图、开场对白和代表性战斗流程。不得把短会话或静态对照写成通关/Android 实测。
+- **发布策略：**此关作为完整内容功能批次；不因每个文档或代码切片独立发布。
+
+## 后续工作
+
+当前未细化其他关卡。M34 完成后，按 APK 原始资源逐关选择下一关并重新核对目标内容；不得仅按相邻关卡顺序复制配置或预设路线、地形图集、单位池结构。
+
+## 批次规则
+
+- 每个切片先跑针对性验证、更新本计划并本地提交；不在每个切片提交后重复运行整套检查或单独发布。
+- 一组切片完成后复核剩余差异；整批结束时运行应用完整检查与适用共享检查一次。失败在当前批次修复，并重跑失败项与最终完整检查。
+- 新关卡数据以该关 APK 原始资源及实际消费分支为准。不得以相邻关卡、摘要或生产数据自身建立测试期望；数值、路线、绘制、碰撞和表现分别核对。
+- 浏览器默认窗口模式并静音；Android 仅在静态证据无法回答明确问题时做一次定点观察。
+- 发布是完整功能批次的决定，不按单个切片或文档单独发版；发布后核对 CI、部署来源 SHA，并用内置浏览器验收整批功能。

@@ -36,7 +36,7 @@ async function settleWithoutBattle(
 }
 
 test('Colt City unlocks after Mount Hood, Free Play stays isolated, and formal victory records level 28', async () => {
-  assert.equal(officialCampaignStages.length, 32);
+  assert.equal(officialCampaignStages.length, 33);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 28), {
     scenarioId: oregon08CampaignId,
     contentVersion: oregon08CampaignContentVersionFor(['campaign-oregon-07']),

@@ -473,7 +473,22 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **漏测点：**若只测试共享构造器或贴图文件存在性，不会发现特定关卡的原始标记没有被场景层消费。
 - **修复与防回归：**map06 场景显式加入 72/75 映射；测试逐项从独立 TDM 基线生成“对象码→资产→格子”期望，并检查所有资产可加载。后续新地图必须核对该关完整对象码表，再决定继承共享项或增加关卡专属映射。
 
-M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：Loot Lakes 初稿把 shack 写成不存在的 `b_1x2_shack`，资源目录及其他关卡中 APK 对应贴图的正式映射为 `b_2x1_shack`。在编写场景前通过资源存在性检查发现并更正，未进入游戏实现。新地图验收应从原始 marker 逐项走到“APK drawable 名→网页资源别名→文件路径”，不得仅凭外形描述或宽高顺序拼资源名。
+M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：Loot Lakes 初稿把 shack 写成不存在的 `b_1x2_shack`，资源目录及其他关卡中 APK 对应贴图的正式映射为 `b_2x1_shack`。在编写场景前通过资源存在性检查发现并更正，未进入游戏实现。新地图验收应从原始 marker 逐项走到“APK drawable 名→网页资源别名→文件路径”，不得仅凭外形描述或宽高顺序拼资源名。**防回归补充：**资源测试也不能直接拼 `${asset}.png`；地图图集别名可能由 `gameAssetRelativePath()` 映射到 `hdpi/` 或其他正式文件名。Fort Knockout C5 首次测试曾因直拼路径误报 `tiles_canyon_floor_var` 缺文件，改按项目资源映射核验后通过。写预载测试前要先读 `src/render/game-asset-path.ts`，并用它计算测试路径。D1 的浏览器场景探针也曾把静态 `ScenarioUnit` 和运行时 `GameViewUnit` 整体深比较；后者会合法增加 `positionFine`、`moving`、`selected`、`attackRange` 等字段。跨层对照应只比较明确的业务投影（marker ID、类型、活动状态、贴图和格位），运行时字段按各自契约另测。
+
+### 登记新关卡时同步检查场景上下文
+
+- **表现与复现：**Fort Knockout 已能从 Dakota 菜单正确显示标题、简介和地图，但启动后 HUD 场景上下文仍写着 `NEW MEXICO`。
+- **根因与漏测：**`campaignRegionLabel` 由正式关卡 ID 手工分支映射；新增 Dakota03 后未加入 Dakota 分支，遗漏项回退到了 New Mexico。此前 D1 的内容与正式进度单测未走菜单到实际场景的完整链路，因此标题和关卡已正确仍漏掉 HUD 文案差异。
+- **修复与验证：**将 `dakota03CampaignId` 纳入 Dakota 上下文映射；`t72-dakota-03-integration.spec.ts` 同时启动 Free Play 和正式模式，断言场景上下文分别为 `FREE PLAY · DAKOTA · 33` 和 `DAKOTA · 33`，并检查 Level 32 门槛、开场对白、头像与资源加载。两项 E2E 通过。
+- **防回归：**新增正式关卡时，除了目录、browser factory、菜单标题和预览，还要沿实际启动链检查 scene title、region context、difficulty、wave intro 与资源加载；若 UI 派生值使用 ID 手工枚举，必须将新关卡纳入对应分支并由菜单 E2E 断言。
+
+### 新增正式关卡要检索完整阶段快照与显示计数
+
+- **表现与复现：**注册 Fort Knockout 后，单测第一次完整运行有4项失败。阶段数量断言已从32改为33，但全关卡依赖列表、全阶段进度状态快照仍遗漏末尾的 Dakota03；菜单 E2E 也仍断言 `0/32`、`1/32` 等旧总数。
+- **根因与漏测：**更新时只检索了 `officialCampaignStages.length`，没有检索所有把正式目录完整投影成数组的 `deepEqual` 断言，也没有搜索由进度 UI 输出的固定总数。失败分别出现在 `apache-valley.test.ts`、`fort-kaboom-formal.test.ts`、`content.test.ts`、`progress.test.ts` 及 `t20`、`t22`、`t25`、`t28`、`t33` E2E。
+- **修复与验证：**四份单测加入 Level 33 及其 `campaign-dakota-02` 前置条件/锁定状态；五份 E2E 总数断言改为33。四个受影响单测文件合计41项通过。完整 `test:ci` 最终通过类型检查、989项单测、生产构建和190项 E2E。
+- **收尾复核：**完整 E2E 首次运行中，188 项通过、2 项失败；失败是 `t70`、`t71` 的 Dakota Free Play 区域可玩数仍期待2，Level 33 接入后正确值为3。定向复跑这两个 spec 的4项通过后，完整回归全部通过。地区可玩数也是正式关卡目录的消费者，不能只搜索战役总数与进度分母。生产构建仍报告约3.77 MB 的主 JS chunk 超过 Vite 500 KB 提示阈值；这是既有构建警告，本批未调整拆包。
+- **防回归：**新增正式阶段时，搜索并核对 `officialCampaignStages` 的长度、完整阶段投影、进度状态顺序、固定进度 UI 总数和地图菜单可用数。只改数量断言不算目录变更验收完成。
 
 ## 地形图层不能只画 tile 的表面标记
 
