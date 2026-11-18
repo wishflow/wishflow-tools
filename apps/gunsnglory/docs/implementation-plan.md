@@ -40,10 +40,10 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.td
 - **M34-C2a 已完成：**Dakota03 静态装饰与 scene 已接入。raw69/70/71/76/94/95/113/116/117 逐格匹配 APK 资产和锚点；静态碰撞使用 TDM canonical box。真实 GameSession 移动探针核对 Fort、shack、大岩石、小 tipi 和铁路挡车器的阻挡边界，详见 `dakota-03-static-scene.test.ts`。
 - **M34-C2b 已完成：**raw92/raw91 生成一组竖列火车（两节 wagon、两段 locomotive），与 APK 的 cell 顺序、activity、资产帧和单一 movement group 一致；GameSession 已验证列车实体阻挡。raw102/raw110 生成 trigger/box pair `(16,5)` + `(15,6)`，level20 或30完成后才显示并登记两个对象碰撞框。详见 `dakota-03-map-entities.test.ts`。
 - **M34-C3a 已完成：**raw96–101、130–131 的61个新局招募 marker 已复用共享单位构造器；16种单位解锁快照中的坐标、类型、activity 4、唯一 ID 和贴图资源均通过 TDM 独立期望核对。真实 GameSession 确认未雇佣的 Gunslinger 阻挡移动；详见 `dakota-03-unit-entities.test.ts`。
+- **M34-C3b 已完成：**独立 pool-only Cannon 模板与 raw98 六个开局 Cannon 分离；两个 raw113 Fort 均登记为 type 2 出生场。Wave 1 的 SET 清空全部单位库存槽，SET_MAX 只开放 Cannon 池上限5。真实 GameSession 从地图雇佣 Cannon 后确认扣款、入池，并生成 activity 2 Cannon 到实际 Fort；刷新周期仍沿用共享网页15秒缺省，未记作 APK 数值。详见 `dakota-03-unit-pool.test.ts`。
 
 | 切片 | 内容与依赖 | 完成门槛与定向验证 |
 | --- | --- | --- |
-| **M34-C3b Fort Cannon 池模板** | 复用 `CampaignSpawnPoolDefinition.template`，给 Cannon 的 Fort 池提供独立生成模板；将模板与 raw98 的六个地图 Cannon 分离。用 TDM raw113 的两个 Fort 位置作为 `spawnLocationType: 2` 出生场，并按 level33 Wave 1 动作设置四池清零及 Cannon 池上限5。 | 独立期望确认六个初始 Cannon、两个 Fort 出生点和一个 pool-only 模板分别计数；模板不出现在初始 `ScenarioContent.units`。真实 GameSession 从地图雇佣 Cannon，核对入池、池上限和 Fort 出生位置/生成 Cannon 类型；不完整推进关卡。运行 `tests/dakota-03-unit-pool.test.ts` 与类型检查。 |
 | **M34-C4 关卡参数与波次规则** | 接入 global level33 参数与十波、二十个敌方请求调用；复核 C3b 已接入的 Wave 1 玩家池动作不被敌方波次装配覆盖。依赖 C1 路线与 C3b 池定义。 | 独立期望逐字段、逐波匹配静态审计；检查初始生命/现金、难度倍率、10波顺序和请求向量；短 GameSession 核对代表性首波、Wave 1 池动作及第十波 Boss 槽。请求向量不用于推断固定敌人出现顺序，不完整推进整关。 |
 | **M34-C5 关卡文案与表现资源** | 接入中英标题/简介、十段双语对白与头像、Dakota 音乐映射、独占资源预载和关卡内容版本。依赖 C2a–C4 的场景及规则内容。 | APK 英文资源 key 与原文逐项匹配；中文翻译逐段存在；头像、音乐、地图预览、初始资源数与单关快照一致；独占资源构建后可加载且回放版本可重建。 |
 
