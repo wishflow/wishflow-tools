@@ -153,6 +153,7 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `res/raw/td_m
 | 项目 | 当前结论 | 实现前/实现时验收 |
 | --- | --- | --- |
 | 路线 | TDM 四入口、所有转向和出口已静态展开，135条唯一有向边闭合 | 对照网页 `runtimeWaveRedirects()` 和真实短 GameSession 转向；不以完整通关代替。 |
+| 开局参数与敌方波次 | global level33 的11字段消费者映射、10个 wave header、20条 `addToWave` 请求及Boss槽位均来自本关 APK 分支 | **M34-C4 已完成：**`dakota-03-campaign-rules.test.ts` 独立逐字段/逐波核对；短 GameSession 验证 Wave 1 的现金、生命、待生成请求与入口事件，并以仅清空前置波次的短 fixture 验证 Wave 10 request index 8 实际生成 Boss。没有完整推进战役。 |
 | 贴图与地形 | 768个背景命令与104个覆盖层命令逐项匹配 APK 派生参考；固定网页随机种子用于稳定变体 | `dakota-03-map.test.ts` 比较每项资源、source rectangle、目的坐标、尺寸和序列；7座横桥及19格铁路覆盖均与 TDM 输入对应。该对照不证明 Android 每次启动抽到相同随机贴图。 |
 | 最终背景格网 | 网页 Dakota 贴图命令反解出的768格碰撞码与 APK 完整形塑参考逐格一致 | 测试抽查 raw36 `(14,2)`→最终码14、raw80 `(8,1)`→背景码74且另绘桥面、water `(20,22)`→96、铁路 `(11,2)`→19并由覆盖层绘轨。绘制层和背景码分开记录。 |
 | 玩家碰撞 | 本报告的路线/地形格网静态结果不等于玩家移动范围、单位碰撞框或实际停靠边界 | M34-C2a 已用短 GameSession 检查 Fort、shack、大岩石、小 tipi、铁路挡车器；M34-C2b 已验证列车阻挡及解锁炸药的碰撞框登记；M34-C3a 已验证未雇佣 Gunslinger 在 GameSession 中阻挡移动；C3b 已验证已雇佣 Cannon 从两个实际 Fort 之一出生。敌方路线不能作为玩家可走范围。 |
@@ -161,4 +162,4 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `res/raw/td_m
 | 单位池 | Wave 1 `SET` 清空库存、第三槽 Cannon 上限5；模板独立于六个初始 Cannon。APK 单关刷新周期未证实，网页沿用共享15,000 ms 缺省 | **M34-C3b 已完成：**TDM raw113 的两个 Fort 均作为 type 2 出生场；独立 pool-only 模板不增加开局 `ScenarioUnit`。定向测试确认六个初始 Cannon、全池清空、Cannon 上限5，并通过真实 GameSession 验证雇佣入池及从实际 Fort 出生。 |
 | Android/实战 | 目前没有必须依赖运行观察的未知参数 | 不完整通关、不因静态材料已足够而启动模拟器；仅针对静态无法判定的问题申请一次最小运行观察。 |
 
-当前无必要 Android 权限或额外工具阻塞。map36 地形绘制/背景碰撞投影、网页敌方路线、静态装饰、竖列车、解锁炸药对象、61个活动/睡眠招募 marker 及 Fort Cannon 池模板均已分别在 M34-B、C1、C2a、C2b、C3a、C3b 闭合；尚待接入敌方波次、文案资源和正式目录，详见实施计划 M34-C4–C5 与 M34-D。现有 APK、Smali、TDM fixture 和本地工具足以完成剩余静态及短会话核验。
+当前无必要 Android 权限或额外工具阻塞。map36 地形绘制/背景碰撞投影、网页敌方路线、静态装饰、竖列车、解锁炸药对象、61个活动/睡眠招募 marker、Fort Cannon 池模板及 level33 开局/波次规则均已分别在 M34-B、C1、C2a、C2b、C3a、C3b、C4 闭合；尚待接入文案资源和正式目录，详见实施计划 M34-C5 与 M34-D。现有 APK、Smali、TDM fixture 和本地工具足以完成剩余静态及短会话核验。
