@@ -54,9 +54,7 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.td
 
 **M34-D2 已完成：**新增 `createBrowserGameForDakota03Replay()` 并接入回放导入分派；回放内容由严格解析的 Dakota03 内容版本重建，使用录制时的单位解锁快照，不借用导入者当前档案。缺失版本由回放格式校验以 `missing-version` 拒绝；未知或非规范快照由关卡 factory 以 `content-unavailable` 拒绝。验证：Dakota03 presentation/replay 定向单测7项、TypeScript 类型检查通过；`t72-dakota-03-integration.spec.ts` 的 Free Play、正式解锁和回放导入三项 E2E 通过。回放导入 E2E 使用空档案导入有历史解锁快照的记录，并以预期的 checkpoint mismatch 作为“已成功解析对应内容版本”的观测点；它不声称该构造记录是完整有效的战斗回放。
 
-| 切片 | 实施范围与依赖 | 可判定验收与定向验证 |
-| --- | --- | --- |
-| **M34-D3 最终菜单回归与整批检查** | 汇总 D1/D2 已完成的 `t72-dakota-03-integration.spec.ts`；运行该 spec、受影响的 `t29` 与 `t31`，再按 M34-E 执行应用完整检查。只修复有证据的集成差异，不重做已通过的关卡路线、快照或地图对照。依赖已完成 D1、D2。 | 菜单 E2E 覆盖 Free Play 与正式解锁、双语简介/map36 预览、场景上下文、难度、开场对白、HUD、资源加载和回放导入分派；相关旧菜单流程无回归；Free Play 结算不改档案、正式模式门槛正确。默认窗口、静音，不完整通关。 |
+**M34-D3 已完成：**`t72-dakota-03-integration.spec.ts` 覆盖 Free Play、正式解锁和回放导入；受影响的旧菜单流程 `t29-campaign-menu.spec.ts` 与 `t31-free-play.spec.ts` 未发现回归。窗口模式、静音下共12项 E2E 通过；无手动完整通关。
 
 - **不包含：**其他 Dakota 关卡内容与完整战役通关。正式/自由模式结算隔离由短 GameSession 断言，不用长时间手动战斗替代。
 
