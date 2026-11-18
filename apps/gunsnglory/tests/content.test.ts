@@ -16,6 +16,7 @@ import {
   billyHillsLevelFiveCampaignContent,
   cactusvilleLevelEightCampaignContent,
   cowGulchLevelOneContent,
+  dakota02LevelThirtyTwoCampaignContent,
   fortKaboomLevelThreeContent,
   luckyLakeLevelSevenCampaignContent,
   lostCityLevelTenCampaignContent,
@@ -323,6 +324,15 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Loot Lakes · Level 31', zh: '湖泊金矿 · 第 31 关' },
     globalLevel: 31,
     requiresCompletedScenarioIds: [oregon10LevelThirtyCampaignContent.id],
+  }, {
+    scenarioId: dakota02LevelThirtyTwoCampaignContent.id,
+    contentVersion: dakota02LevelThirtyTwoCampaignContent.contentVersion,
+    title: {
+      en: `${dakota02LevelThirtyTwoCampaignContent.title.en} · Level 32`,
+      zh: `${dakota02LevelThirtyTwoCampaignContent.title.zh} · 第 32 关`,
+    },
+    globalLevel: 32,
+    requiresCompletedScenarioIds: ['campaign-oregon-11'],
   }]);
 });
 

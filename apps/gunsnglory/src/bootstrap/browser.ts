@@ -161,6 +161,12 @@ import {
   parseOregon11ReplayContentVersion,
 } from '../content/oregon-11-content-version';
 import { oregon11CampaignId } from '../content/oregon-11-identity';
+import { createDakota02CampaignContent, createDakota02CampaignContentFromSnapshot } from '../content/dakota-02-campaign';
+import {
+  dakota02CampaignContentVersionFor,
+  parseDakota02ReplayContentVersion,
+} from '../content/dakota-02-content-version';
+import { dakota02CampaignId } from '../content/dakota-02-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -320,6 +326,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === oregon11CampaignId) {
     return oregon11CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === dakota02CampaignId) {
+    return dakota02CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -360,6 +369,7 @@ export function createBrowserGame(
     [oregon09CampaignId]: createOregon09CampaignContent(completedScenarioIds),
     [oregon10CampaignId]: createOregon10CampaignContent(completedScenarioIds),
     [oregon11CampaignId]: createOregon11CampaignContent(completedScenarioIds),
+    [dakota02CampaignId]: createDakota02CampaignContent(completedScenarioIds),
     ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {
@@ -635,6 +645,15 @@ export function createBrowserGameForOregon11Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, oregon11CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [oregon11CampaignId]: createOregon11CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Six Grandfathers from its recorded global-unit unlock snapshot. */
+export function createBrowserGameForDakota02Replay(contentVersion: string | undefined) {
+  const parsed = parseDakota02ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, dakota02CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [dakota02CampaignId]: createDakota02CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 

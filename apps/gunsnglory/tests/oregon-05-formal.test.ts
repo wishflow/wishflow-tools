@@ -136,7 +136,7 @@ test('Dynamite Plains replay versions reject missing, malformed, cross-level, an
 });
 
 test('Dynamite Plains is formal level 25 after Fort Echo; Free Play cannot write campaign progress', async () => {
-  assert.equal(officialCampaignStages.length, 31);
+  assert.equal(officialCampaignStages.length, 32);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 25), {
     scenarioId: oregon05CampaignId,
     contentVersion: oregon05CampaignContentVersionFor([]),
