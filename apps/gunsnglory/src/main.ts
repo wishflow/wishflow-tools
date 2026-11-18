@@ -169,6 +169,10 @@ import { createDakota02CampaignContent } from './content/dakota-02-campaign';
 import { dakota02CampaignCopy } from './content/dakota-02-campaign-copy';
 import { dakota02CampaignPortraitAssets, dakota02WaveIntros } from './content/dakota-02-wave-intros';
 import { dakota02AmbientMusic, dakota02BattleMusicForWave, type Dakota02MusicTrack } from './content/dakota-02-music';
+import { dakota03CampaignId } from './content/dakota-03-identity';
+import { createDakota03CampaignContent } from './content/dakota-03-campaign';
+import { dakota03CampaignPortraitAssets, dakota03WaveIntros } from './content/dakota-03-wave-intros';
+import { dakota03AmbientMusic, dakota03BattleMusicForWave, type Dakota03MusicTrack } from './content/dakota-03-music';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -3953,6 +3957,7 @@ const assetNames = new Set([
     createOregon10CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createOregon11CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createDakota02CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
+    createDakota03CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
   ]),
   'pioneer_male',
   'pioneer_female',
@@ -4060,13 +4065,14 @@ const assetNames = new Set([
   ...oregon10CampaignPortraitAssets,
   ...oregon11CampaignPortraitAssets,
   ...dakota02CampaignPortraitAssets,
+  ...dakota03CampaignPortraitAssets,
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
 let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
 const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
-let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
 const blockedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let audioUserGestureObserved = false;
@@ -4250,7 +4256,8 @@ function isOfficialOregonMusicSession(): boolean {
 function isOfficialDakotaMusicSession(): boolean {
   return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
     && (session.startRecord.scenarioId === oregon11CampaignId
-      || session.startRecord.scenarioId === dakota02CampaignId);
+      || session.startRecord.scenarioId === dakota02CampaignId
+      || session.startRecord.scenarioId === dakota03CampaignId);
 }
 
 function isOfficialCampaignMusicSession(): boolean {
@@ -4291,12 +4298,14 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === oregon10CampaignId) return oregon10WaveIntros;
   if (scenarioId === oregon11CampaignId) return oregon11WaveIntros;
   if (scenarioId === dakota02CampaignId) return dakota02WaveIntros;
+  if (scenarioId === dakota03CampaignId) return dakota03WaveIntros;
   return [];
 }
 
 function isOfficialCampaignSession(): boolean {
   return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
-    && officialCampaignStages.some(({ scenarioId }) => scenarioId === session.startRecord.scenarioId);
+    && (session.startRecord.scenarioId === dakota03CampaignId
+      || officialCampaignStages.some(({ scenarioId }) => scenarioId === session.startRecord.scenarioId));
 }
 
 function removeAudioPlayer(
@@ -4449,7 +4458,7 @@ function pauseBackgroundMusic(resetPosition = false): void {
 }
 
 function setCampaignBackgroundMusic(
-  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack,
+  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack,
 ): void {
   if (!isOfficialCampaignMusicSession()) return;
   if (backgroundMusicTrack === track && backgroundMusic) {
@@ -4565,7 +4574,9 @@ function playRequestedSounds(
       setCampaignBackgroundMusic(isOfficialDakotaMusicSession()
         ? session.startRecord.scenarioId === dakota02CampaignId
           ? dakota02BattleMusicForWave(eventWaveNumber - 1)
-          : oregon11BattleMusicForWave(eventWaveNumber - 1)
+          : session.startRecord.scenarioId === dakota03CampaignId
+            ? dakota03BattleMusicForWave(eventWaveNumber - 1)
+            : oregon11BattleMusicForWave(eventWaveNumber - 1)
         : isOfficialMississippiMusicSession()
           ? mississippiBattleMusicForWave(eventWaveNumber - 1)
           : isOfficialOregonMusicSession()
@@ -4575,7 +4586,9 @@ function playRequestedSounds(
     if (event.type === 'wave-settled') {
       setCampaignBackgroundMusic(event.settlement.outcome === 'victory'
         ? cowGulchVictoryMusic
-        : isOfficialDakotaMusicSession() ? oregon11AmbientMusic
+        : isOfficialDakotaMusicSession() ? session.startRecord.scenarioId === dakota03CampaignId
+          ? dakota03AmbientMusic
+          : oregon11AmbientMusic
           : isOfficialMississippiMusicSession() ? mississippiAmbientMusic
             : isOfficialOregonMusicSession() ? oregon01AmbientMusic : cowGulchAmbientMusic);
     }
@@ -4623,7 +4636,9 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   if (isOfficialDakotaMusicSession()) {
     setCampaignBackgroundMusic(session.startRecord.scenarioId === dakota02CampaignId
       ? dakota02AmbientMusic
-      : oregon11AmbientMusic);
+      : session.startRecord.scenarioId === dakota03CampaignId
+        ? dakota03AmbientMusic
+        : oregon11AmbientMusic);
   }
   else if (isOfficialNewMexicoMusicSession()) setCampaignBackgroundMusic(cowGulchAmbientMusic);
   else if (isOfficialMississippiMusicSession()) setCampaignBackgroundMusic(mississippiAmbientMusic);

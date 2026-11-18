@@ -42,12 +42,9 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.td
 - **M34-C3a 已完成：**raw96–101、130–131 的61个新局招募 marker 已复用共享单位构造器；16种单位解锁快照中的坐标、类型、activity 4、唯一 ID 和贴图资源均通过 TDM 独立期望核对。真实 GameSession 确认未雇佣的 Gunslinger 阻挡移动；详见 `dakota-03-unit-entities.test.ts`。
 - **M34-C3b 已完成：**独立 pool-only Cannon 模板与 raw98 六个开局 Cannon 分离；两个 raw113 Fort 均登记为 type 2 出生场。Wave 1 的 SET 清空全部单位库存槽，SET_MAX 只开放 Cannon 池上限5。真实 GameSession 从地图雇佣 Cannon 后确认扣款、入池，并生成 activity 2 Cannon 到实际 Fort；刷新周期仍沿用共享网页15秒缺省，未记作 APK 数值。详见 `dakota-03-unit-pool.test.ts`。
 - **M34-C4 已完成：**逐字段接入 global level33 开局参数及十波、二十个敌方请求池；独立期望逐波核对请求计数、入口、间隔、倍率和 Boss/Doc 槽。真实 GameSession 确认首波 `$300`、25生命及19个待生成请求；隔离短会话确认第十波 request index 8 生成 Boss。Wave 1 Cannon 玩家池动作仍独立生效，未被敌方波次覆盖。详见 `dakota-03-campaign-rules.test.ts`。
+- **M34-C5 已完成：**标题/简介映射 `T_LEVEL_NAME_36`、`T_LEVEL_INFO_36` 和10段 `T_CAMPAIGN_33_01..10` 英文逐字匹配静态审计；中文对白与头像顺序已补齐。Dakota ambient/三曲循环复用现有映射；地图、单位和头像进入启动预载；unlock 快照内容版本可严格解析并直接重建同版本的地图、单位。5项专题测试、`pnpm run typecheck` 及生产构建通过，构建产物含本关独占头像、音乐和地图预览资源。资源测试首次误把贴图别名当物理文件名，已按 `gameAssetRelativePath()` 修正并记入经验记录。正式目录、菜单入口、browser replay factory 与真实回放恢复仍留给 M34-D。
 
-| 切片 | 内容与依赖 | 完成门槛与定向验证 |
-| --- | --- | --- |
-| **M34-C5 关卡文案与表现资源** | 接入中英标题/简介、十段双语对白与头像、Dakota 音乐映射、独占资源预载和关卡内容版本。依赖 C2a–C4 的场景及规则内容。 | APK 英文资源 key 与原文逐项匹配；中文翻译逐段存在；头像、音乐、地图预览、初始资源数与单关快照一致；独占资源构建后可加载且回放版本可重建。 |
-
-- **不包含：**正式关卡目录、菜单/Free Play、进度、回放恢复和全局计数属于 M34-D；仅在 C1–C5 全部通过后接线。
+- **不包含：**正式关卡目录、菜单/Free Play、进度、浏览器回放工厂接线和全局计数属于 M34-D；仅在 C1–C5 全部通过后接线。
 
 ### M34-D：正式目录、菜单、Free Play 与回放接线
 
