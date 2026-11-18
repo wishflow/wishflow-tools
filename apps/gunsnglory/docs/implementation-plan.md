@@ -37,13 +37,14 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.td
 - **范围：**依序完成下表中的独立切片。每项关卡期望均直接来自[Fort Knockout 静态审计](fort-knockout-static-audit.md)，不从 Dakota 前一关复制。
 - **依赖：**M34-A、M34-B 已通过；若切片发现共享地形转换回归，先修复并对既有关卡运行对应定向检查。
 - **M34-C1 已完成：**Fort Knockout 路线数据已接入。四条路线、135条相邻有向边、139个路线格和四个入口的首个 GameSession 转向均通过独立 APK 期望核对；详情见 `dakota-03-routes.test.ts` 与本关静态审计。此项不代表关卡已进入正式目录或可从菜单启动。
+- **M34-C2a 已完成：**Dakota03 静态装饰与 scene 已接入。raw69/70/71/76/94/95/113/116/117 逐格匹配 APK 资产和锚点；静态碰撞使用 TDM canonical box。真实 GameSession 移动探针核对 Fort、shack、大岩石、小 tipi 和铁路挡车器的阻挡边界，详见 `dakota-03-static-scene.test.ts`。
 
 | 切片 | 内容与依赖 | 完成门槛与定向验证 |
 | --- | --- | --- |
-| **M34-C2 场景与静态对象** | 新增 Dakota03 scene 与树、岩石、Fort、shack、tipi、trigger、dynamite、火车等静态 marker 映射；使用共享 TDM 碰撞模板。依赖 C1 与 M34-B。 | 按 marker 核对数量、坐标、类型、图集帧、锚点、层序和 APK 碰撞框；trigger/dynamite/建筑位置对象语义分开；场景对象 ID 唯一。短 GameSession 探测 Fort、shack、铁路/列车及障碍物的可走边界。 |
-| **M34-C3 初始招募单位与池模板** | 加入 raw96–101、130–131 的初始 activity 4 单位及锁定状态；给 Fort Cannon 配 pool-only 生成模板，不生成第七个开局 Cannon。依赖 C2 的 Fort 场景与现有可选 pool-template 契约。 | 61个候选 marker 的类型/坐标/状态/唯一 ID 与 TDM 闭合；已解锁和未解锁快照均符合 activity 4；六个地图 Cannon 与 pool-only Cannon 分别计数；睡眠单位碰撞按 APK 保留。短会话验证 Fort 招募入池并可生成 Cannon。 |
+| **M34-C2b 列车与炸药对象** | 接入 raw92/91 的一组竖列火车以及 raw102/110 Dynamite trigger/box；火车采用动态移动组，炸药沿用解锁门槛与现有 Dynamite contract。依赖 C2a。 | 火车为2个机车件+2节车厢，资源方向、activity、移动轴和唯一组 ID 与 APK marker 闭合；trigger 和 box 组成一个对应 pair，不当作静态装饰。定向检查锁定/解锁状态、碰撞与贴图。 |
+| **M34-C3 初始招募单位与池模板** | 加入 raw96–101、130–131 的初始 activity 4 单位及锁定状态；给 Fort Cannon 配 pool-only 生成模板，不生成第七个开局 Cannon。依赖 C2a 的 Fort 场景与现有可选 pool-template 契约。 | 61个候选 marker 的类型/坐标/状态/唯一 ID 与 TDM 闭合；已解锁和未解锁快照均符合 activity 4；六个地图 Cannon 与 pool-only Cannon 分别计数；睡眠单位碰撞按 APK 保留。短会话验证 Fort 招募入池并可生成 Cannon。 |
 | **M34-C4 关卡参数与波次规则** | 接入 global level33 参数、十波、二十个敌方请求调用及两项 Wave 1 单位池动作。依赖 C1 路线与 C3 池模板。 | 独立期望逐字段、逐波匹配静态审计；检查初始生命/现金、难度倍率、10波顺序和请求向量；短 GameSession 核对代表性首波、池动作及第十波 Boss 槽。请求向量不用于推断固定敌人出现顺序，不完整推进整关。 |
-| **M34-C5 关卡文案与表现资源** | 接入中英标题/简介、十段双语对白与头像、Dakota 音乐映射、独占资源预载和关卡内容版本。依赖 C2–C4 的场景及规则内容。 | APK 英文资源 key 与原文逐项匹配；中文翻译逐段存在；头像、音乐、地图预览、初始资源数与单关快照一致；独占资源构建后可加载且回放版本可重建。 |
+| **M34-C5 关卡文案与表现资源** | 接入中英标题/简介、十段双语对白与头像、Dakota 音乐映射、独占资源预载和关卡内容版本。依赖 C2a–C4 的场景及规则内容。 | APK 英文资源 key 与原文逐项匹配；中文翻译逐段存在；头像、音乐、地图预览、初始资源数与单关快照一致；独占资源构建后可加载且回放版本可重建。 |
 
 - **不包含：**正式关卡目录、菜单/Free Play、进度、回放恢复和全局计数属于 M34-D；仅在 C1–C5 全部通过后接线。
 
