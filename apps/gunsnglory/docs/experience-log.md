@@ -625,12 +625,14 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 
 ## 自动化暂停测试必须先确认战斗会话已就绪
 
-**状态：代码与完整本地检查已修复，远端 CI/线上验证待完成。**M32 发布候选的两次完整 Actions 都在同一条 Escape 暂停板断言失败；远端没有记录失败时的页面状态。
+**状态：根因仍未查明，发布未完成。**初次修复后，master 候选 `1cf4ade` 的 Actions `44231079917` 再次在同一条 Escape 暂停板断言失败；本地完整检查通过不等于远端失败已解决。
 
-- **表现与复现：**GitHub Actions `44221923581` 的 attempt 1、2 都在 `t29-campaign-menu.spec.ts` 中按 Escape 后找不到 `pause-board`；各次其余183项 E2E 通过。本地对该用例单跑并连续重复五次，共6/6通过。
-- **代码事实：**开发用 `?testBattle=1` 在 `assetLoadFailureNames` 非空或 `campaignProgressView` 未加载时不会调用 `replaceSession()` / `openCampaignStage()`，但仍调用 `showBattleScene()`。此时 `view.wave` 可以为空；`pauseBattleFromHud()` 对 `!view.wave` 会直接返回，所以页面外观在战斗区域、却没有可暂停会话。两次 Actions 的普通失败日志没有记录 `campaignProgressView`、`assetLoadFailureNames`、`view.wave`，因此不能据此断言远端测试进入了该分支。
-- **漏测点：**该 E2E 只等待 OverlayHost 隐藏，没在 Escape 前确认 Cow Gulch 会话和 Wave 1 已初始化；“没有弹窗”并不等于“战斗已经就绪”。本地复跑在正常初始化路径通过，也不能证明远端启动状态相同。
+- **表现与复现：**GitHub Actions `44221923581` 的 attempt 1、2 都在 `t29-campaign-menu.spec.ts` 中按 Escape 后找不到 `pause-board`；各次其余183项 E2E 通过。本地对该用例单跑并连续重复五次，共6/6通过。加入启动 fallback 和 Wave 1 前置断言后，Actions `44231079917` 仍在 `pause-board` 可见断言失败，其余184项通过；日志显示新增 `wave-status` 非空断言已通过。
+- **代码事实与假设边界：**开发用 `?testBattle=1` 曾在 `assetLoadFailureNames` 非空或 `campaignProgressView` 未加载时跳过会话初始化，却仍调用 `showBattleScene()`；此时 `view.wave` 可能为空，`pauseBattleFromHud()` 会因 `!view.wave` 返回。这是已发现且已修正的半初始化路径，但新 Actions 在 `wave-status` 非空前置断言通过后仍失败，所以它不能解释本次失败；也不能排除 `wave-status` 非空与当前有效、可暂停会话并非同一件事。远端没有记录其他页面/会话状态。
+- **漏测点：**原 E2E 只等待 OverlayHost 隐藏；首次补充后只断言 `wave-status` 非空。该文本不能单独证明 UI route 为 battle、会话状态为 running/ready，或 Escape 没有被浏览器/其他监听器拦截。Actions 当前没有上传 Playwright error-context 附件，失败日志也没有应用状态转储。
+- **本地诊断：**`t29-campaign-menu.spec.ts` 现在在首个 Escape 前后输出游戏 route、模拟状态、活动 overlay、波次文字、打开的 dialog、页面可见性、Fullscreen 状态和焦点；window capture 与 document bubble 两处记录 Escape target、`defaultPrevented` 及处理后的焦点。`CI=1 PLAYWRIGHT_PORT=43291 pnpm run test:e2e tests/e2e/t29-campaign-menu.spec.ts --workers=1 --repeat-each=3` 三次都得到 `battle/running`、页面可见、无活动 dialog；Escape 到达应用后 `defaultPrevented=true`，状态转为 `battle/paused` 且 `pause-board` 打开。随后 `CI=1 PLAYWRIGHT_PORT=43292 pnpm run test:ci` 通过类型检查、938项单测、生产构建及185项 E2E。该本地结果没有复现 Actions 失败，不能据此判断远端根因；需要远端新 run 的事件与页面状态。
 - **修复与防回归：**当档案已加载时，开发测试入口仍按原正式关卡流程打开 Cow Gulch；档案不可读时，通过现有 `requestScenarioOpen()` 与 `replaceSession()` 打开相同正式内容，不改正式菜单或战斗逻辑。`t29-campaign-menu.spec.ts` 现在在 Escape 前确认 `wave-status` 非空，并新增 IndexedDB 不可用时的启动/暂停回归。定向两项和完整 t29 文件7项 E2E、TypeScript 类型检查通过。
 - **完整本地检查：**`CI=1 PLAYWRIGHT_PORT=43173 pnpm run test:ci` 通过类型检查、938项单测、生产构建和185项 E2E，耗时约5.8分钟；保留既有 JS chunk 大于500KB提示。
-- **验证边界：**本地证明了“档案不可读”路径会创建 Wave 1 并能暂停，但没有拿到两次远端失败当时的档案/资源/wave 状态。因此修复覆盖了已发现的半初始化路径，不能说已证明它就是远端两次失败的原因；需等待修复提交后的完整 Actions 及部署结果。
-- **避免重复：**同一远端失败再次出现后，不要再以“单项本地通过”结案；先读取测试启动条件和实际 Wave 状态。若要进一步归因，需采集页面的 `data-ui-route`、`data-simulation-state`、波次状态、profile 错误和资源错误，而不是重复查看菜单截图或启动 Android。
+- **验证边界：**`CI=1 PLAYWRIGHT_PORT=43173 pnpm run test:ci` 在本地通过类型检查、938项单测、生产构建和185项 E2E；这只证明本地路径。修复后的 Actions `44231079917` 再次失败，部署 jobs 跳过。`gh api repos/wishflow/wishflow-tools/actions/runs/44231079917/artifacts` 返回 `total_count: 0`，没有可下载的远端 trace/error-context；当前没有部署 SHA 或线上验收结果。
+- **下一步诊断：**将该 E2E 与诊断输出推送并触发远端完整检查，先看失败的 before/after 状态与 key event phase，再对应核对 `pauseBattleFromHud()` 的 guard。若下一次 Actions 通过，仍保留失败断言及诊断，不据此声称原失败根因已确认；后续不再出现时按回归稳定性记录结论。不得重复检查菜单截图、启动 Android、统一延长超时或删掉暂停断言来代替定位。
+- **避免重复：**启动测试入口存在的潜在缺陷只能解释它实际满足的失败状态；后来观测不符合该状态时，必须撤销原假设而不是继续把它当成根因。单项本地通过和 `wave-status` 非空都不能代替远端失败点的状态证据。
