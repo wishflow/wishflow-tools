@@ -48,10 +48,16 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.td
 
 ### M34-D：正式目录、菜单、Free Play 与回放接线
 
-- **范围：**将 Fort Knockout 加入 Dakota 正式阶段目录与 Free Play；补齐菜单标题/说明、地图预览、战斗 HUD、结算与存档版本、回放快照/恢复、音乐、启动预加载和进度投影的全部消费者。
-- **依赖：**M34-C 的关卡内容可由真实 GameSession 创建。
-- **验收：**菜单选关和 Free Play 显示同一关卡身份与地图；Formal 受正常战役进度约束、Free Play 不写战役完成记录；档案驱动场景重建和新旧回放内容版本正确；新关所有独占图像/头像被预加载；进度总数、Dakota 可玩数及锁定边界一致。
-- **验证：**从真实菜单路径的 E2E、Free Play/正式进度隔离、回放往返、资源预载和目录快照测试。新增全局关卡前全仓搜索固定计数与禁用边界。
+**当前基线：**Level 33 已正式登记并接入浏览器菜单和可玩入口；Free Play 与正式关卡路径、档案结算和场景上下文均已通过 D1 定向检查。剩余工作从 Dakota03 的回放内容版本恢复开始；菜单入口已在 D1 E2E 中验证，最终整批 E2E 仍需回归。
+
+**M34-D1 已完成：**Fort Knockout 已登记为 Six Grandfathers 后的第33个正式关卡，27份固定阶段数断言已更新。Browser scenario 按存档中的单位解锁快照生成精确内容版本；Free Play 与正式模式均能从 Dakota 地图选择、查看双语简介/map36 预览并启动。菜单 E2E 首次发现 Level 33 场景上下文仍显示 `NEW MEXICO`：场景区域名使用手工列举关卡 ID 的分支，新增 Dakota03 时漏列。补入关卡映射后，Free Play 和正式路径的场景上下文均显示 Dakota；两条路径的开场对白、头像、HUD 和资源加载检查通过。正式模式完成 Dakota02 前锁定、完成后开放。验证：Fort Knockout 正式内容与 browser bootstrap 定向单测6项通过；受影响的阶段数/正式关卡测试98项通过；新增菜单 E2E 2项通过；TypeScript 类型检查通过。回放恢复仍由 D2 处理。
+
+| 切片 | 实施范围与依赖 | 可判定验收与定向验证 |
+| --- | --- | --- |
+| **M34-D2 浏览器回放恢复** | 在 `bootstrap/browser.ts` 增加 `createBrowserGameForDakota03Replay()`，在回放导入分派中用记录版本恢复 C5 unlock 快照。不得用导入者当前解锁状态覆盖记录快照。依赖已完成 D1、C5。 | 空快照/全解锁快照版本严格对应单位 marker；合法版本可还原同一 `ScenarioContent` 并通过真实 `Game.replay()` 的回放校验入口；缺失/损坏版本返回该关的 content-unavailable 路径，不静默套用 profile。运行 Dakota03 replay 单测和 browser bootstrap 定向测试。 |
+| **M34-D3 最终菜单与整批 E2E** | D1 的 `t72-dakota-03-integration.spec.ts` 已覆盖 Free Play 和正式解锁/启动路径。D2 完成后复核回放导入分派，再运行本关 E2E 和受影响的 `t29`、`t31`；只修复有证据的集成差异，不重做已通过菜单流程。依赖 D1、D2。 | 保留 Free Play → Dakota → Fort Knockout 的地图、双语简介、开场对白、HUD 和无资源错误检查；正式模式在 Dakota02 完成前锁定、之后开放；回放按记录的解锁快照恢复；自由模式结果不改档案。默认窗口、静音，不完整通关。 |
+
+- **不包含：**其他 Dakota 关卡内容与完整战役通关。正式/自由模式结算隔离由短 GameSession 断言，不用长时间手动战斗替代。
 
 ### M34-E：批次收尾与发布判断
 
