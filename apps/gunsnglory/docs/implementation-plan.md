@@ -34,16 +34,17 @@ Fort Knockout 是 Dakota 第 3 关、全局第 33 关，对应 APK `td_map_36.td
 
 ### M34-C：接入地图、路线、对象和规则数据
 
-- **范围：**依序完成下表中的独立切片。每项关卡期望均直接来自[Fort Knockout 静态审计](fort-knockout-static-audit.md)，不从 Dakota 前一关复制。
+- **范围：**依序完成下表中的独立切片。每项关卡期望均直接来自[Fort Knockout 静态审计](fort-knockout-static-audit.md)，不从 Dakota 前一关复制。C3a 先闭合地图 marker 到新局单位；C3b 再接池模板、出生场和 Wave 1 玩家池动作。两项均通过后才接入 C4 的敌方波次。
 - **依赖：**M34-A、M34-B 已通过；若切片发现共享地形转换回归，先修复并对既有关卡运行对应定向检查。
 - **M34-C1 已完成：**Fort Knockout 路线数据已接入。四条路线、135条相邻有向边、139个路线格和四个入口的首个 GameSession 转向均通过独立 APK 期望核对；详情见 `dakota-03-routes.test.ts` 与本关静态审计。此项不代表关卡已进入正式目录或可从菜单启动。
 - **M34-C2a 已完成：**Dakota03 静态装饰与 scene 已接入。raw69/70/71/76/94/95/113/116/117 逐格匹配 APK 资产和锚点；静态碰撞使用 TDM canonical box。真实 GameSession 移动探针核对 Fort、shack、大岩石、小 tipi 和铁路挡车器的阻挡边界，详见 `dakota-03-static-scene.test.ts`。
+- **M34-C2b 已完成：**raw92/raw91 生成一组竖列火车（两节 wagon、两段 locomotive），与 APK 的 cell 顺序、activity、资产帧和单一 movement group 一致；GameSession 已验证列车实体阻挡。raw102/raw110 生成 trigger/box pair `(16,5)` + `(15,6)`，level20 或30完成后才显示并登记两个对象碰撞框。详见 `dakota-03-map-entities.test.ts`。
 
 | 切片 | 内容与依赖 | 完成门槛与定向验证 |
 | --- | --- | --- |
-| **M34-C2b 列车与炸药对象** | 接入 raw92/91 的一组竖列火车以及 raw102/110 Dynamite trigger/box；火车采用动态移动组，炸药沿用解锁门槛与现有 Dynamite contract。依赖 C2a。 | 火车为2个机车件+2节车厢，资源方向、activity、移动轴和唯一组 ID 与 APK marker 闭合；trigger 和 box 组成一个对应 pair，不当作静态装饰。定向检查锁定/解锁状态、碰撞与贴图。 |
-| **M34-C3 初始招募单位与池模板** | 加入 raw96–101、130–131 的初始 activity 4 单位及锁定状态；给 Fort Cannon 配 pool-only 生成模板，不生成第七个开局 Cannon。依赖 C2a 的 Fort 场景与现有可选 pool-template 契约。 | 61个候选 marker 的类型/坐标/状态/唯一 ID 与 TDM 闭合；已解锁和未解锁快照均符合 activity 4；六个地图 Cannon 与 pool-only Cannon 分别计数；睡眠单位碰撞按 APK 保留。短会话验证 Fort 招募入池并可生成 Cannon。 |
-| **M34-C4 关卡参数与波次规则** | 接入 global level33 参数、十波、二十个敌方请求调用及两项 Wave 1 单位池动作。依赖 C1 路线与 C3 池模板。 | 独立期望逐字段、逐波匹配静态审计；检查初始生命/现金、难度倍率、10波顺序和请求向量；短 GameSession 核对代表性首波、池动作及第十波 Boss 槽。请求向量不用于推断固定敌人出现顺序，不完整推进整关。 |
+| **M34-C3a 初始招募单位** | 复用 `createCampaignMapUnitPlacements()` 与既有 New Mexico/Fort 单位构造器，为 raw96–101、130–131 生成 Fort Knockout 的新局对象；通过当前四位解锁快照控制 Sniper、Grandpa、Pyromaniac、Salesman marker。锁定 marker 的显示/省略行为遵循共享构造器，不新造锁图标或关卡规则。 | 独立从 TDM 逐点比对59个 raw96–101 和2个 raw130/131 marker 的数量、坐标、类型、activity、资源及唯一 ID；覆盖四个解锁位的16种组合：1–4类基础单位照常存在，受门槛单位仅在解锁后生成且仍为 activity 4。全解锁场景中确认单位碰撞框实际进入 GameSession，至少验证一个未雇佣单位阻挡移动。运行 `tests/dakota-03-unit-entities.test.ts` 与类型检查。 |
+| **M34-C3b Fort Cannon 池模板** | 复用 `CampaignSpawnPoolDefinition.template`，给 Cannon 的 Fort 池提供独立生成模板；将模板与 raw98 的六个地图 Cannon 分离。用 TDM raw113 的两个 Fort 位置作为 `spawnLocationType: 2` 出生场，并按 level33 Wave 1 动作设置四池清零及 Cannon 池上限5。 | 独立期望确认六个初始 Cannon、两个 Fort 出生点和一个 pool-only 模板分别计数；模板不出现在初始 `ScenarioContent.units`。真实 GameSession 从地图雇佣 Cannon，核对入池、池上限和 Fort 出生位置/生成 Cannon 类型；不完整推进关卡。运行 `tests/dakota-03-unit-pool.test.ts` 与类型检查。 |
+| **M34-C4 关卡参数与波次规则** | 接入 global level33 参数与十波、二十个敌方请求调用；复核 C3b 已接入的 Wave 1 玩家池动作不被敌方波次装配覆盖。依赖 C1 路线与 C3b 池定义。 | 独立期望逐字段、逐波匹配静态审计；检查初始生命/现金、难度倍率、10波顺序和请求向量；短 GameSession 核对代表性首波、Wave 1 池动作及第十波 Boss 槽。请求向量不用于推断固定敌人出现顺序，不完整推进整关。 |
 | **M34-C5 关卡文案与表现资源** | 接入中英标题/简介、十段双语对白与头像、Dakota 音乐映射、独占资源预载和关卡内容版本。依赖 C2a–C4 的场景及规则内容。 | APK 英文资源 key 与原文逐项匹配；中文翻译逐段存在；头像、音乐、地图预览、初始资源数与单关快照一致；独占资源构建后可加载且回放版本可重建。 |
 
 - **不包含：**正式关卡目录、菜单/Free Play、进度、回放恢复和全局计数属于 M34-D；仅在 C1–C5 全部通过后接线。
