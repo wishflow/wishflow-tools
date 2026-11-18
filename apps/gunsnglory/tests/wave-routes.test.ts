@@ -19,6 +19,7 @@ import {
   mississippi19LevelNineteenCampaignContent,
   mississippi20LevelTwentyCampaignContent,
   murdockMountainsLevelSixCampaignContent,
+  oregon11LevelThirtyOneCampaignContent,
   oregon01LevelTwentyOneCampaignContent,
   oregon02LevelTwentyTwoCampaignContent,
   oregon03LevelTwentyThreeCampaignContent,
@@ -69,6 +70,7 @@ const officialScenarios: readonly ScenarioContent[] = [
   oregon06LevelTwentySixCampaignContent,
   oregon07LevelTwentySevenCampaignContent,
   oregon08LevelTwentyEightCampaignContent,
+  oregon11LevelThirtyOneCampaignContent,
 ];
 
 function cellKey(cell: { x: number; y: number }): string {
@@ -91,7 +93,7 @@ function sortedRedirects(redirects: readonly WaveRedirect[]) {
   return redirects.map(({ cell, directions }) => `${cellKey(cell)}:${directions.join('/')}`).sort();
 }
 
-test('all 28 campaign maps consume every APK action-2 marker and direction', () => {
+test('all 29 campaign maps consume every APK action-2 marker and direction', () => {
   for (const scenario of officialScenarios) {
     const preview = scenario.previewWave;
     assert.ok(preview, `${scenario.id} has a preview wave`);

@@ -1,0 +1,120 @@
+{
+  "source": "APK-derived static-route-graph.json map index 34; unique directed edges transcribed from the audited TDM edge table",
+  "resource": "res/raw/td_map_34.tdm",
+  "dimensions": [
+    32,
+    24
+  ],
+  "spawns": [
+    {
+      "actionId": 0,
+      "cell": [
+        13,
+        23
+      ],
+      "direction": [
+        0,
+        -1
+      ],
+      "firstControlCell": [
+        13,
+        20
+      ],
+      "spawnPointId": 2
+    },
+    {
+      "actionId": 1,
+      "cell": [
+        31,
+        21
+      ],
+      "direction": [
+        -1,
+        0
+      ],
+      "firstControlCell": [
+        28,
+        21
+      ],
+      "spawnPointId": 1
+    },
+    {
+      "actionId": 2,
+      "cell": [
+        31,
+        3
+      ],
+      "direction": [
+        -1,
+        0
+      ],
+      "firstControlCell": [
+        25,
+        3
+      ],
+      "spawnPointId": 0
+    }
+  ],
+  "edges": [
+    "10,1:west->0,1",
+    "11,10:west->7,10",
+    "11,11:north->11,10",
+    "11,1:west->10,1",
+    "11,2:north->11,1",
+    "11,2:west->0,2",
+    "11,4:north->11,2",
+    "13,20:east->15,20",
+    "13,23:north->13,20",
+    "14,11:west->11,11",
+    "14,8:south->14,11",
+    "15,10:south->15,11",
+    "15,11:west->14,11",
+    "15,16:east->18,16",
+    "15,20:north->15,16",
+    "15,4:west->11,4",
+    "15,7:north->15,4",
+    "15,7:south->15,8",
+    "15,8:west->14,8",
+    "15,9:south->15,10",
+    "16,8:south->16,9",
+    "16,9:west->15,9",
+    "18,10:west->15,10",
+    "18,13:east->20,13",
+    "18,13:north->18,10",
+    "18,16:north->18,13",
+    "20,10:north->20,9",
+    "20,10:west->18,10",
+    "20,12:east->21,12",
+    "20,12:north->20,10",
+    "20,13:north->20,12",
+    "20,5:south->20,7",
+    "20,7:west->15,7",
+    "20,8:north->20,7",
+    "20,8:west->16,8",
+    "20,9:north->20,8",
+    "20,9:west->16,9",
+    "21,10:west->20,10",
+    "21,12:north->21,10",
+    "22,12:north->22,9",
+    "22,12:west->21,12",
+    "22,9:west->20,9",
+    "25,12:west->22,12",
+    "25,18:north->25,12",
+    "25,3:south->25,5",
+    "25,5:west->20,5",
+    "28,18:west->25,18",
+    "28,21:north->28,18",
+    "3,12:north->3,9",
+    "3,9:west->0,9",
+    "31,21:west->28,21",
+    "31,3:west->25,3",
+    "7,10:south->7,12",
+    "7,12:west->3,12"
+  ],
+  "summary": {
+    "spawnCount": 3,
+    "redirectCount": 43,
+    "exitCount": 3,
+    "edgeCount": 54
+  }
+}

@@ -88,6 +88,9 @@ import { oregon09CampaignId } from './oregon-09-identity';
 import { createOregon10CampaignContent } from './oregon-10-campaign';
 import { oregon10CampaignCopy } from './oregon-10-campaign-copy';
 import { oregon10CampaignId } from './oregon-10-identity';
+import { createOregon11CampaignContent } from './oregon-11-campaign';
+import { oregon11CampaignCopy } from './oregon-11-campaign-copy';
+import { oregon11CampaignId } from './oregon-11-identity';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -194,6 +197,7 @@ export const oregon07LevelTwentySevenCampaignContent = createOregon07CampaignCon
 export const oregon08LevelTwentyEightCampaignContent = createOregon08CampaignContent();
 export const oregon09LevelTwentyNineCampaignContent = createOregon09CampaignContent();
 export const oregon10LevelThirtyCampaignContent = createOregon10CampaignContent();
+export const oregon11LevelThirtyOneCampaignContent = createOregon11CampaignContent();
 
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
@@ -375,4 +379,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: { en: `${oregon10CampaignCopy.title.en} · Level 30`, zh: `${oregon10CampaignCopy.title.zh} · 第 30 关` },
   globalLevel: 30,
   requiresCompletedScenarioIds: [oregon09CampaignId],
+}, {
+  scenarioId: oregon11CampaignId,
+  contentVersion: oregon11LevelThirtyOneCampaignContent.contentVersion!,
+  title: { en: `${oregon11CampaignCopy.title.en} · Level 31`, zh: `${oregon11CampaignCopy.title.zh} · 第 31 关` },
+  globalLevel: 31,
+  requiresCompletedScenarioIds: [oregon10CampaignId],
 }]);
