@@ -6236,8 +6236,11 @@ if (testBattleStart) {
   showBattleScene();
   if (assetLoadFailureNames.length === 0 && testRecruitStart) {
     await replaceSession(requestScenarioOpen(recruitConfirmationUiSampleContent.id, 'debug'));
-  } else if (assetLoadFailureNames.length === 0 && campaignProgressView) {
-    await openCampaignStage(cowGulchLevelOneContent.id);
+  } else if (assetLoadFailureNames.length === 0) {
+    const opened = campaignProgressView
+      ? await openCampaignStage(cowGulchLevelOneContent.id)
+      : await replaceSession(requestScenarioOpen(cowGulchLevelOneContent.id, 'formal', 'easy'));
+    if (opened) showBattleScene();
   }
 } else {
   showCampaignMenu('home');

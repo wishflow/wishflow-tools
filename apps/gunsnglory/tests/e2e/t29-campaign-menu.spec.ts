@@ -300,6 +300,7 @@ test('Escape returns through menu panels and opens the original pause board from
   const waveIntro = page.getByTestId('campaign-wave-intro');
   if (await waveIntro.isVisible()) await waveIntro.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByTestId('overlay-host')).toBeHidden();
+  await expect(page.getByTestId('wave-status')).not.toBeEmpty();
   await page.keyboard.press('Escape');
   const pauseBoard = page.getByTestId('pause-board');
   await expect(pauseBoard).toBeVisible();
@@ -308,6 +309,19 @@ test('Escape returns through menu panels and opens the original pause board from
   await expect(pauseBoard).toBeVisible();
   await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
   await page.getByTestId('pause-continue').click();
+});
+
+test('the test battle opens Cow Gulch when the saved profile cannot be read', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'indexedDB', { configurable: true, value: undefined });
+  });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/?testBattle=1');
+
+  await expect(page.getByTestId('wave-status')).not.toBeEmpty();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('pause-board')).toBeVisible();
+  await expect(page.locator('.game-frame')).toHaveAttribute('data-simulation-state', 'paused');
 });
 
 test('keeps Options and the external simulation speed usable on a narrow phone with the site language', async ({ page }) => {

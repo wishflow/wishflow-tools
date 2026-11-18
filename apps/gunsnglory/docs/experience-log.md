@@ -622,3 +622,15 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **修复与防回归：**将完整 Snake River 场景内容交给启动收集器；扩展 `oregon-09-wave-intros.test.ts`，同时核对场景/装饰/单位图片被收集且对应资源文件存在。新增关卡应分别检查目录、地图预览、`GameSession` 内容、回放工厂和启动图片收集器，不能因为 builder 可生成就假定所有消费点已接通。
 
 - **整批验证与发布：**`CI=1 PLAYWRIGHT_PORT=4180 pnpm run test:ci` 通过类型检查、892 项单测、生产构建和180项 E2E。发布提交 `9fbb26a48c6d75143aaa469ce249f70f18bc3684` 的 GitHub Actions `44023162078` 成功，GitHub Pages 与 Cloudflare Pages 来源 SHA 均匹配。内置浏览器窗口模式、静音验证 Free Play → Oregon → Snake River → 中等难度 → 首波对白与地图；390×844 窄屏画布为约 16:9，页面无横向溢出。没有完整通关、进入全屏或播放音效。
+
+## 自动化暂停测试必须先确认战斗会话已就绪
+
+**状态：代码与完整本地检查已修复，远端 CI/线上验证待完成。**M32 发布候选的两次完整 Actions 都在同一条 Escape 暂停板断言失败；远端没有记录失败时的页面状态。
+
+- **表现与复现：**GitHub Actions `44221923581` 的 attempt 1、2 都在 `t29-campaign-menu.spec.ts` 中按 Escape 后找不到 `pause-board`；各次其余183项 E2E 通过。本地对该用例单跑并连续重复五次，共6/6通过。
+- **代码事实：**开发用 `?testBattle=1` 在 `assetLoadFailureNames` 非空或 `campaignProgressView` 未加载时不会调用 `replaceSession()` / `openCampaignStage()`，但仍调用 `showBattleScene()`。此时 `view.wave` 可以为空；`pauseBattleFromHud()` 对 `!view.wave` 会直接返回，所以页面外观在战斗区域、却没有可暂停会话。两次 Actions 的普通失败日志没有记录 `campaignProgressView`、`assetLoadFailureNames`、`view.wave`，因此不能据此断言远端测试进入了该分支。
+- **漏测点：**该 E2E 只等待 OverlayHost 隐藏，没在 Escape 前确认 Cow Gulch 会话和 Wave 1 已初始化；“没有弹窗”并不等于“战斗已经就绪”。本地复跑在正常初始化路径通过，也不能证明远端启动状态相同。
+- **修复与防回归：**当档案已加载时，开发测试入口仍按原正式关卡流程打开 Cow Gulch；档案不可读时，通过现有 `requestScenarioOpen()` 与 `replaceSession()` 打开相同正式内容，不改正式菜单或战斗逻辑。`t29-campaign-menu.spec.ts` 现在在 Escape 前确认 `wave-status` 非空，并新增 IndexedDB 不可用时的启动/暂停回归。定向两项和完整 t29 文件7项 E2E、TypeScript 类型检查通过。
+- **完整本地检查：**`CI=1 PLAYWRIGHT_PORT=43173 pnpm run test:ci` 通过类型检查、938项单测、生产构建和185项 E2E，耗时约5.8分钟；保留既有 JS chunk 大于500KB提示。
+- **验证边界：**本地证明了“档案不可读”路径会创建 Wave 1 并能暂停，但没有拿到两次远端失败当时的档案/资源/wave 状态。因此修复覆盖了已发现的半初始化路径，不能说已证明它就是远端两次失败的原因；需等待修复提交后的完整 Actions 及部署结果。
+- **避免重复：**同一远端失败再次出现后，不要再以“单项本地通过”结案；先读取测试启动条件和实际 Wave 状态。若要进一步归因，需采集页面的 `data-ui-route`、`data-simulation-state`、波次状态、profile 错误和资源错误，而不是重复查看菜单截图或启动 Android。
