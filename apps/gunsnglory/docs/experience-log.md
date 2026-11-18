@@ -525,6 +525,8 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **根因与证据：**`officialCampaignStages` 已正确登记 Steam Valley 为 global level 12、以前置 `campaign-mississippi-11` 解锁；失败来自测试仍硬编码 11 项，与关卡注册或 Progress 运行逻辑无关。
 - **修复与防回归：**加入正式关卡时同步更新目录快照、Progress 初态和结算后的状态数组；本次仅补入第 12 关及 locked 状态，三个文件的 29 项定向测试通过。每次登记正式关卡后，搜索完整 `officialCampaignStages` 列表、globalLevel、解锁前置、结算后状态数组及进度文案；不要为了迎合旧快照改动正确的进度逻辑。
 
+**M33 复现：**登记 Dakota 第32关后，首次完整 `test:ci` 的187项 E2E 中有6项只因 `campaign-progress-summary` 仍断言 `*/31 stages complete` 而失败，实际目录及页面正确显示 `/32`。失败分布在 `t20`、`t22`、`t25`、`t28`、`t33` 五个 spec；单测阶段已通过，M33 新关入口 E2E 也通过。根因是检查只更新了目录快照和新增关卡用例，没有在首次失败后用全仓 `rg` 搜索所有摘要字符串。5个 spec 的6条期望现已更新为32，五个 spec 共11项定向 E2E 全部通过；随后完整 `CI=1 PLAYWRIGHT_PORT=43363 pnpm run test:ci` 通过类型检查、959项单测、生产构建和187项 E2E。以后先搜索精确的 `stages complete` 文案，再运行完整 E2E；只检查单测和新关卡入口会漏掉跨批次旧用例。
+
 ### 新正式关卡要同步更新目录快照、E2E 与 Free Play 可用性
 
 - **M24 复现：**新增 global level 23 后，第二次完整 `test:ci` 中 6 项 E2E 仍断言战役摘要总数为 22；另 1 项 Oregon Free Play 测试仍将已实现的 level 23 判为禁用。
@@ -586,6 +588,15 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **漏测点：**初步计划和旧摘要没有与本关参数数组、TDM 字节及 Smali 调用顺序做独立交叉核验；把相邻关卡或已生成摘要当作当前地图事实。
 - **防回归：**每关单独建立 `campaign level ↔ TDM index ↔ 参数数组 index ↔ wave 分支` 映射；参数从目标 index 读取，地图对象从目标 TDM 计数，波次按 Smali 调用实际顺序还原寄存器。旧摘要仅作为检索线索，不能覆盖 APK 原始数据。未知参数语义继续标未知，不因非零字段或相邻地图对象推断玩法。统计波次数时只数目标 level 条件分支内的调用，并分别计数 `newWave`、`addToWave` 和玩家池动作；M31-C2 初稿沿用此前提取摘要中的23次请求数，直接核对 map33 的 Smali 分支后确认是20次 `addToWave` 与2次池动作，已在实现前更正。
 - **相邻关卡参数复核：**Loot Lakes 实施前，初步上下文摘要把 map33（`level == 30`）与 map34（`level == 31`）的玩家池上限串成同一组。REA 对完整 `GameDesignWaves.setWaves` 条件分支确认：map33 为 `[6,6,6,6]`，map34 为 `[2,2,0,0]`；两关清空库存的 `SET` 调用相同，但 `SET_MAX` 参数不同。该草稿错误在改代码前被发现，M31 实现、审计和测试没有缺陷。后续引用历史摘要时必须回到准确的 level 条件分支，不能因为调用结构相似就复用邻关参数。
+- **单个对象行必须与 TDM 频次和坐标表闭合：**Six Grandfathers 的静态审计表误记 raw `109@(13,1)` 为活动 Grandpa；同一报告的 raw marker 频次表并没有 `109`，且该坐标的 TDM 实际为 raw `32`。APK TDM fixture 与派生网格一致，错误发生在报告转录/汇总，没有证据表明 DEX 对象构造分析错误。M33-C 测试在实现前发现矛盾，现已删除虚构对象。新地图审计的每个对象行必须同时满足：目标 TDM 的 marker 频次、全部坐标、对象构造/activity 分支三者一致；汇总频次和原始字节要能反向覆盖表格的每一行。
+
+
+## 新关卡波次统计必须核对目标分支
+
+- **表现与复现：**Six Grandfathers 的前置批次摘要把 `GameDesignWaves.setWaves()` 中的 `addToWave` 调用数写成12。
+- **根因与证据：**APK 反解析没有漏掉调用；错误来自读取压缩后的上下文摘要时未重数完整 `i == 32` 分支。REA 当前返回的完整分支和独立 `waves.json` 都含13条调用（Wave 1–8 分别有1、1、1、1、2、3、3、1条），原来的分组摘要少算了一条。关卡内容表和实现计划现以13为准。
+- **漏测点：**曾用波次数及整理后的摘要估算请求总数，没有核对分支中的实际调用数，也没有用另一个派生清单交叉计数。
+- **防回归：**每关分别数目标分支的 `newWave`、`addToWave` 和池动作；按各波汇总请求条数后与 DEX/REA 分支及派生表双向对照。压缩摘要只作定位线索，不作计数事实；自动化测试固定波次数、总请求数、分波数和每条参数。
 
 ## 固定随机种子说明必须由完整地形指令验证
 
@@ -625,14 +636,14 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 
 ## 自动化暂停测试必须先确认战斗会话已就绪
 
-**状态：根因仍未查明，发布未完成。**初次修复后，master 候选 `1cf4ade` 的 Actions `44231079917` 再次在同一条 Escape 暂停板断言失败；本地完整检查通过不等于远端失败已解决。
+**状态：M32 已发布并完成线上验收；此前间歇性失败的历史根因仍未查明。**诊断版发布提交 `a14edaa47058a379459e58374828ad7b8f2265d9` 的 Actions `44236563151` 全部相关检查与 Pages 部署成功；远端诊断用例通过并记录到正常的 Escape→暂停板状态流。该成功运行没有解释先前两次失败当时的现场。
 
 - **表现与复现：**GitHub Actions `44221923581` 的 attempt 1、2 都在 `t29-campaign-menu.spec.ts` 中按 Escape 后找不到 `pause-board`；各次其余183项 E2E 通过。本地对该用例单跑并连续重复五次，共6/6通过。加入启动 fallback 和 Wave 1 前置断言后，Actions `44231079917` 仍在 `pause-board` 可见断言失败，其余184项通过；日志显示新增 `wave-status` 非空断言已通过。
-- **代码事实与假设边界：**开发用 `?testBattle=1` 曾在 `assetLoadFailureNames` 非空或 `campaignProgressView` 未加载时跳过会话初始化，却仍调用 `showBattleScene()`；此时 `view.wave` 可能为空，`pauseBattleFromHud()` 会因 `!view.wave` 返回。这是已发现且已修正的半初始化路径，但新 Actions 在 `wave-status` 非空前置断言通过后仍失败，所以它不能解释本次失败；也不能排除 `wave-status` 非空与当前有效、可暂停会话并非同一件事。远端没有记录其他页面/会话状态。
+- **代码事实与假设边界：**开发用 `?testBattle=1` 曾在 `assetLoadFailureNames` 非空或 `campaignProgressView` 未加载时跳过会话初始化，却仍调用 `showBattleScene()`；此时 `view.wave` 可能为空，`pauseBattleFromHud()` 会因 `!view.wave` 返回。这是已发现且已修正的半初始化路径，但新 Actions 在 `wave-status` 非空前置断言通过后仍失败，所以它不能解释本次失败；也不能排除 `wave-status` 非空与当前有效、可暂停会话并非同一件事。该失败 run 没有记录其他页面/会话状态。
 - **漏测点：**原 E2E 只等待 OverlayHost 隐藏；首次补充后只断言 `wave-status` 非空。该文本不能单独证明 UI route 为 battle、会话状态为 running/ready，或 Escape 没有被浏览器/其他监听器拦截。Actions 当前没有上传 Playwright error-context 附件，失败日志也没有应用状态转储。
 - **本地诊断：**`t29-campaign-menu.spec.ts` 现在在首个 Escape 前后输出游戏 route、模拟状态、活动 overlay、波次文字、打开的 dialog、页面可见性、Fullscreen 状态和焦点；window capture 与 document bubble 两处记录 Escape target、`defaultPrevented` 及处理后的焦点。`CI=1 PLAYWRIGHT_PORT=43291 pnpm run test:e2e tests/e2e/t29-campaign-menu.spec.ts --workers=1 --repeat-each=3` 三次都得到 `battle/running`、页面可见、无活动 dialog；Escape 到达应用后 `defaultPrevented=true`，状态转为 `battle/paused` 且 `pause-board` 打开。随后 `CI=1 PLAYWRIGHT_PORT=43292 pnpm run test:ci` 通过类型检查、938项单测、生产构建及185项 E2E。该本地结果没有复现 Actions 失败，不能据此判断远端根因；需要远端新 run 的事件与页面状态。
 - **修复与防回归：**当档案已加载时，开发测试入口仍按原正式关卡流程打开 Cow Gulch；档案不可读时，通过现有 `requestScenarioOpen()` 与 `replaceSession()` 打开相同正式内容，不改正式菜单或战斗逻辑。`t29-campaign-menu.spec.ts` 现在在 Escape 前确认 `wave-status` 非空，并新增 IndexedDB 不可用时的启动/暂停回归。定向两项和完整 t29 文件7项 E2E、TypeScript 类型检查通过。
 - **完整本地检查：**`CI=1 PLAYWRIGHT_PORT=43173 pnpm run test:ci` 通过类型检查、938项单测、生产构建和185项 E2E，耗时约5.8分钟；保留既有 JS chunk 大于500KB提示。
-- **验证边界：**`CI=1 PLAYWRIGHT_PORT=43173 pnpm run test:ci` 在本地通过类型检查、938项单测、生产构建和185项 E2E；这只证明本地路径。修复后的 Actions `44231079917` 再次失败，部署 jobs 跳过。`gh api repos/wishflow/wishflow-tools/actions/runs/44231079917/artifacts` 返回 `total_count: 0`，没有可下载的远端 trace/error-context；当前没有部署 SHA 或线上验收结果。
-- **下一步诊断：**将该 E2E 与诊断输出推送并触发远端完整检查，先看失败的 before/after 状态与 key event phase，再对应核对 `pauseBattleFromHud()` 的 guard。若下一次 Actions 通过，仍保留失败断言及诊断，不据此声称原失败根因已确认；后续不再出现时按回归稳定性记录结论。不得重复检查菜单截图、启动 Android、统一延长超时或删掉暂停断言来代替定位。
+- **远端诊断与发布验收：**此前失败的 Actions `44221923581`、`44231079917` 没有上传 trace/error-context，无法还原失败现场。诊断版 Actions `44236563151` 的远端 E2E 通过，日志记录首次 Escape 前 route=`battle`、simulation=`running`、Wave 1/8、文档可见、无活动 dialog；window capture 时 `defaultPrevented=false`，应用处理后的 document bubble 时为 `true`、焦点是 `pause-continue`；随后 simulation=`paused`、active overlay=`pause-board`。这是一次成功运行的观测，不证明旧失败根因已确定。该 Actions 的应用测试、共享检查和两处 Pages 部署均成功；GitHub Pages 与 Cloudflare Pages 根 `build-info.json` 均返回来源 SHA `a14edaa47058a379459e58374828ad7b8f2265d9`。内置浏览器静音、窗口模式进入 Free Play → Dakota → Loot Lakes → Medium，确认开场对白与地图；未手动通关、未进入全屏或播放音频。
+- **结论与防回归：**保留失败时的状态与按键阶段诊断、有效会话前置断言和暂停板可见断言；下一次若复现，先比较失败 run 与本次成功 run 的页面、会话、焦点和事件日志。不要把一次通过写成旧失败已找到原因，也不要重复检查菜单截图、启动 Android、统一延长超时或删掉暂停断言来代替定位。
 - **避免重复：**启动测试入口存在的潜在缺陷只能解释它实际满足的失败状态；后来观测不符合该状态时，必须撤销原假设而不是继续把它当成根因。单项本地通过和 `wave-status` 非空都不能代替远端失败点的状态证据。

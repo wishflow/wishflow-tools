@@ -35,7 +35,7 @@ async function settleWithoutBattle(session: Awaited<ReturnType<ReturnType<typeof
 
 test('Loot Lakes is the gated 31st official stage after Lumber Mill Hills', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === oregon11CampaignId);
-  assert.equal(officialCampaignStages.length, 31);
+  assert.equal(officialCampaignStages.length, 32);
   assert.deepEqual(stage, {
     scenarioId: oregon11CampaignId,
     contentVersion: oregon11CampaignContentVersionFor([]),
