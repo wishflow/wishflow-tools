@@ -114,3 +114,68 @@ test('formal Fort Knockout stays locked until Six Grandfathers is complete', asy
   await page.getByTestId('campaign-difficulty-medium').click();
   await expectFortKnockoutOpening(page, 'DAKOTA · 33');
 });
+
+test('replay import resolves Fort Knockout from its recorded hire snapshot', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  await keepSoundOff(page);
+  await writeCompletedProfile(page, []);
+  await page.reload();
+  await keepSoundOff(page);
+
+  const serialized = await page.evaluate(async () => {
+    const loadModule = (specifier: string) => import(specifier);
+    const [bootstrap, replay, identity, unlocks] = await Promise.all([
+      loadModule('/src/bootstrap/browser.ts') as Promise<typeof import('../../src/bootstrap/browser')>,
+      loadModule('/src/game/replay.ts') as Promise<typeof import('../../src/game/replay')>,
+      loadModule('/src/content/dakota-03-identity.ts') as Promise<typeof import('../../src/content/dakota-03-identity')>,
+      loadModule('/src/content/mississippi-unit-unlocks.ts') as Promise<typeof import('../../src/content/mississippi-unit-unlocks')>,
+    ]);
+    const recordedCompletedScenarios = unlocks.completedScenarioIdsForMississippiUnitUnlockSnapshot({
+      grandpa: true,
+      sniper: false,
+      pyromaniac: true,
+      salesman: false,
+    });
+    const scenarioId = identity.dakota03CampaignId;
+    const contentVersion = bootstrap.getBrowserScenarioContentVersion(scenarioId, recordedCompletedScenarios);
+    if (!contentVersion) throw new Error('Fort Knockout replay content version is unavailable');
+    const session = await bootstrap.createBrowserGameForDakota03Replay(contentVersion).open({
+      scenarioId,
+      contentVersion,
+      mode: 'free',
+      difficulty: 'easy',
+      randomSeed: 33_021,
+    });
+    try {
+      const initialDigest = await replay.replayStateDigest(replay.captureReplayState(session.observe()));
+      const mismatch = `sha256:${'0'.repeat(64)}`;
+      return replay.serializeReplay({
+        formatVersion: replay.GAME_REPLAY_FORMAT_VERSION,
+        rulesVersion: replay.GAME_RULES_VERSION,
+        startRecord: session.startRecord,
+        frames: [{ frame: 1, deltaMs: 0, tileSizePixels: 32, intents: [] }],
+        checkpoints: [
+          { frame: 0, stateDigest: initialDigest },
+          { frame: 1, stateDigest: mismatch },
+        ],
+        terminal: {
+          frame: 1,
+          settlement: { outcome: 'victory', scoreBase: 0, displayScore: 0, highScoreCandidate: 0 },
+          stateDigest: mismatch,
+        },
+      });
+    } finally {
+      session.close();
+    }
+  });
+
+  await page.getByTestId('import-replay').setInputFiles({
+    name: 'fort-knockout-snapshot-routing.replay.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(serialized),
+  });
+  await expect(page.getByTestId('replay-status')).toHaveText(
+    'Replay verification failed: a checkpoint or result differs.',
+  );
+});

@@ -29,6 +29,7 @@ import {
   createBrowserGameForOregon10Replay,
   createBrowserGameForOregon11Replay,
   createBrowserGameForDakota02Replay,
+  createBrowserGameForDakota03Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -5113,6 +5114,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === dakota02CampaignId) {
       return createBrowserGameForDakota02Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === dakota03CampaignId) {
+      return createBrowserGameForDakota03Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }
