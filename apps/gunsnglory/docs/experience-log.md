@@ -482,6 +482,14 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **修复与验证：**将 `dakota03CampaignId` 纳入 Dakota 上下文映射；`t72-dakota-03-integration.spec.ts` 同时启动 Free Play 和正式模式，断言场景上下文分别为 `FREE PLAY · DAKOTA · 33` 和 `DAKOTA · 33`，并检查 Level 32 门槛、开场对白、头像与资源加载。两项 E2E 通过。
 - **防回归：**新增正式关卡时，除了目录、browser factory、菜单标题和预览，还要沿实际启动链检查 scene title、region context、difficulty、wave intro 与资源加载；若 UI 派生值使用 ID 手工枚举，必须将新关卡纳入对应分支并由菜单 E2E 断言。
 
+### 新增正式关卡要检索完整阶段快照与显示计数
+
+- **表现与复现：**注册 Fort Knockout 后，单测第一次完整运行有4项失败。阶段数量断言已从32改为33，但全关卡依赖列表、全阶段进度状态快照仍遗漏末尾的 Dakota03；菜单 E2E 也仍断言 `0/32`、`1/32` 等旧总数。
+- **根因与漏测：**更新时只检索了 `officialCampaignStages.length`，没有检索所有把正式目录完整投影成数组的 `deepEqual` 断言，也没有搜索由进度 UI 输出的固定总数。失败分别出现在 `apache-valley.test.ts`、`fort-kaboom-formal.test.ts`、`content.test.ts`、`progress.test.ts` 及 `t20`、`t22`、`t25`、`t28`、`t33` E2E。
+- **修复与验证：**四份单测加入 Level 33 及其 `campaign-dakota-02` 前置条件/锁定状态；五份 E2E 总数断言改为33。四个受影响单测文件合计41项通过。完整 `test:ci` 最终通过类型检查、989项单测、生产构建和190项 E2E。
+- **收尾复核：**完整 E2E 首次运行中，188 项通过、2 项失败；失败是 `t70`、`t71` 的 Dakota Free Play 区域可玩数仍期待2，Level 33 接入后正确值为3。定向复跑这两个 spec 的4项通过后，完整回归全部通过。地区可玩数也是正式关卡目录的消费者，不能只搜索战役总数与进度分母。生产构建仍报告约3.77 MB 的主 JS chunk 超过 Vite 500 KB 提示阈值；这是既有构建警告，本批未调整拆包。
+- **防回归：**新增正式阶段时，搜索并核对 `officialCampaignStages` 的长度、完整阶段投影、进度状态顺序、固定进度 UI 总数和地图菜单可用数。只改数量断言不算目录变更验收完成。
+
 ## 地形图层不能只画 tile 的表面标记
 
 **状态：**Railroad Ranch 静态地形切片已修正并通过定向检查。

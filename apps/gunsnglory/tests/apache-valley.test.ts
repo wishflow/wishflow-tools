@@ -235,6 +235,7 @@ test('official Apache Valley content exposes its six source wave schedules and u
     ['campaign-oregon-10', ['campaign-oregon-09']],
     ['campaign-oregon-11', ['campaign-oregon-10']],
     ['campaign-dakota-02', ['campaign-oregon-11']],
+    ['campaign-dakota-03', ['campaign-dakota-02']],
   ]);
 });
 
