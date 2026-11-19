@@ -74,15 +74,48 @@
 - **定向验证：**新规则、波次、玩家池测试共6项；加 Dakota 05 同契约及共享玩家池回归共21项通过；`pnpm run typecheck` 通过。短 `GameSession` 验证 Wave 1 action 1 的 spawn point 与首个敌人事件、Wave 9 Boss 请求槽；没有推进完整关卡。
 - **未证实边界：**APK 未提供或尚未确认本关 `SpawnPoolManager` 全局派发间隔，沿用现有网页15秒默认并在代码中标注为非 APK 结论。Dynamite 与单位解锁快照的完整回放导入接线留到 G4。
 
-### G4：关卡内容工厂、回放、菜单与表现资源
+### G4：关卡内容工厂、目录接入、表现与回放
 
-- **范围：**在 G1–G3 内容闭环后组合 Ice Rocks 场景；登记 Dakota 第6关/Level 36；接通正式前置解锁、Free Play 全难度、档案驱动内容版本和回放重建。加入原版英文标题/简介/九段对白、中文翻译、头像预载及 Dakota 音乐选择。
-- **验收：**正式模式需满足 Level 35 前置，Free Play 可直接进入；地图预览和战斗内容均为 map39，不落入邻关兜底。对白资源、头像、地区与关卡 HUD、音乐资源选择及回放 unlock snapshot 都指向 level36；完整关卡结算语义只影响正式档案。声音保持关闭，仅核对音乐引用与文件存在性。
-- **针对性验证：**builder/版本快照/资源清单单测；菜单真实入口的 Free Play 与 formal 前置 E2E；导入回放按录制快照重建单位。未验证消费者不得由目录登记推定为已完成。
+**静态依据：**所有关卡专属值、资源与编号关系以[Ice Rocks 静态审计](ice-rocks-static-audit.md)和 APK 原始条目为准。不得把 global level 36、TDM 39、参数 index 35、对白编号 36 混为同一索引；邻关只提供已经确认的共享机制。`campaign-catalog.ts` 已有 Level 36 的 Ice Rocks 展示记录，本批需接入正式阶段及各实际消费点，不重复登记目录行。
+
+消费点依赖关系：
+
+```text
+G4-A 内容版本快照与 ScenarioContent 工厂
+ ├─ G4-B 正式阶段、Free Play/正式菜单与档案驱动开局
+ ├─ G4-C 标题/简介、对白/头像、HUD、音乐及启动预载
+ └─ G4-D 回放版本解析与录制快照重建
+G4-B、G4-C、G4-D 全部通过后 → G5 批次验收
+```
+
+#### G4-A：内容工厂与开局快照
+
+- **范围：**新增 Ice Rocks 的 identity、content-version 与正式 `ScenarioContent` builder；组合 G1–G3 的 map39 场景、单位、Dynamite、规则、波次和玩家池。按静态审计，不创建本关没有 marker 的列车、蒸汽船、赌场或奖励箱。快照包含四个全局招募单位解锁位及 Dynamite 解锁位；正式/自由新局都由传入的 `completedScenarioIds` 生成一致的版本与内容。
+- **依据与边界：**照用已审计的 Dakota 共享规则；单位解锁位按具名字段，Dynamite 按现有 Level 20/30 里程碑函数计算。不得将网页默认池间隔或其他未证实字段伪装为 APK 专属事实；内容版本只编码会改变初始场景的状态。
+- **验收：**覆盖 `16 × 2 = 32` 个单位/Dynamite 快照组合，断言版本生成—解析往返、规范版本拒绝、最终初始单位集合和 Dynamite 状态一致；builder 输出正式结算能力、地图 ID、9 波、16 个敌人请求及玩家池契约。使用真实 Ice Rocks 场景创建 `GameSession`，确保 G1–G3 内容可以开局且单位/对象 ID 唯一。
+- **定向验证：**新增 `dakota-06-content-version` 与 `dakota-06-campaign` 单测；运行相关 Ice Rocks 的单位、Dynamite、规则、波次和玩家池测试及 `pnpm run typecheck`。不接页面、不测试回放导入，也不推进完整关卡。
+
+#### G4-B：正式阶段、Free Play 与菜单开局
+
+- **范围：**将 Level 36 加入 `officialCampaignStages`，要求 `campaign-dakota-05`（Ghost Town）完成；复用 `campaign-catalog.ts` 已有 Level 36 行。接通菜单标题/简介/缩略图与 map39 预览、Dakota 地区/Level 36 HUD、正式/Free Play 开局、难度选择和基于当前档案的场景 builder；正式结算保持现有 Progress 语义。
+- **验收：**从真实菜单验证 Free Play 可直接选择 Ice Rocks 且三档难度可进；正式模式在 Ghost Town 未完成时不可进，完成后可进。进入后场景 ID、内容版本、地图/缩略图、HUD、开局数值均对应 Ice Rocks。对至少一种与默认测试档案不同的全局解锁档案，确认页面选择的 builder 和 `GameSession.open` 使用同一快照。
+- **定向验证：**正式目录/Progress 与菜单状态单测；真实菜单路径 E2E 覆盖 Free Play、正式锁定与解锁、档案驱动开局以及中文/英文名称。不得用静态目录存在或直接调用 builder 代替菜单路径验收。
+
+#### G4-C：双语表现、HUD 与媒体预载
+
+- **范围：**按 `ICE-COPY` 接入 APK 英文标题/简介及九段对白原文，补充中文翻译和九个头像映射；将 Ice Rocks 接入 Dakota HUD 区域标签、对白选择、启动图片预载、环境音乐与逐波音乐选择。音乐沿用 Dakota 共用资源；不发明本关独立曲目或语音。
+- **验收：**九段对白顺序、resource ID、speaker、portrait 与独立审计表一致；中英文均能显示。正式与 Free Play 的标题、地区和 Level 36 HUD 正确；地图、单位、头像等图像以及音乐文件离线可读取。音频保持静音，只核对选择函数和资源文件，不播放试听。
+- **定向验证：**copy/presentation 单测核对 APK 原文、翻译、头像和音乐映射及文件存在；E2E 从菜单进入并检查开场对白、头像实际加载、地图无资源错误及 HUD。检查所有 `main.ts` 资源收集与音乐消费者，不由单测常量存在推断页面已接线。
+
+#### G4-D：回放导入按录制快照重建
+
+- **范围：**注册 Ice Rocks 内容版本解析器和 replay game factory；主页面导入路由识别 `campaign-dakota-06`，依据回放记录中的四个单位解锁位和 Dynamite 位重建内容，不读取导入者当前档案。未知、缺失或非规范版本按现有回放错误路径拒绝，不能静默回退到邻关或默认档案场景。
+- **验收：**用录制快照与导入档案刻意不同的有效 Ice Rocks 回放，验证真实导入入口重建的单位集合、Dynamite 状态及回放状态与录制内容一致；32 个快照分别通过版本 round-trip。未知版本不启动错误关卡；正式完成进度仍只由正式结算写入，自由模式与回放不污染 Progress。
+- **定向验证：**扩展 `dakota-06-replay-content.test.ts` 覆盖 factory、真实 replay 导入分发、跨档案差异和拒绝路径；必要时复用已完成结算的有效 replay fixture，不为验证导入而手动通关整关。同步覆盖 `getBrowserScenarioContentVersion`、`createBrowserGame` 与 `main.ts` 导入分支。
 
 ### G5：本地批次验收
 
-- **范围：**G2-A–G2-C、G3 和 G4 各切片先运行定向检查并本地提交；最后运行一次 `pnpm run test:ci` 与 `pnpm test:catalog`，修复失败后重跑受影响项目和最终完整检查。
+- **范围：**G4-A–G4-D 各切片先跑针对性检查并本地提交；全部通过后运行一次 `pnpm run test:ci` 与 `pnpm test:catalog`。若失败，修复后重跑失败项和最终完整检查。
 - **验收：**桌面内置浏览器窗口模式、静音，从菜单进入 Ice Rocks，核对关卡身份、地图、对白、HUD与首波状态；不进入全屏、不播放音频、不通关。公开集成与发布遵循应用批次规则；当前轮只做本地开发，不推送或发布。
 - **交付边界：**若静态证据和真实 `GameSession` 足以回答，不启动 Android；仅在出现一个静态证据无法解释的具体行为时，才制定最小运行观察。
 
