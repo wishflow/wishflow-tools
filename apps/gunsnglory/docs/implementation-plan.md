@@ -34,7 +34,7 @@
 
 ## M38：Dakota 第 7 关 Frost Station
 
-**当前状态：G1 地图/路线、G2 实体/列车已完成；G3–G5 尚未开始。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
+**当前状态：G1 地图/路线、G2 实体/列车、G3 参数/波次/对白均已完成；G4–G5 尚未开始。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
 
 **依赖：**M36 Ghost Town 与 M37 Ice Rocks 已完成的 Dakota 地形、路线、单位、列车、正式/自由模式、回放和页面框架。M36–M37 仍是本地完成、未发布状态；M38 完成后统一复核三关批次是否一起集成发布，不为单个切片发版。
 
@@ -58,11 +58,10 @@ G4 → G5 批次检查与发布决策
 - **结果：**raw69/70/75 及 raw86/87 均映射到 APK 资源与 TDM 碰撞框；47个 raw96–101 睡眠招募单位按全局里程碑门控，raw130/131 解锁单位坐标和唯一 ID 正确。四组水平列车各包含两台机车和三节车厢，按原有共享移动/碰撞规则构造。未添加 TDM 中不存在的炸药、Steamer 或玩家 spawn pool。
 - **验证：**`dakota-07-entities.test.ts` 和 `dakota-07-trains.test.ts` 共7项通过；GameSession 检查睡眠 Gunslinger/Mexican 阻挡、列车整组移动与 raw87 端缓冲阻挡、raw82 铁路覆盖层通行和列车对玩家的阻挡。`pnpm run typecheck` 通过。
 
-### G3：参数、八波、对白与头像
+### G3：参数、八波、对白与头像（已完成）
 
-- **实现范围：**接入 GameDesignData index36 的12项、`i == 37` 的8个 wave header 和18条 `addToWave` 请求；接入8段英文资源原文、中文翻译、portrait、Dakota 共用音乐选择。不得创建敌人波次以外的玩家 spawn pool。
-- **验收基线：**原始参数 `[350,25,999,25000,3,30000,5,15,56,75,110,118000]` 逐项匹配；难度 HP 为56/75/110%。断言波次数、请求总数、每波请求数、action/间隔、八个普通请求槽、Boss/Doc 槽和 portrait 顺序；第8波仅有一个 Boss 请求，没有 Doc。对30000ms/5两个字段只保存有证据支持的字段语义，不推断未确认效果。
-- **针对性验证：**新增 `dakota-07-campaign-rules.test.ts`、`dakota-07-campaign-waves.test.ts`、`dakota-07-campaign-presentation.test.ts`。静态期望独立于生产数据；短 `GameSession` 核对实际 action→spawnPoint、代表性波次配置和 Wave 8 Boss 类型，不以完整通关验证请求向量；中英文对白/portrait与离线资源存在性逐项断言。运行相关 spec 与 `pnpm run typecheck`。
+- **结果：**接入 GameDesignData index36 的12项参数、`i == 37` 的8个 wave header 与18条敌人请求、8段英文资源原文及中文翻译、portrait 和 Dakota 共用音乐选择。四个 action 均映射到本图 TDM 出生点；Wave 8 请求一个 Boss、Doc 请求为0。未创建玩家 spawn pool；未对30000ms、5等字段推断未知效果。
+- **验证：**`dakota-07-campaign-rules.test.ts`、`dakota-07-campaign-waves.test.ts`、`dakota-07-campaign-presentation.test.ts` 共7项通过；短 GameSession 验证四个 action 的实际出生映射及 Wave 8 Boss；参数通过 Easy/Medium/Hard 开局检查。`pnpm run typecheck` 通过。音频只核对离线资源和轨道选择，未播放。
 
 ### G4：内容快照、目录消费者、正式/自由入口与回放
 
