@@ -24,9 +24,9 @@
 
 #### G2-B：新局可招募单位与解锁状态
 
-- **范围：**实现 raw96–101 六类普通单位及 raw130 Pyromaniac；遵守已审 Smali 的新局/读档分支，按地图访问与全局单位解锁状态分别决定是否实例化及睡眠/活动状态。
-- **验收：**每个 TDM marker 位置只投影到正确单位类型和唯一 ID；解锁前的睡眠单位仍有原版碰撞，解锁后的活动贴图脚底与 `positionFine` 对齐；无 marker 时不凭资源存在创建单位；读档分支不把新局 marker 再次实例化。
-- **验证：**覆盖全解锁位组合的 marker→单位投影测试；至少用真实 Ghost Town `ScenarioContent` 的 `GameSession` 验证一个睡眠单位、一个活动单位、Pyromaniac 门槛和地图碰撞。JADX 伪代码不覆盖 Smali 条件跳转证据。
+- **范围：**实现 raw96–101 六类普通单位及 raw130 Pyromaniac；遵守已审 Smali 的新局/读档分支，按全局单位解锁分别决定是否实例化。实际创建的这些 TDM marker 全部为 activity 4；raw96–99 常驻为睡眠招募对象，raw100/101/130 未解锁时不创建。关卡入口访问仍由目录单独控制。
+- **验收：**16种全局解锁快照下，raw96–99 始终按原坐标创建 activity 4，raw100/101/130 仅在各自解锁后创建 activity 4；所有单位类型、唯一 ID、睡眠/醒来贴图锚点和碰撞均对应 APK；不创建 activity 5 单位，也不凭资源存在合成 marker；读档分支不把新局 marker 再次实例化。
+- **验证：**覆盖全部16种解锁快照的 marker→单位投影测试；至少用真实 Ghost Town `ScenarioContent` 的 `GameSession` 验证常驻睡眠单位、解锁后特殊睡眠单位的碰撞及 Pyromaniac 门槛。JADX 伪代码不覆盖 Smali 条件跳转证据。
 
 #### G2-C：水平列车组与轨道边界
 
