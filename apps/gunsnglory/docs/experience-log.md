@@ -53,6 +53,7 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **根因与漏测：**`campaignMenuOverviewScreen()`、`campaignMenuLevelScreen()`、`renderStatus()`、`isOfficialOregonMusicSession()` 和 `replaceSession()` 是彼此独立的消费点。Fort Echo 的 builder、路线、波次、进度规则测试只覆盖内容层，因此无法发现网页入口仍缺少 level 24 分支；此前 Oregon E2E 又把关卡 24 预期为未实现。
 - **修复与防回归：**为 Fort Echo 补齐菜单双语标题/简介、map27 预览 builder、战斗说明、Oregon 地区标签、档案快照驱动的场景重建，以及复用 Oregon 曲目的识别分支。`t63-oregon-04-integration.spec.ts` 从真实菜单路径检查 Free Play 可玩数量、map27 关卡图与缩略图尺寸、双语文案、Fort Echo 的地区/关卡上下文及首波对白头像。测试拦截媒体 `load()` 记录环境音乐资源地址；音效保持关闭，不加载或播放声音。
 - **避免重复：**新增关卡不能以“目录和 Progress 已登记”作为 UI 集成完成标准。逐项搜索消费 `CampaignCatalog` / `officialCampaignStages` 的页面路由、标题/说明、缩略图 builder、HUD 分类、场景重建、音乐和 replay 工厂；至少从菜单实际进入新关卡，并验证预览身份、开局 ID/地区/波次。目录已有静态地图图并不能证明预览使用了正确的 `ScenarioContent`。
+- **Ghost Town 再次验证：**G4-B 已接通目录、菜单和新局，但对白选择、Dakota 音乐识别、头像预载及 replay snapshot factory 仍是 `main.ts` / `bootstrap/browser.ts` 中互不自动联动的消费者。G4-C 接入后，`dakota-05-campaign-presentation.test.ts` 检查对白、音乐和预载路由，`dakota-05-replay-content.test.ts` 比较16种录制解锁快照与导入场景单位；t74 E2E 从菜单验证首段对白、头像实际加载和 HUD 地区/关卡上下文。新关验收应使用消费点矩阵逐项关单，不能把“菜单可进”推及到其他页面消费者。
 
 ## DEX 伪代码分支与路线优先级复核
 

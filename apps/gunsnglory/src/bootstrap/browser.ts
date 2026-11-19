@@ -179,8 +179,11 @@ import {
   parseDakota04ReplayContentVersion,
 } from '../content/dakota-04-content-version';
 import { dakota04CampaignId } from '../content/dakota-04-identity';
-import { createDakota05CampaignContent } from '../content/dakota-05-campaign';
-import { dakota05CampaignContentVersionFor } from '../content/dakota-05-content-version';
+import { createDakota05CampaignContent, createDakota05CampaignContentFromSnapshot } from '../content/dakota-05-campaign';
+import {
+  dakota05CampaignContentVersionFor,
+  parseDakota05ReplayContentVersion,
+} from '../content/dakota-05-content-version';
 import { dakota05CampaignId } from '../content/dakota-05-identity';
 import {
   newMexicoCampaignContentVersionFor,
@@ -699,6 +702,15 @@ export function createBrowserGameForDakota04Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, dakota04CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [dakota04CampaignId]: createDakota04CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Ghost Town from its recorded global-unit unlock snapshot. */
+export function createBrowserGameForDakota05Replay(contentVersion: string | undefined) {
+  const parsed = parseDakota05ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, dakota05CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [dakota05CampaignId]: createDakota05CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 

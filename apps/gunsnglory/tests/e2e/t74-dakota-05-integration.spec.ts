@@ -69,6 +69,16 @@ test('Free Play opens Ghost Town with map38 and all three difficulties', async (
   await expect(page.getByTestId('campaign-difficulty-medium')).toBeEnabled();
   await expect(page.getByTestId('campaign-difficulty-hard')).toBeEnabled();
   await page.getByTestId('campaign-difficulty-medium').click();
+  await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
+  await expect(page.getByTestId('campaign-wave-intro-wave')).toHaveText('Wave 1 of 9');
+  await expect(page.getByTestId('campaign-wave-intro-text')).toHaveText(
+    '“Boss, I\'m scared… They say that Ghost Town is haunted!”',
+  );
+  const introPortrait = page.getByTestId('campaign-wave-intro-portrait');
+  await expect(introPortrait).toHaveAttribute('src', /portrait_mexican\.png/);
+  await expect.poll(() => introPortrait.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.getByTestId('scene-context')).toHaveText('FREE PLAY · DAKOTA · 35');
+  await page.locator('[data-action="continue-wave-intro"]').click();
   await expect(page.getByTestId('wave-status')).toContainText('Wave 1/9');
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
   await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');

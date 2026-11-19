@@ -80,3 +80,15 @@ test('Ghost Town music maps to bundled Dakota tracks and cycles by wave index', 
     assert.equal(bytes.toString('ascii', 0, 4), 'OggS', `${track} is bundled as Ogg audio`);
   }
 });
+
+test('Ghost Town presentation data is connected to the browser HUD, dialogue, music and preload consumers', () => {
+  const mainSource = readFileSync(fileURLToPath(new URL('../src/main.ts', import.meta.url)), 'utf8');
+  const browserSource = readFileSync(fileURLToPath(new URL('../src/bootstrap/browser.ts', import.meta.url)), 'utf8');
+
+  assert.match(mainSource, /\.\.\.dakota05CampaignPortraitAssets,/);
+  assert.match(mainSource, /if \(scenarioId === dakota05CampaignId\) return dakota05WaveIntros;/);
+  assert.match(mainSource, /session\.startRecord\.scenarioId === dakota05CampaignId\s*\? dakota05BattleMusicForWave/);
+  assert.match(mainSource, /session\.startRecord\.scenarioId === dakota05CampaignId\s*\? dakota05AmbientMusic/);
+  assert.match(mainSource, /createBrowserGameForDakota05Replay\(/);
+  assert.match(browserSource, /createDakota05CampaignContentFromSnapshot\(parsed\.snapshot\)/);
+});
