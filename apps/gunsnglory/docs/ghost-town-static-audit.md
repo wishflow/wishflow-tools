@@ -160,6 +160,12 @@ GameDesignData.<clinit> 中 index34 对应数组 array_910。原始12项为 [300
 
 setWaves(i == 35) 中共有9个 newWave、19个 addToWave 和2个 addActionForSpawnPool。玩家池动作均在第1波：action 1 将第1池四种普通单位计数清零；action 3 把这四种单位的库存上限设为7。末波500毫秒间隔来自 LokSteam.MAX_CLOUD_SPAWN_INTERVAL 的常量消费者；第6波 action 2 的3000毫秒来自 PathInterpolatorCompat.MAX_NUM_POINTS = 0xbb8，不是按名字猜测的值。
 
+### 玩家单位生成池
+
+第1波的两项池操作分别把当前库存槽设为 `[0,0,0,0]`，再把库存上限设为 `[7,7,7,7]`。APK 的 pool type 与可接受建筑类型对应为：1 Gunslinger → Saloon；2 Mexican → Saloon；3 Cannon → Fort；4 Indian → Tipi。TDM 中对应的生成建筑为 Saloon raw112 `(24,15)`、Fort raw113 `(7,15)`、Tipi raw114 `(29,21)`。原始 pool type 是 SpawnPoolManager 的单位库存槽，建筑类型是 GameObjectSpawnLocation 的类型；不能与地图上 raw96–101/130 的初始休眠招募单位混为一类。招募地图单位后，池系统另行把对应单位计入库存并从匹配建筑生成后备单位。依据为 `GT-WAVES` 的池操作/消费分支及 `GT-OBJECTS` 的地图建筑/生成位置构造分支。
+
+APK 分析未确认 Ghost Town 专属的 pool 全局派发间隔；网页内容暂沿用现有 15 秒契约，只作为实现默认值，不作为原版精确数值。
+
 ## 英文文案、头像与音乐
 
 | 资源 | APK 原文 |
