@@ -34,7 +34,7 @@
 
 ## M38：Dakota 第 7 关 Frost Station
 
-**当前状态：G1 地图与路线已完成；G2–G5 尚未开始。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
+**当前状态：G1 地图/路线、G2 实体/列车已完成；G3–G5 尚未开始。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
 
 **依赖：**M36 Ghost Town 与 M37 Ice Rocks 已完成的 Dakota 地形、路线、单位、列车、正式/自由模式、回放和页面框架。M36–M37 仍是本地完成、未发布状态；M38 完成后统一复核三关批次是否一起集成发布，不为单个切片发版。
 
@@ -53,11 +53,10 @@ G4 → G5 批次检查与发布决策
 - **结果：**保存原始 TDM fixture，新增 Frost Station 地图数据、Dakota 场景碰撞适配、独立路线图 fixture 与4个 action→spawnPoint 映射。原始格网、768条背景命令、131条街道命令、图集裁切、最终碰撞码、48条控制边、7条完整路线及396次道路格访问均与 APK 派生期望一致；访问格包括 raw81 铁路覆盖路面。
 - **验证：**`node --import tsx --test --test-reporter=spec tests/dakota-07-map-and-routes.test.ts` 通过3项；`pnpm run typecheck` 通过。只验证静态派生数据与网页实现，不声称复现 Android 时间随机种子的逐次贴图；未启动 Android。对象、波次和菜单留在后续切片。
 
-### G2：装饰、睡眠单位与四组列车
+### G2：装饰、睡眠单位与四组列车（已完成）
 
-- **实现范围：**接入 raw69/70/75 岩石和水塔；raw96–101六类睡眠招募单位及 raw130/131 Pyromaniac/Salesman 解锁单位；按 TDM 创建4组两机车、三车厢的水平列车。raw83/84 与 raw86/87 的列车、缓冲器碰撞按现有共享 APK 几何实现。M38 没有炸药、Steamer 或玩家 spawn pool marker，禁止补造。
-- **验收基线：**raw69=6、raw70=7、raw75=4，水塔映射到 `b_1x1_watertower`；raw96–101共47个 marker；raw130/131各1个并受各自全局里程碑控制。四组列车分别位于 TDM 第1、7、13、21行，每组恰有2个引擎和3节车厢，单位 ID 唯一、移动间距稳定、成员不与自身碰撞；原始 TDM 与最终 `ScenarioContent.units` 逐 marker 对照。
-- **针对性验证：**新增 `dakota-07-entities.test.ts` 和 `dakota-07-trains.test.ts`。至少覆盖两类睡眠单位阻挡、特殊招募单位全锁/解锁状态、静态岩石/水塔 TDM 碰撞框、4组列车部件/贴图/资源、玩家跨铁路覆盖层、列车移动及端缓冲阻挡；运行相关新 spec 与 `pnpm run typecheck`。
+- **结果：**raw69/70/75 及 raw86/87 均映射到 APK 资源与 TDM 碰撞框；47个 raw96–101 睡眠招募单位按全局里程碑门控，raw130/131 解锁单位坐标和唯一 ID 正确。四组水平列车各包含两台机车和三节车厢，按原有共享移动/碰撞规则构造。未添加 TDM 中不存在的炸药、Steamer 或玩家 spawn pool。
+- **验证：**`dakota-07-entities.test.ts` 和 `dakota-07-trains.test.ts` 共7项通过；GameSession 检查睡眠 Gunslinger/Mexican 阻挡、列车整组移动与 raw87 端缓冲阻挡、raw82 铁路覆盖层通行和列车对玩家的阻挡。`pnpm run typecheck` 通过。
 
 ### G3：参数、八波、对白与头像
 
