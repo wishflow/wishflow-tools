@@ -119,10 +119,11 @@ G4-B、G4-C、G4-D 全部通过后 → G5 批次验收
 
 ### G5：本地批次验收
 
-- **当前状态：**首轮完整检查发现 `tests/content.test.ts` 的 Cow Gulch 全目录断言只列到 Level 35；已将 Dakota 06 的 Level 36 独立期望补齐。`content.test.ts`、`dakota-06-formal.test.ts`、`progress.test.ts` 定向单测共30项通过，类型检查通过。
-- **范围：**G4-A–G4-D 各切片均已针对性验收并本地提交；现在重跑一次 `pnpm run test:ci` 与 `pnpm test:catalog`。若失败，修复后重跑失败项和最终完整检查。
-- **验收：**桌面内置浏览器窗口模式、静音，从菜单进入 Ice Rocks，核对关卡身份、地图、对白、HUD与首波状态；不进入全屏、不播放音频、不通关。公开集成与发布遵循应用批次规则；当前轮只做本地开发，不推送或发布。
-- **交付边界：**若静态证据和真实 `GameSession` 足以回答，不启动 Android；仅在出现一个静态证据无法解释的具体行为时，才制定最小运行观察。
+- **状态：本地验收完成；本批不推送或发布。**首轮完整检查发现 `tests/content.test.ts` 的 Cow Gulch 全目录断言只列到 Level 35；已补入 Dakota 06 的 Level 36 独立期望。定向 `content.test.ts`、`dakota-06-formal.test.ts`、`progress.test.ts` 共30项通过。
+- **完整检查：**`CI=1 PLAYWRIGHT_PORT=4198 pnpm run test:ci` 通过类型检查、1084项单测、生产构建和197项 E2E；`pnpm test:catalog` 通过18项。生产构建保留约4.1 MB 主 JS chunk 体积提示。
+- **内置浏览器：**本地窗口模式、静音，从主菜单进入 Free Play → Dakota → Ice Rocks → Medium，确认 Level 36 身份、首波对话与头像、地图、HUD、缩放和全屏控件；关闭对白后战场正常显示。没有进入全屏、播放音频或通关。
+- **本地批次范围：**G4-A–G4-D 各切片均已针对性验收并本地提交；M37 在当前分支完成本地验证。本轮不 push、不 squash、不合并、不发布。
+- **交付边界：**静态 APK 证据和真实 `GameSession` 已能回答本批问题，没有启动 Android；全屏与音频未作验收。
 
 ## 发布比例
 
