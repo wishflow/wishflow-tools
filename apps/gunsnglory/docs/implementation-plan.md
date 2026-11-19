@@ -23,6 +23,7 @@
 
 - **依赖：**M35-B1、静态场景、M35-B2、M35-C、M35-D1–D3 全部关闭并分别本地提交。
 - **本地门槛：**修复当前批次已发现失败；运行 Guns’n’Glory 完整 pnpm run test:ci 与适用的共享 catalog 检查。先确认测试进程来自当前 worktree；完整检查在批次收尾运行，不在每个切片后重复。
+- **当前检查状态：**首次 `test:ci` 在单测阶段发现3份旧的完整阶段快照漏列 level34（Apache Valley 依赖链、Fort Kaboom 全目录投影、Progress 初始/结算状态）；已补齐，相关31项定向单测、18项正式关卡/内容单测、2项 T73 E2E 与类型检查通过。最终完整 `test:ci` 尚待重跑。
 - **发布门槛：**将 M35 完整批次以一个 squash commit 集成到 master；推送后等待现有 workflow 成功，核对 GitHub Pages 与 Cloudflare Pages 的构建 source SHA 均匹配，再合并发布提交回 gunsnglory 并核对分支/worktree 同步。
 - **线上验收：**内置浏览器窗口模式、静音打开与部署 SHA 一致的页面；从菜单验证 Free Play 与正式锁定/解锁入口、Badlands 预览、对白、地图、HUD 以及代表性游戏状态。只做代表性流程，不完整通关；除非某项静态证据无法回答，不启动 Android。
 
