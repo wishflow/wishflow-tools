@@ -32,6 +32,55 @@
 - **M37 G4-A–G4-D 关卡工厂、目录、表现和回放入口已完成。**Ice Rocks 已接入档案驱动的正式/自由入口、地图预览、Dakota HUD、九段双语对白、音乐选择及 replay factory。G4-D 以32种单位/Dynamite 解锁快照验证回放内容重建和规范版本拒绝，并以页面导入 E2E 核实分派；完整应用检查与本地内置浏览器验收留在 G5。
 - **发布比例基线为43/254=16.9%。**M36 有12个、M37 有9个已验收实现切片，均尚未公开发布。若 M36 与 M37 各按完整批次发布一次，则为45/254=17.7%。静态审计与文档提交不计实现切片。
 
+## M38：Dakota 第 7 关 Frost Station
+
+**当前状态：静态审计已完成，尚未编写关卡实现。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
+
+**依赖：**M36 Ghost Town 与 M37 Ice Rocks 已完成的 Dakota 地形、路线、单位、列车、正式/自由模式、回放和页面框架。M36–M37 仍是本地完成、未发布状态；M38 完成后统一复核三关批次是否一起集成发布，不为单个切片发版。
+
+实施顺序及依赖：
+
+```text
+G1 原始地图、地形、完整路线
+ ├─ G2 静态对象、睡眠/活动单位、四组列车
+ └─ G3 参数、八波、对白与头像
+G1–G3 → G4 内容快照、正式/自由入口、表现与回放
+G4 → G5 批次检查与发布决策
+```
+
+### G1：TDM、绘制层、碰撞输入与敌人路线
+
+- **实现范围：**将 APK `td_map_40.tdm` 作为不可变测试 fixture 保存；新增 Frost Station 地图数据与 Dakota 场景适配。按 APK 派生参考生成768格背景绘制和131条街道/铁路/桥命令，生成最终背景碰撞码；新增独立静态路线 fixture 与4个 action→spawnPoint 映射。
+- **验收基线：**TDM 32×24、770字节、768格频次与原始 fixture 完全一致；核对4个出生 marker、42个方向转向 marker、2个出口、48条有向边、7条完整路径和396次中间格访问。中间访问预期按 raw32=353、raw80=12、raw81=3、raw88=28 分项断言；raw81 铁路覆盖格不可被错误过滤。比较完整背景/街道指令、图集裁切和碰撞格，覆盖两层桥、桥墩及铁路贴图。
+- **针对性验证：**新增 `dakota-07-map-and-routes.test.ts` 与静态路线 fixture；对原始 TDM、路线边/路径、生产转向表、绘制指令、素材裁切和768格最终碰撞输入做独立比较。运行该 spec 与 `pnpm run typecheck`。本步不接对象、波次或菜单。
+- **边界：**只验证 APK 派生的静态数据与网页实现一致，不声称复现 Android 时间随机种子的逐次贴图；不启动 Android。
+
+### G2：装饰、睡眠单位与四组列车
+
+- **实现范围：**接入 raw69/70/75 岩石和水塔；raw96–101六类睡眠招募单位及 raw130/131 Pyromaniac/Salesman 解锁单位；按 TDM 创建4组两机车、三车厢的水平列车。raw83/84 与 raw86/87 的列车、缓冲器碰撞按现有共享 APK 几何实现。M38 没有炸药、Steamer 或玩家 spawn pool marker，禁止补造。
+- **验收基线：**raw69=6、raw70=7、raw75=4，水塔映射到 `b_1x1_watertower`；raw96–101共47个 marker；raw130/131各1个并受各自全局里程碑控制。四组列车分别位于 TDM 第1、7、13、21行，每组恰有2个引擎和3节车厢，单位 ID 唯一、移动间距稳定、成员不与自身碰撞；原始 TDM 与最终 `ScenarioContent.units` 逐 marker 对照。
+- **针对性验证：**新增 `dakota-07-entities.test.ts` 和 `dakota-07-trains.test.ts`。至少覆盖两类睡眠单位阻挡、特殊招募单位全锁/解锁状态、静态岩石/水塔 TDM 碰撞框、4组列车部件/贴图/资源、玩家跨铁路覆盖层、列车移动及端缓冲阻挡；运行相关新 spec 与 `pnpm run typecheck`。
+
+### G3：参数、八波、对白与头像
+
+- **实现范围：**接入 GameDesignData index36 的12项、`i == 37` 的8个 wave header 和18条 `addToWave` 请求；接入8段英文资源原文、中文翻译、portrait、Dakota 共用音乐选择。不得创建敌人波次以外的玩家 spawn pool。
+- **验收基线：**原始参数 `[350,25,999,25000,3,30000,5,15,56,75,110,118000]` 逐项匹配；难度 HP 为56/75/110%。断言波次数、请求总数、每波请求数、action/间隔、八个普通请求槽、Boss/Doc 槽和 portrait 顺序；第8波仅有一个 Boss 请求，没有 Doc。对30000ms/5两个字段只保存有证据支持的字段语义，不推断未确认效果。
+- **针对性验证：**新增 `dakota-07-campaign-rules.test.ts`、`dakota-07-campaign-waves.test.ts`、`dakota-07-campaign-presentation.test.ts`。静态期望独立于生产数据；短 `GameSession` 核对实际 action→spawnPoint、代表性波次配置和 Wave 8 Boss 类型，不以完整通关验证请求向量；中英文对白/portrait与离线资源存在性逐项断言。运行相关 spec 与 `pnpm run typecheck`。
+
+### G4：内容快照、目录消费者、正式/自由入口与回放
+
+- **G4-A 内容工厂：**新增 `campaign-dakota-07` identity、具名单位解锁快照、规范 content-version 解析和 `ScenarioContent` builder；组合 G1–G3。快照只编码会影响单位集合的全局解锁位；正式/自由新局和 replay factory 都以相应档案/录制快照创建内容。覆盖全部16种解锁组合、唯一实体 ID 和真实 `GameSession.open()`。
+- **G4-B 菜单与正式目录：**登记为 global level 37，正式解锁前置为 `campaign-dakota-06`（Ice Rocks）；复用已存在 catalog 行。Free Play 无条件开放 Frost Station 的已实现内容及三档难度。核对菜单地图预览、标题/简介、正式进度初始/结算快照、地区已实现数和禁用边界；从真实菜单入口检查，不能只调用 builder。
+- **G4-C 表现接线与预载：**接入 Level 37/Dakota HUD、双语对白/头像、Dakota 音乐选择以及完整 Frost Station 场景图像预载。声音保持静音，只验证资源和选择结果。扩展全目录/菜单 E2E，查找所有硬编码关卡总数、地区计数和 Free Play 范围。
+- **G4-D 回放入口：**主页面 replay dispatch 按 `campaign-dakota-07` 及录制内容版本重建单位解锁快照；覆盖缺少/未知/非规范版本拒绝及导入当前档案与录制快照不同的情形。不得改旧回放格式或正式结算语义。
+- **验收与针对性验证：**builder 输出地图、单位、8波/18请求、正式结算能力和版本；16种解锁快照往返；正式前置锁定/解锁及 Free Play 真实菜单 E2E；中英文 title/overview/dialogue、HUD、地图预载和 replay dispatch 均指向 Level 37。各 G4 子步分别跑受影响单测/E2E和类型检查，完成后更新本计划、关闭已完成子项并本地提交。
+
+### G5：整批本地检查、内置浏览器验收与集成决策
+
+- **本地完整检查：**G1–G4 全部定向检查通过后，运行一次 `CI=1 pnpm run test:ci` 与 `pnpm test:catalog`；修复失败后重跑失败项及最终整套检查。确认 `git diff --check`、资源路径映射、Markdown 相对链接、所有 changed files 与本批范围一致。
+- **内置浏览器：**本地窗口模式、静音，从真实主菜单进入 Free Play → Dakota → Frost Station → Medium；核对 Level 37 文案、首波对白/头像、铁路/桥面/列车、单位与 HUD，关闭对白后确认战场正常。使用小幅模拟推进或短交互，不完成关卡；不进入全屏、不播放音频。
+- **集成发布：**G5 通过后重新核对 M36–M38 的完整内容、分支状态和发布比例，再按 Guns’n’Glory 规则决定以一个完整批次 squash 集成到 master；需要发布时 push 后核对 Actions 与部署来源 SHA，再用内置浏览器验收。任何来源 SHA 或线上关卡入口不一致时保持发布未完成。不得把 M38 单关的小切片单独发布。
+
 ## M36：Ghost Town 内容接入
 
 依赖：M35 Dakota 内容与共享地图/碰撞/路线框架。接入数据仅以本关静态审计和 APK 原始资源为准；旧摘要只能作检索线索。实现过程中如发现差异，先回原始 TDM/Smali/resource consumer 核实，再更新审计与本计划。
