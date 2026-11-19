@@ -363,6 +363,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     },
     globalLevel: 35,
     requiresCompletedScenarioIds: ['campaign-dakota-04'],
+  }, {
+    scenarioId: 'campaign-dakota-06',
+    contentVersion: 'gng-free-1.8.6-dakota-06-formal-v1-grandpa0-sniper0-pyro0-salesman0-dynamite0',
+    title: { en: 'Ice Rocks · Level 36', zh: '冰岩 · 第 36 关' },
+    globalLevel: 36,
+    requiresCompletedScenarioIds: ['campaign-dakota-05'],
   }]);
 });
 

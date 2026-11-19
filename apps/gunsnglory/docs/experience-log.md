@@ -530,6 +530,7 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **M35 复发：**加入 Badlands level34 后，批次完整单测再次因旧快照失败：`apache-valley.test.ts` 依赖链缺 Dakota04，`fort-kaboom-formal.test.ts` 的全目录投影缺 level34，`progress.test.ts` 初始和结算后状态缺一个 locked stage。目录、锁定逻辑和 Progress 实现均正确；补入三处期望后，这三份文件共31项定向测试通过。
 - **复发原因：**已有经验文档清楚列出完整阶段投影和状态顺序，但本轮没有检索并执行该项；只批量改了 `officialCampaignStages.length` 和 UI 分母。因此这是执行检查遗漏，不是 APK/REA 证据缺失，也不是证据组织结构导致无法找到答案。新增正式关卡前必须逐项执行上一条列出的搜索，而不能把读过经验记录当成检查已完成。
 - **M36 复发：**登记 Ghost Town level35 后，目录长度与多数完整快照已更新，`progress.test.ts` 的重载后状态向量仍少一个 `locked`。定向测试首轮 43/44；补齐末尾状态后，相关目录/进度测试 44/44 通过，类型检查通过。正式目录和解锁逻辑正确，遗漏来自同一测试文件的第二个完整投影未随第一处一起更新。
+- **M37 复发：**登记 Ice Rocks level36 后，首轮完整 `test:ci` 的单测再次发现 `content.test.ts` 内 Cow Gulch 用例的 `officialCampaignStages` 全目录快照只列到 level35。实际目录已正确加入 `campaign-dakota-06`，内容版本、双语标题、global level 36 和前置关卡均正确；失败源于该独立完整投影未纳入 G4-B 的旧断言检索。已在独立期望中补入 level36；`content.test.ts`、`dakota-06-formal.test.ts`、`progress.test.ts` 共30项及类型检查通过，完整批次重跑留在 G5。
 - **分类与防回归：**这仍是测试维护/执行清单漏检，不是反解析遗漏或文档结论读错。更新关卡数时应在所有受影响测试中搜索阶段长度、目录全量数组、加载前后状态数组、解锁链和页面计数；新增关卡自身测试通过后，至少运行这些共享目录消费者的定向测试。
 
 ## 地形图层不能只画 tile 的表面标记
