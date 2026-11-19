@@ -144,6 +144,13 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **修正与防回归：**比较改为 `<=`；单测同时检查 `radius−1`、`radius`、`radius+1`，并用真实 Dynamite Plains TDM 配对启动 `GameSession`，验证位于 3 格边界的敌人确实受伤。M26-C 定向回归 179 项通过，类型检查通过。
 - **避免重复：**炸药以二维距离平方比较，保留 fine-unit 坐标精度；不要用格数取整、曼哈顿距离或 `<` 替代 APK 的边界规则。
 
+## Dynamite 解锁碰撞探针要隔离地形格
+
+- **表现与复现：**Ice Rocks 锁定与解锁两种 GameSession 移动探针都停在 Box 前；起初看起来像锁定态仍创建了动态碰撞框。
+- **根因与证据：**探针把 raw102/110 marker 直接放进 `originalTileGrid`。玩家地形判定会读取这些 raw 格的背景碰撞语义；因此即使 `createPlayerMapCollisionBoxes()` 在锁定态不添加 Dynamite 动态框，底层地形判定也可能让两组探针停在相同位置。这是测试夹具把地形阻挡和解锁对象阻挡混在一起，不是共享碰撞规则缺陷。
+- **修正与防回归：**Ice Rocks marker 坐标和配对从真实 map39 TDM 单独断言；动态碰撞差分探针使用同尺寸全开放地形，Dynamite Pair 仍由 Ice Rocks APK 派生构造器提供。锁定态穿过、解锁态停在 Box 碰撞边界前；实际地图另用 GameSession 核对爆炸与三格精确边界。
+- **避免重复：**测试某个可解锁对象是否加入动态碰撞时，保持其他地形/对象输入相同且开放；TDM marker 坐标、marker 所在底图阻挡语义和解锁对象碰撞框分别断言，不能把“人在该格停下”直接归因于解锁对象。
+
 ## TDM 单位 marker 必须验证到最终场景单位
 
 **状态：map10 切片 B 已修复并由静态 marker 对照测试验证。**
