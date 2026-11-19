@@ -42,7 +42,7 @@ function emptyRequestContent(completedScenarioIds: readonly string[]): ScenarioC
 }
 
 test('Shadow Town is formal level 18 and requires Dead Rocks completion', async () => {
-  assert.equal(officialCampaignStages.length, 34);
+  assert.equal(officialCampaignStages.length, 35);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 18), {
     scenarioId: mississippi18CampaignId,
     contentVersion: mississippi18CampaignContentVersionFor([]),
