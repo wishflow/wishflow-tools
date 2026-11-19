@@ -34,7 +34,7 @@
 
 ## M38：Dakota 第 7 关 Frost Station
 
-**当前状态：G1 地图/路线、G2 实体/列车、G3 参数/波次/对白均已完成；G4–G5 尚未开始。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
+**当前状态：G1 地图/路线、G2 实体/列车、G3 参数/波次/对白及 G4-A 内容工厂与快照均已完成；G4-B–G4-D、G5 尚未开始。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
 
 **依赖：**M36 Ghost Town 与 M37 Ice Rocks 已完成的 Dakota 地形、路线、单位、列车、正式/自由模式、回放和页面框架。M36–M37 仍是本地完成、未发布状态；M38 完成后统一复核三关批次是否一起集成发布，不为单个切片发版。
 
@@ -65,11 +65,11 @@ G4 → G5 批次检查与发布决策
 
 ### G4：内容快照、目录消费者、正式/自由入口与回放
 
-- **G4-A 内容工厂与快照：**新增 `campaign-dakota-07` identity、只包含四个全局招募解锁位的具名快照、规范 content-version 生成/解析，以及组合 G1–G3 的 `ScenarioContent` builder。正式与 Free Play 新局都从当前完成记录计算快照；builder 输出正式结算能力，不添加档案字段。测试16种解锁组合、最终单位集合/ID唯一性、版本往返与非规范版本拒绝，并用真实 Frost Station 场景打开 `GameSession`。
+- **G4-A 内容工厂与快照（已完成）：**新增 `campaign-dakota-07` identity、只包含四个全局招募解锁位的具名快照、规范 content-version 生成/解析，以及组合 G1–G3 的 `ScenarioContent` builder。正式与 Free Play 新局可从当前完成记录计算快照；builder 声明正式结算能力，不添加档案字段。16 种解锁组合、最终单位集合/ID唯一性、版本往返与非规范版本拒绝，以及真实 Frost Station `GameSession` 开局均通过。
 - **G4-B 菜单与正式目录：**在 `official-campaign.ts` 登记 global level 37，正式前置为 `campaign-dakota-06`（Ice Rocks）；复用现有 `campaign-catalog.ts` level 37 行，不重复登记。接通主菜单选关/预览，Free Play 无条件开放本关和三档难度；核对正式进度初始/结算快照及地区已实现数。单测覆盖锁定、解锁和进度投影；E2E 从真实菜单分别验证未满足前置时锁定、完成 Ice Rocks 后可进入，以及 Free Play 可进入，不能只调用 builder。
 - **G4-C 表现接线与预载：**接通 `main.ts` 中 Level 37 标题/简介、Dakota HUD、Wave Intro、头像预载、Dakota 环境/战斗音乐选择和地图图像启动预载；中英文资源均须指向 Frost Station。音乐保持静音，只校验路径和选择。搜寻并更新所有受关卡数影响的硬编码目录快照、地区计数、Free Play 范围及文案。
 - **G4-D 回放入口：**在浏览器 replay factory/dispatch 按 `campaign-dakota-07` 及录制 content-version 重建记录时的四个单位解锁位，不依赖导入者当前档案。分别覆盖16种规范版本、当前进度与录制快照不同时仍采用录制状态、缺失/未知/非规范版本拒绝；不改既有回放格式或正式结算语义。
-- **验收与针对性验证：**G4-A builder 输出地图、单位、8波/18请求、正式结算能力和规范版本；G4-B 验证正式前置锁定/解锁及 Free Play 真实入口；G4-C 验证中英文 title/overview/dialogue、HUD、头像/地图预载和静音音乐路径；G4-D 验证 replay dispatch 和错误版本拒绝。每个子步单独运行受影响测试与类型检查、更新本计划关闭已完成项并本地提交；各切片都完成后才进入 G5 全批检查。
+- **验收与针对性验证：**G4-A 的 `node --import tsx --test --test-reporter=spec tests/dakota-07-campaign.test.ts` 通过4项，`pnpm run typecheck` 通过；检查覆盖16种解锁快照、最终单位集合/ID唯一性、版本规范拒绝、真实 Frost Station `GameSession` 开局，并确认 APK 未配置玩家单位池或 Dynamite。G4-B 验证正式前置锁定/解锁及 Free Play 真实入口；G4-C 验证中英文 title/overview/dialogue、HUD、头像/地图预载和静音音乐路径；G4-D 验证 replay dispatch 和错误版本拒绝。每个子步单独运行受影响测试与类型检查、更新本计划关闭已完成项并本地提交；各切片都完成后才进入 G5 全批检查。
 
 ### G5：整批本地检查、内置浏览器验收与集成决策
 
