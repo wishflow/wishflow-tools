@@ -34,7 +34,7 @@
 
 ## M38：Dakota 第 7 关 Frost Station
 
-**当前状态：静态审计已完成，尚未编写关卡实现。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
+**当前状态：G1 地图与路线已完成；G2–G5 尚未开始。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
 
 **依赖：**M36 Ghost Town 与 M37 Ice Rocks 已完成的 Dakota 地形、路线、单位、列车、正式/自由模式、回放和页面框架。M36–M37 仍是本地完成、未发布状态；M38 完成后统一复核三关批次是否一起集成发布，不为单个切片发版。
 
@@ -48,12 +48,10 @@ G1–G3 → G4 内容快照、正式/自由入口、表现与回放
 G4 → G5 批次检查与发布决策
 ```
 
-### G1：TDM、绘制层、碰撞输入与敌人路线
+### G1：TDM、绘制层、碰撞输入与敌人路线（已完成）
 
-- **实现范围：**将 APK `td_map_40.tdm` 作为不可变测试 fixture 保存；新增 Frost Station 地图数据与 Dakota 场景适配。按 APK 派生参考生成768格背景绘制和131条街道/铁路/桥命令，生成最终背景碰撞码；新增独立静态路线 fixture 与4个 action→spawnPoint 映射。
-- **验收基线：**TDM 32×24、770字节、768格频次与原始 fixture 完全一致；核对4个出生 marker、42个方向转向 marker、2个出口、48条有向边、7条完整路径和396次中间格访问。中间访问预期按 raw32=353、raw80=12、raw81=3、raw88=28 分项断言；raw81 铁路覆盖格不可被错误过滤。比较完整背景/街道指令、图集裁切和碰撞格，覆盖两层桥、桥墩及铁路贴图。
-- **针对性验证：**新增 `dakota-07-map-and-routes.test.ts` 与静态路线 fixture；对原始 TDM、路线边/路径、生产转向表、绘制指令、素材裁切和768格最终碰撞输入做独立比较。运行该 spec 与 `pnpm run typecheck`。本步不接对象、波次或菜单。
-- **边界：**只验证 APK 派生的静态数据与网页实现一致，不声称复现 Android 时间随机种子的逐次贴图；不启动 Android。
+- **结果：**保存原始 TDM fixture，新增 Frost Station 地图数据、Dakota 场景碰撞适配、独立路线图 fixture 与4个 action→spawnPoint 映射。原始格网、768条背景命令、131条街道命令、图集裁切、最终碰撞码、48条控制边、7条完整路线及396次道路格访问均与 APK 派生期望一致；访问格包括 raw81 铁路覆盖路面。
+- **验证：**`node --import tsx --test --test-reporter=spec tests/dakota-07-map-and-routes.test.ts` 通过3项；`pnpm run typecheck` 通过。只验证静态派生数据与网页实现，不声称复现 Android 时间随机种子的逐次贴图；未启动 Android。对象、波次和菜单留在后续切片。
 
 ### G2：装饰、睡眠单位与四组列车
 
