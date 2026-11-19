@@ -61,7 +61,7 @@ test('Free Play opens Badlands with map37, localized copy, all difficulties, and
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-dakota').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('5 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
   await expect(page.getByTestId('campaign-level-34')).toBeEnabled();
   await page.getByTestId('campaign-level-34').click();
 

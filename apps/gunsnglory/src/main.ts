@@ -187,6 +187,9 @@ import { dakota05CampaignCopy } from './content/dakota-05-campaign-copy';
 import { createDakota05CampaignContent } from './content/dakota-05-campaign';
 import { dakota05CampaignPortraitAssets, dakota05WaveIntros } from './content/dakota-05-wave-intros';
 import { dakota05AmbientMusic, dakota05BattleMusicForWave, type Dakota05MusicTrack } from './content/dakota-05-music';
+import { dakota06CampaignId } from './content/dakota-06-identity';
+import { dakota06CampaignCopy } from './content/dakota-06-campaign-copy';
+import { createDakota06CampaignContent } from './content/dakota-06-campaign';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -2145,7 +2148,8 @@ function campaignMenuLevelScreen(): string {
                                                           : level.level === 32 ? copy.levelThirtyTwoTitle
                                                             : level.level === 33 ? dakota03CampaignCopy.title[language]
                                                               : level.level === 34 ? dakota04CampaignCopy.title[language]
-                                                                : level.level === 35 ? dakota05CampaignCopy.title[language] : level.title;
+                                                                : level.level === 35 ? dakota05CampaignCopy.title[language]
+                                                                  : level.level === 36 ? dakota06CampaignCopy.title[language] : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.mapFileNumber).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -2245,6 +2249,7 @@ function campaignMenuOverviewScreen(): string {
                                               : entry.level === 33 ? createDakota03CampaignContent(completedScenarios)
                                                 : entry.level === 34 ? createDakota04CampaignContent(completedScenarios)
                                                   : entry.level === 35 ? createDakota05CampaignContent(completedScenarios)
+                                                    : entry.level === 36 ? createDakota06CampaignContent(completedScenarios)
                                           : createOregon07CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
@@ -2280,7 +2285,8 @@ function campaignMenuOverviewScreen(): string {
                                                                 : entry.level === 32 ? copy.levelThirtyTwoInfo
                                                                   : entry.level === 33 ? dakota03CampaignCopy.overview[language]
                                                                     : entry.level === 34 ? dakota04CampaignCopy.overview[language]
-                                                                      : entry.level === 35 ? dakota05CampaignCopy.overview[language] : '';
+                                                                      : entry.level === 35 ? dakota05CampaignCopy.overview[language]
+                                                                        : entry.level === 36 ? dakota06CampaignCopy.overview[language] : '';
   const levelDescription = entry.level === 15 ? copy.levelFifteenInfo
     : entry.level === 16 ? copy.levelSixteenInfo
       : entry.level === 17 ? copy.levelSeventeenInfo
@@ -2301,7 +2307,8 @@ function campaignMenuOverviewScreen(): string {
                                     : entry.level === 32 ? copy.levelThirtyTwoInfo
                                       : entry.level === 33 ? dakota03CampaignCopy.overview[language]
                                         : entry.level === 34 ? dakota04CampaignCopy.overview[language]
-                                          : entry.level === 35 ? dakota05CampaignCopy.overview[language] : description;
+                                          : entry.level === 35 ? dakota05CampaignCopy.overview[language]
+                                            : entry.level === 36 ? dakota06CampaignCopy.overview[language] : description;
   const artName = `gng_levelmap_${String(entry.mapFileNumber).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -2345,7 +2352,8 @@ function campaignMenuOverviewScreen(): string {
                                                               : entry.level === 32 ? copy.levelThirtyTwoTitle
                                                                 : entry.level === 33 ? dakota03CampaignCopy.title[language]
                                                                   : entry.level === 34 ? dakota04CampaignCopy.title[language]
-                                                                    : entry.level === 35 ? dakota05CampaignCopy.title[language] : entry.title)}</h2>
+                                                                    : entry.level === 35 ? dakota05CampaignCopy.title[language]
+                                                                      : entry.level === 36 ? dakota06CampaignCopy.title[language] : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" data-testid="campaign-overview-minimap" data-scenario-id="${escapeMenuText(content.id)}" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -4005,6 +4013,7 @@ const assetNames = new Set([
     createDakota03CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createDakota04CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createDakota05CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
+    createDakota06CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
   ]),
   'pioneer_male',
   'pioneer_female',
@@ -4841,7 +4850,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             || request.scenarioId === dakota02CampaignId
             || request.scenarioId === dakota03CampaignId
             || request.scenarioId === dakota04CampaignId
-            || request.scenarioId === dakota05CampaignId)
+            || request.scenarioId === dakota05CampaignId
+            || request.scenarioId === dakota06CampaignId)
             && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
             : game;

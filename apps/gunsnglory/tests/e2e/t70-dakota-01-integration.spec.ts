@@ -61,7 +61,7 @@ test('Free Play opens Loot Lakes from the Dakota menu with map 34 and APK openin
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-dakota').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('5 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
   await expect(page.getByTestId('campaign-level-31')).toBeEnabled();
   await page.getByTestId('campaign-level-31').click();
 

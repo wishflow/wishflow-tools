@@ -98,13 +98,14 @@ G4-B、G4-C、G4-D 全部通过后 → G5 批次验收
 
 #### G4-B：正式阶段、Free Play 与菜单开局
 
-- **范围：**将 Level 36 加入 `officialCampaignStages`，要求 `campaign-dakota-05`（Ghost Town）完成；复用 `campaign-catalog.ts` 已有 Level 36 行。接通菜单标题/简介/缩略图与 map39 预览、Dakota 地区/Level 36 HUD、正式/Free Play 开局、难度选择和基于当前档案的场景 builder；正式结算保持现有 Progress 语义。
-- **验收：**从真实菜单验证 Free Play 可直接选择 Ice Rocks 且三档难度可进；正式模式在 Ghost Town 未完成时不可进，完成后可进。进入后场景 ID、内容版本、地图/缩略图、HUD、开局数值均对应 Ice Rocks。对至少一种与默认测试档案不同的全局解锁档案，确认页面选择的 builder 和 `GameSession.open` 使用同一快照。
-- **定向验证：**正式目录/Progress 与菜单状态单测；真实菜单路径 E2E 覆盖 Free Play、正式锁定与解锁、档案驱动开局以及中文/英文名称。不得用静态目录存在或直接调用 builder 代替菜单路径验收。
+- **状态：已完成。**Level 36 已加入正式目录并以前置 Ghost Town 解锁；菜单双语文案、map39 预览、Free Play 三档难度、正式入口和档案快照驱动场景工厂均已接通，Ice Rocks 场景图像已进入启动预载集合。
+- **范围：**将 Level 36 加入 `officialCampaignStages`，要求 `campaign-dakota-05`（Ghost Town）完成；复用 `campaign-catalog.ts` 已有 Level 36 行。接通菜单双语标题/简介、map39 缩略图与场景预览、正式/Free Play 开局、难度选择和基于当前档案的场景 builder；将全解锁 Ice Rocks 场景引用交给启动图片收集器，确保真实开局可绘制。正式结算保持现有 Progress 语义；HUD 地区标签和对白头像预载留给 G4-C。
+- **验收：**从真实菜单验证 Free Play 可直接选择 Ice Rocks 且三档难度可进；正式模式在 Ghost Town 未完成时不可进，完成后可进。菜单标题/简介、场景 ID、内容版本、map39 地图/缩略图、难度和开局波次均对应 Ice Rocks。对至少一种与默认测试档案不同的全局解锁档案，确认页面选择的 builder 和 `GameSession.open` 使用同一快照。HUD 地区标签和 Level 36 上下文由 G4-C 验收，避免与表现接线重复。
+- **定向验证：**正式目录/Progress 与菜单状态单测；真实菜单路径 E2E 覆盖 Free Play、正式锁定与解锁、档案驱动开局以及中文/英文名称。不得用静态目录存在或直接调用 builder 代替菜单路径验收。`dakota-06-formal.test.ts` 等5个定向单测文件共36项通过，`pnpm run typecheck` 通过；Dakota 01–06、共享进度/关卡菜单等定向 E2E 共24项通过。新建用例最初误用了不存在的 `data-testid="scene-title"`，改用页面现有 `#scene-title` 后，t75 两项复跑通过。G4-B 不验收地区 HUD；错误上下文显示该项仍回退为 New Mexico，按计划交给 G4-C 修复和断言。完整 `test:ci` 留到 G5。
 
-#### G4-C：双语表现、HUD 与媒体预载
+#### G4-C：对白、HUD 与表现资源预载
 
-- **范围：**按 `ICE-COPY` 接入 APK 英文标题/简介及九段对白原文，补充中文翻译和九个头像映射；将 Ice Rocks 接入 Dakota HUD 区域标签、对白选择、启动图片预载、环境音乐与逐波音乐选择。音乐沿用 Dakota 共用资源；不发明本关独立曲目或语音。
+- **范围：**沿用 G4-A/G4-B 已接入菜单的双语标题/简介；按 `ICE-COPY` 接入九段对白原文、中文翻译和头像映射。补上 Ice Rocks 的战斗说明、Dakota HUD 地区/Level 36 上下文、对白选择、头像等表现资源预载、环境音乐与逐波音乐选择。地图、静态对象和单位场景图像由 G4-B 预载。音乐沿用 Dakota 共用资源；不发明本关独立曲目或语音。
 - **验收：**九段对白顺序、resource ID、speaker、portrait 与独立审计表一致；中英文均能显示。正式与 Free Play 的标题、地区和 Level 36 HUD 正确；地图、单位、头像等图像以及音乐文件离线可读取。音频保持静音，只核对选择函数和资源文件，不播放试听。
 - **定向验证：**copy/presentation 单测核对 APK 原文、翻译、头像和音乐映射及文件存在；E2E 从菜单进入并检查开场对白、头像实际加载、地图无资源错误及 HUD。检查所有 `main.ts` 资源收集与音乐消费者，不由单测常量存在推断页面已接线。
 

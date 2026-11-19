@@ -103,6 +103,9 @@ import { dakota04CampaignId } from './dakota-04-identity';
 import { createDakota05CampaignContent } from './dakota-05-campaign';
 import { dakota05CampaignCopy } from './dakota-05-campaign-copy';
 import { dakota05CampaignId } from './dakota-05-identity';
+import { createDakota06CampaignContent } from './dakota-06-campaign';
+import { dakota06CampaignCopy } from './dakota-06-campaign-copy';
+import { dakota06CampaignId } from './dakota-06-identity';
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -214,6 +217,7 @@ export const dakota02LevelThirtyTwoCampaignContent = createDakota02CampaignConte
 export const dakota03LevelThirtyThreeCampaignContent = createDakota03CampaignContent();
 export const dakota04LevelThirtyFourCampaignContent = createDakota04CampaignContent();
 export const dakota05LevelThirtyFiveCampaignContent = createDakota05CampaignContent();
+export const dakota06LevelThirtySixCampaignContent = createDakota06CampaignContent();
 
 export const officialCampaignStages: readonly CampaignStageDefinition[] = Object.freeze([{
   scenarioId: cowGulchLevelOneContent.id,
@@ -425,4 +429,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: { en: `${dakota05CampaignCopy.title.en} · Level 35`, zh: `${dakota05CampaignCopy.title.zh} · 第 35 关` },
   globalLevel: 35,
   requiresCompletedScenarioIds: [dakota04CampaignId],
+}, {
+  scenarioId: dakota06CampaignId,
+  contentVersion: dakota06LevelThirtySixCampaignContent.contentVersion!,
+  title: { en: `${dakota06CampaignCopy.title.en} · Level 36`, zh: `${dakota06CampaignCopy.title.zh} · 第 36 关` },
+  globalLevel: 36,
+  requiresCompletedScenarioIds: [dakota05CampaignId],
 }]);
