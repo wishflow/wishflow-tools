@@ -43,6 +43,7 @@
 
 ### G5：批次收尾与发布
 
+- **状态：本地验收通过；发布待执行。**完整应用检查：`CI=1 PLAYWRIGHT_PORT=43480 pnpm run test:ci` 通过类型检查、1053项单测、生产构建及194项E2E；`pnpm test:catalog` 通过18项。构建保留既有约3.99 MB JS chunk 警告。内置浏览器本地窗口模式、静音检查 Ghost Town 选关、Level 35/地图预览、Wave 1/9 对白与头像加载及战场地图；未进入全屏或播放音频。本轮只完成本地验收，不执行 push、发布或线上 SHA 核验，因此发布门槛仍未关闭。
 - **范围：**G4-B–G4-C逐片验收后执行本应用完整检查与适用共享检查；修复本批暴露的回归后再做最终完整检查。
 - **验收：**pnpm run test:ci、pnpm test:catalog通过；文档和经验记录链接有效；工作树与Git diff仅包含本批；本地页面窗口模式、静音完成菜单/地图/首波代表流程检查。
 - **发布：**按Guns’n’Glory流程将完整M36批次squash集成到master并发布，核对 Actions、Pages来源SHA及部署页面，再将发布提交同步回gunsnglory。未完成线上SHA和内置浏览器检查前不得标记发布完成。
