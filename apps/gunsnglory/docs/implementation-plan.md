@@ -29,7 +29,8 @@
 - **M37 G2-B 活动/睡眠单位与解锁已完成。**raw96–99 对应39个常驻 activity-4 招募单位，raw100/101/130/131 分别受共享解锁状态门控，raw104/105 生成4个 activity-5 活动单位。逐 marker 坐标、素材、唯一 ID、脚底锚点及16种解锁快照通过；睡眠与活动 Gunslinger 的真实 GameSession 碰撞探针通过。2项定向测试与类型检查通过。
 - **M37 G2-C Dynamite 配对与全局解锁已完成。**raw102 `(7,17)` 与 raw110 `(6,18)` 配成唯一一组；第20或30关任一里程碑即可解锁。锁定态不加入动态碰撞框且触发无效，解锁态的 Box 会在真实 `GameSession` 中阻挡我方单位；Ice Rocks 原图短会话确认炸药箱中心三格边界上的敌人受伤。3项定向测试通过，类型检查通过；Content Version 中的 Dynamite 解锁快照留到 G4。
 - **M37 G3 参数、九波与玩家单位池已完成。**核对并接入12项关卡参数、9个波次、16条敌人请求及 Wave 1 的两项玩家池操作；三个出生 action 到网页 spawn point 的映射与 G1 一致。短 `GameSession` 验证 Wave 1 出生来源和 Wave 9 Boss；玩家池核对 Saloon/Fort/Tipi、四种模板与库存上限。6项新增定向测试、相关 Dakota 05/共享玩家池回归共21项及类型检查通过。APK 未确认玩家池全局派发间隔，继续沿用网页默认15秒并明确标注。
-- **发布比例基线为43/233=18.5%。**M36 有12个已验收实现切片、M37 当前有5个，均尚未公开发布；按当前总量为43/250=17.2%。若 M36 与 M37 各按完整批次发布，则为45/250=18.0%。静态审计与文档提交不计实现切片。
+- **M37 G4-A–G4-D 关卡工厂、目录、表现和回放入口已完成。**Ice Rocks 已接入档案驱动的正式/自由入口、地图预览、Dakota HUD、九段双语对白、音乐选择及 replay factory。G4-D 以32种单位/Dynamite 解锁快照验证回放内容重建和规范版本拒绝，并以页面导入 E2E 核实分派；完整应用检查与本地内置浏览器验收留在 G5。
+- **发布比例基线为43/254=16.9%。**M36 有12个、M37 有9个已验收实现切片，均尚未公开发布。若 M36 与 M37 各按完整批次发布一次，则为45/254=17.7%。静态审计与文档提交不计实现切片。
 
 ## M36：Ghost Town 内容接入
 
@@ -105,16 +106,16 @@ G4-B、G4-C、G4-D 全部通过后 → G5 批次验收
 
 #### G4-C：对白、HUD 与表现资源预载
 
-- **状态：已完成。**Ice Rocks 已接入九段 APK 英文对白资源、中文翻译、头像、Dakota 地区/36 关 HUD、正式/自由说明、头像预载，以及 Dakota 共用环境音乐和逐波循环选择。回放导入仍由 G4-D 接入；批次完整检查仍由 G5 执行。
+- **状态：已完成。**Ice Rocks 已接入九段 APK 英文对白资源、中文翻译、头像、Dakota 地区/36 关 HUD、正式/自由说明、头像预载，以及 Dakota 共用环境音乐和逐波循环选择。回放导入已由 G4-D 接入；批次完整检查仍由 G5 执行。
 - **范围：**沿用 G4-A/G4-B 已接入菜单的双语标题/简介；按 `ICE-COPY` 接入九段对白原文、中文翻译和头像映射。补上 Ice Rocks 的战斗说明、Dakota HUD 地区/Level 36 上下文、对白选择、头像等表现资源预载、环境音乐与逐波音乐选择。地图、静态对象和单位场景图像由 G4-B 预载。音乐沿用 Dakota 共用资源；不发明本关独立曲目或语音。
 - **验收：**九段对白顺序、resource ID、speaker、portrait 与独立审计表一致；中英文均能显示。正式与 Free Play 的标题、地区和 Level 36 HUD 正确；地图、单位、头像等图像以及音乐文件离线可读取。音频保持静音，只核对选择函数和资源文件，不播放试听。
-- **定向验证：**`node --import tsx --test --test-reporter=spec tests/dakota-06-campaign-presentation.test.ts tests/dakota-06-formal.test.ts` 通过6项；`pnpm run typecheck` 通过。`CI=1 PLAYWRIGHT_PORT=43497 pnpm exec playwright test tests/e2e/t74-dakota-05-integration.spec.ts tests/e2e/t75-dakota-06-integration.spec.ts --workers=1` 中 Ghost Town 2项通过；Ice Rocks 两项先后在修正本地化断言后通过，最终 t75 2/2。E2E 检查九波开场文案及 portrait 实际加载、中文/英文 HUD、Free Play/正式说明和无资源错误；声音保持关闭。未播放音乐。`git diff --check` 通过；G4-D 与 G5 未完成。
+- **定向验证：**`node --import tsx --test --test-reporter=spec tests/dakota-06-campaign-presentation.test.ts tests/dakota-06-formal.test.ts` 通过6项；`pnpm run typecheck` 通过。`CI=1 PLAYWRIGHT_PORT=43497 pnpm exec playwright test tests/e2e/t74-dakota-05-integration.spec.ts tests/e2e/t75-dakota-06-integration.spec.ts --workers=1` 中 Ghost Town 2项通过；Ice Rocks 两项先后在修正本地化断言后通过，最终 t75 2/2。E2E 检查九波开场文案及 portrait 实际加载、中文/英文 HUD、Free Play/正式说明和无资源错误；声音保持关闭。未播放音乐。`git diff --check` 通过；G4-D 已完成，G5 未完成。
 
 #### G4-D：回放导入按录制快照重建
 
-- **范围：**注册 Ice Rocks 内容版本解析器和 replay game factory；主页面导入路由识别 `campaign-dakota-06`，依据回放记录中的四个单位解锁位和 Dynamite 位重建内容，不读取导入者当前档案。未知、缺失或非规范版本按现有回放错误路径拒绝，不能静默回退到邻关或默认档案场景。
-- **验收：**用录制快照与导入档案刻意不同的有效 Ice Rocks 回放，验证真实导入入口重建的单位集合、Dynamite 状态及回放状态与录制内容一致；32 个快照分别通过版本 round-trip。未知版本不启动错误关卡；正式完成进度仍只由正式结算写入，自由模式与回放不污染 Progress。
-- **定向验证：**扩展 `dakota-06-replay-content.test.ts` 覆盖 factory、真实 replay 导入分发、跨档案差异和拒绝路径；必要时复用已完成结算的有效 replay fixture，不为验证导入而手动通关整关。同步覆盖 `getBrowserScenarioContentVersion`、`createBrowserGame` 与 `main.ts` 导入分支。
+- **状态：已完成。**新增 `createBrowserGameForDakota06Replay()`，从回放的规范版本恢复四种单位解锁位和 Dynamite 位；`gameForReplay()` 将 `campaign-dakota-06` 分派给该工厂。缺失版本报告 `missing-version`，不支持或非规范版本报告 `content-unavailable`。
+- **验收：**32 种单位/Dynamite 快照分别通过版本 round-trip，并在导入档案与录制快照不同的条件下比较重建单位集和炸药解锁状态。真实页面导入 E2E 使用不同的当前档案：受支持版本成功进入回放校验阶段，随后因测试特意设置的 frame 1 摘要不匹配而报告 `result-mismatch`；追加后缀的非规范版本报告 `content-unavailable`。这验证了主页面的工厂分派及版本拒绝，不声称完成了一场结算回放或验证了正式进度写入。
+- **定向验证：**`node --import tsx --test tests/dakota-06-replay-content.test.ts` 通过2项（含32种状态矩阵及缺失/非规范版本）；`pnpm run typecheck` 通过；`PLAYWRIGHT_PORT=4198 pnpm exec playwright test tests/e2e/t76-dakota-06-replay.spec.ts --workers=1` 通过1项。全应用 `test:ci`、共享 catalog 检查和本地内置浏览器验收留在 G5。
 
 ### G5：本地批次验收
 
@@ -126,7 +127,7 @@ G4-B、G4-C、G4-D 全部通过后 → G5 批次验收
 
 - M30结束时的核实基线为36次公开发布 / 195个已验收实现切片。
 - M31–M34新增31个切片，同期6次公开部署；累计为42 / 226 = 18.6%。
-- M35增加7个切片并完成1次公开发布；当前累计为43 / 233 = 18.5%，低于20%目标。静态审计、文档提交、完整检查和分支回同步不计为实现切片。
+- M35增加7个切片并完成1次公开发布；累计为43 / 233 = 18.5%。M36 增加12个、M37 增加9个切片，尚未公开发布；当前为43 / 254 = 16.9%。若 M36 与 M37 各按一个完整批次发布，则为45 / 254 = 17.7%，低于20%目标。静态审计、文档提交、完整检查和分支回同步不计为实现切片。
 
 ## 批次执行规则
 

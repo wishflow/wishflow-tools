@@ -93,13 +93,23 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 内容版本必须覆盖所有影响开局的档案状态
 
-**状态：M22 修复中；M4–M7 回放工厂和 Eastwood 新局单位修复已完成，实际回放入口矩阵待验。**
+**状态：M22 基础修复及后续 M36/M37 关卡快照接入均已完成；每个新增关卡仍需核对自己的页面导入分派。**
 
 - **表现与复现：**M4–M7 的部分地图单位受全局关卡里程碑解锁影响，但四关长期使用固定 `contentVersion`。同一回放在不同档案下可能重建出不同初始单位。M21 Eastwood 的定制实体工厂又误将 map24 的 96–101、130、131 marker 排除在新局之外；APK 实际在 `fromLoadGame == false` 时创建 activity 4 招募单位。
 - **根因与证据：**M4–M7 内容构造器读取当前 `completedScenarioIds`，回放入口却没有把这些解锁状态编码进版本或重建快照。Eastwood 审计曾依赖错误重建的 JADX 伪代码，未根据 Smali 条件跳转和最终单位列表反核；Smali/DEX 及 `Guns’n’GloryThread` 调用点已确认新局/读档语义。
 - **修复与防回归：**M22-D 为 M4–M7 新版本记录实际影响内容的全局解锁位，并按录制版本构建 replay factory；v1 保留导入时档案语义，Tech Town 继续补入 M3。M22-E 让 M21 新局通过共享 TDM 单位工厂生成 marker 96、97、100、101、130、131 的 activity 4 单位，M21 v2 记录新单位集，v1 replay 过滤 activity 4 并保留已发布版本的活动单位列表。M22-F 覆盖了实际导入路由、v1/v2 版本识别、未知版本拒绝、Free Play 与正式入口；M4–M7 的16种解锁组合和地图访问位另由工厂单测覆盖。
 - **测试夹具边界：**M4–M7 v1 沿用导入时档案，因此生成带 `preparedSetup` 的 v1 探针时，录制档案必须与导入档案相同；否则数字参数路径集合可能不同，错误表现为 `prepared-setup-invalid`，不是内容版本路由失败。v2 探针则故意使用不同档案，验证录制快照。M4 `map-access=0` 表示不可进入状态，真实 Free Play 新局会补入 M3 并记录开放快照；关闭状态检查版本解析和 `prepare`，不伪造一场可回放战斗。
 - **避免重复：**本轮不改 APK 已核实正确的共享 `createNewMexicoMapUnits()`，也不重新分析 marker 96–101 的 Smali。后续新增关卡时，从真实 TDM marker、最终 `ScenarioContent.units`、内容版本解析和不同当前档案下的 replay factory 四处闭环；不能仅凭固定版本字符串或单测中间映射通过判定。
+
+### 新关卡的回放入口必须测试主页面分派和录制快照
+
+**状态：M37 Ice Rocks 的 replay factory 和页面导入分派已完成定向验证。**
+
+- **表现与复现：**Ice Rocks 初始场景单位及可用炸药由档案里程碑改变；若导入回放时使用当前档案创建场景，同一个回放会重建出不同内容。只测试版本字符串解析或 factory 单独开局，无法确认主页面文件导入真的调用了该 factory。
+- **根因与证据：**回放内容版本把 Grandpa、Sniper、Pyromaniac、Salesman 与 Dynamite 解锁状态编码在规范字符串中。`createBrowserGameForDakota06Replay()` 解析该快照并调用显式 snapshot builder；`main.ts` 的 `gameForReplay()` 必须按 `campaign-dakota-06` 将导入请求分派到该工厂。当前档案不参与这条重建路径。
+- **漏测点：**原有直接 factory 测试只能证明传入版本能重建对应场景，不能证明网页实际导入分派正确；若 E2E 只验证错误提示，也可能没有证明带版本的回放先进入正确关卡工厂。
+- **修复与验证：**M37 新增32种单位解锁与 Dynamite 组合测试，逐项比较版本 round-trip、单位集合和炸药状态；浏览器测试先保存空当前档案，再导入记录了 Grandpa 与 Pyromaniac 解锁状态的 Ice Rocks 回放。受支持版本进入回放校验后按测试设计在 frame 1 产生摘要不匹配；带额外后缀的非规范版本被拒绝为 `content-unavailable`。该 E2E 证明导入分派和版本拒绝，不代表完成过一场有效结算回放。
+- **防回归：**每个新增关卡如有档案依赖内容，必须同时验证版本解析、snapshot factory、不同当前档案下的页面导入分派和非法版本拒绝。摘要不匹配的 E2E 只能证明导入到了可用场景工厂；需要宣称完整回放成功时，必须另用已完成的有效回放并核对 terminal settlement 与档案副作用。
 
 ## 正式开局必须使用与档案版本匹配的场景 builder
 

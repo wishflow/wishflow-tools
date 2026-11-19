@@ -185,8 +185,14 @@ import {
   parseDakota05ReplayContentVersion,
 } from '../content/dakota-05-content-version';
 import { dakota05CampaignId } from '../content/dakota-05-identity';
-import { createDakota06CampaignContent } from '../content/dakota-06-campaign';
-import { dakota06CampaignContentVersionFor } from '../content/dakota-06-content-version';
+import {
+  createDakota06CampaignContent,
+  createDakota06CampaignContentFromSnapshot,
+} from '../content/dakota-06-campaign';
+import {
+  dakota06CampaignContentVersionFor,
+  parseDakota06ReplayContentVersion,
+} from '../content/dakota-06-content-version';
 import { dakota06CampaignId } from '../content/dakota-06-identity';
 import {
   newMexicoCampaignContentVersionFor,
@@ -718,6 +724,15 @@ export function createBrowserGameForDakota05Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, dakota05CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [dakota05CampaignId]: createDakota05CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Ice Rocks from its recorded unit and Dynamite unlock snapshot. */
+export function createBrowserGameForDakota06Replay(contentVersion: string | undefined) {
+  const parsed = parseDakota06ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, dakota06CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [dakota06CampaignId]: createDakota06CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 
