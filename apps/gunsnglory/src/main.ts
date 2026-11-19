@@ -30,6 +30,7 @@ import {
   createBrowserGameForOregon11Replay,
   createBrowserGameForDakota02Replay,
   createBrowserGameForDakota03Replay,
+  createBrowserGameForDakota04Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -175,6 +176,9 @@ import { createDakota03CampaignContent } from './content/dakota-03-campaign';
 import { dakota03CampaignCopy } from './content/dakota-03-campaign-copy';
 import { dakota03CampaignPortraitAssets, dakota03WaveIntros } from './content/dakota-03-wave-intros';
 import { dakota03AmbientMusic, dakota03BattleMusicForWave, type Dakota03MusicTrack } from './content/dakota-03-music';
+import { dakota04CampaignId } from './content/dakota-04-identity';
+import { createDakota04CampaignContent } from './content/dakota-04-campaign';
+import { dakota04CampaignPortraitAssets } from './content/dakota-04-wave-intros';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -3967,6 +3971,7 @@ const assetNames = new Set([
     createOregon11CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createDakota02CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createDakota03CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
+    createDakota04CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
   ]),
   'pioneer_male',
   'pioneer_female',
@@ -4075,6 +4080,7 @@ const assetNames = new Set([
   ...oregon11CampaignPortraitAssets,
   ...dakota02CampaignPortraitAssets,
   ...dakota03CampaignPortraitAssets,
+  ...dakota04CampaignPortraitAssets,
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
@@ -5119,6 +5125,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === dakota03CampaignId) {
       return createBrowserGameForDakota03Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === dakota04CampaignId) {
+      return createBrowserGameForDakota04Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }
