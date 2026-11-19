@@ -120,13 +120,14 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 内容版本快照位序不等于地图单位枚举顺序
 
-**状态：**M24-F1 与 M36 G4-A 测试期望均已修正；运行时代码符合共享快照契约。
+**状态：**M24-F1、M36 G4-A 与 M37 G4-A 的测试期望均已修正；运行时代码符合共享快照契约。
 
 - **表现与复现：**为 Chinook Woods 写 16 种解锁矩阵时，按地图 marker 顺序将 mask bit 0 解释为 Sniper，第一组测试与内容工厂结果不一致。
 - **根因与证据：**共享 `mississippi-unit-unlocks.ts` 的 canonical suffix 固定按 `grandpa`、`sniper`、`pyro`、`salesman` 编码；TDM marker 清单通常按 Sniper、Grandpa、Pyromaniac、Salesman 排列。两种顺序不同，不能把枚举下标直接当作版本位。实际 `CampaignCatalog` milestone ID 和 builder 生成的活动单位才是行为基线。
 - **修复与防回归：**修正测试矩阵，将 `campaign-oregon-10` / `campaign-dakota-10` 等 milestone ID 分别映射到对应单位类型；16 种状态均通过内容版本 round-trip 与 `GameSession` 初态核对。生产快照编码没有修改。
 - **避免重复：**复用全局 unlock suffix 时，按 named snapshot field 或对应 milestone ID 生成测试数据；单独测试编码/解析顺序与最终地图单位，不从 marker 列表位置推导 bit order。
 - **M36 复发与定位：**Ghost Town 首轮快照用例再次把 `campaign-dakota-10` 映射到 Grandpa，定向测试立即失败；实际里程碑是 `campaign-oregon-10` 解锁 Grandpa，`campaign-dakota-10` 解锁 Sniper。代码中的版本位序正确，问题仍在测试样例映射。修正后16种位组合、对应单位集及版本 round-trip 全部通过。写快照矩阵时需逐项引用 `mississippiUnitUnlockSnapshotFor()` 中的 global level 与 `campaignCatalog` 地区，不得只凭 region 名猜 milestone。
+- **M37 复发与定位：**Ice Rocks 的 profile fixture 预期四个单位解锁位全开，却漏列 Sniper 对应的 `campaign-dakota-10`；比较生产 builder 与显式快照 factory 时因此报 `sniper0`/`sniper1` 不一致。`campaign-oregon-10`、`campaign-nevada-10` 和 `campaign-alaska-10` 分别不能替代 Sniper 里程碑。补入正确完成关卡后，profile 与快照工厂一致；17项 Ice Rocks 定向测试和类型检查通过，未改运行时代码。快照测试失败时先逐字段将 milestone ID 对到全局等级和具名解锁位，再判断生产实现。
 
 ## TDM Dynamite marker 与对象角色不能混写
 

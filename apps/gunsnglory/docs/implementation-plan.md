@@ -90,10 +90,11 @@ G4-B、G4-C、G4-D 全部通过后 → G5 批次验收
 
 #### G4-A：内容工厂与开局快照
 
+- **状态：已完成。**新增 Ice Rocks identity、规范化 content-version、按档案/快照构造正式 `ScenarioContent`；接入地图单位和 Dynamite 两种解锁快照，未加入静态审计不存在的列车、蒸汽船、赌场或奖励箱。
 - **范围：**新增 Ice Rocks 的 identity、content-version 与正式 `ScenarioContent` builder；组合 G1–G3 的 map39 场景、单位、Dynamite、规则、波次和玩家池。按静态审计，不创建本关没有 marker 的列车、蒸汽船、赌场或奖励箱。快照包含四个全局招募单位解锁位及 Dynamite 解锁位；正式/自由新局都由传入的 `completedScenarioIds` 生成一致的版本与内容。
 - **依据与边界：**照用已审计的 Dakota 共享规则；单位解锁位按具名字段，Dynamite 按现有 Level 20/30 里程碑函数计算。不得将网页默认池间隔或其他未证实字段伪装为 APK 专属事实；内容版本只编码会改变初始场景的状态。
 - **验收：**覆盖 `16 × 2 = 32` 个单位/Dynamite 快照组合，断言版本生成—解析往返、规范版本拒绝、最终初始单位集合和 Dynamite 状态一致；builder 输出正式结算能力、地图 ID、9 波、16 个敌人请求及玩家池契约。使用真实 Ice Rocks 场景创建 `GameSession`，确保 G1–G3 内容可以开局且单位/对象 ID 唯一。
-- **定向验证：**新增 `dakota-06-content-version` 与 `dakota-06-campaign` 单测；运行相关 Ice Rocks 的单位、Dynamite、规则、波次和玩家池测试及 `pnpm run typecheck`。不接页面、不测试回放导入，也不推进完整关卡。
+- **定向验证：**`node --import tsx --test --test-reporter=spec tests/dakota-06-content-version.test.ts tests/dakota-06-campaign.test.ts tests/dakota-06-dynamite.test.ts tests/dakota-06-units.test.ts tests/dakota-06-campaign-rules.test.ts tests/dakota-06-campaign-waves.test.ts tests/dakota-06-unit-pool.test.ts` 通过17项；`pnpm run typecheck` 通过。首轮暴露 profile fixture 漏列 Sniper 里程碑 `campaign-dakota-10`，修正测试 fixture 后全绿，生产代码未因该错误调整。内容工厂本身及 32 个快照编码、单位集合和炸药状态验收通过。本步不接页面、不测试回放导入，也不推进完整关卡。
 
 #### G4-B：正式阶段、Free Play 与菜单开局
 
