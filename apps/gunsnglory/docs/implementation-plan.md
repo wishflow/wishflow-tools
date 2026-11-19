@@ -65,11 +65,11 @@ G4 → G5 批次检查与发布决策
 
 ### G4：内容快照、目录消费者、正式/自由入口与回放
 
-- **G4-A 内容工厂：**新增 `campaign-dakota-07` identity、具名单位解锁快照、规范 content-version 解析和 `ScenarioContent` builder；组合 G1–G3。快照只编码会影响单位集合的全局解锁位；正式/自由新局和 replay factory 都以相应档案/录制快照创建内容。覆盖全部16种解锁组合、唯一实体 ID 和真实 `GameSession.open()`。
-- **G4-B 菜单与正式目录：**登记为 global level 37，正式解锁前置为 `campaign-dakota-06`（Ice Rocks）；复用已存在 catalog 行。Free Play 无条件开放 Frost Station 的已实现内容及三档难度。核对菜单地图预览、标题/简介、正式进度初始/结算快照、地区已实现数和禁用边界；从真实菜单入口检查，不能只调用 builder。
-- **G4-C 表现接线与预载：**接入 Level 37/Dakota HUD、双语对白/头像、Dakota 音乐选择以及完整 Frost Station 场景图像预载。声音保持静音，只验证资源和选择结果。扩展全目录/菜单 E2E，查找所有硬编码关卡总数、地区计数和 Free Play 范围。
-- **G4-D 回放入口：**主页面 replay dispatch 按 `campaign-dakota-07` 及录制内容版本重建单位解锁快照；覆盖缺少/未知/非规范版本拒绝及导入当前档案与录制快照不同的情形。不得改旧回放格式或正式结算语义。
-- **验收与针对性验证：**builder 输出地图、单位、8波/18请求、正式结算能力和版本；16种解锁快照往返；正式前置锁定/解锁及 Free Play 真实菜单 E2E；中英文 title/overview/dialogue、HUD、地图预载和 replay dispatch 均指向 Level 37。各 G4 子步分别跑受影响单测/E2E和类型检查，完成后更新本计划、关闭已完成子项并本地提交。
+- **G4-A 内容工厂与快照：**新增 `campaign-dakota-07` identity、只包含四个全局招募解锁位的具名快照、规范 content-version 生成/解析，以及组合 G1–G3 的 `ScenarioContent` builder。正式与 Free Play 新局都从当前完成记录计算快照；builder 输出正式结算能力，不添加档案字段。测试16种解锁组合、最终单位集合/ID唯一性、版本往返与非规范版本拒绝，并用真实 Frost Station 场景打开 `GameSession`。
+- **G4-B 菜单与正式目录：**在 `official-campaign.ts` 登记 global level 37，正式前置为 `campaign-dakota-06`（Ice Rocks）；复用现有 `campaign-catalog.ts` level 37 行，不重复登记。接通主菜单选关/预览，Free Play 无条件开放本关和三档难度；核对正式进度初始/结算快照及地区已实现数。单测覆盖锁定、解锁和进度投影；E2E 从真实菜单分别验证未满足前置时锁定、完成 Ice Rocks 后可进入，以及 Free Play 可进入，不能只调用 builder。
+- **G4-C 表现接线与预载：**接通 `main.ts` 中 Level 37 标题/简介、Dakota HUD、Wave Intro、头像预载、Dakota 环境/战斗音乐选择和地图图像启动预载；中英文资源均须指向 Frost Station。音乐保持静音，只校验路径和选择。搜寻并更新所有受关卡数影响的硬编码目录快照、地区计数、Free Play 范围及文案。
+- **G4-D 回放入口：**在浏览器 replay factory/dispatch 按 `campaign-dakota-07` 及录制 content-version 重建记录时的四个单位解锁位，不依赖导入者当前档案。分别覆盖16种规范版本、当前进度与录制快照不同时仍采用录制状态、缺失/未知/非规范版本拒绝；不改既有回放格式或正式结算语义。
+- **验收与针对性验证：**G4-A builder 输出地图、单位、8波/18请求、正式结算能力和规范版本；G4-B 验证正式前置锁定/解锁及 Free Play 真实入口；G4-C 验证中英文 title/overview/dialogue、HUD、头像/地图预载和静音音乐路径；G4-D 验证 replay dispatch 和错误版本拒绝。每个子步单独运行受影响测试与类型检查、更新本计划关闭已完成项并本地提交；各切片都完成后才进入 G5 全批检查。
 
 ### G5：整批本地检查、内置浏览器验收与集成决策
 
