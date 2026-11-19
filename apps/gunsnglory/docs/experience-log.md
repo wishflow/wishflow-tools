@@ -54,7 +54,7 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **修复与防回归：**为 Fort Echo 补齐菜单双语标题/简介、map27 预览 builder、战斗说明、Oregon 地区标签、档案快照驱动的场景重建，以及复用 Oregon 曲目的识别分支。`t63-oregon-04-integration.spec.ts` 从真实菜单路径检查 Free Play 可玩数量、map27 关卡图与缩略图尺寸、双语文案、Fort Echo 的地区/关卡上下文及首波对白头像。测试拦截媒体 `load()` 记录环境音乐资源地址；音效保持关闭，不加载或播放声音。
 - **避免重复：**新增关卡不能以“目录和 Progress 已登记”作为 UI 集成完成标准。逐项搜索消费 `CampaignCatalog` / `officialCampaignStages` 的页面路由、标题/说明、缩略图 builder、HUD 分类、场景重建、音乐和 replay 工厂；至少从菜单实际进入新关卡，并验证预览身份、开局 ID/地区/波次。目录已有静态地图图并不能证明预览使用了正确的 `ScenarioContent`。
 - **Ghost Town 再次验证：**G4-B 已接通目录、菜单和新局，但对白选择、Dakota 音乐识别、头像预载及 replay snapshot factory 仍是 `main.ts` / `bootstrap/browser.ts` 中互不自动联动的消费者。G4-C 接入后，`dakota-05-campaign-presentation.test.ts` 检查对白、音乐和预载路由，`dakota-05-replay-content.test.ts` 比较16种录制解锁快照与导入场景单位；t74 E2E 从菜单验证首段对白、头像实际加载和 HUD 地区/关卡上下文。新关验收应使用消费点矩阵逐项关单，不能把“菜单可进”推及到其他页面消费者。
-- **Ice Rocks G4-B 的测试定位：**首次 Playwright 断言用了不存在的 `data-testid="scene-title"`；`game-page-template.ts` 实际提供的是 `id="scene-title"`。失败上下文已显示 Level 36 的战斗标题，故这次是测试定位器错误，不是开局失败。改用 `#scene-title` 后 t75 两项通过。新断言应先查模板和既有稳定 selector，并查看失败快照，不能只根据 locator 超时认定产品行为失败。快照同时显示 Dakota HUD 地区仍回退为 `NEW MEXICO`；这是实际待修接线，计划交由 G4-C 添加地区和关卡上下文断言。
+- **Ice Rocks G4-B/G4-C 的 E2E 断言：**首次 Playwright 断言用了不存在的 `data-testid="scene-title"`；`game-page-template.ts` 实际提供的是 `id="scene-title"`。失败上下文已显示 Level 36 的战斗标题，故这次是测试定位器错误，不是开局失败。改用 `#scene-title` 后 t75 两项通过。G4-C 又在保持中文界面启动后断言英文标题和英文波次状态；页面实际已正确本地化，测试改为匹配当前语言后通过。新断言应先查模板和既有稳定 selector，并按当前语言状态写期望；失败时查看快照，不能只根据 locator/文本不匹配认定产品行为失败。首次快照还显示 Dakota HUD 地区回退为 `NEW MEXICO`，这是实际待修接线；G4-C 已补入 `dakota06CampaignId`，并由正式/自由 E2E 验证 Dakota/达科他地区与 Level 36 上下文。
 
 ## DEX 伪代码分支与路线优先级复核
 

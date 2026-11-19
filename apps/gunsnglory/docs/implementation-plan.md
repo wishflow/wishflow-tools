@@ -105,9 +105,10 @@ G4-B、G4-C、G4-D 全部通过后 → G5 批次验收
 
 #### G4-C：对白、HUD 与表现资源预载
 
+- **状态：已完成。**Ice Rocks 已接入九段 APK 英文对白资源、中文翻译、头像、Dakota 地区/36 关 HUD、正式/自由说明、头像预载，以及 Dakota 共用环境音乐和逐波循环选择。回放导入仍由 G4-D 接入；批次完整检查仍由 G5 执行。
 - **范围：**沿用 G4-A/G4-B 已接入菜单的双语标题/简介；按 `ICE-COPY` 接入九段对白原文、中文翻译和头像映射。补上 Ice Rocks 的战斗说明、Dakota HUD 地区/Level 36 上下文、对白选择、头像等表现资源预载、环境音乐与逐波音乐选择。地图、静态对象和单位场景图像由 G4-B 预载。音乐沿用 Dakota 共用资源；不发明本关独立曲目或语音。
 - **验收：**九段对白顺序、resource ID、speaker、portrait 与独立审计表一致；中英文均能显示。正式与 Free Play 的标题、地区和 Level 36 HUD 正确；地图、单位、头像等图像以及音乐文件离线可读取。音频保持静音，只核对选择函数和资源文件，不播放试听。
-- **定向验证：**copy/presentation 单测核对 APK 原文、翻译、头像和音乐映射及文件存在；E2E 从菜单进入并检查开场对白、头像实际加载、地图无资源错误及 HUD。检查所有 `main.ts` 资源收集与音乐消费者，不由单测常量存在推断页面已接线。
+- **定向验证：**`node --import tsx --test --test-reporter=spec tests/dakota-06-campaign-presentation.test.ts tests/dakota-06-formal.test.ts` 通过6项；`pnpm run typecheck` 通过。`CI=1 PLAYWRIGHT_PORT=43497 pnpm exec playwright test tests/e2e/t74-dakota-05-integration.spec.ts tests/e2e/t75-dakota-06-integration.spec.ts --workers=1` 中 Ghost Town 2项通过；Ice Rocks 两项先后在修正本地化断言后通过，最终 t75 2/2。E2E 检查九波开场文案及 portrait 实际加载、中文/英文 HUD、Free Play/正式说明和无资源错误；声音保持关闭。未播放音乐。`git diff --check` 通过；G4-D 与 G5 未完成。
 
 #### G4-D：回放导入按录制快照重建
 

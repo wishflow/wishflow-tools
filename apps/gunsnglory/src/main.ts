@@ -190,6 +190,8 @@ import { dakota05AmbientMusic, dakota05BattleMusicForWave, type Dakota05MusicTra
 import { dakota06CampaignId } from './content/dakota-06-identity';
 import { dakota06CampaignCopy } from './content/dakota-06-campaign-copy';
 import { createDakota06CampaignContent } from './content/dakota-06-campaign';
+import { dakota06CampaignPortraitAssets, dakota06WaveIntros } from './content/dakota-06-wave-intros';
+import { dakota06AmbientMusic, dakota06BattleMusicForWave, type Dakota06MusicTrack } from './content/dakota-06-music';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -943,6 +945,9 @@ const languageMessages = {
       if (scenarioId === dakota05CampaignId) return mode === 'free'
         ? 'Free Play does not change campaign progress or best score.'
         : 'Official Ghost Town level 35: nine original waves across five routes. Victory records campaign completion and best score.';
+      if (scenarioId === dakota06CampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Ice Rocks level 36: nine original waves across three entrances. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -1230,6 +1235,9 @@ const languageMessages = {
       if (scenarioId === dakota05CampaignId) return mode === 'free'
         ? '自由游玩不会更改战役进度或最高分。'
         : '正式关卡：幽灵镇，第 35 关。包含五条路线上的原版九波；胜利后记录战役完成与最高分。';
+      if (scenarioId === dakota06CampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：冰岩，第 36 关。包含三个入口上的原版九波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -3428,6 +3436,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       || officialStage?.scenarioId === dakota03CampaignId
       || officialStage?.scenarioId === dakota04CampaignId
       || officialStage?.scenarioId === dakota05CampaignId
+      || officialStage?.scenarioId === dakota06CampaignId
       ? language === 'zh' ? '达科他' : 'DAKOTA'
     : officialStage?.scenarioId === oregon01CampaignId
       || officialStage?.scenarioId === oregon02CampaignId
@@ -4124,13 +4133,15 @@ const assetNames = new Set([
   ...dakota03CampaignPortraitAssets,
   ...dakota04CampaignPortraitAssets,
   ...dakota05CampaignPortraitAssets,
+  ...dakota06CampaignPortraitAssets,
+  ...dakota06CampaignPortraitAssets,
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
 let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
 const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
-let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack | Dakota06MusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
 const blockedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let audioUserGestureObserved = false;
@@ -4317,7 +4328,8 @@ function isOfficialDakotaMusicSession(): boolean {
       || session.startRecord.scenarioId === dakota02CampaignId
       || session.startRecord.scenarioId === dakota03CampaignId
       || session.startRecord.scenarioId === dakota04CampaignId
-      || session.startRecord.scenarioId === dakota05CampaignId);
+      || session.startRecord.scenarioId === dakota05CampaignId
+      || session.startRecord.scenarioId === dakota06CampaignId);
 }
 
 function isOfficialCampaignMusicSession(): boolean {
@@ -4361,6 +4373,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === dakota03CampaignId) return dakota03WaveIntros;
   if (scenarioId === dakota04CampaignId) return dakota04WaveIntros;
   if (scenarioId === dakota05CampaignId) return dakota05WaveIntros;
+  if (scenarioId === dakota06CampaignId) return dakota06WaveIntros;
   return [];
 }
 
@@ -4520,7 +4533,7 @@ function pauseBackgroundMusic(resetPosition = false): void {
 }
 
 function setCampaignBackgroundMusic(
-  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack,
+  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack | Dakota06MusicTrack,
 ): void {
   if (!isOfficialCampaignMusicSession()) return;
   if (backgroundMusicTrack === track && backgroundMusic) {
@@ -4642,7 +4655,9 @@ function playRequestedSounds(
               ? dakota04BattleMusicForWave(eventWaveNumber - 1)
               : session.startRecord.scenarioId === dakota05CampaignId
                 ? dakota05BattleMusicForWave(eventWaveNumber - 1)
-                : oregon11BattleMusicForWave(eventWaveNumber - 1)
+                : session.startRecord.scenarioId === dakota06CampaignId
+                  ? dakota06BattleMusicForWave(eventWaveNumber - 1)
+                  : oregon11BattleMusicForWave(eventWaveNumber - 1)
         : isOfficialMississippiMusicSession()
           ? mississippiBattleMusicForWave(eventWaveNumber - 1)
           : isOfficialOregonMusicSession()
@@ -4660,7 +4675,9 @@ function playRequestedSounds(
               ? dakota04AmbientMusic
               : session.startRecord.scenarioId === dakota05CampaignId
                 ? dakota05AmbientMusic
-                : oregon11AmbientMusic
+                : session.startRecord.scenarioId === dakota06CampaignId
+                  ? dakota06AmbientMusic
+                  : oregon11AmbientMusic
           : isOfficialMississippiMusicSession() ? mississippiAmbientMusic
             : isOfficialOregonMusicSession() ? oregon01AmbientMusic : cowGulchAmbientMusic);
     }
@@ -4714,7 +4731,9 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
           ? dakota04AmbientMusic
           : session.startRecord.scenarioId === dakota05CampaignId
             ? dakota05AmbientMusic
-            : oregon11AmbientMusic);
+            : session.startRecord.scenarioId === dakota06CampaignId
+              ? dakota06AmbientMusic
+              : oregon11AmbientMusic);
   }
   else if (isOfficialNewMexicoMusicSession()) setCampaignBackgroundMusic(cowGulchAmbientMusic);
   else if (isOfficialMississippiMusicSession()) setCampaignBackgroundMusic(mississippiAmbientMusic);
