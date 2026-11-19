@@ -46,7 +46,7 @@ test('Golden River is formal level 13 and unlocks only after Steam Valley is com
     globalLevel: 13,
     requiresCompletedScenarioIds: [mississippi12CampaignId],
   });
-  assert.equal(officialCampaignStages.length, 33);
+  assert.equal(officialCampaignStages.length, 34);
 
   const progress = createProgress(createMemoryProfileRepository({
     completedScenarios: completedThroughLevelEleven,

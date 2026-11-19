@@ -37,7 +37,7 @@
 | 130 | `(23,22)`，1 个 | 休眠 type35 Pyromaniac；完成全局关卡50里程碑后才创建。 |
 | 131 | `(12,7)`，1 个 | 休眠 type36 Salesman；完成全局关卡60里程碑后才创建。 |
 | 69、70、71、76 | 分别 7、6、4、1 个；code76 在 `(11,6)` | 依次为 rocks A、rocks B、tree、bush。当前共享 Mississippi scene decoder 缺少 code76；`GameObjectDecoration` 将 decoration id 9 绘制为 `e_1x1_bush`，map16 原始 code76 应被映射为该装饰。 |
-| 96、97、99、101 | 分别 7、7、5、2 个 | APK 仅在加载战局时创建的休眠单位标记；不要当作新局额外可雇用角色。网页未完成战局从关卡初态重开。 |
+| 96、97、99、101 | 分别 7、7、5、2 个 | 新局时创建 activity 4 招募单位的位置标记；是否实际实例化由 GameObjectUnit.\`isUnlocked()\` 的单位解锁状态控制。读取战局时不重复创建 TDM 新局单位，而从存档恢复单位状态。网页未完成战局从关卡初态重开，不改变新局应创建这些 APK marker 的事实。 |
 
 地图没有 code132，因此不创建 Gambler/Casino；没有 `spawnPoolActions`，也没有列车 marker。代码107 Indian 属常规玩家单位；Pyromaniac/Salesman 的可见性受各自全局里程碑影响。两种特殊单位都必须进入 `contentVersion`，否则回放会受导入者当前档案影响。
 

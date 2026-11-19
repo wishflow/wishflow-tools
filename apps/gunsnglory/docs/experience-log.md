@@ -22,7 +22,7 @@
 - **根因与证据：**APK 的桥图是覆盖底图的道路层，资源字节、绘制矩形和网页一致；玩家脚底锚点和 `5068×4608` 碰撞框也与 APK `GameObjectUnit.createCollisionObject()` 一致。横桥 raw `80` 的贴图向左右各伸约 `0.25` 格，但碰撞可走范围由四角所在底图格及街道覆盖层决定；raw `36` 悬崖阻挡漏项已在前一批修复。对象碰撞的另一个调用链是 `CollisionManager.testCollision()` → `boxCheckX/Y()`：按当前碰撞框、本帧位移和正交轴重叠检测边沿穿越；`CollisionManager.boxCheck()` 不是该移动路径。静态 TDM 对象框由 `GameObjectManager.createGameObjectsFromBasicMap()`、`GameObjectDecoration`/`GameObjectSpawnLocation` 构造器和 `CollisionManager.createCollisionObject()` 的不同偏移共同决定。网页之前只查显式 `collisionBoxFine`，未包含单位列表，且测试把同一份内容框当成期望值，因此错框也能通过。睡眠单位只改状态和贴图，仍保留碰撞对象。`GameObjectSpawnLocation.update()` 使用零位移 `testBasicCollision()` 创建单位，不能把一般矩形重叠规则套用到 Fort Cannon 出生位置。
 - **修复与防回归：**以原始 TDM 码生成静态物件框，并只在特殊非静态码装饰（如水岩）或缺少 TDM 的 fixture 中使用显式框；活动、睡眠和动态生成单位都参与碰撞，船体使用自己的框，组成员不与自身同时移动组互撞；Fort 生成继续采用零位移检查。地形四角判断与静态/单位边沿穿越分开实现。`player-collision.test.ts` 覆盖睡眠/活动单位、沙龙、Fort 离开、raw `88` 竖桥、TDM 矩形表、炸药和27关静态 marker；`player-unit-anchor.test.ts` 覆盖 Cow Gulch raw `80` 横桥及27关 raw `36` 墙；Steamer 与奖励箱测试覆盖自定义船体和收集行为。
 - **验证与发布边界：**定向测试122项通过；完整 `test:ci` 通过类型检查、853项单测、生产构建和175项 E2E。GitHub Actions `43833240368` 成功，GitHub Pages 与 Cloudflare Pages 的来源均为发布提交 `0eb4b42`。内置浏览器窗口模式、静音加载对应 Cow Gulch，可选中我方单位并下达移动指令；截图未能确认其最终停靠边界，因此不记作线上碰撞画面通过。证据来自 APK 静态方法/资源、TDM 与自动化会话；本批未启动 Android。网页目前接入27/60关，其余33关未纳入逐图验收。
-- **避免重复：**看到脚底略超出桥面绘图边缘，先按贴图尺寸、脚底锚点、碰撞框底边分别计算，不以视觉矩形代替 walkable field。要改对象碰撞时先定位其 APK TDM 类型和构造器，再核对本帧的移动方法；不要拿独立的 `boxCheck()`、严格 AABB 或一个地图字段推测整条规则。新地图必须逐标记核对静态对象覆盖；单位状态、船体组和建筑 spawn 分别做测试。当前结论基于 APK 静态方法、资源与 `GameSession` 自动化检查，不代表 Android 实机/模拟器画面观察。
+- **避免重复：**看到脚底略超出桥面绘图边缘，先按贴图尺寸、脚底锚点、碰撞框底边分别计算，不以视觉矩形代替 walkable field。要改对象碰撞时先定位其 APK TDM 类型和构造器，再核对本帧的移动方法；不要拿独立的 `boxCheck()`、严格 AABB 或一个地图字段推测整条规则。新地图必须逐标记核对静态对象覆盖；单位状态、船体组和建筑 spawn 分别做测试。测试铁路覆盖是否阻挡时，选 raw0 开放地面跨越轨道；raw32 属于敌方道路地形，玩家本来就会被它阻挡，若把 raw32 路段作为测试起点/目标，停住不能说明铁路贴图层阻挡。本轮 Badlands 用 raw90 覆盖在 raw0 地面上的横向探针验证轨道可穿越。当前结论基于 APK 静态方法、资源与 `GameSession` 自动化检查，不代表 Android 实机/模拟器画面观察。
 
 ## 新增战役关卡后的进度断言
 
@@ -60,9 +60,16 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **证据与核实：**`GameObjectManager.createGameObjectsFromBasicMap` 的 JADX 伪代码在 map-load 布尔分支处存在控制流重建歧义。Smali 中 code 96–101 与130/131都进入 `fromLoadGame == false` 的创建分支：前者按 type1–6 创建 activity 4 可招募单位，后者按 type35/36创建特殊招募单位；加载存档时跳过 TDM 的新局初始对象。网页先前误把96–101当作只在读档恢复的 marker，继而在 M11–M16 手工工厂中将其跳过。静态审计纠正了判断；六关现复用 TDM 单位构造器，v2 内容版本记录四种全局单位解锁位，M16 另记录 Dynamite 解锁位。旧 v1 回放仍按原单位列表重建，123项六关关联测试和类型检查通过。结论以 APK Smali 条件跳转和字段赋值为准，不把伪代码描述成原始源码。
 - **路线复核：**解析 `EnemyDirectorField` 方向表和 `PriorityMap.recursiveLengthTracking` 后，用明确的具体路径独立计算所有路线格优先级，再与网页 TypeScript 算法逐格比较；map05 的 5 个路线变体、142 个路线格均匹配。属于静态算法交叉校验，不是 Android 或浏览器运行观察。
 - **路线方向字段：**`WaveRouteDefinition.redirects[n].directions` 表示从该控制点离开的方向，不是从前一个节点进入该点的方向。map14 首次编写时把图边的方向误记在目标节点上；从原始 TDM 重新解出的方向图测试立即失败。修正后比较全部 13 条完整路径及 59 条有向边。新增地图路线时按控制点的出边填写，并用原始 TDM 独立展开每个分支；只检查路线经过了哪些格子不足以验证方向。
+- **路线链数量不等于出生点数量：**Badlands 的静态路线定义有37条完整 spawn-to-exit 路线，但只有3个唯一出生 marker。初版关卡规则测试把 `routes.length` 错断言为3；定向测试立即以37对3失败，核对 `WaveRouteDefinition` 后改为分别断言37条路线链和3个唯一出生点。统计关卡入口时应按出生坐标/方向去重；统计完整路线时保留每条出生到出口的路线，不以其中一个数量替代另一个。
 - **分组路线表需按有向边去重：**Loot Lakes 静态审计按 marker 方向分组列边，表格有57次边列项，其中三条共享边在基础方向组和多方向分支组各出现一次；归一化 `from-cell + direction + to-cell` 后是54条唯一有向边。生成网页路线 fixture 时按边身份去重，并将唯一边数与节点/marker 数量交叉校验；不要把表格列项数直接当作路线边数。
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
 - **审计结论也要反向核对实现：**M16 审计虽改正了 `130/131` 的新局语义，却再次错误地将 `96–101` 写成仅读档创建；代码随后照此省略了 M11–M16 的可招募单位。M19 接入时，同一错误又进入 M19 审计和 M18 的专用工厂：TDM 96–101 实际在 `fromLoadGame == false` 时创建 activity 4 招募单位，读档时才跳过；仅更新报告或只测共享工厂都不够，必须检查每张地图工厂与最终 `ScenarioContent.units`。本轮已恢复 M18/M19 的 Mexican、Indian、Sniper、Grandpa marker 行为；M18 新内容升为 v2，旧 v1 回放继续使用原单位列表。后续逐图测试需从真实 TDM 核对坐标、activity、解锁门控和唯一 ID，并至少覆盖一条对应关卡的回放入口。
+
+## 更正事实要同步所有关卡报告，并核实派生数据的父级索引
+
+- **表现与复现：**检查当前文档时发现，Golden River（M13）报告仍写着 raw96–101“仅在加载战局时创建”，而 M14 之后的 Smali 结论和本节既有核实均表明这些 marker 在新局时创建 activity 4 招募单位、读档时不重复创建。另一个常见混淆是把 REA Evidence 的 engine.artifact_sha256 当作目标 APK 摘要，或仅凭 Smali 数组标签名推断关卡索引。
+- **根因与证据：**原始来源、全局研究摘要、逐关报告和经验记录分别保存了同一事实；后续更正没有同步所有副本，且没有显著标记哪条旧结论已经失效。这是文档缺少明确权威来源和更正传播规则，不只是一次上下文遗忘。REA 的 engine.artifact_sha256 标识 JADX 引擎工件，APK 身份应取 subject.digest.sha256。M35 Badlands 的 GameDesignData <clinit> 中，array_8f4 由父级 aput-object 写入 index 0x21；标签本身不能说明它属于哪个关卡。
+- **修正与防回归：**M13 报告现改为新局创建、读取存档时恢复状态，并明确单位解锁门控。新的静态报告同时记录 APK 身份来源及“目标 level → 数组引用 → 父级索引”的映射；复核报告更正时，搜索全部关卡文档中的旧说法并同步修订。数组/lookup table 必须先沿数据流找到父级写入索引，再映射字段语义；REA 工具摘要不能代替目标文件 digest。
 
 ## 多分岔运行转向与地图道路图层必须一起核对
 
@@ -434,6 +441,7 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **表现与复现：**本地默认 5-worker `test:ci` 中，t08 的地图选择、t20 的页面重载状态以及 t22 的模拟波次重载检查出现超时或模拟推进到下一波；相同三项在 `CI=1 --workers=1` 下全部通过。首次 5-worker 完整运行仅发现正式关卡计数断言问题，第二次才在高并发时复现上述时序问题。
 - **根因判断（有复现证据，机制仍属推断）：**这些测试依赖实时游戏循环和页面/画布交互；本地多个浏览器 worker 同时运行时会争用进程资源，扩大可观察时序窗口。单 worker 重跑通过，未发现同样的产品状态错误。
 - **修复与防回归：**产品逻辑未改。完整本地验收设置 `CI=1 pnpm run test:ci`，Playwright 配置会与 CI 一样使用一个 worker；若单 worker仍失败，再按具体页面状态调查，不把并行超时直接归因于游戏代码。
+- **定向 spec 命令：**尝试 `pnpm run test:e2e -- tests/e2e/t73-dakota-04-integration.spec.ts` 时，命令实际启动了全量192项 E2E；未等批次收尾就停止了该进程。它不是测试失败或产品回归。定向执行使用 `pnpm exec playwright test tests/e2e/t73-dakota-04-integration.spec.ts`，实测只运行该文件的2项并通过。以后需要传单个 spec 时先确认 Playwright 报告的 `Running N tests` 与预期一致；全量批次仍用 `CI=1 pnpm run test:ci`。
 
 ## 波次语音重试 E2E 不应依赖旧角色名
 
@@ -489,6 +497,8 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **修复与验证：**四份单测加入 Level 33 及其 `campaign-dakota-02` 前置条件/锁定状态；五份 E2E 总数断言改为33。四个受影响单测文件合计41项通过。完整 `test:ci` 最终通过类型检查、989项单测、生产构建和190项 E2E。
 - **收尾复核：**完整 E2E 首次运行中，188 项通过、2 项失败；失败是 `t70`、`t71` 的 Dakota Free Play 区域可玩数仍期待2，Level 33 接入后正确值为3。定向复跑这两个 spec 的4项通过后，完整回归全部通过。地区可玩数也是正式关卡目录的消费者，不能只搜索战役总数与进度分母。生产构建仍报告约3.77 MB 的主 JS chunk 超过 Vite 500 KB 提示阈值；这是既有构建警告，本批未调整拆包。
 - **防回归：**新增正式阶段时，搜索并核对 `officialCampaignStages` 的长度、完整阶段投影、进度状态顺序、固定进度 UI 总数和地图菜单可用数。只改数量断言不算目录变更验收完成。
+- **M35 复发：**加入 Badlands level34 后，批次完整单测再次因旧快照失败：`apache-valley.test.ts` 依赖链缺 Dakota04，`fort-kaboom-formal.test.ts` 的全目录投影缺 level34，`progress.test.ts` 初始和结算后状态缺一个 locked stage。目录、锁定逻辑和 Progress 实现均正确；补入三处期望后，这三份文件共31项定向测试通过。
+- **复发原因：**已有经验文档清楚列出完整阶段投影和状态顺序，但本轮没有检索并执行该项；只批量改了 `officialCampaignStages.length` 和 UI 分母。因此这是执行检查遗漏，不是 APK/REA 证据缺失，也不是证据组织结构导致无法找到答案。新增正式关卡前必须逐项执行上一条列出的搜索，而不能把读过经验记录当成检查已完成。
 
 ## 地形图层不能只画 tile 的表面标记
 

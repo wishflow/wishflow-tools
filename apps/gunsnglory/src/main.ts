@@ -30,6 +30,7 @@ import {
   createBrowserGameForOregon11Replay,
   createBrowserGameForDakota02Replay,
   createBrowserGameForDakota03Replay,
+  createBrowserGameForDakota04Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -175,6 +176,11 @@ import { createDakota03CampaignContent } from './content/dakota-03-campaign';
 import { dakota03CampaignCopy } from './content/dakota-03-campaign-copy';
 import { dakota03CampaignPortraitAssets, dakota03WaveIntros } from './content/dakota-03-wave-intros';
 import { dakota03AmbientMusic, dakota03BattleMusicForWave, type Dakota03MusicTrack } from './content/dakota-03-music';
+import { dakota04CampaignId } from './content/dakota-04-identity';
+import { dakota04CampaignCopy } from './content/dakota-04-campaign-copy';
+import { createDakota04CampaignContent } from './content/dakota-04-campaign';
+import { dakota04CampaignPortraitAssets, dakota04WaveIntros } from './content/dakota-04-wave-intros';
+import { dakota04AmbientMusic, dakota04BattleMusicForWave, type Dakota04MusicTrack } from './content/dakota-04-music';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -922,6 +928,9 @@ const languageMessages = {
       if (scenarioId === dakota02CampaignId) return mode === 'free'
         ? 'Free Play does not change campaign progress or best score.'
         : 'Official Six Grandfathers level 32: eight original waves across three entrances. Victory records campaign completion and best score.';
+      if (scenarioId === dakota04CampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Badlands level 34: nine original waves. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -1203,6 +1212,9 @@ const languageMessages = {
       if (scenarioId === dakota02CampaignId) return mode === 'free'
         ? '自由游玩不会更改战役进度或最高分。'
         : '正式关卡：六祖山，第 32 关。包含三个入口上的原版八波；胜利后记录战役完成与最高分。';
+      if (scenarioId === dakota04CampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：荒原，第 34 关。包含原版九波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -2119,7 +2131,8 @@ function campaignMenuLevelScreen(): string {
                                                       : level.level === 30 ? copy.levelThirtyTitle
                                                         : level.level === 31 ? copy.levelThirtyOneTitle
                                                           : level.level === 32 ? copy.levelThirtyTwoTitle
-                                                            : level.level === 33 ? dakota03CampaignCopy.title[language] : level.title;
+                                                            : level.level === 33 ? dakota03CampaignCopy.title[language]
+                                                              : level.level === 34 ? dakota04CampaignCopy.title[language] : level.title;
     const title = copy.selectLevel(level.level, levelTitle, statusLabel);
     const artName = `gng_levelmap_${String(level.mapFileNumber).padStart(2, '0')}.png`;
     const position = campaignLevelPositions[index];
@@ -2217,6 +2230,7 @@ function campaignMenuOverviewScreen(): string {
                                         : entry.level === 31 ? createOregon11CampaignContent(completedScenarios)
                                           : entry.level === 32 ? createDakota02CampaignContent(completedScenarios)
                                               : entry.level === 33 ? createDakota03CampaignContent(completedScenarios)
+                                                : entry.level === 34 ? createDakota04CampaignContent(completedScenarios)
                                           : createOregon07CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
@@ -2250,7 +2264,8 @@ function campaignMenuOverviewScreen(): string {
                                                             : entry.level === 30 ? copy.levelThirtyInfo
                                                               : entry.level === 31 ? copy.levelThirtyOneInfo
                                                                 : entry.level === 32 ? copy.levelThirtyTwoInfo
-                                                                  : entry.level === 33 ? dakota03CampaignCopy.overview[language] : '';
+                                                                  : entry.level === 33 ? dakota03CampaignCopy.overview[language]
+                                                                    : entry.level === 34 ? dakota04CampaignCopy.overview[language] : '';
   const levelDescription = entry.level === 15 ? copy.levelFifteenInfo
     : entry.level === 16 ? copy.levelSixteenInfo
       : entry.level === 17 ? copy.levelSeventeenInfo
@@ -2269,7 +2284,8 @@ function campaignMenuOverviewScreen(): string {
                                 : entry.level === 30 ? copy.levelThirtyInfo
                                   : entry.level === 31 ? copy.levelThirtyOneInfo
                                     : entry.level === 32 ? copy.levelThirtyTwoInfo
-                                      : entry.level === 33 ? dakota03CampaignCopy.overview[language] : description;
+                                      : entry.level === 33 ? dakota03CampaignCopy.overview[language]
+                                        : entry.level === 34 ? dakota04CampaignCopy.overview[language] : description;
   const artName = `gng_levelmap_${String(entry.mapFileNumber).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -2311,7 +2327,8 @@ function campaignMenuOverviewScreen(): string {
                                                             : entry.level === 30 ? copy.levelThirtyTitle
                                                               : entry.level === 31 ? copy.levelThirtyOneTitle
                                                               : entry.level === 32 ? copy.levelThirtyTwoTitle
-                                                                : entry.level === 33 ? dakota03CampaignCopy.title[language] : entry.title)}</h2>
+                                                                : entry.level === 33 ? dakota03CampaignCopy.title[language]
+                                                                  : entry.level === 34 ? dakota04CampaignCopy.title[language] : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" data-testid="campaign-overview-minimap" data-scenario-id="${escapeMenuText(content.id)}" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -3384,6 +3401,7 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
     : officialStage?.scenarioId === oregon11CampaignId
       || officialStage?.scenarioId === dakota02CampaignId
       || officialStage?.scenarioId === dakota03CampaignId
+      || officialStage?.scenarioId === dakota04CampaignId
       ? language === 'zh' ? '达科他' : 'DAKOTA'
     : officialStage?.scenarioId === oregon01CampaignId
       || officialStage?.scenarioId === oregon02CampaignId
@@ -3967,6 +3985,7 @@ const assetNames = new Set([
     createOregon11CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createDakota02CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
     createDakota03CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
+    createDakota04CampaignContent([...allMississippiUnitUnlocks, 'campaign-mississippi-10']),
   ]),
   'pioneer_male',
   'pioneer_female',
@@ -4075,13 +4094,14 @@ const assetNames = new Set([
   ...oregon11CampaignPortraitAssets,
   ...dakota02CampaignPortraitAssets,
   ...dakota03CampaignPortraitAssets,
+  ...dakota04CampaignPortraitAssets,
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
 let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
 const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
-let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
 const blockedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let audioUserGestureObserved = false;
@@ -4266,7 +4286,8 @@ function isOfficialDakotaMusicSession(): boolean {
   return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
     && (session.startRecord.scenarioId === oregon11CampaignId
       || session.startRecord.scenarioId === dakota02CampaignId
-      || session.startRecord.scenarioId === dakota03CampaignId);
+      || session.startRecord.scenarioId === dakota03CampaignId
+      || session.startRecord.scenarioId === dakota04CampaignId);
 }
 
 function isOfficialCampaignMusicSession(): boolean {
@@ -4308,6 +4329,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
   if (scenarioId === oregon11CampaignId) return oregon11WaveIntros;
   if (scenarioId === dakota02CampaignId) return dakota02WaveIntros;
   if (scenarioId === dakota03CampaignId) return dakota03WaveIntros;
+  if (scenarioId === dakota04CampaignId) return dakota04WaveIntros;
   return [];
 }
 
@@ -4467,7 +4489,7 @@ function pauseBackgroundMusic(resetPosition = false): void {
 }
 
 function setCampaignBackgroundMusic(
-  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack,
+  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack,
 ): void {
   if (!isOfficialCampaignMusicSession()) return;
   if (backgroundMusicTrack === track && backgroundMusic) {
@@ -4585,7 +4607,9 @@ function playRequestedSounds(
           ? dakota02BattleMusicForWave(eventWaveNumber - 1)
           : session.startRecord.scenarioId === dakota03CampaignId
             ? dakota03BattleMusicForWave(eventWaveNumber - 1)
-            : oregon11BattleMusicForWave(eventWaveNumber - 1)
+            : session.startRecord.scenarioId === dakota04CampaignId
+              ? dakota04BattleMusicForWave(eventWaveNumber - 1)
+              : oregon11BattleMusicForWave(eventWaveNumber - 1)
         : isOfficialMississippiMusicSession()
           ? mississippiBattleMusicForWave(eventWaveNumber - 1)
           : isOfficialOregonMusicSession()
@@ -4595,9 +4619,13 @@ function playRequestedSounds(
     if (event.type === 'wave-settled') {
       setCampaignBackgroundMusic(event.settlement.outcome === 'victory'
         ? cowGulchVictoryMusic
-        : isOfficialDakotaMusicSession() ? session.startRecord.scenarioId === dakota03CampaignId
-          ? dakota03AmbientMusic
-          : oregon11AmbientMusic
+        : isOfficialDakotaMusicSession() ? session.startRecord.scenarioId === dakota02CampaignId
+          ? dakota02AmbientMusic
+          : session.startRecord.scenarioId === dakota03CampaignId
+            ? dakota03AmbientMusic
+            : session.startRecord.scenarioId === dakota04CampaignId
+              ? dakota04AmbientMusic
+              : oregon11AmbientMusic
           : isOfficialMississippiMusicSession() ? mississippiAmbientMusic
             : isOfficialOregonMusicSession() ? oregon01AmbientMusic : cowGulchAmbientMusic);
     }
@@ -4647,7 +4675,9 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
       ? dakota02AmbientMusic
       : session.startRecord.scenarioId === dakota03CampaignId
         ? dakota03AmbientMusic
-        : oregon11AmbientMusic);
+        : session.startRecord.scenarioId === dakota04CampaignId
+          ? dakota04AmbientMusic
+          : oregon11AmbientMusic);
   }
   else if (isOfficialNewMexicoMusicSession()) setCampaignBackgroundMusic(cowGulchAmbientMusic);
   else if (isOfficialMississippiMusicSession()) setCampaignBackgroundMusic(mississippiAmbientMusic);
@@ -4781,7 +4811,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             || request.scenarioId === oregon10CampaignId
             || request.scenarioId === oregon11CampaignId
             || request.scenarioId === dakota02CampaignId
-            || request.scenarioId === dakota03CampaignId)
+            || request.scenarioId === dakota03CampaignId
+            || request.scenarioId === dakota04CampaignId)
             && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
             : game;
@@ -5119,6 +5150,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === dakota03CampaignId) {
       return createBrowserGameForDakota03Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === dakota04CampaignId) {
+      return createBrowserGameForDakota04Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }
