@@ -194,8 +194,14 @@ import {
   parseDakota06ReplayContentVersion,
 } from '../content/dakota-06-content-version';
 import { dakota06CampaignId } from '../content/dakota-06-identity';
-import { createDakota07CampaignContent } from '../content/dakota-07-campaign';
-import { dakota07CampaignContentVersionFor } from '../content/dakota-07-content-version';
+import {
+  createDakota07CampaignContent,
+  createDakota07CampaignContentFromSnapshot,
+} from '../content/dakota-07-campaign';
+import {
+  dakota07CampaignContentVersionFor,
+  parseDakota07ReplayContentVersion,
+} from '../content/dakota-07-content-version';
 import { dakota07CampaignId } from '../content/dakota-07-identity';
 import {
   newMexicoCampaignContentVersionFor,
@@ -740,6 +746,15 @@ export function createBrowserGameForDakota06Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, dakota06CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [dakota06CampaignId]: createDakota06CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Frost Station from its recorded global-unit unlock snapshot. */
+export function createBrowserGameForDakota07Replay(contentVersion: string | undefined) {
+  const parsed = parseDakota07ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, dakota07CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [dakota07CampaignId]: createDakota07CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 

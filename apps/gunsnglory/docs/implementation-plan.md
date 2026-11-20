@@ -34,7 +34,7 @@
 
 ## M38：Dakota 第 7 关 Frost Station
 
-**当前状态：G1 地图/路线、G2 实体/列车、G3 参数/波次/对白、G4-A 内容工厂与快照、G4-B 目录与菜单入口、G4-C 表现接线均已完成；G4-D 回放入口和 G5 批次验收待做。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
+**当前状态：G1–G3 与 G4-A–G4-D 均已完成；仅剩 G5 整批本地检查、内置浏览器验收和集成决策。**Frost Station 是 global level 37，APK 地图为 TDM40、参数 index 36、波次分支 `i == 37`。逐关证据以[Frost Station 静态审计](frost-station-static-audit.md)和原始 APK 资源为准；不从邻关复制地图、对象坐标、参数或波次。当前 `campaign-catalog.ts` 已有 Level 37 展示行，本批只接通关卡内容与消费者，不重复登记目录记录。
 
 **依赖：**M36 Ghost Town 与 M37 Ice Rocks 已完成的 Dakota 地形、路线、单位、列车、正式/自由模式、回放和页面框架。M36–M37 仍是本地完成、未发布状态；M38 完成后统一复核三关批次是否一起集成发布，不为单个切片发版。
 
@@ -68,8 +68,8 @@ G4 → G5 批次检查与发布决策
 - **G4-A 内容工厂与快照（已完成）：**新增 `campaign-dakota-07` identity、只包含四个全局招募解锁位的具名快照、规范 content-version 生成/解析，以及组合 G1–G3 的 `ScenarioContent` builder。正式与 Free Play 新局可从当前完成记录计算快照；builder 声明正式结算能力，不添加档案字段。16 种解锁组合、最终单位集合/ID唯一性、版本往返与非规范版本拒绝，以及真实 Frost Station `GameSession` 开局均通过。
 - **G4-B 菜单与正式目录（已完成）：**在 `official-campaign.ts` 登记 global level 37，正式前置为 `campaign-dakota-06`（Ice Rocks）；复用现有 `campaign-catalog.ts` level 37 行，不重复登记。浏览器场景注册、动态内容版本、正式/Free Play 场景构建和选关预览均已接通；Free Play 无条件开放本关，三档难度可启动。正式进度从完成36关状态解锁本关，胜利结算能写入完成记录和最高分。同步修正受影响的正式关卡总数、地区 Free Play 可玩数及 E2E 进度显示期望；未改动既有分支规则。
 - **G4-C 表现接线与预载（已完成）：**`main.ts` 已接通 Level 37 中英文标题/简介、正式/自由模式战斗说明、Dakota HUD 地区标签、八段 Wave Intro、头像预载、Dakota 环境/战斗音乐选择和全解锁场景图像启动预载。音乐保持静音，仅核对资源与选择。E2E 从真实菜单覆盖 Free Play 与正式入口；阶段总数和 Dakota 可玩数已在 G4-B 更新，本步没有重复改进度快照。
-- **G4-D 回放入口：**在浏览器 replay factory/dispatch 按 `campaign-dakota-07` 及录制 content-version 重建记录时的四个单位解锁位，不依赖导入者当前档案。分别覆盖16种规范版本、当前进度与录制快照不同时仍采用录制状态、缺失/未知/非规范版本拒绝；不改既有回放格式或正式结算语义。
-- **验收与针对性验证：**G4-A 的 `dakota-07-campaign.test.ts` 4项通过；G4-B 的内容/正式关卡定向测试共11项、正式目录相关单测115项、Dakota 01–07 真实菜单 E2E 15项均通过，`pnpm run typecheck` 通过。覆盖16种解锁快照、规范版本拒绝、真实 Frost Station `GameSession` 开局、正式关卡锁定/解锁和结算、高分写入、Free Play 三档难度及 Level 40 地图预览。G4-C 的 `dakota-07-campaign-presentation.test.ts` 3项、类型检查及 `t77-dakota-07-integration.spec.ts` 2项通过：校验中英文 title/overview/dialogue、正式/自由 HUD 与说明、头像和完整场景图像预载、静音音乐选择及真实菜单开局。G4-D 尚需验证 replay dispatch 按录制快照重建，并拒绝缺失/未知/非规范版本。每个子步单独运行受影响测试与类型检查、更新本计划关闭已完成项并本地提交；各切片都完成后才进入 G5 全批检查。
+- **G4-D 回放入口（已完成）：**在浏览器 replay factory/dispatch 按 `campaign-dakota-07` 及录制 content-version 重建四个单位解锁位，不依赖导入者当前档案；维持现有回放格式和正式结算语义。
+- **验收与针对性验证：**G4-A 的 `dakota-07-campaign.test.ts` 4项通过；G4-B 的内容/正式关卡定向测试共11项、正式目录相关单测115项、Dakota 01–07 真实菜单 E2E 15项均通过，`pnpm run typecheck` 通过。覆盖16种解锁快照、规范版本拒绝、真实 Frost Station `GameSession` 开局、正式关卡锁定/解锁和结算、高分写入、Free Play 三档难度及 Level 40 地图预览。G4-C 的 `dakota-07-campaign-presentation.test.ts` 3项、类型检查及 `t77-dakota-07-integration.spec.ts` 2项通过：校验中英文 title/overview/dialogue、正式/自由 HUD 与说明、头像和完整场景图像预载、静音音乐选择及真实菜单开局。G4-D 的 `dakota-07-replay-content.test.ts` 2项、类型检查及 `t78-dakota-07-replay.spec.ts` 1项通过：覆盖16种规范快照、导入者档案与录制快照不同、缺失/未知/非规范版本拒绝及真实页面导入分派。每个子步单独运行受影响测试与类型检查、更新本计划关闭已完成项并本地提交；G1–G4 均完成后进入 G5 全批检查。
 
 ### G5：整批本地检查、内置浏览器验收与集成决策
 
