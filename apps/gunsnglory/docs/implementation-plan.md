@@ -5,7 +5,7 @@
 ## 当前基线
 
 - **M36–M38 连续关卡批次已完成并发布：**Dakota Level 35 Ghost Town、Level 36 Ice Rocks、Level 37 Frost Station。28 个实现切片合并为一次公开发布。
-- **发布与部署核对：**master 发布提交 `2a89497`；GitHub Actions run `44660936221` 成功。GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告完整来源 SHA `2a89497746e8e65aa3c5bf75702fd83c67e9ae72`。发布提交已合并回 `gunsnglory` 并推送。
+- **发布与部署核对：**master 发布提交 `2a89497`；GitHub Actions run `44660936221` 成功。GitHub Pages 与 Cloudflare Pages 的 `build-info.json` 均报告与该提交相符的来源 SHA。发布提交已合并回 `gunsnglory` 并推送。
 - **完整检查通过：**`CI=1 PLAYWRIGHT_PORT=4221 pnpm run test:ci` 通过类型检查、1112 项单测、生产构建和 200 项 E2E；`pnpm run test:catalog` 通过18项。生产构建仍显示既有的大型 JavaScript chunk 提示，本批未改拆包策略。
 - **内置浏览器验收通过：**发布页面保持窗口模式和静音，从 Free Play 进入 Dakota → Frost Station（Level 37）→ Medium；核对 Level 37 标题、首波 Engineer 对白/头像、地图、铁路、桥面、列车及 HUD；关闭对白后进入 1/8 波战斗。未通关、未进入全屏、未播放音频，也未启动 Android。
 - **发布频率：**M35 后基线为 43 次发布 / 233 个实现切片；M36–M38 增加 28 个切片和一次发布，累计为 **44/261 = 16.9%**，低于20%目标。静态审计、文档整理、批次检查和分支回同步不计入实现切片。
