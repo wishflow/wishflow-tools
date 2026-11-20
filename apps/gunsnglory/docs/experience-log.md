@@ -142,6 +142,7 @@ M38 再次暴露目录快照遗漏：G4-B 已正确登记 Level 37，但 G5 首�
 - **避免重复：**复用全局 unlock suffix 时，按 named snapshot field 或对应 milestone ID 生成测试数据；单独测试编码/解析顺序与最终地图单位，不从 marker 列表位置推导 bit order。
 - **M36 复发与定位：**Ghost Town 首轮快照用例再次把 `campaign-dakota-10` 映射到 Grandpa，定向测试立即失败；实际里程碑是 `campaign-oregon-10` 解锁 Grandpa，`campaign-dakota-10` 解锁 Sniper。代码中的版本位序正确，问题仍在测试样例映射。修正后16种位组合、对应单位集及版本 round-trip 全部通过。写快照矩阵时需逐项引用 `mississippiUnitUnlockSnapshotFor()` 中的 global level 与 `campaignCatalog` 地区，不得只凭 region 名猜 milestone。
 - **M37 复发与定位：**Ice Rocks 的 profile fixture 预期四个单位解锁位全开，却漏列 Sniper 对应的 `campaign-dakota-10`；比较生产 builder 与显式快照 factory 时因此报 `sniper0`/`sniper1` 不一致。`campaign-oregon-10`、`campaign-nevada-10` 和 `campaign-alaska-10` 分别不能替代 Sniper 里程碑。补入正确完成关卡后，profile 与快照工厂一致；17项 Ice Rocks 定向测试和类型检查通过，未改运行时代码。快照测试失败时先逐字段将 milestone ID 对到全局等级和具名解锁位，再判断生产实现。
+- **M39 派生状态不可任意组合：**Wayne Waters 的内容版本测试遍历32种单位解锁位与炸药位组合，其中 `grandpa=true, dynamite=false` 可被显式快照编码器序列化，但不能由真实进度产生：解锁 Grandpa 的全局第30关同时满足炸药的20/30关解锁条件。首轮测试错误地要求 profile 派生快照与这个不可能状态相等。生产门控和版本解析均正确；修正后分别验证全部32种版本位组合，以及进度生成时 `dynamiteUnlocked = profileUnlock || grandpa`。此为测试夹具未表达里程碑依赖，不是反解析遗漏或内容版本文档误读；测试内容快照时要区分格式可表示状态和玩家实际可达状态。
 
 ## TDM Dynamite marker 与对象角色不能混写
 

@@ -199,6 +199,7 @@ import { dakota07CampaignCopy } from './content/dakota-07-campaign-copy';
 import { createDakota07CampaignContent } from './content/dakota-07-campaign';
 import { dakota07CampaignPortraitAssets, dakota07WaveIntros } from './content/dakota-07-wave-intros';
 import { dakota07AmbientMusic, dakota07BattleMusicForWave, type Dakota07MusicTrack } from './content/dakota-07-music';
+import { dakota08CampaignPortraitAssets } from './content/dakota-08-wave-intros';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -4155,6 +4156,7 @@ const assetNames = new Set([
   ...dakota05CampaignPortraitAssets,
   ...dakota06CampaignPortraitAssets,
   ...dakota07CampaignPortraitAssets,
+  ...dakota08CampaignPortraitAssets,
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
