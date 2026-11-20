@@ -19,6 +19,7 @@ import {
   dakota02LevelThirtyTwoCampaignContent,
   dakota03LevelThirtyThreeCampaignContent,
   dakota04LevelThirtyFourCampaignContent,
+  dakota05LevelThirtyFiveCampaignContent,
   fortKaboomLevelThreeContent,
   luckyLakeLevelSevenCampaignContent,
   lostCityLevelTenCampaignContent,
@@ -353,6 +354,27 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     },
     globalLevel: 34,
     requiresCompletedScenarioIds: ['campaign-dakota-03'],
+  }, {
+    scenarioId: dakota05LevelThirtyFiveCampaignContent.id,
+    contentVersion: dakota05LevelThirtyFiveCampaignContent.contentVersion,
+    title: {
+      en: `${dakota05LevelThirtyFiveCampaignContent.title.en} · Level 35`,
+      zh: `${dakota05LevelThirtyFiveCampaignContent.title.zh} · 第 35 关`,
+    },
+    globalLevel: 35,
+    requiresCompletedScenarioIds: ['campaign-dakota-04'],
+  }, {
+    scenarioId: 'campaign-dakota-06',
+    contentVersion: 'gng-free-1.8.6-dakota-06-formal-v1-grandpa0-sniper0-pyro0-salesman0-dynamite0',
+    title: { en: 'Ice Rocks · Level 36', zh: '冰岩 · 第 36 关' },
+    globalLevel: 36,
+    requiresCompletedScenarioIds: ['campaign-dakota-05'],
+  }, {
+    scenarioId: 'campaign-dakota-07',
+    contentVersion: 'gng-free-1.8.6-dakota-07-formal-v1-grandpa0-sniper0-pyro0-salesman0',
+    title: { en: 'Frost Station · Level 37', zh: '霜冻车站 · 第 37 关' },
+    globalLevel: 37,
+    requiresCompletedScenarioIds: ['campaign-dakota-06'],
   }]);
 });
 

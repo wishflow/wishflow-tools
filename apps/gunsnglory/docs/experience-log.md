@@ -23,6 +23,8 @@
 - **修复与防回归：**以原始 TDM 码生成静态物件框，并只在特殊非静态码装饰（如水岩）或缺少 TDM 的 fixture 中使用显式框；活动、睡眠和动态生成单位都参与碰撞，船体使用自己的框，组成员不与自身同时移动组互撞；Fort 生成继续采用零位移检查。地形四角判断与静态/单位边沿穿越分开实现。`player-collision.test.ts` 覆盖睡眠/活动单位、沙龙、Fort 离开、raw `88` 竖桥、TDM 矩形表、炸药和27关静态 marker；`player-unit-anchor.test.ts` 覆盖 Cow Gulch raw `80` 横桥及27关 raw `36` 墙；Steamer 与奖励箱测试覆盖自定义船体和收集行为。
 - **验证与发布边界：**定向测试122项通过；完整 `test:ci` 通过类型检查、853项单测、生产构建和175项 E2E。GitHub Actions `43833240368` 成功，GitHub Pages 与 Cloudflare Pages 的来源均为发布提交 `0eb4b42`。内置浏览器窗口模式、静音加载对应 Cow Gulch，可选中我方单位并下达移动指令；截图未能确认其最终停靠边界，因此不记作线上碰撞画面通过。证据来自 APK 静态方法/资源、TDM 与自动化会话；本批未启动 Android。网页目前接入27/60关，其余33关未纳入逐图验收。
 - **避免重复：**看到脚底略超出桥面绘图边缘，先按贴图尺寸、脚底锚点、碰撞框底边分别计算，不以视觉矩形代替 walkable field。要改对象碰撞时先定位其 APK TDM 类型和构造器，再核对本帧的移动方法；不要拿独立的 `boxCheck()`、严格 AABB 或一个地图字段推测整条规则。新地图必须逐标记核对静态对象覆盖；单位状态、船体组和建筑 spawn 分别做测试。测试铁路覆盖是否阻挡时，选 raw0 开放地面跨越轨道；raw32 属于敌方道路地形，玩家本来就会被它阻挡，若把 raw32 路段作为测试起点/目标，停住不能说明铁路贴图层阻挡。本轮 Badlands 用 raw90 覆盖在 raw0 地面上的横向探针验证轨道可穿越。当前结论基于 APK 静态方法、资源与 `GameSession` 自动化检查，不代表 Android 实机/模拟器画面观察。
+- **移动探针坐标也要覆盖对象碰撞框：**Ghost Town 首次静态石头探针把移动目标设在整数行 `y=14`，枪手最后的碰撞框底边为 `13.94` 格，而该 rock 的 APK 碰撞框从 `y=14.34` 格开始；角色实际从障碍上方经过。这是测试坐标错误，不是碰撞实现回归。把目标行设为 `y=14.75` 后，以 `positionFine + PLAYER_UNIT_COLLIDER_FINE` 比较实际玩家框和 TDM 对象框，石头、建筑、水塔及铁路缓冲器的短 `GameSession` 探针均在边界前停止。后续碰撞探针应验证实际矩形是否相交，不能只凭逻辑格行或角色贴图判断测试已触达障碍。
+- **水上单位的边界要按最终碰撞图判断：**Ghost Town 的水上船体位于 raw120–123 覆盖的 raw124 水格上；y=11 的水道到地图最右侧仍是可航行碰撞码 `96`，不能因为 y=12 在 x=26 之后画成岸线就假设船会在那里停止。对应 `tiles_waterside` 的碰撞码 `103` 属于水上单位阻挡范围；普通地面单位与船体适用的水面规则不同。raw126 岸岩的 TDM 碰撞框底边低于船体碰撞框顶边，真实 `GameSession` 船组可从其旁边通过。测试最初把可视岸线误当成 y=11 的水域终点，也曾要求整个碰撞框不能越过地图边界；最终改为对照 APK 派生的背景碰撞码、检查船体锚点边界和真实组移动。水路、浅滩及地图边缘测试应分别核对渲染层、碰撞码类别和单位的实际碰撞框，不从 raw0 或画面颜色推导水上通行性。
 
 ## 新增战役关卡后的进度断言
 
@@ -36,6 +38,8 @@
 M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败，包括16个旧正式关卡断言仍期待21关、Apache Valley/Cow Gulch/Fort Kaboom的完整目录快照缺少第22关，以及 Progress 快照少了锁定的 Cashcow Canyon；修正后20个单测定向复跑全部通过。全量 E2E 随后发现7项旧断言：6处仍期待 `*/21 stages complete`，另有 Eastwood Free Play 测试仍把可选的 Level 22 当成禁用关；对应断言已更新，相关6个 spec 共13项定向用例全部通过。最终 `CI=1 PLAYWRIGHT_PORT=43217 pnpm run test:ci` 通过类型检查、748项单测、生产构建和158项 E2E。构建 JS chunk 2.559 MB（gzip 281.36 KB），有超过500 KB的既有 chunk 警告；本批没有修改拆包架构。
 
 M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley、Cow Gulch 主目录、Fort Kaboom 目录快照和 Progress 状态投影仍固定在22关；添加 level 23 及其前置/锁定关系后，相关5个 spec 共42项定向测试通过。另3项 Node worker CLI 子进程当时未解析隔离 worktree 中的 `tsx`；重建现有依赖链接后，`serial-batch-parallel.test.ts` 3项单独通过。完整检查未进入构建或 E2E 阶段；第二次完整运行用于确认子进程问题是否仅由 worktree 依赖链接造成。新增关卡时除了搜索数字断言，还要检查整份 stage 数组、Progress 投影和目录映射快照。
+
+M38 再次暴露目录快照遗漏：G4-B 已正确登记 Level 37，但 G5 首轮全量单测发现 `content.test.ts`、`apache-valley.test.ts`、`progress.test.ts` 的旧目录/进度期望仍只有36关。原因是 G4-B 的定向测试覆盖了新关和 Dakota 区域，却没有触发这三份共享历史夹具。已将 Level 37 及其 `campaign-dakota-06` 前置关系补入目录快照，并在初始与结算后 Progress 快照中补入 locked 状态；三个文件共37项定向单测通过。修复后的完整 `CI=1 PLAYWRIGHT_PORT=4221 pnpm run test:ci` 通过类型检查、1112项单测、生产构建及200项 E2E；根目录 `pnpm run test:catalog` 通过18项。内置浏览器静音、窗口模式从真实菜单进入 Free Play → Dakota → Frost Station → Medium，确认 Level 37、首波对白与 Engineer 头像、铁路/桥面/列车、地图和 HUD；关闭对白后进入1/8波战斗，未通关、未进入全屏或播放音频。此项是网页测试基线维护遗漏，不是 APK 内容或逆向结论错误。新增正式关卡仍需检查所有共享 stage/Progress fixture，不能只测新关入口。
 
 ## 新增关卡时同步战斗 HUD 的地区标签
 
@@ -51,6 +55,9 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **根因与漏测：**`campaignMenuOverviewScreen()`、`campaignMenuLevelScreen()`、`renderStatus()`、`isOfficialOregonMusicSession()` 和 `replaceSession()` 是彼此独立的消费点。Fort Echo 的 builder、路线、波次、进度规则测试只覆盖内容层，因此无法发现网页入口仍缺少 level 24 分支；此前 Oregon E2E 又把关卡 24 预期为未实现。
 - **修复与防回归：**为 Fort Echo 补齐菜单双语标题/简介、map27 预览 builder、战斗说明、Oregon 地区标签、档案快照驱动的场景重建，以及复用 Oregon 曲目的识别分支。`t63-oregon-04-integration.spec.ts` 从真实菜单路径检查 Free Play 可玩数量、map27 关卡图与缩略图尺寸、双语文案、Fort Echo 的地区/关卡上下文及首波对白头像。测试拦截媒体 `load()` 记录环境音乐资源地址；音效保持关闭，不加载或播放声音。
 - **避免重复：**新增关卡不能以“目录和 Progress 已登记”作为 UI 集成完成标准。逐项搜索消费 `CampaignCatalog` / `officialCampaignStages` 的页面路由、标题/说明、缩略图 builder、HUD 分类、场景重建、音乐和 replay 工厂；至少从菜单实际进入新关卡，并验证预览身份、开局 ID/地区/波次。目录已有静态地图图并不能证明预览使用了正确的 `ScenarioContent`。
+- **Ghost Town 再次验证：**G4-B 已接通目录、菜单和新局，但对白选择、Dakota 音乐识别、头像预载及 replay snapshot factory 仍是 `main.ts` / `bootstrap/browser.ts` 中互不自动联动的消费者。G4-C 接入后，`dakota-05-campaign-presentation.test.ts` 检查对白、音乐和预载路由，`dakota-05-replay-content.test.ts` 比较16种录制解锁快照与导入场景单位；t74 E2E 从菜单验证首段对白、头像实际加载和 HUD 地区/关卡上下文。新关验收应使用消费点矩阵逐项关单，不能把“菜单可进”推及到其他页面消费者。
+- **Ice Rocks G4-B/G4-C 的 E2E 断言：**首次 Playwright 断言用了不存在的 `data-testid="scene-title"`；`game-page-template.ts` 实际提供的是 `id="scene-title"`。失败上下文已显示 Level 36 的战斗标题，故这次是测试定位器错误，不是开局失败。改用 `#scene-title` 后 t75 两项通过。G4-C 又在保持中文界面启动后断言英文标题和英文波次状态；页面实际已正确本地化，测试改为匹配当前语言后通过。新断言应先查模板和既有稳定 selector，并按当前语言状态写期望；失败时查看快照，不能只根据 locator/文本不匹配认定产品行为失败。首次快照还显示 Dakota HUD 地区回退为 `NEW MEXICO`，这是实际待修接线；G4-C 已补入 `dakota06CampaignId`，并由正式/自由 E2E 验证 Dakota/达科他地区与 Level 36 上下文。
+- **Frost Station G4-B 复现：**identity、内容版本、builder、正式阶段和菜单预览都已注册，但真实菜单点击后旧场景仍保留并显示“无法打开关卡”。根因是 `main.ts` 的 `replaceSession()` 仍维护一份独立的关卡 ID 列表，遗漏了 `campaign-dakota-07`；builder 与直接 `GameSession` 测试绕过了这个消费点。将 Level 37 加入档案驱动的 browser-game 分支后，t77 从真实 Free Play/正式菜单都能进入。本例再次验证：注册目录和内容工厂不等于接通生产开局路径，必须用真实菜单入口测到 `replaceSession()`。
 
 ## DEX 伪代码分支与路线优先级复核
 
@@ -64,6 +71,12 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **分组路线表需按有向边去重：**Loot Lakes 静态审计按 marker 方向分组列边，表格有57次边列项，其中三条共享边在基础方向组和多方向分支组各出现一次；归一化 `from-cell + direction + to-cell` 后是54条唯一有向边。生成网页路线 fixture 时按边身份去重，并将唯一边数与节点/marker 数量交叉校验；不要把表格列项数直接当作路线边数。
 - **防回归：**碰到 `fromLoadGame`、`isNewGame` 等布尔分支或嵌套 switch 的反编译歧义时，先检查 smali 条件跳转及字段赋值，再参考 JADX 伪代码。多入口/随机岔路的关卡必须覆盖所有路线变体，保存格网、方向节点、出生点和出口的独立期望；不要用完整战役通关替代静态算法验证。
 - **审计结论也要反向核对实现：**M16 审计虽改正了 `130/131` 的新局语义，却再次错误地将 `96–101` 写成仅读档创建；代码随后照此省略了 M11–M16 的可招募单位。M19 接入时，同一错误又进入 M19 审计和 M18 的专用工厂：TDM 96–101 实际在 `fromLoadGame == false` 时创建 activity 4 招募单位，读档时才跳过；仅更新报告或只测共享工厂都不够，必须检查每张地图工厂与最终 `ScenarioContent.units`。本轮已恢复 M18/M19 的 Mexican、Indian、Sniper、Grandpa marker 行为；M18 新内容升为 v2，旧 v1 回放继续使用原单位列表。后续逐图测试需从真实 TDM 核对坐标、activity、解锁门控和唯一 ID，并至少覆盖一条对应关卡的回放入口。
+
+## 路线边数必须从原始 TDM 独立计数
+
+- **表现与复核：**Ice Rocks 初步摘要沿用了56条边的旧汇总值；把 TDM 方向码按 APK 方向表展开后，52/53/54/55/56/61 共形成50条转向出口，加上3条出生出口，独立路线 fixture 与网页路线模块都得到53条唯一有向控制边。8条完整路线及460次中间格访问一致，且所有访问均在raw32/80/88道路格。
+- **根因：**汇总没有写明边的归一化口径，也没有列出可复算的控制边清单；此前结论被直接沿用。问题是静态统计口径/汇总错误，不是 TDM 缺失，也不需要 Android 观察。
+- **防回归：**逐关从原始 marker 展开并保存完整路线节点；按 `from-cell + direction + to-cell` 去重后再报数量，并与 marker 方向出口数交叉检查。路线 fixture 必须独立于生产路线生成结果。
 
 ## 更正事实要同步所有关卡报告，并核实派生数据的父级索引
 
@@ -83,13 +96,23 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 内容版本必须覆盖所有影响开局的档案状态
 
-**状态：M22 修复中；M4–M7 回放工厂和 Eastwood 新局单位修复已完成，实际回放入口矩阵待验。**
+**状态：M22 基础修复及后续 M36/M37 关卡快照接入均已完成；每个新增关卡仍需核对自己的页面导入分派。**
 
 - **表现与复现：**M4–M7 的部分地图单位受全局关卡里程碑解锁影响，但四关长期使用固定 `contentVersion`。同一回放在不同档案下可能重建出不同初始单位。M21 Eastwood 的定制实体工厂又误将 map24 的 96–101、130、131 marker 排除在新局之外；APK 实际在 `fromLoadGame == false` 时创建 activity 4 招募单位。
 - **根因与证据：**M4–M7 内容构造器读取当前 `completedScenarioIds`，回放入口却没有把这些解锁状态编码进版本或重建快照。Eastwood 审计曾依赖错误重建的 JADX 伪代码，未根据 Smali 条件跳转和最终单位列表反核；Smali/DEX 及 `Guns’n’GloryThread` 调用点已确认新局/读档语义。
 - **修复与防回归：**M22-D 为 M4–M7 新版本记录实际影响内容的全局解锁位，并按录制版本构建 replay factory；v1 保留导入时档案语义，Tech Town 继续补入 M3。M22-E 让 M21 新局通过共享 TDM 单位工厂生成 marker 96、97、100、101、130、131 的 activity 4 单位，M21 v2 记录新单位集，v1 replay 过滤 activity 4 并保留已发布版本的活动单位列表。M22-F 覆盖了实际导入路由、v1/v2 版本识别、未知版本拒绝、Free Play 与正式入口；M4–M7 的16种解锁组合和地图访问位另由工厂单测覆盖。
 - **测试夹具边界：**M4–M7 v1 沿用导入时档案，因此生成带 `preparedSetup` 的 v1 探针时，录制档案必须与导入档案相同；否则数字参数路径集合可能不同，错误表现为 `prepared-setup-invalid`，不是内容版本路由失败。v2 探针则故意使用不同档案，验证录制快照。M4 `map-access=0` 表示不可进入状态，真实 Free Play 新局会补入 M3 并记录开放快照；关闭状态检查版本解析和 `prepare`，不伪造一场可回放战斗。
 - **避免重复：**本轮不改 APK 已核实正确的共享 `createNewMexicoMapUnits()`，也不重新分析 marker 96–101 的 Smali。后续新增关卡时，从真实 TDM marker、最终 `ScenarioContent.units`、内容版本解析和不同当前档案下的 replay factory 四处闭环；不能仅凭固定版本字符串或单测中间映射通过判定。
+
+### 新关卡的回放入口必须测试主页面分派和录制快照
+
+**状态：M37 Ice Rocks 的 replay factory 和页面导入分派已完成定向验证。**
+
+- **表现与复现：**Ice Rocks 初始场景单位及可用炸药由档案里程碑改变；若导入回放时使用当前档案创建场景，同一个回放会重建出不同内容。只测试版本字符串解析或 factory 单独开局，无法确认主页面文件导入真的调用了该 factory。
+- **根因与证据：**回放内容版本把 Grandpa、Sniper、Pyromaniac、Salesman 与 Dynamite 解锁状态编码在规范字符串中。`createBrowserGameForDakota06Replay()` 解析该快照并调用显式 snapshot builder；`main.ts` 的 `gameForReplay()` 必须按 `campaign-dakota-06` 将导入请求分派到该工厂。当前档案不参与这条重建路径。
+- **漏测点：**原有直接 factory 测试只能证明传入版本能重建对应场景，不能证明网页实际导入分派正确；若 E2E 只验证错误提示，也可能没有证明带版本的回放先进入正确关卡工厂。
+- **修复与验证：**M37 新增32种单位解锁与 Dynamite 组合测试，逐项比较版本 round-trip、单位集合和炸药状态；浏览器测试先保存空当前档案，再导入记录了 Grandpa 与 Pyromaniac 解锁状态的 Ice Rocks 回放。受支持版本进入回放校验后按测试设计在 frame 1 产生摘要不匹配；带额外后缀的非规范版本被拒绝为 `content-unavailable`。该 E2E 证明导入分派和版本拒绝，不代表完成过一场有效结算回放。
+- **防回归：**每个新增关卡如有档案依赖内容，必须同时验证版本解析、snapshot factory、不同当前档案下的页面导入分派和非法版本拒绝。摘要不匹配的 E2E 只能证明导入到了可用场景工厂；需要宣称完整回放成功时，必须另用已完成的有效回放并核对 terminal settlement 与档案副作用。
 
 ## 正式开局必须使用与档案版本匹配的场景 builder
 
@@ -111,12 +134,14 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 内容版本快照位序不等于地图单位枚举顺序
 
-**状态：**M24-F1 测试期望已修正；运行时代码符合共享快照契约。
+**状态：**M24-F1、M36 G4-A 与 M37 G4-A 的测试期望均已修正；运行时代码符合共享快照契约。
 
 - **表现与复现：**为 Chinook Woods 写 16 种解锁矩阵时，按地图 marker 顺序将 mask bit 0 解释为 Sniper，第一组测试与内容工厂结果不一致。
 - **根因与证据：**共享 `mississippi-unit-unlocks.ts` 的 canonical suffix 固定按 `grandpa`、`sniper`、`pyro`、`salesman` 编码；TDM marker 清单通常按 Sniper、Grandpa、Pyromaniac、Salesman 排列。两种顺序不同，不能把枚举下标直接当作版本位。实际 `CampaignCatalog` milestone ID 和 builder 生成的活动单位才是行为基线。
 - **修复与防回归：**修正测试矩阵，将 `campaign-oregon-10` / `campaign-dakota-10` 等 milestone ID 分别映射到对应单位类型；16 种状态均通过内容版本 round-trip 与 `GameSession` 初态核对。生产快照编码没有修改。
 - **避免重复：**复用全局 unlock suffix 时，按 named snapshot field 或对应 milestone ID 生成测试数据；单独测试编码/解析顺序与最终地图单位，不从 marker 列表位置推导 bit order。
+- **M36 复发与定位：**Ghost Town 首轮快照用例再次把 `campaign-dakota-10` 映射到 Grandpa，定向测试立即失败；实际里程碑是 `campaign-oregon-10` 解锁 Grandpa，`campaign-dakota-10` 解锁 Sniper。代码中的版本位序正确，问题仍在测试样例映射。修正后16种位组合、对应单位集及版本 round-trip 全部通过。写快照矩阵时需逐项引用 `mississippiUnitUnlockSnapshotFor()` 中的 global level 与 `campaignCatalog` 地区，不得只凭 region 名猜 milestone。
+- **M37 复发与定位：**Ice Rocks 的 profile fixture 预期四个单位解锁位全开，却漏列 Sniper 对应的 `campaign-dakota-10`；比较生产 builder 与显式快照 factory 时因此报 `sniper0`/`sniper1` 不一致。`campaign-oregon-10`、`campaign-nevada-10` 和 `campaign-alaska-10` 分别不能替代 Sniper 里程碑。补入正确完成关卡后，profile 与快照工厂一致；17项 Ice Rocks 定向测试和类型检查通过，未改运行时代码。快照测试失败时先逐字段将 milestone ID 对到全局等级和具名解锁位，再判断生产实现。
 
 ## TDM Dynamite marker 与对象角色不能混写
 
@@ -133,6 +158,13 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **漏测点：**旧辅助函数测试只覆盖半径减一和加一，没有断言等于半径；既有 `GameSession` 炸药测试目标位于半径内部，因此未发现边界差异。
 - **修正与防回归：**比较改为 `<=`；单测同时检查 `radius−1`、`radius`、`radius+1`，并用真实 Dynamite Plains TDM 配对启动 `GameSession`，验证位于 3 格边界的敌人确实受伤。M26-C 定向回归 179 项通过，类型检查通过。
 - **避免重复：**炸药以二维距离平方比较，保留 fine-unit 坐标精度；不要用格数取整、曼哈顿距离或 `<` 替代 APK 的边界规则。
+
+## Dynamite 解锁碰撞探针要隔离地形格
+
+- **表现与复现：**Ice Rocks 锁定与解锁两种 GameSession 移动探针都停在 Box 前；起初看起来像锁定态仍创建了动态碰撞框。
+- **根因与证据：**探针把 raw102/110 marker 直接放进 `originalTileGrid`。玩家地形判定会读取这些 raw 格的背景碰撞语义；因此即使 `createPlayerMapCollisionBoxes()` 在锁定态不添加 Dynamite 动态框，底层地形判定也可能让两组探针停在相同位置。这是测试夹具把地形阻挡和解锁对象阻挡混在一起，不是共享碰撞规则缺陷。
+- **修正与防回归：**Ice Rocks marker 坐标和配对从真实 map39 TDM 单独断言；动态碰撞差分探针使用同尺寸全开放地形，Dynamite Pair 仍由 Ice Rocks APK 派生构造器提供。锁定态穿过、解锁态停在 Box 碰撞边界前；实际地图另用 GameSession 核对爆炸与三格精确边界。
+- **避免重复：**测试某个可解锁对象是否加入动态碰撞时，保持其他地形/对象输入相同且开放；TDM marker 坐标、marker 所在底图阻挡语义和解锁对象碰撞框分别断言，不能把“人在该格停下”直接归因于解锁对象。
 
 ## TDM 单位 marker 必须验证到最终场景单位
 
@@ -200,11 +232,12 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 
 ## 快速推进到中途波次时不能把所有敌人池清空
 
-**状态：**M19 单位池短会话测试夹具已修正；没有改动正式波次清算规则。
+**状态：**M19 与 M36 玩家单位池短会话测试夹具均已修正；没有改动正式波次清算规则。
 
 - **表现与复现：**为快速验证 Dust Falls 第4波 Indian 池而把测试用第1–8波全部改成空请求时，会话推进到第4波后很快结束该波，池单位尚未生成。
 - **根因与边界：**网页 `GameSession` 的波次完成条件依据场上敌人、敌方待生成请求及 campaign 状态，不把玩家单位池的待生成数当作延迟波次完成的条件。真实 M19 第4波含两条敌人生成池；空波是测试夹具的人造状态，不能据此认定正式关卡有问题。
 - **修正与防回归：**短会话只将目标波以外的请求置空；目标波保留一个远大于观察时长的待生成敌人请求，以稳定停留在该波，再观察玩家单位池的真实计时和出生点。该测试只推进约两秒，不更改 APK 关卡数据，也不要求完整实战。
+- **M36 复发：**Ghost Town 单位池探针为避免敌人干扰，把第1波 `spawnPools` 设为空；`GameSession` 第一次零时推进便因空波结算，随后拒绝地图雇佣请求。加入一个生成间隔远大于观察时间的待生成请求后，雇佣和 Fort 出生探针通过。测试波次只需避免实际生成，不应清空最后一个待生成请求；提交雇佣意图前也要确认战斗仍处于未结算状态。
 
 ## 实验室大块底板造成贴片感
 
@@ -499,6 +532,9 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **防回归：**新增正式阶段时，搜索并核对 `officialCampaignStages` 的长度、完整阶段投影、进度状态顺序、固定进度 UI 总数和地图菜单可用数。只改数量断言不算目录变更验收完成。
 - **M35 复发：**加入 Badlands level34 后，批次完整单测再次因旧快照失败：`apache-valley.test.ts` 依赖链缺 Dakota04，`fort-kaboom-formal.test.ts` 的全目录投影缺 level34，`progress.test.ts` 初始和结算后状态缺一个 locked stage。目录、锁定逻辑和 Progress 实现均正确；补入三处期望后，这三份文件共31项定向测试通过。
 - **复发原因：**已有经验文档清楚列出完整阶段投影和状态顺序，但本轮没有检索并执行该项；只批量改了 `officialCampaignStages.length` 和 UI 分母。因此这是执行检查遗漏，不是 APK/REA 证据缺失，也不是证据组织结构导致无法找到答案。新增正式关卡前必须逐项执行上一条列出的搜索，而不能把读过经验记录当成检查已完成。
+- **M36 复发：**登记 Ghost Town level35 后，目录长度与多数完整快照已更新，`progress.test.ts` 的重载后状态向量仍少一个 `locked`。定向测试首轮 43/44；补齐末尾状态后，相关目录/进度测试 44/44 通过，类型检查通过。正式目录和解锁逻辑正确，遗漏来自同一测试文件的第二个完整投影未随第一处一起更新。
+- **M37 复发：**登记 Ice Rocks level36 后，首轮完整 `test:ci` 的单测再次发现 `content.test.ts` 内 Cow Gulch 用例的 `officialCampaignStages` 全目录快照只列到 level35。实际目录已正确加入 `campaign-dakota-06`，内容版本、双语标题、global level 36 和前置关卡均正确；失败源于该独立完整投影未纳入 G4-B 的旧断言检索。已在独立期望中补入 level36；`content.test.ts`、`dakota-06-formal.test.ts`、`progress.test.ts` 共30项通过。随后完整检查通过1084项单测、生产构建和197项 E2E，类型检查与共享 catalog 18项通过。
+- **分类与防回归：**这仍是测试维护/执行清单漏检，不是反解析遗漏或文档结论读错。更新关卡数时应在所有受影响测试中搜索阶段长度、目录全量数组、加载前后状态数组、解锁链和页面计数；新增关卡自身测试通过后，至少运行这些共享目录消费者的定向测试。
 
 ## 地形图层不能只画 tile 的表面标记
 
