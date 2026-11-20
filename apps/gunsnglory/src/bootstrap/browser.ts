@@ -204,6 +204,15 @@ import {
 } from '../content/dakota-07-content-version';
 import { dakota07CampaignId } from '../content/dakota-07-identity';
 import {
+  createDakota08CampaignContent,
+  createDakota08CampaignContentFromSnapshot,
+} from '../content/dakota-08-campaign';
+import {
+  dakota08CampaignContentVersionFor,
+  parseDakota08ReplayContentVersion,
+} from '../content/dakota-08-content-version';
+import { dakota08CampaignId } from '../content/dakota-08-identity';
+import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
 } from '../content/new-mexico-replay-content-version';
@@ -380,6 +389,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === dakota07CampaignId) {
     return dakota07CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === dakota08CampaignId) {
+    return dakota08CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -426,6 +438,7 @@ export function createBrowserGame(
     [dakota05CampaignId]: createDakota05CampaignContent(completedScenarioIds),
     [dakota06CampaignId]: createDakota06CampaignContent(completedScenarioIds),
     [dakota07CampaignId]: createDakota07CampaignContent(completedScenarioIds),
+    [dakota08CampaignId]: createDakota08CampaignContent(completedScenarioIds),
     ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {
@@ -755,6 +768,15 @@ export function createBrowserGameForDakota07Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, dakota07CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [dakota07CampaignId]: createDakota07CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Wayne Waters from its recorded unit and Dynamite unlock snapshot. */
+export function createBrowserGameForDakota08Replay(contentVersion: string | undefined) {
+  const parsed = parseDakota08ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, dakota08CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [dakota08CampaignId]: createDakota08CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 

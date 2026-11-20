@@ -35,7 +35,7 @@ async function settleWithoutBattle(session: Awaited<ReturnType<ReturnType<typeof
 
 test('Lumber Mill Hills is the gated 30th official stage after Snake River', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === oregon10CampaignId);
-  assert.equal(officialCampaignStages.length, 37);
+  assert.equal(officialCampaignStages.length, 38);
   assert.deepEqual(stage, {
     scenarioId: oregon10CampaignId,
     contentVersion: oregon10CampaignContentVersionFor([]),

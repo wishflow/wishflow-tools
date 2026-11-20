@@ -356,6 +356,7 @@ export interface CampaignUnitSpawnLocationDefinition {
 }
 
 export type CampaignUnitPoolActionDefinition =
+  /** Raw SpawnPoolManager slot 0–36; it may remain dormant when this map has no matching unit template. */
   | { waveNumber: number; action: 'add' | 'add-max'; poolType: number; count: number }
   | { waveNumber: number; action: 'set' | 'set-max'; values: readonly { poolType: number; count: number }[] };
 
@@ -3190,14 +3191,14 @@ export function createGame(options: {
             if (!Number.isSafeInteger(action.waveNumber) || action.waveNumber < 1
               || (campaignWaveCount > 0 && action.waveNumber > campaignWaveCount)) return true;
             if (action.action === 'add' || action.action === 'add-max') {
-              return !poolTypes.has(action.poolType)
+              return !Number.isSafeInteger(action.poolType) || action.poolType < 0 || action.poolType >= 37
                 || !Number.isSafeInteger(action.count) || action.count < 0 || action.count > 127;
             }
             if (action.action === 'set' || action.action === 'set-max') {
               if (!Array.isArray(action.values)) return true;
               const valuePoolTypes = new Set<number>();
               return action.values.some((value) => {
-                if (!Number.isSafeInteger(value.poolType) || !poolTypes.has(value.poolType)
+                if (!Number.isSafeInteger(value.poolType) || value.poolType < 0 || value.poolType >= 37
                   || valuePoolTypes.has(value.poolType)
                   || !Number.isSafeInteger(value.count) || value.count < 0 || value.count > 127) return true;
                 valuePoolTypes.add(value.poolType);

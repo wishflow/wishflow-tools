@@ -39,7 +39,9 @@ M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败
 
 M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley、Cow Gulch 主目录、Fort Kaboom 目录快照和 Progress 状态投影仍固定在22关；添加 level 23 及其前置/锁定关系后，相关5个 spec 共42项定向测试通过。另3项 Node worker CLI 子进程当时未解析隔离 worktree 中的 `tsx`；重建现有依赖链接后，`serial-batch-parallel.test.ts` 3项单独通过。完整检查未进入构建或 E2E 阶段；第二次完整运行用于确认子进程问题是否仅由 worktree 依赖链接造成。新增关卡时除了搜索数字断言，还要检查整份 stage 数组、Progress 投影和目录映射快照。
 
-M38 再次暴露目录快照遗漏：G4-B 已正确登记 Level 37，但 G5 首轮全量单测发现 `content.test.ts`、`apache-valley.test.ts`、`progress.test.ts` 的旧目录/进度期望仍只有36关。原因是 G4-B 的定向测试覆盖了新关和 Dakota 区域，却没有触发这三份共享历史夹具。已将 Level 37 及其 `campaign-dakota-06` 前置关系补入目录快照，并在初始与结算后 Progress 快照中补入 locked 状态；三个文件共37项定向单测通过。修复后的完整 `CI=1 PLAYWRIGHT_PORT=4221 pnpm run test:ci` 通过类型检查、1112项单测、生产构建及200项 E2E；根目录 `pnpm run test:catalog` 通过18项。内置浏览器静音、窗口模式从真实菜单进入 Free Play → Dakota → Frost Station → Medium，确认 Level 37、首波对白与 Engineer 头像、铁路/桥面/列车、地图和 HUD；关闭对白后进入1/8波战斗，未通关、未进入全屏或播放音频。此项是网页测试基线维护遗漏，不是 APK 内容或逆向结论错误。新增正式关卡仍需检查所有共享 stage/Progress fixture，不能只测新关入口。
+M38 再次暴露目录快照遗漏：G4-B 已正确登记 Level 37，但 G5 首轮全量单测发现 `content.test.ts`、`apache-valley.test.ts`、`progress.test.ts` 的旧目录/进度期望仍只有36关。原因是 G4-B 的定向测试覆盖了新关和 Dakota 区域，却没有触发这三份共享历史夹具。已将 Level 37 及其 `campaign-dakota-06` 前置关系补入目录快照，并在初始与结算后 Progress 快照中补入 locked 状态；三个文件共37项定向单测通过。修复后的完整 `CI=1 PLAYWRIGHT_PORT=4221 pnpm run test:ci` 通过类型检查、1112项单测、生产构建及200项 E2E；根目录 `pnpm run test:catalog` 通过18项。内置浏览器静音、窗口模式从真实菜单进入 Free Play → Dakota → Frost Station → Medium，确认 Level 37、首波对白与 Engineer 头像、铁路/桥面/列车、地图和 HUD；关闭对白后进入1/8波战斗，未通关、未进入全屏或播放音频。M36–M38 发布后，GitHub Actions、GitHub Pages 与 Cloudflare Pages 均成功；两个公开 `build-info.json` 的来源 SHA 一致，内置浏览器已在对应版本完成上述开局检查。此项是网页测试基线维护遗漏，不是 APK 内容或逆向结论错误。新增正式关卡仍需检查所有共享 stage/Progress fixture，不能只测新关入口。
+
+M39 又重现了同一测试基线遗漏：Level 38 接入目录后，首轮完整单测发现32个旧关卡用例仍要求 `officialCampaignStages.length === 37`；更新这些数量后，完整阶段目录断言又在 `fort-kaboom-formal.test.ts` 发现只列到 Level 37。随后检索到12个 E2E 仍固定使用 `*/37 stages complete` 或 Dakota 的7关可玩数。M39 实现代码、Level 38 进度门槛和新关定向测试均正确；这是共享目录历史夹具未纳入变更清单造成的验证遗漏，不是 APK 解析错误。已把32个阶段数期望改为38、补齐完整目录快照，并更新12个受影响的 E2E。修复后完整 `test:ci` 通过类型检查、1135项单测、生产构建和203项 E2E；根目录 `pnpm run test:catalog` 通过18项。窗口模式、静音下通过内置浏览器从菜单进入 Free Play → Dakota → Wayne Waters → Medium，确认 Level 38 地图、Captain 首波对白/头像、关闭对白后 Wave 1/8、1×至1.25×缩放及复位；退出后检查正式战役空进度下 Level 38 为锁定。未通关、未全屏、未播放音频或启动 Android。构建保留既有 JavaScript chunk 超过500KB的提示，本批未改拆包策略。发布验收尚未开始。新增正式关卡必须在同一批次扫描所有正式关卡数量、完整目录数组、区域可玩数量与阶段摘要；只更新一条 `officialCampaignStages` 测试不足以关单。
 
 ## 新增关卡时同步战斗 HUD 的地区标签
 
@@ -142,6 +144,7 @@ M38 再次暴露目录快照遗漏：G4-B 已正确登记 Level 37，但 G5 首�
 - **避免重复：**复用全局 unlock suffix 时，按 named snapshot field 或对应 milestone ID 生成测试数据；单独测试编码/解析顺序与最终地图单位，不从 marker 列表位置推导 bit order。
 - **M36 复发与定位：**Ghost Town 首轮快照用例再次把 `campaign-dakota-10` 映射到 Grandpa，定向测试立即失败；实际里程碑是 `campaign-oregon-10` 解锁 Grandpa，`campaign-dakota-10` 解锁 Sniper。代码中的版本位序正确，问题仍在测试样例映射。修正后16种位组合、对应单位集及版本 round-trip 全部通过。写快照矩阵时需逐项引用 `mississippiUnitUnlockSnapshotFor()` 中的 global level 与 `campaignCatalog` 地区，不得只凭 region 名猜 milestone。
 - **M37 复发与定位：**Ice Rocks 的 profile fixture 预期四个单位解锁位全开，却漏列 Sniper 对应的 `campaign-dakota-10`；比较生产 builder 与显式快照 factory 时因此报 `sniper0`/`sniper1` 不一致。`campaign-oregon-10`、`campaign-nevada-10` 和 `campaign-alaska-10` 分别不能替代 Sniper 里程碑。补入正确完成关卡后，profile 与快照工厂一致；17项 Ice Rocks 定向测试和类型检查通过，未改运行时代码。快照测试失败时先逐字段将 milestone ID 对到全局等级和具名解锁位，再判断生产实现。
+- **M39 派生状态不可任意组合：**Wayne Waters 的内容版本测试遍历32种单位解锁位与炸药位组合，其中 `grandpa=true, dynamite=false` 可被显式快照编码器序列化，但不能由真实进度产生：解锁 Grandpa 的全局第30关同时满足炸药的20/30关解锁条件。首轮测试错误地要求 profile 派生快照与这个不可能状态相等。生产门控和版本解析均正确；修正后分别验证全部32种版本位组合，以及进度生成时 `dynamiteUnlocked = profileUnlock || grandpa`。此为测试夹具未表达里程碑依赖，不是反解析遗漏或内容版本文档误读；测试内容快照时要区分格式可表示状态和玩家实际可达状态。
 
 ## TDM Dynamite marker 与对象角色不能混写
 
@@ -652,6 +655,9 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **单个对象行必须与 TDM 频次和坐标表闭合：**Six Grandfathers 的静态审计表误记 raw `109@(13,1)` 为活动 Grandpa；同一报告的 raw marker 频次表并没有 `109`，且该坐标的 TDM 实际为 raw `32`。APK TDM fixture 与派生网格一致，错误发生在报告转录/汇总，没有证据表明 DEX 对象构造分析错误。M33-C 测试在实现前发现矛盾，现已删除虚构对象。新地图审计的每个对象行必须同时满足：目标 TDM 的 marker 频次、全部坐标、对象构造/activity 分支三者一致；汇总频次和原始字节要能反向覆盖表格的每一行。
 
 
+- **玩家池动作的 wave 与 action 参数要追到消费端：**Wayne Waters 的两个 addActionForSpawnPool 调用都指定 wave 1；第一个 action 1 表示 SET，第二个 action 3 表示 SET_MAX。初稿曾把第二个调用的 action 值误当成发生波次。复核时应从方法签名、字段写入和 performActionsForWave 消费逻辑确认参数顺序，不按数值或调用位置推测。
+- **TDM 对象分派要同时检查直接比较和 packed-switch：**Wayne Waters 的 raw 126 由 createGameObjectsFromBasicMap 中 packed-switch 之前的直接相等分支创建水边石块。只看 packed-switch 会漏掉该对象。检查 marker 时应覆盖整个分派方法、构造器及绘制/碰撞副作用，不把 switch 表当作完整分派清单。
+
 ## 新关卡波次统计必须核对目标分支
 
 - **表现与复现：**Six Grandfathers 的前置批次摘要把 `GameDesignWaves.setWaves()` 中的 `addToWave` 调用数写成12。
@@ -673,6 +679,15 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **根因分类：**未发现 APK 路线反解析错误。第一处是网页测试矩阵维护遗漏：静态地图测试与共享寻路消费者测试分开维护，新地图完成自己的路线拓扑测试后，没有同步进入共用矩阵。第二处是本轮测试计划把 `spawnPointId=2` 误读成 `(31,8)`：APK action ID 先映射到网页 spawn ID，spawn ID 再按 TDM 行优先顺序对应坐标；没有核对第二段映射。静态 `oregon08SpawnPointIdByActionId`、出生点清单和路线定义本身都正确。
 - **修复与验证：**将 Colt City 正式内容加入共用集合，计数更新为28关；新增短 `GameSession` 使用真实 Wave 1 action 1，请求事件确认 `spawnPointId=2`，再核对该点是 `(31,19)`，跟踪无防守单位干扰的敌人到 `(25,19)` 并确认其按 TDM 方向转北。定向 `wave-routes.test.ts` 通过6项，`pnpm run typecheck` 通过；完整 `CI=1 PLAYWRIGHT_PORT=43324 pnpm run test:ci` 通过类型检查、872项单测、生产构建和178项 E2E。反转 marker 52 的方向映射时，路线构造/测试失败，确认测试能捕捉方向错误。内置浏览器静音、窗口模式进入 Free Play → Oregon → Colt City → Medium，确认开场对白、头像及地图加载；短时4×未操作导致第一波败北，结果没有写入战役档案，随后恢复设置为1×。浏览器未目视证明连续行走或池单位战斗；这些运行时路线结论来自短 `GameSession` 与自动化测试，不描述为浏览器实测。
 - **防回归：**每个新关卡都要同时完成静态路线图、`runtimeWaveRedirects()` 对照和至少一条真实短会话转弯断言；对 `actionId → spawnPointId → TDM 坐标` 逐段核实，不从编号或数组位置猜坐标。核对共享关卡清单数量与正式目录一致。不要把静态 `routes` 完整当成运行时路线正确的证明，也不需要通过完整战役或 Android 实测来验证这个确定性分岔。
+
+- **Wayne Waters 同类错误复发：**M39-C 首轮波次测试把 action 2 直接写成 `spawnPointId=2`，测试失败后才查看该地图从 TDM 出生 marker 派生的映射：action 2 实际对应 row-major `spawnPointId=1`。REA 路线、TDM marker 和生产映射都正确；错误是新测试没有逐项读取当前地图的映射表，重犯了本节已经记录的 ID 混淆。修正后短 `GameSession` 检查通过。经验条目已存在仍未阻止复发，说明阅读经验记录不能替代实际执行核对；测试必须同时断言 `actionId → spawnPointId → TDM 坐标`，并把目标地图的映射作为明确期望。
+
+## 玩家池动作槽位可以没有本地图生成模板
+
+- **表现与复现：**Wayne Waters APK 的 Wave 1 `SET`/`SET_MAX` 动作覆盖 raw pool slot 1–4；本图只有 Saloon 和 Fort，没有 Tipi。旧网页校验要求每个动作槽都必须有单位模板，因此无法忠实保留 slot 4 的最大值，又不伪造 Indian pool 或 Tipi。
+- **根因与证据：**APK 的玩家池动作写入独立的37槽计数数组；单位模板和地图生成点则由实际可用的单位/建筑决定。`performActionsForWave()` 按原始 slot 应用动作，`SpawnPoolManager` 后续只会从实际定义的单位模板和匹配地点中派发。M39 静态审计确认两条 Wave 1 动作分别把四槽清零并设为3；TDM 仅有 Saloon raw112、Fort raw113，没有 Tipi raw114。
+- **修正与防回归：**动作校验改为验证 raw slot 位于0–36且同一全表动作不重复，不再要求每个有效槽都拥有本图模板。Wayne Waters 保留四槽的原始动作值，但只定义 Gunslinger/Mexican/Cannon 模板与 Saloon/Fort 生成点；不创建 Indian 模板、Tipi 或虚构出生位置。`dakota-08-campaign-rules.test.ts` 检查四槽动作状态、实际模板和建筑；`campaign-unit-pool.test.ts` 验证无模板槽位可保留计数而不会创造派发单位。
+- **根因分类：**这是网页数据契约把“原始计数槽”和“本图可派发模板”过度绑定，不是 APK 反解析遗漏。新增地图前先比较原始动作数组与可用生成对象；空槽/无来源槽仍可保留原始状态，但不能据此创造场景实体。
 
 ## 新关卡集成的共享断言与启动预载
 
