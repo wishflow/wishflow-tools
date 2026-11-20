@@ -11,24 +11,25 @@
 - **发布频率：**M35 后基线为 43 次发布 / 233 个实现切片；M36–M38 增加 28 个切片和一次发布，累计为 **44/261 = 16.9%**，低于20%目标。静态审计、文档整理、批次检查和分支回同步不计入实现切片。
 - **已接入内容的证据入口：**[Ghost Town 静态审计](ghost-town-static-audit.md)、[Ice Rocks 静态审计](ice-rocks-static-audit.md)、[Frost Station 静态审计](frost-station-static-audit.md)。新实现继续以对应 APK 原始资源和 Smali 为最终依据；REA/JADX 摘要、旧计划和经验条目仅作检索线索，结论冲突时回到原始证据复核。
 
-## 下一批：Dakota Level 38 Wayne Waters 静态审计
+## 当前批次：Dakota Level 38 Wayne Waters（M39）
 
-**状态：**尚未开始。目录当前只记录 Level 38、地图文件号41和标题资源号41；这些目录字段不能代替关卡内容审计，也不能据 Level 37 推定 Wayne Waters 的数据。
+**状态：**静态审计及独立地图基线已完成；网页内容尚未实现。完整证据见[Wayne Waters 静态审计](wayne-waters-static-audit.md)，原始 TDM、路线图和地形参考分别保存在测试 fixture。审计确认 APK 静态资料足以实现；raw 78 的作者意图仍未知，但没有专属对象/道路分支，不阻塞接入。
 
-### 调查步骤与产物
+### 实现切片
 
-1. **确认 APK 数据身份与索引链。**从本项目目标 APK 的原始 TDM、GameDesignData 数组写入点及代码分派条件，独立确认地图文件、参数索引、全局关卡号、波次分支和标题/对白资源编号；每项保留可定位的 APK 证据。
-2. **建立独立地图基线。**导出并核对完整格网、绘制层、街道/桥梁层、静态对象、单位 marker、敌方路线控制图、所有出生到出口路径，以及最终地形/对象碰撞语义；保存不依赖生产代码生成的 fixture。
-3. **补齐关卡规则与资源清单。**核对参数字段、全部波次和敌人请求、玩家生成池、单位/炸药解锁、静态与动态对象、对白顺序/角色/头像、离线音画资源及地图说明。未知字段明确保留为未知，不按邻关值填充。
-4. **检查网页消费边界。**追踪正式关卡解锁、Free Play、内容版本/replay factory、地图预览、场景图片预载、HUD、结算和存档消费者，列出复用的共享规则与本关独有的数据。
-5. **生成可审阅审计与实现计划。**新增 Wayne Waters 专题审计，区分已证实、推导、推断和未知，给出独立数据表、证据位置、工具限制及核对结果；随后把仍有依据的差异拆成可独立测试的实现切片，并写明测试命令和验收条件。
+| 切片 | 范围与依赖 | 验收标准 | 定向验证 |
+| --- | --- | --- | --- |
+| M39-A 地图、地形与敌方路线 | 新增 Dakota 第8关的 map41 数据、静态背景/道路/桥层和 TDM 方向路线；直接消费已审阅 fixture，禁止从 Frost Station 偏移或手工补路线。无前置依赖。 | 原始 TDM 32×24、768 格逐项一致；背景768条、道路/桥71条绘制指令逐项匹配参考；4个出生点、46个转向点、4个出口、52条唯一有向边、6条完整路线及全部 action 到 spawn 映射一致；路线不越界。 | node --import tsx --test tests/dakota-08-map-and-routes.test.ts tests/dakota-08-terrain.test.ts |
+| M39-B 地图对象、单位与碰撞 | 根据 TDM 接入装饰、45个睡眠单位、解锁单位、4组炸药配对、Saloon/Fort 和五个动态 Steamer 组件；复用既有对象工厂与 APK 碰撞契约。依赖 M39-A 地图坐标。 | 每种 raw marker 的坐标、类型、activity、解锁条件和唯一 ID 与审计一致；睡眠单位仍阻挡移动；Saloon、Fort、水边岩石、桥和地形边界命中 APK 派生框；无 Tipi、Casino 或伪造 Cannon。 | node --import tsx --test tests/dakota-08-map-entities.test.ts tests/dakota-08-player-collision.test.ts tests/dakota-08-dynamite.test.ts tests/dakota-08-steamer.test.ts |
+| M39-C 参数、敌人波次与玩家单位池 | 接入参数行37、8个波次头、16条敌方请求以及 Wave 1 的 SET/SET_MAX 玩家池动作；敌方 action ID 显式映射到 M39-A 出生点。依赖 M39-A。 | 初态、难度 HP、全部波次字段与请求槽位逐项匹配审计；两个池动作都在 Wave 1，数量清零且四类上限为3；用短 GameSession 验证真实消费，不要求跑完战役。未知参数字段保留为数据，不猜玩法。 | node --import tsx --test tests/dakota-08-campaign-rules.test.ts tests/dakota-08-campaign-waves.test.ts |
+| M39-D 文案、头像、音乐与内容快照 | 增加英中关卡说明/对白、APK 头像和 Dakota 音乐映射；按当前解锁状态生成稳定内容版本和回放 snapshot factory；不播放音频。依赖 M39-B、M39-C。 | 8段对白、头像、语言键和资源路径与审计对应；全部必需资源存在并进入启动预载；解锁快照往返重建的单位集合一致；历史回放版本不被覆盖。 | node --import tsx --test tests/dakota-08-campaign-copy.test.ts tests/dakota-08-replay-content.test.ts |
+| M39-E 正式/自由入口、注册与回放 | 将 Level 38 接入 Dakota 正式目录、Free Play、菜单预览、HUD、结算、浏览器 builder 和回放导入；更新共享阶段/进度/地区数量及历史 E2E fixture。依赖 M39-A–D。 | 正式模式需完成 Level 37 才开放；Free Play 可选择本关且不写战役进度；地图预览/开局/对白/资源/HUD 均指向 map41；回放按录制快照分派；未实现 Level 39 仍禁用。真实菜单入口覆盖，不用只测 builder 替代。 | node --import tsx --test tests/dakota-08-formal.test.ts tests/official-campaign.test.ts tests/progress.test.ts；CI=1 PLAYWRIGHT_PORT=<独立端口> pnpm exec playwright test tests/e2e/t79-dakota-08-integration.spec.ts tests/e2e/t80-dakota-08-replay.spec.ts --workers=1 |
 
-### 开始实现的门槛
+### 批次收尾
 
-- 目标 APK 身份、地图/波次/参数索引均能追溯至原始条目和代码引用，不从相邻关卡推定。
-- 路线、绘制、地形碰撞、对象/单位、关卡参数、波次、玩家生成池、对白/头像和内容版本/replay 的清单完整；每条关键结论均能独立复核。
-- 静态审计与真实 `GameSession`/浏览器消费入口的验证差异已列明；任何影响实现选择的关键未知项都有明确调查步骤或说明所需外部能力。
-- 上述审计完成后，先更新本计划中的实现范围、依赖、切片验证与批次验收，再开始代码变更。若 APK 静态证据已足够，不启动 Android，不进行完整战役通关。
+M39-A–E 各自运行上述定向验证并本地提交；每步结束后更新本计划。全部通过后运行一次 CI=1 PLAYWRIGHT_PORT=<独立端口> pnpm run test:ci 和 pnpm run test:catalog。窗口模式、静音下用内置浏览器从真实菜单检查 Free Play 与正式解锁入口、地图、首波对白/头像和 HUD，并验证代表性的地图交互；不完整通关、不启动 Android、不播放音频。通过后将整个 M39 批次 squash 集成到 master 发布，核对两个 Pages 来源 SHA，再将发布提交回同步至 gunsnglory。
+
+M39 计划为5个实现切片和1次发布；若按计划完成，发布频率约为45/266（16.9%），仍低于20%目标。该预测不改变当前计数，只有实际完成后才更新累计值。
 
 ## 批次执行约束
 

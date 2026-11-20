@@ -652,6 +652,9 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **单个对象行必须与 TDM 频次和坐标表闭合：**Six Grandfathers 的静态审计表误记 raw `109@(13,1)` 为活动 Grandpa；同一报告的 raw marker 频次表并没有 `109`，且该坐标的 TDM 实际为 raw `32`。APK TDM fixture 与派生网格一致，错误发生在报告转录/汇总，没有证据表明 DEX 对象构造分析错误。M33-C 测试在实现前发现矛盾，现已删除虚构对象。新地图审计的每个对象行必须同时满足：目标 TDM 的 marker 频次、全部坐标、对象构造/activity 分支三者一致；汇总频次和原始字节要能反向覆盖表格的每一行。
 
 
+- **玩家池动作的 wave 与 action 参数要追到消费端：**Wayne Waters 的两个 addActionForSpawnPool 调用都指定 wave 1；第一个 action 1 表示 SET，第二个 action 3 表示 SET_MAX。初稿曾把第二个调用的 action 值误当成发生波次。复核时应从方法签名、字段写入和 performActionsForWave 消费逻辑确认参数顺序，不按数值或调用位置推测。
+- **TDM 对象分派要同时检查直接比较和 packed-switch：**Wayne Waters 的 raw 126 由 createGameObjectsFromBasicMap 中 packed-switch 之前的直接相等分支创建水边石块。只看 packed-switch 会漏掉该对象。检查 marker 时应覆盖整个分派方法、构造器及绘制/碰撞副作用，不把 switch 表当作完整分派清单。
+
 ## 新关卡波次统计必须核对目标分支
 
 - **表现与复现：**Six Grandfathers 的前置批次摘要把 `GameDesignWaves.setWaves()` 中的 `addToWave` 调用数写成12。
