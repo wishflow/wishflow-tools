@@ -138,10 +138,10 @@ test('one SET and SET_MAX action can replace multiple player-pool slots at once'
     'SET_MAX clears every omitted cap slot');
 });
 
-test('scenario validation rejects duplicate or unconfigured slots in whole-table actions', async () => {
+test('scenario validation rejects duplicate or out-of-range raw slots in whole-table actions', async () => {
   for (const [index, values] of [
     [{ poolType: 3, count: 1 }, { poolType: 3, count: 2 }],
-    [{ poolType: 2, count: 1 }],
+    [{ poolType: 37, count: 1 }],
   ].entries()) {
     const scenario = {
       ...fortCampaignFixture(),
@@ -155,6 +155,27 @@ test('scenario validation rejects duplicate or unconfigured slots in whole-table
       createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id }),
       /Campaign unit pool data is invalid/,
     );
+  }
+});
+
+test('wave actions can retain a source pool slot without a map unit template', async () => {
+  const scenario = {
+    ...fortCampaignFixture(),
+    id: 'fort-kaboom-dormant-pool-slot',
+    campaignUnitPool: {
+      ...poolDefinition,
+      actions: [{ waveNumber: 4, action: 'set-max' as const, values: [{ poolType: 4, count: 3 }] }],
+    },
+  };
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id });
+  const runtime = createCampaignUnitPoolRuntime(scenario.campaignUnitPool)!;
+
+  try {
+    applyCampaignUnitPoolActions(runtime, scenario.campaignUnitPool, 4);
+    assert.equal(runtime.maximum[4], 3, 'the APK raw slot keeps its configured cap without inventing a unit source');
+    assert.ok(!scenario.campaignUnitPool.units.some(({ poolType }) => poolType === 4));
+  } finally {
+    session.close();
   }
 });
 

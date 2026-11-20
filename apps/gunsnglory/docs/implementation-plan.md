@@ -13,7 +13,7 @@
 
 ## 当前批次：Dakota Level 38 Wayne Waters（M39）
 
-**状态：**静态审计及独立地图基线已完成；M39-A 地图、地形、桥层与敌方路线，以及 M39-B 地图对象、单位和碰撞已实现并通过定向测试和类型检查。M39-C–E 尚未开始。完整证据见[Wayne Waters 静态审计](wayne-waters-static-audit.md)，原始 TDM、路线图和地形参考分别保存在测试 fixture。raw 78 的作者意图仍未知，但没有专属对象/道路分支，不阻塞接入。
+**状态：**静态审计及独立地图基线已完成；M39-A 地图、地形、桥层与敌方路线，M39-B 地图对象、单位和碰撞，以及 M39-C 参数、波次和玩家单位池已实现并通过定向测试和类型检查。M39-D–E 尚未开始。完整证据见[Wayne Waters 静态审计](wayne-waters-static-audit.md)，原始 TDM、路线图和地形参考分别保存在测试 fixture。raw 78 的作者意图仍未知，但没有专属对象/道路分支，不阻塞接入。
 
 ### 实现切片
 
@@ -21,7 +21,7 @@
 | --- | --- | --- | --- |
 | M39-A（已完成）地图、地形与敌方路线 | 新增 Dakota 第8关的 map41 数据、静态背景/道路/桥层和 TDM 方向路线；直接消费已审阅 fixture，禁止从 Frost Station 偏移或手工补路线。无前置依赖。 | 原始 TDM 32×24、768 格逐项一致；背景768条、道路/桥71条绘制指令逐项匹配参考；4个出生点、46个转向点、4个出口、52条唯一有向边、6条完整路线及全部 action 到 spawn 映射一致；路线不越界。 | `node --import <现有 tsx loader> --test tests/dakota-08-map-and-routes.test.ts`：3项通过；`node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`：通过。 |
 | M39-B（已完成）地图对象、单位与碰撞 | 根据 TDM 接入装饰、45个睡眠单位、解锁单位、4组炸药配对、Saloon/Fort 和五个动态 Steamer 组件；复用既有对象工厂与 APK 碰撞契约。依赖 M39-A 地图坐标。 | 每种 raw marker 的坐标、类型、activity、解锁条件和唯一 ID 与审计一致；睡眠单位仍阻挡移动；Saloon、Fort、水边岩石、桥和地形边界命中 APK 派生框；无 Tipi、Casino 或伪造 Cannon。 | `node --import <现有 tsx loader> --test tests/dakota-08-map-entities.test.ts tests/dakota-08-player-collision.test.ts tests/dakota-08-dynamite.test.ts tests/dakota-08-steamer.test.ts`：8项通过；`node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`：通过。 |
-| M39-C 参数、敌人波次与玩家单位池 | 接入参数行37、8个波次头、16条敌方请求以及 Wave 1 的 SET/SET_MAX 玩家池动作；敌方 action ID 显式映射到 M39-A 出生点。依赖 M39-A。 | 初态、难度 HP、全部波次字段与请求槽位逐项匹配审计；两个池动作都在 Wave 1，数量清零且四类上限为3；用短 GameSession 验证真实消费，不要求跑完战役。未知参数字段保留为数据，不猜玩法。 | node --import tsx --test tests/dakota-08-campaign-rules.test.ts tests/dakota-08-campaign-waves.test.ts |
+| M39-C（已完成）参数、敌人波次与玩家单位池 | 接入参数行37、8个波次头、16条敌方请求以及 Wave 1 的 SET/SET_MAX 玩家单位池动作；敌方 action ID 显式映射到 M39-A 出生点。地图只有 Saloon/Fort，没有 Tipi：保留 APK 对 pool slot 1–4 的原始动作数据，但只为实际存在的建筑生成 1–3 号单位模板；允许有效原始池槽位没有当前地图模板，不伪造 Tipi 或 Indian 出生点。依赖 M39-A、M39-B。 | 初态、难度 HP、全部波次字段与请求槽位逐项匹配审计；两个池动作都在 Wave 1，四个原始槽位均清零、上限均为3；短 GameSession 验证真实敌方出兵和 Saloon/Fort 单位池消费；未知参数效果保持数据，不猜玩法。 | `node --import <现有 tsx loader> --test tests/dakota-08-campaign-rules.test.ts tests/dakota-08-campaign-waves.test.ts tests/campaign-unit-pool.test.ts`：14项通过；`node ./node_modules/typescript/bin/tsc --noEmit -p tsconfig.json`：通过。 |
 | M39-D 文案、头像、音乐与内容快照 | 增加英中关卡说明/对白、APK 头像和 Dakota 音乐映射；按当前解锁状态生成稳定内容版本和回放 snapshot factory；不播放音频。依赖 M39-B、M39-C。 | 8段对白、头像、语言键和资源路径与审计对应；全部必需资源存在并进入启动预载；解锁快照往返重建的单位集合一致；历史回放版本不被覆盖。 | node --import tsx --test tests/dakota-08-campaign-copy.test.ts tests/dakota-08-replay-content.test.ts |
 | M39-E 正式/自由入口、注册与回放 | 将 Level 38 接入 Dakota 正式目录、Free Play、菜单预览、HUD、结算、浏览器 builder 和回放导入；更新共享阶段/进度/地区数量及历史 E2E fixture。依赖 M39-A–D。 | 正式模式需完成 Level 37 才开放；Free Play 可选择本关且不写战役进度；地图预览/开局/对白/资源/HUD 均指向 map41；回放按录制快照分派；未实现 Level 39 仍禁用。真实菜单入口覆盖，不用只测 builder 替代。 | node --import tsx --test tests/dakota-08-formal.test.ts tests/official-campaign.test.ts tests/progress.test.ts；CI=1 PLAYWRIGHT_PORT=<独立端口> pnpm exec playwright test tests/e2e/t79-dakota-08-integration.spec.ts tests/e2e/t80-dakota-08-replay.spec.ts --workers=1 |
 

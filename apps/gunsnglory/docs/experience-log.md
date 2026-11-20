@@ -677,6 +677,15 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **修复与验证：**将 Colt City 正式内容加入共用集合，计数更新为28关；新增短 `GameSession` 使用真实 Wave 1 action 1，请求事件确认 `spawnPointId=2`，再核对该点是 `(31,19)`，跟踪无防守单位干扰的敌人到 `(25,19)` 并确认其按 TDM 方向转北。定向 `wave-routes.test.ts` 通过6项，`pnpm run typecheck` 通过；完整 `CI=1 PLAYWRIGHT_PORT=43324 pnpm run test:ci` 通过类型检查、872项单测、生产构建和178项 E2E。反转 marker 52 的方向映射时，路线构造/测试失败，确认测试能捕捉方向错误。内置浏览器静音、窗口模式进入 Free Play → Oregon → Colt City → Medium，确认开场对白、头像及地图加载；短时4×未操作导致第一波败北，结果没有写入战役档案，随后恢复设置为1×。浏览器未目视证明连续行走或池单位战斗；这些运行时路线结论来自短 `GameSession` 与自动化测试，不描述为浏览器实测。
 - **防回归：**每个新关卡都要同时完成静态路线图、`runtimeWaveRedirects()` 对照和至少一条真实短会话转弯断言；对 `actionId → spawnPointId → TDM 坐标` 逐段核实，不从编号或数组位置猜坐标。核对共享关卡清单数量与正式目录一致。不要把静态 `routes` 完整当成运行时路线正确的证明，也不需要通过完整战役或 Android 实测来验证这个确定性分岔。
 
+- **Wayne Waters 同类错误复发：**M39-C 首轮波次测试把 action 2 直接写成 `spawnPointId=2`，测试失败后才查看该地图从 TDM 出生 marker 派生的映射：action 2 实际对应 row-major `spawnPointId=1`。REA 路线、TDM marker 和生产映射都正确；错误是新测试没有逐项读取当前地图的映射表，重犯了本节已经记录的 ID 混淆。修正后短 `GameSession` 检查通过。经验条目已存在仍未阻止复发，说明阅读经验记录不能替代实际执行核对；测试必须同时断言 `actionId → spawnPointId → TDM 坐标`，并把目标地图的映射作为明确期望。
+
+## 玩家池动作槽位可以没有本地图生成模板
+
+- **表现与复现：**Wayne Waters APK 的 Wave 1 `SET`/`SET_MAX` 动作覆盖 raw pool slot 1–4；本图只有 Saloon 和 Fort，没有 Tipi。旧网页校验要求每个动作槽都必须有单位模板，因此无法忠实保留 slot 4 的最大值，又不伪造 Indian pool 或 Tipi。
+- **根因与证据：**APK 的玩家池动作写入独立的37槽计数数组；单位模板和地图生成点则由实际可用的单位/建筑决定。`performActionsForWave()` 按原始 slot 应用动作，`SpawnPoolManager` 后续只会从实际定义的单位模板和匹配地点中派发。M39 静态审计确认两条 Wave 1 动作分别把四槽清零并设为3；TDM 仅有 Saloon raw112、Fort raw113，没有 Tipi raw114。
+- **修正与防回归：**动作校验改为验证 raw slot 位于0–36且同一全表动作不重复，不再要求每个有效槽都拥有本图模板。Wayne Waters 保留四槽的原始动作值，但只定义 Gunslinger/Mexican/Cannon 模板与 Saloon/Fort 生成点；不创建 Indian 模板、Tipi 或虚构出生位置。`dakota-08-campaign-rules.test.ts` 检查四槽动作状态、实际模板和建筑；`campaign-unit-pool.test.ts` 验证无模板槽位可保留计数而不会创造派发单位。
+- **根因分类：**这是网页数据契约把“原始计数槽”和“本图可派发模板”过度绑定，不是 APK 反解析遗漏。新增地图前先比较原始动作数组与可用生成对象；空槽/无来源槽仍可保留原始状态，但不能据此创造场景实体。
+
 ## 新关卡集成的共享断言与启动预载
 
 **状态：**Snake River（Oregon 第 9 关／全局第 29 关）相关问题已修复、完成整批检查并发布。
