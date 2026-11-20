@@ -20,6 +20,7 @@ import {
   dakota03LevelThirtyThreeCampaignContent,
   dakota04LevelThirtyFourCampaignContent,
   dakota05LevelThirtyFiveCampaignContent,
+  dakota08LevelThirtyEightCampaignContent,
   fortKaboomLevelThreeContent,
   luckyLakeLevelSevenCampaignContent,
   lostCityLevelTenCampaignContent,
@@ -375,6 +376,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Frost Station · Level 37', zh: '霜冻车站 · 第 37 关' },
     globalLevel: 37,
     requiresCompletedScenarioIds: ['campaign-dakota-06'],
+  }, {
+    scenarioId: dakota08LevelThirtyEightCampaignContent.id,
+    contentVersion: dakota08LevelThirtyEightCampaignContent.contentVersion,
+    title: { en: 'Wayne Waters · Level 38', zh: '韦恩水域 · 第 38 关' },
+    globalLevel: 38,
+    requiresCompletedScenarioIds: ['campaign-dakota-07'],
   }]);
 });
 
