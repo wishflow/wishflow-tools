@@ -61,3 +61,19 @@ test('Frost Station uses Dakota music resources without playing them during vali
     assert.equal(bytes.toString('ascii', 0, 4), 'OggS', `${track} is bundled as Ogg`);
   }
 });
+
+test('Frost Station presentation is connected to menu, HUD, dialogue, music and startup image consumers', () => {
+  const mainSource = readFileSync(fileURLToPath(new URL('../src/main.ts', import.meta.url)), 'utf8');
+
+  assert.match(mainSource, /level\.level === 37 \? dakota07CampaignCopy\.title\[language\]/);
+  assert.match(mainSource, /entry\.level === 37 \? dakota07CampaignCopy\.overview\[language\]/);
+  assert.match(mainSource, /entry\.level === 37 \? dakota07CampaignCopy\.title\[language\]/);
+  assert.match(mainSource, /officialStage\?\.scenarioId === dakota07CampaignId[\s\S]*?'达科他' : 'DAKOTA'/);
+  assert.match(mainSource, /Official Frost Station level 37: eight original waves across four entrances/);
+  assert.match(mainSource, /正式关卡：霜冻车站，第 37 关。包含四个入口上的原版八波/);
+  assert.match(mainSource, /if \(scenarioId === dakota07CampaignId\) return dakota07WaveIntros;/);
+  assert.match(mainSource, /\.\.\.dakota07CampaignPortraitAssets,/);
+  assert.match(mainSource, /createDakota07CampaignContent\(allMississippiUnitUnlocks\)/);
+  assert.match(mainSource, /session\.startRecord\.scenarioId === dakota07CampaignId\s*\? dakota07BattleMusicForWave/);
+  assert.match(mainSource, /session\.startRecord\.scenarioId === dakota07CampaignId\s*\? dakota07AmbientMusic/);
+});

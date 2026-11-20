@@ -57,15 +57,32 @@ test('Free Play opens Frost Station from the real Dakota menu with all difficult
   await expect(page.getByTestId('campaign-overview-minimap')).toHaveAttribute(
     'data-scenario-id', 'campaign-dakota-07',
   );
+  await expect(page.locator('.campaign-level-description')).toHaveText(
+    'Frost Station is a famous gathering point for travelers and connects all the railroads in the area.',
+  );
+
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expect(page.getByRole('heading', { name: '霜冻车站' })).toBeVisible();
+  await expect(page.locator('.campaign-level-description')).toHaveText('霜冻车站是旅人们熟知的集散地，连接着这一带的所有铁路。');
 
   await page.getByTestId('campaign-stage-play').click();
   for (const difficulty of ['easy', 'medium', 'hard']) {
     await expect(page.getByTestId(`campaign-difficulty-${difficulty}`)).toBeEnabled();
   }
   await page.getByTestId('campaign-difficulty-medium').click();
-  await expect(page.locator('#scene-title')).toHaveText('Frost Station · Level 37');
+  await expect(page.locator('#scene-title')).toHaveText('霜冻车站 · 第 37 关');
+  await expect(page.getByTestId('scene-context')).toHaveText('自由游玩 · 达科他 · 37');
+  await expect(page.getByTestId('scene-caption')).toContainText('自由游玩不会更改战役进度');
+  await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
+  await expect(page.getByTestId('campaign-wave-intro-wave')).toHaveText('第 1 波 · 共 8 波');
+  await expect(page.getByTestId('campaign-wave-intro-text')).toHaveText('“抱歉让大家久等了，铁轨都冻住了！”');
+  const introPortrait = page.getByTestId('campaign-wave-intro-portrait');
+  await expect(introPortrait).toHaveAttribute('src', /portrait_engineer\.png/);
+  await expect.poll(() => introPortrait.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
   await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
+  await page.locator('[data-action="continue-wave-intro"]').click();
+  await expect(page.getByTestId('wave-status')).toContainText('第 1/8 波');
 });
 
 test('formal Frost Station stays locked until Ice Rocks is complete', async ({ page }) => {
@@ -96,5 +113,14 @@ test('formal Frost Station stays locked until Ice Rocks is complete', async ({ p
   await page.getByTestId('campaign-stage-play').click();
   await page.getByTestId('campaign-difficulty-medium').click();
   await expect(page.locator('#scene-title')).toHaveText('Frost Station · Level 37');
+  await expect(page.getByTestId('scene-context')).toHaveText('DAKOTA · 37');
+  await expect(page.getByTestId('scene-caption')).toHaveText(
+    'Official Frost Station level 37: eight original waves across four entrances. Victory records campaign completion and best score.',
+  );
+  await expect(page.getByTestId('campaign-wave-intro')).toBeVisible();
+  await expect(page.getByTestId('campaign-wave-intro-wave')).toHaveText('Wave 1 of 8');
+  await expect(page.getByTestId('campaign-wave-intro-text')).toHaveText(
+    '“I\'m sorry for the delay, but the tracks are frozen!”',
+  );
   await expect(page.getByTestId('asset-load-error')).toBeHidden();
 });
