@@ -39,6 +39,8 @@ M23-F 的首次完整检查再次暴露相同问题：748项中20项单测失败
 
 M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley、Cow Gulch 主目录、Fort Kaboom 目录快照和 Progress 状态投影仍固定在22关；添加 level 23 及其前置/锁定关系后，相关5个 spec 共42项定向测试通过。另3项 Node worker CLI 子进程当时未解析隔离 worktree 中的 `tsx`；重建现有依赖链接后，`serial-batch-parallel.test.ts` 3项单独通过。完整检查未进入构建或 E2E 阶段；第二次完整运行用于确认子进程问题是否仅由 worktree 依赖链接造成。新增关卡时除了搜索数字断言，还要检查整份 stage 数组、Progress 投影和目录映射快照。
 
+M38 再次暴露目录快照遗漏：G4-B 已正确登记 Level 37，但 G5 首轮全量单测发现 `content.test.ts`、`apache-valley.test.ts`、`progress.test.ts` 的旧目录/进度期望仍只有36关。原因是 G4-B 的定向测试覆盖了新关和 Dakota 区域，却没有触发这三份共享历史夹具。已将 Level 37 及其 `campaign-dakota-06` 前置关系补入目录快照，并在初始与结算后 Progress 快照中补入 locked 状态；三个文件共37项定向单测通过。修复后的完整 `CI=1 PLAYWRIGHT_PORT=4221 pnpm run test:ci` 通过类型检查、1112项单测、生产构建及200项 E2E；根目录 `pnpm run test:catalog` 通过18项。内置浏览器静音、窗口模式从真实菜单进入 Free Play → Dakota → Frost Station → Medium，确认 Level 37、首波对白与 Engineer 头像、铁路/桥面/列车、地图和 HUD；关闭对白后进入1/8波战斗，未通关、未进入全屏或播放音频。此项是网页测试基线维护遗漏，不是 APK 内容或逆向结论错误。新增正式关卡仍需检查所有共享 stage/Progress fixture，不能只测新关入口。
+
 ## 新增关卡时同步战斗 HUD 的地区标签
 
 - **表现与复现：**Cashcow Canyon 已出现在 Oregon 选关和正式战役中，但 Free Play 与正式开局后的战斗 HUD 仍显示 `NEW MEXICO`。从 Oregon 选择 Level 22 并开始战斗即可复现。

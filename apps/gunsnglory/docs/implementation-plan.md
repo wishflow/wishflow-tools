@@ -73,9 +73,10 @@ G4 → G5 批次检查与发布决策
 
 ### G5：整批本地检查、内置浏览器验收与集成决策
 
-- **本地完整检查：**G1–G4 全部定向检查通过后，运行一次 `CI=1 pnpm run test:ci` 与 `pnpm test:catalog`；修复失败后重跑失败项及最终整套检查。确认 `git diff --check`、资源路径映射、Markdown 相对链接、所有 changed files 与本批范围一致。
-- **内置浏览器：**本地窗口模式、静音，从真实主菜单进入 Free Play → Dakota → Frost Station → Medium；核对 Level 37 文案、首波对白/头像、铁路/桥面/列车、单位与 HUD，关闭对白后确认战场正常。使用小幅模拟推进或短交互，不完成关卡；不进入全屏、不播放音频。
-- **集成发布：**G5 通过后重新核对 M36–M38 的完整内容、分支状态和发布比例，再按 Guns’n’Glory 规则决定以一个完整批次 squash 集成到 master；需要发布时 push 后核对 Actions 与部署来源 SHA，再用内置浏览器验收。任何来源 SHA 或线上关卡入口不一致时保持发布未完成。不得把 M38 单关的小切片单独发布。
+- **状态：本地验收通过；M36–M38 整批集成决策待复核。**首次完整检查在单测阶段发现三个旧目录期望缺少 Level 37：`content.test.ts` 的完整正式目录快照、`apache-valley.test.ts` 的正式关卡前置链、`progress.test.ts` 的初始/结算后状态快照。生产目录本身正确；已同步三个 fixture，相关37项定向单测全部通过。
+- **完整本地检查：**修复后 `CI=1 PLAYWRIGHT_PORT=4221 pnpm run test:ci` 通过类型检查、1112项单测、生产构建及200项 E2E；`pnpm run test:catalog` 通过18项。构建有既有大 JS chunk 警告。完成文档收尾后再运行 `git diff --check` 并检查本批工作树。
+- **内置浏览器：**本地窗口模式、静音，从真实主菜单进入 Free Play → Dakota → Frost Station → Medium；确认 Level 37、首波对白和 Engineer 头像、铁路/桥面/列车、地图与 HUD。关闭对白后进入 1/8 波战斗画面；未推进到关卡结束。没有进入全屏或播放音频。
+- **集成发布：**完成本地检查不等于完成发布。需复核 M36–M38 的完整内容、分支状态和累计发布比例后，再决定是否把完整批次 squash 集成到 master；本轮未 push、未部署、未核对线上 SHA。若后续决定发布，必须核对 Actions、部署来源 SHA，并用内置浏览器验收；不得把 M38 单关的小切片单独发布。
 
 ## M36：Ghost Town 内容接入
 
