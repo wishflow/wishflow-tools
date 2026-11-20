@@ -61,7 +61,7 @@ test('Free Play opens Fort Knockout from Dakota with map 36, bilingual copy, and
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-dakota').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available');
   await expect(page.getByTestId('campaign-level-33')).toBeEnabled();
   await page.getByTestId('campaign-level-33').click();
 

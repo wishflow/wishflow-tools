@@ -193,6 +193,8 @@ import { dakota06CampaignCopy } from './content/dakota-06-campaign-copy';
 import { createDakota06CampaignContent } from './content/dakota-06-campaign';
 import { dakota06CampaignPortraitAssets, dakota06WaveIntros } from './content/dakota-06-wave-intros';
 import { dakota06AmbientMusic, dakota06BattleMusicForWave, type Dakota06MusicTrack } from './content/dakota-06-music';
+import { dakota07CampaignId } from './content/dakota-07-identity';
+import { createDakota07CampaignContent } from './content/dakota-07-campaign';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -2259,6 +2261,7 @@ function campaignMenuOverviewScreen(): string {
                                                 : entry.level === 34 ? createDakota04CampaignContent(completedScenarios)
                                                   : entry.level === 35 ? createDakota05CampaignContent(completedScenarios)
                                                     : entry.level === 36 ? createDakota06CampaignContent(completedScenarios)
+                                                      : entry.level === 37 ? createDakota07CampaignContent(completedScenarios)
                                           : createOregon07CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
@@ -4871,7 +4874,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             || request.scenarioId === dakota03CampaignId
             || request.scenarioId === dakota04CampaignId
             || request.scenarioId === dakota05CampaignId
-            || request.scenarioId === dakota06CampaignId)
+            || request.scenarioId === dakota06CampaignId
+            || request.scenarioId === dakota07CampaignId)
             && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
             : game;

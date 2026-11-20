@@ -55,6 +55,7 @@ M24-G 首次完整单测为762项、755通过、7失败：4项是 Apache Valley�
 - **避免重复：**新增关卡不能以“目录和 Progress 已登记”作为 UI 集成完成标准。逐项搜索消费 `CampaignCatalog` / `officialCampaignStages` 的页面路由、标题/说明、缩略图 builder、HUD 分类、场景重建、音乐和 replay 工厂；至少从菜单实际进入新关卡，并验证预览身份、开局 ID/地区/波次。目录已有静态地图图并不能证明预览使用了正确的 `ScenarioContent`。
 - **Ghost Town 再次验证：**G4-B 已接通目录、菜单和新局，但对白选择、Dakota 音乐识别、头像预载及 replay snapshot factory 仍是 `main.ts` / `bootstrap/browser.ts` 中互不自动联动的消费者。G4-C 接入后，`dakota-05-campaign-presentation.test.ts` 检查对白、音乐和预载路由，`dakota-05-replay-content.test.ts` 比较16种录制解锁快照与导入场景单位；t74 E2E 从菜单验证首段对白、头像实际加载和 HUD 地区/关卡上下文。新关验收应使用消费点矩阵逐项关单，不能把“菜单可进”推及到其他页面消费者。
 - **Ice Rocks G4-B/G4-C 的 E2E 断言：**首次 Playwright 断言用了不存在的 `data-testid="scene-title"`；`game-page-template.ts` 实际提供的是 `id="scene-title"`。失败上下文已显示 Level 36 的战斗标题，故这次是测试定位器错误，不是开局失败。改用 `#scene-title` 后 t75 两项通过。G4-C 又在保持中文界面启动后断言英文标题和英文波次状态；页面实际已正确本地化，测试改为匹配当前语言后通过。新断言应先查模板和既有稳定 selector，并按当前语言状态写期望；失败时查看快照，不能只根据 locator/文本不匹配认定产品行为失败。首次快照还显示 Dakota HUD 地区回退为 `NEW MEXICO`，这是实际待修接线；G4-C 已补入 `dakota06CampaignId`，并由正式/自由 E2E 验证 Dakota/达科他地区与 Level 36 上下文。
+- **Frost Station G4-B 复现：**identity、内容版本、builder、正式阶段和菜单预览都已注册，但真实菜单点击后旧场景仍保留并显示“无法打开关卡”。根因是 `main.ts` 的 `replaceSession()` 仍维护一份独立的关卡 ID 列表，遗漏了 `campaign-dakota-07`；builder 与直接 `GameSession` 测试绕过了这个消费点。将 Level 37 加入档案驱动的 browser-game 分支后，t77 从真实 Free Play/正式菜单都能进入。本例再次验证：注册目录和内容工厂不等于接通生产开局路径，必须用真实菜单入口测到 `replaceSession()`。
 
 ## DEX 伪代码分支与路线优先级复核
 

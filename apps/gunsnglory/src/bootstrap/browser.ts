@@ -194,6 +194,9 @@ import {
   parseDakota06ReplayContentVersion,
 } from '../content/dakota-06-content-version';
 import { dakota06CampaignId } from '../content/dakota-06-identity';
+import { createDakota07CampaignContent } from '../content/dakota-07-campaign';
+import { dakota07CampaignContentVersionFor } from '../content/dakota-07-content-version';
+import { dakota07CampaignId } from '../content/dakota-07-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -368,6 +371,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === dakota06CampaignId) {
     return dakota06CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === dakota07CampaignId) {
+    return dakota07CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -413,6 +419,7 @@ export function createBrowserGame(
     [dakota04CampaignId]: createDakota04CampaignContent(completedScenarioIds),
     [dakota05CampaignId]: createDakota05CampaignContent(completedScenarioIds),
     [dakota06CampaignId]: createDakota06CampaignContent(completedScenarioIds),
+    [dakota07CampaignId]: createDakota07CampaignContent(completedScenarioIds),
     ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {

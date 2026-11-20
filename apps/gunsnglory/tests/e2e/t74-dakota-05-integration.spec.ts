@@ -45,7 +45,7 @@ test('Free Play opens Ghost Town with map38 and all three difficulties', async (
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-dakota').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('6 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('7 implemented levels available');
   await page.getByTestId('campaign-level-35').click();
 
   await expect(page.getByRole('heading', { name: 'Ghost Town' })).toBeVisible();

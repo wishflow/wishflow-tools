@@ -42,7 +42,7 @@ function emptyRequestContent(completedScenarioIds: readonly string[]): ScenarioC
 }
 
 test('Dust Falls is formal level 19 and unlocks after Shadow Town', async () => {
-  assert.equal(officialCampaignStages.length, 36);
+  assert.equal(officialCampaignStages.length, 37);
   assert.deepEqual(officialCampaignStages.find(({ globalLevel }) => globalLevel === 19), {
     scenarioId: mississippi19CampaignId,
     contentVersion: mississippi19CampaignContentVersionFor([]),
