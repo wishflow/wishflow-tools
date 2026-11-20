@@ -37,7 +37,7 @@ const completedThroughLevelThirtyThree = officialCampaignStages.slice(0, 33).map
 
 test('Badlands is the gated 34th official stage after Fort Knockout', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota04CampaignId);
-  assert.equal(officialCampaignStages.length, 37);
+  assert.equal(officialCampaignStages.length, 38);
   assert.deepEqual(stage, {
     scenarioId: dakota04CampaignId,
     contentVersion: createDakota04CampaignContent().contentVersion,
