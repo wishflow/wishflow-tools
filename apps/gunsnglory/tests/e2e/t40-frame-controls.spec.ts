@@ -163,9 +163,15 @@ test('keeps battle controls frame-local and the pause Options path stable on des
       const optionsFits = await optionsPanel.locator('.campaign-options-card').evaluate((card) => {
         const frame = card.closest('.game-frame')?.getBoundingClientRect();
         const bounds = card.getBoundingClientRect();
+        const heading = card.querySelector(':scope > h2')?.getBoundingClientRect();
+        const help = card.querySelector<HTMLElement>('[data-testid="options-help"]')?.getBoundingClientRect();
+        const sound = card.querySelector<HTMLElement>('[data-testid="options-sound-toggle"]')?.getBoundingClientRect();
         return {
           frame: frame ? { left: frame.left, top: frame.top, right: frame.right, bottom: frame.bottom } : null,
           card: { left: bounds.left, top: bounds.top, right: bounds.right, bottom: bounds.bottom },
+          heightRatio: frame ? bounds.height / frame.height : 1,
+          controlsSeparated: !!heading && !!help && !!sound
+            && heading.bottom < help.top && help.bottom < sound.top,
           scrollHeight: card.scrollHeight,
           clientHeight: card.clientHeight,
         };
@@ -176,7 +182,9 @@ test('keeps battle controls frame-local and the pause Options path stable on des
           && optionsFits.card.top >= optionsFits.frame!.top
           && optionsFits.card.right <= optionsFits.frame!.right
           && optionsFits.card.bottom <= optionsFits.frame!.bottom
-          && optionsFits.scrollHeight <= optionsFits.clientHeight + 1,
+          && optionsFits.scrollHeight <= optionsFits.clientHeight + 1
+          && optionsFits.heightRatio < 0.95
+          && optionsFits.controlsSeparated,
         `${viewport.name} Options content fits the in-game parchment: ${JSON.stringify(optionsFits)}`,
       ).toBe(true);
 
@@ -227,12 +235,18 @@ test('keeps battle controls frame-local and the pause Options path stable on des
       const chineseOptionsFit = await optionsPanel.locator('.campaign-options-card').evaluate((card) => {
         const frame = card.closest('.game-frame')?.getBoundingClientRect();
         const bounds = card.getBoundingClientRect();
+        const heading = card.querySelector(':scope > h2')?.getBoundingClientRect();
+        const help = card.querySelector<HTMLElement>('[data-testid="options-help"]')?.getBoundingClientRect();
+        const sound = card.querySelector<HTMLElement>('[data-testid="options-sound-toggle"]')?.getBoundingClientRect();
         return !!frame
           && bounds.left >= frame.left
           && bounds.top >= frame.top
           && bounds.right <= frame.right
           && bounds.bottom <= frame.bottom
-          && card.scrollHeight <= card.clientHeight + 1;
+          && card.scrollHeight <= card.clientHeight + 1
+          && bounds.height / frame.height < 0.95
+          && !!heading && !!help && !!sound
+          && heading.bottom < help.top && help.bottom < sound.top;
       });
       expect(chineseOptionsFit, `${viewport.name} Chinese Options content fits`).toBe(true);
       await page.getByTestId('options-help').click();

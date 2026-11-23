@@ -896,139 +896,140 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-overview-card {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  max-height: none;
+  top: 50%;
+  left: 50%;
+  width: min(63.28125cqw, 112.5cqh);
+  aspect-ratio: 3 / 2;
+  container-type: inline-size;
+  transform: translate(-50%, -50%);
   overflow: hidden;
-  transform: none;
-  border: 0;
-  padding: 0;
-  background: none;
-  box-shadow: none;
-}
-
-.campaign-overview-card::before {
-  position: absolute;
-  inset: 12.5% 18.3% 13.5%;
+  color: #000;
   background: var(--campaign-menu-card-background) center / 100% 100% no-repeat;
-  content: "";
-  pointer-events: none;
 }
 
 .campaign-overview-title {
   position: absolute;
-  top: 20.5%;
-  left: 24%;
-  width: 32%;
+  top: 14.6875%;
+  left: 10.8333%;
+  width: 44.375%;
   margin: 0 !important;
-  color: #24170d;
-  font-size: clamp(10px, 2.35cqw, 25px) !important;
+  color: #000;
+  font-family: serif;
+  font-size: clamp(8px, 2.9cqw, 20px) !important;
   font-weight: 500;
-  line-height: 1.1;
+  line-height: 1.2;
   text-align: center;
   text-shadow: none !important;
 }
 
 .campaign-overview-images {
   position: absolute;
-  inset: 0;
+  top: 20.9375%;
+  left: 10.8333%;
+  display: flex;
+  width: 44.375%;
+  height: 23.4375%;
+  align-items: center;
+  justify-content: space-evenly;
   pointer-events: none;
 }
 
 .campaign-overview-level-art {
-  position: absolute;
-  top: 31.5%;
-  left: 26.5%;
-  width: 11.5%;
-  height: 16%;
+  width: 50%;
+  height: 100%;
   object-fit: contain;
 }
 
 .campaign-overview-minimap {
-  position: absolute;
-  top: 32.2%;
-  left: 43.8%;
-  width: 6.4%;
-  height: 11.3%;
+  width: 50%;
+  max-height: 100%;
   border: 1px solid rgba(58, 39, 23, 0.85);
-  object-fit: fill;
+  object-fit: contain;
   image-rendering: pixelated;
 }
 
 .campaign-level-description {
   position: absolute;
-  top: 48.5%;
-  left: 24.3%;
-  width: 27%;
-  height: 28%;
-  overflow: hidden;
+  top: 44.375%;
+  left: 10.8333%;
+  box-sizing: border-box;
+  width: 44.375%;
+  height: 34.6875%;
+  overflow: auto;
   margin: 0;
-  color: #24170d;
-  font-size: clamp(7px, 2.15cqw, 23px);
-  line-height: 1.14;
+  padding-right: 2.0833%;
+  color: #000;
+  font-family: serif;
+  font-size: clamp(8px, 2.9cqw, 20px);
+  line-height: 1.2;
   text-align: left;
+  scrollbar-width: thin;
 }
 
 .campaign-overview-highscore {
   position: absolute;
   inset: 0;
-  color: #21170f;
+  color: #000;
+  font-family: serif;
   text-align: center;
 }
 
 .campaign-overview-wanted {
   position: absolute;
-  top: 18.5%;
-  left: 60.7%;
-  width: 16%;
-  height: 27.5%;
-  object-fit: fill;
+  top: 15.3125%;
+  left: 66.25%;
+  width: 22.5%;
+  height: 28.4375%;
+  object-fit: contain;
 }
 
 .campaign-overview-score-label,
 .campaign-overview-score,
 .campaign-overview-no-score {
   position: absolute;
-  left: 60.5%;
-  width: 17%;
+  left: 65.4167%;
+  width: 25%;
   margin: 0;
-  font-size: clamp(7px, 1.65cqw, 17px);
+  color: #000;
+  font-family: serif;
+  font-size: clamp(8px, 2.9cqw, 20px);
   line-height: 1.15;
 }
 
 .campaign-overview-score-label {
-  top: 46.8%;
+  top: 43.75%;
 }
 
 .campaign-overview-score {
-  top: 51.5%;
+  top: 50.5%;
   font-weight: 700;
 }
 
 .campaign-overview-no-score {
-  top: 15.3%;
-  left: 64.5%;
+  top: 15.3125%;
+  left: 65.4167%;
   display: flex;
   height: 50%;
   align-items: center;
   justify-content: center;
-  padding: 0 1%;
-  font-size: clamp(7px, 1.35cqw, 14px);
-  line-height: 1.25;
+  padding: 0 2.0833%;
+  font-size: clamp(8px, 2.4cqw, 17px);
+  line-height: 1.2;
   text-align: center;
 }
 
 .campaign-overview-play {
   position: absolute;
-  top: 65%;
-  left: 59.2%;
-  width: 18.2%;
-  height: 15.8%;
+  top: 69.0625%;
+  left: 63.75%;
+  width: 27.9167%;
+  aspect-ratio: 134 / 70;
   border: 0;
   padding: 0;
   color: #fff !important;
   background: transparent;
+  font-family: serif;
+  font-weight: 700;
   filter: drop-shadow(0 1px 1px rgba(37, 24, 17, 0.5));
 }
 
@@ -1046,10 +1047,10 @@ body.gng-game-fullscreen .usagi-widget {
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: clamp(9px, 1.9cqw, 20px);
-  font-weight: 800;
-  text-shadow: 0 1px 2px #29202f;
-  text-transform: uppercase;
+  font-family: serif;
+  font-size: clamp(8px, 2.9cqw, 20px);
+  font-weight: 700;
+  text-shadow: 2px 2px 2px #000;
 }
 
 .campaign-overview-play:disabled {
@@ -1059,13 +1060,14 @@ body.gng-game-fullscreen .usagi-widget {
 
 .campaign-overview-cancel {
   position: absolute;
-  top: 78.5%;
-  left: 20.5%;
-  width: 4.2%;
+  top: 85.9375%;
+  left: 4.7917%;
+  width: 7.5%;
   aspect-ratio: 1;
   border: 0;
   padding: 0;
   background: transparent;
+  filter: drop-shadow(1px 1px 1px rgba(25, 17, 12, 0.75));
 }
 
 .campaign-overview-cancel img {
@@ -1339,27 +1341,50 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .campaign-options-card {
-  width: min(90%, 900px);
-  height: min(70%, 420px);
-  max-height: 92%;
+  box-sizing: border-box;
+  width: min(84cqw, 30rem);
+  min-height: clamp(11rem, 44cqh, 14rem);
+  max-height: 90cqh;
   overflow: auto;
   border: 0;
   border-radius: 0;
-  padding: 3.5% 7% 6%;
+  padding: 5% 5% 8%;
   background: var(--campaign-menu-textbox-background) center / 100% 100% no-repeat;
   box-shadow: none;
+  color: #000;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 2cqh, 14px);
+  font-family: serif;
   text-align: center;
 }
 
+.campaign-options-card h2 {
+  margin: 0;
+  color: #563919;
+  font-family: serif;
+  font-size: clamp(15px, 4cqw, 22px);
+  line-height: 1.15;
+}
+
+.game-menu-panel .campaign-options-card h2 {
+  font-size: clamp(15px, 4cqw, 22px) !important;
+}
+
 .campaign-options-help {
-  width: min(42%, 250px);
-  min-height: 2.3em;
-  margin: 0.2em auto 0;
+  width: min(84%, 24rem);
+  min-height: 2.6em;
+  margin: 0;
   padding: 0.35em 0.8em;
   border: 0;
   border-radius: 0;
   color: #fff8e6;
   background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  font-family: serif;
+  font-size: clamp(13px, 3.4cqw, 18px);
   font-weight: 700;
   text-shadow: 0 1px 2px #301b0e;
 }
@@ -1369,15 +1394,24 @@ body.gng-game-fullscreen .usagi-widget {
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 0.35em 0.65em;
-  width: min(68%, 320px);
-  min-height: 2.5em;
-  margin: 0.45em auto 0;
+  width: min(84%, 24rem);
+  min-height: 2.6em;
+  margin: 0;
   border: 0;
   border-radius: 0;
   color: #fff8e6;
   background: var(--campaign-menu-button-background) center / 100% 100% no-repeat;
+  font-family: serif;
+  font-size: clamp(13px, 3.4cqw, 18px);
   font-weight: 700;
   text-shadow: 0 1px 2px #301b0e;
+}
+
+.game-menu-panel button.campaign-options-help,
+.game-menu-panel button.campaign-options-sound {
+  font-family: serif !important;
+  font-size: clamp(13px, 3.4cqw, 18px) !important;
+  font-weight: 700 !important;
 }
 
 .campaign-options-sound img {
@@ -1616,19 +1650,18 @@ body.gng-game-fullscreen .usagi-widget {
   }
 
   body:not(.gng-game-fullscreen) .campaign-options-card {
-    width: 94%;
-    height: 94%;
-    max-height: 94%;
-    padding: 2% 6% 3%;
+    width: min(84cqw, 30rem);
+    min-height: clamp(11rem, 44cqh, 14rem);
+    max-height: 90cqh;
+    padding: 5% 5% 8%;
   }
 
   .campaign-options-card h2 {
-    margin-bottom: 0.15em;
+    margin: 0;
   }
 
   .campaign-options-card .campaign-options-help {
-    min-height: 2em;
-    margin-top: 0.1em;
+    min-height: 2.6em;
   }
 
   body:not(.gng-game-fullscreen) .campaign-help-card {
@@ -2627,68 +2660,113 @@ body.gng-game-fullscreen .usagi-widget {
   line-height: 1.5;
 }
 
-.map-hire-confirmation p {
-  width: 100%;
-  margin: 0;
-  color: #52371f;
-  line-height: 1.22;
-  text-align: left;
+.game-original-confirmation.map-hire-confirmation {
+  width: min(72cqw, 127cqh);
+  max-width: none;
+  max-height: none;
+  aspect-ratio: 384 / 272;
+  overflow: visible;
+  font-family: Arial, sans-serif;
+}
+
+.map-hire-confirmation .game-confirmation-art {
+  inset: auto 0 0;
+  height: 70.588235%;
+  object-fit: fill;
 }
 
 .map-hire-confirmation .game-confirmation-content {
-  inset: 15% 28% 11% 13%;
+  inset: 40.441176% 17.447917% 26% 14.84375%;
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
-  gap: 5%;
-  overflow: hidden;
+  gap: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 0.45em;
+  overscroll-behavior: contain;
   text-align: left;
 }
 
 .map-hire-confirmation h2 {
   padding-right: 0.25rem;
-  font-size: clamp(9px, 1.6cqw, 16px);
+  font-size: clamp(11px, 1.55cqw, 16px);
+  line-height: 1.12;
+  text-align: left;
+}
+
+.map-hire-confirmation p {
+  width: 100%;
+  margin: 0;
+  color: #52371f;
+  line-height: 1.25;
   text-align: left;
 }
 
 .map-hire-confirmation [data-testid="map-hire-confirmation-details"] {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  font-size: clamp(7px, 1.08cqw, 11px);
+  max-height: none;
+  overflow: visible;
+  margin-top: clamp(6px, 0.98cqw, 10px);
+  font-size: clamp(10px, 1.35cqw, 14px);
+  font-weight: 400;
 }
 
 .map-hire-confirmation .map-hire-price {
   flex: 0 0 auto;
-  font-size: clamp(7px, 1.08cqw, 11px);
+  margin-top: clamp(3px, 0.52cqw, 5px);
+  font-size: clamp(10px, 1.3cqw, 13px);
   white-space: nowrap;
 }
 
 .map-hire-confirmation .map-hire-price strong {
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .map-hire-portrait {
   position: absolute;
   z-index: 1;
-  top: -11%;
-  right: 10%;
+  top: 0;
+  left: 59.895833%;
   width: 25%;
-  height: 70%;
+  height: auto;
+  max-height: 45%;
   object-fit: contain;
-  object-position: center bottom;
+  object-position: center;
+  image-rendering: pixelated;
   pointer-events: none;
 }
 
 .map-hire-confirmation .game-original-confirmation-actions {
-  flex: 0 0 26%;
+  position: absolute;
+  inset: auto 5.208333% 9.191176%;
+  display: flex;
+  flex: none;
   justify-content: space-between;
   gap: 0;
-  margin-top: auto;
+  width: auto;
+  height: 16.808824%;
+  margin: 0;
 }
 
 .map-hire-confirmation .game-original-confirmation-actions button {
-  width: 29%;
+  width: 24%;
+  height: 100%;
+  font-size: clamp(9px, 1.05cqw, 11px);
+}
+
+.map-hire-confirmation .game-original-confirmation-actions button:last-child {
+  margin-left: auto;
+}
+
+.map-hire-confirmation .game-original-confirmation-actions button:focus-visible {
+  outline: none;
+}
+
+.map-hire-confirmation .game-original-confirmation-actions button:focus-visible img {
+  outline: 2px solid #73451e;
+  outline-offset: 2px;
+  border-radius: 50%;
 }
 
 .game-original-confirmation {
@@ -2806,6 +2884,10 @@ body.gng-game-fullscreen .usagi-widget {
 .game-original-confirmation-actions button:focus-visible {
   outline: 2px solid #73451e;
   outline-offset: 1px;
+}
+
+.game-original-confirmation-actions button[hidden] {
+  display: none;
 }
 
 .recruit-confirmation-actions {
