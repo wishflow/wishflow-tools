@@ -145,6 +145,36 @@ test('Post Coach follows the APK turn atlas as part of its lead horse group', as
   session.close();
 });
 
+test('Post Coach follows its preceding horse when a redirect offers two routes', async () => {
+  const branches = new Set<string>();
+  const fork = postCoachScenario([], undefined, {
+    redirects: [{ cell: { x: 6, y: 8 }, directions: ['north', 'south'] }],
+    exit: { x: 6, y: 12 },
+  });
+
+  for (let seed = 1; seed <= 32; seed += 1) {
+    const { session } = await startPostCoachWave(fork, seed);
+    let view = session.observe();
+    let pairTurned = false;
+
+    for (let step = 0; step < 100; step += 1) {
+      view = session.advance({ deltaMs: 100 });
+      const { horse, coach } = postCoachEnemies(view);
+      if (horse.direction === 'east' || coach.direction === 'east') continue;
+      assert.equal(coach.direction, horse.direction, `Post Coach must follow the horse for seed ${seed}`);
+      branches.add(horse.direction);
+      pairTurned = true;
+      break;
+    }
+
+    assert.equal(pairTurned, true, `both group members must pass the fork for seed ${seed}`);
+    session.close();
+  }
+
+  assert.deepEqual([...branches].sort(), ['north', 'south'],
+    'the horse keeps the random route choice while the Post Coach follows it');
+});
+
 test('a lethal hit rewards the Post Coach once and leaves its non-damageable lead horse alive', async () => {
   const shooter = {
     id: 'post-coach-test-shooter',

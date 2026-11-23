@@ -7,6 +7,61 @@ async function expectCampaignMenuImagesLoaded(page: import('@playwright/test').P
   )].every((image) => image.complete && image.naturalWidth > 0));
 }
 
+async function expectCampaignOverviewAnchors(page: import('@playwright/test').Page): Promise<void> {
+  const layout = await page.locator('.campaign-overview-card').evaluate((card) => {
+    const bounds = card.getBoundingClientRect();
+    const relative = (selector: string) => {
+      const element = card.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing campaign overview element: ${selector}`);
+      const rect = element.getBoundingClientRect();
+      return { left: (rect.left - bounds.left) / bounds.width, top: (rect.top - bounds.top) / bounds.height };
+    };
+    return {
+      aspect: bounds.width / bounds.height,
+      title: relative('.campaign-overview-title'),
+      images: relative('.campaign-overview-images'),
+      description: relative('.campaign-level-description'),
+      play: relative('.campaign-overview-play'),
+      back: relative('.campaign-overview-cancel'),
+      noScore: card.querySelector('.campaign-overview-no-score') ? relative('.campaign-overview-no-score') : undefined,
+      poster: card.querySelector('.campaign-overview-wanted') ? relative('.campaign-overview-wanted') : undefined,
+      titleFont: getComputedStyle(card.querySelector('.campaign-overview-title')!).fontFamily,
+      descriptionFont: getComputedStyle(card.querySelector('.campaign-level-description')!).fontFamily,
+      titleAlignment: getComputedStyle(card.querySelector('.campaign-overview-title')!).textAlign,
+      descriptionScrollWidth: card.querySelector<HTMLElement>('.campaign-level-description')!.scrollWidth,
+      descriptionClientWidth: card.querySelector<HTMLElement>('.campaign-level-description')!.clientWidth,
+      playRight: (card.querySelector('.campaign-overview-play')!.getBoundingClientRect().right - bounds.left) / bounds.width,
+      backBottom: (card.querySelector('.campaign-overview-cancel')!.getBoundingClientRect().bottom - bounds.top) / bounds.height,
+    };
+  });
+
+  expect(layout.aspect).toBeCloseTo(1.5, 2);
+  expect(layout.title.left).toBeCloseTo(52 / 480, 2);
+  expect(layout.title.top).toBeCloseTo(47 / 320, 2);
+  expect(layout.images.left).toBeCloseTo(52 / 480, 2);
+  expect(layout.images.top).toBeCloseTo(67 / 320, 2);
+  expect(layout.description.left).toBeCloseTo(52 / 480, 2);
+  expect(layout.description.top).toBeCloseTo(142 / 320, 2);
+  expect(layout.play.left).toBeCloseTo(306 / 480, 2);
+  expect(layout.play.top).toBeCloseTo(221 / 320, 2);
+  expect(layout.back.left).toBeCloseTo(23 / 480, 2);
+  expect(layout.back.top).toBeCloseTo(275 / 320, 2);
+  expect(layout.titleFont).toContain('serif');
+  expect(layout.descriptionFont).toContain('serif');
+  expect(layout.titleAlignment).toBe('center');
+  expect(layout.descriptionScrollWidth).toBeLessThanOrEqual(layout.descriptionClientWidth + 1);
+  expect(layout.playRight).toBeLessThanOrEqual(1.01);
+  expect(layout.backBottom).toBeLessThanOrEqual(1.01);
+  if (layout.noScore) {
+    expect(layout.noScore.left).toBeCloseTo(314 / 480, 2);
+    expect(layout.noScore.top).toBeCloseTo(49 / 320, 2);
+  }
+  if (layout.poster) {
+    expect(layout.poster.left).toBeCloseTo(318 / 480, 2);
+    expect(layout.poster.top).toBeCloseTo(49 / 320, 2);
+  }
+}
+
 async function readSavedProfileCount(page: import('@playwright/test').Page): Promise<number> {
   return page.evaluate(() => new Promise<number>((resolve, reject) => {
     const request = indexedDB.open('gunsnglory-profile', 1);
@@ -165,6 +220,13 @@ test('starts in the in-game menu and opens an implemented campaign level through
     'Your highscore for this level will be shown here as soon as you have played it for the first time.',
   );
   await expectCampaignMenuImagesLoaded(page);
+  await expectCampaignOverviewAnchors(page);
+  await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+  await expectCampaignOverviewAnchors(page);
+  await page.setViewportSize({ width: 640, height: 360 });
+  await expectCampaignOverviewAnchors(page);
+  await page.getByRole('button', { name: '切换界面语言为英文' }).click();
+  await page.setViewportSize({ width: 1280, height: 720 });
   const play = page.getByTestId('campaign-stage-play');
   await expect(play).toBeEnabled();
   await page.getByTestId('campaign-menu-back').first().click();
@@ -190,6 +252,7 @@ test('starts in the in-game menu and opens an implemented campaign level through
 });
 
 test('shows the original wanted poster and saved score when a level has a high score', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto('/');
   await writeSavedProfile(page, {
     id: 'default',
@@ -208,6 +271,7 @@ test('shows the original wanted poster and saved score when a level has a high s
   await page.getByTestId('campaign-level-01').click();
 
   await expect(page.locator('.campaign-overview-wanted')).toBeVisible();
+  await expectCampaignOverviewAnchors(page);
   await expect(page.locator('.campaign-overview-score-label')).toHaveText('Best score');
   await expect(page.locator('.campaign-overview-score')).toHaveText('$ 453');
   await expect(page.locator('.campaign-overview-no-score')).toHaveCount(0);
@@ -266,6 +330,33 @@ test('keeps Options to Help and Sound while the experiment lab stays outside the
   await expect(optionsPanel).toBeVisible();
   await expect(page.locator('.campaign-options-card > h2')).toHaveCSS('color', 'rgb(86, 57, 25)');
   await expect(optionsPanel.locator('.campaign-options-card')).toHaveCSS('background-image', /gng_hud_2_textbox_large\.png/);
+  const optionsLayout = await optionsPanel.locator('.campaign-options-card').evaluate((card) => {
+    const stage = card.closest('.game-stage');
+    const bounds = card.getBoundingClientRect();
+    const stageBounds = stage?.getBoundingClientRect();
+    const heading = card.querySelector(':scope > h2')?.getBoundingClientRect();
+    const help = card.querySelector<HTMLElement>('[data-testid="options-help"]')?.getBoundingClientRect();
+    const sound = card.querySelector<HTMLElement>('[data-testid="options-sound-toggle"]')?.getBoundingClientRect();
+    if (!stageBounds || !heading || !help || !sound) throw new Error('Options layout is incomplete');
+    return {
+      centerOffsetRatio: Math.abs((bounds.left + bounds.width / 2) - (stageBounds.left + stageBounds.width / 2)) / stageBounds.width,
+      heightRatio: bounds.height / stageBounds.height,
+      headingBottom: heading.bottom,
+      helpTop: help.top,
+      helpBottom: help.bottom,
+      soundTop: sound.top,
+      controlWidthDelta: Math.abs(help.width - sound.width),
+      fontFamily: getComputedStyle(card).fontFamily,
+      overflowing: card.scrollHeight > card.clientHeight + 1,
+    };
+  });
+  expect(optionsLayout.centerOffsetRatio).toBeLessThan(0.01);
+  expect(optionsLayout.heightRatio).toBeLessThan(0.5);
+  expect(optionsLayout.headingBottom).toBeLessThan(optionsLayout.helpTop);
+  expect(optionsLayout.helpBottom).toBeLessThan(optionsLayout.soundTop);
+  expect(optionsLayout.controlWidthDelta).toBeLessThan(1);
+  expect(optionsLayout.fontFamily).toContain('serif');
+  expect(optionsLayout.overflowing).toBe(false);
   await expect(optionsPanel.getByTestId('options-help')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);
   await expect(optionsPanel.getByTestId('options-sound-toggle')).toHaveAttribute('aria-pressed', 'true');
   await expect(optionsPanel.getByTestId('options-sound-toggle')).toHaveCSS('background-image', /gng_startmenu_2_menu_1_button\.png/);

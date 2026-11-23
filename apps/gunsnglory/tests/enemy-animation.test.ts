@@ -63,6 +63,16 @@ const turningScenario: ScenarioContent = {
   ] satisfies CampaignWaveDefinition[],
 };
 
+const groupForkScenario: ScenarioContent = {
+  ...turningScenario,
+  id: 'enemy-group-follow-fork-fixture',
+  previewWave: {
+    ...turningScenario.previewWave!,
+    redirects: [{ cell: { x: 4, y: 10 }, directions: ['north', 'south'] }],
+    exit: { x: 4, y: 13 },
+  },
+};
+
 async function startCoveredWagonWave(): Promise<{ session: GameSession; view: GameView }> {
   const session = await createGame({ scenarios: { [animationScenario.id]: animationScenario } }).open({
     scenarioId: animationScenario.id,
@@ -118,6 +128,22 @@ async function startCoveredWagonTurnWave(randomSeed = 1): Promise<{ session: Gam
   return { session, view };
 }
 
+async function startCoveredWagonForkWave(randomSeed: number): Promise<GameSession> {
+  const session = await createGame({ scenarios: { [groupForkScenario.id]: groupForkScenario } }).open({
+    scenarioId: groupForkScenario.id,
+    mode: 'formal',
+    randomSeed,
+  });
+  let view = session.observe();
+  for (let step = 0; step < 20 && view.wave?.number !== 3; step += 1) {
+    view = session.advance({ deltaMs: 0 });
+  }
+  assert.equal(view.wave?.number, 3);
+  view = session.advance({ deltaMs: 0 });
+  assert.deepEqual(view.enemies.map(({ type }) => type), [8, 4]);
+  return session;
+}
+
 function vehicle(view: GameView, type: 4 | 8): NonNullable<GameView['enemies'][number]> {
   const enemy = view.enemies.find((candidate) => candidate.type === type);
   assert.ok(enemy, `type ${type} should remain on the first route segment`);
@@ -131,6 +157,33 @@ function framesByType(view: GameView): Record<4 | 8, number> {
   assert.ok(tow);
   return { 4: wagon.animationFrame, 8: tow.animationFrame };
 }
+
+test('same-group wagon members choose the leader route at a fork without skipping its random draw', async () => {
+  const observedLeaderBranches = new Set<string>();
+
+  for (let seed = 1; seed <= 32; seed += 1) {
+    const session = await startCoveredWagonForkWave(seed);
+    let view = session.observe();
+    let pairTurned = false;
+
+    for (let step = 0; step < 100; step += 1) {
+      view = session.advance({ deltaMs: 100 });
+      const leader = vehicle(view, 8);
+      const wagon = vehicle(view, 4);
+      if (leader.direction === 'east' || wagon.direction === 'east') continue;
+      assert.equal(wagon.direction, leader.direction, `wagon must follow the horse for seed ${seed}`);
+      observedLeaderBranches.add(leader.direction);
+      pairTurned = true;
+      break;
+    }
+
+    assert.equal(pairTurned, true, `both group members must pass the fork for seed ${seed}`);
+    session.close();
+  }
+
+  assert.deepEqual([...observedLeaderBranches].sort(), ['north', 'south'],
+    'the route stays random for the leader while the wagon follows its selected branch');
+});
 
 test('types 1 and 2 follow the APK walk cycle at each distance boundary and wrap', async () => {
   const { session, view: initial } = await startSettlerAnimationWave();

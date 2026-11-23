@@ -2371,7 +2371,6 @@ function campaignMenuOverviewScreen(): string {
   const unavailable = assetLoadFailureNames.length > 0 || campaignSelectionBusy || replacingSession || replaying
     || (!isFreePlayMenuActive() && (settingsSaveBusy || profileLoadFailed));
   return `<section class="campaign-overview-screen" aria-labelledby="campaign-menu-heading">
-    <button type="button" class="campaign-menu-back" data-action="menu-back-levels" data-testid="campaign-menu-back" aria-label="${copy.back}"><img src="${campaignMenuAssetUrl('left_button.png')}" alt="" aria-hidden="true"></button>
     <article class="campaign-overview-card">
       <h2 id="campaign-menu-heading" class="campaign-overview-title">${escapeMenuText(entry.level === 5 ? copy.levelFiveTitle
         : entry.level === 6 ? copy.levelSixTitle
@@ -2417,7 +2416,7 @@ function campaignMenuOverviewScreen(): string {
       <button type="button" class="campaign-overview-play" data-action="open-campaign-difficulty" data-scenario-id="${escapeMenuText(scenarioId)}" data-testid="campaign-stage-play" aria-label="${copy.startLevel}" ${unavailable ? 'disabled' : ''}>
         <img src="${campaignMenuAssetUrl('gng_highscore_2_button.png')}" alt="" aria-hidden="true"><span>${copy.startLevel}</span>
       </button>
-      <button type="button" class="campaign-overview-cancel" data-action="menu-back-levels" aria-label="${copy.back}" title="${copy.back}"><img src="${campaignMenuAssetUrl('gng_hud_2_no.png')}" alt="" aria-hidden="true"></button>
+      <button type="button" class="campaign-overview-cancel" data-action="menu-back-levels" data-testid="campaign-menu-back" aria-label="${copy.back}" title="${copy.back}"><img src="${campaignMenuAssetUrl('gng_hud_2_no.png')}" alt="" aria-hidden="true"></button>
     </article>
   </section>`;
 }

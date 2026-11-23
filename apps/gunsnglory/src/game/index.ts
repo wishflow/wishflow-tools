@@ -1933,6 +1933,28 @@ function fullCell(fine: number): number {
   return Math.trunc(Math.fround(fine / FINE_UNITS_PER_CELL));
 }
 
+function sameGroupPredecessorDirection(
+  enemy: MutableEnemy,
+  enemies: readonly MutableEnemy[],
+): Direction | undefined {
+  const enemyIndex = enemies.indexOf(enemy);
+  if (enemyIndex <= 0) return undefined;
+  const predecessor = enemies[enemyIndex - 1];
+  if (!predecessor || predecessor.groupId !== enemy.groupId) return undefined;
+
+  // APK EnemyDirector.moveEnemys() replaces a grouped follower's random
+  // redirect with the relative direction from the preceding group member.
+  // Prefer that same cell delta; the leader heading covers the brief diagonal
+  // position while its sprite is completing a corner turn.
+  const deltaX = fullCell(predecessor.positionFine.x) - fullCell(enemy.positionFine.x);
+  const deltaY = fullCell(predecessor.positionFine.y) - fullCell(enemy.positionFine.y);
+  if (deltaX > 0 && deltaY === 0) return 'east';
+  if (deltaX < 0 && deltaY === 0) return 'west';
+  if (deltaX === 0 && deltaY > 0) return 'south';
+  if (deltaX === 0 && deltaY < 0) return 'north';
+  return predecessor.direction;
+}
+
 function normalizedDelta(deltaMs: number | undefined): number {
   if (deltaMs === undefined || !Number.isFinite(deltaMs)) return 0;
   return Math.trunc(Math.max(0, Math.min(MAX_DELTA_MS, deltaMs)));
@@ -2937,7 +2959,8 @@ function moveEnemy(
         const redirect = redirects.find((candidate) =>
           candidate.cell.x === cell.x && candidate.cell.y === cell.y);
         if (redirect) {
-          const nextDirection = redirect.directions[random.nextInt(redirect.directions.length)]!;
+          const randomDirection = redirect.directions[random.nextInt(redirect.directions.length)]!;
+          const nextDirection = sameGroupPredecessorDirection(enemy, enemies) ?? randomDirection;
           if (nextDirection !== enemy.direction) {
             const previousVector = directionVector(enemy.direction);
             const nextVector = directionVector(nextDirection);
