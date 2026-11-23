@@ -4141,6 +4141,7 @@ const assetNames = new Set([
   'cursor',
   'hud_crosshair',
   'sfx_mexican_dynamite',
+  'sfx_cannon_ball',
   'sfx_explosion',
   'sfx_pyromaniac_rocket',
   'sfx_salesman_bottle',

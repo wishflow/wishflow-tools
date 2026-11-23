@@ -555,7 +555,7 @@ export interface ShotView {
   fineZ: 0 | 7680;
   /** Original vertical arc offset, in fine coordinates above the ground anchor. */
   heightFine: number;
-  imageAsset?: 'sfx_mexican_dynamite' | 'sfx_pyromaniac_rocket' | 'sfx_salesman_bottle' | 'sfx_poison' | 'sfx_rocket_explosion';
+  imageAsset?: 'sfx_cannon_ball' | 'sfx_mexican_dynamite' | 'sfx_pyromaniac_rocket' | 'sfx_salesman_bottle' | 'sfx_poison' | 'sfx_rocket_explosion';
   animationFrame: number;
   explosionRemainingMs?: number;
 }
@@ -4266,7 +4266,8 @@ export function createGame(options: {
                 poisonRemainingMs: 0,
                 damageStyle: weapon.damageStyle,
                 areaDamageFine: weapon.areaDamageFine ?? 0,
-                imageAsset: weapon.damageStyle === 6 ? 'sfx_pyromaniac_rocket'
+                imageAsset: weapon.damageStyle === 4 ? 'sfx_cannon_ball'
+                  : weapon.damageStyle === 6 ? 'sfx_pyromaniac_rocket'
                   : weapon.damageStyle === 3 ? 'sfx_mexican_dynamite'
                     : weapon.damageStyle === 5 ? 'sfx_salesman_bottle' : undefined,
                 animationFrame: 0,

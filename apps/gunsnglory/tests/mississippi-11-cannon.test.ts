@@ -215,6 +215,8 @@ test('fires, animates the separate cannon overlay, and damages a target on the r
   }, { row: 0, mirrored: true }, 'the cannon frame follows the target direction using the APK facing row and mirror');
   assert.deepEqual(cannon.weaponFacing, { row: 0, mirrored: true });
   assert.ok(view.events.some((event) => event.type === 'sound-requested' && event.sound === 'sound_cannon'));
+  assert.ok(view.shots.some(({ damageStyle, imageAsset }) => damageStyle === 4 && imageAsset === 'sfx_cannon_ball'),
+    'damage style 4 exposes the APK cannonball image for rendering');
 
   for (let tick = 0; tick < 80 && !view.events.some((event) => event.type === 'enemy-hit' && event.damage === 650); tick += 1) {
     view = session.advance({ deltaMs: 100 });
@@ -296,6 +298,8 @@ test('draws the APK cannon idle/firing frame and upgrade arrows at the hull anch
 });
 
 test('bundles original APK hdpi cannon and all three upgrade-arrow sprites', () => {
+  assert.deepEqual(pngDimensions('sfx_cannon_ball'), { width: 12, height: 12 });
+  assert.equal(existsSync(path.join(appRoot, 'public/assets', gameAssetRelativePath('sfx_cannon_ball'))), true);
   assert.deepEqual(pngDimensions('player_double_cannon'), { width: 48, height: 240 });
   assert.deepEqual(pngDimensions('player_double_cannon_shot'), { width: 48, height: 240 });
   for (const asset of ['hud_upgrade_arrow_1', 'hud_upgrade_arrow_2', 'hud_upgrade_arrow_3']) {

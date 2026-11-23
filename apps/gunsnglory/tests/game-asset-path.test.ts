@@ -41,6 +41,7 @@ test('uses the APK high-density atlases for wagon, cart, and Post Coach assets',
 test('keeps unrelated resources on their existing asset paths', () => {
   assert.equal(gameAssetRelativePath('pioneer_male'), 'pioneer_male.png');
   assert.equal(gameAssetRelativePath('hud_crosshair'), 'hud_crosshair.png');
+  assert.equal(gameAssetRelativePath('sfx_cannon_ball'), 'sfx_cannon_ball.png');
   for (const asset of ['gng_wave_arrow_a', 'gng_wave_arrow_b', 'gng_wave_arrow_c', 'gng_wave_arrow_d', 'boss', 'boss_hat']) {
     assert.equal(gameAssetRelativePath(asset), `${asset}.png`);
   }
