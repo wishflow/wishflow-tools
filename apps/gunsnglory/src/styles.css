@@ -2628,9 +2628,67 @@ body.gng-game-fullscreen .usagi-widget {
 }
 
 .map-hire-confirmation p {
-  margin: 0 0 1rem;
-  color: #f0d5a8;
-  line-height: 1.5;
+  width: 100%;
+  margin: 0;
+  color: #52371f;
+  line-height: 1.22;
+  text-align: left;
+}
+
+.map-hire-confirmation .game-confirmation-content {
+  inset: 15% 28% 11% 13%;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 5%;
+  overflow: hidden;
+  text-align: left;
+}
+
+.map-hire-confirmation h2 {
+  padding-right: 0.25rem;
+  font-size: clamp(9px, 1.6cqw, 16px);
+  text-align: left;
+}
+
+.map-hire-confirmation [data-testid="map-hire-confirmation-details"] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: clamp(7px, 1.08cqw, 11px);
+}
+
+.map-hire-confirmation .map-hire-price {
+  flex: 0 0 auto;
+  font-size: clamp(7px, 1.08cqw, 11px);
+  white-space: nowrap;
+}
+
+.map-hire-confirmation .map-hire-price strong {
+  font-weight: 900;
+}
+
+.map-hire-portrait {
+  position: absolute;
+  z-index: 1;
+  top: -11%;
+  right: 10%;
+  width: 25%;
+  height: 70%;
+  object-fit: contain;
+  object-position: center bottom;
+  pointer-events: none;
+}
+
+.map-hire-confirmation .game-original-confirmation-actions {
+  flex: 0 0 26%;
+  justify-content: space-between;
+  gap: 0;
+  margin-top: auto;
+}
+
+.map-hire-confirmation .game-original-confirmation-actions button {
+  width: 29%;
 }
 
 .game-original-confirmation {

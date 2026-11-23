@@ -170,7 +170,16 @@ async function hireThroughMapUi(
     );
   }
   await expect(page.getByTestId('map-hire-confirmation')).toBeVisible();
-  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText(`Hire ${hireLabel(slot.type)} for $${slot.price}?`);
+  const hireDialogName = ({
+    gunslinger: 'Desperado',
+    mexican: 'Bandito',
+    cannon: 'Cannon',
+    indian: 'Native',
+    sniper: 'Markswoman',
+    grandpa: 'Scattergun Grandpa',
+  } as const)[slot.type];
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText(hireDialogName);
+  await expect(page.getByTestId('map-hire-confirmation-price')).toHaveText(`$ ${slot.price}`);
   const confirmHire = page.getByTestId('confirm-map-hire');
   await expect(confirmHire).toBeEnabled();
   await confirmHire.click();

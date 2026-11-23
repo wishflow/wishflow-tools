@@ -14,6 +14,16 @@
 
 修复未完成的问题可以先登记为“待验证”；实现和运行验证结束后，应在同一条记录中补充结论。记录根因时优先引用稳定的文件/选择器/测试名称，不抄录冗长日志、日期或散列值。
 
+## 地图雇佣框要消费 APK 的单位展示映射
+
+**状态：**地图雇佣框已恢复原版主要信息与余额不足分支；New Mexico、Fort Kaboom、Tech Town、桌面和触屏的定向检查通过。
+
+- **表现与复现：**选中待雇佣地图角色后，网页只显示通用“Hire … for $…”标题；没有角色肖像或角色介绍。余额不足时显示通用资金提示，不显示角色原版台词。
+- **根因与证据：**APK 的 `GameScreenActivity.onPrepareDialog` 对资金充足与不足分别调用 `InGameGeneralMessageDialog.setUpDialog`，传入单位 hire text、portrait、name，并独立设置 Price 图文和确认按钮可见性。单位映射由 `GameObjectUnit.getHireStringResId`、`getNotEnoughCashStringResId`、`getPortraitResId`、`getUnitNameResId` 提供；`TrainHorizontal` 和 `Steamer` 各自覆盖这些方法。布局 `dialog_hire.xml` 明确包含 portrait、headline、message、price 和 yes/no。网页原来只复用 HUD 单位名并把价格拼进一个标题，映射数据没有接入 UI。这是实现遗漏，不是 APK 证据缺失。
+- **漏测点：**旧 E2E 只断言标题与余额不足通用文案；没有断言肖像实际加载、角色名/角色台词/价格各自所在的字段，也没有覆盖角色专属余额不足台词。
+- **修复与防回归：**新增 `map-hire-presentation.ts`，按 APK 类型映射十种角色/载具雇佣展示，并提供中英文名称、正常和余额不足台词与 portrait；弹窗单独呈现羊皮纸上的肖像、名称、台词、价格和原版确认/取消状态。映射单测覆盖全部类型；`t01`、`t07`、`t25`、`t26`、`t28`、`t33`、`t36` 覆盖实际入口及状态。新增任何 `hirePrice` 单位时，需同时核对 APK 的展示 getter 和两种现金分支，不能只验证确认事件。
+- **避免重复：**标准单位先查 `GameObjectUnit` 映射；列车和汽船等复合单位先查其 override，不能从游戏内 HUD 名称推测原版雇佣称呼。余额不足分支也有单位专属台词，不用网页通用资金错误文案替代。
+
 ## 桥面边界与我方地图对象碰撞必须拆开核对
 
 **状态：**APK 静态几何已复核，网页对象碰撞已修正并发布；27 张已接入地图的对象标记和代表性桥面规则已验证。

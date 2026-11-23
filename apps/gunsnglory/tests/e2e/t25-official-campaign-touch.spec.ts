@@ -116,7 +116,7 @@ test('touch completes the official Cow Gulch level through real movement and nat
     const confirmHire = page.getByTestId('confirm-map-hire');
     await expect(hireDialog).toBeVisible();
     await expect(confirmHire).toBeHidden();
-    await expect(page.getByTestId('map-hire-confirmation-details')).toContainText('Not enough cash');
+    await expect(page.getByTestId('map-hire-confirmation-details')).toContainText('gringos');
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired · Cell (4, 7)');
 
     let lastIntroWave = 1;
