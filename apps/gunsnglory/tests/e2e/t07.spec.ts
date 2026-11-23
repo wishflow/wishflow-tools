@@ -18,8 +18,9 @@ test('formal Cow Gulch only offers map hires for selected sleeping units', async
   await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired');
   await expect(hireDialog).toBeVisible();
-  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
-  await expect(page.getByTestId('map-hire-confirmation-details')).toHaveText('Not enough cash: need $75, have $65.');
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Desperado');
+  await expect(page.getByTestId('map-hire-confirmation-details')).toHaveText('First, go and ambush a few more gringos, so you can pay me, too!');
+  await expect(page.getByTestId('map-hire-confirmation-price')).toHaveText('$ 75');
   await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
   await expectInteractiveGameOverlay(page, 'map-hire', 'map-hire-confirmation', '[data-testid="cancel-map-hire"]');
   await expect(page.getByTestId('map-hire-status')).toBeEmpty();
@@ -29,7 +30,7 @@ test('formal Cow Gulch only offers map hires for selected sleeping units', async
 
   await clickCanvasPoint(page, cowGulchMarkerPoint(6, 5));
   await expect(hireDialog).toBeVisible();
-  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Mexican for $100?');
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Bandito');
   await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
   await page.getByTestId('cancel-map-hire').click();
   await clickCanvasPoint(page, { x: 272, y: 80 });
@@ -64,7 +65,7 @@ test('formal map-hire state is available through touch on a phone-sized viewport
     await expect(page.getByTestId('selection-status')).toContainText('Gunslinger is waiting to be hired');
     await expect(hireDialog).toBeVisible();
     await expectInteractiveGameOverlay(page, 'map-hire', 'map-hire-confirmation', '[data-testid="cancel-map-hire"]');
-    await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
+    await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Desperado');
     await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
     await page.getByTestId('cancel-map-hire').click();
     await tapCanvasPoint(page, { x: 272, y: 80 });

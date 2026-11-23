@@ -270,6 +270,7 @@ import { GameUiController, type GameUiPanel, type GameUiRoute } from './ui/contr
 import { FrameChromeController } from './ui/frame-chrome';
 import { CACTUSVILLE_AWESOME_FEEDBACK, selectAwesomeFeedbackMessageIndex } from './ui/awesome-feedback';
 import { renderHelpPanelView, renderOptionsPanelView } from './ui/menu-panels';
+import { getMapHirePresentation } from './ui/map-hire-presentation';
 import './styles.css';
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -398,6 +399,9 @@ const mapHireConfirmationElement = app.querySelector<HTMLDialogElement>('[data-t
 const mapHireConfirmationTitleElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-title"]');
 const mapHireConfirmationDetailsElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-details"]');
 const mapHireConfirmationArtElement = app.querySelector<HTMLImageElement>('[data-testid="map-hire-confirmation-art"]');
+const mapHireConfirmationPortraitElement = app.querySelector<HTMLImageElement>('[data-testid="map-hire-confirmation-portrait"]');
+const mapHireConfirmationPriceLabelElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-price-label"]');
+const mapHireConfirmationPriceElement = app.querySelector<HTMLElement>('[data-testid="map-hire-confirmation-price"]');
 const confirmMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="confirm-map-hire"]');
 const cancelMapHireButton = app.querySelector<HTMLButtonElement>('[data-action="cancel-map-hire"]');
 const confirmMapHireIconElement = app.querySelector<HTMLImageElement>('[data-testid="confirm-map-hire-icon"]');
@@ -486,7 +490,9 @@ if (!canvasElement || !gameFrameElement || !gameStageElement || !overlayHostElem
   || !upgradeConfirmationTitleElement || !upgradeConfirmationDetailsElement || !upgradeConfirmationArtElement
   || !confirmUpgradeButton || !cancelUpgradeButton || !confirmUpgradeIconElement || !cancelUpgradeIconElement
   || !mapHireConfirmationElement || !mapHireConfirmationTitleElement || !mapHireConfirmationDetailsElement
-  || !mapHireConfirmationArtElement || !confirmMapHireButton || !cancelMapHireButton
+  || !mapHireConfirmationArtElement || !mapHireConfirmationPortraitElement
+  || !mapHireConfirmationPriceLabelElement || !mapHireConfirmationPriceElement
+  || !confirmMapHireButton || !cancelMapHireButton
   || !confirmMapHireIconElement || !cancelMapHireIconElement
   || !gamblerDialogElement || !gamblerDialogTitleElement || !gamblerDialogMessageElement || !gamblerPortraitElement
   || !gamblerCashElement || !gamblerCardsElement || !gamblerResultElement || !playGamblerButton || !closeGamblerButton
@@ -631,6 +637,9 @@ const mapHireConfirmation: HTMLDialogElement = mapHireConfirmationElement;
 const mapHireConfirmationTitle: HTMLElement = mapHireConfirmationTitleElement;
 const mapHireConfirmationDetails: HTMLElement = mapHireConfirmationDetailsElement;
 const mapHireConfirmationArt: HTMLImageElement = mapHireConfirmationArtElement;
+const mapHireConfirmationPortrait: HTMLImageElement = mapHireConfirmationPortraitElement;
+const mapHireConfirmationPriceLabel: HTMLElement = mapHireConfirmationPriceLabelElement;
+const mapHireConfirmationPrice: HTMLElement = mapHireConfirmationPriceElement;
 const confirmMapHireControl: HTMLButtonElement = confirmMapHireButton;
 const cancelMapHireControl: HTMLButtonElement = cancelMapHireButton;
 const confirmMapHireIcon: HTMLImageElement = confirmMapHireIconElement;
@@ -3898,16 +3907,19 @@ function renderMapHireConfirmation(language: keyof typeof languageMessages): voi
     return;
   }
 
+  const presentation = getMapHirePresentation(unit.type);
+  if (!presentation) throw new Error(`Missing APK hire presentation for map unit type: ${unit.type}`);
   const price = unit.hirePrice;
   const cash = view.wave.cash;
   const affordable = cash >= price;
-  mapHireConfirmationTitle.textContent = languageMessages[language].mapHirePrompt(
-    languageMessages[language].unitName(unit.type),
-    price,
-  );
+  mapHireConfirmationTitle.textContent = presentation.name[language];
   mapHireConfirmationDetails.textContent = affordable
-    ? ''
-    : languageMessages[language].mapHireInsufficientCash(price, cash);
+    ? presentation.hireText[language]
+    : presentation.insufficientCashText[language];
+  mapHireConfirmationPortrait.src = campaignPortraitAssetUrl(`${presentation.portraitAsset}.png`);
+  mapHireConfirmationPriceLabel.textContent = language === 'zh' ? '价格：' : 'Price:';
+  mapHireConfirmationPrice.textContent = `$ ${price}`;
+  mapHireConfirmationDetails.dataset.affordable = String(affordable);
   setConfirmationButtonLabel(confirmMapHireControl, languageMessages[language].confirmMapHire);
   confirmMapHireControl.hidden = !affordable;
   confirmMapHireControl.disabled = !affordable;
@@ -4129,6 +4141,7 @@ const assetNames = new Set([
   'cursor',
   'hud_crosshair',
   'sfx_mexican_dynamite',
+  'sfx_cannon_ball',
   'sfx_explosion',
   'sfx_pyromaniac_rocket',
   'sfx_salesman_bottle',
@@ -4153,7 +4166,9 @@ const assetNames = new Set([
   'portrait_mexican',
   'portrait_indian',
   'portrait_settlers',
+  'portrait_captain',
   'oregon_dakota_portrait_geezer',
+  'oregon_dakota_portrait_calamity',
   'portrait_deserter',
   'portrait_engineer',
   'portrait_sheriff',

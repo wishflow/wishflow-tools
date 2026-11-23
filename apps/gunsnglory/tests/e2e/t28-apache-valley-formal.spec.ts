@@ -161,9 +161,10 @@ async function installManualGameClock(page: import('@playwright/test').Page): Pr
 async function hireThroughMapUi(page: import('@playwright/test').Page, slot: HireSlot): Promise<void> {
   const point = await mapHirePoint(page, slot);
   await clickCanvasPoint(page, point.x, point.y);
-  const unitName = slot.type === 'gunslinger' ? 'Gunslinger' : 'Mexican';
+  const unitName = slot.type === 'gunslinger' ? 'Desperado' : 'Bandito';
   await expect(page.getByTestId('map-hire-confirmation')).toBeVisible();
-  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText(`Hire ${unitName} for $${slot.price}?`);
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText(unitName);
+  await expect(page.getByTestId('map-hire-confirmation-price')).toHaveText(`$ ${slot.price}`);
   const confirmHire = page.getByTestId('confirm-map-hire');
   await expect(confirmHire).toBeEnabled();
   await confirmHire.click();

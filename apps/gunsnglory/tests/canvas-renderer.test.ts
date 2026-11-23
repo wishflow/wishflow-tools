@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import type { EnemyView, GameView } from '../src/game';
+import type { EnemyView, GameView, ShotView } from '../src/game';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, mapDecorationDestination } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
@@ -1372,6 +1372,78 @@ test('draws Damage Style 6 flight, impact, and sparkle atlas frames', () => {
   const sparkleDraw = drawCalls.find(([image]) => image === sparkles);
   assert.ok(sparkleDraw);
   assert.deepEqual(sparkleDraw.slice(1, 5), [56, 0, 28, 28], 'sparkles use the final 28×28 atlas frame');
+});
+
+test('draws Damage Style 4 cannonballs from the APK 12px image and keeps ordinary bullets separate', () => {
+  const ground = {} as HTMLImageElement;
+  const cannonball = {} as HTMLImageElement;
+  const explosion = {} as HTMLImageElement;
+  const drawCalls: unknown[][] = [];
+  const fills: unknown[][] = [];
+  const context = {
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect(...args: unknown[]) { fills.push(args); },
+    beginPath() {},
+    rect() {},
+    clip() {},
+    drawImage(...args: unknown[]) { drawCalls.push(args); },
+  } as unknown as CanvasRenderingContext2D;
+  const shot = (id: string, damageStyle: 0 | 4, imageAsset?: ShotView['imageAsset']): ShotView => ({
+    id,
+    shooterId: 'cannon',
+    targetId: 'enemy',
+    positionFine: { x: 3_840, y: 3_840 },
+    remainingMs: 100,
+    damageStyle,
+    fineZ: 0,
+    heightFine: 2_400,
+    animationFrame: 0,
+    ...(imageAsset ? { imageAsset } : {}),
+  });
+  const view: GameView = {
+    frame: 1,
+    elapsedMs: 100,
+    paused: false,
+    scenarioId: 'cannonball-render',
+    map: { width: 1, height: 1, tileSize: 32, background: [], streets: [] },
+    units: [],
+    enemies: [],
+    shots: [
+      shot('cannon-flight', 4, 'sfx_cannon_ball'),
+      { ...shot('cannon-impact', 4, 'sfx_cannon_ball'), explosionRemainingMs: 250, animationFrame: 2 },
+      shot('ordinary', 0),
+    ],
+    drawOrder: ['shot:cannon-flight', 'shot:cannon-impact', 'shot:ordinary'],
+    recruitPool: [],
+    events: [],
+  };
+
+  drawGame(context, view, { ground, sfx_cannon_ball: cannonball, sfx_explosion: explosion });
+
+  const cannonballDraw = drawCalls.find(([image]) => image === cannonball);
+  assert.ok(cannonballDraw, 'damage style 4 draws the original cannonball image');
+  assert.deepEqual(cannonballDraw.slice(1, 5), [0, 0, 12, 12]);
+  const viewport = getMapViewport(view);
+  const x = viewport.origin.x + (3_840 / 240) * viewport.scaleFactor;
+  const y = viewport.origin.y + ((3_840 - 2_400) / 240) * viewport.scaleFactor;
+  const expectedSize = 12 * viewport.scaleFactor;
+  assert.deepEqual(cannonballDraw.slice(5, 9), [
+    x - expectedSize / 2,
+    y - expectedSize,
+    expectedSize,
+    expectedSize,
+  ], 'the projectile uses its native square size with the APK bottom anchor');
+  const explosionDraw = drawCalls.find(([image]) => image === explosion);
+  assert.ok(explosionDraw, 'Cannon impact switches from the cannonball to the original explosion atlas');
+  assert.deepEqual(explosionDraw.slice(1, 5), [96, 0, 48, 52]);
+  const ordinaryBulletSize = Math.max(1, 3 * viewport.scaleFactor);
+  assert.equal(
+    fills.filter((args) => args[2] === ordinaryBulletSize && args[3] === ordinaryBulletSize).length,
+    1,
+    'only the ordinary bullet uses the small dark-red fallback',
+  );
 });
 
 test('draws ordinary bullets as small dark-red rectangles without an outline', () => {

@@ -26,7 +26,8 @@ test('map click confirms or cancels Gatling hire, upgrades it, and fires on the 
   await clickMapPoint(page, 8.5, 12.5);
   const dialog = page.getByTestId('map-hire-confirmation');
   await expect(dialog).toBeVisible();
-  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gatling wagon for $125?');
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Gatling Gun');
+  await expect(page.getByTestId('map-hire-confirmation-price')).toHaveText('$ 125');
   await page.getByTestId('cancel-map-hire').click();
   await expect(dialog).toBeHidden();
   await expect(page.getByTestId('wave-status')).toContainText('Cash $350');

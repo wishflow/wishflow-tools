@@ -95,8 +95,9 @@ test('touch players can pan to the original Mexican slot and see its unaffordabl
 
     const hireDialog = page.getByTestId('map-hire-confirmation');
     await expect(hireDialog).toBeVisible();
-    await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Mexican for $100?');
-    await expect(page.getByTestId('map-hire-confirmation-details')).toContainText('Not enough cash');
+    await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Bandito');
+    await expect(page.getByTestId('map-hire-confirmation-details')).toHaveText('No, Señor. For that money, I’ll stay here. It’s much too hot.');
+    await expect(page.getByTestId('map-hire-confirmation-price')).toHaveText('$ 100');
     await expect(page.getByTestId('confirm-map-hire')).toBeHidden();
     expect(readCash(await waveStatus.innerText())).toBeLessThan(100);
     await expect(page.getByTestId('map-hire-status')).toBeEmpty();

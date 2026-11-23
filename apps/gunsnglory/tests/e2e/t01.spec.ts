@@ -35,7 +35,12 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await clickCanvasPoint(page, cowGulchMarkerPoint(3, 6));
   await expect(status).toContainText('Gunslinger is waiting to be hired');
   await expect(hireDialog).toBeVisible();
-  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Gunslinger for $75?');
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Desperado');
+  await expect(page.getByTestId('map-hire-confirmation-details')).toHaveText('First, go and ambush a few more gringos, so you can pay me, too!');
+  await expect(page.getByTestId('map-hire-confirmation-price-label')).toHaveText('Price:');
+  await expect(page.getByTestId('map-hire-confirmation-price')).toHaveText('$ 75');
+  await expect(page.getByTestId('map-hire-confirmation-portrait')).toHaveJSProperty('complete', true);
+  expect(await page.getByTestId('map-hire-confirmation-portrait').evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   await page.getByTestId('cancel-map-hire').click();
   await expect(hireDialog).toBeHidden();
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');
@@ -46,7 +51,8 @@ test('opens Cow Gulch, selects the gunslinger, clears selection, and survives re
   await clickCanvasPoint(page, cowGulchMarkerPoint(6, 5));
   await expect(status).toContainText('Mexican is waiting to be hired');
   await expect(hireDialog).toBeVisible();
-  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Hire Mexican for $100?');
+  await expect(page.getByTestId('map-hire-confirmation-title')).toHaveText('Bandito');
+  await expect(page.getByTestId('map-hire-confirmation-details')).toHaveText('No, Señor. For that money, I’ll stay here. It’s much too hot.');
   await page.getByTestId('cancel-map-hire').click();
   await expect(hireDialog).toBeHidden();
   await expect(page.getByTestId('wave-status')).toContainText('Cash $65');

@@ -22,6 +22,7 @@ export const GAME_VIEWPORT: Readonly<GameViewportSize> = BASE_GAME_VIEWPORT;
 
 const FINE_UNITS_PER_CELL = 7680;
 const SLEEPING_EFFECT_FRAME = Object.freeze({ width: 24, height: 16, count: 3 });
+const CANNON_BALL_FRAME = Object.freeze({ width: 12, height: 12 });
 const MEXICAN_DYNAMITE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
 const SALESMAN_BOTTLE_FRAME = Object.freeze({ width: 16, height: 16, count: 3 });
 const POISON_CLOUD_FRAME = Object.freeze({ width: 32, height: 32, count: 6 });
@@ -882,27 +883,44 @@ function drawShot(
     );
     return;
   }
+  if (shot.explosionRemainingMs !== undefined && shot.imageAsset) {
+    const image = images.sfx_explosion;
+    if (!image) throw new Error('Missing game image: sfx_explosion');
+    const frame = Math.min(EXPLOSION_FRAME.count - 1, Math.max(0, shot.animationFrame));
+    const width = EXPLOSION_FRAME.width * tileScale;
+    const height = EXPLOSION_FRAME.height * tileScale;
+    context.drawImage(
+      image,
+      frame * EXPLOSION_FRAME.width,
+      0,
+      EXPLOSION_FRAME.width,
+      EXPLOSION_FRAME.height,
+      x - width / 2,
+      y - height,
+      width,
+      height,
+    );
+    return;
+  }
+  if (shot.imageAsset === 'sfx_cannon_ball') {
+    const image = images.sfx_cannon_ball;
+    if (!image) throw new Error('Missing game image: sfx_cannon_ball');
+    const width = CANNON_BALL_FRAME.width * tileScale;
+    const height = CANNON_BALL_FRAME.height * tileScale;
+    context.drawImage(
+      image,
+      0,
+      0,
+      CANNON_BALL_FRAME.width,
+      CANNON_BALL_FRAME.height,
+      x - width / 2,
+      y - height,
+      width,
+      height,
+    );
+    return;
+  }
   if (shot.imageAsset) {
-    if (shot.explosionRemainingMs !== undefined) {
-      const image = images.sfx_explosion;
-      if (!image) throw new Error('Missing game image: sfx_explosion');
-      const frame = Math.min(EXPLOSION_FRAME.count - 1, Math.max(0, shot.animationFrame));
-      const width = EXPLOSION_FRAME.width * tileScale;
-      const height = EXPLOSION_FRAME.height * tileScale;
-      context.drawImage(
-        image,
-        frame * EXPLOSION_FRAME.width,
-        0,
-        EXPLOSION_FRAME.width,
-        EXPLOSION_FRAME.height,
-        x - width / 2,
-        y - height,
-        width,
-        height,
-      );
-      return;
-    }
-
     const image = images[shot.imageAsset];
     if (!image) throw new Error('Missing game image: ' + shot.imageAsset);
     const frameSpec = shot.imageAsset === 'sfx_pyromaniac_rocket'
