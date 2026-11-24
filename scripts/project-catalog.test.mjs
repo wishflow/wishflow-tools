@@ -242,6 +242,15 @@ test('catalog or shared site changes test every app and rebuild the full site', 
   });
 });
 
+test('Pages workflow changes rebuild the static site', () => {
+  assert.deepEqual(analyzeChanges(['.github/workflows/pages.yml'], projects), {
+    docsOnly: false,
+    siteRequired: true,
+    workerRequired: false,
+    testApps: [],
+  });
+});
+
 test('documentation-only changes do not trigger tests or deployment', () => {
   assert.deepEqual(analyzeChanges(['apps/duolingo-avatar/README.md', 'AGENTS.md'], projects), {
     docsOnly: true,
