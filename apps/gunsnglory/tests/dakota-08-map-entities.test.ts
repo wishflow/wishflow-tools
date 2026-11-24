@@ -10,9 +10,9 @@ import { gameAssetRelativePath } from '../src/render/game-asset-path';
 
 const appRoot = path.resolve(import.meta.dirname, '..');
 const sceneryByCode: Readonly<Record<number, { asset: string; cells: readonly (readonly [number, number])[] }>> = {
-  69: { asset: 'e_1x1_rocks_a', cells: [[13, 0], [24, 8], [31, 9], [9, 14], [3, 17], [31, 22], [4, 23]] },
-  70: { asset: 'e_1x1_rocks_b', cells: [[30, 0], [23, 15], [29, 18], [0, 20]] },
-  71: { asset: 'e_1x1_tree', cells: [[24, 1], [31, 3], [0, 5], [31, 14], [17, 21], [9, 22]] },
+  69: { asset: 'e_1x1_rocks_snow_a', cells: [[13, 0], [24, 8], [31, 9], [9, 14], [3, 17], [31, 22], [4, 23]] },
+  70: { asset: 'e_1x1_rocks_snow_b', cells: [[30, 0], [23, 15], [29, 18], [0, 20]] },
+  71: { asset: 'e_1x1_tree_snow', cells: [[24, 1], [31, 3], [0, 5], [31, 14], [17, 21], [9, 22]] },
   74: { asset: 'b_1x1_windmill', cells: [[16, 15]] },
   76: { asset: 'e_1x1_bush', cells: [[29, 3], [3, 4], [9, 5], [5, 19], [27, 20], [18, 23]] },
   112: { asset: 'b_3x2_saloon', cells: [[29, 12]] },

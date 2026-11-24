@@ -36,7 +36,7 @@ async function settleWithoutBattle(session: Awaited<ReturnType<ReturnType<typeof
 
 test('Fort Knockout is the gated 33rd official stage after Six Grandfathers', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota03CampaignId);
-  assert.equal(officialCampaignStages.length, 38);
+  assert.equal(officialCampaignStages.length, 39);
   assert.deepEqual(stage, {
     scenarioId: dakota03CampaignId,
     contentVersion: dakota03CampaignContentVersionFor([]),

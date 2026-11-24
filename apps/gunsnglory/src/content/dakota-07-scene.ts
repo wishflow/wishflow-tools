@@ -3,8 +3,8 @@ import map from './dakota-07.json';
 import { createDakotaBackgroundCollisionCodes } from './dakota-background-collision';
 
 const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
-  69: { asset: 'e_1x1_rocks_a' },
-  70: { asset: 'e_1x1_rocks_b' },
+  69: { asset: 'e_1x1_rocks_snow_a' },
+  70: { asset: 'e_1x1_rocks_snow_b' },
   75: { asset: 'b_1x1_watertower' },
   86: { asset: 'tiles_railway_buffers_hori_left' },
   87: { asset: 'tiles_railway_buffers_hori_right' },

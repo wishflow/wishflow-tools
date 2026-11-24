@@ -16,8 +16,8 @@ import { gameAssetRelativePath } from '../src/render/game-asset-path';
 const appRoot = path.resolve(import.meta.dirname, '..');
 const fineUnitsPerCell = 7_680;
 const sceneryExpectations = [
-  { marker: 69, asset: 'e_1x1_rocks_a', cells: [[0, 0], [31, 0], [26, 7], [17, 19], [30, 22], [22, 23]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
-  { marker: 70, asset: 'e_1x1_rocks_b', cells: [[19, 0], [1, 2], [31, 5], [0, 17], [19, 19], [31, 19], [4, 23]], bounds: { x: 1_306, y: 1_920, width: 5_068, height: 3_840 } },
+  { marker: 69, asset: 'e_1x1_rocks_snow_a', cells: [[0, 0], [31, 0], [26, 7], [17, 19], [30, 22], [22, 23]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
+  { marker: 70, asset: 'e_1x1_rocks_snow_b', cells: [[19, 0], [1, 2], [31, 5], [0, 17], [19, 19], [31, 19], [4, 23]], bounds: { x: 1_306, y: 1_920, width: 5_068, height: 3_840 } },
   { marker: 75, asset: 'b_1x1_watertower', cells: [[9, 0], [16, 6], [14, 14], [14, 22]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
   { marker: 86, asset: 'tiles_railway_buffers_hori_left', cells: [[6, 1], [5, 7], [10, 13], [1, 21]], bounds: { x: 0, y: 0, width: 7_680, height: 7_680 } },
   { marker: 87, asset: 'tiles_railway_buffers_hori_right', cells: [[26, 1], [21, 7], [29, 13], [25, 21]], bounds: { x: 0, y: 0, width: 7_680, height: 7_680 } },

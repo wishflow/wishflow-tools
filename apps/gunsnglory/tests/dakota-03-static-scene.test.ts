@@ -16,19 +16,19 @@ const FINE_PER_CELL = 7_680;
 const sceneryExpectations = [
   {
     marker: 69,
-    asset: 'e_1x1_rocks_a',
+    asset: 'e_1x1_rocks_snow_a',
     cells: [[22, 0], [0, 4], [30, 6], [29, 11], [13, 12], [31, 15], [1, 22], [9, 23], [28, 23]],
     bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 },
   },
   {
     marker: 70,
-    asset: 'e_1x1_rocks_b',
+    asset: 'e_1x1_rocks_snow_b',
     cells: [[0, 0], [18, 5], [3, 21]],
     bounds: { x: 1_306, y: 1_920, width: 5_068, height: 3_840 },
   },
   {
     marker: 71,
-    asset: 'e_1x1_tree',
+    asset: 'e_1x1_tree_snow',
     cells: [[17, 2], [29, 3], [7, 5], [24, 17], [2, 19], [30, 22]],
     bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 },
   },

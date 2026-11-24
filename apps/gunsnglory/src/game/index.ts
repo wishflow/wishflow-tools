@@ -48,6 +48,13 @@ import {
   type CampaignBonusCratePool,
   type CampaignBonusRewardType,
 } from './campaign-bonus-crates';
+import {
+  advanceFinePosition,
+  alignFinePositionAtRedirect,
+  directionForMovementVector,
+  sameGroupPredecessorMovementVector as getSameGroupPredecessorMovementVector,
+  type EnemyRouteVector,
+} from './enemy-route';
 import { createRoutePriorityMap, normalizedRoutePriority, type RoutePriorityMap } from './route-priority';
 import { runtimeWaveRedirects } from './wave-routes';
 import {
@@ -739,6 +746,7 @@ interface MutableEnemy {
   asset: EnemyView['asset'];
   speed: number;
   direction: Direction;
+  movementVector: EnemyRouteVector;
   mirrored: boolean;
   positionFine: { x: number; y: number };
   collisionStartOffsetFine?: number;
@@ -1933,26 +1941,12 @@ function fullCell(fine: number): number {
   return Math.trunc(Math.fround(fine / FINE_UNITS_PER_CELL));
 }
 
-function sameGroupPredecessorDirection(
+function sameGroupPredecessorMovementVector(
   enemy: MutableEnemy,
   enemies: readonly MutableEnemy[],
-): Direction | undefined {
+): EnemyRouteVector | undefined {
   const enemyIndex = enemies.indexOf(enemy);
-  if (enemyIndex <= 0) return undefined;
-  const predecessor = enemies[enemyIndex - 1];
-  if (!predecessor || predecessor.groupId !== enemy.groupId) return undefined;
-
-  // APK EnemyDirector.moveEnemys() replaces a grouped follower's random
-  // redirect with the relative direction from the preceding group member.
-  // Prefer that same cell delta; the leader heading covers the brief diagonal
-  // position while its sprite is completing a corner turn.
-  const deltaX = fullCell(predecessor.positionFine.x) - fullCell(enemy.positionFine.x);
-  const deltaY = fullCell(predecessor.positionFine.y) - fullCell(enemy.positionFine.y);
-  if (deltaX > 0 && deltaY === 0) return 'east';
-  if (deltaX < 0 && deltaY === 0) return 'west';
-  if (deltaX === 0 && deltaY > 0) return 'south';
-  if (deltaX === 0 && deltaY < 0) return 'north';
-  return predecessor.direction;
+  return getSameGroupPredecessorMovementVector(enemies, enemyIndex, FINE_UNITS_PER_CELL);
 }
 
 function normalizedDelta(deltaMs: number | undefined): number {
@@ -1998,6 +1992,7 @@ function createPreviewEnemy(
     asset: 'pioneer_male',
     speed,
     direction: spawn.direction,
+    movementVector: { ...vector },
     mirrored: false,
     positionFine: {
       x: (spawn.cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF - (vector.x * 2 * FINE_UNITS_PER_CELL),
@@ -2152,6 +2147,7 @@ function createCampaignEnemy(
     asset,
     speed,
     direction: spawn.direction,
+    movementVector: { ...directionVector(spawn.direction) },
     mirrored: false,
     positionFine: { ...positionFine },
     collisionStartOffsetFine: type === 4 || type === 5 || type === 6 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
@@ -2918,23 +2914,22 @@ function moveEnemy(
 
   const previous = { ...enemy.positionFine };
   const previousDirection = enemy.direction;
+  const previousMovementVector = { ...enemy.movementVector };
   const turningAtStart = enemy.turningRemainingMs > 0;
-  const vector = directionVector(enemy.direction);
+  const vector = enemy.movementVector;
   if (!movementBlocked) {
     if (!turningAtStart) enemy.turningImageActive = false;
-    const distance = Math.fround((enemy.speed * deltaMs) / 100);
-    enemy.positionFine = {
-      x: Math.trunc(Math.fround(previous.x + vector.x * distance)),
-      y: Math.trunc(Math.fround(previous.y + vector.y * distance)),
-    };
+    enemy.positionFine = advanceFinePosition(previous, vector, enemy.speed, deltaMs);
     if (enemy.type === 4 || enemy.type === 5 || enemy.type === 6 || enemy.type === 8) {
       enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
     }
   }
-  const movedFine = Math.abs(enemy.positionFine.x - previous.x) + Math.abs(enemy.positionFine.y - previous.y);
-  if (movedFine > 0 && !turningAtStart
-    && Math.abs(enemy.positionFine.x - previous.x) > Math.abs(enemy.positionFine.y - previous.y)) {
-    enemy.mirrored = enemy.positionFine.x > previous.x;
+  const movedX = enemy.positionFine.x - previous.x;
+  const movedY = enemy.positionFine.y - previous.y;
+  const movedFine = Math.abs(movedX) + Math.abs(movedY);
+  if (movedFine > 0 && !turningAtStart) {
+    enemy.direction = directionForMovementVector({ x: movedX, y: movedY }, enemy.direction);
+    if (Math.abs(movedX) > Math.abs(movedY)) enemy.mirrored = movedX > 0;
   }
   if (movedFine > 0 && !turningAtStart) {
     enemy.animationDistance = (enemy.animationDistance + movedFine) % ENEMY_WALK_ANIMATION_CYCLE_FINE;
@@ -2942,9 +2937,9 @@ function moveEnemy(
   }
   if (!movementBlocked && turningAtStart) enemy.turningRemainingMs = Math.max(0, enemy.turningRemainingMs - deltaMs);
 
-  const passedCenter = !movementBlocked && (vector.x !== 0
-    ? passesFieldCenter(previous.x, enemy.positionFine.x)
-    : passesFieldCenter(previous.y, enemy.positionFine.y));
+  const passedCenter = !movementBlocked
+    && ((vector.x !== 0 && passesFieldCenter(previous.x, enemy.positionFine.x))
+      || (vector.y !== 0 && passesFieldCenter(previous.y, enemy.positionFine.y)));
 
   if (passedCenter) {
     if (enemy.despawnOnNextFieldCounter > 0) {
@@ -2960,10 +2955,13 @@ function moveEnemy(
           candidate.cell.x === cell.x && candidate.cell.y === cell.y);
         if (redirect) {
           const randomDirection = redirect.directions[random.nextInt(redirect.directions.length)]!;
-          const nextDirection = sameGroupPredecessorDirection(enemy, enemies) ?? randomDirection;
-          if (nextDirection !== enemy.direction) {
-            const previousVector = directionVector(enemy.direction);
-            const nextVector = directionVector(nextDirection);
+          const nextVector = sameGroupPredecessorMovementVector(enemy, enemies) ?? directionVector(randomDirection);
+          const previousVector = {
+            x: Math.sign(enemy.movementVector.x),
+            y: Math.sign(enemy.movementVector.y),
+          };
+          if ((enemy.movementVector.x !== 0 || enemy.movementVector.y !== 0)
+            && (nextVector.x !== previousVector.x || nextVector.y !== previousVector.y)) {
             let turnFrame: 0 | 1 | undefined;
             let turnMirrored: boolean | undefined;
             if ((previousVector.x === -1 && nextVector.y === 1)
@@ -2990,18 +2988,20 @@ function moveEnemy(
               enemy.turningFrame = turnFrame;
               enemy.turningMirrored = turnMirrored;
             }
-            enemy.direction = nextDirection;
-            enemy.positionFine = {
-              x: (cell.x * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.x * 2),
-              y: (cell.y * FINE_UNITS_PER_CELL) + FIELD_CENTER_HALF + (nextVector.y * 2),
-            };
+            enemy.movementVector = { ...nextVector };
+            enemy.direction = directionForMovementVector(nextVector, enemy.direction);
+            enemy.positionFine = alignFinePositionAtRedirect(
+              enemy.positionFine,
+              nextVector,
+              FINE_UNITS_PER_CELL,
+            );
           }
         }
       }
     }
   }
 
-  const nextVector = directionVector(enemy.direction);
+  const nextVector = enemy.movementVector;
   const collisionBlocked = enemyCollisionBlocksMove(
     enemy,
     enemies,
@@ -3011,6 +3011,7 @@ function moveEnemy(
   if (collisionBlocked) {
     enemy.positionFine = previous;
     enemy.direction = previousDirection;
+    enemy.movementVector = previousMovementVector;
     enemy.animationDistance = 0;
     enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
   }

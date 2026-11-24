@@ -213,6 +213,15 @@ import {
 } from '../content/dakota-08-content-version';
 import { dakota08CampaignId } from '../content/dakota-08-identity';
 import {
+  createDakota09CampaignContent,
+  createDakota09CampaignContentFromSnapshot,
+} from '../content/dakota-09-campaign';
+import {
+  dakota09CampaignContentVersionFor,
+  parseDakota09ReplayContentVersion,
+} from '../content/dakota-09-content-version';
+import { dakota09CampaignId } from '../content/dakota-09-identity';
+import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
 } from '../content/new-mexico-replay-content-version';
@@ -392,6 +401,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === dakota08CampaignId) {
     return dakota08CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === dakota09CampaignId) {
+    return dakota09CampaignContentVersionFor(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -439,6 +451,7 @@ export function createBrowserGame(
     [dakota06CampaignId]: createDakota06CampaignContent(completedScenarioIds),
     [dakota07CampaignId]: createDakota07CampaignContent(completedScenarioIds),
     [dakota08CampaignId]: createDakota08CampaignContent(completedScenarioIds),
+    [dakota09CampaignId]: createDakota09CampaignContent(completedScenarioIds),
     ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {
@@ -777,6 +790,15 @@ export function createBrowserGameForDakota08Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, dakota08CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [dakota08CampaignId]: createDakota08CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Snow Town from its recorded global-unit unlock snapshot. */
+export function createBrowserGameForDakota09Replay(contentVersion: string | undefined) {
+  const parsed = parseDakota09ReplayContentVersion(contentVersion);
+  if (!parsed) return createBrowserGame([], undefined, dakota09CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [dakota09CampaignId]: createDakota09CampaignContentFromSnapshot(parsed.snapshot),
   });
 }
 

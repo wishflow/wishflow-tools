@@ -77,6 +77,8 @@ M32-C1 已按此顺序建立网页基线：原始网格存于 `src/content/orego
 
 同一加载方法也请求共享的 `tiles_canyon_floor`、`tiles_canyon_floor_var`、`tiles_shadow`、`tiles_shadow_var`、`tiles_water`。实际 tile 源矩形、目的矩形、阴影和图层遮挡由 `Dakota.drawBackgroundLayer()` 与公共街道绘制共同决定；资源别名正确不代表网页地图已完成视觉对照。
 
+该 LevelPack 的 `getFirstLevelIdPack()` 返回全局关卡31，正是 Loot Lakes。`loadIngameImagesPack()` 还把 `e_1x1_tree_snow`、`e_1x1_rocks_snow_a`、`e_1x1_rocks_snow_b` 分别写入通用树、岩石 A/B 的位图缓存槽，因此地图 raw `71/69/70` 应使用雪地变体；不能因场景模块名 `oregon-11` 把首个 Dakota 关卡排除在地区资源替换之外。网页现由 `createOregon11MapScene()` 使用这些雪地资产，`dakota-snow-biome-assets.test.ts` 将 Loot Lakes 与已接入的 Dakota 第2–9关、Snow Town 一并核对。
+
 ## 敌方入口与完整路线
 
 路线 marker 的 action：raw `52/53/54/55/56/57/58` 分别是北、南、西、东、北+西、北+东、北+南。spawn marker `40/41/42` 的 action ID 为 `raw - 40`，redirect marker 的 action ID 为 `raw - 52`。路线边从 marker 沿给定轴向扫描到下一个 redirect 或出口；方括号内为格距，不是像素或游戏时间。

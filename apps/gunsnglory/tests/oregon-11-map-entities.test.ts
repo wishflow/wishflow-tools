@@ -18,19 +18,19 @@ const PLAYER_COLLIDER_HALF_WIDTH = 2_534;
 const staticObjectExpectations = [
   {
     marker: 69,
-    asset: 'e_1x1_rocks_a',
+    asset: 'e_1x1_rocks_snow_a',
     cells: [[15, 0], [26, 0], [22, 1], [17, 3], [28, 5], [12, 7], [6, 10], [15, 12], [31, 17], [23, 18], [9, 19], [16, 22]],
     bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 },
   },
   {
     marker: 70,
-    asset: 'e_1x1_rocks_b',
+    asset: 'e_1x1_rocks_snow_b',
     cells: [[6, 3], [27, 7], [12, 14]],
     bounds: { x: 1_306, y: 1_920, width: 5_068, height: 3_840 },
   },
   {
     marker: 71,
-    asset: 'e_1x1_tree',
+    asset: 'e_1x1_tree_snow',
     cells: [[3, 3], [30, 10], [21, 18], [8, 23]],
     bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 },
   },

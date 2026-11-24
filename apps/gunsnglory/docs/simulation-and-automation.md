@@ -23,7 +23,7 @@
 
 ## 随机、环境和视图
 
-APK 的 `Game.Randomizer.nextInt(bound)` 先调用 Java `Random.nextInt(bound)`，随后调用 `nextLong()` 并以所得 long 重新 `setSeed()`，再将 `firstRandom` 设为 false；重置时重新置为 true。REA 静态调用图中该包装器只有 Gambler 抽奖和手牌动画的两个调用类。网页按 `StartRecord.randomSeed` 初始化规则流，回放规则版本为 `gng-rules-21`，格式版本仍为2。Gambler 规则先按规则流抽奖，再抽 `GamblerResults` 手牌模板，最后以 `[4,3,2,1]` 的边界不放回洗牌花色；结果牌面、奖项、冷却与待生成奖品均进入 GameView 和 replay checkpoint，UI 不另抽随机。规则流尚未抽取整数时奖池排除输钱项；失败和冷却拒绝不消费规则随机值。
+APK 的 `Game.Randomizer.nextInt(bound)` 先调用 Java `Random.nextInt(bound)`，随后调用 `nextLong()` 并以所得 long 重新 `setSeed()`，再将 `firstRandom` 设为 false；重置时重新置为 true。REA 静态调用图中该包装器只有 Gambler 抽奖和手牌动画的两个调用类。网页按 `StartRecord.randomSeed` 初始化规则流，回放规则版本为 `gng-rules-22`，格式版本仍为2。规则版本22复刻同组车辆在岔路以 APK `fullX/fullY` 坐标差更新双轴移动；规则版本21及更早的记录会明确报 `unsupported-version`，不按新规则静默重放。Gambler 规则先按规则流抽奖，再抽 `GamblerResults` 手牌模板，最后以 `[4,3,2,1]` 的边界不放回洗牌花色；结果牌面、奖项、冷却与待生成奖品均进入 GameView 和 replay checkpoint，UI 不另抽随机。规则流尚未抽取整数时奖池排除输钱项；失败和冷却拒绝不消费规则随机值。
 
 APK 另有 `Util.random(bound)`：它调用单独的 `java.util.Random`，并在 `Util` 类初始化时以系统毫秒时钟设 seed；它与 `Game.Randomizer` 不是同一随机源。网页通过 `deriveSessionRandomSeed(StartRecord.randomSeed, 'game-util')` 派生标准 Java `Random` 兼容流，当前已接入预览敌军速度、战役波次/生成池抽取、敌军出生点与编队/颜色、路线转向、马车残骸与乘客、战役单位池、补给箱和列车烟雾。Gambler 仍只使用规则流。地图 `BackgroundMap.createVariationMap` 在 APK 会消费 `Util.random` 选择图块；网页 Tech Town 场景当前用固定内容资源组装，未按每局 seed 重抽地面/道路变体。未实现的友军随机移动尚未接入；实现对应行为时须复用会话 Util 流。
 

@@ -3,9 +3,9 @@ import map from './dakota-05.json';
 import { createDakotaBackgroundCollisionCodes } from './dakota-background-collision';
 
 const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
-  69: { asset: 'e_1x1_rocks_a' },
-  70: { asset: 'e_1x1_rocks_b' },
-  71: { asset: 'e_1x1_tree' },
+  69: { asset: 'e_1x1_rocks_snow_a' },
+  70: { asset: 'e_1x1_rocks_snow_b' },
+  71: { asset: 'e_1x1_tree_snow' },
   74: { asset: 'b_1x1_windmill' },
   75: { asset: 'b_1x1_watertower' },
   76: { asset: 'e_1x1_bush' },
