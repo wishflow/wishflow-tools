@@ -22,11 +22,11 @@
 
 ## 当前工作顺序
 
-### 切片 A：修复 GitHub Pages 部署条件（本地完成；发布待验收）
+### 切片 A：修复 GitHub Pages 部署条件与触发分类（进行中）
 
 - **问题：**Level 40 的 GitHub Pages 构建 artifact 已成功生成，但部署 job 被跳过，导致公开站点版本不一致。
-- **实现：**在 `deploy-github-pages` 的 job 条件中加入 `always()`，仍严格要求 `needs.build-github-pages.result == 'success'`；在仓库 workflow 回归测试中断言该条件，避免只检查静态构建或只看 Actions 总结状态。
-- **本地验收：**新增测试在旧条件下按预期失败；修复后 `pnpm run test:catalog` 19/19 通过，Ruby YAML 解析及 `git diff --check` 通过。实现已提交到集成分支。
+- **实现：**在 `deploy-github-pages` 的 job 条件中加入 `always()`，仍严格要求 `needs.build-github-pages.result == 'success'`；将 `.github/workflows/pages.yml` 纳入站点构建变更分类，确保 workflow 修复也触发两处静态站点重新生成；添加部署条件和变更分类回归测试。
+- **本地验收：**部署条件测试已在旧条件下按预期失败；当前 `pnpm run test:catalog` 19/19、Ruby YAML 解析及 `git diff --check` 通过。加入 workflow 变更分类测试后需重新运行并更新结果。第一项修复已提交到集成分支，分类测试仍待实现。
 - **发布验收：**Actions 中 `build-github-pages` 与 `deploy-github-pages` 都必须成功；两处 `build-info.json` 均须等于新发布 SHA，再用内置浏览器做窗口模式、静音的页面检查。尚未完成。
 - **发布边界：**这是对已开始发布批次的阻塞性发布修复；修复单独集成，不能因 Level 40 的应用测试通过而略过部署 job。
 
