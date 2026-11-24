@@ -22,11 +22,12 @@
 
 ## 当前工作顺序
 
-### 切片 A：修复 GitHub Pages 部署条件
+### 切片 A：修复 GitHub Pages 部署条件（本地完成；发布待验收）
 
 - **问题：**Level 40 的 GitHub Pages 构建 artifact 已成功生成，但部署 job 被跳过，导致公开站点版本不一致。
 - **实现：**在 `deploy-github-pages` 的 job 条件中加入 `always()`，仍严格要求 `needs.build-github-pages.result == 'success'`；在仓库 workflow 回归测试中断言该条件，避免只检查静态构建或只看 Actions 总结状态。
-- **验收：**先让新增回归测试在旧 workflow 上失败；修复后运行 `node scripts/project-catalog.test.mjs`。发布该修复后，Actions 中 `build-github-pages` 与 `deploy-github-pages` 都必须成功；两处 `build-info.json` 均须等于新发布 SHA，再用内置浏览器做窗口模式、静音的页面检查。
+- **本地验收：**新增测试在旧条件下按预期失败；修复后 `pnpm run test:catalog` 19/19 通过，Ruby YAML 解析及 `git diff --check` 通过。实现已提交到集成分支。
+- **发布验收：**Actions 中 `build-github-pages` 与 `deploy-github-pages` 都必须成功；两处 `build-info.json` 均须等于新发布 SHA，再用内置浏览器做窗口模式、静音的页面检查。尚未完成。
 - **发布边界：**这是对已开始发布批次的阻塞性发布修复；修复单独集成，不能因 Level 40 的应用测试通过而略过部署 job。
 
 ### 后续 UI 与车辆视觉修复批次
@@ -40,7 +41,7 @@
 
 ### 当前功能批次：Sioux Falls（全局 Level 40）
 
-本批包含 GitHub Pages artifact/deploy 分离；分离本身已完成，但真实 Actions 结果发现部署条件还缺 `always()`，由“切片 A”修复。Level 40 内容已于 `7fb5c36` 发布到 Cloudflare Pages；GitHub Pages 仍待部署。除部署闭环外，本批不再重做内容实现。保持窗口模式和静音；不完整通关，不启用全屏。
+本批包含 GitHub Pages artifact/deploy 分离；分离本身已完成，且部署条件补上 `always()` 的代码与本地回归检查已提交到集成分支，等待发布验证。Level 40 内容已于 `7fb5c36` 发布到 Cloudflare Pages；GitHub Pages 仍待部署。除部署闭环外，本批不再重做内容实现。保持窗口模式和静音；不完整通关，不启用全屏。
 
 ### 切片 1：校准 GitHub Pages artifact 交接（本地实现完成）
 
@@ -71,7 +72,7 @@
 - **本地验收：**`CI=1 PLAYWRIGHT_PORT=43325 pnpm run test:ci` 通过：1,190 项单测、TypeScript 检查、生产构建及 209 项 Playwright 全部通过。`pnpm run test:catalog` 18/18 通过；`pnpm run build:site` 成功。临时工作树未安装其余应用依赖，站点构建使用已有工作树的已安装依赖做本地链接，构建期间只写入当前工作树；干净环境的部署构建仍由 CI 验证。
 - **本地提交：**切片 4 和计划更新已提交为 `a26e4b0`、`6bc2291`；切片 1–4 均已关闭。
 - **集成与发布：**Level 40 已 squash 到 `master` 并推送。集成树现已 merge 纳入 `origin/master`，但远端 `gunsnglory` 尚待本轮修复与发布同步。
-- **发布验收：**本批 GitHub Pages 部署 job 被跳过，故尚未通过发布门槛。先完成切片 A，再核对两处 build-info 来源与修复发布 SHA 一致；随后用内置浏览器在窗口模式、静音下检查 Sioux Falls 选关、开局地图、路线/桥面、首波对白、HUD 和未完成关卡退出。运行时检查只推进代表性片段，不完整通关。
+- **发布验收：**本批 GitHub Pages 部署 job 被跳过，故尚未通过发布门槛。切片 A 已完成本地代码和回归检查；待修复随发布流程推送后，核对两处 build-info 来源与修复发布 SHA 一致，再用内置浏览器在窗口模式、静音下检查 Sioux Falls 选关、开局地图、路线/桥面、首波对白、HUD 和未完成关卡退出。运行时检查只推进代表性片段，不完整通关。
 
 ## 本批之外仍待确认
 
