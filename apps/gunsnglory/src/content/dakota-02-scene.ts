@@ -5,9 +5,9 @@ import { createDakotaBackgroundCollisionCodes } from './dakota-background-collis
 const railwayBufferCollisionBox = Object.freeze({ x: 0, y: 0, width: 7_680, height: 7_680 });
 
 const decorationByCode: Readonly<Record<number, Omit<MapDecoration, 'cell'>>> = Object.freeze({
-  69: { asset: 'e_1x1_rocks_a' },
-  70: { asset: 'e_1x1_rocks_b' },
-  71: { asset: 'e_1x1_tree' },
+  69: { asset: 'e_1x1_rocks_snow_a' },
+  70: { asset: 'e_1x1_rocks_snow_b' },
+  71: { asset: 'e_1x1_tree_snow' },
   72: { asset: 'b_1x1_stake' },
   75: { asset: 'b_1x1_watertower' },
   76: { asset: 'e_1x1_bush' },

@@ -1,0 +1,87 @@
+import type { CampaignSpawnPoolDefinition, CampaignWaveDefinition } from '../game';
+import { dakota09SpawnPointIdByActionId } from './dakota-09-routes';
+
+function createSpawnPool(
+  actionId: number,
+  intervalMs: number,
+  requestCounts: readonly number[],
+  bossCount = 0,
+  docCount = 0,
+): CampaignSpawnPoolDefinition {
+  const spawnPointId = dakota09SpawnPointIdByActionId[actionId];
+  if (spawnPointId === undefined) throw new Error(`Snow Town has no route for APK action ID ${actionId}`);
+  if (requestCounts.length !== 8) throw new Error('Snow Town APK addToWave data must contain eight ordinary request types');
+  return Object.freeze({
+    spawnPointId,
+    intervalMs,
+    requests: Object.freeze([...requestCounts, bossCount, docCount]),
+  });
+}
+
+function createWave(wave: CampaignWaveDefinition): CampaignWaveDefinition {
+  return Object.freeze({
+    ...wave,
+    spawnPools: Object.freeze(wave.spawnPools.map((pool) => Object.freeze(pool))),
+  });
+}
+
+/** Eight source-ordered APK waves; request slots 9 and 10 are Boss and Doc. */
+export const dakota09CampaignWaves: readonly CampaignWaveDefinition[] = Object.freeze([
+  createWave({
+    number: 1, delayMs: 15_000, hitPointMultiplierPercent: 120, speedMultiplierPercent: 130,
+    spawnPools: [createSpawnPool(0, 1_500, [2, 6, 7, 8, 0, 2, 0, 0])],
+  }),
+  createWave({
+    number: 2, delayMs: 15_000, hitPointMultiplierPercent: 150, speedMultiplierPercent: 150,
+    // APK calls addToWave twice for action 1 with identical data; Wave stores by action ID,
+    // so the second call overwrites the same row instead of creating a second spawn pool.
+    spawnPools: [createSpawnPool(1, 1_500, [1, 0, 0, 1, 12, 2, 0, 0])],
+  }),
+  createWave({
+    number: 3, delayMs: 15_000, hitPointMultiplierPercent: 110, speedMultiplierPercent: 130,
+    spawnPools: [
+      createSpawnPool(0, 1_500, [1, 1, 2, 2, 1, 4, 0, 0]),
+      createSpawnPool(1, 1_500, [1, 1, 2, 2, 1, 4, 0, 0]),
+    ],
+  }),
+  createWave({
+    number: 4, delayMs: 15_000, hitPointMultiplierPercent: 155, speedMultiplierPercent: 145,
+    spawnPools: [
+      createSpawnPool(0, 3_000, [0, 0, 1, 2, 1, 1, 4, 1]),
+      createSpawnPool(1, 3_000, [0, 0, 1, 2, 1, 1, 4, 0]),
+    ],
+  }),
+  createWave({
+    number: 5, delayMs: 25_000, hitPointMultiplierPercent: 160, speedMultiplierPercent: 150,
+    spawnPools: [
+      createSpawnPool(0, 4_500, [0, 0, 1, 2, 2, 1, 1, 2]),
+      createSpawnPool(1, 4_500, [0, 0, 1, 2, 2, 1, 1, 2]),
+      createSpawnPool(2, 3_500, [2, 2, 2, 2, 2, 1, 1, 1]),
+    ],
+  }),
+  createWave({
+    number: 6, delayMs: 15_000, hitPointMultiplierPercent: 175, speedMultiplierPercent: 155,
+    spawnPools: [
+      createSpawnPool(0, 2_500, [1, 2, 4, 4, 3, 4, 1, 0]),
+      createSpawnPool(1, 2_500, [0, 2, 3, 4, 4, 3, 2, 1]),
+      createSpawnPool(2, 2_500, [0, 2, 3, 4, 3, 4, 1, 1]),
+    ],
+  }),
+  createWave({
+    number: 7, delayMs: 15_000, hitPointMultiplierPercent: 205, speedMultiplierPercent: 160,
+    spawnPools: [
+      createSpawnPool(0, 2_500, [0, 1, 2, 2, 4, 4, 2, 1]),
+      createSpawnPool(1, 2_500, [0, 1, 2, 2, 4, 3, 2, 2]),
+      createSpawnPool(2, 2_500, [0, 1, 2, 2, 4, 4, 2, 2]),
+    ],
+  }),
+  createWave({
+    number: 8, delayMs: 30_000, hitPointMultiplierPercent: 195, speedMultiplierPercent: 165,
+    spawnPools: [createSpawnPool(2, 500, [0, 0, 0, 0, 0, 0, 0, 0], 1)],
+  }),
+]);
+
+export const dakota09CampaignSpawnRequestCount = dakota09CampaignWaves.reduce(
+  (count, wave) => count + wave.spawnPools.length,
+  0,
+);

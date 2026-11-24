@@ -47,7 +47,7 @@ test('Free Play opens Frost Station from the real Dakota menu with all difficult
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-dakota').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available');
   await page.getByTestId('campaign-level-37').click();
 
   await expect(page.getByRole('heading', { name: 'Frost Station' })).toBeVisible();

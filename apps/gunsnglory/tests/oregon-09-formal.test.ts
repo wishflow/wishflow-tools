@@ -36,7 +36,7 @@ test('Snake River is the gated 29th official stage after Colt City', async () =>
   const expectedVersion = oregon09CampaignContentVersionFor([]);
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === oregon09CampaignId);
 
-  assert.equal(officialCampaignStages.length, 38);
+  assert.equal(officialCampaignStages.length, 39);
   assert.deepEqual(stage, {
     scenarioId: oregon09CampaignId,
     contentVersion: expectedVersion,

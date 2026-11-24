@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { cowGulchP1cCampaignContent } from '../src/content/cow-gulch';
+import { billyHillsLevelFiveCampaignContent } from '../src/content/official-campaign';
 import { createGame, type CampaignWaveDefinition, type GameSession, type GameView, type ScenarioContent } from '../src/game';
 
 const emptyRequests = Object.freeze([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
@@ -183,6 +184,77 @@ test('same-group wagon members choose the leader route at a fork without skippin
 
   assert.deepEqual([...observedLeaderBranches].sort(), ['north', 'south'],
     'the route stays random for the leader while the wagon follows its selected branch');
+});
+
+test('the official Billy Hills wagon and horse take the same branch at its first real fork', async () => {
+  const scenario = billyHillsLevelFiveCampaignContent;
+  const fork = scenario.previewWave?.redirects.find(({ cell }) => cell.x === 7 && cell.y === 5);
+  assert.ok(fork);
+  assert.deepEqual(fork.directions, ['north', 'south']);
+  assert.deepEqual(scenario.campaignWaves?.[0]?.spawnPools[0]?.requests.slice(5, 8), [2, 2, 1],
+    'official wave 1 includes covered wagon, Post Coach, and Gold Transport requests');
+
+  const fineUnitsPerCell = 7680;
+  const maxFramesToReachFork = 450;
+  const observedBranches = new Set<string>();
+  let matchingPairs = 0;
+
+  for (let seed = 1; seed <= 32; seed += 1) {
+    const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+      scenarioId: scenario.id,
+      mode: 'formal',
+      randomSeed: seed,
+      difficulty: 'easy',
+    });
+    let view = session.observe();
+    const directionChanges = new Map<string, { horse?: string; wagon?: string }>();
+    const previousDirections = new Map<string, string>();
+
+    for (let frame = 0; frame < maxFramesToReachFork; frame += 1) {
+      view = session.advance({ deltaMs: 100 });
+      const groupedEnemies = new Map<string, (typeof view.enemies)[number][]>();
+      for (const enemy of view.enemies) {
+        const groupId = enemy.groupId;
+        if (!groupId) continue;
+        const group = groupedEnemies.get(groupId) ?? [];
+        group.push(enemy);
+        groupedEnemies.set(groupId, group);
+      }
+
+      for (const [groupId, enemies] of groupedEnemies) {
+        const horse = enemies.find(({ type }) => type === 8);
+        const wagon = enemies.find(({ type }) => type === 4);
+        if (!horse || !wagon) continue;
+
+        const changes = directionChanges.get(groupId) ?? {};
+        for (const [member, key] of [[horse, 'horse'], [wagon, 'wagon']] as const) {
+          const previousDirection = previousDirections.get(member.id);
+          if (previousDirection !== undefined
+            && previousDirection !== member.direction
+            && Math.trunc(member.positionFine.x / fineUnitsPerCell) === fork.cell.x
+            && Math.trunc(member.positionFine.y / fineUnitsPerCell) === fork.cell.y) {
+            changes[key] = member.direction;
+          }
+          previousDirections.set(member.id, member.direction);
+        }
+        directionChanges.set(groupId, changes);
+      }
+    }
+
+    for (const [groupId, changes] of directionChanges) {
+      if (!changes.horse || !changes.wagon) continue;
+      assert.equal(changes.wagon, changes.horse,
+        `covered wagon in ${groupId} must follow its horse at the official fork for seed ${seed}`);
+      observedBranches.add(changes.horse);
+      matchingPairs += 1;
+    }
+
+    session.close();
+  }
+
+  assert.ok(matchingPairs > 0, 'formal wave-1 covered-wagon groups must reach the real fork');
+  assert.deepEqual([...observedBranches].sort(), ['north', 'south'],
+    'the official route tests both branches without separating the horse and wagon');
 });
 
 test('types 1 and 2 follow the APK walk cycle at each distance boundary and wrap', async () => {

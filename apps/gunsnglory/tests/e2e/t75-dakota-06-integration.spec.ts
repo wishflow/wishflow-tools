@@ -46,7 +46,7 @@ test('Free Play opens Ice Rocks with map39, bilingual copy, and all difficulties
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-dakota').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('8 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available');
   await page.getByTestId('campaign-level-36').click();
 
   await expect(page.getByRole('heading', { name: 'Ice Rocks' })).toBeVisible();

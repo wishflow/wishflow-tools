@@ -1,0 +1,255 @@
+{
+  "source": "Independently expanded from the APK TDM with the original border-spawn and direction-marker rules; source data is tests/fixtures/td_map_42.tdm.",
+  "resource": "res/raw/td_map_42.tdm",
+  "dimensions": [
+    32,
+    24
+  ],
+  "nodeEncoding": "[rawTdmCode,x,y], zero-based cells; actionId is spawn raw code minus 40.",
+  "summary": {
+    "spawnCount": 3,
+    "redirectCount": 33,
+    "exitCount": 2,
+    "uniqueDirectedEdgeCount": 36,
+    "completeSpawnToExitPathCount": 3,
+    "intermediateCellVisits": 193,
+    "uniqueIntermediateRouteCells": 172,
+    "intermediateVisitsByRawTile": {
+      "32": 141,
+      "52": 5,
+      "53": 12,
+      "54": 6,
+      "55": 13,
+      "80": 3,
+      "81": 2,
+      "88": 11
+    }
+  },
+  "routes": [
+    {
+      "actionId": 1,
+      "nodes": [
+        [
+          41,
+          20,
+          0
+        ],
+        [
+          54,
+          20,
+          3
+        ],
+        [
+          53,
+          4,
+          3
+        ],
+        [
+          54,
+          4,
+          4
+        ],
+        [
+          53,
+          2,
+          4
+        ],
+        [
+          55,
+          2,
+          9
+        ],
+        [
+          53,
+          5,
+          9
+        ],
+        [
+          55,
+          5,
+          10
+        ],
+        [
+          53,
+          10,
+          10
+        ],
+        [
+          54,
+          10,
+          14
+        ],
+        [
+          53,
+          8,
+          14
+        ],
+        [
+          55,
+          8,
+          20
+        ],
+        [
+          55,
+          13,
+          20
+        ],
+        [
+          52,
+          23,
+          20
+        ],
+        [
+          55,
+          23,
+          17
+        ],
+        [
+          48,
+          31,
+          17
+        ]
+      ]
+    },
+    {
+      "actionId": 0,
+      "nodes": [
+        [
+          40,
+          31,
+          3
+        ],
+        [
+          53,
+          27,
+          3
+        ],
+        [
+          54,
+          27,
+          7
+        ],
+        [
+          52,
+          20,
+          7
+        ],
+        [
+          54,
+          20,
+          4
+        ],
+        [
+          53,
+          6,
+          4
+        ],
+        [
+          55,
+          6,
+          9
+        ],
+        [
+          53,
+          11,
+          9
+        ],
+        [
+          54,
+          11,
+          15
+        ],
+        [
+          53,
+          9,
+          15
+        ],
+        [
+          55,
+          9,
+          19
+        ],
+        [
+          52,
+          22,
+          19
+        ],
+        [
+          55,
+          22,
+          16
+        ],
+        [
+          48,
+          31,
+          16
+        ]
+      ]
+    },
+    {
+      "actionId": 2,
+      "nodes": [
+        [
+          42,
+          0,
+          13
+        ],
+        [
+          53,
+          2,
+          13
+        ],
+        [
+          55,
+          2,
+          16
+        ],
+        [
+          53,
+          4,
+          16
+        ],
+        [
+          55,
+          4,
+          19
+        ],
+        [
+          53,
+          7,
+          19
+        ],
+        [
+          55,
+          7,
+          21
+        ],
+        [
+          52,
+          13,
+          21
+        ],
+        [
+          55,
+          13,
+          20
+        ],
+        [
+          52,
+          23,
+          20
+        ],
+        [
+          55,
+          23,
+          17
+        ],
+        [
+          48,
+          31,
+          17
+        ]
+      ]
+    }
+  ]
+}

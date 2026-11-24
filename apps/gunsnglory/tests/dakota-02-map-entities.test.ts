@@ -16,9 +16,9 @@ const appRoot = path.resolve(import.meta.dirname, '..');
 const FINE_PER_CELL = 7_680;
 
 const sceneryExpectations = [
-  { marker: 69, asset: 'e_1x1_rocks_a', cells: [[9, 1], [25, 1], [23, 4], [29, 13], [23, 14], [29, 22]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
-  { marker: 70, asset: 'e_1x1_rocks_b', cells: [[21, 1], [26, 12]], bounds: { x: 1_306, y: 1_920, width: 5_068, height: 3_840 } },
-  { marker: 71, asset: 'e_1x1_tree', cells: [[17, 0], [30, 0], [2, 7], [2, 19], [30, 20]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
+  { marker: 69, asset: 'e_1x1_rocks_snow_a', cells: [[9, 1], [25, 1], [23, 4], [29, 13], [23, 14], [29, 22]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
+  { marker: 70, asset: 'e_1x1_rocks_snow_b', cells: [[21, 1], [26, 12]], bounds: { x: 1_306, y: 1_920, width: 5_068, height: 3_840 } },
+  { marker: 71, asset: 'e_1x1_tree_snow', cells: [[17, 0], [30, 0], [2, 7], [2, 19], [30, 20]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
   { marker: 72, asset: 'b_1x1_stake', cells: [[12, 13]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
   { marker: 75, asset: 'b_1x1_watertower', cells: [[8, 22]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },
   { marker: 76, asset: 'e_1x1_bush', cells: [[8, 4], [31, 5], [0, 6], [22, 7], [17, 11], [30, 11], [2, 17], [5, 19], [20, 23]], bounds: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 } },

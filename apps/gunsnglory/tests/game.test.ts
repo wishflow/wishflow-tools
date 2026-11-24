@@ -2357,8 +2357,8 @@ test('records consumed frame inputs and replays checkpoints to the same terminal
     (error as { code?: string }).code === 'unsupported-version');
 
   const unsupportedRulesVersion = structuredClone(record);
-  unsupportedRulesVersion.rulesVersion = 'gng-rules-18';
-  unsupportedRulesVersion.startRecord.rulesVersion = 'gng-rules-18';
+  unsupportedRulesVersion.rulesVersion = 'gng-rules-21';
+  unsupportedRulesVersion.startRecord.rulesVersion = 'gng-rules-21';
   await assert.rejects(game.replay(JSON.stringify(unsupportedRulesVersion)), (error: unknown) =>
     (error as { code?: string }).code === 'unsupported-version');
 
@@ -2909,7 +2909,7 @@ test('rejects an out-of-map target when UnitDirector.getPrio returns -1', async 
 test('tapping a settler sets the nearest preferred target, preserves unit selection, toggles, and boosts its shot score', async () => {
   const scenario = priorityTargetScenario();
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id, randomSeed: 42 });
-  assert.equal(GAME_RULES_VERSION, 'gng-rules-21');
+  assert.equal(GAME_RULES_VERSION, 'gng-rules-22');
 
   session.submitIntent({ type: 'select-at', x: 9.5, y: 7.3 });
   let view = session.advance({ deltaMs: 0 });

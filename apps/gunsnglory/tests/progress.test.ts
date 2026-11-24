@@ -6,7 +6,12 @@ import type { ProfileData } from '../src/progress/profile-repository';
 import { verifyProfileRepositoryContract } from './profile-repository-contract';
 import type { GameSettlementRecord } from '../src/game';
 import type { CampaignStageDefinition } from '../src/progress';
-import { cowGulchLevelOneContent, lostCityLevelTenCampaignContent, officialCampaignStages } from '../src/content/official-campaign';
+import {
+  cowGulchLevelOneContent,
+  dakota09LevelThirtyNineCampaignContent,
+  lostCityLevelTenCampaignContent,
+  officialCampaignStages,
+} from '../src/content/official-campaign';
 import { mississippi11CampaignId } from '../src/content/mississippi-11-campaign';
 
 test('loads Easy and a default speed for a new or older profile without the setting', async () => {
@@ -344,6 +349,10 @@ test('keeps legacy samples isolated while official Cow Gulch progress preserves 
     scenarioId: 'campaign-dakota-08',
     status: 'locked',
     highScore: undefined,
+  }, {
+    scenarioId: dakota09LevelThirtyNineCampaignContent.id,
+    status: 'locked',
+    highScore: undefined,
   }]);
   assert.equal(before.completedCount, 0);
   assert.deepEqual(before.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium', soundEnabled: true });
@@ -367,7 +376,7 @@ test('keeps legacy samples isolated while official Cow Gulch progress preserves 
 
   const reloaded = await createProgress(repository, officialCampaignStages).loadCampaign();
   assert.deepEqual(reloaded.stages.map(({ status }) => status), [
-    'completed', 'available', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked',
+    'completed', 'available', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked', 'locked',
   ]);
   assert.equal(reloaded.completedCount, 1);
   assert.deepEqual(reloaded.profile.settings, { simulationSpeed: 1.5, difficulty: 'medium', soundEnabled: true });
