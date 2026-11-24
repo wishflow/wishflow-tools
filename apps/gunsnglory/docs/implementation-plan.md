@@ -9,11 +9,11 @@
 - Snow Town 批次的本地完整检查已通过：1,174 项单测、TypeScript、生产构建和 206 项 Playwright；catalog 检查与共享站点构建也通过。此处记录的是前一批结果，本轮没有重跑。
 - 最近一次部署观察：Cloudflare Pages 的 `build-info.json` 对应 `9a96db6`；GitHub Pages 仍是旧版 `ede0a50`。GitHub Actions run `45360235333` 中 Guns’n’Glory 测试和 Cloudflare Pages 部署成功，但 GitHub Pages 的 `deploy-pages` 在上传步骤后立即查询到 0 个 `github-pages` artifact 并失败。故公开部署仍不一致，不能把 Snow Town 批次报告为两处站点均验收完成。
 - 之前已完成马车双轴跟随规则修正，并以 Fort Kaboom 隔离用例及五关正式岔口矩阵验证；这不是所有关卡的逐帧视觉验收。雇佣框、Play 页面和 Options 已有当前源码下的 DOM/E2E 与内置浏览器检查，未建立 APK 原版运行画面的逐像素基线。大炮炮弹贴图对应关系仍未完成核对。
-- 原始 APK、地图 43 TDM 和资源已在本机可读。REA 已确认 `GameDesignWaves.setWaves(i == 40)` 的 10 个波次、31 条 `addToWave` 调用、2 条玩家生成池动作；`GameDesignData.<clinit>` 的第 40 关数据对应数组下标 39。实现前仍需核对 TDM marker、数据字段消费者、池动作覆盖语义、地图对象与渲染/碰撞映射，不能直接复制相邻关卡参数。
+- 原始 APK、地图 43 TDM 和资源已在本机可读。REA 已确认 `GameDesignWaves.setWaves(i == 40)` 有 10 个波次和 **28 条** `addToWave` 调用；`GameDesignData.<clinit>` 的第 40 关数据对应数组下标 39。TDM marker、参数消费者、玩家池动作语义、地图单位/Steamer/炸药均已在切片 3 复核。旧计划写成 31 条是计数错误，现按源码调用及测试修正。
 
 ## 当前功能批次：Sioux Falls（全局 Level 40）
 
-本批还包含 GitHub Pages artifact/deploy 分离修复，以便批次结束时两处公开站点能核对到同一发布来源。批次只发布一次；不完整通关，不启用声音或全屏。
+本批还包含 GitHub Pages artifact/deploy 分离修复，以便批次结束时两处公开站点能核对到同一发布来源。切片 1–3 已在本地关闭；下一步是关卡目录、解锁与回放接入。批次只发布一次；不完整通关，不启用声音或全屏。
 
 ### 切片 1：校准 GitHub Pages artifact 交接（本地实现完成）
 
@@ -27,11 +27,11 @@
 - **定向验收：**`node --import tsx --test tests/sioux-falls-static.test.ts` 4/4 通过；`pnpm --dir apps/gunsnglory run typecheck` 通过。覆盖 TDM 文件/网格/频数、独立绘制参考、独立完整路线分支追踪、APK 静态对象及碰撞框、资源存在和图集裁剪范围。APK 选关缩略图也已与 `drawable-mdpi-v4` 原文件逐字节比对。
 - **边界：**固定 Java Random seed 仅提供稳定网页场景，不声称复现 Android 每次启动的随机变体；未做 Sioux Falls Android 运行画面采样，也未接入敌我单位或完整战役内容。
 
-### 切片 3：接入 Sioux Falls 动态单位、规则、波次和对白
+### 切片 3：接入 Sioux Falls 动态单位、规则、波次和对白（已完成）
 
-- **实现：**转录第 40 关 12 项 GameDesignData 原始值并按消费点确认映射；复原 10 个 wave header、31 条敌方请求、spawn action 与 TDM 出生点的映射、2 条玩家生成池动作、地图初始单位/休眠招募、Steamer 组合、炸药配对及单位解锁快照。接入标题/简介、10 段双语对白与 APK 指定头像、Dakota 音乐路由。区分调用次数与同 action 覆盖后的有效池状态。
-- **验收：**逐项比较 APK/REA 派生的初始参数、波次延迟/倍率、请求槽位、出生点、池状态、单位 marker/活动状态、Steamer 连续移动组、对白顺序/头像、可招募单位、结算标识和音乐区域；以独立 TDM 夹具与真实 `GameSession` 短推进验证首波和代表性生成，不进行完整通关。
-- **边界：**波次向量表示生成池请求，不解释成固定敌人出现顺序；未知字段保留原值并标未知，不猜语义。只添加本关实际出现的角色/对象，不复制 Snow Town 的列车或地图单位。
+- **实现：**12 项 GameDesignData 原始值均逐个映射；未找到消费者的 30,000 值保留为未解析字段。接入 10 个波次、28 条源级 `addToWave` 调用/请求池、出生点映射、两条玩家池动作、TDM 初始单位和解锁门、五节 Steamer、炸药配对、标题/简介、10 段对白与头像以及 Dakota 音乐路由。详细映射见[动态内容核对](sioux-falls-content-audit.md)。
+- **验收：**`node --import tsx --test tests/dakota-10-campaign-content.test.ts` 7/7 通过；`pnpm run typecheck` 通过。测试比较独立转录的参数/波次/生成池期望，核对单位标记、解锁快照、对白/头像/音乐，并用真实 `GameSession` 只推进到 Wave 1 首次生成。未进行完整战役或 Android 运行观察。
+- **边界：**波次向量表示生成池请求，不是固定敌人出现顺序。Wave 10 的 Boss 位于第 9 个请求槽，Doc 槽为零。未解析字段保留原值、不猜测。内容 builder 已完成，但正式关卡目录、菜单、结算及 replay factory 由切片 4 接入。
 
 ### 切片 4：注册关卡、解锁与回放
 
