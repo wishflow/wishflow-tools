@@ -37,7 +37,7 @@ const completedThroughLevelThirtyFour = officialCampaignStages.slice(0, 34).map(
 
 test('Ghost Town is Dakota level 35 and stays locked until Badlands is complete', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota05CampaignId);
-  assert.equal(officialCampaignStages.length, 39);
+  assert.equal(officialCampaignStages.length, 40);
   assert.deepEqual(stage, {
     scenarioId: dakota05CampaignId,
     contentVersion: createDakota05CampaignContent().contentVersion,

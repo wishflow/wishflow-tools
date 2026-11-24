@@ -42,9 +42,9 @@ test('Free Play opens Snow Town with the real Level 39 content without changing 
 
   await page.getByTestId('menu-free-play').click();
   await page.getByTestId('campaign-region-dakota').click();
-  await expect(page.getByTestId('campaign-menu-progress')).toContainText('9 implemented levels available');
+  await expect(page.getByTestId('campaign-menu-progress')).toContainText('10 implemented levels available');
   await expect(page.getByTestId('campaign-level-39')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-40')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-40')).toBeEnabled();
   await page.getByTestId('campaign-level-39').click();
 
   await expect(page.getByRole('heading', { name: 'Snow Town' })).toBeVisible();

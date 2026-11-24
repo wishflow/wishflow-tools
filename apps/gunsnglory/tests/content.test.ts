@@ -22,6 +22,7 @@ import {
   dakota05LevelThirtyFiveCampaignContent,
   dakota08LevelThirtyEightCampaignContent,
   dakota09LevelThirtyNineCampaignContent,
+  dakota10LevelFortyCampaignContent,
   fortKaboomLevelThreeContent,
   luckyLakeLevelSevenCampaignContent,
   lostCityLevelTenCampaignContent,
@@ -389,6 +390,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Snow Town · Level 39', zh: '雪镇 · 第 39 关' },
     globalLevel: 39,
     requiresCompletedScenarioIds: ['campaign-dakota-08'],
+  }, {
+    scenarioId: dakota10LevelFortyCampaignContent.id,
+    contentVersion: dakota10LevelFortyCampaignContent.contentVersion,
+    title: { en: 'Sioux Falls · Level 40', zh: '苏福尔斯 · 第 40 关' },
+    globalLevel: 40,
+    requiresCompletedScenarioIds: ['campaign-dakota-09'],
   }]);
 });
 

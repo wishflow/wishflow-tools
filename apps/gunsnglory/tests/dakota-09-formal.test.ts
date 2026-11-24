@@ -9,7 +9,7 @@ import { createBrowserGame, getBrowserScenarioContentVersion } from '../src/boot
 import { createProgress } from '../src/progress';
 import { createMemoryProfileRepository } from '../src/progress/memory-profile-repository';
 
-test('Snow Town is formal Level 39 after Wayne Waters and leaves Level 40 unimplemented', async () => {
+test('Snow Town is formal Level 39 after Wayne Waters and unlocks Sioux Falls on victory', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota09CampaignId);
   assert.deepEqual(stage && {
     globalLevel: stage.globalLevel,
@@ -28,11 +28,25 @@ test('Snow Town is formal Level 39 after Wayne Waters and leaves Level 40 unimpl
   assert.equal(campaignLevelState(38, afterFrostStation), 'available');
   assert.equal(campaignLevelState(39, afterFrostStation), 'locked');
 
-  const afterWayneWaters = await createProgress(createMemoryProfileRepository({
+  const afterWayneWatersProgress = createProgress(createMemoryProfileRepository({
     completedScenarios: [dakota08CampaignId],
-  }), officialCampaignStages).loadCampaign();
+  }), officialCampaignStages);
+  const afterWayneWaters = await afterWayneWatersProgress.loadCampaign();
   assert.equal(campaignLevelState(39, afterWayneWaters), 'available');
   assert.equal(campaignLevelState(40, afterWayneWaters), 'locked');
+
+  await afterWayneWatersProgress.applySettlement({
+    settlementId: `snow-town-session:${dakota09CampaignId}:8`,
+    sessionId: 'snow-town-session',
+    scenarioId: dakota09CampaignId,
+    mode: 'formal',
+    waveNumber: 8,
+    outcome: 'victory',
+    scoreBase: 1_000,
+    displayScore: 1_000,
+    highScoreCandidate: 1_000,
+  });
+  assert.equal(campaignLevelState(40, await afterWayneWatersProgress.loadCampaign()), 'available');
 
   const content = createDakota09CampaignContent([dakota08CampaignId]);
   assert.equal(content.id, dakota09CampaignId);
