@@ -4,8 +4,8 @@
 
 ## 当前实现与发布状态
 
-- Guns’n’Glory 正式战役已接入全局第 1–39 关，最后一关是 Dakota Level 39 Snow Town。目录已列出 Sioux Falls（全局 Level 40、地图文件 43），但 `officialCampaignStages`、地图场景和规则内容还没有该关。
-- 公开 `master` 当前包含 Snow Town，来源提交为 `9a96db6`。远端 `gunsnglory` 为 `53d1950`；本地集成工作树已将公开提交合并回 `gunsnglory`，当前本地 `f9b6c0a` 是同步合并提交，尚待推送。两边内容此前相同，缺的是发布提交的历史关系。
+- Guns’n’Glory 正式战役已接入全局第 1–39 关，最后一关是 Dakota Level 39 Snow Town。目录已列出 Sioux Falls（全局 Level 40、地图文件 43）。地图、地形图层、静态场景及敌方路线的独立空间数据现已完成；`officialCampaignStages`、单位/波次/经济规则和正式解锁仍未接入。
+- 公开 `master` 当前包含 Snow Town，来源提交为 `9a96db6`。远端 `gunsnglory` 当前为 `ef3ac4e`；本地集成工作树在其上增加了 GitHub Pages 修复与 Sioux Falls 空间切片两个本地提交，尚未推送或发布，等待本轮内容批次完成。
 - Snow Town 批次的本地完整检查已通过：1,174 项单测、TypeScript、生产构建和 206 项 Playwright；catalog 检查与共享站点构建也通过。此处记录的是前一批结果，本轮没有重跑。
 - 最近一次部署观察：Cloudflare Pages 的 `build-info.json` 对应 `9a96db6`；GitHub Pages 仍是旧版 `ede0a50`。GitHub Actions run `45360235333` 中 Guns’n’Glory 测试和 Cloudflare Pages 部署成功，但 GitHub Pages 的 `deploy-pages` 在上传步骤后立即查询到 0 个 `github-pages` artifact 并失败。故公开部署仍不一致，不能把 Snow Town 批次报告为两处站点均验收完成。
 - 之前已完成马车双轴跟随规则修正，并以 Fort Kaboom 隔离用例及五关正式岔口矩阵验证；这不是所有关卡的逐帧视觉验收。雇佣框、Play 页面和 Options 已有当前源码下的 DOM/E2E 与内置浏览器检查，未建立 APK 原版运行画面的逐像素基线。大炮炮弹贴图对应关系仍未完成核对。
@@ -21,16 +21,16 @@
 - **依据：**现有失败日志明确显示上传步骤后 `deploy-pages` 查到 0 个 artifact。GitHub 官方 `actions/deploy-pages` 指南建议使用独立部署 job，且让部署 job 依赖 artifact 上传 job。
 - **本地验收：**workflow YAML 解析、build→deploy 依赖及部署权限检查通过；`pnpm run test:catalog` 18 项通过，覆盖应用代码变更会触发对应 app tests 与共享站点构建。真实部署成功尚未验证，保留在切片 5 的发布门槛中。
 
-### 切片 2：复原 Sioux Falls 地图与空间规则
+### 切片 2：复原 Sioux Falls 地图与空间规则（已完成）
 
-- **实现：**从 APK 原始 `td_map_43.tdm` 建立公开地图文件和测试 fixture，生成 32×24 `originalTileGrid` 与本关场景数据。按实际出现的 marker 生成路线、出生/出口、静态对象、道路/桥面/地形绘制和碰撞；复用已确认的 Dakota 地区图集替换规则。增加按主题组织的 Sioux Falls 静态审计，记录 marker、位置、原版语义、网页映射与证据边界。
-- **验收：**fixture 与 APK TDM 字节完全一致；地图尺寸及每格 raw code 一一对应；所有路线出生点均可沿 marker 分支到达对应出口；路线实际经过可见道路/桥面；对象绘制锚点、地形碰撞及静态阻挡与 TDM/共享 APK 映射逐项一致。由独立 TDM 参考逻辑生成绘制和碰撞期望，不用生产 builder 自证。
-- **边界：**若发现本关存在现有系统尚不支持的对象类型，先用 APK 构造/消费点证明缺口，再把最小规则支持加入该切片；不造地图对象，不挪动路线去迎合贴图。
+- **实现：**已从 APK 原始 `td_map_43.tdm` 建立公开地图文件与 fixture，生成 32×24 `originalTileGrid` 和 Sioux Falls 场景。按原始 marker 接入敌人出生/出口/方向路线、静态物件、背景、道路、桥梁、桥墩、铁路及 Dakota 地形碰撞。已添加[空间静态审计](sioux-falls-static-audit.md)和独立路线图夹具，区分静态场景与切片 3 才接入的地图单位、Steamer、炸药和战役规则。
+- **定向验收：**`node --import tsx --test tests/sioux-falls-static.test.ts` 4/4 通过；`pnpm --dir apps/gunsnglory run typecheck` 通过。覆盖 TDM 文件/网格/频数、独立绘制参考、独立完整路线分支追踪、APK 静态对象及碰撞框、资源存在和图集裁剪范围。APK 选关缩略图也已与 `drawable-mdpi-v4` 原文件逐字节比对。
+- **边界：**固定 Java Random seed 仅提供稳定网页场景，不声称复现 Android 每次启动的随机变体；未做 Sioux Falls Android 运行画面采样，也未接入敌我单位或完整战役内容。
 
-### 切片 3：接入 Sioux Falls 规则、波次和对白
+### 切片 3：接入 Sioux Falls 动态单位、规则、波次和对白
 
-- **实现：**转录第 40 关 12 项 GameDesignData 原始值，并按消费点确认映射；复原 10 个 wave header、31 条请求调用、spawn action 到 TDM 出生点的对应、2 条玩家生成池动作、地图单位池与单位解锁快照。接入标题/简介、10 段双语对白和 APK 指定头像，以及 Dakota 音乐路由。若同 action 的池写入覆盖旧值，分别记录调用数与最终有效行数。
-- **验收：**逐项比较 APK/REA 派生的初始参数、波次延迟与倍率、请求槽位、出生点、池状态、对白顺序/头像、可招募单位、结算标识和音乐区域；用真实 `GameSession` 短推进验证首波及代表性出生点，不通过完整通关验证。
+- **实现：**转录第 40 关 12 项 GameDesignData 原始值并按消费点确认映射；复原 10 个 wave header、31 条敌方请求、spawn action 与 TDM 出生点的映射、2 条玩家生成池动作、地图初始单位/休眠招募、Steamer 组合、炸药配对及单位解锁快照。接入标题/简介、10 段双语对白与 APK 指定头像、Dakota 音乐路由。区分调用次数与同 action 覆盖后的有效池状态。
+- **验收：**逐项比较 APK/REA 派生的初始参数、波次延迟/倍率、请求槽位、出生点、池状态、单位 marker/活动状态、Steamer 连续移动组、对白顺序/头像、可招募单位、结算标识和音乐区域；以独立 TDM 夹具与真实 `GameSession` 短推进验证首波和代表性生成，不进行完整通关。
 - **边界：**波次向量表示生成池请求，不解释成固定敌人出现顺序；未知字段保留原值并标未知，不猜语义。只添加本关实际出现的角色/对象，不复制 Snow Town 的列车或地图单位。
 
 ### 切片 4：注册关卡、解锁与回放
