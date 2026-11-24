@@ -5,7 +5,7 @@
 ## 当前实现与发布状态
 
 - 当前集成树已接入正式战役全局第 1–40 关，最后一关是 Dakota Level 40 Sioux Falls；`officialCampaignStages`、Level 39 解锁依赖、Free Play、结算、十波内容、对白、音频路由和 replay factory 均已接线。完整目录仍为 60 关，Level 41–60 保持未实现。
-- 公开 `master` 当前仍包含 Snow Town（Level 39），来源提交为 `9a96db6`。远端 `gunsnglory` 当前为 `ef3ac4e`；本地集成树已有 GitHub Pages 修复、Sioux Falls 空间/动态内容与关卡注册切片。完整本地检查已通过；切片 4 的实现和计划更新仍待本地提交，整批尚未 squash、推送或发布。
+- 公开 `master` 当前仍包含 Snow Town（Level 39），来源提交为 `9a96db6`。远端 `gunsnglory` 当前为 `ef3ac4e`；本地集成树已有 GitHub Pages 修复、Sioux Falls 空间/动态内容与关卡注册切片。完整本地检查已通过；切片 4 与批次计划更新已分别提交为 `a26e4b0`、`6bc2291`，整批尚未 squash、推送或发布。
 - Snow Town 批次的本地完整检查已通过：1,174 项单测、TypeScript、生产构建和 206 项 Playwright；catalog 检查与共享站点构建也通过。此处记录的是前一批结果，本轮没有重跑。
 - 最近一次部署观察：Cloudflare Pages 的 `build-info.json` 对应 `9a96db6`；GitHub Pages 仍是旧版 `ede0a50`。GitHub Actions run `45360235333` 中 Guns’n’Glory 测试和 Cloudflare Pages 部署成功，但 GitHub Pages 的 `deploy-pages` 在上传步骤后立即查询到 0 个 `github-pages` artifact 并失败。故公开部署仍不一致，不能把 Snow Town 批次报告为两处站点均验收完成。
 - 之前已完成马车双轴跟随规则修正，并以 Fort Kaboom 隔离用例及五关正式岔口矩阵验证；这不是所有关卡的逐帧视觉验收。雇佣框、Play 页面和 Options 已有当前源码下的 DOM/E2E 与内置浏览器检查，未建立 APK 原版运行画面的逐像素基线。大炮炮弹贴图对应关系仍未完成核对。
@@ -16,9 +16,9 @@
 | 统计点 | 公开发布次数 | 已验收实现切片 | 比例 |
 | --- | ---: | ---: | ---: |
 | 上次留存基线（`0bed82f`） | 31 | 173 | 17.9% |
-| Sioux Falls 发布后累计 | 44 | 235 | 18.7% |
+| 计划发布 Sioux Falls 批次后 | 44 | 235 | 18.7% |
 
-从基线到本批，Git 历史中新增 58 个代码实现提交（按 `feat`、`fix`、`refactor`、`build`、`ci` 计数；不计文档和单测提交），另有 12 次已发布批次；本批再增加 4 个实现切片和 1 次发布。因此累计为 `(31 + 12 + 1) / (173 + 58 + 4) = 44/235`，低于 20% 目标。后续批次继续用相同口径复核。
+从基线到本批，Git 历史中新增 58 个代码实现提交（按 `feat`、`fix`、`refactor`、`build`、`ci` 计数；不计文档和单测提交），另有 12 次已发布批次；本批再增加 4 个实现切片和 1 次计划发布。因此累计为 `(31 + 12 + 1) / (173 + 58 + 4) = 44/235`，低于 20% 目标。后续批次继续用相同口径复核。
 
 ## 当前功能批次：Sioux Falls（全局 Level 40）
 
@@ -51,7 +51,8 @@
 ### 切片 5：整批检查、集成与部署验收（本地检查已通过）
 
 - **本地验收：**`CI=1 PLAYWRIGHT_PORT=43325 pnpm run test:ci` 通过：1,190 项单测、TypeScript 检查、生产构建及 209 项 Playwright 全部通过。`pnpm run test:catalog` 18/18 通过；`pnpm run build:site` 成功。临时工作树未安装其余应用依赖，站点构建使用已有工作树的已安装依赖做本地链接，构建期间只写入当前工作树；干净环境的部署构建仍由 CI 验证。
-- **剩余实现：**切片 1–4 已关闭；将切片 4 和计划更新提交到 `gunsnglory`，按应用流程 squash 集成到 `master`，复核普通发布比例后推送发布分支。发布后合并回 `gunsnglory` 并推送同步。
+- **本地提交：**切片 4 和计划更新已提交为 `a26e4b0`、`6bc2291`；切片 1–4 均已关闭。
+- **剩余实现：**按应用流程将批次 squash 集成到 `master`，复核普通发布比例后推送发布分支。发布后合并回 `gunsnglory` 并推送同步。
 - **发布验收：**GitHub Actions 全部必要 job 成功；GitHub Pages 与 Cloudflare Pages 的 build-info 来源一致并等于预期发布 SHA；用内置浏览器打开该版本，保持窗口模式与静音，检查 Sioux Falls 选关、开局地图、路线/桥面、首波对白、HUD 和未完成关卡退出。运行时检查只推进代表性片段，不完整通关。
 
 ## 本批之外仍待确认
