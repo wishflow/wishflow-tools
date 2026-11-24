@@ -15,11 +15,11 @@
 
 本批还包含 GitHub Pages artifact/deploy 分离修复，以便批次结束时两处公开站点能核对到同一发布来源。批次只发布一次；不完整通关，不启用声音或全屏。
 
-### 切片 1：校准 GitHub Pages artifact 交接
+### 切片 1：校准 GitHub Pages artifact 交接（本地实现完成）
 
-- **实现：**将 Pages 静态站构建与 artifact 上传放在 build job；部署放在依赖 build job 完成的独立 deploy job。只向部署 job 授予 Pages 与 OIDC 权限，保留现有环境和部署 URL。变更分类仍应触发完整站点构建与应用测试。
+- **实现：**已将 Pages 静态站构建与 artifact 上传放在 `build-github-pages` job；部署放在依赖该 job 的 `deploy-github-pages`。Pages 与 OIDC 权限只授予部署 job；共享变更分类仍由应用文件变化触发完整站点构建和对应应用测试。
 - **依据：**现有失败日志明确显示上传步骤后 `deploy-pages` 查到 0 个 artifact。GitHub 官方 `actions/deploy-pages` 指南建议使用独立部署 job，且让部署 job 依赖 artifact 上传 job。
-- **验收：**检查 workflow 依赖关系、权限最小化与 `workflow-changes` 分类；运行仓库分类测试和 YAML/静态检查。最终以 M40 发布触发真实 push workflow，确认 Pages artifact 被部署且 Actions 成功；若仍失败，在本批内修复，不把失败归咎于应用测试。
+- **本地验收：**workflow YAML 解析、build→deploy 依赖及部署权限检查通过；`pnpm run test:catalog` 18 项通过，覆盖应用代码变更会触发对应 app tests 与共享站点构建。真实部署成功尚未验证，保留在切片 5 的发布门槛中。
 
 ### 切片 2：复原 Sioux Falls 地图与空间规则
 
