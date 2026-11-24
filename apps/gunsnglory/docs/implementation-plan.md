@@ -4,10 +4,10 @@
 
 ## 当前实现与发布状态
 
-- 当前集成树已接入正式战役全局第 1–40 关，最后一关是 Dakota Level 40 Sioux Falls；`officialCampaignStages`、Level 39 解锁依赖、Free Play、结算、十波内容、对白、音频路由和 replay factory 均已接线。完整目录仍为 60 关，Level 41–60 保持未实现。
-- 公开 `master` 当前仍包含 Snow Town（Level 39），来源提交为 `9a96db6`。远端 `gunsnglory` 当前为 `ef3ac4e`；本地集成树已有 GitHub Pages 修复、Sioux Falls 空间/动态内容与关卡注册切片。完整本地检查已通过；切片 4 与批次计划更新已分别提交为 `a26e4b0`、`6bc2291`，整批尚未 squash、推送或发布。
+- 当前集成树包含正式战役全局第 1–40 关，最后一关是 Dakota Level 40 Sioux Falls；`officialCampaignStages`、Level 39 解锁依赖、Free Play、结算、十波内容、对白、音频路由和 replay factory 均已接线。完整目录仍为 60 关，Level 41–60 保持未实现。
+- 公开 `master` 与 `origin/master` 当前指向 Sioux Falls 发布提交 `7fb5c36`；集成树已通过普通 merge 纳入该发布。Level 40 本地完整检查与对应 CI 测试均通过，但发布验收未完成：Cloudflare Pages 的 `build-info.json` 已报告 `7fb5c36`，GitHub Pages 仍报告 `ede0a50`。
 - Snow Town 批次的本地完整检查已通过：1,174 项单测、TypeScript、生产构建和 206 项 Playwright；catalog 检查与共享站点构建也通过。此处记录的是前一批结果，本轮没有重跑。
-- 最近一次部署观察：Cloudflare Pages 的 `build-info.json` 对应 `9a96db6`；GitHub Pages 仍是旧版 `ede0a50`。GitHub Actions run `45360235333` 中 Guns’n’Glory 测试和 Cloudflare Pages 部署成功，但 GitHub Pages 的 `deploy-pages` 在上传步骤后立即查询到 0 个 `github-pages` artifact 并失败。故公开部署仍不一致，不能把 Snow Town 批次报告为两处站点均验收完成。
+- 最近一次部署观察：GitHub Actions run `45385441233` 中 Guns’n’Glory 测试、共享检查、Cloudflare Pages 部署和 GitHub Pages artifact 构建均成功，但 `deploy-github-pages` 被跳过。根因已核实为部署 job 的 `if` 只检查 artifact 构建结果，没有 `always()`；依赖链中 `test-pet-windows` 被跳过时，GitHub Actions 会默认跳过后续 job。页面公开来源仍不一致，因此尚未进行这一发布的内置浏览器验收。
 - 之前已完成马车双轴跟随规则修正，并以 Fort Kaboom 隔离用例及五关正式岔口矩阵验证；这不是所有关卡的逐帧视觉验收。雇佣框、Play 页面和 Options 已有当前源码下的 DOM/E2E 与内置浏览器检查，未建立 APK 原版运行画面的逐像素基线。大炮炮弹贴图对应关系仍未完成核对。
 - 原始 APK、地图 43 TDM 和资源已在本机可读。REA 已确认 `GameDesignWaves.setWaves(i == 40)` 有 10 个波次和 **28 条** `addToWave` 调用；`GameDesignData.<clinit>` 的第 40 关数据对应数组下标 39。TDM marker、参数消费者、玩家池动作语义、地图单位/Steamer/炸药均已在切片 3 复核。旧计划写成 31 条是计数错误，现按源码调用及测试修正。
 
@@ -20,9 +20,28 @@
 
 从基线到本批，Git 历史中新增 58 个代码实现提交（按 `feat`、`fix`、`refactor`、`build`、`ci` 计数；不计文档和单测提交），另有 12 次已发布批次；本批再增加 4 个实现切片和 1 次计划发布。因此累计为 `(31 + 12 + 1) / (173 + 58 + 4) = 44/235`，低于 20% 目标。后续批次继续用相同口径复核。
 
-## 当前功能批次：Sioux Falls（全局 Level 40）
+## 当前工作顺序
 
-本批还包含 GitHub Pages artifact/deploy 分离修复，以便批次结束时两处公开站点能核对到同一发布来源。切片 1–4 已在本地关闭；接下来只做整批检查、集成和部署验收。批次只发布一次；不完整通关，不启用声音或全屏。
+### 切片 A：修复 GitHub Pages 部署条件与触发分类（本地完成；发布待验收）
+
+- **问题：**Level 40 的 GitHub Pages 构建 artifact 已成功生成，但部署 job 被跳过，导致公开站点版本不一致。
+- **实现：**在 `deploy-github-pages` 的 job 条件中加入 `always()`，仍严格要求 `needs.build-github-pages.result == 'success'`；将 `.github/workflows/pages.yml` 纳入站点构建变更分类，确保 workflow 修复也触发两处静态站点重新生成；添加部署条件和变更分类回归测试。
+- **本地验收：**部署条件测试在旧 job 条件下按预期失败；分类测试在旧变更分类下按预期失败。补齐两处修复后，`pnpm run test:catalog` 20/20、Ruby YAML 解析及 `git diff --check` 通过，代码已提交到集成分支。
+- **发布验收：**Actions 中 `build-github-pages` 与 `deploy-github-pages` 都必须成功；两处 `build-info.json` 均须等于新发布 SHA，再用内置浏览器做窗口模式、静音的页面检查。尚未完成。
+- **发布边界：**这是对已开始发布批次的阻塞性发布修复；修复单独集成，不能因 Level 40 的应用测试通过而略过部署 job。
+
+### 后续 UI 与车辆视觉修复批次
+
+以下均为用户已报告但尚未完整关闭的问题。先按 APK 资源/代码和当前实现建立可复核基线，再按顺序逐片修复；不能用 DOM 存在或单张菜单截图代替原版布局核对。
+
+1. **车马岔路连续性：**使用已报告的分叉关卡与可复现 seed，记录马、车每个推进步的逻辑坐标、脚底坐标、绘制 bounds 和路线分支；把当前网页轨迹与 APK `EnemyDirector` 的双轴跟随规则对照。验收至少覆盖一个真实关卡岔口和现有正式车辆路线矩阵，证明马车没有因错误的路线选择或渲染深度与马分离；若与 APK 规则一致但 APK 本身也会分离，必须先呈现证据再决定产品取舍，不能暗中改变规则。
+2. **雇佣面板：**基于 APK 的招募弹窗调用链、角色图集/头像裁剪和绘制位置，复核网页实际显示的角色图、姓名、介绍、价格及按钮锚点；修正缺图或相对位置差异。验收使用有代表性的 Gunslinger 和另一种招募角色，检查中英文、游戏窗口比例和实际开局来源。
+3. **Play 与 Options 页面适配：**依据 APK 资源与布局关系，复核标题、说明、选择项、按钮的对齐轴、间距和可用区域；修正文字偏向一边、Options 内容集中拥挤的问题。保留原版字体与视觉层级，按游戏框尺寸适配布局，不照搬固定屏幕像素。验收覆盖桌面 16:9、窄屏横向和中英文；验证无偏移、遮挡、溢出，并保持非全屏、静音。
+4. **批次检查：**每个切片先跑对应单测/E2E 并本地提交，完成后更新计划关闭项；整批结束运行 `pnpm run test:ci` 与适用的共享检查，再按重要缺陷修复批次统一集成和发布。发布 SHA 核对后，用内置浏览器检查以上修复及代表性车辆分叉，不通关、不启用声音或全屏。
+
+### 当前功能批次：Sioux Falls（全局 Level 40）
+
+本批包含 GitHub Pages artifact/deploy 分离；分离本身已完成，且部署条件补上 `always()` 的代码与本地回归检查已提交到集成分支，等待发布验证。Level 40 内容已于 `7fb5c36` 发布到 Cloudflare Pages；GitHub Pages 仍待部署。除部署闭环外，本批不再重做内容实现。保持窗口模式和静音；不完整通关，不启用全屏。
 
 ### 切片 1：校准 GitHub Pages artifact 交接（本地实现完成）
 
@@ -48,12 +67,12 @@
 - **定向验收：**`node --import tsx --test tests/dakota-10-formal.test.ts tests/dakota-10-replay-factory.test.ts tests/dakota-10-campaign-content.test.ts tests/dakota-09-formal.test.ts tests/progress.test.ts tests/content.test.ts tests/apache-valley.test.ts tests/fort-kaboom-formal.test.ts` 54/54 通过；`pnpm run typecheck` 通过。受影响的进度摘要、Snow Town 与 Sioux Falls 集成/回放 E2E 定向集 17/17 通过。覆盖初始锁定、Level 39 结算解锁、地图/波次、Free Play 三种难度、正式结算与 Free Play 隔离、内容快照重建和不支持版本拒绝。
 - **边界：**Sioux Falls E2E 只检查菜单、开局和首波对白，不完整游玩或通关；完整批次检查结果记录在切片 5。
 
-### 切片 5：整批检查、集成与部署验收（本地检查已通过）
+### 切片 5：整批检查、集成与部署验收（本地检查通过；线上验收未完成）
 
 - **本地验收：**`CI=1 PLAYWRIGHT_PORT=43325 pnpm run test:ci` 通过：1,190 项单测、TypeScript 检查、生产构建及 209 项 Playwright 全部通过。`pnpm run test:catalog` 18/18 通过；`pnpm run build:site` 成功。临时工作树未安装其余应用依赖，站点构建使用已有工作树的已安装依赖做本地链接，构建期间只写入当前工作树；干净环境的部署构建仍由 CI 验证。
 - **本地提交：**切片 4 和计划更新已提交为 `a26e4b0`、`6bc2291`；切片 1–4 均已关闭。
-- **剩余实现：**按应用流程将批次 squash 集成到 `master`，复核普通发布比例后推送发布分支。发布后合并回 `gunsnglory` 并推送同步。
-- **发布验收：**GitHub Actions 全部必要 job 成功；GitHub Pages 与 Cloudflare Pages 的 build-info 来源一致并等于预期发布 SHA；用内置浏览器打开该版本，保持窗口模式与静音，检查 Sioux Falls 选关、开局地图、路线/桥面、首波对白、HUD 和未完成关卡退出。运行时检查只推进代表性片段，不完整通关。
+- **集成与发布：**Level 40 已 squash 到 `master` 并推送。集成树现已 merge 纳入 `origin/master`，但远端 `gunsnglory` 尚待本轮修复与发布同步。
+- **发布验收：**本批 GitHub Pages 部署 job 被跳过，故尚未通过发布门槛。切片 A 已完成本地代码和回归检查；待修复随发布流程推送后，核对两处 build-info 来源与修复发布 SHA 一致，再用内置浏览器在窗口模式、静音下检查 Sioux Falls 选关、开局地图、路线/桥面、首波对白、HUD 和未完成关卡退出。运行时检查只推进代表性片段，不完整通关。
 
 ## 本批之外仍待确认
 

@@ -242,6 +242,15 @@ test('catalog or shared site changes test every app and rebuild the full site', 
   });
 });
 
+test('Pages workflow changes rebuild the static site', () => {
+  assert.deepEqual(analyzeChanges(['.github/workflows/pages.yml'], projects), {
+    docsOnly: false,
+    siteRequired: true,
+    workerRequired: false,
+    testApps: [],
+  });
+});
+
 test('documentation-only changes do not trigger tests or deployment', () => {
   assert.deepEqual(analyzeChanges(['apps/duolingo-avatar/README.md', 'AGENTS.md'], projects), {
     docsOnly: true,
@@ -249,4 +258,13 @@ test('documentation-only changes do not trigger tests or deployment', () => {
     workerRequired: false,
     testApps: [],
   });
+});
+
+test('GitHub Pages deployment runs when its artifact build succeeds despite skipped upstream jobs', () => {
+  const workflow = readFileSync(path.join(repoRoot, '.github', 'workflows', 'pages.yml'), 'utf8');
+  const deployJob = workflow.split('  deploy-github-pages:\n')[1]?.split('\n  deploy-cloudflare-pages:')[0];
+
+  assert.ok(deployJob, 'GitHub Pages deployment job exists');
+  assert.match(deployJob, /^    needs: build-github-pages$/m);
+  assert.match(deployJob, /^    if: always\(\) && needs\.build-github-pages\.result == 'success'$/m);
 });

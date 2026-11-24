@@ -7,7 +7,7 @@ import { readProjectCatalog } from './project-catalog.mjs';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DOC_PATTERN = /\.(?:md|mdx)$/i;
 const SHARED_TEST_PATHS = new Set(['apps/catalog.json', 'package.json', 'scripts/build-site.mjs']);
-const SITE_BUILD_PATHS = new Set(['apps/catalog.json', 'scripts/build-site.mjs', 'scripts/project-catalog.mjs']);
+const SITE_BUILD_PATHS = new Set(['apps/catalog.json', 'scripts/build-site.mjs', 'scripts/project-catalog.mjs', '.github/workflows/pages.yml']);
 const TEST_ONLY_PROJECTS = new Set(['blender-lab']);
 
 function affectsWorker(file) {
