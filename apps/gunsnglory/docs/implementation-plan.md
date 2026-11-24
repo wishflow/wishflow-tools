@@ -1,48 +1,71 @@
 # 实施计划
 
-本文件维护当前实现基线、未完成工作、依赖顺序和发布门槛。每轮开始先对照当前代码、APK 专题审计和既有测试；只推进仍未闭合的差异。完成一个切片后立即更新本计划并关闭已完成项。
+本文只维护当前代码基线、未闭合问题和接下来可执行的切片。每轮开工前对照代码与 APK 证据；每完成一个切片，立即更新状态并移除已完成项。
 
-## 当前基线
+## 当前实现与发布状态
 
-- `origin/gunsnglory` 仍为 `502fc89`；当前开发分支 `codex/gng-ui-fidelity-current` 已包含 Snow Town 地图、规则和关卡接入切片，领先 17 个本地提交。公开 `master` 为 `ede0a50`。当前分支尚未发布；发布 SHA 必须在发布时重新核对。
-- 战役目录固定为 60 关；当前 `officialCampaignStages` 为 39 关，最后一关是 Dakota Level 39 Snow Town。下一缺口是 Dakota Level 40 Sioux Falls（地图文件 43），仍未实现。
-- 已完成 Snow Town 静态地图切片：32×24 地图 fixture 与 APK TDM 逐字节一致；路线图、地图对象、静态碰撞、初始单位、三种生成点、四项解锁快照、两段机车与三节车厢均已接入。40 项定向测试和 TypeScript 类型检查通过；测试覆盖列车成组移动并在右侧缓冲器前停止。
-- 已完成 Snow Town 规则与表现切片：GameDesignData 原始行、8 个波次、对白与头像、十槽请求、玩家池动作、初始经济与 Dakota 音乐路由已接入内容 builder。APK 有17次 `addToWave` 调用，但 Wave 2 重复 action 1 的同值调用会覆盖同一行，因此最终是16条有效生成池记录。
-- 已完成 Snow Town 关卡流程接入：Level 39 正式阶段要求完成 Level 38 Wayne Waters；Level 40 仍未实现。正式菜单、地图预览、Free Play、三档难度、Dakota HUD、场景 builder、结算标识和回放 factory 均已接入。回放按记录的全局单位解锁快照重建；未知或非法版本不可静默回退到当前内容。
-- 本步骤已更新官方阶段数和 Dakota Free Play 可用数的单测与 E2E。完整 `test:ci` 已通过：1,174 项单测、TypeScript 检查、生产构建和 206 项 Playwright E2E；根目录 catalog 检查 18 项通过，`pnpm run build:site` 已构建并验证全部目录应用。生产构建有 Vite 大 chunk 提示，但构建成功。线上部署 SHA 核对和内置浏览器验收仍待批次收尾。
-- Dakota LevelPack 的雪地缓存替换已覆盖 Loot Lakes（全局第31关）、Dakota 第2–9关与 Snow Town（全局第39关）。Loot Lakes 的旧模块名 `oregon-11` 曾导致遗漏；现在 raw 69/70/71 使用雪地岩石/树资源。APK TDM 与六张 mdpi/hdpi 雪地资源均经 `cmp` 逐字节核对；测试确认别名只作用于 Dakota 地图。
-- 最近一个记录的普通功能比例基线为 M39 后 `45/266`；最近 UI 修复批次为 `1/4`。暂按累计 `46/270 = 17.0%` 复核，下一次公开发布前须用 Git 发布与实现切片记录重新核算；20% 目标继续有效。修复批次按整批记录，不拆切片调整统计。
+- 当前集成树已接入正式战役全局第 1–40 关，最后一关是 Dakota Level 40 Sioux Falls；`officialCampaignStages`、Level 39 解锁依赖、Free Play、结算、十波内容、对白、音频路由和 replay factory 均已接线。完整目录仍为 60 关，Level 41–60 保持未实现。
+- 公开 `master` 当前仍包含 Snow Town（Level 39），来源提交为 `9a96db6`。远端 `gunsnglory` 当前为 `ef3ac4e`；本地集成树已有 GitHub Pages 修复、Sioux Falls 空间/动态内容与关卡注册切片。完整本地检查已通过；切片 4 与批次计划更新已分别提交为 `a26e4b0`、`6bc2291`，整批尚未 squash、推送或发布。
+- Snow Town 批次的本地完整检查已通过：1,174 项单测、TypeScript、生产构建和 206 项 Playwright；catalog 检查与共享站点构建也通过。此处记录的是前一批结果，本轮没有重跑。
+- 最近一次部署观察：Cloudflare Pages 的 `build-info.json` 对应 `9a96db6`；GitHub Pages 仍是旧版 `ede0a50`。GitHub Actions run `45360235333` 中 Guns’n’Glory 测试和 Cloudflare Pages 部署成功，但 GitHub Pages 的 `deploy-pages` 在上传步骤后立即查询到 0 个 `github-pages` artifact 并失败。故公开部署仍不一致，不能把 Snow Town 批次报告为两处站点均验收完成。
+- 之前已完成马车双轴跟随规则修正，并以 Fort Kaboom 隔离用例及五关正式岔口矩阵验证；这不是所有关卡的逐帧视觉验收。雇佣框、Play 页面和 Options 已有当前源码下的 DOM/E2E 与内置浏览器检查，未建立 APK 原版运行画面的逐像素基线。大炮炮弹贴图对应关系仍未完成核对。
+- 原始 APK、地图 43 TDM 和资源已在本机可读。REA 已确认 `GameDesignWaves.setWaves(i == 40)` 有 10 个波次和 **28 条** `addToWave` 调用；`GameDesignData.<clinit>` 的第 40 关数据对应数组下标 39。TDM marker、参数消费者、玩家池动作语义、地图单位/Steamer/炸药均已在切片 3 复核。旧计划写成 31 条是计数错误，现按源码调用及测试修正。
 
-## 当前批次：Snow Town（全局第39关）
+## 发布计数
 
-Snow Town 是当前完整功能批次；不把地图能画出来当成关卡已完成。地图、规则、对白、音乐和正式/自由流程切片均已实现。应用完整 CI、catalog 检查和共享站点构建已通过；集成前还需处理现存 `master` worktree 的暂存改动，之后才能部署与视觉验收。
+| 统计点 | 公开发布次数 | 已验收实现切片 | 比例 |
+| --- | ---: | ---: | ---: |
+| 上次留存基线（`0bed82f`） | 31 | 173 | 17.9% |
+| 计划发布 Sioux Falls 批次后 | 44 | 235 | 18.7% |
 
-### 1. 批次收尾、集成与发布
+从基线到本批，Git 历史中新增 58 个代码实现提交（按 `feat`、`fix`、`refactor`、`build`、`ci` 计数；不计文档和单测提交），另有 12 次已发布批次；本批再增加 4 个实现切片和 1 次计划发布。因此累计为 `(31 + 12 + 1) / (173 + 58 + 4) = 44/235`，低于 20% 目标。后续批次继续用相同口径复核。
 
-- **本地检查完成：**`CI=1 pnpm --dir apps/gunsnglory run test:ci` 通过（1,174 项单测、类型检查、生产构建、206 项 E2E）；`pnpm run test:catalog` 通过（18 项）；`pnpm run build:site` 通过并构建全部目录应用。
+## 当前功能批次：Sioux Falls（全局 Level 40）
 
-- 将已验收批次集成到 `gunsnglory`，并以一个 squash commit 发布到 `master`；发布前根据 Git 历史重新核算累计发布比例。
-- 发布后核对 GitHub Actions 和两处 `build-info.json` 来源 SHA，再使用 Codex 内置浏览器，以窗口模式、静音检查桌面和窄屏下的菜单锁定/解锁、Free Play 开局、Snow Town 全图、三条路线、雪地对象、列车移动、首波对白与 HUD；不完整通关、不启用全屏或音频。只有 SHA 匹配且浏览器验收通过才关闭本批。
+本批还包含 GitHub Pages artifact/deploy 分离修复，以便批次结束时两处公开站点能核对到同一发布来源。切片 1–4 已在本地关闭；接下来只做整批检查、集成和部署验收。批次只发布一次；不完整通关，不启用声音或全屏。
 
-## 后续修复批次：原版 UI 与路线视觉复核
+### 切片 1：校准 GitHub Pages artifact 交接（本地实现完成）
 
-### 已核实的基线
+- **实现：**已将 Pages 静态站构建与 artifact 上传放在 `build-github-pages` job；部署放在依赖该 job 的 `deploy-github-pages`。Pages 与 OIDC 权限只授予部署 job；共享变更分类仍由应用文件变化触发完整站点构建和对应应用测试。
+- **依据：**现有失败日志明确显示上传步骤后 `deploy-pages` 查到 0 个 artifact。GitHub 官方 `actions/deploy-pages` 指南建议使用独立部署 job，且让部署 job 依赖 artifact 上传 job。
+- **本地验收：**workflow YAML 解析、build→deploy 依赖及部署权限检查通过；`pnpm run test:catalog` 18 项通过，覆盖应用代码变更会触发对应 app tests 与共享站点构建。真实部署成功尚未验证，保留在切片 5 的发布门槛中。
 
-- 公网页面当前对应公开 `master`；当前开发工作树还包含未发布的 Snow Town 提交。未带 `release` 查询参数的页面两次显示旧版关卡预览；使用根 `build-info.json` 中的来源标识构造 `?release=<sourceSha>` 后，木框底图与本地当前源码一致。后续线上视觉核对必须使用版本化页面地址，不能拿未标识的缓存页判断当前 UI。
-- 关卡详情此前看起来“文字偏一边”的截图来自未带来源标识的旧缓存页。当前源码与版本化公开页面在桌面均显示完整木框卡片：标题、地图和说明在左侧羊皮纸内，高分信息与 Play 在右侧；其相对锚点符合 APK `dialog_level_overview.xml` 的坐标映射。现有 `t29-campaign-menu.spec.ts` 也检查归一化坐标。本轮内置浏览器在当前源码中复核中文 Cow Gulch 详情页，未见文字偏移；地图/说明位于左侧，最高分和开始按钮位于右侧。暂未发现桌面构图缺陷。
-- 当前源码的 Options 使用居中羊皮纸和 Help/Sound 两个选项。此前桌面英文/中文和本轮手机竖屏英文截图均未复现“挤在中上部”；`t29`、`t40` 另有边界、间距及双语断言。手机竖屏下游戏画框按 16:9 缩小，文字随之变小；横屏视口中的关卡详情分栏和中英文文案没有发现偏移或溢出。
-- 雇佣框的中英文低余额状态已有检查。本轮在 844×390 横屏视口中检查可雇佣状态，角色头像、名称、台词、价格和确认/取消按钮均可见；DOM 几何仍符合 APK 的384×272外框比例，头像与文本锚点符合现有测试，取消按钮实际可点击。该核对使用当前源码内置浏览器，不是 Android 原版运行截图的逐像素比对。
-- 本轮针对 `t29-campaign-menu`、`t39-ui-overlay-contract`、`t40-frame-controls`、`t41-lab-workbench` 运行了定向 Playwright E2E，共14项通过；覆盖选关与 Options 返回、手机视口的确认框/结算、双语招募布局和实验室窄屏几何。自动化断言证明这些交互与边界条件，不等同于逐像素或 APK 运行画面对照。
-- 马车分叉已按 APK 的双轴坐标差语义实现，并将回放规则版本升为 `gng-rules-22`。Fort Kaboom Wave 3 隔离回归和 Billy Hills、Cactusville、Lucky Lake、Lost City、Railroad Ranch 五关正式岔口矩阵均验证了 `fullX/fullY` 跟随语义。随后以正式地图、路线和生成池隔离目标波次，定点记录五关车辆岔口前、转向和下一步的位置，以及脚底锚点与绘制矩形；脚底坐标都留在对应 TDM 转向格。Lost City 一例的绘制矩形因精细坐标比格中心偏 2 个 fine 单位，几何边界擦入相邻 raw `36` 格约 `0.00026` 格；这是贴图包围框的亚像素边界，不是路线中心或脚底进入悬崖，也不能据此推断有不透明像素越界。完整战役 seed 6 重放和 APK 运行截图仍未建立；细节见[经验记录](experience-log.md)。
+### 切片 2：复原 Sioux Falls 地图与空间规则（已完成）
 
-### 按顺序执行的步骤
+- **实现：**已从 APK 原始 `td_map_43.tdm` 建立公开地图文件与 fixture，生成 32×24 `originalTileGrid` 和 Sioux Falls 场景。按原始 marker 接入敌人出生/出口/方向路线、静态物件、背景、道路、桥梁、桥墩、铁路及 Dakota 地形碰撞。已添加[空间静态审计](sioux-falls-static-audit.md)和独立路线图夹具，区分静态场景与切片 3 才接入的地图单位、Steamer、炸药和战役规则。
+- **定向验收：**`node --import tsx --test tests/sioux-falls-static.test.ts` 4/4 通过；`pnpm --dir apps/gunsnglory run typecheck` 通过。覆盖 TDM 文件/网格/频数、独立绘制参考、独立完整路线分支追踪、APK 静态对象及碰撞框、资源存在和图集裁剪范围。APK 选关缩略图也已与 `drawable-mdpi-v4` 原文件逐字节比对。
+- **边界：**固定 Java Random seed 仅提供稳定网页场景，不声称复现 Android 每次启动的随机变体；未做 Sioux Falls Android 运行画面采样，也未接入敌我单位或完整战役内容。
 
-1. **路线脚底与绘制范围核对：已完成。**仅抽查五个官方多向岔口，没有重跑 38 张地图静态路线审计或玩家碰撞矩阵。各样本的逻辑格、脚底锚点和包围框已写入[经验记录](experience-log.md)；未发现路线中心/脚底进入 raw `36` 悬崖格。Lost City 的包围框亚像素擦边按渲染矩形记录，不据此挪动路线。APK 运行截图对照仍未建立，不能把静态代码核对描述成原版运行画面对照。
-2. **UI 视觉基线：本轮范围已完成。**窗口模式、静音下用内置浏览器检查了当前 worktree 的手机竖屏 Options、横屏英文/中文关卡详情、中文余额充足地图雇佣框；此前桌面英文/中文 Options、双语低余额雇佣框已检查。雇佣框尺寸与锚点符合 APK 布局，旧版 Play 页偏移与 Options 拥挤在当前源码未复现。手机竖屏保留 16:9 画框，因此文字随画框缩放变小；原版 APK 运行画面逐像素对照不在现有证据内。定向 E2E 仍为17项通过。
-3. **当前未发布批次收尾。**当前开发分支包含完整 Snow Town 关卡切片和马车双轴移动修正，领先 `origin/gunsnglory` 17 个本地提交；完整应用检查、catalog 检查和共享站点构建均已通过。集成前发现 `/private/tmp/gng-m36-m38-master-release` 的 `master` worktree 有 11 个已暂存文件，涉及游戏代码、测试和本计划同路径文件；不得覆盖或混入本批。长期 `gunsnglory` worktree 另有一个未跟踪研究文档，需保留。待这些现场明确并准备好干净发布 worktree 后，按应用流程 squash 集成到 `gunsnglory`/`master`，发布前核算比例。部署后核对 GitHub Actions 与两处 Pages 的来源 SHA，再用内置浏览器以窗口模式、静音验收整批功能。SHA 不匹配或线上检查失败时保持未发布状态。
+### 切片 3：接入 Sioux Falls 动态单位、规则、波次和对白（已完成）
+
+- **实现：**12 项 GameDesignData 原始值均逐个映射；未找到消费者的 30,000 值保留为未解析字段。接入 10 个波次、28 条源级 `addToWave` 调用/请求池、出生点映射、两条玩家池动作、TDM 初始单位和解锁门、五节 Steamer、炸药配对、标题/简介、10 段对白与头像以及 Dakota 音乐路由。详细映射见[动态内容核对](sioux-falls-content-audit.md)。
+- **验收：**`node --import tsx --test tests/dakota-10-campaign-content.test.ts` 7/7 通过；`pnpm run typecheck` 通过。测试比较独立转录的参数/波次/生成池期望，核对单位标记、解锁快照、对白/头像/音乐，并用真实 `GameSession` 只推进到 Wave 1 首次生成。未进行完整战役或 Android 运行观察。
+- **边界：**波次向量表示生成池请求，不是固定敌人出现顺序。Wave 10 的 Boss 位于第 9 个请求槽，Doc 槽为零。未解析字段保留原值、不猜测。关卡目录、菜单、结算及 replay factory 已由切片 4 接入；回放观察边界见动态内容核对。
+
+### 切片 4：注册关卡、解锁与回放（已完成）
+
+- **实现：**`officialCampaignStages` 新增 Level 40，依赖 `campaign-dakota-09`；Progress 快照与全部旧的阶段总数/摘要断言更新到 40。`bootstrap/browser.ts` 注册 Sioux Falls builder 与 canonical content version，并由 Level 40 replay factory 按记录中的单位和 Dynamite 快照重建。`main.ts` 接入选关与地图预览、正式/Free Play 标题和简介、三档 Free Play 难度、正式关卡开局与结算、十段对白/头像、Dakota 音乐、资源预载及回放文件分派。
+- **定向验收：**`node --import tsx --test tests/dakota-10-formal.test.ts tests/dakota-10-replay-factory.test.ts tests/dakota-10-campaign-content.test.ts tests/dakota-09-formal.test.ts tests/progress.test.ts tests/content.test.ts tests/apache-valley.test.ts tests/fort-kaboom-formal.test.ts` 54/54 通过；`pnpm run typecheck` 通过。受影响的进度摘要、Snow Town 与 Sioux Falls 集成/回放 E2E 定向集 17/17 通过。覆盖初始锁定、Level 39 结算解锁、地图/波次、Free Play 三种难度、正式结算与 Free Play 隔离、内容快照重建和不支持版本拒绝。
+- **边界：**Sioux Falls E2E 只检查菜单、开局和首波对白，不完整游玩或通关；完整批次检查结果记录在切片 5。
+
+### 切片 5：整批检查、集成与部署验收（本地检查已通过）
+
+- **本地验收：**`CI=1 PLAYWRIGHT_PORT=43325 pnpm run test:ci` 通过：1,190 项单测、TypeScript 检查、生产构建及 209 项 Playwright 全部通过。`pnpm run test:catalog` 18/18 通过；`pnpm run build:site` 成功。临时工作树未安装其余应用依赖，站点构建使用已有工作树的已安装依赖做本地链接，构建期间只写入当前工作树；干净环境的部署构建仍由 CI 验证。
+- **本地提交：**切片 4 和计划更新已提交为 `a26e4b0`、`6bc2291`；切片 1–4 均已关闭。
+- **剩余实现：**按应用流程将批次 squash 集成到 `master`，复核普通发布比例后推送发布分支。发布后合并回 `gunsnglory` 并推送同步。
+- **发布验收：**GitHub Actions 全部必要 job 成功；GitHub Pages 与 Cloudflare Pages 的 build-info 来源一致并等于预期发布 SHA；用内置浏览器打开该版本，保持窗口模式与静音，检查 Sioux Falls 选关、开局地图、路线/桥面、首波对白、HUD 和未完成关卡退出。运行时检查只推进代表性片段，不完整通关。
+
+## 本批之外仍待确认
+
+- **马车与马的画面连续性：**逻辑双轴跟随和五关分叉测试已完成；仍需在部署版本以短片段观察代表性分叉处马车与马是否持续相连。此前修复不再重复做静态路线矩阵，除非出现新回归。
+- **招募、Play、Options 的原版视觉基线：**当前源码的文字、头像、几何与交互已有自动及浏览器核对；与 APK 原版运行画面的完整视觉对照仍未建立。若当前版本重新出现错位，再针对具体视口和页面状态修，不重跑已通过的通用检查。
+- **大炮炮弹贴图：**尚未完成 APK 发射调用、炮弹资源 ID、网页资源映射和实际绘制结果的闭环；安排独立定点核对，不阻塞 Sioux Falls 内容实现。
+- **全关地图视觉：**当前集成树已接入 40/60。已有逐图 TDM、路线和碰撞测试按关卡覆盖，但没有对 40 张地图进行完整人工逐帧观察；不以少量代表图截图声称“所有关卡完全一致”。只对测试发现或用户新报的差异做针对性复核。
+
 ## 稳定交付门槛
 
-- 每个实现切片先跑针对性测试并本地提交；整批结束后才跑应用完整检查和共享检查。
-- 开发与验收默认窗口模式、静音；只在静态证据不能回答具体行为且确有必要时才做一次 Android 定点观察，不重复检查启动页或已由代码证明的行为。
-- 批次发布比例按真实 Git 历史记录，普通发布目标不高于已验收实现切片的20%；不通过拆分或延后已验收切片来美化比例。
-- 有问题确认并修复后更新[经验记录](experience-log.md)；本计划每完成一项即移除活动任务并重排余项。
+- 每个切片先跑针对性测试并本地提交；不在每个切片提交后重复跑全套。整批结束后再运行应用完整检查与共享检查。
+- 浏览器验收默认窗口模式、静音；仅验收对应功能时才启用全屏或声音。优先用 APK、REA 与静态代码证据；仅在静态证据无法回答具体问题时做一次短时 Android 定点观察。
+- 普通公开发布次数占已验收实现切片数的目标不高于 20%；每次发布前根据最新提交记录复核比例，不通过拆分或延后已验收切片调整统计。
+- 每个关闭的已复现问题更新[经验记录](experience-log.md)；本计划移除已完成项，并明确仍未验证的结论与边界。
+- 涉及 Markdown 的切片运行 `git diff --check`，再按仓库规则复制成品到 `/tmp/var/wishflow-tools/`。本计划修改本身不触发产品发布。

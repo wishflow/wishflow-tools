@@ -7,8 +7,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -182,16 +180,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-  deploy-github-pages:
+  build-github-pages:
     runs-on: ubuntu-latest
     needs: [changes, test, test-shared, test-pet-windows]
     if: >-
       always() && needs.changes.outputs.site_required == 'true' &&
       needs.test.result == 'success' && needs.test-shared.result == 'success' &&
       (needs.test-pet-windows.result == 'success' || needs.test-pet-windows.result == 'skipped')
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -204,10 +201,6 @@ jobs:
             apps/simple-house/pnpm-lock.yaml
             apps/pet/pnpm-lock.yaml
           run_install: false
-
-      - uses: actions/configure-pages@v6
-        with:
-          enablement: true
 
       - uses: actions/setup-node@v6
         with:
@@ -222,6 +215,22 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+
+  deploy-github-pages:
+    runs-on: ubuntu-latest
+    needs: build-github-pages
+    if: needs.build-github-pages.result == 'success'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v6
+        with:
+          enablement: true
 
       - id: deployment
         uses: actions/deploy-pages@v5

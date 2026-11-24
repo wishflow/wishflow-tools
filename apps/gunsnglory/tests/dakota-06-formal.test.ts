@@ -15,7 +15,7 @@ const completedThroughLevelThirtyFive = officialCampaignStages
 
 test('Ice Rocks is Dakota level 36 and unlocks after Ghost Town', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota06CampaignId);
-  assert.equal(officialCampaignStages.length, 39);
+  assert.equal(officialCampaignStages.length, 40);
   assert.deepEqual(stage, {
     scenarioId: dakota06CampaignId,
     contentVersion: dakota06LevelThirtySixCampaignContent.contentVersion,
