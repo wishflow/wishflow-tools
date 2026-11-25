@@ -128,6 +128,8 @@ New Mexico Levels 1–10、Mississippi Levels 11–20、Oregon Levels 21–31 �
 
 [Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉组合数。182项矩阵确认马匹与车体在已触达的正式分支处按同一组位移；它不检查生产渲染中的资源可见性、锚点或层级，用户报告的“马车分开”仍需 M3-D 画面复核。
 
+[正式路线交叉审计](../tests/official-transport-route-intersections.test.ts)找到6组可能发生同波次交会的不同出生路线：Level 11 spawn 0/1；Level 14 spawn 0/1 与 3/5；Level 17 spawn 3/5 与 4/5；Level 31 spawn 1/2。审计同时展开路线转弯方向并要求两个出生池在同一正式波次请求马车；不将平行同路或未转向的共享格算成交叉。它是 C4-C 的测试候选，不证明该波次中两辆车会在同一时间抵达交会格。
+
 **端点静态源格审计**已由[正式运输端点测试](../tests/official-static-transport-endpoint-audit.test.ts)覆盖48组/96个方向，首个沿轴阻挡来源分类如下。该扫描用正式 `GameView` TDM、背景碰撞码与 APK 对象碰撞框表定位来源，不等于车辆已在该端点实测停靠。
 
 | 首个源格类别 | 端数 | 来源说明 |
