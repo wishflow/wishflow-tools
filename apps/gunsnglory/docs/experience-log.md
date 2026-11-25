@@ -24,7 +24,7 @@
 
 ## 车马分叉必须复刻 APK 的坐标差移动
 
-**状态：**核心移动向量已按 APK 更新；Fort Kaboom 单关及五张正式关卡的隔离岔口矩阵测试通过。现已用完整波次、seed 6 的无操作模拟重建前车先转、后车晚转的过程；实际网页帧与 APK 运行画面的视觉对照仍未完成。
+**状态：**核心移动向量已按 APK 更新；Fort Kaboom 单关及五张正式关卡的隔离岔口矩阵测试通过。完整波次 seed 6 的网页连续帧已用生产渲染器核对，并与 APK 静态绘制顺序和锚点交叉比较；这组 Wave 1 样本没有发现网页实现偏差。用户报告的 Wave 3 车辆组仍未重现，且没有 APK 实际运行截图，因此不能声称车辆表现已完全闭环。
 
 - **表现与复现：**部分种子中马车会在岔路处走向不同，或车辆轨迹偏出原路。Cow Gulch 正式路线只有单向 redirect，不能复现分叉；Billy Hills Level 5 Wave 1 有 `(7,5)` 南北岔路及 Covered Wagon 组，但 32 种子测试只比较 `EnemyView.direction`，两者方向相同不足以证明实际移动向量一致。
 - **网页根因：**`sameGroupPredecessorDirection()` 将前序同组单位与当前单位的整格坐标差压成一个 `Direction`；差值斜向时回退到前车方向。`moveEnemy()` 随后只按四方向之一移动，因此丢失 x/y 分量和坐标差幅度。正式复现为 Fort Kaboom Level 3 Wave 3、seed 6、`campaign-3-group-15`：车辆到达 `(9,3)` 时，前序马匹已在 `(13,4)`；该格 redirect 为 north/east，网页车辆却选了 south。
@@ -34,6 +34,9 @@
 - **seed 6 岔口轨迹补查：**原始 Fort Kaboom、medium、seed 6、完整波次、无玩家命令仍会在 Wave 2 defeat，所以用仅把 `previewWave.initialLives` 提高到 500 的测试副本继续同一无操作模拟；地图、波次请求和随机种子不变，该字段只改变提前失败阈值。Wave 1 的 `campaign-1-group-14` 在 `(9,3)` 北向分支上，马于第 642 步（100 ms/步）转北；车继续向东，至第 650 步进入 `(9,3)`，第 657 步走到自己的控制点中心后转北。两者相差 15 步，即 **1,500 ms**，之后进入同一北向支路。这是逻辑位置轨迹，不是截图，也不是用户先前提到的 Wave 3 具体组别；它说明岔口的短时分路可由现有规则产生，不能只据此判断最终走错路线。
 - **APK 更新顺序和资源映射：**对 APK 1.8.6 的 `EnemyDirector.moveEnemys()` 重新检查确认：方法按 `gameObjectsEnemy` 列表索引逐个更新；到每个敌人自己的 redirect 时，才读取紧邻前一对象的 `unitGroup` 和 `fullX/fullY` 差。`GameObjectEnemy.setImageForUnit()` 将 type 4 映射到 `R.drawable.wagon`、type 8 映射到 `horse_wagon` 或 `horse_wagon_white`；`GameObjectEnemy.draw()` 按 fine 坐标加绘制偏移定位。网页亦以两只独立敌人绘制这两份独立图集。当前没有证据表明资源丢失；尚未将这段连续画面与 APK 实际运行帧并排比对。
 - **完整 seed 6 的无输入基线：**使用正式 Fort Kaboom、medium、seed 6 和原波次数据，仅以 100 ms 步长推进 `GameSession`，没有模拟玩家操作。原始 50 lives 的模拟在 Wave 2 以 defeat 结束：239,200 ms 时 49 名敌人已逃脱、23 名仍存活、Wave 3 未开始；此后继续推进也不会改变结算。该终局是失败阈值阻塞，不代表路线逻辑已正确或错误。上面的 500 lives 仅用于诊断续跑，不能替代实际玩家动作，也没有复现用户提到的具体 Wave 3 组别。
+- **生产画面与 APK 绘制顺序核对：**把同一条完整 seed 6 轨迹的 frame 643、651、658 输入生产 `drawGame()`，在内置浏览器查看整张地图，并测量马、wagon 和奖励箱的绘制框与贴图 alpha 边界。frame 643 马和 wagon 的脚底 y 为 314.36 与 314.38，中心相距约一格；源图透明边缘使可见轮廓间约留 10 个显示像素。type 8 使用 `horse_wagon_white` / 转向图，type 4 使用 `wagon`；它们是 APK 中两个独立对象。网页取相同 48×60 源帧并按一格宽、5/4 格高的逻辑尺寸绘制，脚底均使用 fineY 加 y 偏移。frame 651 两个 alpha 边界重叠；frame 658 两者已同向转北。
+- **奖励箱覆盖车辆是 APK 原有层级：**REA 静态反编译 APK 1.8.6 的 `GameObjectManager.getValueByObject()`、`insertDrawOrder()`、`SpawnPoolManager.update()`、`GameObjectCollectable`、`GunsAndGloryThread.drawEnemies()` 与 `drawObjects()` 得到：奖励箱生成时 `fineZ=7680`，位置中心 y 再加 `UNIT_PLACEMENT_OFFSET_Y=1920`；深度按 `fineY + drawingOffsetY + fineZ×100` 排序。APK 先绘制深度小于 768000 的敌人，再绘道路，最后绘高层对象。网页对相同箱体使用同一 y 位置、+768000 深度及 768000 道路切层，所以 frame 643 箱体和 `$` 图标覆盖相邻车辆局部，属原版排序。frame 651 两张车辆贴图本身明显重叠。不要为了截图观感擅自把奖励箱移到车辆后面或把车马吸附到一起。
+- **本次判定边界：**Fort Kaboom seed 6 的 Wave 1 代表帧没有发现网页移动、素材裁剪或排序偏离 APK 静态实现；不据此声称用户报告的 Wave 3 组已复现，也不声称已完成 APK 实机逐像素画面对照。静态证据足以解释当前样本，因此无需启动模拟器。若后续 Wave 3 组可重现，应记录关卡、波次和该组马/车的帧级坐标，再做一次定点分析。
 - **岔口脚底和绘制范围复核：**用正式地图、TDM 和车辆生成池隔离每关目标波次，以 seed 1、100 ms 步长记录转向前、转向帧和下一步。下表中的 `fine` 是逻辑坐标；贴图范围按渲染器的一格宽、车辆高度和 `drawingOffsetFine.y=2880` 计算，表示矩形范围而非贴图非透明像素。
 
   | 关卡 | 岔口前 → 转向 → 下一步（fine） | 转向格 / raw | 绘制脚底（格坐标） | 矩形触及的 TDM 格 | raw 36 边界 |
