@@ -396,6 +396,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Sioux Falls · Level 40', zh: '苏福尔斯 · 第 40 关' },
     globalLevel: 40,
     requiresCompletedScenarioIds: ['campaign-dakota-09'],
+  }, {
+    scenarioId: 'campaign-nevada-01',
+    contentVersion: 'gng-free-1.8.6-nevada-01-formal-v1',
+    title: { en: 'Labyrinth Gulch · Level 41', zh: '迷宫峡谷 · 第 41 关' },
+    globalLevel: 41,
+    requiresCompletedScenarioIds: ['campaign-dakota-10'],
   }]);
 });
 
