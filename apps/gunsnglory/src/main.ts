@@ -219,6 +219,9 @@ import { dakota10CampaignCopy } from './content/dakota-10-campaign-copy';
 import { createDakota10CampaignContent } from './content/dakota-10-campaign';
 import { dakota10WaveIntros, dakota10CampaignPortraitAssets } from './content/dakota-10-wave-intros';
 import { dakota10AmbientMusic, dakota10BattleMusicForWave, type Dakota10MusicTrack } from './content/dakota-10-music';
+import { nevada01CampaignId } from './content/nevada-01-identity';
+import { nevada01CampaignPortraitAssets, nevada01WaveIntros } from './content/nevada-01-wave-intros';
+import { nevada01AmbientMusic, nevada01BattleMusicForWave, type Nevada01MusicTrack } from './content/nevada-01-music';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
 import { mississippiAmbientMusic, mississippiBattleMusicForWave, type MississippiMusicTrack } from './content/mississippi-music';
 import { mississippi11WaveIntros } from './content/mississippi-11-wave-intros';
@@ -4236,13 +4239,14 @@ const assetNames = new Set([
   ...dakota08CampaignPortraitAssets,
   ...dakota09CampaignPortraitAssets,
   ...dakota10CampaignPortraitAssets,
+  ...nevada01CampaignPortraitAssets,
 ]);
 const images: Record<string, HTMLImageElement> = {};
 const audioElements = new Map<string, HTMLAudioElement[]>();
 let presentationRandom = new JavaUtilRandom(deriveSessionRandomSeed(session.startRecord.randomSeed, 'presentation'));
 const gameSoundEffects = new SoundEffectsManager((bound) => presentationRandom.nextInt(bound));
 let backgroundMusic: HTMLAudioElement | undefined;
-let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack | Dakota06MusicTrack | Dakota07MusicTrack | Dakota09MusicTrack | Dakota10MusicTrack | undefined;
+let backgroundMusicTrack: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack | Dakota06MusicTrack | Dakota07MusicTrack | Dakota09MusicTrack | Dakota10MusicTrack | Nevada01MusicTrack | undefined;
 let battleMusicWaveNumber: number | undefined;
 const blockedSoundElements = new Map<string, Set<HTMLAudioElement>>();
 let audioUserGestureObserved = false;
@@ -4437,12 +4441,18 @@ function isOfficialDakotaMusicSession(): boolean {
       || session.startRecord.scenarioId === dakota10CampaignId);
 }
 
+function isOfficialNevadaMusicSession(): boolean {
+  return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
+    && session.startRecord.scenarioId === nevada01CampaignId;
+}
+
 function isOfficialCampaignMusicSession(): boolean {
   return isOfficialNewMexicoMusicSession() || isOfficialMississippiMusicSession()
-    || isOfficialOregonMusicSession() || isOfficialDakotaMusicSession();
+    || isOfficialOregonMusicSession() || isOfficialDakotaMusicSession() || isOfficialNevadaMusicSession();
 }
 
 function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[] {
+  if (scenarioId === nevada01CampaignId) return nevada01WaveIntros;
   if (scenarioId === cowGulchLevelOneContent.id) return cowGulchWaveIntros;
   if (scenarioId === apacheValleyLevelTwoContent.id) return apacheValleyWaveIntros;
   if (scenarioId === fortKaboomLevelThreeContent.id) return fortKaboomWaveIntros;
@@ -4489,6 +4499,7 @@ function waveIntrosForScenario(scenarioId: string): readonly CampaignWaveIntro[]
 function isOfficialCampaignSession(): boolean {
   return (session.startRecord.mode === 'formal' || session.startRecord.mode === 'free')
     && (session.startRecord.scenarioId === dakota03CampaignId
+      || session.startRecord.scenarioId === nevada01CampaignId
       || officialCampaignStages.some(({ scenarioId }) => scenarioId === session.startRecord.scenarioId));
 }
 
@@ -4642,7 +4653,7 @@ function pauseBackgroundMusic(resetPosition = false): void {
 }
 
 function setCampaignBackgroundMusic(
-  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack | Dakota06MusicTrack | Dakota07MusicTrack | Dakota09MusicTrack | Dakota10MusicTrack,
+  track: CowGulchMusicTrack | MississippiMusicTrack | Oregon01MusicTrack | Oregon11MusicTrack | Dakota02MusicTrack | Dakota03MusicTrack | Dakota04MusicTrack | Dakota05MusicTrack | Dakota06MusicTrack | Dakota07MusicTrack | Dakota09MusicTrack | Dakota10MusicTrack | Nevada01MusicTrack,
 ): void {
   if (!isOfficialCampaignMusicSession()) return;
   if (backgroundMusicTrack === track && backgroundMusic) {
@@ -4755,7 +4766,9 @@ function playRequestedSounds(
     if (event.type === 'unit-fired' && eventWaveNumber !== undefined && battleMusicWaveNumber !== eventWaveNumber) {
       battleMusicWaveNumber = eventWaveNumber;
       // GameView numbers waves from 1; the APK's GunsAndGloryThread.wave counter starts at 0.
-      setCampaignBackgroundMusic(isOfficialDakotaMusicSession()
+      setCampaignBackgroundMusic(isOfficialNevadaMusicSession()
+        ? nevada01BattleMusicForWave(eventWaveNumber - 1)
+        : isOfficialDakotaMusicSession()
         ? session.startRecord.scenarioId === dakota02CampaignId
           ? dakota02BattleMusicForWave(eventWaveNumber - 1)
           : session.startRecord.scenarioId === dakota03CampaignId
@@ -4784,6 +4797,7 @@ function playRequestedSounds(
     if (event.type === 'wave-settled') {
       setCampaignBackgroundMusic(event.settlement.outcome === 'victory'
         ? cowGulchVictoryMusic
+        : isOfficialNevadaMusicSession() ? nevada01AmbientMusic
         : isOfficialDakotaMusicSession() ? session.startRecord.scenarioId === dakota02CampaignId
           ? dakota02AmbientMusic
           : session.startRecord.scenarioId === dakota03CampaignId
@@ -4847,7 +4861,9 @@ function showCampaignWaveIntroForCurrentWave(): boolean {
   const intro = campaignWaveIntroCursor.next(view.wave.number);
   if (!intro) return false;
   battleMusicWaveNumber = undefined;
-  if (isOfficialDakotaMusicSession()) {
+  if (isOfficialNevadaMusicSession()) {
+    setCampaignBackgroundMusic(nevada01AmbientMusic);
+  } else if (isOfficialDakotaMusicSession()) {
     setCampaignBackgroundMusic(session.startRecord.scenarioId === dakota02CampaignId
       ? dakota02AmbientMusic
       : session.startRecord.scenarioId === dakota03CampaignId
