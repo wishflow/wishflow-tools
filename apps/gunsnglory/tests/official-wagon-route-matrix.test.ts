@@ -19,7 +19,8 @@ type RouteRedirect = NonNullable<ScenarioContent['previewWave']>['redirects'][nu
 const officialRouteCases: readonly OfficialWagonRouteCase[] = inspectOfficialWagonRouteCoverage()
   .branchCases.filter(({ region }) => region === 'new-mexico'
     || region === 'mississippi'
-    || region === 'oregon');
+    || region === 'oregon'
+    || region === 'dakota-nevada');
 
 /**
  * Retain the official map, turn data, and selected official request pool.
