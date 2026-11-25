@@ -4,7 +4,7 @@ import type { EnemyView, GameView, ShotView } from '../src/game';
 import { drawGame, GAME_VIEWPORT, gameHudPointerActionAt, getHudMinimapGeometry, getMapViewport, mapDecorationDestination } from '../src/render/canvas-renderer';
 import { mapCellToScreen } from '../src/render/map-viewport';
 
-test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts', () => {
+test('clips world layers, depth-sorts objects, and pins inspection to the unit foot', () => {
   const mapImage = {} as HTMLImageElement;
   const hdpiTerrainImage = {} as HTMLImageElement;
   const bridgeImage = {} as HTMLImageElement;
@@ -22,6 +22,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   const horseWagonImage = {} as HTMLImageElement;
   const smokeImage = { naturalWidth: 384, naturalHeight: 64 } as HTMLImageElement;
   const unitImage = {} as HTMLImageElement;
+  const cursorImage = {} as HTMLImageElement;
   const shotImage = {} as HTMLImageElement;
   const wagonPartsImage = {} as HTMLImageElement;
   const cactusImage = { naturalWidth: 48, naturalHeight: 66 } as HTMLImageElement;
@@ -216,6 +217,7 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
     horse_wagon: horseWagonImage,
     sfx_smoke_explosion: smokeImage,
     unit: unitImage,
+    cursor: cursorImage,
     e_1x1_cactus_a: cactusImage,
     e_1x1_cactus_b: cactusImage,
     e_1x1_tree: treeImage,
@@ -458,6 +460,35 @@ test('clips world tiles and depth-sorts scenery, units, shots, and wagon parts',
   assert.equal(routeCommands.filter((command) => command === 'lineTo').length,
     (view.route!.length - 1) + (secondRoute.length - 1),
   'inspection preserves each route’s waypoint geometry');
+
+  const selectedView: GameView = {
+    ...view,
+    units: view.units.map((unit) => ({ ...unit, selected: true })),
+  };
+  const inspectionCamera = { zoom: 1.75, offsetX: 18, offsetY: -12 };
+  const inspectionViewport = getMapViewport(selectedView, 1, inspectionCamera);
+  const selectedUnit = selectedView.units[0]!;
+  const expectedFoot = {
+    x: inspectionViewport.origin.x + (selectedUnit.positionFine.x / 7680) * inspectionViewport.tileSize,
+    y: inspectionViewport.origin.y + (selectedUnit.positionFine.y / 7680) * inspectionViewport.tileSize,
+  };
+  const markerStart = fillCalls.length;
+  drawGame(context, selectedView, images, 1, inspectionCamera, true);
+  const footMarkerDraws = fillCalls.slice(markerStart).filter(({ color }) => color === '#fff09c');
+  const markerHalfLength = Math.max(4, 5 * inspectionViewport.scaleFactor);
+  const markerThickness = Math.max(2, 2 * inspectionViewport.scaleFactor);
+  assert.deepEqual(footMarkerDraws, [
+    {
+      color: '#fff09c',
+      rect: [expectedFoot.x - markerHalfLength, expectedFoot.y - markerThickness / 2, markerHalfLength * 2, markerThickness],
+    },
+    {
+      color: '#fff09c',
+      rect: [expectedFoot.x - markerThickness / 2, expectedFoot.y - markerHalfLength, markerThickness, markerHalfLength * 2],
+    },
+  ], 'the selected-unit crosshair follows fine position through zoom and camera offsets');
+  assert.ok(overlayText.includes('Foot gunslinger-1 fine=(65280.0,67200.0) cell=(8.5000,8.7500)'),
+    'the selected-unit marker reports its exact fine and map-cell coordinates');
 
   const horsemanImage = { naturalWidth: 128, naturalHeight: 120 } as HTMLImageElement;
   const horsemanTurnImage = { naturalWidth: 64, naturalHeight: 40 } as HTMLImageElement;

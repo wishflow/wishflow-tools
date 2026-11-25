@@ -1082,7 +1082,10 @@ function drawInspectionOverlay(
     x: viewport.origin.x + x * viewport.tileSize,
     y: viewport.origin.y + y * viewport.tileSize,
   });
-  for (const unit of view.units) drawUnitInspection(context, unit, viewport, toScreen, language);
+  for (const unit of view.units) {
+    drawUnitInspection(context, unit, viewport, toScreen, language);
+    if (unit.selected) drawSelectedUnitFootInspection(context, unit, viewport);
+  }
   for (const enemy of view.enemies) {
     const logical = { x: enemy.positionFine.x / FINE_UNITS_PER_CELL, y: enemy.positionFine.y / FINE_UNITS_PER_CELL };
     const screen = toScreen(logical.x, logical.y);
@@ -1097,6 +1100,37 @@ function drawInspectionOverlay(
       enemy.alive ? '#ffe28a' : '#ef9b84',
     );
   }
+}
+
+function drawSelectedUnitFootInspection(
+  context: CanvasRenderingContext2D,
+  unit: UnitView,
+  viewport: MapViewport,
+): void {
+  const cellX = unit.positionFine.x / FINE_UNITS_PER_CELL;
+  const cellY = unit.positionFine.y / FINE_UNITS_PER_CELL;
+  const footX = viewport.origin.x + cellX * viewport.tileSize;
+  const footY = viewport.origin.y + cellY * viewport.tileSize;
+  const halfLength = Math.max(4, 5 * viewport.scaleFactor);
+  const thickness = Math.max(2, 2 * viewport.scaleFactor);
+
+  context.save();
+  context.fillStyle = 'rgba(20, 15, 10, 0.95)';
+  context.fillRect(footX - halfLength - 2, footY - (thickness / 2) - 2, (halfLength + 2) * 2, thickness + 4);
+  context.fillRect(footX - (thickness / 2) - 2, footY - halfLength - 2, thickness + 4, (halfLength + 2) * 2);
+  context.fillStyle = '#fff09c';
+  context.fillRect(footX - halfLength, footY - (thickness / 2), halfLength * 2, thickness);
+  context.fillRect(footX - (thickness / 2), footY - halfLength, thickness, halfLength * 2);
+  context.restore();
+
+  drawInspectionLabel(
+    context,
+    footX,
+    footY - (12 * viewport.scaleFactor),
+    `Foot ${unit.id} fine=(${unit.positionFine.x.toFixed(1)},${unit.positionFine.y.toFixed(1)}) cell=(${cellX.toFixed(4)},${cellY.toFixed(4)})`,
+    viewport,
+    '#fff09c',
+  );
 }
 
 function drawUnitInspection(
