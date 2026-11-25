@@ -124,7 +124,9 @@
 
 这里按“关卡、出生点、车辆类型”去重，不把每个波次或每种路径排列重复计数。动态短会话将挑选每个组合最早出现该请求类型的正式波次，隔离其余无关请求，并以固定 seed 检查对应车体在至少一个多向字段处跟随同组前车；这不等于播放完整战役，也不声称每个随机分支排列都已动态跑过。全部 TDM 分支和路线是否成立仍由静态地图/路线证据判定。
 
-当前动态路线直接测试仅覆盖[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)中的五个正式地图/波次/出生点组合；该测试保留选中的官方路线和请求池，但隔离其他波次及出生池，因此会改变完整战役随机消耗。[Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉覆盖。现有证据不能外推到其余正式路线组合。
+New Mexico Levels 1–10 的[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)已从覆盖审计动态生成 24 个关卡/出生点/车辆类型组合，定向测试 24/24 通过。它保留正式地图、TDM、路线、出生点、目标波次和车辆请求，隔离其他波次/出生池及我方防御单位/招募池，只验证车马实际到达多向字段后的同组跟随。初次运行中 Lost City 的 4 例被防御单位在抵达分岔前击毁；这是测试夹具隔离不足，不是路线错误证据。此地区测试隔离后会改变完整战役随机消耗，也不评价单位生存结果。
+
+[Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉覆盖。除 New Mexico 外，其他地区正式分叉组合尚未由该矩阵测试，现有证据不能外推。
 
 **端点与阻挡等待**也只在部分结构上有直接运动断言：Tech Town 列车两端、Lucky Lake 纵向边界/阻挡格、Traveller's Town 列车缓冲、Ghost Town 列车右缓冲与船岸/地图边界、Frost Station 第一列 raw87 缓冲、Snow Town 列车右缓冲。其余组的具体端点、交叉/岔口阻塞和运输组之间的等待行为仍待 M3-C 对照 TDM 逐项补证。
 
