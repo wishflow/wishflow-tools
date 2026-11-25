@@ -1,5 +1,8 @@
 import type { BonusCrateView, BonusNoticeView, Direction, DynamiteObjectView, EnemyView, GameView, MapDecoration, RenderTile, ShotView, UnitView, WagonDebrisView } from '../game';
-import { campaignBonusRewardAsset } from '../game/campaign-bonus-crates';
+import {
+  campaignBonusRewardAnimationFrameCount,
+  campaignBonusRewardAsset,
+} from '../game/campaign-bonus-crates';
 import { GAME_DRAW_ORDER_ROAD_CUTOFF } from '../game/draw-order';
 import {
   calculateMapViewport,
@@ -320,16 +323,17 @@ function drawUnit(
   if (unit.bonus && unit.bonus.remainingMs > 0) {
     const bonusImage = images[campaignBonusRewardAsset(unit.bonus.type)];
     if (!bonusImage) throw new Error('Missing game image: ' + campaignBonusRewardAsset(unit.bonus.type));
-    const sourceWidth = bonusImage.naturalWidth / 3;
+    const frameCount = campaignBonusRewardAnimationFrameCount(unit.bonus.type);
+    const sourceWidth = bonusImage.naturalWidth / frameCount;
     const scale = viewport.scaleFactor;
     const width = sourceWidth * scale;
     const height = bonusImage.naturalHeight * scale;
-    let bonusFrame = (Math.floor(elapsedMs / 100) % 3) + 1;
-    if (bonusFrame === 3) bonusFrame = 1;
+    let bonusFrame = (Math.floor(elapsedMs / 100) % frameCount) + 1;
+    if (bonusFrame === frameCount) bonusFrame = 1;
     const verticalPulse = bonusPulseOffset(sessionFrame, scale);
     context.drawImage(
       bonusImage,
-      (bonusFrame - 1) * sourceWidth,
+      bonusFrame * sourceWidth,
       0,
       sourceWidth,
       bonusImage.naturalHeight,
@@ -403,10 +407,11 @@ function drawBonusCrate(
 
   const icon = images[campaignBonusRewardAsset(crate.rewardType)];
   if (!icon) throw new Error('Missing game image: ' + campaignBonusRewardAsset(crate.rewardType));
-  const frameWidth = icon.naturalWidth / 3;
+  const frameCount = campaignBonusRewardAnimationFrameCount(crate.rewardType);
+  const frameWidth = icon.naturalWidth / frameCount;
   const iconSize = 16 * scale;
-  let iconFrame = Math.floor(elapsedMs / 100) % 4;
-  if (iconFrame === 3) iconFrame = 1;
+  let iconFrame = Math.floor(elapsedMs / 100) % (frameCount + 1);
+  if (iconFrame === frameCount) iconFrame = 1;
   const verticalPulse = bonusPulseOffset(sessionFrame, scale);
   context.drawImage(
     icon,
@@ -433,6 +438,9 @@ function bonusMessage(rewardType: BonusNoticeView['rewardType'], language: 'en' 
     2: { en: '25 dollars!', zh: '获得 $25' },
     3: { en: 'Quick shot!', zh: '快速射击！' },
     4: { en: 'Damage boost!', zh: '伤害提升！' },
+    5: { en: 'Slow down!', zh: '减速弹！' },
+    6: { en: 'Fire damage!', zh: '燃烧伤害！' },
+    7: { en: 'Random bonus!', zh: '随机奖励！' },
   };
   return messages[rewardType][language];
 }
@@ -609,7 +617,7 @@ function createDrawObjects(
     id: `enemy:${enemy.id}`,
     kind: 'enemy',
     depth: enemy.positionFine.y + (enemy.drawingOffsetFine?.y ?? 0),
-    draw: () => drawEnemy(context, enemy, images, viewport),
+    draw: () => drawEnemy(context, enemy, images, viewport, view.elapsedMs),
   }));
   const shots = view.shots.map((shot): DrawObject => ({
     id: `shot:${shot.id}`,
@@ -743,6 +751,7 @@ function drawEnemy(
   enemy: EnemyView,
   images: GameImages,
   viewport: MapViewport,
+  elapsedMs: number,
 ): void {
   const vehicle = enemy.type === 4 || enemy.type === 5 || enemy.type === 6 || enemy.type === 8;
   const turn = enemy.turningAnimation;
@@ -795,6 +804,65 @@ function drawEnemy(
   context.restore();
 
   drawEnemyHealthBar(context, enemy, centerX, feetY, viewport);
+
+  if (enemy.alive && enemy.burning) {
+    const fire = images.sfx_fire;
+    if (!fire) throw new Error('Missing game image: sfx_fire');
+    const fireFrameWidth = fire.naturalWidth / 5;
+    const fireFrame = Math.floor(elapsedMs / 100) % 5;
+    const fireWidth = fireFrameWidth * tileScale;
+    const fireHeight = fire.naturalHeight * tileScale;
+    const fireAnchors = vehicle && enemy.type !== 8
+      ? [
+        { x: centerX, y: feetY },
+        { x: centerX - ((640 / FINE_UNITS_PER_CELL) * viewport.tileSize), y: feetY },
+        {
+          x: centerX - ((640 / FINE_UNITS_PER_CELL) * viewport.tileSize),
+          y: feetY + ((640 / FINE_UNITS_PER_CELL) * viewport.tileSize),
+        },
+      ]
+      : [{ x: centerX, y: feetY }];
+    for (const anchor of fireAnchors) {
+      const fireLeft = anchor.x - (fireWidth / 2);
+      const fireTop = anchor.y - (fireHeight * 2);
+      if (!intersectsMapPlayfield(fireLeft, fireTop, fireLeft + fireWidth, fireTop + fireHeight, viewport)) continue;
+      context.drawImage(
+        fire,
+        fireFrame * fireFrameWidth,
+        0,
+        fireFrameWidth,
+        fire.naturalHeight,
+        Math.trunc(fireLeft),
+        Math.trunc(fireTop),
+        Math.trunc(fireWidth),
+        Math.trunc(fireHeight),
+      );
+    }
+  }
+
+  if (enemy.alive && enemy.slowed) {
+    const stun = images.sfx_stun;
+    if (!stun) throw new Error('Missing game image: sfx_stun');
+    const stunFrameWidth = stun.naturalWidth / 6;
+    const stunFrame = Math.floor(elapsedMs / 100) % 6;
+    const stunWidth = stunFrameWidth * tileScale;
+    const stunHeight = stun.naturalHeight * tileScale;
+    const stunLeft = centerX - (stunWidth / 2);
+    const stunTop = feetY - (stunHeight * 2);
+    if (intersectsMapPlayfield(stunLeft, stunTop, stunLeft + stunWidth, stunTop + stunHeight, viewport)) {
+      context.drawImage(
+        stun,
+        stunFrame * stunFrameWidth,
+        0,
+        stunFrameWidth,
+        stun.naturalHeight,
+        Math.trunc(stunLeft),
+        Math.trunc(stunTop),
+        Math.trunc(stunWidth),
+        Math.trunc(stunHeight),
+      );
+    }
+  }
 
   if (!enemy.alive && vehicle && enemy.deathRemainingMs >= 0) {
     const smoke = images.sfx_smoke_explosion;

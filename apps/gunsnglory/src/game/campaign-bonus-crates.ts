@@ -1,4 +1,4 @@
-export type CampaignBonusRewardType = 1 | 2 | 3 | 4;
+export type CampaignBonusRewardType = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export type CampaignBonusCratePhase = 'spawning' | 'active' | 'despawning';
 
 export interface CampaignBonusCrateDefinition {
@@ -134,14 +134,31 @@ export function chooseCampaignBonusReward(
   maxLives: number,
   random: CampaignBonusCrateRandom,
 ): CampaignBonusRewardType {
-  if (!Number.isInteger(rewardTypeCount) || rewardTypeCount < 1 || rewardTypeCount > 4) {
-    throw new RangeError('Fort Kaboom reward type count must be between 1 and 4');
+  if (!Number.isInteger(rewardTypeCount) || rewardTypeCount < 1 || rewardTypeCount > 7) {
+    throw new RangeError('Campaign reward type count must be between 1 and 7');
   }
   let rewardType = random.nextInt(rewardTypeCount) + 1;
   if (rewardType === 1 && lives > maxLives - 5) {
     rewardType = random.nextInt(rewardTypeCount - 1) + 2;
   }
   return rewardType as CampaignBonusRewardType;
+}
+
+export function resolveCampaignBonusRewardOnPickup(
+  rewardType: CampaignBonusRewardType,
+  lives: number,
+  maxLives: number,
+  random: CampaignBonusCrateRandom,
+): Exclude<CampaignBonusRewardType, 7> {
+  if (rewardType !== 7) return rewardType;
+  const firstRewardType = lives > maxLives - 5 ? 2 : 1;
+  return (random.nextInt(firstRewardType === 2 ? 5 : 6) + firstRewardType) as Exclude<CampaignBonusRewardType, 7>;
+}
+
+export function campaignBonusRewardAnimationFrameCount(rewardType: CampaignBonusRewardType): number {
+  if (rewardType === 5) return 6;
+  if (rewardType === 6) return 5;
+  return 3;
 }
 
 export function campaignBonusLivesAfterPickup(lives: number, maxLives: number): number {
@@ -154,6 +171,9 @@ export function campaignBonusRewardAsset(rewardType: CampaignBonusRewardType): s
     case 2: return 'hud_bonus_cash';
     case 3: return 'hud_bonus_speed';
     case 4: return 'hud_bonus_damage';
+    case 5: return 'hud_bonus_stun';
+    case 6: return 'hud_bonus_fire';
+    case 7: return 'hud_bonus_random';
   }
 }
 

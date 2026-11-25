@@ -847,6 +847,9 @@ test('draws original bonus-crate frames, reward icons, and the centered localize
     hud_bonus_cash: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
     hud_bonus_damage: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
     hud_bonus_speed: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
+    hud_bonus_stun: { naturalWidth: 96, naturalHeight: 16 } as HTMLImageElement,
+    hud_bonus_fire: { naturalWidth: 80, naturalHeight: 16 } as HTMLImageElement,
+    hud_bonus_random: { naturalWidth: 48, naturalHeight: 16 } as HTMLImageElement,
     gng_speechbubble: { naturalWidth: 209, naturalHeight: 90 } as HTMLImageElement,
     player_gunslinger: { naturalWidth: 96, naturalHeight: 132 } as HTMLImageElement,
   };
@@ -903,7 +906,72 @@ test('draws original bonus-crate frames, reward icons, and the centered localize
   drawGame(context, unitWithBonus, images);
   const unitBonusIcon = calls.find((call) => call[0] === images.hud_bonus_speed);
   assert.ok(unitBonusIcon, 'active units show the matching bonus icon');
-  assert.deepEqual(unitBonusIcon.slice(1, 5), [16, 0, 16, 16], 'unit bonus icon follows the APK 0, 1, 0 loop');
+  assert.deepEqual(unitBonusIcon.slice(1, 5), [32, 0, 16, 16], 'unit bonus icon uses the APK 1, 2, 1 loop');
+
+  calls.length = 0;
+  const typeFiveUnitView = {
+    ...unitWithBonus,
+    units: [{ ...unitWithBonus.units[0]!, bonus: { type: 5 as const, remainingMs: 30_000 } }],
+  };
+  drawGame(context, typeFiveUnitView, images);
+  const typeFiveIcon = calls.find((call) => call[0] === images.hud_bonus_stun);
+  assert.ok(typeFiveIcon);
+  assert.deepEqual(typeFiveIcon.slice(1, 5), [32, 0, 16, 16], 'slow bonus reads frame 2 from the six-frame APK atlas');
+
+  calls.length = 0;
+  const typeSixUnitView = {
+    ...unitWithBonus,
+    units: [{ ...unitWithBonus.units[0]!, bonus: { type: 6 as const, remainingMs: 30_000 } }],
+  };
+  drawGame(context, typeSixUnitView, images);
+  const typeSixIcon = calls.find((call) => call[0] === images.hud_bonus_fire);
+  assert.ok(typeSixIcon);
+  assert.deepEqual(typeSixIcon.slice(1, 5), [32, 0, 16, 16], 'fire bonus reads frame 2 from the five-frame APK atlas');
+});
+
+test('draws APK fire and slowdown status atlases over affected enemies', () => {
+  const calls: unknown[][] = [];
+  const context = {
+    globalAlpha: 1,
+    save() {},
+    restore() {},
+    clearRect() {},
+    fillRect() {},
+    beginPath() {},
+    rect() {},
+    clip() {},
+    translate() {},
+    scale() {},
+    drawImage(...args: unknown[]) { calls.push(args); },
+  } as unknown as CanvasRenderingContext2D;
+  const enemyImage = { naturalWidth: 48, naturalHeight: 72 } as HTMLImageElement;
+  const fireImage = { naturalWidth: 80, naturalHeight: 16 } as HTMLImageElement;
+  const stunImage = { naturalWidth: 144, naturalHeight: 24 } as HTMLImageElement;
+  const view = {
+    frame: 0,
+    elapsedMs: 200,
+    paused: false,
+    scenarioId: 'bonus-status-render-test',
+    map: { width: 17, height: 17, tileSize: 32, background: [], streets: [] },
+    units: [],
+    enemies: [{
+      id: 'affected-enemy', type: 1, asset: 'pioneer_male', speed: 5, direction: 'south',
+      positionFine: { x: 8 * 7_680 + 3_840, y: 8 * 7_680 + 3_840 },
+      hitPoints: 100, maxHitPoints: 100, alive: true, deathRemainingMs: 0, animationFrame: 0,
+      slowed: true, burning: true,
+    }],
+    shots: [],
+    recruitPool: [],
+    events: [],
+    drawOrder: ['enemy:affected-enemy'],
+  } as unknown as GameView;
+  drawGame(context, view, { pioneer_male: enemyImage, sfx_fire: fireImage, sfx_stun: stunImage });
+  const fire = calls.find((call) => call[0] === fireImage);
+  const stun = calls.find((call) => call[0] === stunImage);
+  assert.ok(fire);
+  assert.ok(stun);
+  assert.deepEqual(fire.slice(1, 5), [32, 0, 16, 16], 'fire uses the third frame of the five-frame APK effect atlas');
+  assert.deepEqual(stun.slice(1, 5), [48, 0, 24, 24], 'slow uses the third frame of the six-frame APK effect atlas');
 });
 
 test('draws the sleeping unit and its elapsed-time Zzz atlas frame above the unit', () => {

@@ -39,6 +39,7 @@ import {
   campaignBonusLivesAfterPickup,
   campaignBonusCrateAnimationFrame,
   chooseCampaignBonusReward,
+  resolveCampaignBonusRewardOnPickup,
   collisionBoundsOverlap,
   createCampaignBonusCratePool,
   isCampaignBonusCrateFieldBlocked,
@@ -266,6 +267,8 @@ export interface UnitWeaponDefinition {
   /** APK GameDesignData UNIT_DATA_POST_DAMAGE and UNIT_DATA_POST_DAMAGE_DURATION. */
   postDamage?: number;
   postDamageDurationMs?: number;
+  /** APK GameDesignData UNIT_DATA_STUN_DURATION. */
+  postSlowDownDurationMs?: number;
   /** APK GameDesignData UNIT_DATA_POISON_DAMAGE and UNIT_DATA_POISON_DURATION. */
   poisonDamage?: number;
   poisonDurationMs?: number;
@@ -456,7 +459,7 @@ export interface GamblerStateView {
 export interface UnitView extends ScenarioUnit {
   sleepingAnimationFrame?: number;
   selected: boolean;
-  bonus?: { type: 3 | 4; remainingMs: number };
+  bonus?: { type: 3 | 4 | 5 | 6; remainingMs: number };
   moving: boolean;
   positionFine: { x: number; y: number };
   walkingAnimation?: {
@@ -517,6 +520,10 @@ export interface EnemyView {
   poisoned?: true;
   /** Strongest active UNIT_DATA_POISON_DAMAGE value. */
   poisonDamage?: number;
+  /** Present while the original EnemyDirector slowdown timer is active. */
+  slowed?: true;
+  /** Present while the original fire damage-over-time effect is active. */
+  burning?: true;
   alive: boolean;
   deathRemainingMs: number;
   animationFrame: number;
@@ -745,6 +752,7 @@ interface MutableEnemy {
   type: CampaignEnemyType;
   asset: EnemyView['asset'];
   speed: number;
+  maxSpeed: number;
   direction: Direction;
   movementVector: EnemyRouteVector;
   mirrored: boolean;
@@ -763,6 +771,7 @@ interface MutableEnemy {
   maxHitPoints: number;
   damageOverTime: number;
   damageOverTimeRemainingMs: number;
+  slowDownRemainingMs: number;
   poisoned: boolean;
   poisonDamage: number;
   cashReward: number;
@@ -782,6 +791,7 @@ interface MutableShot {
   damageType: DamageType;
   postDamage: number;
   postDamageDurationMs: number;
+  postSlowDownDurationMs: number;
   poisonDamage: number;
   poisonDurationMs: number;
   poisonRemainingMs: number;
@@ -851,7 +861,7 @@ interface MutableUnit {
   movementTargetFine?: { x: number; y: number };
   upgradeLevel: number;
   movementSpeedFinePer100Ms: number;
-  bonusAttribute?: 3 | 4;
+  bonusAttribute?: 3 | 4 | 5 | 6;
   bonusRemainingMs?: number;
   weapon?: UnitWeaponDefinition;
   weaponCooldownMs: number;
@@ -1991,6 +2001,7 @@ function createPreviewEnemy(
     type: 1,
     asset: 'pioneer_male',
     speed,
+    maxSpeed: speed,
     direction: spawn.direction,
     movementVector: { ...vector },
     mirrored: false,
@@ -2011,6 +2022,7 @@ function createPreviewEnemy(
     maxHitPoints: hitPoints,
     damageOverTime: 0,
     damageOverTimeRemainingMs: 0,
+    slowDownRemainingMs: 0,
     poisoned: false,
     poisonDamage: 0,
     cashReward: enemyDefinition?.cashReward ?? 0,
@@ -2146,6 +2158,7 @@ function createCampaignEnemy(
     type,
     asset,
     speed,
+    maxSpeed: speed,
     direction: spawn.direction,
     movementVector: { ...directionVector(spawn.direction) },
     mirrored: false,
@@ -2164,6 +2177,7 @@ function createCampaignEnemy(
     maxHitPoints: hitPoints,
     damageOverTime: 0,
     damageOverTimeRemainingMs: 0,
+    slowDownRemainingMs: 0,
     poisoned: false,
     poisonDamage: 0,
     cashReward: definition.cashReward,
@@ -2681,6 +2695,38 @@ function applyEnemyPoison(enemy: MutableEnemy, damage: number, durationMs: numbe
   if (!enemy.alive || enemy.hitPoints <= 0 || !enemy.damageable || enemy.type === 8 || durationMs <= 0) return;
   enemy.poisoned = true;
   enemy.poisonDamage = Math.max(enemy.poisonDamage, damage);
+}
+
+function applyEnemyShotEffects(enemy: MutableEnemy, shot: MutableShot): void {
+  if (!enemy.damageable || enemy.type === 8) return;
+  if (shot.postDamage > 0) {
+    enemy.damageOverTime = shot.postDamage;
+    enemy.damageOverTimeRemainingMs = Math.max(
+      enemy.damageOverTimeRemainingMs,
+      shot.postDamageDurationMs,
+    );
+  }
+  if (shot.postSlowDownDurationMs > 0) {
+    enemy.slowDownRemainingMs = Math.max(enemy.slowDownRemainingMs, shot.postSlowDownDurationMs);
+  }
+}
+
+function advanceEnemySlowdownAfterMove(
+  enemy: MutableEnemy,
+  enemies: readonly MutableEnemy[],
+  deltaMs: number,
+): void {
+  if (enemy.slowDownRemainingMs <= 0) return;
+  const speed = Math.trunc(enemy.maxSpeed / 2);
+  for (const groupMember of enemies) {
+    if (groupMember.groupId === enemy.groupId) groupMember.speed = speed;
+  }
+  enemy.slowDownRemainingMs = Math.trunc(enemy.slowDownRemainingMs - deltaMs);
+  if (enemy.slowDownRemainingMs > 0) return;
+  enemy.slowDownRemainingMs = 0;
+  for (const groupMember of enemies) {
+    if (groupMember.groupId === enemy.groupId) groupMember.speed = enemy.maxSpeed;
+  }
 }
 
 function unitAttackCenterTenthTiles(unit: MutableUnit): { x: number; y: number } {
@@ -3244,7 +3290,7 @@ export function createGame(options: {
         || bonusCrateDefinition.simultaneousLimit < 1
         || !Number.isSafeInteger(bonusCrateDefinition.rewardTypeCount)
         || bonusCrateDefinition.rewardTypeCount < 1
-        || bonusCrateDefinition.rewardTypeCount > 4
+        || bonusCrateDefinition.rewardTypeCount > 7
         || !(scenario.originalTileGrid ?? scenario.map.originalTileGrid))) {
         throw new GameOpenError('scenario-unavailable', 'Campaign bonus-crate data is invalid');
       }
@@ -3426,6 +3472,8 @@ export function createGame(options: {
             hitPoints: enemy.hitPoints,
             maxHitPoints: enemy.maxHitPoints,
             ...(enemy.poisoned ? { poisoned: true as const, poisonDamage: enemy.poisonDamage } : {}),
+            ...(enemy.slowDownRemainingMs > 0 ? { slowed: true as const } : {}),
+            ...(enemy.damageOverTime > 0 ? { burning: true as const } : {}),
             alive: enemy.alive,
             deathRemainingMs: enemy.deathRemainingMs,
             animationFrame: enemy.animationFrame,
@@ -4118,6 +4166,12 @@ export function createGame(options: {
             for (const crate of campaignBonusCratePool.crates) {
               if (crate.phase !== 'active' || !unitMovementCrossesBonusCrate(previousPosition, unit.positionFine, crate)) continue;
               if (!beginCampaignBonusCrateDespawn(crate)) continue;
+              crate.rewardType = resolveCampaignBonusRewardOnPickup(
+                crate.rewardType,
+                wave.lives,
+                scenario.previewWave?.initialLives ?? wave.lives,
+                utilRandom,
+              );
               if (crate.rewardType === 1) {
                 wave.lives = campaignBonusLivesAfterPickup(
                   wave.lives,
@@ -4217,6 +4271,7 @@ export function createGame(options: {
               const movementBlocked = movementBlockedEnemyId === enemy.id;
               movementBlockedEnemyId = undefined;
               const result = moveEnemy(enemy, deltaMs, scenario, redirects, utilRandom, wave.enemies, movementBlocked);
+              advanceEnemySlowdownAfterMove(enemy, wave.enemies, deltaMs);
               if (result.collisionBlocked) {
                 const nextEnemy = movingEnemies[enemyIndex + 1];
                 if (nextEnemy?.groupId === enemy.groupId) movementBlockedEnemyId = nextEnemy.id;
@@ -4283,8 +4338,15 @@ export function createGame(options: {
                 targetId: target.id,
                 damage: Math.trunc(weapon.damage * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
                 damageType: weapon.damageType,
-                postDamage: Math.trunc((weapon.postDamage ?? 0) * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
-                postDamageDurationMs: weapon.postDamageDurationMs ?? 0,
+                postDamage: unit.bonusAttribute === 6
+                  ? Math.max(weapon.postDamage ?? 0, 12)
+                  : Math.trunc((weapon.postDamage ?? 0) * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
+                postDamageDurationMs: unit.bonusAttribute === 6
+                  ? Math.max(Math.trunc((weapon.postDamageDurationMs ?? 0) * 150 / 100), 5_000)
+                  : weapon.postDamageDurationMs ?? 0,
+                postSlowDownDurationMs: unit.bonusAttribute === 5
+                  ? Math.max(Math.trunc((weapon.postSlowDownDurationMs ?? 0) * 150 / 100), 2_000)
+                  : weapon.postSlowDownDurationMs ?? 0,
                 poisonDamage: Math.trunc((weapon.poisonDamage ?? 0) * (unit.bonusAttribute === 4 ? 150 : 100) / 100),
                 poisonDurationMs: weapon.poisonDurationMs ?? 0,
                 poisonRemainingMs: 0,
@@ -4407,13 +4469,7 @@ export function createGame(options: {
                         || shotTargetDistanceSquare(shot.positionFine, enemy) >= areaSquare) continue;
                       const damage = Math.trunc((shot.damage * damagePenetration(enemy, shot.damageType)) / 100);
                       applyEnemyDamage(wave, enemy, damage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold);
-                      if (shot.postDamage > 0) {
-                        enemy.damageOverTime = shot.postDamage;
-                        enemy.damageOverTimeRemainingMs = Math.max(
-                          enemy.damageOverTimeRemainingMs,
-                          shot.postDamageDurationMs,
-                        );
-                      }
+                      applyEnemyShotEffects(enemy, shot);
                     }
                   }
                 }
@@ -4434,13 +4490,7 @@ export function createGame(options: {
                   affectedEnemyIds.push(hitEnemy.id);
                   const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
                   applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold);
-                  if (shot.postDamage > 0) {
-                    hitEnemy.damageOverTime = shot.postDamage;
-                    hitEnemy.damageOverTimeRemainingMs = Math.max(
-                      hitEnemy.damageOverTimeRemainingMs,
-                      shot.postDamageDurationMs,
-                    );
-                  }
+                  applyEnemyShotEffects(hitEnemy, shot);
                 }
                 wave.events.push({
                   type: 'sound-requested',
@@ -4490,13 +4540,7 @@ export function createGame(options: {
                 affectedEnemyIds.push(hitEnemy.id);
                 const damage = Math.trunc((shot.damage * damagePenetration(hitEnemy, shot.damageType)) / 100);
                 applyEnemyDamage(wave, hitEnemy, damage, priorityMap, campaignMode, scenario.campaignAwesomeEnemyTypeThreshold);
-                if (shot.postDamage > 0) {
-                  hitEnemy.damageOverTime = shot.postDamage;
-                  hitEnemy.damageOverTimeRemainingMs = Math.max(
-                    hitEnemy.damageOverTimeRemainingMs,
-                    shot.postDamageDurationMs,
-                  );
-                }
+                applyEnemyShotEffects(hitEnemy, shot);
               }
               if (shot.damageStyle === 3) {
                 wave.events.push({ type: 'sound-requested', sound: 'sound_dynamite', positionFine: { ...shot.positionFine } });

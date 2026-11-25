@@ -6,8 +6,11 @@ import { captureReplayState } from '../src/game/replay';
 import {
   advanceCampaignBonusCratePool,
   beginCampaignBonusCrateDespawn,
+  campaignBonusRewardAnimationFrameCount,
+  campaignBonusRewardAsset,
   campaignBonusLivesAfterPickup,
   chooseCampaignBonusReward,
+  resolveCampaignBonusRewardOnPickup,
   collisionBoundsOverlap,
   createCampaignBonusCratePool,
   findBonusCrateCell,
@@ -42,6 +45,9 @@ function createBonusCrateScenario(
   id: string,
   spawnCell: { x: number; y: number },
   withWeapon = false,
+  rewardTypeCount = 4,
+  weaponRangeFine = 38_400,
+  weaponReloadMs = 500,
 ): ScenarioContent {
   return {
     id,
@@ -62,8 +68,9 @@ function createBonusCrateScenario(
         weapon: {
           damage: 140,
           damageType: 'light' as const,
-          rangeFine: 38_400,
-          reloadTimeMs: 500,
+          postSlowDownDurationMs: 500,
+          rangeFine: weaponRangeFine,
+          reloadTimeMs: weaponReloadMs,
           projectileSpeed: 600,
           damageStyle: 0 as const,
         },
@@ -92,7 +99,7 @@ function createBonusCrateScenario(
       totalCount: 1,
       intervalMs: 10,
       simultaneousLimit: 22,
-      rewardTypeCount: 4,
+      rewardTypeCount,
     },
   };
 }
@@ -121,6 +128,33 @@ test('map03 reward 1–4 is sampled at spawn and full lives rerolls life to 2–
   assert.equal(chooseCampaignBonusReward(4, 46, 50, new RecordingRandom([0, 0])), 2);
   assert.equal(chooseCampaignBonusReward(4, 50, 50, new RecordingRandom([0, 2])), 4);
   assert.equal(chooseCampaignBonusReward(4, 50, 50, new RecordingRandom([3])), 4);
+});
+
+test('level 41 rolls seven crate types and rerolls life rewards at spawn when lives are high', () => {
+  assert.equal(chooseCampaignBonusReward(7, 45, 50, new RecordingRandom([6])), 7);
+  const rerolled = new RecordingRandom([0, 5]);
+  assert.equal(chooseCampaignBonusReward(7, 46, 50, rerolled), 7);
+  assert.deepEqual(rerolled.bounds, [7, 6]);
+});
+
+test('random reward boxes roll again on pickup using the APK life threshold', () => {
+  assert.equal(resolveCampaignBonusRewardOnPickup(7, 45, 50, new RecordingRandom([0])), 1);
+  const rerolled = new RecordingRandom([4]);
+  assert.equal(resolveCampaignBonusRewardOnPickup(7, 46, 50, rerolled), 6);
+  assert.deepEqual(rerolled.bounds, [5]);
+
+  const fixed = new RecordingRandom([]);
+  assert.equal(resolveCampaignBonusRewardOnPickup(5, 50, 50, fixed), 5);
+  assert.deepEqual(fixed.bounds, []);
+});
+
+test('level 41 bonus types map to the original HUD sheets and frame counts', () => {
+  assert.deepEqual([5, 6, 7].map((type) => campaignBonusRewardAsset(type as 5 | 6 | 7)), [
+    'hud_bonus_stun', 'hud_bonus_fire', 'hud_bonus_random',
+  ]);
+  assert.deepEqual([3, 5, 6, 7].map((type) => campaignBonusRewardAnimationFrameCount(type as 3 | 5 | 6 | 7)), [
+    3, 6, 5, 3,
+  ]);
 });
 
 test('type 1 life reward is capped at the level maximum', () => {
@@ -252,6 +286,11 @@ test('APK assets are present at their recovered dimensions', async () => {
     ['hud_bonus_cash.png', 48, 16],
     ['hud_bonus_speed.png', 48, 16],
     ['hud_bonus_damage.png', 48, 16],
+    ['hud_bonus_stun.png', 96, 16],
+    ['hud_bonus_fire.png', 80, 16],
+    ['hud_bonus_random.png', 48, 16],
+    ['sfx_fire.png', 80, 16],
+    ['sfx_stun.png', 144, 24],
     ['gng_speechbubble.png', 209, 90],
   ] as const;
   for (const [filename, width, height] of pngs) {
@@ -455,5 +494,89 @@ test('damage bonus extends actual attack range and increases the resulting hit',
   }
   assert.equal(hit?.type, 'enemy-hit');
   if (hit?.type === 'enemy-hit') assert.equal(hit.damage, 210);
+  session.close();
+});
+
+test('level 41 type 5 and 6 bonuses add their original hit effects', async () => {
+  for (const { seed, rewardType } of [{ seed: 22, rewardType: 5 }, { seed: 2, rewardType: 6 }] as const) {
+    const scenario = createBonusCrateScenario(
+      `bonus-crate-level41-${rewardType}`, { x: 14, y: 8 }, true, 7, 100_000, 10_000,
+    );
+    const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+      scenarioId: scenario.id,
+      randomSeed: seed,
+    });
+    session.submitIntent({ type: 'start-wave' });
+    session.advance({ deltaMs: 0 });
+    let view = session.advance({ deltaMs: 11 });
+    const crate = view.bonusCrates![0]!;
+    assert.equal(crate.rewardType, rewardType);
+    for (let index = 0; index < 5; index += 1) view = session.advance({ deltaMs: 100 });
+    session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+    session.advance({ deltaMs: 0 });
+    session.submitIntent({
+      type: 'move-unit',
+      targetX: crate.positionFine.x / 7_680,
+      targetY: crate.positionFine.y / 7_680,
+    });
+
+    for (let index = 0; index < 200; index += 1) {
+      view = session.advance({ deltaMs: 100 });
+      if (view.events.some((event) => event.type === 'bonus-crate-collected')) break;
+    }
+    assert.ok(view.events.some((event) => event.type === 'bonus-crate-collected'
+      && event.rewardType === rewardType));
+    assert.deepEqual(view.units[0]?.bonus, { type: rewardType, remainingMs: 60_000 });
+
+    session.submitIntent({ type: 'stop-moving' });
+    view = session.advance({ deltaMs: 0 });
+    const initialEnemyHitPoints = view.enemies[0]!.hitPoints;
+    for (let index = 0; index < 80; index += 1) {
+      view = session.advance({ deltaMs: 100 });
+      if (rewardType === 5 ? view.enemies[0]?.slowed : view.enemies[0]?.burning) break;
+    }
+    if (rewardType === 5) {
+      assert.equal(view.enemies[0]?.slowed, true, 'the level-41 slowdown bonus reaches the enemy on projectile impact');
+      for (let index = 0; index < 20; index += 1) view = session.advance({ deltaMs: 100 });
+      assert.equal(view.enemies[0]?.slowed, undefined, 'the minimum slowdown effect expires at two seconds');
+    } else {
+      assert.equal(view.enemies[0]?.burning, true, 'the level-41 fire bonus reaches the enemy on projectile impact');
+      view = session.advance({ deltaMs: 100 });
+      assert.ok(view.enemies[0]!.hitPoints < initialEnemyHitPoints,
+        'the boosted minimum fire damage ticks after impact');
+      for (let index = 0; index < 50; index += 1) view = session.advance({ deltaMs: 100 });
+      assert.equal(view.enemies[0]?.burning, undefined, 'the minimum fire effect expires at five seconds');
+    }
+    session.close();
+  }
+});
+
+test('level 41 random crates resolve type 7 at pickup rather than applying it as a buff', async () => {
+  const scenario = createBonusCrateScenario('bonus-crate-level41-random', { x: 14, y: 8 }, false, 7);
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    randomSeed: 0,
+  });
+  session.submitIntent({ type: 'start-wave' });
+  session.advance({ deltaMs: 0 });
+  let view = session.advance({ deltaMs: 11 });
+  const crate = view.bonusCrates![0]!;
+  assert.equal(crate.rewardType, 7);
+  for (let index = 0; index < 5; index += 1) view = session.advance({ deltaMs: 100 });
+  session.submitIntent({ type: 'select-at', x: 8.5, y: 8.25 });
+  session.advance({ deltaMs: 0 });
+  session.submitIntent({
+    type: 'move-unit',
+    targetX: crate.positionFine.x / 7_680,
+    targetY: crate.positionFine.y / 7_680,
+  });
+  for (let index = 0; index < 200; index += 1) {
+    view = session.advance({ deltaMs: 100 });
+    if (view.events.some((event) => event.type === 'bonus-crate-collected')) break;
+  }
+  const event = view.events.find((entry) => entry.type === 'bonus-crate-collected');
+  assert.equal(event?.type, 'bonus-crate-collected');
+  if (event?.type === 'bonus-crate-collected') assert.ok(event.rewardType >= 2 && event.rewardType <= 6);
+  assert.notEqual(view.units[0]?.bonus?.type, 7);
   session.close();
 });
