@@ -110,7 +110,21 @@
 
 统计结果为 48/48 个静态地图组，其中火车 31/31、蒸汽船 17/17。此覆盖限于至少一个无阻挡方向上的组移动、组内同步及构件间距；特定端点、交叉阻挡、等待行为与生产绘制仍分别按后续任务核对。
 
-**敌方车马动态路线**目前由[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)检查五个正式地图/波次/出生点组合；该测试保留选中的官方路线和请求池，但隔离其他波次及出生池，因此会改变完整战役随机消耗。[Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉的关卡数量。由此只能确认六个正式关卡组合有动态岔路证据，不能外推到所有 40 个含 covered-wagon 请求的关卡。
+## 敌方车马分叉覆盖审计
+
+初步枚举所有 41 个正式关卡的 `campaignWaves`、出生点和 `previewWave.routes`：750 个波次/出生点请求项去重后为 **294 个关卡/出生点/车辆类型组合**；其中 **182 个组合**至少一条官方路线经过 TDM 多向字段（raw 56–65）。此处“车辆类型”区分 covered-wagon 与 stagecoach；不含 gold-transport。分地区如下，后续 M3-C3 将把枚举固化到自动测试，再按该范围补动态跟随证据。
+
+| 地区 | 全部关卡/出生点/车辆类型组合 | 路线含多向字段 | 当前计划 |
+| --- | ---: | ---: | --- |
+| New Mexico · Levels 1–10 | 50 | 24 | M3-C3-B |
+| Mississippi · Levels 11–20 | 84 | 68 | M3-C3-C |
+| Oregon · Levels 21–31 | 86 | 48 | M3-C3-D |
+| Dakota/Nevada · Levels 32–41 | 74 | 42 | M3-C3-E |
+| **合计** | **294** | **182** | 按地区逐批补测 |
+
+这里按“关卡、出生点、车辆类型”去重，不把每个波次或每种路径排列重复计数。动态短会话将挑选每个组合最早出现该请求类型的正式波次，隔离其余无关请求，并以固定 seed 检查对应车体在至少一个多向字段处跟随同组前车；这不等于播放完整战役，也不声称每个随机分支排列都已动态跑过。全部 TDM 分支和路线是否成立仍由静态地图/路线证据判定。
+
+当前动态路线直接测试仅覆盖[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)中的五个正式地图/波次/出生点组合；该测试保留选中的官方路线和请求池，但隔离其他波次及出生池，因此会改变完整战役随机消耗。[Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉覆盖。现有证据不能外推到其余正式路线组合。
 
 **端点与阻挡等待**也只在部分结构上有直接运动断言：Tech Town 列车两端、Lucky Lake 纵向边界/阻挡格、Traveller's Town 列车缓冲、Ghost Town 列车右缓冲与船岸/地图边界、Frost Station 第一列 raw87 缓冲、Snow Town 列车右缓冲。其余组的具体端点、交叉/岔口阻塞和运输组之间的等待行为仍待 M3-C 对照 TDM 逐项补证。
 
