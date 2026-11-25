@@ -118,10 +118,10 @@ test('stops the Cow Gulch gunslinger at the raw36 cliff from the raw16 corridor'
   expect(position!.x).toBeGreaterThanOrEqual(8.4);
   expect(position!.x).toBeLessThanOrEqual(8.6);
   const collisionBottom = position!.y - 0.1;
-  expect(collisionBottom).toBeLessThanOrEqual(12,
-    'the APK player collision box must remain on the raw16 side of raw36 wall (8,12)');
-  expect(collisionBottom).toBeGreaterThan(11.8,
-    'the player approaches the wall boundary instead of stopping at an unrelated obstruction');
+  expect(collisionBottom, 'the APK player collision box must remain on the raw16 side of raw36 wall (8,12)')
+    .toBeLessThanOrEqual(12);
+  expect(collisionBottom, 'the player approaches the wall boundary instead of stopping at an unrelated obstruction')
+    .toBeGreaterThan(11.8);
   await expect(page.getByTestId('profile-status')).toContainText('no official Cow Gulch level 1 result yet');
 });
 
