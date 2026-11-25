@@ -102,7 +102,7 @@
 | Level 30 · Lumber Mill Hills | [official-static-train-movement](../tests/official-static-train-movement.test.ts) | 1/1 火车组；验证正式地图移动、轨道轴、组内同步和组距 |
 | Level 32 · Six Grandfathers | [official-static-train-movement](../tests/official-static-train-movement.test.ts) | 1/1 火车组；验证正式地图移动、轨道轴、组内同步和组距 |
 | Level 34 · Badlands | [official-static-train-movement](../tests/official-static-train-movement.test.ts) | 1/1 火车组；验证正式地图移动、轨道轴、组内同步和组距 |
-| Level 35 · Ghost Town | [dakota-05-trains](../tests/dakota-05-trains.test.ts)、[dakota-05-steamer](../tests/dakota-05-steamer.test.ts) | 1/1 火车组、1/1 蒸汽船组；列车缓冲、船体从 raw126 岸岩旁通过及地图边界停止；raw126 不与船体碰撞框相交，不算水岸阻挡 |
+| Level 35 · Ghost Town | [dakota-05-trains](../tests/dakota-05-trains.test.ts)、[dakota-05-steamer](../tests/dakota-05-steamer.test.ts) | 1/1 火车组、1/1 蒸汽船组；列车右缓冲、船体从 raw126 岸岩旁通过。旧船测目标 x=30，不是边界停靠；西/东地图边界由 C4-B 定点测试单独覆盖 |
 | Level 37 · Frost Station | [dakota-07-trains](../tests/dakota-07-trains.test.ts)、[official-static-train-movement](../tests/official-static-train-movement.test.ts) | 4/4 火车组；逐组直接检查移动，另有第一组 raw87 端部阻挡断言 |
 | Level 38 · Wayne Waters | [dakota-08-steamer](../tests/dakota-08-steamer.test.ts) | 1/1 蒸汽船组；验证水路移动 |
 | Level 39 · Snow Town | [dakota-09-units](../tests/dakota-09-units.test.ts) | 1/1 火车组；验证组移动和原始右端缓冲 |
@@ -139,7 +139,7 @@ New Mexico Levels 1–10、Mississippi Levels 11–20、Oregon Levels 21–31 �
 | 背景水岸码107 / 109 / 110 / 119 / 127 | 1 / 1 / 2 / 3 / 3 | 读取场景派生背景碰撞码；普通 raw126 岸岩不计入此类 |
 | 地图边界 | 24 | 轨道/航道扫描抵达 TDM 网格边缘 |
 
-Ghost Town 的 raw126 岸岩碰撞框没有与船体框相交；已有测试仅证明船能从岩旁通过并在地图边界停止，不能作为水岸阻挡证据。原临时扫描把 raw68 错当作地形碰撞并漏掉 raw94/95；原因是把简化的碰撞码范围直接套在原始 TDM 上。正式审计已按运行时 raw→背景碰撞码转换及对象碰撞表更正。首个阻挡来源只建立静态候选；各类实际停靠坐标、整组反向移动及敌方组间等待仍待 M3-C4 行为测试补证。
+Ghost Town 的 raw126 岸岩碰撞框没有与船体框相交；旧 `dakota-05-steamer.test.ts` 只将选中船的目标设为 x=30，虽测试文本称“stays within the map”，这不是地图边界停靠证据。正式边缘行为由[运输端点移动测试](../tests/official-static-transport-endpoint-movement.test.ts)分别向西、向东下达越界目标，验证全船停止、保持间距并能收到反向移动指令。该测试还覆盖 raw94/raw95、五种水岸码的实际停靠；不把 raw126 岸岩算作水岸阻挡。原临时扫描把 raw68 错当作地形碰撞并漏掉 raw94/95；原因是把简化的碰撞码范围直接套在原始 TDM 上。正式审计已按运行时 raw→背景碰撞码转换及对象碰撞表更正。静态首个阻挡来源只负责定位候选，敌方组间等待仍待 M3-C4 后续行为测试补证。
 
 ## 后续验证边界
 
