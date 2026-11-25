@@ -102,7 +102,7 @@
 | Level 30 · Lumber Mill Hills | [official-static-train-movement](../tests/official-static-train-movement.test.ts) | 1/1 火车组；验证正式地图移动、轨道轴、组内同步和组距 |
 | Level 32 · Six Grandfathers | [official-static-train-movement](../tests/official-static-train-movement.test.ts) | 1/1 火车组；验证正式地图移动、轨道轴、组内同步和组距 |
 | Level 34 · Badlands | [official-static-train-movement](../tests/official-static-train-movement.test.ts) | 1/1 火车组；验证正式地图移动、轨道轴、组内同步和组距 |
-| Level 35 · Ghost Town | [dakota-05-trains](../tests/dakota-05-trains.test.ts)、[dakota-05-steamer](../tests/dakota-05-steamer.test.ts) | 1/1 火车组、1/1 蒸汽船组；包括车组缓冲和蒸汽船水岸/地图边界 |
+| Level 35 · Ghost Town | [dakota-05-trains](../tests/dakota-05-trains.test.ts)、[dakota-05-steamer](../tests/dakota-05-steamer.test.ts) | 1/1 火车组、1/1 蒸汽船组；列车缓冲、船体从 raw126 岸岩旁通过及地图边界停止；raw126 不与船体碰撞框相交，不算水岸阻挡 |
 | Level 37 · Frost Station | [dakota-07-trains](../tests/dakota-07-trains.test.ts)、[official-static-train-movement](../tests/official-static-train-movement.test.ts) | 4/4 火车组；逐组直接检查移动，另有第一组 raw87 端部阻挡断言 |
 | Level 38 · Wayne Waters | [dakota-08-steamer](../tests/dakota-08-steamer.test.ts) | 1/1 蒸汽船组；验证水路移动 |
 | Level 39 · Snow Town | [dakota-09-units](../tests/dakota-09-units.test.ts) | 1/1 火车组；验证组移动和原始右端缓冲 |
@@ -128,7 +128,7 @@ New Mexico Levels 1–10、Mississippi Levels 11–20、Oregon Levels 21–31 �
 
 [Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉覆盖。除 New Mexico 外，其他地区正式分叉组合尚未由该矩阵测试，现有证据不能外推。
 
-**端点与阻挡等待**也只在部分结构上有直接运动断言：Tech Town 列车两端、Lucky Lake 纵向边界/阻挡格、Traveller's Town 列车缓冲、Ghost Town 列车右缓冲与船岸/地图边界、Frost Station 第一列 raw87 缓冲、Snow Town 列车右缓冲。其余组的具体端点、交叉/岔口阻塞和运输组之间的等待行为仍待 M3-C 对照 TDM 逐项补证。
+**端点与阻挡等待**也只在部分结构上有直接运动断言：Tech Town 列车两端、Lucky Lake 纵向边界/阻挡格、Traveller's Town 列车缓冲、Ghost Town 列车右缓冲与蒸汽船地图边界、Frost Station 第一列 raw87 缓冲、Snow Town 列车右缓冲。Ghost Town 的 raw126 岸岩碰撞框没有与船体框相交，现有测试仅证明船能从岸岩旁通过，不能作为水岸阻挡证据。其余组的具体端点、交叉/岔口阻塞和运输组之间的等待行为仍待 M3-C 对照 TDM 逐项补证。
 
 ## 后续验证边界
 
