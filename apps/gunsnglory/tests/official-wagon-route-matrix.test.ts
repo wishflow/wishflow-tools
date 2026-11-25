@@ -17,7 +17,9 @@ const MAX_VERIFIED_TURNS_PER_SCENARIO = 4;
 type RouteRedirect = NonNullable<ScenarioContent['previewWave']>['redirects'][number];
 
 const officialRouteCases: readonly OfficialWagonRouteCase[] = inspectOfficialWagonRouteCoverage()
-  .branchCases.filter(({ region }) => region === 'new-mexico' || region === 'mississippi');
+  .branchCases.filter(({ region }) => region === 'new-mexico'
+    || region === 'mississippi'
+    || region === 'oregon');
 
 /**
  * Retain the official map, turn data, and selected official request pool.

@@ -124,7 +124,7 @@
 
 这里按“关卡、出生点、车辆类型”去重，不把每个波次或每种路径排列重复计数。动态短会话将挑选每个组合最早出现该请求类型的正式波次，隔离其余无关请求，并以固定 seed 检查对应车体在至少一个多向字段处跟随同组前车；这不等于播放完整战役，也不声称每个随机分支排列都已动态跑过。全部 TDM 分支和路线是否成立仍由静态地图/路线证据判定。
 
-New Mexico Levels 1–10 和 Mississippi Levels 11–20 的[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)已从覆盖审计动态生成并通过全部 92 个关卡/出生点/车辆类型组合（24/24 与 68/68）。测试保留正式地图、TDM、路线、出生点、目标波次和车辆请求，隔离其他波次/出生池及我方防御单位/招募池，只验证车马实际到达多向字段后的同组跟随。初次运行中 Lost City 的 4 例被防御单位在抵达分岔前击毁；这是测试夹具隔离不足，不是路线错误证据。此地区测试隔离后会改变完整战役随机消耗，也不评价单位生存结果。
+New Mexico Levels 1–10、Mississippi Levels 11–20 和 Oregon Levels 21–31 的[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)已从覆盖审计动态生成并通过全部 140 个关卡/出生点/车辆类型组合（24/24、68/68、48/48）。测试保留正式地图、TDM、路线、出生点、目标波次和车辆请求，隔离其他波次/出生池及我方防御单位/招募池，只验证车马实际到达多向字段后的同组跟随。初次运行中 Lost City 的 4 例被防御单位在抵达分岔前击毁；这是测试夹具隔离不足，不是路线错误证据。此地区测试隔离后会改变完整战役随机消耗，也不评价单位生存结果。Dakota/Nevada 的 42 个组合仍待 C3-E 验证。
 
 [Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉覆盖。除 New Mexico 外，其他地区正式分叉组合尚未由该矩阵测试，现有证据不能外推。
 
