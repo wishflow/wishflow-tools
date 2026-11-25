@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createBrowserGame } from '../src/bootstrap/browser';
+import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import { createActiveGunslinger } from '../src/content/new-mexico-unit-entities';
+import { createTechTownMapContent } from '../src/content/tech-town-map-entities';
 import { officialCampaignStages } from '../src/content/official-campaign';
+import techTownMap from '../src/content/new-mexico-04.json';
 import { createGame, type ScenarioContent } from '../src/game';
 import {
   apkCollisionBlocksX,
@@ -93,6 +96,86 @@ test('a saloon marker blocks movement even when its decoration has no hand-autho
   const saloonLeft = (3 * FINE_PER_CELL) - 2_496;
   assert.ok(movingRight < saloonLeft,
     'TDM code 112 creates a GameObjectSpawnLocation with its own large cmUnits collision box');
+});
+
+test('Tech Town bones and an unlocked Casino block real player movement with their APK bounds', async () => {
+  const unlockedContent = createTechTownMapContent(() => true);
+  const gambler = unlockedContent.units.find(({ type }) => type === 'gambler');
+  assert.ok(gambler);
+
+  const cases = [
+    {
+      id: 'tech-town-bones-collision',
+      start: { x: 18, y: 2 },
+      target: { x: 23, y: 2.75 },
+      marker: 77,
+      cell: { x: 21, y: 2 },
+      map: createTechTownMapContent(() => false).scene,
+      units: (unit: ReturnType<typeof createActiveGunslinger>) => [unit],
+      gamblerRules: undefined,
+    },
+    {
+      id: 'tech-town-casino-collision',
+      start: { x: 27, y: 2 },
+      target: { x: 31, y: 2.75 },
+      marker: 150,
+      cell: { x: 30, y: 3 },
+      map: unlockedContent.scene,
+      units: (unit: ReturnType<typeof createActiveGunslinger>) => [gambler, unit],
+      gamblerRules: {
+        unlockedPrizeUnitTypes: [1],
+        cooldownMs: 299_000,
+        prizeTemplates: { 1: createActiveGunslinger({ x: 0, y: 0 }) },
+      },
+    },
+  ] as const;
+
+  for (const obstacle of cases) {
+    const player = createActiveGunslinger(obstacle.start);
+    const scenario: ScenarioContent = {
+      id: obstacle.id,
+      title: { en: 'Tech Town obstacle collision', zh: 'Tech Town 障碍碰撞' },
+      map: { ...obstacle.map, originalTileGrid: techTownMap.originalTileGrid },
+      originalTileGrid: techTownMap.originalTileGrid,
+      units: obstacle.units(player),
+      ...(obstacle.gamblerRules ? {
+        gambler: obstacle.gamblerRules,
+        previewWave: {
+          ...cowGulchPreviewWave,
+          initialLives: 1,
+          initialCash: 100,
+          baseEnemySpeed: 5_000,
+          speedMultiplierMin: 100,
+          speedMultiplierCount: 1,
+        },
+      } : {}),
+    };
+    const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({ scenarioId: scenario.id });
+    assert.equal(session.submitIntent({ type: 'select-at', x: obstacle.start.x + 0.5, y: obstacle.start.y + 0.5 }), true);
+    session.advance({ deltaMs: 0 });
+    assert.equal(session.submitIntent({
+      type: 'move-unit',
+      targetX: obstacle.target.x,
+      targetY: obstacle.target.y,
+    }), true);
+
+    let view = session.observe();
+    for (let frame = 0; frame < 30; frame += 1) view = session.advance({ deltaMs: 100, tileSizePixels: 32 });
+    const moved = view.units.find(({ id }) => id === player.id);
+    const collision = createPlayerMapCollisionBoxes(
+      techTownMap.originalTileGrid,
+      obstacle.map.decorations ?? [],
+      undefined,
+    ).find(({ sourceTdmCode, sourceCell }) => (
+      sourceTdmCode === obstacle.marker
+      && sourceCell?.x === obstacle.cell.x
+      && sourceCell.y === obstacle.cell.y
+    ));
+    assert.ok(moved && collision, `raw ${obstacle.marker} has its APK collision object`);
+    assert.ok(moved.positionFine.x + PLAYER_UNIT_COLLIDER_FINE.x + PLAYER_UNIT_COLLIDER_FINE.width <= collision.x,
+      `raw ${obstacle.marker} at (${obstacle.cell.x},${obstacle.cell.y}) blocks GameSession movement at its APK edge`);
+    session.close();
+  }
 });
 
 test('static object bounds match APK constructors and ignore misleading content offsets', () => {

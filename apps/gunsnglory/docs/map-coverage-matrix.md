@@ -29,8 +29,8 @@
 
 - **已全图自动检查：**`player-collision.test.ts` 逐关检查41张地图上每个 APK 静态对象 TDM marker 都只生成一个对应尺寸的碰撞框，并排除明确不阻挡的 marker；`player-unit-anchor.test.ts` 逐关核对活动单位/唤醒角色脚底锚点，并对每张地图选一个 raw36 墙边做短移动探针。
 - **已做真实桥面移动的地图：**`all-maps-player-bridge.test.ts` 遍历41张正式地图的生产桥面绘制命令，按 TDM 格码和阻挡岸边划分实际可走连通桥段；每个桥段均以对应正式地图数据建立短 `GameSession`，检查沿桥移动及两侧边界停靠。覆盖 raw80 横桥、Railroad Ranch（Level 9）实际桥面贴图上的 raw81 横桥，以及 raw88 竖桥。该测试不是 Android 原版运行画面对照。
-- **已做真实对象阻挡会话的代表地图：**Snake River、Loot Lakes、Badlands、Wayne Waters 覆盖睡眠单位及 Saloon/Shack/Fort 等对象类别；其他地图的对象框有逐格生成断言，但不应因此宣称每个实际地图对象都做过移动会话。
-- 因此 M2 的桥面部分已达到“全图实际渲染桥段短会话覆盖”；对象碰撞仍是“共享几何广覆盖、对象类别真实移动代表样本覆盖”，生产 Canvas 视觉对照也尚未完成。后续只补未验证的对象类别和视觉边界，不重做已通过的全图桥段探针。
+- **已做真实对象阻挡会话的代表地图：**Snake River、Loot Lakes、Six Grandfathers、Badlands、Ghost Town、Ice Rocks、Frost Station、Wayne Waters 和 Tech Town 覆盖睡眠/活动单位、Saloon/Fort/Shack、树石/骨骸/水塔、铁路挡车器、水岩、解锁 Casino/Dynamite 和奖励接触。碰撞框生成对41图逐 marker 检查；真实移动按 APK 对象类别及特殊规则覆盖，不代表逐个移动过每张地图上的每个对象实例。
+- 因此 M2 的自动桥段和主要对象类别移动会话已完成；生产 Canvas 视觉边界对照尚未完成。M2-D 只补齐脚底像素与逻辑 fine 坐标可对应的代表截图，不重做已通过的桥段/对象会话。
 
 | Level | 关卡与场景 ID | APK TDM / 格数 | 地图数据与当前专项测试入口 | 专题静态审计 | 敌方路线/道路层 | 我方脚底/碰撞 | 交通实体 | 生产画面 |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
