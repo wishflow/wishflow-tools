@@ -92,13 +92,14 @@
 
 ### 桥面画面探针按脚底锚点选目标
 
-**状态：**Cow Gulch raw80、Steam Valley raw88 与 Cow Gulch raw36 均已通过真实 Canvas 输入及定向 E2E 观察；M2-D3 仍需判定 raw36 脚底锚点与墙格美术的边界关系。三张网页画面不是 APK 同帧运行证据。
+**状态：**Cow Gulch raw80、Steam Valley raw88 与 Cow Gulch raw36 均已通过真实 Canvas 输入及定向 E2E 观察；M2-D3 已按 APK 锚点/碰撞框关系判定。三张网页画面不是 APK 同帧运行证据。
 
 - **表现与复现：**初次桥面探针把目标放在 raw80 `(12,9)` 格中心 `(12.5,9.5)`，实际枪手停在 `x=11.65`；这容易被误判为桥面碰撞错误。坐标点击脚底 `(8.5,8.75)` 也没有选中单位，沿用 E2E 已验证的精灵可选点 `(8.5,8.25)` 才能开始左键拖动。
 - **根因与证据：**`PLAYER_UNIT_COLLIDER_FINE` 相对脚底的 y 范围是 `-5376..-768`（约 `-0.70..-0.10` 格）。Cow Gulch raw80 上方 `(12,8)` 为阻挡 raw32；脚底 y=9.5 时碰撞框仍覆盖该上邻格，因此横向移动在桥前被正确挡住。将脚底目标降到 y=9.75 后，真实 Canvas 拖动到达 raw80 `(12,9)`；调试十字读数约为 `fine=(93697,74765)`、`cell=(12.2001,9.7350)`，截图中的脚底标记落在桥面贴图范围内。对应位置来自 `cow-gulch.json` 与运行时检查面板，不代表 APK 同帧实机画面对照。
 - **计划坐标纠错：**旧观察计划把 Cow Gulch `(8,13)` 的 raw32 称为可走侧，这是错误的：`BACKGROUND_BLOCKING_TILES` 包含 raw32，且 `STREET_LAYER_TILES` 不包含 raw32。raw36 `(8,12)` 墙的相邻可走侧改用 raw16 `(8,11)`；静态碰撞规则见 `src/game/index.ts`，墙边实会话断言见 `tests/player-unit-anchor.test.ts`。
 - **Steam Valley 竖桥证据：**Level 12 的 TDM raw88 位于 `(11,8)`、`(11,9)`，实际桥图 `tiles_bridge_verti` 的纵向绘制范围为 `y=7.75–10.25`。Canvas 输入把 Gunslinger 移入上方 raw88 行，截图脚底标记为 `fine=(88320,67995)`、`cell=(11.5000,8.8535)`；这处位置处于 TDM row8 和桥图范围内。画面 `/tmp/gng-m2-d2-steam-valley-raw88.png`；测试直接复用运行时 16:9 内视口、显示像素缩放和地图 viewport 计算。
 - **Cow Gulch raw36 边界读数：**Level 1 的 raw36 墙在 `(8,12)`，相邻 raw16 可走侧在 `(8,11)`。短 Canvas 移动停止时脚底锚点为 `fine=(65280,92700)`、`cell=(8.5000,12.0703)`；由于 APK `PLAYER_UNIT_COLLIDER_FINE` 的碰撞框终点位于脚底锚点上方约 `0.10` 格，碰撞框底边是 `y=11.9703`，仍未进入 raw36。不能把锚点的 `floor(y)=12` 单独当作碰撞越界。网页截图 `/tmp/gng-m2-d2-cow-gulch-wall.png` 说明实际视觉落点，但与 APK 原版同帧画面是否逐像素一致仍未知。
+- **M2-D3 判定：**APK `GameObjectUnit.draw()` 使用 `fineY` 绘制角色帧的底边；网页 `createAnchoredMapRender()` 初始底边同为 `cell.y+0.75`，运行时 `unitRenderOffsetAt()` 保持 `render.y + render.height = positionFine.y/7680`。因此测得的脚底锚点进入 raw36 行约 `0.07` 格、但 APK 碰撞框仍留在 raw16 侧，是原版参数允许的轻微美术覆盖，不是网页碰撞网格整体偏移。这个结论只针对 Cow Gulch 测点；没有 APK 同帧运行截图时，不宣称贴图栅格逐像素相同。若其他地图的脚底越界超过 `0.10` 格或碰撞框角进入阻挡格，仍需单独调查。
 - **E2E 坐标误报与防回归：**Steam Valley 首次测试把 map 点按 canvas 外框宽高线性映射，没有复用运行时 `fitAspectViewport()` 的内层 16:9 视口；之后又把目标放在桥格边缘并要求 `floor(y)` 必须跨格。前者可能产生输入坐标偏移，后者会与约 `0.31` 格的到达停止容差冲突。修正助手后确认应用实际接收的目标为 `(11.5000,9.2641)`；将目标放到 raw88 上方桥格内部 `(11.5,8.5)`，生产截图读数落在 row8，三项永久 E2E（Cow raw80、Cow raw36、Steam raw88）通过。测试必须使用与 `pointerLogicalPosition()` 同一视口变换，且将目标放在待验证格内部；先查输入映射、目标是否合法和到达容差，再判断碰撞规则。
 - **防回归：**桥面目标不是一律放在 TDM 格中心；先读 `PLAYER_UNIT_COLLIDER_FINE` 和周边 TDM，再选择碰撞框完整落在桥格内的脚底坐标。Cow Gulch raw80 的可复现输入顺序为 `(8.5,8.25)` 选中，拖至 `(9.5,8.75)`，再至 `(9.5,9.75)`，最后沿桥拖至 `(12.5,9.75)`。测试 `floor(x), floor(y)` 时必须明确测的是逻辑锚点、碰撞框边缘还是所属 TDM 格；不可把 `stop-moving`、不合法锚点或测试选点失败写成产品碰撞缺陷。新增的定向 E2E `tests/e2e/t43-player-bridge-anchor.spec.ts` 需单独通过后才作为永久回归证据。
 
