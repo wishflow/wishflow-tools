@@ -1018,6 +1018,27 @@ body.gng-game-fullscreen .usagi-widget {
   text-align: center;
 }
 
+.campaign-overview-free-play-note {
+  left: 64%;
+  width: 30%;
+  flex-direction: column;
+  gap: 0.45em;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.campaign-overview-free-play-note strong {
+  font-size: clamp(8px, 2.2cqw, 16px);
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+}
+
+.campaign-overview-free-play-note span {
+  display: block;
+  font-size: clamp(8px, 2.1cqw, 15px);
+  line-height: 1.2;
+}
+
 .campaign-overview-play {
   position: absolute;
   top: 69.0625%;

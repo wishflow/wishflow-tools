@@ -1610,7 +1610,8 @@ const campaignMenuCopy = {
     freePlayMenu: 'Free Play menu', freePlayRegionHeading: 'Choose a region for Free Play',
     freePlayRegionHint: 'Free Play opens implemented campaign levels at any difficulty, without campaign unlock requirements.',
     freePlayLevelHint: (available: number) => `${available} implemented level${available === 1 ? '' : 's'} available in this region. Other levels are not implemented yet.`,
-    freePlayScoreNote: 'Free play does not change the saved campaign score or progress.',
+    freePlayLabel: 'FREE PLAY',
+    freePlayScoreNote: 'No campaign progress or score is saved.',
     freePlayDifficultyNotice: 'Free play results do not change campaign progress, high scores, unlocks, or saved difficulty.',
     chooseRegion: 'Choose a region', chooseLevel: 'Select a level',
     regionHint: 'Choose a region to view its ten campaign levels.',
@@ -1733,7 +1734,8 @@ const campaignMenuCopy = {
     freePlayMenu: '自由游玩菜单', freePlayRegionHeading: '选择自由游玩区域',
     freePlayRegionHint: '自由游玩可进入目前已实现的战役关卡和任意难度，不受战役解锁条件限制。',
     freePlayLevelHint: (available: number) => `本区域目前有 ${available} 个已实现关卡可供自由游玩，其他关卡尚未实现。`,
-    freePlayScoreNote: '自由游玩不会更改已保存的战役分数或进度。',
+    freePlayLabel: '自由游玩',
+    freePlayScoreNote: '不记录战役进度或分数。',
     freePlayDifficultyNotice: '自由游玩不会更改战役进度、最高分、解锁状态或已保存难度。',
     chooseRegion: '选择区域', chooseLevel: '选择关卡',
     regionHint: '选择一个区域，查看其中的十个战役关卡。',
@@ -2410,7 +2412,7 @@ function campaignMenuOverviewScreen(): string {
                                                     : entry.level === 41 ? nevada01CampaignCopy.overview[language] : description;
   const artName = `gng_levelmap_${String(entry.mapFileNumber).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
-    ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
+    ? `<div class="campaign-overview-no-score campaign-overview-free-play-note"><strong>${escapeMenuText(copy.freePlayLabel)}</strong><span>${escapeMenuText(copy.freePlayScoreNote)}</span></div>`
     : stage!.highScore === undefined
       ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.noHighScore)}</p>`
       : `<img class="campaign-overview-wanted" src="${campaignMenuAssetUrl('gng_highscore_1_wanted.png')}" alt="" aria-hidden="true"><p class="campaign-overview-score-label">${copy.highScoreLabel}</p><p class="campaign-overview-score">${escapeMenuText(copy.bestScore(stage!.highScore))}</p>`;
