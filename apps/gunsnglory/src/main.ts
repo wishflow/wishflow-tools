@@ -37,6 +37,7 @@ import {
   createBrowserGameForDakota08Replay,
   createBrowserGameForDakota09Replay,
   createBrowserGameForDakota10Replay,
+  createBrowserGameForNevada01Replay,
   createBrowserGameForRailroadRanchReplay,
   createBrowserProgress,
   getBrowserScenarioContentVersion,
@@ -64,6 +65,7 @@ import {
   luckyLakeLevelSevenCampaignContent,
   cactusvilleLevelEightCampaignContent,
   murdockMountainsLevelSixCampaignContent,
+  nevada01LevelFortyOneCampaignContent,
   techTownLevelFourCampaignContent,
 } from './content/official-campaign';
 import { techTownWaveIntros } from './content/tech-town-wave-intros';
@@ -220,6 +222,7 @@ import { createDakota10CampaignContent } from './content/dakota-10-campaign';
 import { dakota10WaveIntros, dakota10CampaignPortraitAssets } from './content/dakota-10-wave-intros';
 import { dakota10AmbientMusic, dakota10BattleMusicForWave, type Dakota10MusicTrack } from './content/dakota-10-music';
 import { nevada01CampaignId } from './content/nevada-01-identity';
+import { nevada01CampaignCopy } from './content/nevada-01-campaign-copy';
 import { nevada01CampaignPortraitAssets, nevada01WaveIntros } from './content/nevada-01-wave-intros';
 import { nevada01AmbientMusic, nevada01BattleMusicForWave, type Nevada01MusicTrack } from './content/nevada-01-music';
 import { collectScenarioImageAssetNames } from './content/scenario-image-assets';
@@ -999,6 +1002,9 @@ const languageMessages = {
       if (scenarioId === dakota10CampaignId) return mode === 'free'
         ? 'Free Play does not change campaign progress or best score.'
         : 'Official Sioux Falls level 40: ten original waves across five entrances. Victory records campaign completion and best score.';
+      if (scenarioId === nevada01CampaignId) return mode === 'free'
+        ? 'Free Play does not change campaign progress or best score.'
+        : 'Official Labyrinth Gulch level 41: eleven original waves across four entrances. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchLevelOneContent.id) return 'Official Cow Gulch level 1: eight original waves. Victory records campaign completion and best score.';
       if (scenarioId === apacheValleyLevelTwoContent.id) return 'Official Apache Valley level 2: six original waves across three routes. Victory records campaign completion and best score.';
       if (scenarioId === cowGulchP1aSampleContent.id) return 'One-wave sandbox sample: test movement, targeting, and combat. It does not complete the official campaign.';
@@ -1301,6 +1307,9 @@ const languageMessages = {
       if (scenarioId === dakota10CampaignId) return mode === 'free'
         ? '自由游玩不会更改战役进度或最高分。'
         : '正式关卡：苏福尔斯，第 40 关。包含五个入口上的原版十波；胜利后记录战役完成与最高分。';
+      if (scenarioId === nevada01CampaignId) return mode === 'free'
+        ? '自由游玩不会更改战役进度或最高分。'
+        : '正式关卡：迷宫峡谷，第 41 关。包含四个入口上的原版十一波；胜利后记录战役完成与最高分。';
       if (scenarioId === cowGulchLevelOneContent.id) return '正式牛溪谷第 1 关：包含原版 8 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === apacheValleyLevelTwoContent.id) return '正式阿帕奇山谷第 2 关：包含三条路线上的原版 6 波。胜利后记录战役完成状态和最高分。';
       if (scenarioId === cowGulchP1aSampleContent.id) return '单波沙盒样本：用于检查移动、目标选择和战斗，不计入正式战役通关。';
@@ -2328,7 +2337,8 @@ function campaignMenuOverviewScreen(): string {
                                                       : entry.level === 37 ? createDakota07CampaignContent(completedScenarios)
                                                         : entry.level === 38 ? createDakota08CampaignContent(completedScenarios)
                                                           : entry.level === 39 ? createDakota09CampaignContent(completedScenarios)
-                                                            : entry.level === 40 ? createDakota10CampaignContent(completedScenarios)
+                                                                              : entry.level === 40 ? createDakota10CampaignContent(completedScenarios)
+                                                                                : entry.level === 41 ? nevada01LevelFortyOneCampaignContent
                                           : createOregon07CampaignContent(completedScenarios);
   const description = entry.level === 1 ? copy.levelOneInfo
     : entry.level === 2 ? copy.levelTwoInfo
@@ -2369,7 +2379,8 @@ function campaignMenuOverviewScreen(): string {
                                                                         : entry.level === 37 ? dakota07CampaignCopy.overview[language]
                                                                           : entry.level === 38 ? dakota08CampaignCopy.overview[language]
                                                                             : entry.level === 39 ? dakota09CampaignCopy.overview[language]
-                                                                              : entry.level === 40 ? dakota10CampaignCopy.overview[language] : '';
+                                                                              : entry.level === 40 ? dakota10CampaignCopy.overview[language]
+                                                                                : entry.level === 41 ? nevada01CampaignCopy.overview[language] : '';
   const levelDescription = entry.level === 15 ? copy.levelFifteenInfo
     : entry.level === 16 ? copy.levelSixteenInfo
       : entry.level === 17 ? copy.levelSeventeenInfo
@@ -2395,7 +2406,8 @@ function campaignMenuOverviewScreen(): string {
                                             : entry.level === 37 ? dakota07CampaignCopy.overview[language]
                                               : entry.level === 38 ? dakota08CampaignCopy.overview[language]
                                                 : entry.level === 39 ? dakota09CampaignCopy.overview[language]
-                                                  : entry.level === 40 ? dakota10CampaignCopy.overview[language] : description;
+                                                  : entry.level === 40 ? dakota10CampaignCopy.overview[language]
+                                                    : entry.level === 41 ? nevada01CampaignCopy.overview[language] : description;
   const artName = `gng_levelmap_${String(entry.mapFileNumber).padStart(2, '0')}.png`;
   const score = isFreePlayMenuActive()
     ? `<p class="campaign-overview-no-score">${escapeMenuText(copy.freePlayScoreNote)}</p>`
@@ -2443,7 +2455,8 @@ function campaignMenuOverviewScreen(): string {
                                                               : entry.level === 37 ? dakota07CampaignCopy.title[language]
                                                                 : entry.level === 38 ? dakota08CampaignCopy.title[language]
                                                                   : entry.level === 39 ? dakota09CampaignCopy.title[language]
-                                                                    : entry.level === 40 ? dakota10CampaignCopy.title[language] : entry.title)}</h2>
+                                                                    : entry.level === 40 ? dakota10CampaignCopy.title[language]
+                                                                      : entry.level === 41 ? nevada01CampaignCopy.title[language] : entry.title)}</h2>
       <div class="campaign-overview-images">
         <img class="campaign-overview-level-art" src="${campaignMenuAssetUrl(artName)}" alt="" aria-hidden="true">
         <img class="campaign-overview-minimap" data-testid="campaign-overview-minimap" data-scenario-id="${escapeMenuText(content.id)}" src="${campaignMenuMinimapDataUrl(content)}" alt="${escapeMenuText(copy.levelNumber(entry.level))} map preview">
@@ -3524,6 +3537,8 @@ function renderStatus(events: readonly GameEvent[] = view.events): void {
       || officialStage?.scenarioId === dakota09CampaignId
       || officialStage?.scenarioId === dakota10CampaignId
       ? language === 'zh' ? '达科他' : 'DAKOTA'
+    : officialStage?.scenarioId === nevada01CampaignId
+      ? language === 'zh' ? '内华达' : 'NEVADA'
     : officialStage?.scenarioId === oregon01CampaignId
       || officialStage?.scenarioId === oregon02CampaignId
       || officialStage?.scenarioId === oregon03CampaignId
@@ -4116,6 +4131,7 @@ const assetNames = new Set([
     createDakota08CampaignContent(allMississippiUnitUnlocks),
     createDakota09CampaignContent(allMississippiUnitUnlocks),
     createDakota10CampaignContent(allMississippiUnitUnlocks),
+    nevada01LevelFortyOneCampaignContent,
   ]),
   'pioneer_male',
   'pioneer_female',
@@ -5023,7 +5039,8 @@ async function replaceSession(request: SessionOpenRequest): Promise<boolean> {
             || request.scenarioId === dakota07CampaignId
             || request.scenarioId === dakota08CampaignId
             || request.scenarioId === dakota09CampaignId
-            || request.scenarioId === dakota10CampaignId)
+            || request.scenarioId === dakota10CampaignId
+            || request.scenarioId === nevada01CampaignId)
             && (campaignProgressView || request.mode === 'free')
             ? createBrowserGame(completedScenarioIds)
             : game;
@@ -5396,6 +5413,11 @@ function gameForReplay(serialized: string) {
     }
     if (parsed.startRecord?.scenarioId === dakota10CampaignId) {
       return createBrowserGameForDakota10Replay(
+        typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
+      );
+    }
+    if (parsed.startRecord?.scenarioId === nevada01CampaignId) {
+      return createBrowserGameForNevada01Replay(
         typeof parsed.startRecord.contentVersion === 'string' ? parsed.startRecord.contentVersion : undefined,
       );
     }

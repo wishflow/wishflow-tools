@@ -35,7 +35,7 @@ async function settleWithoutBattle(session: Awaited<ReturnType<ReturnType<typeof
 
 test('Six Grandfathers is the gated 32nd official stage after Loot Lakes', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota02CampaignId);
-  assert.equal(officialCampaignStages.length, 40);
+  assert.equal(officialCampaignStages.length, 41);
   assert.deepEqual(stage, {
     scenarioId: dakota02CampaignId,
     contentVersion: dakota02CampaignContentVersionFor([]),
