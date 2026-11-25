@@ -112,7 +112,7 @@
 
 ## 敌方车马分叉覆盖审计
 
-初步枚举所有 41 个正式关卡的 `campaignWaves`、出生点和 `previewWave.routes`：750 个波次/出生点请求项去重后为 **294 个关卡/出生点/车辆类型组合**；其中 **182 个组合**至少一条官方路线经过 TDM 多向字段（raw 56–65）。此处“车辆类型”区分 covered-wagon 与 stagecoach；不含 gold-transport。分地区如下，后续 M3-C3 将把枚举固化到自动测试，再按该范围补动态跟随证据。
+初步枚举所有 41 个正式关卡的 `campaignWaves`、出生点和 `previewWave.routes`：750 个波次/出生点请求项去重后为 **294 个关卡/出生点/车辆类型组合**；其中 **182 个组合**至少一条官方路线经过 TDM 多向字段（raw 56–65）。此处“车辆类型”区分 covered-wagon 与 stagecoach；不含 gold-transport。该枚举已由[覆盖审计测试](../tests/official-wagon-route-coverage.test.ts)及[测试辅助器](../tests/helpers/official-wagon-route-coverage.ts)固化，定向审计 1/1 通过。分地区结果如下，M3-C3-B–E 将按此范围补动态跟随证据。
 
 | 地区 | 全部关卡/出生点/车辆类型组合 | 路线含多向字段 | 当前计划 |
 | --- | ---: | ---: | --- |
