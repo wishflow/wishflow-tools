@@ -24,14 +24,16 @@
 
 ## 车马分叉必须复刻 APK 的坐标差移动
 
-**状态：**核心移动向量已按 APK 更新；Fort Kaboom 单关及五张正式关卡的隔离岔口矩阵测试通过。五个岔口的逻辑脚底与绘制范围已作定点测量；完整战役 seed 6 重放和 APK 运行画面对照仍未完成。
+**状态：**核心移动向量已按 APK 更新；Fort Kaboom 单关及五张正式关卡的隔离岔口矩阵测试通过。现已用完整波次、seed 6 的无操作模拟重建前车先转、后车晚转的过程；实际网页帧与 APK 运行画面的视觉对照仍未完成。
 
 - **表现与复现：**部分种子中马车会在岔路处走向不同，或车辆轨迹偏出原路。Cow Gulch 正式路线只有单向 redirect，不能复现分叉；Billy Hills Level 5 Wave 1 有 `(7,5)` 南北岔路及 Covered Wagon 组，但 32 种子测试只比较 `EnemyView.direction`，两者方向相同不足以证明实际移动向量一致。
 - **网页根因：**`sameGroupPredecessorDirection()` 将前序同组单位与当前单位的整格坐标差压成一个 `Direction`；差值斜向时回退到前车方向。`moveEnemy()` 随后只按四方向之一移动，因此丢失 x/y 分量和坐标差幅度。正式复现为 Fort Kaboom Level 3 Wave 3、seed 6、`campaign-3-group-15`：车辆到达 `(9,3)` 时，前序马匹已在 `(13,4)`；该格 redirect 为 north/east，网页车辆却选了 south。
 - **APK 证据：**APK 1.8.6 `EnemyDirector.moveEnemys()`（`smali_classes2/com/hg/gunsandglory/gamelogic/EnemyDirector.smali`，`.line 401–417`）先照常抽 redirect 随机方向，再在前序对象 `unitGroup` 相同的情况下，将方向分量改为前序敌人与当前敌人的 `fullX/fullY` 差。`GameObjectEnemy.setDirection(II)` 将两个原始分量分别乘以速度；`move()` 每帧分别更新 `fineX` 和 `fineY`。这不是“记住领车分支”，而是按当前相对位置移动；斜向或多格差值会造成对角/加速跟随，可能是 APK 行为本身的瑕疵，复刻时不得擅自用寻路、分支缓存或道路吸附改写。
 - **漏测点：**人工岔路 fixture 和 Billy Hills 真实关卡检查都只观察四向 `direction` 或车辆是否同向，没有比较分量移动、前后到岔口的时间差与整格位置。测试通过因此曾被误写成“已按 APK 修复”。
-- **修复与当前验证：**在内部 `MutableEnemy` 状态中把 x/y 移动分量与精灵图朝向分开；同组 follower 继续消费 APK 对应的随机 redirect 抽样，再应用前序对象的 `fullX/fullY` 差。移动与碰撞探测都使用两个原始分量；格中心跨越、坐标重新对齐及动画主轴按 APK 规则实现。`GAME_RULES_VERSION` 升至 `gng-rules-22`，回放格式版本不变，旧规则回放明确拒绝。新增 `fort-kaboom-wagon-route.test.ts`，保留 Fort Kaboom 原始地图、路线和 Wave 3，请求前两波清零以隔离到目标波次；seed 1 到达马匹 `(13,4)`、马车 `(9,3)` 后，下一 100 ms 分别移动 `(4 × speed, 1 × speed)`，精灵朝东。因为前两波请求被清零、随机消耗已改变，这不是完整战役 seed 6 的重放。随后新增 `official-wagon-route-matrix.test.ts`，使用正式 TDM、正式关卡岔口与正式车辆生成池，覆盖 Billy Hills 第 5 关、Cactusville 第 8 关、Lucky Lake 第 7 关、Lost City 第 10 关和 Railroad Ranch 第 9 关；5 项测试通过，逐场景核对至少一个未被碰撞阻塞的车辆步长等于前序同组对象的 `fullX/fullY` 格差乘速度。该矩阵会清空其他波次或无关生成池以聚焦目标路线，因此不代表完整战役种子序列。完整 seed 6 是否能用现有回放材料复现仍待核实。此前这一移动切片的110项相关单测与类型检查通过；新增矩阵测试也单独通过。
-- **完整 seed 6 的无输入尝试：**使用正式 Fort Kaboom、medium、seed 6 和原波次数据，仅以 100 ms 步长推进 `GameSession`，没有模拟玩家操作。模拟在 Wave 2 以 defeat 结束：239,200 ms 时 49 名敌人已逃脱、23 名仍存活、Wave 3 未开始；此后继续推进也不会改变结算。该结果只说明“空跑时间”不能复现用户在实际操作中的 Wave 3 车马画面，不代表路线逻辑已正确或错误。不要重复无输入推进；要复现该状态，必须有可回放的玩家动作，或构造保持波次随机消耗的最小战斗输入。
+- **修复与当前验证：**在内部 `MutableEnemy` 状态中把 x/y 移动分量与精灵图朝向分开；同组 follower 继续消费 APK 对应的随机 redirect 抽样，再应用前序对象的 `fullX/fullY` 差。移动与碰撞探测都使用两个原始分量；格中心跨越、坐标重新对齐及动画主轴按 APK 规则实现。`GAME_RULES_VERSION` 升至 `gng-rules-22`，回放格式版本不变，旧规则回放明确拒绝。新增 `fort-kaboom-wagon-route.test.ts`，保留 Fort Kaboom 原始地图、路线和 Wave 3，请求前两波清零以隔离到目标波次；seed 1 到达马匹 `(13,4)`、马车 `(9,3)` 后，下一 100 ms 分别移动 `(4 × speed, 1 × speed)`，精灵朝东。因为前两波请求被清零、随机消耗已改变，这不是完整战役 seed 6 的重放。随后新增 `official-wagon-route-matrix.test.ts`，使用正式 TDM、正式关卡岔口与正式车辆生成池，覆盖 Billy Hills 第 5 关、Cactusville 第 8 关、Lucky Lake 第 7 关、Lost City 第 10 关和 Railroad Ranch 第 9 关；5 项测试通过，逐场景核对至少一个未被碰撞阻塞的车辆步长等于前序同组对象的 `fullX/fullY` 格差乘速度。该矩阵会清空其他波次或无关生成池以聚焦目标路线，因此不代表完整战役种子序列。
+- **seed 6 岔口轨迹补查：**原始 Fort Kaboom、medium、seed 6、完整波次、无玩家命令仍会在 Wave 2 defeat，所以用仅把 `previewWave.initialLives` 提高到 500 的测试副本继续同一无操作模拟；地图、波次请求和随机种子不变，该字段只改变提前失败阈值。Wave 1 的 `campaign-1-group-14` 在 `(9,3)` 北向分支上，马于第 642 步（100 ms/步）转北；车继续向东，至第 650 步进入 `(9,3)`，第 657 步走到自己的控制点中心后转北。两者相差 15 步，即 **1,500 ms**，之后进入同一北向支路。这是逻辑位置轨迹，不是截图，也不是用户先前提到的 Wave 3 具体组别；它说明岔口的短时分路可由现有规则产生，不能只据此判断最终走错路线。
+- **APK 更新顺序和资源映射：**对 APK 1.8.6 的 `EnemyDirector.moveEnemys()` 重新检查确认：方法按 `gameObjectsEnemy` 列表索引逐个更新；到每个敌人自己的 redirect 时，才读取紧邻前一对象的 `unitGroup` 和 `fullX/fullY` 差。`GameObjectEnemy.setImageForUnit()` 将 type 4 映射到 `R.drawable.wagon`、type 8 映射到 `horse_wagon` 或 `horse_wagon_white`；`GameObjectEnemy.draw()` 按 fine 坐标加绘制偏移定位。网页亦以两只独立敌人绘制这两份独立图集。当前没有证据表明资源丢失；尚未将这段连续画面与 APK 实际运行帧并排比对。
+- **完整 seed 6 的无输入基线：**使用正式 Fort Kaboom、medium、seed 6 和原波次数据，仅以 100 ms 步长推进 `GameSession`，没有模拟玩家操作。原始 50 lives 的模拟在 Wave 2 以 defeat 结束：239,200 ms 时 49 名敌人已逃脱、23 名仍存活、Wave 3 未开始；此后继续推进也不会改变结算。该终局是失败阈值阻塞，不代表路线逻辑已正确或错误。上面的 500 lives 仅用于诊断续跑，不能替代实际玩家动作，也没有复现用户提到的具体 Wave 3 组别。
 - **岔口脚底和绘制范围复核：**用正式地图、TDM 和车辆生成池隔离每关目标波次，以 seed 1、100 ms 步长记录转向前、转向帧和下一步。下表中的 `fine` 是逻辑坐标；贴图范围按渲染器的一格宽、车辆高度和 `drawingOffsetFine.y=2880` 计算，表示矩形范围而非贴图非透明像素。
 
   | 关卡 | 岔口前 → 转向 → 下一步（fine） | 转向格 / raw | 绘制脚底（格坐标） | 矩形触及的 TDM 格 | raw 36 边界 |
@@ -43,7 +45,7 @@
   | Railroad Ranch L9 | `(203960,49920) → (203520,49922) → (203520,50422)` | `(26,6) / 58` | `(26.500,6.875)` | `(26,5)=32`、`(26,6)=58` | 未触及 |
 
   五个转向格均是正式路线控制格，逻辑位置未进入 raw `36`。Lost City 的车体矩形在 x 边界因 `fineX=57598` 比格中心偏 2 个 fine 单位，理论边界擦入相邻 raw `36` 格约 `0.00026` 格；这不是路线中心偏移，也没有测量贴图透明边缘是否产生可见像素。该结果说明峡谷边缘可能与车体贴图相邻或轻微重叠，不支持移动 TDM 路线。静态 APK 方法显示车辆按绘制偏移锚定并整帧绘制；没有 APK 运行截图，不能证明网页和 APK 在该处视觉完全相同。
-- **防回归：**现有自动矩阵覆盖上述五张关卡的实际车辆生成池与指定多向岔口，并断言岔口后的移动分量；Fort Kaboom 隔离用例覆盖斜向、非单位格差跟随。若将来获取完整 seed 6 的可重放输入，应单独补充整战回归。更广泛的路线回归仍需覆盖碰撞等待、动画朝向、关卡出口和回放确定性；用正式内容及 APK 静态方法作为预期，不以“方向相等”替代行为比对。
+- **防回归：**现有自动矩阵覆盖上述五张关卡的实际车辆生成池与指定多向岔口，并断言岔口后的移动分量；Fort Kaboom 隔离用例覆盖斜向、非单位格差跟随。`fort-kaboom-wagon-route.test.ts` 现新增完整波次 seed 6 回归，断言马与 wagon 在同一岔口相差 15 帧转向；当前文件定向测试 2/2 通过。用户报告的 Wave 3 具体组别仍未重现。更广泛的路线回归仍需覆盖碰撞等待、动画朝向、关卡出口和回放确定性；用正式内容及 APK 静态方法作为预期，不以“方向相等”替代行为比对。
 - **适用边界：**上述结论来自 APK 静态反编译与网页 `GameSession` 探针，不是 Android 实机观察。敌方路线与敌人图片显示出的悬崖重叠需分开调查；本项不修改 TDM 路线点。
 
 ## 地图雇佣框要消费 APK 的单位展示映射
