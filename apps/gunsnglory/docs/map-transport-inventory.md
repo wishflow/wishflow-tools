@@ -124,11 +124,11 @@
 
 这里按“关卡、出生点、车辆类型”去重，不把每个波次或每种路径排列重复计数。动态短会话将挑选每个组合最早出现该请求类型的正式波次，隔离其余无关请求，并以固定 seed 检查对应车体在至少一个多向字段处跟随同组前车；这不等于播放完整战役，也不声称每个随机分支排列都已动态跑过。全部 TDM 分支和路线是否成立仍由静态地图/路线证据判定。
 
-New Mexico Levels 1–10、Mississippi Levels 11–20、Oregon Levels 21–31 和 Dakota/Nevada Levels 32–41 的[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)已从覆盖审计动态生成并通过全部182个关卡/出生点/车辆类型组合（24/24、68/68、48/48、42/42）。测试保留正式地图、TDM、路线、出生点、目标波次和车辆请求，隔离其他波次/出生池及我方防御单位/招募池，只验证车马实际到达多向字段后的同组跟随。初次运行中 Lost City 的4例被防御单位在抵达分岔前击毁；这是测试夹具隔离不足，不是路线错误证据。此地区测试隔离后会改变完整战役随机消耗，也不评价单位生存结果。当前剩余的 M3-C 项为运输端点行为与正式路线交叉阻挡。
+New Mexico Levels 1–10、Mississippi Levels 11–20、Oregon Levels 21–31 和 Dakota/Nevada Levels 32–41 的[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)已从覆盖审计动态生成并通过全部182个关卡/出生点/车辆类型组合（24/24、68/68、48/48、42/42）。测试保留正式地图、TDM、路线、出生点、目标波次和车辆请求，隔离其他波次/出生池及我方防御单位/招募池，只验证车马实际到达多向字段后的同组跟随。初次运行中 Lost City 的4例被防御单位在抵达分岔前击毁；这是测试夹具隔离不足，不是路线错误证据。此地区测试隔离后会改变完整战役随机消耗，也不评价单位生存结果。当前 M3-C 剩余工作是解释敌方交会区域停驻的碰撞因果与持续时间。
 
 [Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)补充 Wave 3 落后马车双轴跟随隔离会话，以及 seed 6 完整正式波次分叉时序。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉组合数。182项矩阵确认马匹与车体在已触达的正式分支处按同一组位移；它不检查生产渲染中的资源可见性、锚点或层级，用户报告的“马车分开”仍需 M3-D 画面复核。
 
-[正式路线交叉审计](../tests/official-transport-route-intersections.test.ts)找到6组可能发生同波次交会的不同出生路线：Level 11 spawn 0/1；Level 14 spawn 0/1 与 3/5；Level 17 spawn 3/5 与 4/5；Level 31 spawn 1/2。审计同时展开路线转弯方向并要求两个出生池在同一正式波次请求马车；不将平行同路或未转向的共享格算成交叉。它是 C4-C 的测试候选，不证明该波次中两辆车会在同一时间抵达交会格。
+[正式路线交叉审计](../tests/official-transport-route-intersections.test.ts)找到6组可能发生同波次交会的不同出生路线：Level 11 spawn 0/1；Level 14 spawn 0/1 与 3/5；Level 17 spawn 3/5 与 4/5；Level 31 spawn 1/2。静态候选由[正式交会区域会话测试](../tests/official-transport-crossing-behavior.test.ts)继续复核：保留目标波次原始车辆请求数量和间隔，固定隔离波次 seed，6组中5组观察到两个出生池同帧进入交会区域，6组都未见交会区域附近跨池碰撞框重叠。Level 17 spawn 3/5 的 seed 40 中两边车辆各自经过，但未同帧进入；seed 1–40 的临时隔离扫描也未见同帧进入。这不是对完整战役随机序列或所有可能分支的证明。自动测试只检查同帧靠近和物理框重叠，不把静止直接归因于车辆碰撞。
 
 **端点静态源格审计**已由[正式运输端点测试](../tests/official-static-transport-endpoint-audit.test.ts)覆盖48组/96个方向，首个沿轴阻挡来源分类如下。该扫描用正式 `GameView` TDM、背景碰撞码与 APK 对象碰撞框表定位来源，不等于车辆已在该端点实测停靠。
 
