@@ -758,6 +758,7 @@ interface MutableEnemy {
   mirrored: boolean;
   positionFine: { x: number; y: number };
   collisionStartOffsetFine?: number;
+  reservedRedirectCell?: { x: number; y: number };
   drawingOffsetFine: { x: number; y: number };
   groupId: string;
   damageable: boolean;
@@ -2163,7 +2164,7 @@ function createCampaignEnemy(
     movementVector: { ...directionVector(spawn.direction) },
     mirrored: false,
     positionFine: { ...positionFine },
-    collisionStartOffsetFine: type === 4 || type === 5 || type === 6 || type === 8 ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
+    collisionStartOffsetFine: isEnemyCollisionObject(type) ? ENEMY_COLLISION_INITIAL_START_OFFSET_FINE : undefined,
     drawingOffsetFine: { ...drawingOffsetFine },
     groupId,
     damageable: type !== 8,
@@ -2492,6 +2493,7 @@ function applyEnemyDamage(
   if (enemy.hitPoints > 0) return;
 
   enemy.alive = false;
+  enemy.reservedRedirectCell = undefined;
   enemy.deathRemainingMs = enemy.type === 4 || enemy.type === 5 || enemy.type === 6 || enemy.type === 8
     ? 799
     : campaignMode ? 599 : 799;
@@ -2519,6 +2521,7 @@ function applyEnemyDamage(
       if (groupMember !== enemy && groupMember.groupId === enemy.groupId && groupMember.alive) {
         groupMember.alive = false;
         groupMember.deathRemainingMs = 799;
+        groupMember.reservedRedirectCell = undefined;
       }
     }
   }
@@ -2874,6 +2877,18 @@ const ENEMY_COLLISION_MOVED_START_OFFSET_FINE = 3840;
 const ENEMY_COLLISION_MAX_START_DELTA_X_FINE = 23040;
 const ENEMY_COLLISION_MAX_START_DELTA_Y_FINE = 15360;
 
+function isEnemyCollisionObject(type: CampaignEnemyType): boolean {
+  return type >= 3 && type <= 8;
+}
+
+function reservesEnemyRedirectCell(type: CampaignEnemyType): boolean {
+  return type === 3 || type === 7 || type === 8;
+}
+
+function sameCell(left: { x: number; y: number } | undefined, right: { x: number; y: number }): boolean {
+  return left?.x === right.x && left.y === right.y;
+}
+
 function enemyCollisionBoxCheck(
   movingStartX: number,
   movingStartY: number,
@@ -2906,7 +2921,7 @@ function enemyCollisionBlocksMove(
   deltaX: number,
   deltaY: number,
 ): boolean {
-  if (enemy.type !== 4 && enemy.type !== 5 && enemy.type !== 6 && enemy.type !== 8) return false;
+  if (!isEnemyCollisionObject(enemy.type)) return false;
 
   const movingOffset = enemy.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
   const movingStartX = enemy.positionFine.x - movingOffset;
@@ -2920,8 +2935,9 @@ function enemyCollisionBlocksMove(
     for (const other of enemies) {
       // The APK enemy manager uses ignoreSameUnitGroup=false, which filters
       // candidates whose unitGroup matches the moving collision object.
+      // APK collision objects stay registered until the death animation removes the enemy.
       if (other === enemy || other.groupId === enemy.groupId
-        || (other.type !== 4 && other.type !== 5 && other.type !== 6 && other.type !== 8)) continue;
+        || (!other.alive && other.deathRemainingMs < 0) || !isEnemyCollisionObject(other.type)) continue;
       const otherOffset = other.collisionStartOffsetFine ?? ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
       const otherStartX = other.positionFine.x - otherOffset;
       const otherStartY = other.positionFine.y - otherOffset;
@@ -2966,7 +2982,7 @@ function moveEnemy(
   if (!movementBlocked) {
     if (!turningAtStart) enemy.turningImageActive = false;
     enemy.positionFine = advanceFinePosition(previous, vector, enemy.speed, deltaMs);
-    if (enemy.type === 4 || enemy.type === 5 || enemy.type === 6 || enemy.type === 8) {
+    if (isEnemyCollisionObject(enemy.type)) {
       enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
     }
   }
@@ -2986,6 +3002,11 @@ function moveEnemy(
   const passedCenter = !movementBlocked
     && ((vector.x !== 0 && passesFieldCenter(previous.x, enemy.positionFine.x))
       || (vector.y !== 0 && passesFieldCenter(previous.y, enemy.positionFine.y)));
+
+  const currentCell = { x: fullCell(enemy.positionFine.x), y: fullCell(enemy.positionFine.y) };
+  const releasedRedirectCell = passedCenter && sameCell(enemy.reservedRedirectCell, currentCell)
+    ? enemy.reservedRedirectCell
+    : undefined;
 
   if (passedCenter) {
     if (enemy.despawnOnNextFieldCounter > 0) {
@@ -3054,12 +3075,23 @@ function moveEnemy(
     nextVector.x * enemy.speed,
     nextVector.y * enemy.speed,
   );
-  if (collisionBlocked) {
+  const nextRedirectCell = reservesEnemyRedirectCell(enemy.type)
+    ? redirects.find((redirect) => redirect.cell.x === currentCell.x + nextVector.x
+      && redirect.cell.y === currentCell.y + nextVector.y)?.cell
+    : undefined;
+  const routeFieldBlocked = !collisionBlocked && nextRedirectCell !== undefined
+    && enemies.some((other) => other !== enemy && other.alive
+      && sameCell(other.reservedRedirectCell, nextRedirectCell));
+  const movementWasBlocked = collisionBlocked || routeFieldBlocked;
+  if (movementWasBlocked) {
     enemy.positionFine = previous;
     enemy.direction = previousDirection;
     enemy.movementVector = previousMovementVector;
     enemy.animationDistance = 0;
     enemy.collisionStartOffsetFine = ENEMY_COLLISION_MOVED_START_OFFSET_FINE;
+  } else {
+    if (releasedRedirectCell) enemy.reservedRedirectCell = undefined;
+    if (nextRedirectCell) enemy.reservedRedirectCell = { ...nextRedirectCell };
   }
 
   const cellX = fullCell(enemy.positionFine.x);
@@ -3067,7 +3099,7 @@ function moveEnemy(
   return {
     escaped: cellX >= scenario.map.width + 3 || cellY >= scenario.map.height + 3
       || cellX <= -3 || cellY <= -3,
-    collisionBlocked,
+    collisionBlocked: movementWasBlocked,
   };
 }
 
