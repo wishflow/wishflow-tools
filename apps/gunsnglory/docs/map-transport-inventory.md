@@ -6,7 +6,7 @@
 
 - 从正式 `GameSession` 初始 `units` 清点到 **27/41 关**有地图摆放的火车或蒸汽船，共 **48 个运输组、238 个部件**（火车 148 件、蒸汽船 90 件）。其余 14 关没有在关卡初始单位中生成 `train-*` 或 `steamer-*`；这不表示这些关没有敌方运输车。
 - 41/41 关的正式战役波次数据都有至少一种敌方运输组请求。41 关原始波次数据合计 **2,012 个 covered-wagon 组请求、1,046 个 stagecoach 组请求、418 个 gold-transport 组请求**。这是 APK 派生波次数组中的请求数，不等于某次动态难度对局实际生成的敌人数或画面帧数。
-- M3-A 已关闭存在性分类。M3-B 建立的初始基线为 18/48 个运输组有直接移动会话测试；M3-C1 与 C2 分别补齐 22 个火车组和 8 个蒸汽船组，目前 48/48 个静态运输组均有正式地图移动会话（火车 31/31、蒸汽船 17/17）。M3-C3 已为全部地区补齐182/182个正式分叉组合的同组跟随短会话。这些测试不等于所有端点、交叉阻挡或生产画面都已验证。
+- M3-A 已关闭存在性分类。M3-B 建立的初始基线为 18/48 个运输组有直接移动会话测试；M3-C1 与 C2 分别补齐 22 个火车组和 8 个蒸汽船组，目前 48/48 个静态运输组均有正式地图移动会话（火车 31/31、蒸汽船 17/17）。M3-C3 已为全部地区补齐182/182个正式分叉组合的同组跟随短会话，M3-C4 已核对静态运输端点和有限交会/等待样本。M3-D 另有动态马车、stagecoach、gold transport、静态火车与蒸汽船的生产 `drawGame()` 代表测试；范围和视觉边界见下文。
 
 ## 判定依据
 
@@ -108,7 +108,20 @@
 | Level 39 · Snow Town | [dakota-09-units](../tests/dakota-09-units.test.ts) | 1/1 火车组；验证组移动和原始右端缓冲 |
 | Level 40 · Sioux Falls | [official-static-steamer-movement](../tests/official-static-steamer-movement.test.ts) | 1/1 蒸汽船组；验证水面移动、航道、组内同步和组距 |
 
-统计结果为 48/48 个静态地图组，其中火车 31/31、蒸汽船 17/17。此覆盖限于至少一个无阻挡方向上的组移动、组内同步及构件间距；特定端点、交叉阻挡、等待行为与生产绘制仍分别按后续任务核对。
+统计结果为 48/48 个静态地图组，其中火车 31/31、蒸汽船 17/17。此覆盖限于至少一个无阻挡方向上的组移动、组内同步及构件间距；特定端点与交会等待由 M3-C4 的静态来源和有限会话覆盖，生产绘制由 M3-D 代表测试覆盖，适用边界分别列于后文。
+
+## M3-D 生产绘制代表覆盖
+
+本节区分生产 renderer 的可调用性/几何断言与实际浏览器画面观察。所有测试都使用正式 `GameView` 和生产 `drawGame()`，以最终资源键、render 目标框及 `GameView.drawOrder` 关联每个实体；该类断言不等于 APK 同帧像素比较。
+
+| 类别 | 正式样本 | 检查结果 | 尚未证明 |
+| --- | --- | --- | --- |
+| 牵引马 + covered wagon | Fort Kaboom Level 3、Wave 1、medium、seed 6，frame 643/651/658；[`fort-kaboom-wagon-route.test.ts`](../tests/fort-kaboom-wagon-route.test.ts) | type 8 马和 type 4 wagon 均有匹配实际位置的资源绘制调用，转向资源、脚底和相对层级按正式 view 检查 | 不证明 APK 同 seed 运行像素逐帧一致；frame 643/651 的透明边缘间隔不要求两对象视觉粘连 |
+| Covered wagon / stagecoach / gold transport | Billy Hills Level 5、Wave 1、easy、seed 1、frame 732；[`official-transport-renderer.test.ts`](../tests/official-transport-renderer.test.ts) | 正式单位 type 4/5/6 的 `wagon`、`stagecoach`、`goldtransport` 资源与实体坐标一一对应，draw order 通过 | 不推断其他 seed 的实体数量、到达时刻或视觉像素 |
+| 静态火车 | Railroad Ranch Level 9 六组正式初始列车；[`official-static-transport-renderer.test.ts`](../tests/official-static-transport-renderer.test.ts) | 六组横/纵列车的最终资源、render 目标框及排序均匹配；本地内置浏览器窗口模式画面可见列车位于轨道上 | 浏览器截图只作视觉 smoke；不是逐像素 APK 对照或41图完整画面检查 |
+| 静态蒸汽船 | Mississippi Level 11 正式初始 steamer 组；[`official-static-transport-renderer.test.ts`](../tests/official-static-transport-renderer.test.ts) | 完整 steamer 部件均有唯一绘制框；尾段按 fine-X 位置序列解析为 `steamboat_4c` | 普通 UI 无固定 seed/frame 入口，未把此次浏览器画面与 Fort seed 6 对应；没有 APK 同帧对照 |
+
+本轮本地内置浏览器静音、窗口模式检查了 Fort Kaboom Level 3 的活动战斗和 Railroad Ranch Level 9 的静态列车场景；没有完整游玩，也未保存随机运行截图作为证据附件。浏览器开局 seed 来自 `crypto.getRandomValues()`，无法通过普通菜单复现 Fort 固定逻辑帧；马车代表帧以固定正式 `GameView` 自动回归和已有锚点/透明边界测量核对。未逐图做浏览器目视的关卡，交通实体行仍保持“未逐图核对”。
 
 ## 敌方车马分叉覆盖审计
 
@@ -124,9 +137,9 @@
 
 这里按“关卡、出生点、车辆类型”去重，不把每个波次或每种路径排列重复计数。动态短会话将挑选每个组合最早出现该请求类型的正式波次，隔离其余无关请求，并以固定 seed 检查对应车体在至少一个多向字段处跟随同组前车；这不等于播放完整战役，也不声称每个随机分支排列都已动态跑过。全部 TDM 分支和路线是否成立仍由静态地图/路线证据判定。
 
-New Mexico Levels 1–10、Mississippi Levels 11–20、Oregon Levels 21–31 和 Dakota/Nevada Levels 32–41 的[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)已从覆盖审计动态生成并通过全部182个关卡/出生点/车辆类型组合（24/24、68/68、48/48、42/42）。测试保留正式地图、TDM、路线、出生点、目标波次和车辆请求，隔离其他波次/出生池及我方防御单位/招募池，只验证车马实际到达多向字段后的同组跟随。初次运行中 Lost City 的4例被防御单位在抵达分岔前击毁；这是测试夹具隔离不足，不是路线错误证据。此地区测试隔离后会改变完整战役随机消耗，也不评价单位生存结果。当前 M3-C 剩余工作是解释敌方交会区域停驻的碰撞因果与持续时间。
+New Mexico Levels 1–10、Mississippi Levels 11–20、Oregon Levels 21–31 和 Dakota/Nevada Levels 32–41 的[正式马车路线矩阵](../tests/official-wagon-route-matrix.test.ts)已从覆盖审计动态生成并通过全部182个关卡/出生点/车辆类型组合（24/24、68/68、48/48、42/42）。测试保留正式地图、TDM、路线、出生点、目标波次和车辆请求，隔离其他波次/出生池及我方防御单位/招募池，只验证车马实际到达多向字段后的同组跟随。初次运行中 Lost City 的4例被防御单位在抵达分岔前击毁；这是测试夹具隔离不足，不是路线错误证据。此地区测试隔离后会改变完整战役随机消耗，也不评价单位生存结果。交会区域碰撞来源、等待机制与其有限行为样本已在 M3-C4 核对；不穷举所有随机序列。
 
-[Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)保留 seed 6 完整正式波次分叉时序；曾加入的 Wave 3 `(9,3)/(13,4)` 隔离位置测试因清空前序波次会改变随机消耗、位置前置条件不稳定而删除。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉组合数。182项矩阵确认马匹与车体在已触达的正式分支处按同一组位移；它不检查生产渲染中的资源可见性、锚点或层级，用户报告的“马车分开”仍需 M3-D 画面复核。
+[Fort Kaboom 回归](../tests/fort-kaboom-wagon-route.test.ts)保留 seed 6 完整正式波次分叉时序；曾加入的 Wave 3 `(9,3)/(13,4)` 隔离位置测试因清空前序波次会改变随机消耗、位置前置条件不稳定而删除。[enemy-animation](../tests/enemy-animation.test.ts)还验证 Billy Hills 的正式首个分叉及合成分叉组。通用 [post-coach](../tests/post-coach.test.ts) 和 [gold-transport](../tests/gold-transport.test.ts) 覆盖车辆组移动/生成机制，不增加正式地图分叉组合数。182项矩阵确认马匹与车体在已触达的正式分支处按同一组位移；生产绘制资源、锚点和层级现由 M3-D 的正式场景检查补充。frame 643、651、658 显示马与 wagon 是 APK 中两个独立对象，前车在分叉处可能短时走过不同步长、并在后续重新并行；这不能单靠截图判为贴图丢失或永久选错路线。
 
 [正式路线交叉审计](../tests/official-transport-route-intersections.test.ts)找到6组可能发生同波次交会的不同出生路线：Level 11 spawn 0/1；Level 14 spawn 0/1 与 3/5；Level 17 spawn 3/5 与 4/5；Level 31 spawn 1/2。静态候选由[正式交会区域会话测试](../tests/official-transport-crossing-behavior.test.ts)继续复核：保留目标波次原始车辆请求数量和间隔，固定隔离波次 seed，6组中5组观察到两个出生池同帧进入交会区域，6组都未见交会区域附近跨池碰撞框重叠。Level 17 spawn 3/5 的 seed 40 中两边车辆各自经过，但未同帧进入；seed 1–40 的临时隔离扫描也未见同帧进入。这不是对完整战役随机序列或所有可能分支的证明。自动测试只检查同帧靠近和物理框重叠，不把静止直接归因于车辆碰撞。
 
@@ -144,6 +157,6 @@ Ghost Town 的 raw126 岸岩碰撞框没有与船体框相交；旧 `dakota-05-s
 ## 后续验证边界
 
 - 现有正式敌方马车岔路测试只覆盖上述六个关卡组合，不代表 41 关所有波次或路线。
-- 48 个静态地图运输组都已有至少一个方向的直接移动会话断言；此项不覆盖所有端点、交叉阻挡和车辆绘制，相关缺口见 M3-C3/C4 与 M3-D。
-- 生产 Canvas 的部件绘制、脚底锚点和层级排序属于 M3-D。启动单位清单和资源图集只能证明对象构成，不能证明运行画面中车马没有分离、船车没有错层。
+- 48 个静态地图运输组均有至少一个方向的直接移动会话断言；端点、交会等待与来源碰撞由 M3-C4 的静态方法和有限场景测试覆盖，不穷举所有随机序列。
+- 生产 Canvas 的代表绘制覆盖见 M3-D 表格；它验证最终资源、目标框和 draw order，但不能证明所有关卡全帧像素都与 APK 一致。普通 UI 未提供 seed/frame 注入，Fort 固定帧以正式 `GameView` 自动回归核对。
 - 不对“无地图摆放运输组”的关卡推断整关不含运输车；这些关的正式波次数据仍含敌方运输请求。也不把波次原始请求总数当成截图中应同时出现的实体数量。

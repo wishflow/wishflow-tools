@@ -39,7 +39,20 @@
 
 ## M3-B 现有行为测试覆盖审计
 
-M3-B 的原有行为证据审计已完成；M3-C1/C2 随后为 22 个火车组和 8 个蒸汽船组补上正式地图短会话。[交通实体清单](map-transport-inventory.md)当前逐组标注结果：48 组全部有直接 `GameSession` 移动断言（火车 31/31、蒸汽船 17/17）。这只覆盖每组至少一个可行方向、组内同步与组距，不代表端点和等待机制全部闭合。正式敌方车马动态岔路目前覆盖六个关卡组合，不能外推为所有含运输车请求的路线；M3-C3/C4 继续处理正式敌方路线和端点等待，M3-D 另行检查 Canvas 部件贴合与图层。
+M3-B 的原有行为证据审计已完成；M3-C1/C2 随后为 22 个火车组和 8 个蒸汽船组补上正式地图短会话。[交通实体清单](map-transport-inventory.md)当前逐组标注结果：48 组全部有直接 `GameSession` 移动断言（火车 31/31、蒸汽船 17/17）。M3-C3/C4 已补齐正式车马分叉、运输端点及交会等待的有界证据；正式动态路线样本仍不能外推为所有随机序列。M3-D 的代表性生产 renderer 检查见下节；这些分类不等于41张地图都完成逐帧视觉对照。
+
+## M3-D 生产 renderer 代表检查
+
+以下检查从正式 `GameSession` 取得 `GameView` 并调用生产 `drawGame()`，按每个单位的最终资源键、绘制矩形和 `GameView.drawOrder` 对应实际 Canvas 调用。它们证明代表性正式对象进入 renderer 后使用了对应资源、位置与层级；不代表网页截图与 APK 同帧像素一致，也不将未观察的关卡标成生产画面已核。
+
+| 运输类别 | 正式场景与入口 | 当前结论 | 边界 |
+| --- | --- | --- | --- |
+| 牵引马与 covered wagon | Fort Kaboom Level 3，Wave 1，medium，seed 6；[`fort-kaboom-wagon-route.test.ts`](../tests/fort-kaboom-wagon-route.test.ts) frame 643/651/658 | 马 `horse_wagon_white` 与车体 `wagon` 分别绘制，脚底位置、转向资源与相对 `drawOrder` 符合正式 view | 这些是逻辑轨迹帧的生产绘制检查；边缘透明像素已量测，未与 APK 同 seed 运行截图做并排像素差分 |
+| Covered wagon、stagecoach、gold transport | Billy Hills Level 5，Wave 1，easy，seed 1；[`official-transport-renderer.test.ts`](../tests/official-transport-renderer.test.ts) frame 732 | 正式 view 中 type 4/5/6 对应资源在目标坐标各有一次绘制调用；两辆 stagecoach 分别与实体匹配 | 不推断所有随机局都会同时出现相同数量或相同位置 |
+| 静态火车 | Railroad Ranch Level 9 的正式初始 view；[`official-static-transport-renderer.test.ts`](../tests/official-static-transport-renderer.test.ts) | 六组横/纵列车的所有部件资源、目标矩形与绘制顺序均匹配；本地浏览器静态地图画面可见火车位于轨道上 | 浏览器截图是网页视觉 smoke；Canvas 自动断言是绘制调用和几何，不是 APK 像素对照 |
+| 静态蒸汽船 | Mississippi Level 11 的正式初始 view；[`official-static-transport-renderer.test.ts`](../tests/official-static-transport-renderer.test.ts) | 蒸汽船组全部部件按最终资源名和目标框绘制；尾段按初始 fine-X 解析为 `steamboat_4c` | 普通 UI 以密码学随机源生成种子，无固定 Fort 帧入口；新浏览器检查未匹配 D1 的 seed 6 帧 |
+
+正式关卡表格中的“生产画面”仍按实际逐图截图观察填写。上表的代表 renderer 调用不改变其“未逐图核对”状态，也不外推到 Level 42–60。
 
 | Level | 关卡与场景 ID | APK TDM / 格数 | 地图数据与当前专项测试入口 | 专题静态审计 | 敌方路线/道路层 | 我方脚底/碰撞 | 交通实体 | 生产画面 |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
