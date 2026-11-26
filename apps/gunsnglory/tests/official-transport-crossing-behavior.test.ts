@@ -14,6 +14,8 @@ interface OfficialCrossingCase {
   spawnPointIds: readonly [number, number];
   cells: readonly { x: number; y: number }[];
   seed: number;
+  horsemanSeed?: number;
+  horsemanApproachSpawnPointIds?: readonly number[];
   expectSimultaneousApproach: boolean;
 }
 
@@ -52,6 +54,8 @@ const crossingCases: readonly OfficialCrossingCase[] = [
     spawnPointIds: [3, 5],
     cells: [{ x: 14, y: 21 }],
     seed: 40,
+    horsemanSeed: 1,
+    horsemanApproachSpawnPointIds: [5],
     expectSimultaneousApproach: false,
   },
   {
@@ -70,7 +74,8 @@ const crossingCases: readonly OfficialCrossingCase[] = [
     spawnPointIds: [1, 2],
     cells: [{ x: 20, y: 9 }, { x: 20, y: 10 }],
     seed: 1,
-    expectSimultaneousApproach: true,
+    // The action-2 reservation now serializes this fixed-seed crossing.
+    expectSimultaneousApproach: false,
   },
 ];
 
@@ -100,6 +105,30 @@ function isolateCrossingWave(crossingCase: OfficialCrossingCase): ScenarioConten
         .map((pool) => ({
           ...pool,
           requests: pool.requests.map((count, index) => index >= 5 && index <= 7 ? count : 0),
+        }))
+      : wave.spawnPools.map((pool) => ({
+        ...pool,
+        requests: pool.requests.map(() => 0),
+      })),
+  }));
+  return source;
+}
+
+/** Keep only the official horseman request at each entrance to isolate type-3 route traffic. */
+function isolateHorsemanCrossingWave(crossingCase: OfficialCrossingCase): ScenarioContent {
+  const source = structuredClone(findScenario(crossingCase.scenarioId));
+  source.units = [];
+  source.campaignUnitPool = undefined;
+  source.campaignBonusCratePool = undefined;
+  source.campaignWaves = source.campaignWaves!.map((wave) => ({
+    ...wave,
+    delayMs: 0,
+    spawnPools: wave.number === crossingCase.waveNumber
+      ? wave.spawnPools
+        .filter(({ spawnPointId }) => crossingCase.spawnPointIds.includes(spawnPointId))
+        .map((pool) => ({
+          ...pool,
+          requests: pool.requests.map((count, index) => index === 4 ? count : 0),
         }))
       : wave.spawnPools.map((pool) => ({
         ...pool,
@@ -212,8 +241,98 @@ async function verifyCrossingCase(crossingCase: OfficialCrossingCase): Promise<v
   }
 }
 
+async function verifyOfficialHorsemanCrossingCase(crossingCase: OfficialCrossingCase): Promise<void> {
+  const seed = crossingCase.horsemanSeed ?? crossingCase.seed;
+  const originalScenario = findScenario(crossingCase.scenarioId);
+  const scenario = isolateHorsemanCrossingWave(crossingCase);
+  const originalWave = originalScenario.campaignWaves!.find(({ number }) => number === crossingCase.waveNumber)!;
+  const isolatedWave = scenario.campaignWaves!.find(({ number }) => number === crossingCase.waveNumber)!;
+  const schedule = (wave: typeof originalWave) => wave.spawnPools
+    .filter(({ spawnPointId }) => crossingCase.spawnPointIds.includes(spawnPointId))
+    .map(({ spawnPointId, intervalMs, intervalMultiplier, requests }) => ({
+      spawnPointId,
+      intervalMs,
+      intervalMultiplier,
+      horsemanRequests: requests[4],
+    }));
+  assert.deepEqual(schedule(isolatedWave), schedule(originalWave),
+    `Level ${crossingCase.level} preserves each official horseman request count and interval`);
+  assert.ok(schedule(isolatedWave).every(({ horsemanRequests }) => (horsemanRequests ?? 0) > 0),
+    `Level ${crossingCase.level} requests horsemen from both official entrances`);
+
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    mode: 'formal',
+    difficulty: 'easy',
+    randomSeed: seed,
+  });
+
+  try {
+    let view = session.observe();
+    for (let frame = 0; frame < 100 && view.wave?.number !== crossingCase.waveNumber; frame += 1) {
+      view = session.advance({ deltaMs: 0 });
+    }
+    assert.equal(view.wave?.number, crossingCase.waveNumber,
+      `Level ${crossingCase.level} enters the isolated official horseman wave`);
+
+    const spawnByGroup = new Map<string, number>();
+    const observedSpawnIds = new Set<number>();
+    const observedApproachSpawnIds = new Set<number>();
+    let overlappingFrames = 0;
+
+    for (let frame = 0; frame < MAX_OBSERVATION_FRAMES; frame += 1) {
+      view = session.advance({ deltaMs: 200 });
+      for (const event of view.events) {
+        if (event.type !== 'enemy-group-spawned') continue;
+        const member = view.enemies.find(({ id }) => event.enemyIds.includes(id));
+        if (!member?.groupId) continue;
+        spawnByGroup.set(member.groupId, event.spawnPointId);
+        observedSpawnIds.add(event.spawnPointId);
+      }
+
+      const horsemenBySpawn = new Map<number, Array<(typeof view.enemies)[number]>>();
+      for (const enemy of view.enemies) {
+        if (!enemy.alive || enemy.type !== 3) continue;
+        const spawnPointId = spawnByGroup.get(enemy.groupId ?? '');
+        if (spawnPointId === undefined || !crossingCase.spawnPointIds.includes(spawnPointId)) continue;
+        const current = horsemenBySpawn.get(spawnPointId) ?? [];
+        current.push(enemy);
+        horsemenBySpawn.set(spawnPointId, current);
+      }
+
+      const first = horsemenBySpawn.get(crossingCase.spawnPointIds[0]) ?? [];
+      const second = horsemenBySpawn.get(crossingCase.spawnPointIds[1]) ?? [];
+      const firstNear = first.filter(({ positionFine }) => isNearCrossingArea(positionFine, crossingCase.cells, 0.8));
+      const secondNear = second.filter(({ positionFine }) => isNearCrossingArea(positionFine, crossingCase.cells, 0.8));
+      if (firstNear.length > 0) observedApproachSpawnIds.add(crossingCase.spawnPointIds[0]);
+      if (secondNear.length > 0) observedApproachSpawnIds.add(crossingCase.spawnPointIds[1]);
+
+      const firstAtCrossing = first.filter(({ positionFine }) => isNearCrossingArea(positionFine, crossingCase.cells, 1.5));
+      const secondAtCrossing = second.filter(({ positionFine }) => isNearCrossingArea(positionFine, crossingCase.cells, 1.5));
+      if (firstAtCrossing.some((left) => secondAtCrossing.some((right) => (
+        Math.abs(left.positionFine.x - right.positionFine.x) < 7_678
+        && Math.abs(left.positionFine.y - right.positionFine.y) < 7_678
+      )))) overlappingFrames += 1;
+    }
+
+    assert.deepEqual([...observedSpawnIds].sort((left, right) => left - right), [...crossingCase.spawnPointIds].sort((left, right) => left - right),
+      `Level ${crossingCase.level} spawns horsemen from both official entrances`);
+    const expectedApproachSpawnIds = crossingCase.horsemanApproachSpawnPointIds ?? crossingCase.spawnPointIds;
+    assert.deepEqual([...observedApproachSpawnIds].sort((left, right) => left - right), [...expectedApproachSpawnIds].sort((left, right) => left - right),
+      `Level ${crossingCase.level} seed ${seed} sends horsemen from the expected official entrances through the action-2 crossing`);
+    assert.equal(overlappingFrames, 0,
+      `Level ${crossingCase.level} seed ${seed} keeps horseman collision boxes separated at the action-2 crossing`);
+  } finally {
+    session.close();
+  }
+}
+
 for (const crossingCase of crossingCases) {
   test(`Level ${crossingCase.level} official transport crossing behavior: spawns ${crossingCase.spawnPointIds.join('/')}`, async () => {
     await verifyCrossingCase(crossingCase);
+  });
+
+  test(`Level ${crossingCase.level} official horseman crossing behavior: spawns ${crossingCase.spawnPointIds.join('/')}`, async () => {
+    await verifyOfficialHorsemanCrossingCase(crossingCase);
   });
 }
