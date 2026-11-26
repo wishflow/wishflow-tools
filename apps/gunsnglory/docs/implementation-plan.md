@@ -4,8 +4,8 @@
 
 ## 当前实现与发布状态
 
-- 正式战役 Level 1–41 已接入；Level 42–60 尚未接入。当前碰撞与交通绘制批次在独立分支 `codex/gng-source-collision-review` 上工作；公开 `master/origin/master` 为 `f8dbfee`，本地 `gunsnglory` 集成树的未提交现场保持不动。M3 动态交通实体及 M4 出生区碰撞均已完成本地验证，Fort、Apache 正式 E2E 明确核对来源碰撞停滞且不写入进度，Cow Gulch 正式胜利/存档用例提供独立结算覆盖；完整批次检查与集成发布仍待 M5。
-- 集成分支 gunsnglory 包含 origin/master（本地核对的 origin/master 为 f8dbfee），并有本地提交未推送；继续开发使用独立干净 worktree。各 worktree 的 HEAD、未提交状态和上游必须分别核对，不在 dirty 集成树上切分支或覆盖现场。
+- 正式战役 Level 1–41 已接入；Level 42–60 尚未接入。当前碰撞与交通绘制批次在独立分支 `codex/gng-source-collision-review` 上工作；公开 `master/origin/master` 为 `f8dbfee`，远端集成分支为 `05574e5`。该开发分支包含远端集成分支及本地 M3/M4 批次，完整本地验证已通过；发布仍待 M5。
+- 刷新远端后发现旧集成工作树 `/private/tmp/gng-clean-integration` 位于 `e06a674`，比 `origin/gunsnglory` 落后 51 个提交，并保留 5 个未提交文件。该现场不得切分支、覆盖或并入当前候选；以已通过检查且基于最新 `origin/gunsnglory` 的独立开发分支作为干净晋升候选，发布后再通过该候选同步远端集成分支。干净发布工作树 `/private/tmp/gng-clean-publish` 位于 `f8dbfee`，与 `origin/master` 一致。
 - 最新公开发布为 `f8dbfee04072d01e6a5ead7a704823cbe36ffe1d`。GitHub Actions run `45390291790` 的 Guns’n’Glory 完整测试、Pages 构建、GitHub Pages 部署与 Cloudflare Pages 部署均成功；两处公开根 `build-info.json` 的 `sourceSha` 均与该提交一致。
 - 该版本已在内置浏览器以窗口模式、静音检查主菜单 Options、Cow Gulch Level 1 介绍页、Easy 开局对白及低余额 Bandito 雇佣弹窗。当前桌面截图中 Options 不再拥挤；关卡介绍标题、地图、说明、记录面板与 Play 按钮处于对应槽位；雇佣弹窗显示角色图、名称、对白、价格与确认槽。结论只覆盖这些桌面代表状态，不等于与 APK 运行画面逐像素一致，也未覆盖本轮窄屏目视检查。
 - 车马跟随逻辑已改为复刻 APK 的 x/y 前车坐标差；Fort Kaboom Wave 3 落后马车状态及 seed 6 的分叉时序均有 `GameSession` 回归测试，完整波次代表帧通过生产 `drawGame()` 检查。测试不是 APK 实机并排画面对照，不能据此宣称所有车辆场景已达到视觉等同。Cannon 弹丸已映射到 APK 独立资源并有定向测试，见[经验记录](experience-log.md)。
@@ -81,7 +81,7 @@
       - **M4-C3：核实 Apache 与正式结算覆盖（已完成，来源级网页停滞复现）。**新增 `tests/apache-valley-source-collision.test.ts`，以正式 Apache Valley 内容、seed 42/easy、4×速度、10,000ms时钟、最多100ms步进、波次对白暂停/恢复和地图雇佣优先级重放 UI 调度。Wave 6 剩余 Wagon type4 位于 `(34560,-6075)`，两名 Horseman type3 位于 `(34560,-11520)`；三者方向均向南、分属不同 group。APK 7,678×7,678 碰撞框中 wagon 与 horseman 的纵向重叠为2,233 fine，独立 APK 模型预测双方候选移动均被阻挡；请求仍有4项待生成时，三者连续停住且不结算。Apache 正式 E2E `t28-apache-valley-formal.spec.ts` 现验证同一 Wave 6 停滞、不写入完成进度/高分/结算记录，重载后后续关仍锁定。正式 Victory/存档覆盖改由既有 Cow Gulch `t25-official-campaign-touch.spec.ts` 用例承担：Level 1 正式8波胜利并持久化结算；该定向用例通过。Apache 参考模型1/1、Fort 与 Apache UI E2E 2/2、Cow Gulch Victory/存档 E2E 1/1、类型检查均通过。Apache 与 Fort 的 APK 同种子运行状态仍未在 Android 上观察，不写成原版实机已复现。
    4. **M4-D：批次验证与交付（已完成）。**`CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 通过 TypeScript 检查、1,460 项单测、生产构建和216项 E2E；定向碰撞回归和 Fort/Apache/Cow Gulch 三项正式 UI 用例也单独通过。构建保留主 JS 包大于500KB的既有提示。本批未改生产碰撞规则；没有修改共享包，故无额外共享包检查。本地 Markdown 已按相对路径复制，变更复核后提交到独立开发分支；未 squash、push 或发布。
    5. **M4 关闭条件（已达到）。**独立 APK 碰撞模型、Fort 与 Apache 正式 `GameSession`、对应 bounded UI E2E 对持续停滞的证据相互一致；Fort/Apache 测试不再要求与来源行为冲突的 Victory；Cow Gulch 提供正式胜利/存档覆盖；M4 定向测试与完整 CI 通过。APK 原版是否在相同种子、输入下冻结仍标为未观察，不用静态反编译声称运行核实。
-6. **M5：地图批次收尾（完整本地验证已完成，集成/发布待处理）。**对照41图矩阵核对路线、玩家碰撞、交通实体和生产画面证据边界；M3/M4 不改 APK 可证的产品规则。`CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 的类型检查、1,463 项单测、生产构建均通过，构建保留既有 500KB chunk 提示；沙箱最初拒绝 Playwright 本地监听，获准后 `CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:e2e` 通过216/216。`site-shell` 未修改，无共享包测试。发布前集成门槛尚未满足：当前 `gunsnglory` worktree `/private/tmp/gng-clean-integration`（HEAD `e06a674`）有5份未提交文件，其中包括 `src/game/index.ts`、Fort 马车测试及相关计划/经验文档；这些现场未被覆盖或并入本批。下一步需在保持该现场的前提下确定干净集成路径，再执行 squash、发布、来源 SHA 核对和内置浏览器整批验收；这些动作完成前不报告发布完成。
+6. **M5：地图批次收尾（完整本地验证已完成，集成/发布待处理）。**对照41图矩阵核对路线、玩家碰撞、交通实体和生产画面证据边界；M3/M4 不改 APK 可证的产品规则。`CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 的类型检查、1,463 项单测、生产构建均通过，构建保留既有 500KB chunk 提示；沙箱最初拒绝 Playwright 本地监听，获准后 `CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:e2e` 通过216/216。`site-shell` 未修改，无共享包测试。全套检查基于 `codex/gng-source-collision-review`；它以 `origin/gunsnglory` 的 `05574e5` 为祖先，批次代码树未包含旧集成工作树中的 5 个未提交改动。待在干净发布工作树 squash 集成到 `master`、推送、核对部署来源 SHA 并用内置浏览器完成整批验收；随后将发布提交合并回开发候选并更新远端集成分支。旧 `gunsnglory` 工作树继续原样保留；这些动作完成前不报告发布完成。
 
 #### 统一判定与验收
 
