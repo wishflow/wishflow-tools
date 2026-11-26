@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fortKaboomLevelThreeContent } from '../src/content/official-campaign';
 import { createGame, type GameView, type ScenarioContent } from '../src/game';
-import { drawGame, getMapViewport, type GameImages } from '../src/render/canvas-renderer';
+import { getMapViewport } from '../src/render/canvas-renderer';
+import { recordProductionDrawCalls } from './helpers/record-production-draws';
 
 const FINE_UNITS_PER_CELL = 7_680;
 
@@ -45,48 +46,6 @@ function groupedWagonPair(view: GameView): {
   });
 }
 
-interface ProductionDrawCall {
-  asset: string;
-  args: unknown[];
-}
-
-function productionDrawCalls(view: GameView): ProductionDrawCall[] {
-  const imageNames = new WeakMap<object, string>();
-  const imageCache = new Map<string, HTMLImageElement>();
-  const images = new Proxy({} as GameImages, {
-    get(_target, key) {
-      if (typeof key !== 'string') return undefined;
-      const cached = imageCache.get(key);
-      if (cached) return cached;
-      const image = { naturalWidth: 2_048, naturalHeight: 2_048 } as HTMLImageElement;
-      imageNames.set(image, key);
-      imageCache.set(key, image);
-      return image;
-    },
-  });
-  const drawCalls: ProductionDrawCall[] = [];
-  const noOp = () => undefined;
-  const context = new Proxy({} as CanvasRenderingContext2D, {
-    get(_target, key) {
-      if (key === 'drawImage') {
-        return (image: object, ...args: unknown[]) => {
-          drawCalls.push({ asset: imageNames.get(image) ?? '<unknown>', args });
-        };
-      }
-      if (key === 'measureText') return (text: string) => ({ width: text.length * 6 });
-      if (key === 'canvas') return { width: 1_024, height: 576 };
-      if (key === 'globalAlpha') return 1;
-      return noOp;
-    },
-    set() {
-      return true;
-    },
-  });
-
-  drawGame(context, view, images);
-  return drawCalls;
-}
-
 function assertProductionWagonPairDrawn(view: GameView, expectedFrame: number): void {
   assert.equal(view.frame, expectedFrame);
   const pair = groupedWagonPair(view).find(({ horse }) => horse.groupId === 'campaign-1-group-14');
@@ -96,7 +55,7 @@ function assertProductionWagonPairDrawn(view: GameView, expectedFrame: number): 
   assert.equal(pair.horse.asset, 'horse_wagon_white');
   assert.equal(pair.wagon.asset, 'wagon');
 
-  const calls = productionDrawCalls(view);
+  const calls = recordProductionDrawCalls(view);
   const horseAsset = pair.horse.turningAnimation?.asset ?? pair.horse.asset;
   const wagonAsset = pair.wagon.turningAnimation?.asset ?? pair.wagon.asset;
   const viewport = getMapViewport(view);
