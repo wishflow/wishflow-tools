@@ -96,6 +96,25 @@ export function createSleepingPyromaniac(cell: { x: number; y: number }, index =
   };
 }
 
+/** Creates the active Pyromaniac encoded by the fresh-game TDM marker 138. */
+export function createActivePyromaniac(cell: { x: number; y: number }, index = 1): ScenarioUnit {
+  const sleepingUnit = createSleepingPyromaniac(cell, index);
+  const { awakeAsset, awakeFrame, awakeRender, awakeHitArea, hirePrice, hireSound, ...activeUnit } = sleepingUnit;
+  if (!awakeAsset || !awakeFrame || !awakeRender || !awakeHitArea) {
+    throw new Error('Pyromaniac active design is incomplete');
+  }
+
+  return {
+    ...activeUnit,
+    id: `pyromaniac-map-${String(index).padStart(2, '0')}`,
+    activity: 5,
+    asset: awakeAsset,
+    frame: awakeFrame,
+    render: awakeRender,
+    hitArea: awakeHitArea,
+  };
+}
+
 export function createSleepingSalesman(cell: { x: number; y: number }, index = 1): ScenarioUnit {
   const frame = { x: 0, y: 0, width: 32, height: 44 };
   const render = createAnchoredMapRender(cell, frame);

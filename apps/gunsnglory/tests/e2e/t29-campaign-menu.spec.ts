@@ -24,6 +24,7 @@ async function expectCampaignOverviewAnchors(page: import('@playwright/test').Pa
       play: relative('.campaign-overview-play'),
       back: relative('.campaign-overview-cancel'),
       noScore: card.querySelector('.campaign-overview-no-score') ? relative('.campaign-overview-no-score') : undefined,
+      freePlayNote: card.querySelector('.campaign-overview-free-play-note') ? relative('.campaign-overview-free-play-note') : undefined,
       poster: card.querySelector('.campaign-overview-wanted') ? relative('.campaign-overview-wanted') : undefined,
       titleFont: getComputedStyle(card.querySelector('.campaign-overview-title')!).fontFamily,
       descriptionFont: getComputedStyle(card.querySelector('.campaign-level-description')!).fontFamily,
@@ -53,7 +54,7 @@ async function expectCampaignOverviewAnchors(page: import('@playwright/test').Pa
   expect(layout.playRight).toBeLessThanOrEqual(1.01);
   expect(layout.backBottom).toBeLessThanOrEqual(1.01);
   if (layout.noScore) {
-    expect(layout.noScore.left).toBeCloseTo(314 / 480, 2);
+    expect(layout.noScore.left).toBeCloseTo(layout.freePlayNote ? 64 / 100 : 314 / 480, 2);
     expect(layout.noScore.top).toBeCloseTo(49 / 320, 2);
   }
   if (layout.poster) {
@@ -275,6 +276,72 @@ test('shows the original wanted poster and saved score when a level has a high s
   await expect(page.locator('.campaign-overview-score-label')).toHaveText('Best score');
   await expect(page.locator('.campaign-overview-score')).toHaveText('$ 453');
   await expect(page.locator('.campaign-overview-no-score')).toHaveCount(0);
+});
+
+test('Free Play overview note stays readable in English and Chinese across screen sizes', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+  const sound = page.getByTestId('menu-sound');
+  if (await sound.getAttribute('aria-pressed') !== 'false') await sound.click();
+  await expect(page.getByTestId('menu-sound')).toHaveAttribute('aria-pressed', 'false');
+  await page.getByTestId('menu-free-play').click();
+  await page.getByTestId('campaign-region-new-mexico').click();
+  await page.getByTestId('campaign-level-01').click();
+
+  const assertFreePlayNoteLayout = async (): Promise<void> => {
+    const note = page.locator('.campaign-overview-free-play-note');
+    await expect(note).toBeVisible();
+    const layout = await note.evaluate((element) => {
+      const card = element.closest<HTMLElement>('.campaign-overview-card');
+      const detail = element.querySelector<HTMLElement>('span');
+      const play = card?.querySelector<HTMLElement>('.campaign-overview-play');
+      const description = card?.querySelector<HTMLElement>('.campaign-level-description');
+      const images = card?.querySelector<HTMLElement>('.campaign-overview-images');
+      if (!card || !detail || !play || !description || !images) throw new Error('Free Play overview layout is incomplete');
+      const bounds = (target: Element) => {
+        const { left, top, right, bottom, width } = target.getBoundingClientRect();
+        return { left, top, right, bottom, width };
+      };
+      return {
+        card: bounds(card), note: bounds(element), detail: bounds(detail), play: bounds(play),
+        description: bounds(description), images: bounds(images),
+        detailScrollHeight: detail.scrollHeight, detailClientHeight: detail.clientHeight,
+        detailScrollWidth: detail.scrollWidth, detailClientWidth: detail.clientWidth,
+      };
+    });
+    const overlap = (a: typeof layout.note, b: typeof layout.note) => (
+      a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+    );
+    expect(layout.note.left).toBeGreaterThanOrEqual(layout.card.left);
+    expect(layout.note.right).toBeLessThanOrEqual(layout.card.right + 1);
+    expect(layout.note.width / layout.card.width).toBeGreaterThanOrEqual(0.29);
+    expect(layout.note.bottom).toBeLessThanOrEqual(layout.play.top);
+    expect(overlap(layout.note, layout.description)).toBe(false);
+    expect(overlap(layout.note, layout.images)).toBe(false);
+    expect(layout.detailScrollHeight).toBeLessThanOrEqual(layout.detailClientHeight + 1);
+    expect(layout.detailScrollWidth).toBeLessThanOrEqual(layout.detailClientWidth + 1);
+  };
+
+  for (const viewport of [
+    { width: 1280, height: 720 },
+    { width: 640, height: 360 },
+    { width: 390, height: 844 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(page.getByTestId('campaign-overview-minimap')).toBeVisible();
+    await expect(page.getByTestId('campaign-overview-minimap')).toHaveAttribute('data-scenario-id', 'campaign-new-mexico-01');
+    await expect(page.locator('.campaign-overview-free-play-note strong')).toHaveText('FREE PLAY');
+    await expect(page.locator('.campaign-overview-free-play-note span')).toHaveText('No campaign progress or score is saved.');
+    await assertFreePlayNoteLayout();
+
+    await page.getByRole('button', { name: 'Switch interface language to Chinese' }).click();
+    await expect(page.locator('.campaign-overview-free-play-note strong')).toHaveText('自由游玩');
+    await expect(page.locator('.campaign-overview-free-play-note span')).toHaveText('不记录战役进度或分数。');
+    await assertFreePlayNoteLayout();
+    await page.getByRole('button', { name: '切换界面语言为英文' }).click();
+  }
+  await expect(page.getByTestId('campaign-stage-play')).toBeEnabled();
+  await expect(page.getByTestId('campaign-menu-back').first()).toBeVisible();
 });
 
 test('keeps Options to Help and Sound while the experiment lab stays outside the game frame', async ({ page }) => {

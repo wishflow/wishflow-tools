@@ -1,0 +1,944 @@
+{
+  "source": {
+    "apkVersion": "Guns’n’Glory FREE 1.8.6",
+    "resource": "res/raw/td_map_44.tdm",
+    "derivation": "Independent static graph extracted from TDM direction markers and the APK route-consumption rules."
+  },
+  "campaignLevel": 41,
+  "mapIndex": 44,
+  "width": 32,
+  "height": 24,
+  "summary": {
+    "spawn_count": 4,
+    "redirector_count": 47,
+    "exit_count": 2,
+    "reachable_redirector_count": 47,
+    "unreachable_redirectors": [],
+    "reachable_exit_count": 2,
+    "unreachable_exits": [],
+    "exceptional_path_count": 0,
+    "exceptional_paths": []
+  },
+  "spawns": [
+    {
+      "actionId": 2,
+      "cell": {
+        "x": 6,
+        "y": 0
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "firstControl": {
+        "x": 6,
+        "y": 4
+      },
+      "reachableExitCount": 1,
+      "reachableExits": [
+        [
+          0,
+          11
+        ]
+      ]
+    },
+    {
+      "actionId": 0,
+      "cell": {
+        "x": 31,
+        "y": 11
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "firstControl": {
+        "x": 29,
+        "y": 11
+      },
+      "reachableExitCount": 2,
+      "reachableExits": [
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          12
+        ]
+      ]
+    },
+    {
+      "actionId": 1,
+      "cell": {
+        "x": 31,
+        "y": 12
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "firstControl": {
+        "x": 28,
+        "y": 12
+      },
+      "reachableExitCount": 2,
+      "reachableExits": [
+        [
+          0,
+          11
+        ],
+        [
+          0,
+          12
+        ]
+      ]
+    },
+    {
+      "actionId": 3,
+      "cell": {
+        "x": 6,
+        "y": 23
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "firstControl": {
+        "x": 6,
+        "y": 20
+      },
+      "reachableExitCount": 1,
+      "reachableExits": [
+        [
+          0,
+          12
+        ]
+      ]
+    }
+  ],
+  "exits": [
+    {
+      "x": 0,
+      "y": 11
+    },
+    {
+      "x": 0,
+      "y": 12
+    }
+  ],
+  "edges": [
+    {
+      "from": {
+        "x": 6,
+        "y": 0
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 6,
+        "y": 4
+      }
+    },
+    {
+      "from": {
+        "x": 16,
+        "y": 1
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 19,
+        "y": 1
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 1
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 19,
+        "y": 3
+      }
+    },
+    {
+      "from": {
+        "x": 11,
+        "y": 2
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 16,
+        "y": 2
+      }
+    },
+    {
+      "from": {
+        "x": 16,
+        "y": 2
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 16,
+        "y": 1
+      }
+    },
+    {
+      "from": {
+        "x": 9,
+        "y": 3
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 11,
+        "y": 3
+      }
+    },
+    {
+      "from": {
+        "x": 11,
+        "y": 3
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 11,
+        "y": 2
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 3
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 19,
+        "y": 7
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 3
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 19,
+        "y": 3
+      }
+    },
+    {
+      "from": {
+        "x": 6,
+        "y": 4
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 9,
+        "y": 4
+      }
+    },
+    {
+      "from": {
+        "x": 6,
+        "y": 4
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 6,
+        "y": 7
+      }
+    },
+    {
+      "from": {
+        "x": 9,
+        "y": 4
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 9,
+        "y": 3
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 6
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 25,
+        "y": 3
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 6
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 25,
+        "y": 8
+      }
+    },
+    {
+      "from": {
+        "x": 29,
+        "y": 6
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 25,
+        "y": 6
+      }
+    },
+    {
+      "from": {
+        "x": 6,
+        "y": 7
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 13,
+        "y": 7
+      }
+    },
+    {
+      "from": {
+        "x": 13,
+        "y": 7
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 13,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 16,
+        "y": 7
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 13,
+        "y": 7
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 7
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 16,
+        "y": 7
+      }
+    },
+    {
+      "from": {
+        "x": 24,
+        "y": 8
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 24,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 8
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 24,
+        "y": 8
+      }
+    },
+    {
+      "from": {
+        "x": 16,
+        "y": 9
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 16,
+        "y": 7
+      }
+    },
+    {
+      "from": {
+        "x": 13,
+        "y": 11
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 0,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 16,
+        "y": 11
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 16,
+        "y": 9
+      }
+    },
+    {
+      "from": {
+        "x": 17,
+        "y": 11
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 16,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 17,
+        "y": 11
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 17,
+        "y": 12
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 11
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 19,
+        "y": 7
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 11
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 17,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 11
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 19,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 24,
+        "y": 11
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 19,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 11
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 24,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 29,
+        "y": 11
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 29,
+        "y": 6
+      }
+    },
+    {
+      "from": {
+        "x": 31,
+        "y": 11
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 29,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 13,
+        "y": 12
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 0,
+        "y": 12
+      }
+    },
+    {
+      "from": {
+        "x": 16,
+        "y": 12
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 17,
+        "y": 12
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 16,
+        "y": 12
+      }
+    },
+    {
+      "from": {
+        "x": 28,
+        "y": 12
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 28,
+        "y": 14
+      }
+    },
+    {
+      "from": {
+        "x": 31,
+        "y": 12
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 28,
+        "y": 12
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 14
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 25,
+        "y": 11
+      }
+    },
+    {
+      "from": {
+        "x": 27,
+        "y": 14
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 25,
+        "y": 14
+      }
+    },
+    {
+      "from": {
+        "x": 27,
+        "y": 14
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 27,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 28,
+        "y": 14
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 27,
+        "y": 14
+      }
+    },
+    {
+      "from": {
+        "x": 6,
+        "y": 16
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 13,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 13,
+        "y": 16
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 13,
+        "y": 12
+      }
+    },
+    {
+      "from": {
+        "x": 16,
+        "y": 16
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 13,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 16
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 16,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 16
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 25,
+        "y": 19
+      }
+    },
+    {
+      "from": {
+        "x": 27,
+        "y": 16
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 25,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 18
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 19,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 22,
+        "y": 18
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 19,
+        "y": 18
+      }
+    },
+    {
+      "from": {
+        "x": 22,
+        "y": 19
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 22,
+        "y": 18
+      }
+    },
+    {
+      "from": {
+        "x": 25,
+        "y": 19
+      },
+      "direction": [
+        -1,
+        0
+      ],
+      "to": {
+        "x": 22,
+        "y": 19
+      }
+    },
+    {
+      "from": {
+        "x": 6,
+        "y": 20
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 6,
+        "y": 16
+      }
+    },
+    {
+      "from": {
+        "x": 6,
+        "y": 20
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 12,
+        "y": 20
+      }
+    },
+    {
+      "from": {
+        "x": 12,
+        "y": 20
+      },
+      "direction": [
+        0,
+        1
+      ],
+      "to": {
+        "x": 12,
+        "y": 21
+      }
+    },
+    {
+      "from": {
+        "x": 12,
+        "y": 21
+      },
+      "direction": [
+        1,
+        0
+      ],
+      "to": {
+        "x": 19,
+        "y": 21
+      }
+    },
+    {
+      "from": {
+        "x": 19,
+        "y": 21
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 19,
+        "y": 18
+      }
+    },
+    {
+      "from": {
+        "x": 6,
+        "y": 23
+      },
+      "direction": [
+        0,
+        -1
+      ],
+      "to": {
+        "x": 6,
+        "y": 20
+      }
+    }
+  ]
+}

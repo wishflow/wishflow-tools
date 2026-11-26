@@ -142,5 +142,6 @@ test('Fort Kaboom is New Mexico stage three and stays locked until Apache Valley
     { scenarioId: 'campaign-dakota-08', globalLevel: 38, requiresCompletedScenarioIds: ['campaign-dakota-07'] },
     { scenarioId: 'campaign-dakota-09', globalLevel: 39, requiresCompletedScenarioIds: ['campaign-dakota-08'] },
     { scenarioId: 'campaign-dakota-10', globalLevel: 40, requiresCompletedScenarioIds: ['campaign-dakota-09'] },
+    { scenarioId: 'campaign-nevada-01', globalLevel: 41, requiresCompletedScenarioIds: ['campaign-dakota-10'] },
   ]);
 });

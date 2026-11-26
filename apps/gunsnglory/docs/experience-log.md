@@ -24,13 +24,23 @@
 
 ## 车马分叉必须复刻 APK 的坐标差移动
 
-**状态：**核心移动向量已按 APK 更新；Fort Kaboom 单关及五张正式关卡的隔离岔口矩阵测试通过。五个岔口的逻辑脚底与绘制范围已作定点测量；完整战役 seed 6 重放和 APK 运行画面对照仍未完成。
+**状态：**核心移动向量已按 APK 更新；完整波次 seed 6 Wave 1 的岔口时序有回归测试，五张正式关卡的岔口矩阵通过。Fort Kaboom Wave 3 的“wagon 在 `(9,3)`、马在 `(13,4)`”曾在改变前序波次请求的隔离会话中被记录，但该随机位置前置条件不稳定，已移除对应测试；因此不再把它作为可重复覆盖。尚未记录用户当时运行的确切随机种子/帧，也没有 APK 实际运行截图，视觉逐帧等同性仍未核实。
 
 - **表现与复现：**部分种子中马车会在岔路处走向不同，或车辆轨迹偏出原路。Cow Gulch 正式路线只有单向 redirect，不能复现分叉；Billy Hills Level 5 Wave 1 有 `(7,5)` 南北岔路及 Covered Wagon 组，但 32 种子测试只比较 `EnemyView.direction`，两者方向相同不足以证明实际移动向量一致。
 - **网页根因：**`sameGroupPredecessorDirection()` 将前序同组单位与当前单位的整格坐标差压成一个 `Direction`；差值斜向时回退到前车方向。`moveEnemy()` 随后只按四方向之一移动，因此丢失 x/y 分量和坐标差幅度。正式复现为 Fort Kaboom Level 3 Wave 3、seed 6、`campaign-3-group-15`：车辆到达 `(9,3)` 时，前序马匹已在 `(13,4)`；该格 redirect 为 north/east，网页车辆却选了 south。
 - **APK 证据：**APK 1.8.6 `EnemyDirector.moveEnemys()`（`smali_classes2/com/hg/gunsandglory/gamelogic/EnemyDirector.smali`，`.line 401–417`）先照常抽 redirect 随机方向，再在前序对象 `unitGroup` 相同的情况下，将方向分量改为前序敌人与当前敌人的 `fullX/fullY` 差。`GameObjectEnemy.setDirection(II)` 将两个原始分量分别乘以速度；`move()` 每帧分别更新 `fineX` 和 `fineY`。这不是“记住领车分支”，而是按当前相对位置移动；斜向或多格差值会造成对角/加速跟随，可能是 APK 行为本身的瑕疵，复刻时不得擅自用寻路、分支缓存或道路吸附改写。
 - **漏测点：**人工岔路 fixture 和 Billy Hills 真实关卡检查都只观察四向 `direction` 或车辆是否同向，没有比较分量移动、前后到岔口的时间差与整格位置。测试通过因此曾被误写成“已按 APK 修复”。
-- **修复与当前验证：**在内部 `MutableEnemy` 状态中把 x/y 移动分量与精灵图朝向分开；同组 follower 继续消费 APK 对应的随机 redirect 抽样，再应用前序对象的 `fullX/fullY` 差。移动与碰撞探测都使用两个原始分量；格中心跨越、坐标重新对齐及动画主轴按 APK 规则实现。`GAME_RULES_VERSION` 升至 `gng-rules-22`，回放格式版本不变，旧规则回放明确拒绝。新增 `fort-kaboom-wagon-route.test.ts`，保留 Fort Kaboom 原始地图、路线和 Wave 3，请求前两波清零以隔离到目标波次；seed 1 到达马匹 `(13,4)`、马车 `(9,3)` 后，下一 100 ms 分别移动 `(4 × speed, 1 × speed)`，精灵朝东。因为前两波请求被清零、随机消耗已改变，这不是完整战役 seed 6 的重放。随后新增 `official-wagon-route-matrix.test.ts`，使用正式 TDM、正式关卡岔口与正式车辆生成池，覆盖 Billy Hills 第 5 关、Cactusville 第 8 关、Lucky Lake 第 7 关、Lost City 第 10 关和 Railroad Ranch 第 9 关；5 项测试通过，逐场景核对至少一个未被碰撞阻塞的车辆步长等于前序同组对象的 `fullX/fullY` 格差乘速度。该矩阵会清空其他波次或无关生成池以聚焦目标路线，因此不代表完整战役种子序列。完整 seed 6 是否能用现有回放材料复现仍待核实。此前这一移动切片的110项相关单测与类型检查通过；新增矩阵测试也单独通过。
+- **修复与当前验证：**在内部 `MutableEnemy` 状态中把 x/y 移动分量与精灵图朝向分开；同组 follower 继续消费 APK 对应的随机 redirect 抽样，再应用前序对象的 `fullX/fullY` 差。移动与碰撞探测都使用两个原始分量；格中心跨越、坐标重新对齐及动画主轴按 APK 规则实现。`GAME_RULES_VERSION` 升至 `gng-rules-22`，回放格式版本不变，旧规则回放明确拒绝。Fort Kaboom Wave 3 的隔离测试曾保留原始地图与路线、清零前两波请求，并固定 seed 1；因为这改变了随机消耗，马匹 `(13,4)`、马车 `(9,3)` 只是该合成随机序列中的偶然坐标，不应被当作必须到达的规则状态。该精确坐标测试已删除；完整战役 seed 6 的跟随者转向时序回归仍保留。`official-wagon-route-matrix.test.ts` 使用正式 TDM、正式关卡岔口与正式车辆生成池，覆盖 Billy Hills 第 5 关、Cactusville 第 8 关、Lucky Lake 第 7 关、Lost City 第 10 关和 Railroad Ranch 第 9 关；5 项测试逐场景核对至少一个未被碰撞阻塞的车辆步长等于前序同组对象的 `fullX/fullY` 格差乘速度。该矩阵会清空其他波次或无关生成池以聚焦目标路线，因此不代表完整战役种子序列。包含 Fort seed 6 与正式路线矩阵的定向检查通过 188/188。
+- **随机隔离夹具的断言边界：**隔离前序波次或生成池会改变随机数消耗顺序，因此固定 seed 不能保证复现完整战役中的随机单位/坐标。隔离会话适合验证有界规则（例如一个已知状态的移动分量），不适合把自然生成的具体单位位置写成必达前置条件。需要覆盖精确位置时，应直接构造状态或验证该状态局部规则；需要验证生成顺序时，应保留正式波次并固定完整输入。防回归时检查 fixture 是否改过请求数、间隔、随机调用次序，再决定断言是否可重复。
+- **seed 6 岔口轨迹补查：**原始 Fort Kaboom、medium、seed 6、完整波次、无玩家命令仍会在 Wave 2 defeat，所以用仅把 `previewWave.initialLives` 提高到 500 的测试副本继续同一无操作模拟；地图、波次请求和随机种子不变，该字段只改变提前失败阈值。Wave 1 的 `campaign-1-group-14` 在 `(9,3)` 北向分支上，马于第 642 步（100 ms/步）转北；车继续向东，至第 650 步进入 `(9,3)`，第 657 步走到自己的控制点中心后转北。两者相差 15 步，即 **1,500 ms**，之后进入同一北向支路。这是逻辑位置轨迹，不是截图，也不是用户当时的确切 Wave 3 运行；它说明短时分路由 APK 的坐标差跟随规则产生，不能仅凭间隔画面判断最终走错路线。
+- **APK 更新顺序和资源映射：**对 APK 1.8.6 的 `EnemyDirector.moveEnemys()` 重新检查确认：方法按 `gameObjectsEnemy` 列表索引逐个更新；到每个敌人自己的 redirect 时，才读取紧邻前一对象的 `unitGroup` 和 `fullX/fullY` 差。`GameObjectEnemy.setImageForUnit()` 将 type 4 映射到 `R.drawable.wagon`、type 8 映射到 `horse_wagon` 或 `horse_wagon_white`；`GameObjectEnemy.draw()` 按 fine 坐标加绘制偏移定位。网页亦以两只独立敌人绘制这两份独立图集。当前没有证据表明资源丢失；尚未将这段连续画面与 APK 实际运行帧并排比对。
+- **完整 seed 6 的无输入基线：**使用正式 Fort Kaboom、medium、seed 6 和原波次数据，仅以 100 ms 步长推进 `GameSession`，没有模拟玩家操作。原始 50 lives 的模拟在 Wave 2 以 defeat 结束：239,200 ms 时 49 名敌人已逃脱、23 名仍存活、Wave 3 未开始；此后继续推进也不会改变结算。该终局是失败阈值阻塞，不代表路线逻辑已正确或错误。500 lives 诊断运行继续相同随机序列，但完整 seed 6 Wave 3 仍未实际到达；此前 seed 1 隔离测试的坐标前置条件不稳定，已移除，不再将其与完整战役轨迹并列为可重复证据。
+- **生产画面与 APK 绘制顺序核对：**把同一条完整 seed 6 轨迹的 frame 643、651、658 输入生产 `drawGame()`，在内置浏览器查看整张地图，并测量马、wagon 和奖励箱的绘制框与贴图 alpha 边界。frame 643 马和 wagon 的脚底 y 为 314.36 与 314.38，中心相距约一格；源图透明边缘使可见轮廓间约留 10 个显示像素。type 8 使用 `horse_wagon_white` / 转向图，type 4 使用 `wagon`；它们是 APK 中两个独立对象。网页取相同 48×60 源帧并按一格宽、5/4 格高的逻辑尺寸绘制，脚底均使用 fineY 加 y 偏移。frame 651 两个 alpha 边界重叠；frame 658 两者已同向转北。
+- **生产绘制回归需按实体位置关联图集：**把正式 seed 6 的三个 `GameView` 送入生产 `drawGame()` 后，首版断言按整张画面中的 `wagon` 图集调用次数判断目标车辆是否只绘制一次；正式画面还有其他 covered wagon 共用该图集，因此测试观测到 4 次并失败。这是测试把“图集调用”误当“目标实体调用”，不是画面重复绘制缺陷。回归改为同时匹配资源键与该实体由 `positionFine`、`drawingOffsetFine` 和 viewport 推导出的脚底/中心位置，再按 `GameView.drawOrder` 校验目标马与 wagon 的相对绘制顺序；frame 643、651、658 均通过。今后多实例共用精灵图集时，按实体锚点和 draw order 关联绘制，不能要求整张画面只出现一次该资源。此自动检查验证生产绘制调用和几何，不声称实际像素或 APK 同 seed 运行完全一致。
+- **正式战斗车辆也要进入生产 renderer：**新增检查使用 Billy Hills Level 5 原始 Wave 1、Easy、seed 1、无输入；frame 732 同时出现一辆 covered wagon、两辆 stagecoach 和一辆 gold transport。实际 `GameView` 经 `drawGame()` 后，测试按每个实体的资源键和绘制锚点逐一配对，并核对四者的 `drawOrder`。这补上了“正式波次生成检查”和“合成 EnemyView 渲染检查”之间的证据空档；它证明这些正式单位到达 renderer 后被绘制，不证明屏幕像素与 APK 同帧相同。
+- **静态运输资源应检查最终 GameView 资产：**Mississippi Level 11 的 TDM marker 原始名为 `steamboat_4a`，但正式地图位置资源序列按 `trunc(fineX / 1000) % 3` 选择，初始 `GameView` 实际资源为 `steamboat_4c`。首轮把 marker 名当成 renderer 的最终期望会误报差异；REA 地图审计与既有 `mississippi-11-steamer.test.ts` 已记录该轮换规则。正式静态运输测试应断言解析后的 `unit.asset` 并用生产绘制调用确认，而不是要求原始 marker 名直接绘制。此结论覆盖当前初始场景的资源解析，不代表所有运行帧的像素对照。
+- **奖励箱覆盖车辆是 APK 原有层级：**REA 静态反编译 APK 1.8.6 的 `GameObjectManager.getValueByObject()`、`insertDrawOrder()`、`SpawnPoolManager.update()`、`GameObjectCollectable`、`GunsAndGloryThread.drawEnemies()` 与 `drawObjects()` 得到：奖励箱生成时 `fineZ=7680`，位置中心 y 再加 `UNIT_PLACEMENT_OFFSET_Y=1920`；深度按 `fineY + drawingOffsetY + fineZ×100` 排序。APK 先绘制深度小于 768000 的敌人，再绘道路，最后绘高层对象。网页对相同箱体使用同一 y 位置、+768000 深度及 768000 道路切层，所以 frame 643 箱体和 `$` 图标覆盖相邻车辆局部，属原版排序。frame 651 两张车辆贴图本身明显重叠。不要为了截图观感擅自把奖励箱移到车辆后面或把车马吸附到一起。
+- **本次判定边界：**Fort Kaboom seed 6 的 Wave 1 代表帧没有发现网页移动、素材裁剪或排序偏离 APK 静态实现。Wave 3 隔离测试曾把一个依赖改变随机消耗的坐标设为必达条件，后来在单测运行中未能稳定满足，现已删除；不能再把它描述为可重复的轨迹证据。当前无需为已由静态代码与确定性会话解释的向量启动模拟器；若用户再次遇到不同路线结果，应记录关卡、波次、随机种子和马/车帧级坐标，再按该轨迹定点分析。
 - **岔口脚底和绘制范围复核：**用正式地图、TDM 和车辆生成池隔离每关目标波次，以 seed 1、100 ms 步长记录转向前、转向帧和下一步。下表中的 `fine` 是逻辑坐标；贴图范围按渲染器的一格宽、车辆高度和 `drawingOffsetFine.y=2880` 计算，表示矩形范围而非贴图非透明像素。
 
   | 关卡 | 岔口前 → 转向 → 下一步（fine） | 转向格 / raw | 绘制脚底（格坐标） | 矩形触及的 TDM 格 | raw 36 边界 |
@@ -42,8 +52,35 @@
   | Railroad Ranch L9 | `(203960,49920) → (203520,49922) → (203520,50422)` | `(26,6) / 58` | `(26.500,6.875)` | `(26,5)=32`、`(26,6)=58` | 未触及 |
 
   五个转向格均是正式路线控制格，逻辑位置未进入 raw `36`。Lost City 的车体矩形在 x 边界因 `fineX=57598` 比格中心偏 2 个 fine 单位，理论边界擦入相邻 raw `36` 格约 `0.00026` 格；这不是路线中心偏移，也没有测量贴图透明边缘是否产生可见像素。该结果说明峡谷边缘可能与车体贴图相邻或轻微重叠，不支持移动 TDM 路线。静态 APK 方法显示车辆按绘制偏移锚定并整帧绘制；没有 APK 运行截图，不能证明网页和 APK 在该处视觉完全相同。
-- **防回归：**现有自动矩阵覆盖上述五张关卡的实际车辆生成池与指定多向岔口，并断言岔口后的移动分量；Fort Kaboom 隔离用例覆盖斜向、非单位格差跟随。若将来获取完整 seed 6 的可重放输入，应单独补充整战回归。更广泛的路线回归仍需覆盖碰撞等待、动画朝向、关卡出口和回放确定性；用正式内容及 APK 静态方法作为预期，不以“方向相等”替代行为比对。
+- **防回归：**现有自动矩阵覆盖上述五张关卡的实际车辆生成池与指定多向岔口，并断言岔口后的移动分量；完整波次 Fort Kaboom seed 6 回归检查 Wave 1 马与 wagon 相差 15 帧转向。此前用于 Wave 3 `(9,3)/(13,4)` 坐标差的隔离用例已删除，因为清空前序波次改变随机消耗，坐标不是稳定前置条件。当前 `fort-kaboom-wagon-route.test.ts` 只保留完整战役 seed 6 时序用例；本轮将其与 `enemy-route.test.ts` 和正式马车矩阵一起运行，188/188 通过。这些测试证明已覆盖样本遵循查明的 APK 移动规则，不证明所有完整战役随机序列或 APK 运行画面逐帧相同。更广泛的路线回归仍需覆盖碰撞等待、动画朝向、关卡出口和回放确定性；用正式内容及 APK 静态方法作为预期，不以“方向相等”替代行为比对。
 - **适用边界：**上述结论来自 APK 静态反编译与网页 `GameSession` 探针，不是 Android 实机观察。敌方路线与敌人图片显示出的悬崖重叠需分开调查；本项不修改 TDM 路线点。
+
+## 敌方碰撞与路口占位要拆成两层验证
+
+- **表现与复现：**网页曾能让部分运输车互相挡住，但 horseman 和 boss 仍会从对向单位穿过；即使运输对象在岔路相交，也没有实现原版 action-2 转向格的先到先占。只看“两个组同时到过附近”或通用车辆测试，无法证明它们因哪种规则停下。
+- **根因与 APK 证据：**APK `EnemyDirector.moveEnemys()` 对类型 3–8 做实体碰撞，类型 3、7、8 还会预占前方 action-2 转向格。占用冲突会撤销本帧移动，并让相邻同组下一成员停一帧；越过转向格中心释放占位。`GameObjectEnemy.startDying()` 会清除其路口占位，但不会立即移除 `CollisionObject`；`CollisionManager.testCollisionEnemy()` 不按存活状态过滤碰撞框，待死亡动画计时结束后 `EnemyDirector.moveEnemys()` 才将对象和碰撞框移除。因此，死亡会立即释放路口格，但死亡动画期间仍会作为物理障碍。
+- **网页漏测点：**此前 `enemyCollisionBlocksMove()` 仅覆盖类型 4、5、6、8，现有正式交会测试也只检查运输实体；类型 3 horseman、类型 7 boss 及路口占位从未覆盖。把两个测试组沿同一直线对向放置，会先发生物理碰撞，不能单独验证转向格占用。
+- **修复与防回归：**在 `src/game/index.ts` 内统一登记 3–8 碰撞类型，并为类型 3、7、8 保存波次级占位；占用冲突沿用本帧撤销与同组暂停，越过格中心或死亡时清除占位，死亡物理框保留到死亡计时结束。`tests/p1f-enemy-collision.test.ts` 7/7 定向通过，覆盖 horseman/boss 实体碰撞、type 1/2 不参与碰撞、垂直交叉路线的占位等待与通过释放，以及占位者死亡后的等待组恢复；`pnpm run typecheck` 通过。正式路线六个候选组合的回归仍按实施计划 C4-D3 执行，本测试不代表路线交会全面关闭。
+- **避免重复：**测试要拆开“物理框碰撞”与“action-2 格预约”；用两条垂直接近路线证明预约发生在物理框接触前。比较距离时按 APK 的 `7678` 格碰撞框和碰撞框起点偏移计算，不能只比较精灵图边缘。占位者死亡后不应假设碰撞框同步消失；应等死亡动画结束后验证后续组恢复。上述依据为 APK 静态反编译和网页 `GameSession` 自动观察，不是 Android 实机画面对照。
+
+### 出生区已重叠时，APK 碰撞检查可能让单位持续停住
+
+**状态：**APK 静态算法、独立参考模型、Fort Kaboom seed 42 Wave 3 GameSession 调度以及正式 Playwright E2E 的终止状态吻合：两只跨组敌人持续重叠并停住，阻止波次结算。当前分支保留来源碰撞规则，不加入网页专属“重叠后放行”。APK 原版的同种子运行画面没有观察。
+
+- **表现与复现：**先前 Apache Valley/Fort Kaboom 的正式胜利 E2E 未结算。一个此前采集的网页会话样本中，type 5 stagecoach 位于 `(-6200,72960)`，type 3 horseman 位于 `(-11520,72960)`，两者同 y、碰撞框水平起点相差5,320 fine；APK 框宽7,678 fine，因此已经重叠2,358 fine。该坐标样本本身不证明它就是 E2E 的失败帧。
+- **APK 根因证据：**REA 检查 APK 1.8.6 的 `EnemyDirector.moveEnemys()`：实体先执行 `GameObjectEnemy.move()`，随后对类型3–8 调 `CollisionManager.testAdvancedCollisionEnemy(co,xDir,yDir)`；返回碰撞时调用 `undoMove(oldXDir,oldYDir)`。`GameObjectEnemy.move()` 将框起点更新为 `fineX/Y−3840`；`CollisionManager.createCollisionObject()` 创建7,678×7,678框。`testAdvancedCollisionEnemy()` 转调 `testCollisionEnemy()`；后者先用反向的 `−xDir/−yDir` 检查对方框，未命中才正向检查当前框；`boxCheck()` 用移动后四角是否落入另一框判定。apktool 导出的 smali 将起点候选筛选范围确认为 X `0x5a00`、Y `0x3c00`。这些是 APK 静态证据，未在 Android 运行验证。
+- **网页漏测点：**已有碰撞测试覆盖对向碰撞和分组排除，却没有独立重建“碰撞开始前框已经交叠、第一轮反向预测仍命中，于是正向分离机会也被短路”的条件；而 seed 42 E2E 只断言最后胜利，没有报告发生停滞时的碰撞框/位移/波次状态。
+- **参考模型与验证：**[`apk-enemy-collision-reference.test.ts`](../tests/apk-enemy-collision-reference.test.ts) 以 APK 方法语义独立实现候选过滤、两次预测和四角检查；对上述坐标探针 `xDir=±1` 均预测阻挡，同组对象和任一轴分离的样本不阻挡。合成真实 `GameSession` 中，两组同向同点生成的运输单位与模型预测一致，连续五帧坐标不变。连同既有[`p1f-enemy-collision.test.ts`](../tests/p1f-enemy-collision.test.ts) 共10/10通过，类型检查通过。此前直接按100ms连续推进的无输入/初始输入短测未观察到重叠，但它没有复刻浏览器时钟调度，不能用于排除正式 E2E 路径。
+- **正式调度下的观察：**按 `t28/t33` 测试的10,000ms时钟、4×速度、100ms步长、波次对白暂停/恢复和自动购买次序做不超过20个循环的 GameSession 探针。Apache Wave 1 首次 type 4/type 3 跨组碰撞框重叠后没有连续停帧。Fort Wave 3 在 step 2530、elapsed 253,000ms 遇到 stagecoach type 5 `campaign-3-enemy-147` / group `campaign-3-group-133`（`(-6200,72960)`，向东，speed 500）与 horseman type 3 `campaign-3-enemy-151` / group `campaign-3-group-137`（`(-11520,72960)`，向东，speed 460）。碰撞框重叠，APK 独立模型预测双方候选移动都被挡；网页会话连续5个100ms帧保持原坐标。其坐标对应此前报告的 Fort Wave 3 网页样本。这个程序化关卡会话没有 UI DOM，但重用了现有 E2E 的时序和购买策略；后续 Fort 正式 E2E 诊断显示相同敌人坐标且停留在 Wave 3，网页端因果链由此闭合。APK 运行帧并排对照仍未建立。
+- **正式 E2E 因果复核：**此前以 Fort Victory 为目标的测试用单 worker 两次未结算，诊断版的最终页面状态为 Wave3/10、Lives50、Enemies2、Cash$33、未显示结算、120个测试循环后仍处于 Wave3；已处理购买为 Cannon01/02、Mexican01/02 和 Gunslinger05。检查器显示剩余敌人位于 `(-0.81,9.50)` 与 `(-1.50,9.50)`。对应 GameSession 在同一固定输入/购买调度后，最终 Wave3 active、lives50、cash37、activeEnemies2、pendingSpawnRequests0，剩余对象为 type5 与 type3、不同 group，位置 `(-6200,72960)` 和 `(-11520,72960)`；从 step2535 到结束的44,690个100ms帧坐标保持不变。两处坐标换算一致；APK 独立模型预测这对对象在碰撞框重叠后互相阻挡。它解释了 Victory 用例为何不可达，但仍属于静态 APK 语义加网页行为验证，不是 APK 实机或视觉并排观察。
+- **正式 GameSession 防回归：**`tests/fort-kaboom-source-collision.test.ts` 使用正式 Fort 数据和 seed42/easy，重放初始双 Cannon 雇佣、首 Cannon 移动、4×模拟调度、Wave对白暂停/恢复及自动购买顺序。测试在所有 Wave3 请求耗尽、仅剩 stagecoach 与 horseman 时，用独立 APK 模型分别检查双方移动均被阻挡，并断言位置持续不变、Wave3 active、无结算记录。定向测试1/1、TypeScript检查通过。首次断言把 Wave3 阻塞误写成“仅两敌人存活”而失败；检查 `WaveView.activeEnemies` 后确认那时仍有28名活动敌人，因此测试改为继续按正式时序推进，直到请求清空且仅剩阻塞对，再验证结算状态。没有把观察到的计数误当规则或改生产逻辑。
+- **正式 UI E2E 验收：**`tests/e2e/t33-fort-kaboom-formal.spec.ts` 现按源码结论测试可达行为：进入 Wave3 后识别 stagecoach/horseman 的固定检查器坐标，再用5个25ms真实时钟步（4×、每步100ms游戏时间）确认它们不移动。测试确认没有结算、completed scenarios/high scores/settlement 去重记录未变化，重载后 Fort 后续关仍锁定。声音设置为关闭，移除原来与碰撞无关的波次语音断言。定向 E2E 单 worker 1/1及类型检查通过；没有完整推进或通关战役。
+- **Apache Valley 第二个正式复现：**Fort 之外，Apache Valley seed 42 的完整正式时序也会在 Wave 6 停滞。`tests/apache-valley-source-collision.test.ts` 按4×、10,000ms浏览器时钟、最多100ms步进、对白暂停/恢复与自动购买顺序推进正式 `GameSession`；地图雇佣18名后，Wave 6 的 wagon type 4 位于 `(34560,-6075)`、向南速度525，两名 horseman type 3 位于 `(34560,-11520)`、向南速度495/480，三者属于不同 group。APK 碰撞框重叠2,233 fine，独立 APK 模型判定 wagon 与 horseman 的双方候选移动都受阻。即便尚有4个生成请求，三者连续5帧坐标不变，波次仍 active、没有结算。
+- **Apache 正式 E2E 与独立结算覆盖：**`tests/e2e/t28-apache-valley-formal.spec.ts` 改为核对 Wave 6 碰撞组合、短时坐标稳定、不显示结算，且完成关卡/高分/结算去重记录不变；重载后下一关仍锁定。它不再要求该 seed 获胜。正式胜利和存档另由 `tests/e2e/t25-official-campaign-touch.spec.ts` 的 Cow Gulch 完整关卡用例覆盖。Apache 来源回归1/1、Fort/Apache 两个 UI E2E 2/2、Cow Gulch Victory/存档 E2E 1/1、类型检查通过。它们验证的是网页按 APK 静态算法建模后的行为；Apache/Fort 是否在 APK 同种子实机冻结尚未观察。
+- **错误探针的剪枝记录：**Apache 初步调度探针在追踪的临时实体消失时错误地 `break` 了外层模拟循环，导致每轮只推进一次而不是完整时钟帧；它没有进入 Wave 6，不能用于排除后续碰撞。修正后探针按每个真实时钟回调完整消费 `SimulationTimeAccumulator` 输出，并只在对白造成暂停时结束当前推进批次。遇到“未复现”先确认模拟步数、波次进度与退出分支，不能只看脚本执行成功或一次采样结果。
+- **M4 整批回归：**`CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 通过类型检查、1,460项单测、生产构建及216项E2E；主 JS 包仍有大于500KB的构建提示。未改共享包，因此没有额外共享包检查。碰撞研究批次完成但尚未集成或发布。
+- **诊断方法修正：**Playwright 使用 `SimulationTimeAccumulator.advanceElapsed(deltaMs, simulationSpeed)`，每个测试时钟步拆成多个不超过100ms的会话步。`showCampaignWaveIntroAfterWaveChange()` 在波次变化时暂停会话并跳出当前步进循环，因此对白确认等待会丢掉该批剩余时间；测试在同一循环迭代中确认对白，下一迭代才推进模拟。普通帧推进后才按余额和优先级购买。早期直接连续调用 `GameSession.advance({deltaMs:100})` 的短测没有复现这一节奏；已将它降级为简化基线，不用它排除正式 E2E 路径。
+- **防回归与未决项：**Fort seed42 的 UI 流程不得再以十波 Victory 作为固定验收；应验证抵达 Wave3、持续停滞、不错误结算和不写入 Fort 完成进度。相同地图遇到其他 seed 是否可通关、APK 实机是否完全同样停住，未在本轮验证。更一般的卡住问题仍需记录 seed/波次/类型/group/碰撞框/向量及输入；不以 AABB 启发式放行。正式 Victory/存档覆盖由通过源码核对、且未触发此源级停滞的其他关卡承担。
 
 ## 地图雇佣框要消费 APK 的单位展示映射
 
@@ -74,15 +111,31 @@
 
 ## 桥面边界与我方地图对象碰撞必须拆开核对
 
-**状态：**APK 静态几何已复核，网页对象碰撞已修正并发布；27 张已接入地图的对象标记和代表性桥面规则已验证。
+**状态：**APK 静态几何已复核，网页对象碰撞修正已发布。后续关卡扩展后，共享测试已把静态对象框、单位脚底/唤醒锚点及 raw36 墙边探针扩展到41张地图；新增 `all-maps-player-bridge.test.ts` 又为全部41张地图中每个实际渲染、两侧由 raw32/36 阻挡的连通桥段运行短 `GameSession` 边界移动，覆盖 raw80、Railroad Ranch 实际桥面 raw81 和 raw88。**剩余缺口是特殊对象类别的全图真实会话及生产画面锚点复核；桥面自动通过不代表 APK 画面对照通过。**见[地图覆盖矩阵](map-coverage-matrix.md)。
 
 - **表现与复现：**我方单位在桥边看起来越过峡谷壁；未雇佣的睡眠角色、Saloon 等地图设施无法挡路；部分单位互相穿过。单纯把桥图整体移动或缩窄，不能修复这些对象问题。
 - **根因与证据：**APK 的桥图是覆盖底图的道路层，资源字节、绘制矩形和网页一致；玩家脚底锚点和 `5068×4608` 碰撞框也与 APK `GameObjectUnit.createCollisionObject()` 一致。横桥 raw `80` 的贴图向左右各伸约 `0.25` 格，但碰撞可走范围由四角所在底图格及街道覆盖层决定；raw `36` 悬崖阻挡漏项已在前一批修复。对象碰撞的另一个调用链是 `CollisionManager.testCollision()` → `boxCheckX/Y()`：按当前碰撞框、本帧位移和正交轴重叠检测边沿穿越；`CollisionManager.boxCheck()` 不是该移动路径。静态 TDM 对象框由 `GameObjectManager.createGameObjectsFromBasicMap()`、`GameObjectDecoration`/`GameObjectSpawnLocation` 构造器和 `CollisionManager.createCollisionObject()` 的不同偏移共同决定。网页之前只查显式 `collisionBoxFine`，未包含单位列表，且测试把同一份内容框当成期望值，因此错框也能通过。睡眠单位只改状态和贴图，仍保留碰撞对象。`GameObjectSpawnLocation.update()` 使用零位移 `testBasicCollision()` 创建单位，不能把一般矩形重叠规则套用到 Fort Cannon 出生位置。
-- **修复与防回归：**以原始 TDM 码生成静态物件框，并只在特殊非静态码装饰（如水岩）或缺少 TDM 的 fixture 中使用显式框；活动、睡眠和动态生成单位都参与碰撞，船体使用自己的框，组成员不与自身同时移动组互撞；Fort 生成继续采用零位移检查。地形四角判断与静态/单位边沿穿越分开实现。`player-collision.test.ts` 覆盖睡眠/活动单位、沙龙、Fort 离开、raw `88` 竖桥、TDM 矩形表、炸药和27关静态 marker；`player-unit-anchor.test.ts` 覆盖 Cow Gulch raw `80` 横桥及27关 raw `36` 墙；Steamer 与奖励箱测试覆盖自定义船体和收集行为。
-- **验证与发布边界：**定向测试122项通过；完整 `test:ci` 通过类型检查、853项单测、生产构建和175项 E2E。GitHub Actions `43833240368` 成功，GitHub Pages 与 Cloudflare Pages 的来源均为发布提交 `0eb4b42`。内置浏览器窗口模式、静音加载对应 Cow Gulch，可选中我方单位并下达移动指令；截图未能确认其最终停靠边界，因此不记作线上碰撞画面通过。证据来自 APK 静态方法/资源、TDM 与自动化会话；本批未启动 Android。网页目前接入27/60关，其余33关未纳入逐图验收。
+- **修复与防回归：**以原始 TDM 码生成静态物件框，并只在特殊非静态码装饰（如水岩）或缺少 TDM 的 fixture 中使用显式框；活动、睡眠和动态生成单位都参与碰撞，船体使用自己的框，组成员不与自身同时移动组互撞；Fort 生成继续采用零位移检查。地形四角判断与静态/单位边沿穿越分开实现。当前 `player-collision.test.ts` 对41张地图的每个静态对象 marker 断言唯一 APK 碰撞框，并覆盖睡眠/活动单位、Saloon/Fort/Shack、桥面、炸药、奖励等规则；另以 Tech Town 真实地图补测 raw77 高骨骸的长框边界和解锁后 raw150 Casino 的条件碰撞框。`player-unit-anchor.test.ts` 对41张地图核对单位脚底/唤醒锚点和 raw `36` 墙边移动；`all-maps-player-bridge.test.ts` 为41张地图中每个可走连通桥段做真实短会话移动和两侧边界探针。`oregon-09-collision.test.ts`、地图实体测试、Steamer 与奖励箱测试提供其他对象类别的真实短会话证据。
+- **验证与发布边界：**原对象碰撞修复批次的定向测试122项通过；当时完整 `test:ci` 通过类型检查、853项单测、生产构建和175项 E2E。GitHub Actions `43833240368` 成功，GitHub Pages 与 Cloudflare Pages 的来源均为发布提交 `0eb4b42`。内置浏览器窗口模式、静音加载对应 Cow Gulch，可选中我方单位并下达移动指令；截图未能确认其最终停靠边界，因此不记作线上碰撞画面通过。上述发布数据是27张地图阶段的历史验收范围；当前网页接入41/60关，后续全图自动断言见本节状态与地图覆盖矩阵。证据来自 APK 静态方法/资源、TDM 与自动化会话；原批次未启动 Android。
 - **避免重复：**看到脚底略超出桥面绘图边缘，先按贴图尺寸、脚底锚点、碰撞框底边分别计算，不以视觉矩形代替 walkable field。要改对象碰撞时先定位其 APK TDM 类型和构造器，再核对本帧的移动方法；不要拿独立的 `boxCheck()`、严格 AABB 或一个地图字段推测整条规则。新地图必须逐标记核对静态对象覆盖；单位状态、船体组和建筑 spawn 分别做测试。测试铁路覆盖是否阻挡时，选 raw0 开放地面跨越轨道；raw32 属于敌方道路地形，玩家本来就会被它阻挡，若把 raw32 路段作为测试起点/目标，停住不能说明铁路贴图层阻挡。本轮 Badlands 用 raw90 覆盖在 raw0 地面上的横向探针验证轨道可穿越。当前结论基于 APK 静态方法、资源与 `GameSession` 自动化检查，不代表 Android 实机/模拟器画面观察。
 - **移动探针坐标也要覆盖对象碰撞框：**Ghost Town 首次静态石头探针把移动目标设在整数行 `y=14`，枪手最后的碰撞框底边为 `13.94` 格，而该 rock 的 APK 碰撞框从 `y=14.34` 格开始；角色实际从障碍上方经过。这是测试坐标错误，不是碰撞实现回归。把目标行设为 `y=14.75` 后，以 `positionFine + PLAYER_UNIT_COLLIDER_FINE` 比较实际玩家框和 TDM 对象框，石头、建筑、水塔及铁路缓冲器的短 `GameSession` 探针均在边界前停止。后续碰撞探针应验证实际矩形是否相交，不能只凭逻辑格行或角色贴图判断测试已触达障碍。
 - **水上单位的边界要按最终碰撞图判断：**Ghost Town 的水上船体位于 raw120–123 覆盖的 raw124 水格上；y=11 的水道到地图最右侧仍是可航行碰撞码 `96`，不能因为 y=12 在 x=26 之后画成岸线就假设船会在那里停止。对应 `tiles_waterside` 的碰撞码 `103` 属于水上单位阻挡范围；普通地面单位与船体适用的水面规则不同。raw126 岸岩的 TDM 碰撞框底边低于船体碰撞框顶边，真实 `GameSession` 船组可从其旁边通过。测试最初把可视岸线误当成 y=11 的水域终点，也曾要求整个碰撞框不能越过地图边界；最终改为对照 APK 派生的背景碰撞码、检查船体锚点边界和真实组移动。水路、浅滩及地图边缘测试应分别核对渲染层、碰撞码类别和单位的实际碰撞框，不从 raw0 或画面颜色推导水上通行性。
+- **运输端点审计要区分 TDM、派生背景码和对象碰撞框：**临时扫描曾把 Railroad Ranch raw68 误判成地形阻挡，并漏掉 TDM raw94/raw95 纵向缓冲对象；原因是把简化碰撞码范围直接用于原始 TDM。引擎先由 `backgroundCollisionCode()` 将 raw 转为背景码，raw68 则有独立 `PLAYER_STATIC_COLLISION_BOUNDS_BY_TDM_CODE` 静态物件框。正式 `GameView` 审计并核对对象框后，48组/96个端方向的源格分类为 raw86 22端、raw87 22端、raw94 9端、raw95 9端、水岸码107/109/110/119/127合计10端、地图边界24端；没有普通地形码作为首个端点来源。永久测试 `official-static-transport-endpoint-audit.test.ts` 固化了该静态分类与对象框登记。此清单只定位来源，不证明移动停靠。
+- **端点运动必须证明车辆真的撞到了端点：**旧 Ghost Town 蒸汽船测试虽称“地图边界停止”，但它的移动目标是 x=30，船在目标处停下并未触碰右边界。C4-B 新增正式地图 `GameSession` 定点，会把船目标设到地图外，分别检查西/东边缘；另用 Lucky Lake raw94/raw95 与 Mississippi/Oregon 五类水岸码检查整组停稳、APK 对象框/水面角点不越界、原始间距及反向移动。测试通过确认9个代表方向。后续不能依据“moving=false”或目标在边缘附近就称为碰撞停靠；须证明目标仍未到达、边界/碰撞框确实阻止本帧位移、整组稳定且新指令可离开。此结论是网页 `GameSession` 自动观察，不等同 APK 同帧运行验证。
+- **路线交会验证必须保留正式波次，并尊重 action-2 的合法随机分岔：**临时扫描曾把请求数压成1、把间隔改为0，并把全图碰撞当成交会冲突；这会改变相遇时间并纳入无关对象。正式测试 `official-transport-crossing-behavior.test.ts` 保留官方车辆/horseman 请求数量、间隔和路线，只隔离其他波次、我方单位与奖励箱，推进真实 `GameSession` 并只在候选交会格周围检查路径与 APK 7678×7678 碰撞框。固定 seed 是隔离波次 seed，不是完整战役同 seed 回放。Level 17 spawn 3/5 的 horseman seed 1 中，spawn 3 在原图 action-2 格 `(6,21)` 选择北向合法分支并从 y=16 出口离开，因此没有经过 `(14,21)`；spawn 5 才经过该交会格。这不是漏路或越界，不应强制每个出生点经过同一格。六组车辆与六组 horseman 定向会话共12项通过，未见候选区域跨源碰撞框重叠；Level 31 的预约会让车辆错帧进入附近区域，也不应把同帧靠近作为通过条件。结论只覆盖固定 seed，不穷举随机路线；检查时要对照源 action 方向、实际路线分支与碰撞框，不能只按“候选交会清单”要求所有单位到同一点。
+
+### 桥面画面探针按脚底锚点选目标
+
+**状态：**M2 碰撞/桥面范围已按41图自动覆盖与类别级移动会话关闭。Cow Gulch raw80、Steam Valley raw88 与 Cow Gulch raw36 均通过真实 Canvas 输入及定向 E2E 观察；raw36 已按 APK 锚点/碰撞框关系判定。网页生产画面仅为三处代表样本，不是 APK 同帧运行证据，也不外推为41图逐帧核对。
+
+- **表现与复现：**初次桥面探针把目标放在 raw80 `(12,9)` 格中心 `(12.5,9.5)`，实际枪手停在 `x=11.65`；这容易被误判为桥面碰撞错误。坐标点击脚底 `(8.5,8.75)` 也没有选中单位，沿用 E2E 已验证的精灵可选点 `(8.5,8.25)` 才能开始左键拖动。
+- **根因与证据：**`PLAYER_UNIT_COLLIDER_FINE` 相对脚底的 y 范围是 `-5376..-768`（约 `-0.70..-0.10` 格）。Cow Gulch raw80 上方 `(12,8)` 为阻挡 raw32；脚底 y=9.5 时碰撞框仍覆盖该上邻格，因此横向移动在桥前被正确挡住。将脚底目标降到 y=9.75 后，真实 Canvas 拖动到达 raw80 `(12,9)`；调试十字读数约为 `fine=(93697,74765)`、`cell=(12.2001,9.7350)`，截图中的脚底标记落在桥面贴图范围内。对应位置来自 `cow-gulch.json` 与运行时检查面板，不代表 APK 同帧实机画面对照。
+- **计划坐标纠错：**旧观察计划把 Cow Gulch `(8,13)` 的 raw32 称为可走侧，这是错误的：`BACKGROUND_BLOCKING_TILES` 包含 raw32，且 `STREET_LAYER_TILES` 不包含 raw32。raw36 `(8,12)` 墙的相邻可走侧改用 raw16 `(8,11)`；静态碰撞规则见 `src/game/index.ts`，墙边实会话断言见 `tests/player-unit-anchor.test.ts`。
+- **Steam Valley 竖桥证据：**Level 12 的 TDM raw88 位于 `(11,8)`、`(11,9)`，实际桥图 `tiles_bridge_verti` 的纵向绘制范围为 `y=7.75–10.25`。Canvas 输入把 Gunslinger 移入上方 raw88 行，截图脚底标记为 `fine=(88320,67995)`、`cell=(11.5000,8.8535)`；这处位置处于 TDM row8 和桥图范围内。画面 `/tmp/gng-m2-d2-steam-valley-raw88.png`；测试直接复用运行时 16:9 内视口、显示像素缩放和地图 viewport 计算。
+- **Cow Gulch raw36 边界读数：**Level 1 的 raw36 墙在 `(8,12)`，相邻 raw16 可走侧在 `(8,11)`。短 Canvas 移动停止时脚底锚点为 `fine=(65280,92700)`、`cell=(8.5000,12.0703)`；由于 APK `PLAYER_UNIT_COLLIDER_FINE` 的碰撞框终点位于脚底锚点上方约 `0.10` 格，碰撞框底边是 `y=11.9703`，仍未进入 raw36。不能把锚点的 `floor(y)=12` 单独当作碰撞越界。网页截图 `/tmp/gng-m2-d2-cow-gulch-wall.png` 说明实际视觉落点，但与 APK 原版同帧画面是否逐像素一致仍未知。
+- **M2-D3 判定：**APK `GameObjectUnit.draw()` 使用 `fineY` 绘制角色帧的底边；网页 `createAnchoredMapRender()` 初始底边同为 `cell.y+0.75`，运行时 `unitRenderOffsetAt()` 保持 `render.y + render.height = positionFine.y/7680`。因此测得的脚底锚点进入 raw36 行约 `0.07` 格、但 APK 碰撞框仍留在 raw16 侧，是原版参数允许的轻微美术覆盖，不是网页碰撞网格整体偏移。这个结论只针对 Cow Gulch 测点；没有 APK 同帧运行截图时，不宣称贴图栅格逐像素相同。若其他地图的脚底越界超过 `0.10` 格或碰撞框角进入阻挡格，仍需单独调查。
+- **E2E 坐标误报与防回归：**Steam Valley 首次测试把 map 点按 canvas 外框宽高线性映射，没有复用运行时 `fitAspectViewport()` 的内层 16:9 视口；之后又把目标放在桥格边缘并要求 `floor(y)` 必须跨格。前者可能产生输入坐标偏移，后者会与约 `0.31` 格的到达停止容差冲突。修正助手后确认应用实际接收的目标为 `(11.5000,9.2641)`；将目标放到 raw88 上方桥格内部 `(11.5,8.5)`，生产截图读数落在 row8，三项永久 E2E（Cow raw80、Cow raw36、Steam raw88）通过。测试必须使用与 `pointerLogicalPosition()` 同一视口变换，且将目标放在待验证格内部；先查输入映射、目标是否合法和到达容差，再判断碰撞规则。
+- **防回归：**桥面目标不是一律放在 TDM 格中心；先读 `PLAYER_UNIT_COLLIDER_FINE` 和周边 TDM，再选择碰撞框完整落在桥格内的脚底坐标。Cow Gulch raw80 的可复现输入顺序为 `(8.5,8.25)` 选中，拖至 `(9.5,8.75)`，再至 `(9.5,9.75)`，最后沿桥拖至 `(12.5,9.75)`。测试 `floor(x), floor(y)` 时必须明确测的是逻辑锚点、碰撞框边缘还是所属 TDM 格；不可把 `stop-moving`、不合法锚点或测试选点失败写成产品碰撞缺陷。新增的定向 E2E `tests/e2e/t43-player-bridge-anchor.spec.ts` 需单独通过后才作为永久回归证据。
 
 ## 新增战役关卡后的进度断言
 
@@ -153,6 +206,14 @@ M39 又重现了同一测试基线遗漏：Level 38 接入目录后，首轮完�
 - **漏测点：**过去的路线检查主要验证控制节点/边界是否存在，未将“完整路线集合”与“运行时真正消费的转向表”逐格比较；单入口关卡或第一条路线不会覆盖其他出生口在共享路口的选择。道路图层测试也未把每个关卡的地图指令与 APK 派生绘制规则对照，因此地图数据里有路线却不代表玩家看得到正确的道路。
 - **修复与防回归：**[`runtimeWaveRedirects()`](../src/game/wave-routes.ts) 从完整路线重建共享转向表，并以原始 TDM action-2 方向码补全合法选择；关卡显式覆盖仍优先，无路线定义的 legacy 场景继续使用原 `redirects`。敌人预览出生位置根据实际行进方向计算，避免所有边缘出生点被假定为向左进入。Apache Valley 补齐5段桥面和3对桥墩，不挪动路线点。后续每张地图必须同时核对：TDM marker→运行时方向表、所有 spawn→redirect→exit 分支、路径实际经过的道路/桥层、角色脚底锚点；不能只检查画出的路线折线，也不能为掩盖数据错位而手动偏移路线。
 - **验证与边界：**[`wave-routes.test.ts`](../tests/wave-routes.test.ts) 逐项比较27关所有 action-2 格及方向；Riverside Mountains 的底部出生口通过短 `GameSession` 轨迹确认向南，[`apache-valley.test.ts`](../tests/apache-valley.test.ts) 确认敌人可到达原始桥面，且 Apache Valley 绘制命令与独立 TDM 参考生成器逐条一致。本地内置浏览器静音、窗口模式实看 Apache Valley 与 Riverside Mountains 的代表性移动；公开版内置浏览器进入 Free Play → New Mexico → Death Valley，在 Medium 下确认实际地图、桥面贴图和游戏状态可加载。测试模拟速度临时调至 `4×` 后恢复为 `1×`，声音保持关闭；全程未手动通关或启动 Android。GitHub Pages 与 Cloudflare Pages 的 `sourceSha` 均匹配发布 SHA。没有人工逐关观察全部随机路径，浏览器观察为代表性检查，不声称全关逐帧目视通过。
+
+## 41 关路线联系表需要区分路线/图层核对与完整战斗画面
+
+- **表现与复核：**用户指出已接入地图的路线普遍偏离道路，部分敌人看似走到峡谷。M1 对 Level 1–41 逐关生成联系表：底图取正式 `GameView.map.background` 与 `map.streets` 的 `RenderTile`，裁切使用生产图集资源及源矩形；路线取运行时 `route` 或 `routes`，叠加出生、转向和出口。41 张图逐一检查后，未见路线中心与可见道路/桥层整体错位，也未见直线回退。
+- **交叉验证结果：**独立 TDM 路径展开器与正式运行时路线在 40/41 张地图逐条一致。唯一差异是 Cactusville 角落出生 `(0,23)`、`(1,23)`：通用检查器按边界命中顺序推断初始方向，错误选为东向；TDM 专用 `cactusville-map.test.ts` 依据 APK 方向动作确认实际方向为北，并覆盖三条正式路线、出口和路线格。此处是检查器方向假设错误，不能据此改路线。Tech Town code 66 铁轨交叉由 `tech-town-map.test.ts` 确认属于有效路线格，不应只因它不是常见道路码而报警。
+- **审计器误报与漏测：**`GameView` 可能只提供单数 `route`，不能只读取 `routes`；关卡级别也不能直接当 TDM 文件号，必须通过 `campaignCatalog.mapFileNumber` 映射。否则会漏掉单路线地图或把关卡 11+ 标成错误 TDM。独立路线检查遇到角落出生时，不能仅用“先匹配到的边”决定移动方向，应读取 TDM/APK 方向动作并由地图专属测试交叉核对。
+- **证据边界：**联系表复用了生产图块绘制命令和图集裁剪，但它不是完整 `drawGame()` 截图，不呈现动态敌人脚底、碰撞框、装饰物深度排序、相机裁切或运动动画。因此 M1 只关闭 41 关的路线中心/静态道路图层核对；我方可达范围与碰撞属于 M2，动态车辆/单位表现属于 M3，完整生产画面仍保留为独立视觉验收项。不能用联系表证明用户指出的我方桥面可移动范围或动态精灵与悬崖的每帧关系正确。
+- **防回归：**地图审计同时读取 `route` 和 `routes`，TDM 编号从 catalog 取值，路线期望从 APK/TDM 独立数据生成；联系表保留入口、出口与桥端，不裁地图。路线中心、动态精灵包围范围和玩家碰撞区域分别记录、分别验收；图层静态通过不能替代真实 `GameSession` 移动和生产绘制检查。
 
 ## 内容版本必须覆盖所有影响开局的档案状态
 
@@ -565,13 +626,19 @@ M39 又重现了同一测试基线遗漏：Level 38 接入目录后，首轮完�
 
 ## Free Play 关卡说明挤入高分栏
 
-**状态：待修复；不阻塞关卡内容接入。**
+**状态：已修复。**定向菜单 E2E 8/8 通过；桌面内置浏览器已检查英文和中文，手机窄屏由视口 E2E 检查。
 
 - **表现与复现：**桌面窗口模式进入 Free Play → New Mexico → Billy Hills 关卡预览时，提示“Free play does not change the saved campaign score or progress.” 被排进右侧狭窄的高分区域，英文句子逐词窄行换行，视觉上难以阅读。
-- **证据与根因：**本地内置浏览器截图确认异常；`.campaign-overview-no-score` 在 `styles.css` 中以绝对定位复用海报高分区，仅占预览宽度的17%。该文案明显长于高分标签，现有规则没有给 Free Play 提示设置独立宽度。
-- **漏测点：**`t29-campaign-menu.spec.ts` 只断言提示文案完整存在，没有检查提示的实际宽度、换行数、与海报元素的重叠或窄屏边界。
-- **修复方向：**让 Free Play 提示使用足够宽的独立文本区域，或精简文案；保留正式战役 Wanted/高分海报的位置与样式，不通过压小字号解决。覆盖中英文、桌面及手机布局，检查文本不溢出、不逐词窄排且不遮挡海报。
-- **避免重复：**map05 内容批次只记录此项，不顺手改菜单视觉；下一次处理该 UI 时先核对 `.campaign-overview-no-score` 与正式高分元素的共用定位关系，并为两种模式分别断言几何。
+- **证据与根因：**本地内置浏览器截图确认异常；`.campaign-overview-no-score` 复用了高分栏槽位，原版的短“无最高分”文案与 Free Play 说明长度不同，旧测试只检查文字存在，没有检查宽度和边界。
+- **漏测点：**`t29-campaign-menu.spec.ts` 原先没有检查 Free Play 提示的实际宽度、换行数、与介绍/按钮的重叠或窄屏边界。
+- **修复：**将 Free Play 提示改成独立的标签与说明两行；英文精简为“No campaign progress or score is saved.”，中文对应“不记录战役进度或分数”。保留 480×320 卡片和正式模式 Wanted/高分区域，通过更宽的 Free Play 专属栏位承载说明，不缩小字号。扩展 `t29-campaign-menu.spec.ts`，覆盖桌面 1280×720、较小横屏 640×360、手机竖屏 390×844 的中英文状态，并检查卡片边界、栏宽、溢出、重叠及 Play/返回入口。定向 E2E 8/8 与类型检查通过；内置浏览器窗口模式、静音检查桌面中英文；最近批次的 213 项单 worker E2E 全部通过。
+- **避免重复：**正式战役“尚无最高分”和 Free Play“结果不写入战役”语义不同，分开布局和文案；桌面截图不能代替窄视口检查，E2E 也不能代替实际桌面字体与贴图观察。
+
+## Playwright 并发失败须按项目标准复核
+
+- **表现与复现：**本批五 worker 首次跑完整 E2E 时，213 项中 211 项通过；两项失败分别是倍速用例耗时 11.919 秒、超过 10 秒断言，以及 frame controls 用例在 30 秒时等待关闭已关闭页面的 context。之后按项目约定以 `CI=1` 单 worker 重跑，213 项全部通过。
+- **证据边界：**单 worker 没有复现这两项失败，支持“并发/调度可能造成时间波动”的判断，但没有 worker 级 trace 证明首次失败的唯一根因；不能删除或放宽产品断言来掩盖失败，也不能仅凭后续通过宣称根因已确定。单 worker 复跑因 4173 被占用及沙箱拒绝绑定，改用 `PLAYWRIGHT_PORT=4174` 完成。
+- **防回归：**本应用完整 E2E 使用 `CI=1` 单 worker 作为验收基线。若必须调查并发失败，保留首次失败上下文，并在相同代码上用单 worker、并发方式分别复现；报告失败数、错误信息和复现情况。
 
 ## 实验工作台与游戏内设置归属
 
@@ -723,6 +790,14 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **Snake River 对照：**M30-B3 的独立参考转换显示 map32 768 个格点的陆地阻挡分类在“网页 raw tile + street overlay”与“APK shaped background + street overlay”之间 `0/768` 不同；raw `36` `(2,15)` 的最终码为 `14`，raw `80` `(4,13)` 为 `67`，raw `88` `(20,10)` 为 `23`，后两者通过道路层放行。真实 `GameSession` 又在这张图上分别验证 raw `80/88` 桥、raw `36` 墙、睡眠 Grandpa 和 shack 碰撞；10 项地图/对象/移动定向测试及类型检查通过。此结果仅适用于 map32，不代表其余 Oregon 地图已逐格对照；没有发现需要改共享碰撞行为的差异。
 - **防回归：**地形碰撞问题必须分别记录 raw TDM、`createBackgroundMap()` 初始值、`shapenBackgroundMap()` 后最终值、street 覆盖和碰撞查询结果；不能把中间阶段称为最终碰撞规则。新增地形转换参考测试应从 APK Smali 的完整转换链独立生成最终格网，并与网页逐格比较；修共享转换时回归桥行和墙格。
 
+## 玩家移动画面对照必须遵循 Canvas 指针语义
+
+- **状态：**排查方法已校正；本次没有完成桥缘画面对照，也没有发现新的碰撞缺陷。
+- **误判风险：**对 Cow Gulch Level 1 发出鼠标右键移动后，单位没有移动；如果据此判断路径或碰撞错误，会把无效输入当成产品复现。
+- **代码依据：**`main.ts` 的 Canvas `pointerdown` 处理器直接忽略鼠标非左键事件。玩家单位通过按住左键拖动发出 `move-unit`；指针释放进入 `finishPointerMovement()`，进而发送 `stop-moving`，`GameSession` 会清除单位的 `movementTargetFine`。因此释放后再单步不能继续刚才的移动目标。
+- **本次浏览器观察：**本地 `?testBattle=1` 以 Cow Gulch Wave 1、1×、静音启动。右键点击 raw80 `(12,9)` 后位置未变，属于无效输入，不是桥不可通行。随后多次短左拖将 `gunslinger-1` 从 `(8.50,8.75)` 移至 `(9.92,9.08)`；中途开发态十字报告 `fine=(68513.0,66693.0)`，并与该帧单位位置重合。操作没有把角色带到 raw80 桥格，终点是否受阻也未作判定，故不能作为桥缘或碰撞结论。战斗保持 Wave 1 暂停，未完成关卡、未写入战役结算。
+- **防回归与复用：**浏览器移动验证先左键命中活动单位，再用左键拖动；每次释放后重新读取 `positionFine`，不得把单次短拖当作完整路线。若目标需要连续移动，应使用能维持按压的自动化动作或多个有坐标记录的短拖，并在到达后暂停截图。单测/`GameSession` 的 `move-unit` 命令测试与生产画面观察分别记录；不能用右键试探代替真实玩家输入，也不能因单次拖动距离短就推断边界。
+
 ## 新关卡数据必须以本关 APK 资源为准
 
 - **表现与复现：**Snake River 初步计划把关卡参数末项写为 `299000`，并沿用旧摘要中“Colt City/map31 含 Steamer marker”的说法；波次第 4 波第二条请求入口也被记成 action 2。
@@ -813,3 +888,9 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **防回归：**APK 对话框应先建立外框设计坐标，再将头像、正文、价格和动作分别映射到同一坐标系；将长宽比/归一化位置写成断言，不能只搬字面 font-size 或凭单张桌面截图判断。样式审查须留意后定义的同优先级通用规则覆盖专属布局、作者样式覆盖 `[hidden]`、窄屏内容把价格推入动作槽、焦点环框出大块透明按钮槽等情况。通过截图核对字重/对齐/素材关系，同时用可计算的几何断言防止布局回归。
 
 - **整批发布与线上验收：**修复批次发布提交为 `ede0a501680244b16e99898ee4baf0e387c91f9d`；GitHub Actions `45149494428` 的应用测试、共享检查、GitHub Pages 和 Cloudflare Pages 部署均成功，两处 `build-info.json` 返回相同 `sourceSha`。本地 `CI=1 PLAYWRIGHT_PORT=4193 pnpm run test:ci` 通过类型检查、1140项单测、生产构建及203项 E2E；保留主 JS chunk 超500KB提示。内置浏览器静音、窗口模式核对主菜单、Options、关卡介绍和低余额雇佣弹窗；公开截图显示角色头像位于羊皮纸上方，名字、对话和价格位于左侧，弹窗留在游戏框内。未启用全屏、声音、Android，也未完整游玩关卡。
+
+## 生产渲染测试与浏览器画面必须分层记录
+
+- **表现与复核：**本地内置浏览器以窗口模式、静音从 Free Play 打开 Fort Kaboom Level 3 Easy，观察活动战场；另打开 Railroad Ranch Level 9 Easy，首波地图截图能看到六组静态列车位于铁轨上。没有完整游玩，测试后将实验室速度恢复至1×。
+- **固定帧限制：**普通 UI 的开局种子由 `crypto.getRandomValues()` 生成，菜单没有固定 seed 或逻辑帧入口。因此 Fort 浏览器画面不能对应 seed 6 的 frame 643/651/658；本轮看到的随机画面也没有保存为固定帧附件。D1 通过正式 `GameSession.observe()` 的固定帧 `GameView` 调用生产 `drawGame()` 检查马与 wagon 的资源、位置和排序；D2-B 同样用正式 Railroad Ranch/Mississippi `GameView` 检查静态运输。浏览器目视、生产绘制调用断言和 APK 同帧对照属于三种不同证据。
+- **当前结论：**代表性动态与静态运输类别都已进入生产 renderer 并通过资源键、render 矩形和 draw order 检查；本地浏览器对 Fort 战斗与 Railroad Ranch 列车提供有限视觉确认。没有证据证明41张图逐关逐帧一致，也没有 APK 原版同 seed 像素比较。后续不得用 D1/D2 自动绘制调用替代对新的视觉差异做目视检查；若需要精确复现，先增加受控且仅开发态可用的 seed/frame 入口，并将其纳入单独测试和范围评估。

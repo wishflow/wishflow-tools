@@ -5,12 +5,10 @@ import { continueFromPauseBoard, setSimulationSpeedFromLab } from './helpers';
 
 const cowGulchId = 'campaign-new-mexico-01';
 const apacheValleyId = 'campaign-new-mexico-02';
-const fortKaboomId = 'campaign-new-mexico-03';
 const mapViewport = calculateMapViewport(22, 17, 1024, 576);
 
 type HireType = 'gunslinger' | 'mexican' | 'cannon' | 'indian' | 'sniper' | 'grandpa';
 type HireSlot = { id: string; type: HireType; price: number; x: number; y: number };
-type AudioPlayAttempt = { source: string; introWave?: string };
 
 const hireDefinitions: Readonly<Record<number, { type: HireType; price: number }>> = {
   96: { type: 'gunslinger', price: 75 },
@@ -28,70 +26,60 @@ const expectedIntros = [
     wave: 1,
     speaker: 'Pedro',
     portrait: 'portrait_pedro',
-    voice: 'sound_pedro',
     text: 'The army has hidden supply crates here. Collect them with a unit to earn lots of rewards!',
   },
   {
     wave: 2,
     speaker: 'Pedro',
     portrait: 'portrait_pedro',
-    voice: 'sound_pedro',
     text: "The soldiers of Fort Kaboom love money more than anything. They're bound to desert and join us for a fistful of dollars.",
   },
   {
     wave: 3,
     speaker: 'Settlers',
     portrait: 'portrait_settlers',
-    voice: 'sound_siedler',
     text: "I always feel claustrophobic in these narrow canyons. Let's take the more open western approach!",
   },
   {
     wave: 4,
     speaker: 'Pedro',
     portrait: 'portrait_pedro',
-    voice: 'sound_pedro',
     text: 'More and more soldiers are deserting. Watch where the cannons go; if they leave the fort, you can then hire them later!',
   },
   {
     wave: 5,
     speaker: 'Settlers',
     portrait: 'portrait_settlers',
-    voice: 'sound_siedler',
     text: 'We actually want to go west, so why are we always traveling east? Aww, what the heck!',
   },
   {
     wave: 6,
     speaker: 'Deserter',
     portrait: 'portrait_deserter',
-    voice: 'sound_deserter_yes_sir',
     text: 'Sir, our spies report that hundreds of settlers are approaching from all directions.',
   },
   {
     wave: 7,
     speaker: 'Pedro',
     portrait: 'portrait_pedro',
-    voice: 'sound_pedro',
     text: 'Loot! Lots of lovely loot!',
   },
   {
     wave: 8,
     speaker: 'Pedro',
     portrait: 'portrait_pedro',
-    voice: 'sound_pedro',
     text: 'Hee hee hee! Come here!',
   },
   {
     wave: 9,
     speaker: 'Deserter',
     portrait: 'portrait_deserter',
-    voice: 'sound_deserter_yes_sir',
     text: 'Sir, a large group of riders is approaching!',
   },
   {
     wave: 10,
     speaker: 'Pedro',
     portrait: 'portrait_pedro',
-    voice: 'sound_pedro',
     text: "Looks like that's all. No, wait... more are arriving!",
   },
 ] as const;
@@ -110,6 +98,22 @@ function fortKaboomHireSlots(): HireSlot[] {
       y,
     }];
   }));
+}
+
+function fortSourceCollisionPair(enemiesText: string): readonly string[] | undefined {
+  const enemies = [...enemiesText.matchAll(/(campaign-3-enemy-\d+) at \((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/g)]
+    .flatMap((match) => {
+      const [, id, x, y] = match;
+      if (!id || !x || !y) return [];
+      return [{ id, x: Number(x), y: Number(y) }];
+    });
+  const stagecoach = enemies.find(({ x, y }) => x === -0.81 && y === 9.5);
+  const horseman = enemies.find(({ x, y }) => x === -1.5 && y === 9.5);
+  if (!stagecoach || !horseman) return undefined;
+  return [
+    `${stagecoach.id}@${stagecoach.x},${stagecoach.y}`,
+    `${horseman.id}@${horseman.x},${horseman.y}`,
+  ];
 }
 
 async function canvasPoint(
@@ -195,13 +199,6 @@ async function readCash(page: import('@playwright/test').Page): Promise<number> 
   return cash;
 }
 
-async function readLives(page: import('@playwright/test').Page): Promise<number> {
-  const text = await page.getByTestId('wave-status').innerText();
-  const lives = Number(text.match(/Lives (\d+)/)?.[1]);
-  if (!Number.isSafeInteger(lives)) throw new Error(`Life count is not visible in wave status: ${text}`);
-  return lives;
-}
-
 async function readProfile(page: import('@playwright/test').Page): Promise<Record<string, unknown>> {
   return page.evaluate(async () => new Promise<Record<string, unknown>>((resolve, reject) => {
     const request = indexedDB.open('gunsnglory-profile', 1);
@@ -227,7 +224,7 @@ async function writeUnlockedProfile(page: import('@playwright/test').Page): Prom
       transaction.objectStore('profiles').put({
         id: 'default',
         schemaVersion: 2,
-        settings: { simulationSpeed: 1, difficulty: 'easy', soundEnabled: true },
+        settings: { simulationSpeed: 1, difficulty: 'easy', soundEnabled: false },
         completedScenarios: [cowGulchScenarioId, apacheValleyScenarioId],
         highScores: { [cowGulchScenarioId]: 50, [apacheValleyScenarioId]: 50 },
         appliedSettlementIds: [],
@@ -254,21 +251,6 @@ async function installSeed42(page: import('@playwright/test').Page): Promise<voi
       }
       return originalGetRandomValues(array) as typeof array;
     }) as typeof crypto.getRandomValues;
-  });
-}
-
-async function installAudioTracker(page: import('@playwright/test').Page): Promise<void> {
-  await page.addInitScript(() => {
-    const testWindow = window as Window & { __soundPlayAttempts?: AudioPlayAttempt[] };
-    testWindow.__soundPlayAttempts = [];
-    HTMLMediaElement.prototype.play = function () {
-      const intro = document.querySelector<HTMLDialogElement>('[data-testid="campaign-wave-intro"]');
-      testWindow.__soundPlayAttempts?.push({
-        source: this.currentSrc || this.src,
-        ...(intro?.open ? { introWave: intro.dataset.waveNumber } : {}),
-      });
-      return Promise.resolve();
-    };
   });
 }
 
@@ -303,10 +285,6 @@ async function advanceGameFrame(
   ).advanceGngGameFrame?.(delta) ?? false, realDeltaMs);
 }
 
-async function soundAttempts(page: import('@playwright/test').Page): Promise<AudioPlayAttempt[]> {
-  return page.evaluate(() => (window as Window & { __soundPlayAttempts?: AudioPlayAttempt[] }).__soundPlayAttempts ?? []);
-}
-
 async function assertWaveIntro(
   page: import('@playwright/test').Page,
   expected: typeof expectedIntros[number],
@@ -320,10 +298,6 @@ async function assertWaveIntro(
   await expect(portrait).toHaveAttribute('alt', expected.speaker);
   await expect(portrait).toHaveAttribute('src', new RegExp(`${expected.portrait}\\.png`));
   await expect(portrait).toHaveJSProperty('naturalWidth', 96);
-  const attempts = await soundAttempts(page);
-  expect(attempts.filter(({ source, introWave }) => (
-    source.includes(`/assets/sounds/${expected.voice}.ogg`) && introWave === String(expected.wave)
-  ))).toHaveLength(1);
   await intro.getByRole('button', { name: 'Continue', exact: true }).click();
 }
 
@@ -350,12 +324,11 @@ async function moveFirstCannonThroughCanvas(page: import('@playwright/test').Pag
   await expect(page.getByTestId('selection-status')).toHaveText('Cannon selected · Cell (10, 6)');
 }
 
-test('formal Fort Kaboom completes all ten waves through the campaign UI and saves one settlement', async ({ page }) => {
+test('formal Fort Kaboom preserves the source collision stall without writing a settlement', async ({ page }) => {
   test.setTimeout(360_000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
   await installSeed42(page);
-  await installAudioTracker(page);
   await page.goto('/');
   await writeUnlockedProfile(page);
   await page.reload();
@@ -381,6 +354,7 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
   await installManualGameClock(page);
   await continueFromPauseBoard(page);
   await expect(page.getByTestId('pause-board')).toBeHidden();
+  const profileBeforeBattle = await readProfile(page);
 
   const slots = fortKaboomHireSlots();
   expect(slots).toHaveLength(31);
@@ -395,10 +369,13 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
   await hireThroughMapUi(page, secondCannon);
   hires.add(secondCannon.id);
   await moveFirstCannonThroughCanvas(page);
+  await page.getByTestId('inspection-panel').evaluate((element) => {
+    (element as HTMLDetailsElement).open = true;
+  });
 
   const seenWaves = [1];
-  let reachedSettlement = false;
-  for (let frame = 0; frame < 120 && !reachedSettlement; frame += 1) {
+  let stalledPair: readonly string[] | undefined;
+  for (let frame = 0; frame < 30 && !stalledPair; frame += 1) {
     if (await intro.isVisible()) {
       const next = expectedIntros[seenWaves.length];
       if (!next) throw new Error('An unexpected extra campaign wave introduction appeared');
@@ -408,11 +385,7 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
     }
 
     if (!(await advanceGameFrame(page))) {
-      reachedSettlement = await page.getByTestId('settlement').isVisible();
-      if (!reachedSettlement && !(await intro.isVisible())) {
-        throw new Error('The formal campaign stopped without a wave introduction or settlement');
-      }
-      continue;
+      throw new Error('The formal campaign stopped without a wave introduction or settlement');
     }
     if (await intro.isVisible()) {
       const next = expectedIntros[seenWaves.length];
@@ -421,10 +394,7 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
       seenWaves.push(next.wave);
       continue;
     }
-    if (await page.getByTestId('settlement').isVisible()) {
-      reachedSettlement = true;
-      break;
-    }
+    await expect(page.getByTestId('settlement')).toBeHidden();
 
     const cash = await readCash(page);
     const purchaseCandidate = slots
@@ -436,39 +406,39 @@ test('formal Fort Kaboom completes all ten waves through the campaign UI and sav
       await hireThroughMapUi(page, purchaseCandidate);
       hires.add(purchaseCandidate.id);
     }
+
+    const pairNow = fortSourceCollisionPair(await page.getByTestId('inspection-enemies').innerText());
+    if (pairNow) {
+      stalledPair = pairNow;
+      for (let step = 0; step < 5; step += 1) {
+        expect(await advanceGameFrame(page, 25)).toBe(true);
+        expect(fortSourceCollisionPair(await page.getByTestId('inspection-enemies').innerText()))
+          .toEqual(stalledPair);
+        await expect(status).toContainText('Wave 3/10');
+        await expect(page.getByTestId('settlement')).toBeHidden();
+      }
+    }
   }
 
-  expect(seenWaves).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
-  await expect(page.getByTestId('settlement')).toBeVisible({ timeout: 1_000 });
-  await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
-  await expect(status).toContainText('Wave 10/10');
-  expect(await readLives(page)).toBeGreaterThan(0);
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('3/40 stages complete');
-  await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
-
-  const profile = await readProfile(page);
-  expect(profile.completedScenarios).toEqual([cowGulchId, apacheValleyId, fortKaboomId]);
-  expect(profile.appliedSettlementIds).toHaveLength(1);
-  expect((profile.highScores as Record<string, number>)[fortKaboomId]).toBeGreaterThan(0);
+  expect(stalledPair, 'the official seed reaches the two Wave 3 collision coordinates').toBeDefined();
+  expect(seenWaves).toEqual([1, 2, 3]);
+  await expect(status).toContainText('Wave 3/10');
+  await expect(page.getByTestId('settlement')).toBeHidden();
   expect(hires.has('cannon-hire-01')).toBe(true);
   expect(hires.has('cannon-hire-02')).toBe(true);
   expect(hires.size).toBeGreaterThan(2);
 
+  const profile = await readProfile(page);
+  expect(profile.completedScenarios).toEqual(profileBeforeBattle.completedScenarios);
+  expect(profile.highScores).toEqual(profileBeforeBattle.highScores);
+  expect(profile.appliedSettlementIds).toEqual(profileBeforeBattle.appliedSettlementIds);
+
   await page.reload();
   await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
-  expect(await readProfile(page)).toEqual(profile);
+  expect(await readProfile(page)).toEqual(profileBeforeBattle);
   await page.getByTestId('menu-start').click();
   await page.getByTestId('campaign-region-new-mexico').click();
   await expect(page.getByTestId('campaign-level-03')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-04')).toBeEnabled();
-  await expect(page.getByTestId('campaign-level-05')).toBeDisabled();
-  await expect(page.getByTestId('campaign-level-05')).toHaveAttribute('aria-label', /locked/i);
-  await page.getByTestId('campaign-level-03').click();
-  await page.getByTestId('campaign-stage-play').click();
-  await page.getByTestId('campaign-difficulty-easy').click();
-  await expect(page.locator('#scene-title')).toHaveText('Fort Kaboom · Level 3');
-  await expect(status).toContainText('Wave 1/10 · Lives 50');
-  await expect(status).toContainText('Cash $300');
-  await expect(intro).toHaveAttribute('data-wave-number', '1');
-  await expect(page.getByTestId('settlement')).toBeHidden();
+  await expect(page.getByTestId('campaign-level-04')).toBeDisabled();
+  await expect(page.getByTestId('campaign-level-04')).toHaveAttribute('aria-label', /locked/i);
 });

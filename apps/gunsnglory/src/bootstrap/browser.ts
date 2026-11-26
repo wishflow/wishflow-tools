@@ -230,6 +230,8 @@ import {
   parseDakota10ReplayContentVersion,
 } from '../content/dakota-10-content-version';
 import { dakota10CampaignId } from '../content/dakota-10-identity';
+import { createNevada01CampaignContent } from '../content/nevada-01-campaign';
+import { nevada01CampaignContentVersion, nevada01CampaignId } from '../content/nevada-01-identity';
 import {
   newMexicoCampaignContentVersionFor,
   parseNewMexicoReplayContentVersion,
@@ -285,6 +287,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi18CampaignId]: createMississippi18CampaignContent(),
   [mississippi19CampaignId]: createMississippi19CampaignContent(),
   [mississippi20CampaignId]: createMississippi20CampaignContent(),
+  [nevada01CampaignId]: createNevada01CampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -821,6 +824,16 @@ export function createBrowserGameForDakota10Replay(contentVersion: string | unde
   if (!parsed) return createBrowserGame([], undefined, dakota10CampaignId);
   return createBrowserGame([], undefined, undefined, {
     [dakota10CampaignId]: createDakota10CampaignContentFromSnapshot(parsed.snapshot),
+  });
+}
+
+/** Replay import rebuilds Labyrinth Gulch from its fixed original level-41 content. */
+export function createBrowserGameForNevada01Replay(contentVersion: string | undefined) {
+  if (contentVersion !== nevada01CampaignContentVersion) {
+    return createBrowserGame([], undefined, nevada01CampaignId);
+  }
+  return createBrowserGame([], undefined, undefined, {
+    [nevada01CampaignId]: createNevada01CampaignContent(),
   });
 }
 

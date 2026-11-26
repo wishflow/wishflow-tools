@@ -6,6 +6,8 @@ import { createGame, type CampaignWaveDefinition, type GameSession, type Scenari
 const transportRequests = [0, 0, 0, 0, 0, 1, 0, 0, 0, 0];
 const settlerRequests = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 const goldTransportRequests = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0];
+const horsemanRequests = [0, 0, 0, 0, 1, 0, 0, 0, 0, 0];
+const bossRequests = [0, 0, 0, 0, 0, 0, 0, 0, 1, 0];
 const emptyRequests = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 async function advanceToWave(session: GameSession, number: number) {
@@ -46,6 +48,28 @@ function makeOpposingEnemyFixture(requests: readonly number[], id: string): Scen
     },
     units: [],
   };
+}
+
+function makeSharedRedirectFixture(requests: readonly number[], id: string): ScenarioContent {
+  const scenario = makeOpposingEnemyFixture(requests, id);
+  return {
+    ...scenario,
+    previewWave: {
+      ...scenario.previewWave!,
+      spawn: { cell: { x: 8, y: 8 }, direction: 'east' },
+      additionalSpawns: [{ cell: { x: 7, y: 7 }, direction: 'north' }],
+      redirects: [{ cell: { x: 7, y: 8 }, directions: ['east'] }],
+    },
+  };
+}
+
+function spawnGroup(view: ReturnType<GameSession['observe']>, spawnPointId: number): string {
+  const event = view.events.find((candidate) => candidate.type === 'enemy-group-spawned'
+    && candidate.spawnPointId === spawnPointId);
+  assert.ok(event && event.type === 'enemy-group-spawned');
+  const enemy = view.enemies.find(({ id }) => event.enemyIds.includes(id));
+  assert.ok(enemy?.groupId);
+  return enemy.groupId;
 }
 
 test('transport collision filters same-group objects and blocks opposing enemy groups', async () => {
@@ -170,4 +194,174 @@ test('opposing Gold Transports collide using their physical vehicle boxes', asyn
   );
   assert.notDeepEqual(stopped, startingPositions);
   session.close();
+});
+
+for (const collisionCase of [
+  { name: 'horsemen', requests: horsemanRequests, type: 3 },
+  { name: 'bosses', requests: bossRequests, type: 7 },
+]) {
+  test(`opposing ${collisionCase.name} collide using APK enemy boxes`, async () => {
+    const scenario = makeOpposingEnemyFixture(
+      collisionCase.requests,
+      `p1f-opposing-${collisionCase.name}-collision-fixture`,
+    );
+    const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+      scenarioId: scenario.id,
+      mode: 'formal',
+      difficulty: 'easy',
+      randomSeed: 7,
+    });
+
+    try {
+      await advanceToWave(session, 3);
+      let view = session.advance({ deltaMs: 0 });
+      assert.equal(view.enemies.length, 2);
+      assert.ok(view.enemies.every(({ type }) => type === collisionCase.type));
+
+      let previousPositions = view.enemies.map(({ id, positionFine }) => [id, positionFine.x, positionFine.y]);
+      let stableFrames = 0;
+      let moved = false;
+      for (let frame = 0; frame < 100 && stableFrames < 5; frame += 1) {
+        view = session.advance({ deltaMs: 100 });
+        const [left, right] = view.enemies;
+        assert.ok(left && right);
+        const xDistance = Math.abs(left.positionFine.x - right.positionFine.x);
+        const yDistance = Math.abs(left.positionFine.y - right.positionFine.y);
+        assert.ok(xDistance > 7_678 || yDistance > 7_678,
+          `${collisionCase.name} collision boxes overlap at frame ${frame + 1}`);
+        const positions = view.enemies.map(({ id, positionFine }) => [id, positionFine.x, positionFine.y]);
+        moved ||= JSON.stringify(positions) !== JSON.stringify(previousPositions);
+        stableFrames = JSON.stringify(positions) === JSON.stringify(previousPositions) ? stableFrames + 1 : 0;
+        previousPositions = positions;
+      }
+      assert.equal(moved, true);
+      assert.equal(stableFrames >= 5, true, `${collisionCase.name} remain stopped while the opposing boxes overlap`);
+    } finally {
+      session.close();
+    }
+  });
+}
+
+test('enemy route fields reserve the next redirect cell and release it after passage', async () => {
+  const scenario = makeSharedRedirectFixture(transportRequests, 'p1f-redirect-field-wait-fixture');
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    mode: 'formal',
+    difficulty: 'easy',
+    randomSeed: 7,
+  });
+
+  try {
+    await advanceToWave(session, 3);
+    let view = session.advance({ deltaMs: 0 });
+    const firstGroupId = spawnGroup(view, 0);
+    const secondGroupId = spawnGroup(view, 1);
+    const findTow = (groupId: string) => view.enemies.find(({ groupId: id, type }) => id === groupId && type === 8);
+    const firstStart = findTow(firstGroupId);
+    const secondStart = findTow(secondGroupId);
+    assert.ok(firstStart && secondStart);
+    const secondStartX = secondStart.positionFine.x;
+
+    view = session.advance({ deltaMs: 100 });
+    let firstTow = findTow(firstGroupId);
+    let secondTow = findTow(secondGroupId);
+    assert.ok(firstTow && secondTow);
+    assert.ok(firstTow.positionFine.x > firstStart.positionFine.x,
+      'the first covered-wagon group enters the redirect approach');
+    assert.equal(secondTow.positionFine.x, secondStartX,
+      'the opposing group waits before its collision box overlaps the first group');
+    assert.ok(Math.abs(firstTow.positionFine.x - secondTow.positionFine.x) > 7_678
+      || Math.abs(firstTow.positionFine.y - secondTow.positionFine.y) > 7_678,
+    `route-field reservation blocks before a physical collision: ${JSON.stringify([firstTow.positionFine, secondTow.positionFine])}`);
+
+    let ownerPassed = false;
+    let waitingGroupResumed = false;
+    for (let frame = 0; frame < 120; frame += 1) {
+      view = session.advance({ deltaMs: 100 });
+      firstTow = findTow(firstGroupId);
+      secondTow = findTow(secondGroupId);
+      assert.ok(firstTow && secondTow);
+      ownerPassed ||= firstTow.positionFine.x > (7.5 * 7_680);
+      if (ownerPassed && secondTow.positionFine.y < (9.5 * 7_680)) {
+        waitingGroupResumed = true;
+        break;
+      }
+    }
+    assert.equal(ownerPassed, true, 'the first group passes the shared redirect field');
+    assert.equal(waitingGroupResumed, true, 'the waiting group resumes after the occupied field clears');
+  } finally {
+    session.close();
+  }
+});
+
+test('a defeated route-field owner no longer blocks another group', async () => {
+  const scenario = makeSharedRedirectFixture(horsemanRequests, 'p1f-dead-redirect-field-owner-fixture');
+  scenario.campaignEnemyByType = {
+    ...scenario.campaignEnemyByType,
+    3: {
+      hitPoints: 1,
+      cashReward: 2,
+      penetration: { light: 100, fire: 100, heavy: 100, poison: 100 },
+    },
+  };
+  const shooterTemplate = structuredClone(cowGulchP1cCampaignContent.units.find(({ id }) => id === 'gunslinger-1')!);
+  const moveRect = (rect: typeof shooterTemplate.render, dx: number, dy: number) => ({
+    ...rect,
+    x: rect.x + dx,
+    y: rect.y + dy,
+  });
+  const offsetX = 6 - shooterTemplate.cell.x;
+  const offsetY = 10 - shooterTemplate.cell.y;
+  shooterTemplate.id = 'p1f-route-field-test-shooter';
+  shooterTemplate.activity = 5;
+  shooterTemplate.cell = { x: 6, y: 10 };
+  shooterTemplate.render = moveRect(shooterTemplate.render, offsetX, offsetY);
+  shooterTemplate.hitArea = moveRect(shooterTemplate.hitArea, offsetX, offsetY);
+  shooterTemplate.weapon = {
+    ...shooterTemplate.weapon!,
+    damage: 5_000,
+    rangeFine: 100_000,
+    projectileSpeed: 600,
+    reloadTimeMs: 100,
+    specialReloadTimeMs: 100_000,
+    specialReloadFrequency: 1,
+  };
+  scenario.units = [shooterTemplate];
+
+  const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
+    scenarioId: scenario.id,
+    mode: 'formal',
+    difficulty: 'easy',
+    randomSeed: 7,
+  });
+
+  try {
+    await advanceToWave(session, 3);
+    let view = session.advance({ deltaMs: 0 });
+    const firstGroupId = spawnGroup(view, 0);
+    const secondGroupId = spawnGroup(view, 1);
+    const firstEnemy = view.enemies.find(({ groupId }) => groupId === firstGroupId);
+    const secondEnemy = view.enemies.find(({ groupId }) => groupId === secondGroupId);
+    assert.ok(firstEnemy && secondEnemy);
+    const secondStartY = secondEnemy.positionFine.y;
+
+    let defeatedOwner = false;
+    for (let frame = 0; frame < 40 && !defeatedOwner; frame += 1) {
+      view = session.advance({ deltaMs: 100 });
+      defeatedOwner = view.events.some((event) => event.type === 'enemy-defeated'
+        && event.enemyId === firstEnemy.id);
+    }
+    assert.equal(defeatedOwner, true, 'the first group member is defeated while it owns the route field');
+
+    let resumed = false;
+    for (let frame = 0; frame < 8 && !resumed; frame += 1) {
+      view = session.advance({ deltaMs: 100 });
+      const waiter: ReturnType<GameSession['observe']>['enemies'][number] | undefined = view.enemies.find(({ id }) => id === secondEnemy.id);
+      assert.ok(waiter);
+      resumed = waiter.positionFine.y < secondStartY;
+    }
+    assert.equal(resumed, true, 'a dead reservation owner cannot leave a permanent route block');
+  } finally {
+    session.close();
+  }
 });

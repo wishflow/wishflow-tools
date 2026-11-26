@@ -118,6 +118,11 @@ import { dakota09CampaignId } from './dakota-09-identity';
 import { createDakota10CampaignContent } from './dakota-10-campaign';
 import { dakota10CampaignCopy } from './dakota-10-campaign-copy';
 import { dakota10CampaignId } from './dakota-10-identity';
+import { nevada01LevelFortyOneCampaignContent } from './nevada-01-campaign';
+import { nevada01CampaignCopy } from './nevada-01-campaign-copy';
+import { nevada01CampaignId } from './nevada-01-identity';
+
+export { nevada01LevelFortyOneCampaignContent };
 
 /** Stable production identity for the fully implemented original Cow Gulch level. */
 export const cowGulchLevelOneContent = {
@@ -475,4 +480,10 @@ export const officialCampaignStages: readonly CampaignStageDefinition[] = Object
   title: { en: `${dakota10CampaignCopy.title.en} · Level 40`, zh: `${dakota10CampaignCopy.title.zh} · 第 40 关` },
   globalLevel: 40,
   requiresCompletedScenarioIds: [dakota09CampaignId],
+}, {
+  scenarioId: nevada01CampaignId,
+  contentVersion: nevada01LevelFortyOneCampaignContent.contentVersion!,
+  title: { en: `${nevada01CampaignCopy.title.en} · Level 41`, zh: `${nevada01CampaignCopy.title.zh} · 第 41 关` },
+  globalLevel: 41,
+  requiresCompletedScenarioIds: [dakota10CampaignId],
 }]);

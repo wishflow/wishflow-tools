@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  billyHillsLevelFiveCampaignContent,
-  cactusvilleLevelEightCampaignContent,
-  lostCityLevelTenCampaignContent,
-  luckyLakeLevelSevenCampaignContent,
-  railroadRanchLevelNineCampaignContent,
-} from '../src/content/official-campaign';
 import { createGame, type GameView, type ScenarioContent } from '../src/game';
+import { runtimeWaveRedirects } from '../src/game/wave-routes';
+import {
+  inspectOfficialWagonRouteCoverage,
+  type OfficialWagonRouteCase,
+} from './helpers/official-wagon-route-coverage';
 
 const FINE_UNITS_PER_CELL = 7_680;
 const FIELD_CENTER_OFFSET = 15_360;
@@ -16,59 +14,30 @@ const ROUTE_STEP_MS = 100;
 const MAX_ROUTE_FRAMES = 2_200;
 const MAX_VERIFIED_TURNS_PER_SCENARIO = 4;
 
-interface OfficialRouteCase {
-  scenario: ScenarioContent;
-  waveNumber: number;
-  spawnPointId: number;
-  requiredRedirects: readonly { x: number; y: number }[];
-}
-
 type RouteRedirect = NonNullable<ScenarioContent['previewWave']>['redirects'][number];
 
-const officialRouteCases: readonly OfficialRouteCase[] = [
-  {
-    scenario: billyHillsLevelFiveCampaignContent,
-    waveNumber: 1,
-    spawnPointId: 0,
-    requiredRedirects: [{ x: 7, y: 5 }, { x: 17, y: 10 }],
-  },
-  {
-    scenario: cactusvilleLevelEightCampaignContent,
-    waveNumber: 1,
-    spawnPointId: 0,
-    requiredRedirects: [{ x: 5, y: 16 }],
-  },
-  {
-    scenario: luckyLakeLevelSevenCampaignContent,
-    waveNumber: 3,
-    spawnPointId: 1,
-    requiredRedirects: [{ x: 23, y: 13 }],
-  },
-  {
-    scenario: lostCityLevelTenCampaignContent,
-    waveNumber: 1,
-    spawnPointId: 0,
-    requiredRedirects: [{ x: 7, y: 8 }],
-  },
-  {
-    scenario: railroadRanchLevelNineCampaignContent,
-    waveNumber: 1,
-    spawnPointId: 0,
-    requiredRedirects: [{ x: 26, y: 6 }, { x: 22, y: 11 }],
-  },
-];
+const officialRouteCases: readonly OfficialWagonRouteCase[] = inspectOfficialWagonRouteCoverage()
+  .branchCases.filter(({ region }) => region === 'new-mexico'
+    || region === 'mississippi'
+    || region === 'oregon'
+    || region === 'dakota-nevada');
 
 /**
  * Retain the official map, turn data, and selected official request pool.
  * Other waves and spawn pools are cleared to focus the route rule; the result
  * must not be treated as a full-campaign replay of the same seed.
  */
-function isolateOfficialRouteCase(routeCase: OfficialRouteCase): ScenarioContent {
-  const { scenario, waveNumber, spawnPointId } = routeCase;
+function isolateOfficialRouteCase(routeCase: OfficialWagonRouteCase): ScenarioContent {
+  const source = structuredClone(routeCase.scenario);
+  const { waveNumber, spawnPointId, requestIndex } = routeCase;
+  // The route assertion is about enemy vehicle movement. Official defense
+  // units can destroy the isolated request before it reaches its branch.
+  source.units = [];
+  source.campaignUnitPool = undefined;
   return {
-    ...scenario,
-    id: `${scenario.id}-route-matrix-w${waveNumber}-spawn${spawnPointId}`,
-    campaignWaves: scenario.campaignWaves!.map((wave) => {
+    ...source,
+    id: `${source.id}-route-matrix-w${waveNumber}-spawn${spawnPointId}-type${requestIndex}`,
+    campaignWaves: source.campaignWaves!.map((wave) => {
       if (wave.number !== waveNumber) {
         return {
           ...wave,
@@ -83,7 +52,13 @@ function isolateOfficialRouteCase(routeCase: OfficialRouteCase): ScenarioContent
       return {
         ...wave,
         delayMs: 0,
-        spawnPools: wave.spawnPools.filter((pool) => pool.spawnPointId === spawnPointId),
+        spawnPools: wave.spawnPools
+          .filter((pool) => pool.spawnPointId === spawnPointId)
+          .map((pool) => ({
+            ...pool,
+            intervalMs: 0,
+            requests: pool.requests.map((count, index) => index === requestIndex ? count : 0),
+          })),
       };
     }),
     campaignBonusCratePool: undefined,
@@ -115,20 +90,22 @@ function fineCellDifference(
   };
 }
 
-async function verifyOfficialRouteCase(routeCase: OfficialRouteCase): Promise<void> {
+async function verifyOfficialRouteCase(routeCase: OfficialWagonRouteCase): Promise<void> {
   const scenario = isolateOfficialRouteCase(routeCase);
-  const redirects = new Map<string, RouteRedirect>((scenario.previewWave?.redirects ?? []).map((redirect) => (
+  const sourceGrid = scenario.originalTileGrid ?? scenario.map.originalTileGrid;
+  const redirects = new Map<string, RouteRedirect>(runtimeWaveRedirects(scenario.previewWave, sourceGrid).map((redirect) => (
     [`${redirect.cell.x},${redirect.cell.y}`, redirect] as const
   )));
 
-  for (const required of routeCase.requiredRedirects) {
+  for (const required of routeCase.branchCells) {
     const redirect = redirects.get(`${required.x},${required.y}`);
     assert.ok(redirect && redirect.directions.length > 1,
       `${scenario.id} must retain the official multi-direction redirect at (${required.x},${required.y})`);
-    assert.ok(scenario.campaignWaves?.find(({ number }) => number === routeCase.waveNumber)
+    const requestCount = scenario.campaignWaves?.find(({ number }) => number === routeCase.waveNumber)
       ?.spawnPools.some((pool) => pool.spawnPointId === routeCase.spawnPointId
-        && ((pool.requests[5] ?? 0) > 0 || (pool.requests[6] ?? 0) > 0)),
-    `${scenario.id} Wave ${routeCase.waveNumber} spawn ${routeCase.spawnPointId} must request a wagon or coach`);
+        && (pool.requests[routeCase.requestIndex] ?? 0) > 0);
+    assert.ok(requestCount,
+      `${scenario.id} Wave ${routeCase.waveNumber} spawn ${routeCase.spawnPointId} must request ${routeCase.wagonType}`);
   }
 
   const session = await createGame({ scenarios: { [scenario.id]: scenario } }).open({
@@ -158,7 +135,7 @@ async function verifyOfficialRouteCase(routeCase: OfficialRouteCase): Promise<vo
         const predecessor = view.enemies[index - 1]!;
         const previousFollower = previousById.get(follower.id);
         if (!previousFollower || !follower.alive || !predecessor.alive
-          || (follower.type !== 4 && follower.type !== 5)
+          || follower.type !== (routeCase.wagonType === 'covered-wagon' ? 4 : 5)
           || predecessor.type !== 8
           || predecessor.groupId !== follower.groupId) continue;
 
@@ -205,7 +182,7 @@ async function verifyOfficialRouteCase(routeCase: OfficialRouteCase): Promise<vo
 }
 
 for (const routeCase of officialRouteCases) {
-  test(`${routeCase.scenario.title.en} vehicle movement matches APK at official forks`, async () => {
+  test(`Level ${routeCase.globalLevel} ${routeCase.wagonType} spawn ${routeCase.spawnPointId} follows the official route`, async () => {
     await verifyOfficialRouteCase(routeCase);
   });
 }
