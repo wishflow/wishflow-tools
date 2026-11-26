@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { fortKaboomLevelThreeContent } from '../src/content/official-campaign';
 import { createGame, type GameView, type ScenarioContent } from '../src/game';
+import { drawGame, getMapViewport, type GameImages } from '../src/render/canvas-renderer';
 
 const FINE_UNITS_PER_CELL = 7_680;
 
@@ -44,6 +45,93 @@ function groupedWagonPair(view: GameView): {
   });
 }
 
+interface ProductionDrawCall {
+  asset: string;
+  args: unknown[];
+}
+
+function productionDrawCalls(view: GameView): ProductionDrawCall[] {
+  const imageNames = new WeakMap<object, string>();
+  const imageCache = new Map<string, HTMLImageElement>();
+  const images = new Proxy({} as GameImages, {
+    get(_target, key) {
+      if (typeof key !== 'string') return undefined;
+      const cached = imageCache.get(key);
+      if (cached) return cached;
+      const image = { naturalWidth: 2_048, naturalHeight: 2_048 } as HTMLImageElement;
+      imageNames.set(image, key);
+      imageCache.set(key, image);
+      return image;
+    },
+  });
+  const drawCalls: ProductionDrawCall[] = [];
+  const noOp = () => undefined;
+  const context = new Proxy({} as CanvasRenderingContext2D, {
+    get(_target, key) {
+      if (key === 'drawImage') {
+        return (image: object, ...args: unknown[]) => {
+          drawCalls.push({ asset: imageNames.get(image) ?? '<unknown>', args });
+        };
+      }
+      if (key === 'measureText') return (text: string) => ({ width: text.length * 6 });
+      if (key === 'canvas') return { width: 1_024, height: 576 };
+      if (key === 'globalAlpha') return 1;
+      return noOp;
+    },
+    set() {
+      return true;
+    },
+  });
+
+  drawGame(context, view, images);
+  return drawCalls;
+}
+
+function assertProductionWagonPairDrawn(view: GameView, expectedFrame: number): void {
+  assert.equal(view.frame, expectedFrame);
+  const pair = groupedWagonPair(view).find(({ horse }) => horse.groupId === 'campaign-1-group-14');
+  assert.ok(pair, `the official convoy is present in production frame ${expectedFrame}`);
+  assert.equal(pair.horse.type, 8);
+  assert.equal(pair.wagon.type, 4);
+  assert.equal(pair.horse.asset, 'horse_wagon_white');
+  assert.equal(pair.wagon.asset, 'wagon');
+
+  const calls = productionDrawCalls(view);
+  const horseAsset = pair.horse.turningAnimation?.asset ?? pair.horse.asset;
+  const wagonAsset = pair.wagon.turningAnimation?.asset ?? pair.wagon.asset;
+  const viewport = getMapViewport(view);
+  const targets = [
+    { enemy: pair.horse, asset: horseAsset },
+    { enemy: pair.wagon, asset: wagonAsset },
+  ].map(({ enemy, asset }) => {
+    const offsetY = enemy.drawingOffsetFine?.y ?? 0;
+    const expectedFeetY = Math.trunc(
+      viewport.origin.y + ((enemy.positionFine.y + offsetY) / 240) * viewport.scaleFactor,
+    );
+    const offsetX = enemy.drawingOffsetFine?.x ?? 0;
+    const expectedCenterX = viewport.origin.x
+      + ((enemy.positionFine.x + offsetX) / 240) * viewport.scaleFactor;
+    const matchingCalls = calls.flatMap((call, index) => {
+      if (call.asset !== asset) return [];
+      const [left, top, width, height] = call.args.slice(4, 8) as number[];
+      return top + height === expectedFeetY && Math.abs((left + (width / 2)) - expectedCenterX) < 1
+        ? [{ call, index }]
+        : [];
+    });
+    assert.equal(matchingCalls.length, 1,
+      `${asset} for ${enemy.id} is drawn once at its fine-position foot in frame ${expectedFrame}`);
+    return { id: enemy.id, asset, ...matchingCalls[0]! };
+  });
+
+  const expectedOrder = view.drawOrder
+    .filter((entry) => targets.some(({ id }) => entry === `enemy:${id}`))
+    .map((entry) => targets.find(({ id }) => entry === `enemy:${id}`)!.asset);
+  assert.equal(expectedOrder.length, 2, `both convoy members are in draw order in frame ${expectedFrame}`);
+  const actualOrder = [...targets].sort((left, right) => left.index - right.index).map(({ asset }) => asset);
+  assert.deepEqual(actualOrder, expectedOrder,
+    `vehicle draw order follows the official GameView in frame ${expectedFrame}`);
+}
+
 test('Fort Kaboom seed 6 wagon takes the horse branch at its own redirect', async () => {
   const session = await createGame({
     scenarios: { [fortKaboomSeedSixLagProbe.id]: fortKaboomSeedSixLagProbe },
@@ -59,6 +147,7 @@ test('Fort Kaboom seed 6 wagon takes the horse branch at its own redirect', asyn
     let targetGroupId: string | undefined;
     let horseTurnFrame = -1;
     let view = session.observe();
+    const productionFrames = new Map<number, GameView>();
 
     for (let frame = 0; frame < 1_000 && targetGroupId === undefined; frame += 1) {
       view = session.advance({ deltaMs: 100 });
@@ -74,6 +163,7 @@ test('Fort Kaboom seed 6 wagon takes the horse branch at its own redirect', asyn
 
         targetGroupId = groupId;
         horseTurnFrame = frame;
+        productionFrames.set(view.frame, view);
         assert.equal(pair.wagon.direction, 'east', 'the wagon has not reached its own redirect center yet');
         assert.equal(pair.wagon.positionFine.y, 3.5 * FINE_UNITS_PER_CELL);
         break;
@@ -86,6 +176,7 @@ test('Fort Kaboom seed 6 wagon takes the horse branch at its own redirect', asyn
     let wagonTurnFrame = -1;
     for (let delay = 1; delay <= 20; delay += 1) {
       view = session.advance({ deltaMs: 100 });
+      if (view.frame === 651 || view.frame === 658) productionFrames.set(view.frame, view);
       const pair: ReturnType<typeof groupedWagonPair>[number] | undefined = groupedWagonPair(view)
         .find(({ horse }) => horse.groupId === targetGroupId);
       assert.ok(pair, 'both convoy members remain present until the follower reaches the redirect');
@@ -106,6 +197,12 @@ test('Fort Kaboom seed 6 wagon takes the horse branch at its own redirect', asyn
 
     assert.equal(wagonTurnFrame - horseTurnFrame, 15,
       'the wagon turns north 1,500 ms after the horse, matching APK per-object redirect timing');
+
+    assert.deepEqual([...productionFrames.keys()].sort((left, right) => left - right), [643, 651, 658],
+      'the complete official seed-6 trajectory preserves the three previously inspected production frames');
+    for (const frame of [643, 651, 658]) {
+      assertProductionWagonPairDrawn(productionFrames.get(frame)!, frame);
+    }
   } finally {
     session.close();
   }
