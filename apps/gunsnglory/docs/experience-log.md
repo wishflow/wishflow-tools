@@ -62,13 +62,13 @@
 
 ### 出生区已重叠时，APK 碰撞检查可能让单位持续停住
 
-**状态：**碰撞算法和合成 `GameSession` 行为已用独立模型对齐；seed 42 正式模式无输入短测推进到第二波，未观察到跨组碰撞框重叠。Apache Valley/Fort Kaboom 正式 E2E 的失败是否由同一重叠状态造成仍待确认。按单独坐标样本推导为原版算法可产生的停滞，但没有证据将其关联到正式 E2E；不把它当成网页已证实缺陷，也不擅自加入网页专属“重叠后放行”规则。
+**状态：**碰撞算法和合成 `GameSession` 行为已用独立模型对齐；seed 42 正式模式无输入及复现 Playwright 初始操作的有界短测，均未观察到跨组碰撞框重叠。Apache Valley/Fort Kaboom 正式 E2E 的失败是否由同一重叠状态造成仍待确认。按单独坐标样本推导为原版算法可产生的停滞，但没有证据将其关联到正式 E2E；不把它当成网页已证实缺陷，也不擅自加入网页专属“重叠后放行”规则。
 
 - **表现与复现：**先前 Apache Valley/Fort Kaboom 的正式胜利 E2E 未结算。一个此前采集的网页会话样本中，type 5 stagecoach 位于 `(-6200,72960)`，type 3 horseman 位于 `(-11520,72960)`，两者同 y、碰撞框水平起点相差5,320 fine；APK 框宽7,678 fine，因此已经重叠2,358 fine。该坐标样本本身不证明它就是 E2E 的失败帧。
 - **APK 根因证据：**REA 检查 APK 1.8.6 的 `EnemyDirector.moveEnemys()`：实体先执行 `GameObjectEnemy.move()`，随后对类型3–8 调 `CollisionManager.testAdvancedCollisionEnemy(co,xDir,yDir)`；返回碰撞时调用 `undoMove(oldXDir,oldYDir)`。`GameObjectEnemy.move()` 将框起点更新为 `fineX/Y−3840`；`CollisionManager.createCollisionObject()` 创建7,678×7,678框。`testAdvancedCollisionEnemy()` 转调 `testCollisionEnemy()`；后者先用反向的 `−xDir/−yDir` 检查对方框，未命中才正向检查当前框；`boxCheck()` 用移动后四角是否落入另一框判定。apktool 导出的 smali 将起点候选筛选范围确认为 X `0x5a00`、Y `0x3c00`。这些是 APK 静态证据，未在 Android 运行验证。
 - **网页漏测点：**已有碰撞测试覆盖对向碰撞和分组排除，却没有独立重建“碰撞开始前框已经交叠、第一轮反向预测仍命中，于是正向分离机会也被短路”的条件；而 seed 42 E2E 只断言最后胜利，没有报告发生停滞时的碰撞框/位移/波次状态。
-- **参考模型与验证：**[`apk-enemy-collision-reference.test.ts`](../tests/apk-enemy-collision-reference.test.ts) 以 APK 方法语义独立实现候选过滤、两次预测和四角检查；对上述坐标探针 `xDir=±1` 均预测阻挡，同组对象和任一轴分离的样本不阻挡。合成真实 `GameSession` 中，两组同向同点生成的运输单位与模型预测一致，连续五帧坐标不变。连同既有[`p1f-enemy-collision.test.ts`](../tests/p1f-enemy-collision.test.ts) 共10/10通过，类型检查通过。另对正式 Apache Valley/Fort Kaboom 以 seed 42、easy、无输入方式推进约230–240秒至第二波，未发现跨组碰撞框重叠；这不能代表 Playwright 中雇佣和移动后的状态，也不能代替 APK 运行画面对照。
-- **防回归与未决项：**若再遇到“敌人卡住”，先记录稳定的关卡/seed/波次、碰撞框坐标、组 ID 和本帧 xDir/yDir，再分别运行 APK 来源模型与网页会话；不要仅凭 UI 未结算就归因碰撞，也不要用 AABB“是否更重叠”启发式放行。下一步只在有界复现正式 E2E 的初始输入后检查首个跨组重叠；如果没有关联证据，保持因果未证实，不修改正式结算断言或碰撞规则。
+- **参考模型与验证：**[`apk-enemy-collision-reference.test.ts`](../tests/apk-enemy-collision-reference.test.ts) 以 APK 方法语义独立实现候选过滤、两次预测和四角检查；对上述坐标探针 `xDir=±1` 均预测阻挡，同组对象和任一轴分离的样本不阻挡。合成真实 `GameSession` 中，两组同向同点生成的运输单位与模型预测一致，连续五帧坐标不变。连同既有[`p1f-enemy-collision.test.ts`](../tests/p1f-enemy-collision.test.ts) 共10/10通过，类型检查通过。另对正式 Apache Valley/Fort Kaboom 以 seed 42、easy 模式分别做无输入和初始输入短测：输入包括 Apache 首次雇佣 Bandito、Fort 雇佣两个 Cannon 并将首个 Cannon 移至 `(9.5,5.75)`，每次最多推进2,400个100ms帧；会话确认单位进入活动/移动状态，但两个场景都未观察到跨组碰撞框重叠。Apache 到第2波，Fort 到第3波。这不覆盖自动雇佣后的完整浏览器时序，也不能代替 APK 运行画面对照。
+- **防回归与未决项：**若再遇到“敌人卡住”，先记录稳定的关卡/seed/波次、碰撞框坐标、组 ID 和本帧 xDir/yDir，再分别运行 APK 来源模型与网页会话；不要仅凭 UI 未结算就归因碰撞，也不要用 AABB“是否更重叠”启发式放行。已覆盖两关 E2E 的初始操作，但后续余额自动雇佣、完整浏览器调度以及旧失败帧仍未逐项对应。只有发现相关坐标重叠，才继续对照首个停帧；无关联证据时保持因果未证实，不修改正式结算断言或碰撞规则。
 
 ## 地图雇佣框要消费 APK 的单位展示映射
 
