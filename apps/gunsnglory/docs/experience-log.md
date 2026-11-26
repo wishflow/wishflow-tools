@@ -60,6 +60,16 @@
 - **修复与防回归：**在 `src/game/index.ts` 内统一登记 3–8 碰撞类型，并为类型 3、7、8 保存波次级占位；占用冲突沿用本帧撤销与同组暂停，越过格中心或死亡时清除占位，死亡物理框保留到死亡计时结束。`tests/p1f-enemy-collision.test.ts` 7/7 定向通过，覆盖 horseman/boss 实体碰撞、type 1/2 不参与碰撞、垂直交叉路线的占位等待与通过释放，以及占位者死亡后的等待组恢复；`pnpm run typecheck` 通过。正式路线六个候选组合的回归仍按实施计划 C4-D3 执行，本测试不代表路线交会全面关闭。
 - **避免重复：**测试要拆开“物理框碰撞”与“action-2 格预约”；用两条垂直接近路线证明预约发生在物理框接触前。比较距离时按 APK 的 `7678` 格碰撞框和碰撞框起点偏移计算，不能只比较精灵图边缘。占位者死亡后不应假设碰撞框同步消失；应等死亡动画结束后验证后续组恢复。上述依据为 APK 静态反编译和网页 `GameSession` 自动观察，不是 Android 实机画面对照。
 
+### 出生区已重叠时，APK 碰撞检查可能让单位持续停住
+
+**状态：**碰撞算法和合成 `GameSession` 行为已用独立模型对齐；Apache Valley/Fort Kaboom 正式 E2E 的失败是否由同一重叠状态造成仍待确认。按已观察坐标推导为原版算法可产生的停滞，不将其当成网页已证实缺陷，也不擅自加入网页专属“重叠后放行”规则。
+
+- **表现与复现：**先前 Apache Valley/Fort Kaboom 的正式胜利 E2E 未结算。一个此前采集的网页会话样本中，type 5 stagecoach 位于 `(-6200,72960)`，type 3 horseman 位于 `(-11520,72960)`，两者同 y、碰撞框水平起点相差5,320 fine；APK 框宽7,678 fine，因此已经重叠2,358 fine。该坐标样本本身不证明它就是 E2E 的失败帧。
+- **APK 根因证据：**REA 检查 APK 1.8.6 的 `EnemyDirector.moveEnemys()`：实体先执行 `GameObjectEnemy.move()`，随后对类型3–8 调 `CollisionManager.testAdvancedCollisionEnemy(co,xDir,yDir)`；返回碰撞时调用 `undoMove(oldXDir,oldYDir)`。`GameObjectEnemy.move()` 将框起点更新为 `fineX/Y−3840`；`CollisionManager.createCollisionObject()` 创建7,678×7,678框。`testAdvancedCollisionEnemy()` 转调 `testCollisionEnemy()`；后者先用反向的 `−xDir/−yDir` 检查对方框，未命中才正向检查当前框；`boxCheck()` 用移动后四角是否落入另一框判定。apktool 导出的 smali 将起点候选筛选范围确认为 X `0x5a00`、Y `0x3c00`。这些是 APK 静态证据，未在 Android 运行验证。
+- **网页漏测点：**已有碰撞测试覆盖对向碰撞和分组排除，却没有独立重建“碰撞开始前框已经交叠、第一轮反向预测仍命中，于是正向分离机会也被短路”的条件；而 seed 42 E2E 只断言最后胜利，没有报告发生停滞时的碰撞框/位移/波次状态。
+- **参考模型与验证：**[`apk-enemy-collision-reference.test.ts`](../tests/apk-enemy-collision-reference.test.ts) 以 APK 方法语义独立实现候选过滤、两次预测和四角检查；对上述坐标探针 `xDir=±1` 均预测阻挡，同组对象和任一轴分离的样本不阻挡。合成真实 `GameSession` 中，两组同向同点生成的运输单位与模型预测一致，连续五帧坐标不变。连同既有[`p1f-enemy-collision.test.ts`](../tests/p1f-enemy-collision.test.ts) 共10/10通过，类型检查通过。此处的合成夹具证明网页执行结果符合模型，不能代替正式关卡复现或 APK 运行画面对照。
+- **防回归与未决项：**若再遇到“敌人卡住”，先记录稳定的关卡/seed/波次、碰撞框坐标、组 ID 和本帧 xDir/yDir，再分别运行 APK 来源模型与网页会话；不要仅凭 UI 未结算就归因碰撞，也不要用 AABB“是否更重叠”启发式放行。下一步先把 seed 42 正式会话/E2E 的停滞状态和该模型逐帧对齐，再决定 E2E 应验证胜利还是仅验证无错误结算。
+
 ## 地图雇佣框要消费 APK 的单位展示映射
 
 **状态：**地图雇佣框已恢复原版主要信息与余额不足分支；New Mexico、Fort Kaboom、Tech Town、桌面和触屏的定向检查通过。本轮在手机横屏内置浏览器复查余额充足状态，头像、名称、介绍、价格与确认/取消动作均可见；只检查并取消，没有执行雇佣扣款。
