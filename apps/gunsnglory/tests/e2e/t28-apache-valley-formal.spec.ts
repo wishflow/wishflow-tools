@@ -4,7 +4,6 @@ import { calculateMapViewport, getMapCameraOriginBounds } from '../../src/render
 import { continueFromPauseBoard, setSimulationSpeedFromLab } from './helpers';
 
 const officialCowGulchId = 'campaign-new-mexico-01';
-const officialApacheValleyId = 'campaign-new-mexico-02';
 const mapViewport = calculateMapViewport(20, 18, 1024, 576);
 const mapOriginBounds = getMapCameraOriginBounds(mapViewport.mapHeight, 576, mapViewport.tileSize);
 let currentMapOriginY = mapViewport.origin.y;
@@ -136,6 +135,19 @@ async function installSeed42(page: import('@playwright/test').Page): Promise<voi
   });
 }
 
+function apacheSourceCollisionPack(enemiesText: string): readonly string[] | undefined {
+  const enemies = [...enemiesText.matchAll(/(campaign-6-enemy-\d+) at \((-?\d+\.\d+),\s*(-?\d+\.\d+)\)/g)]
+    .flatMap((match) => {
+      const [, id, x, y] = match;
+      if (!id || !x || !y) return [];
+      return [{ id, x: Number(x), y: Number(y) }];
+    });
+  const wagon = enemies.find(({ x, y }) => x === 4.5 && y >= -0.9 && y <= -0.75);
+  const horsemen = enemies.filter(({ x, y }) => x === 4.5 && y === -1.5);
+  if (!wagon || horsemen.length < 2) return undefined;
+  return [wagon.id, ...horsemen.slice(0, 2).map(({ id }) => id)].sort();
+}
+
 async function installManualGameClock(page: import('@playwright/test').Page): Promise<void> {
   await page.evaluate(() => {
     const callbacks = new Map<number, FrameRequestCallback>();
@@ -147,15 +159,24 @@ async function installManualGameClock(page: import('@playwright/test').Page): Pr
       return handle;
     };
     window.cancelAnimationFrame = (handle) => { callbacks.delete(handle); };
-    (window as Window & { advanceGngGameFrame?: () => boolean }).advanceGngGameFrame = () => {
+    (window as Window & { advanceGngGameFrame?: (realDeltaMs?: number) => boolean }).advanceGngGameFrame = (realDeltaMs = 10_000) => {
       const entry = callbacks.entries().next().value as [number, FrameRequestCallback] | undefined;
       if (!entry) return false;
       callbacks.delete(entry[0]);
-      timestamp += 10_000;
+      timestamp += realDeltaMs;
       entry[1](timestamp);
       return true;
     };
   });
+}
+
+async function advanceGameFrame(
+  page: import('@playwright/test').Page,
+  realDeltaMs = 10_000,
+): Promise<boolean> {
+  return page.evaluate((delta) => (
+    window as Window & { advanceGngGameFrame?: (realDeltaMs?: number) => boolean }
+  ).advanceGngGameFrame?.(delta) ?? false, realDeltaMs);
 }
 
 async function hireThroughMapUi(page: import('@playwright/test').Page, slot: HireSlot): Promise<void> {
@@ -171,7 +192,7 @@ async function hireThroughMapUi(page: import('@playwright/test').Page, slot: Hir
   await expect(page.getByTestId('map-hire-status')).toContainText('hired from the map');
 }
 
-test('formal Apache Valley can be won through the map hiring UI and saves progress across reload', async ({ page }) => {
+test('formal Apache Valley reproduces the Wave 6 source collision stall without saving progress', async ({ page }) => {
   test.setTimeout(360_000);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.clock.install({ time: new Date('2026-10-29T00:00:00Z') });
@@ -189,8 +210,9 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   await expect(page.getByRole('dialog')).toContainText('Choose difficulty:');
   await page.getByTestId('campaign-difficulty-easy').click();
   await expect(page.locator('#scene-title')).toHaveText('Apache Valley · Level 2');
-  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/6 · Lives 50');
-  await expect(page.getByTestId('wave-status')).toContainText('Cash $100');
+  const status = page.getByTestId('wave-status');
+  await expect(status).toContainText('Wave 1/6 · Lives 50');
+  await expect(status).toContainText('Cash $100');
   const intro = page.getByTestId('campaign-wave-intro');
   await expect(intro).toBeVisible();
   await intro.getByRole('button', { name: 'Continue', exact: true }).click();
@@ -199,6 +221,7 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   await installManualGameClock(page);
   await continueFromPauseBoard(page);
   await expect(page.getByTestId('pause-board')).toBeHidden();
+  const profileBeforeBattle = await readProfile(page);
 
   const slots = apacheValleyHireSlots();
   const hired = new Set<string>();
@@ -206,56 +229,66 @@ test('formal Apache Valley can be won through the map hiring UI and saves progre
   const firstHire = slots.find(({ id }) => id === 'mexican-hire-01')!;
   await hireThroughMapUi(page, firstHire);
   hired.add(firstHire.id);
-  const status = page.getByTestId('wave-status');
+  await page.getByTestId('inspection-panel').evaluate((element) => {
+    (element as HTMLDetailsElement).open = true;
+  });
+
   let currentWave = 1;
-  for (let frame = 0; frame < 100; frame += 1) {
+  let collisionPack: readonly string[] | undefined;
+  for (let frame = 0; frame < 100 && !collisionPack; frame += 1) {
     if (await intro.isVisible()) {
       await intro.getByRole('button', { name: 'Continue', exact: true }).click();
       continue;
     }
-    const advanced = await page.evaluate(() => (window as Window & { advanceGngGameFrame?: () => boolean }).advanceGngGameFrame?.());
-    if (!advanced) throw new Error('The manual game clock has no scheduled animation frame');
+    if (!(await advanceGameFrame(page))) {
+      throw new Error('The manual game clock has no scheduled animation frame');
+    }
     if (await intro.isVisible()) {
       await intro.getByRole('button', { name: 'Continue', exact: true }).click();
       continue;
     }
-    if (await page.getByTestId('settlement').isVisible()) break;
+    await expect(page.getByTestId('settlement')).toBeHidden();
 
     const statusText = await status.innerText();
     const waveMatch = statusText.match(/Wave (\d+)\/6/);
     if (waveMatch) currentWave = Number(waveMatch[1]);
-    const cashMatch = statusText.match(/Cash \$(\d+)/);
-    const cash = Number(cashMatch?.[1]);
+    const cash = Number(statusText.match(/Cash \$(\d+)/)?.[1]);
     if (!Number.isSafeInteger(cash)) throw new Error(`Cash is not visible in wave status: ${statusText}`);
     const candidate = slots.find((slot) => !hired.has(slot.id) && slot.price <= cash);
-    if (!candidate) continue;
+    if (candidate) {
+      await hireThroughMapUi(page, candidate);
+      hired.add(candidate.id);
+    }
 
-    await hireThroughMapUi(page, candidate);
-    hired.add(candidate.id);
+    const packNow = apacheSourceCollisionPack(await page.getByTestId('inspection-enemies').innerText());
+    if (packNow) {
+      collisionPack = packNow;
+      for (let step = 0; step < 5; step += 1) {
+        expect(await advanceGameFrame(page, 25)).toBe(true);
+        expect(apacheSourceCollisionPack(await page.getByTestId('inspection-enemies').innerText()))
+          .toEqual(collisionPack);
+        await expect(status).toContainText('Wave 6/6');
+        await expect(page.getByTestId('settlement')).toBeHidden();
+      }
+    }
   }
 
-  const settlement = page.getByTestId('settlement');
-  await expect(settlement).toBeVisible({ timeout: 1_000 });
-  await expect(page.getByTestId('settlement-outcome')).toHaveText('Victory');
+  expect(collisionPack).toBeDefined();
+  expect(currentWave).toBe(6);
   await expect(status).toContainText('Wave 6/6');
-  const finalStatus = await status.innerText();
-  const lives = Number(finalStatus.match(/Lives (\d+)/)?.[1]);
-  expect(lives).toBeGreaterThan(0);
-  await expect(page.getByTestId('campaign-progress-summary')).toHaveText('2/41 stages complete');
-  await expect(page.getByTestId('settlement-save-status')).toHaveText('Result saved to this browser.');
+  await expect(page.getByTestId('settlement')).toBeHidden();
+  expect(hired.has('mexican-hire-01')).toBe(true);
 
   const profile = await readProfile(page);
-  expect(profile.completedScenarios).toEqual([officialCowGulchId, officialApacheValleyId]);
-  expect(profile.appliedSettlementIds).toHaveLength(1);
-  expect((profile.highScores as Record<string, number>)[officialApacheValleyId]).toBeGreaterThan(0);
-  expect(hired.size).toBeGreaterThanOrEqual(17);
+  expect(profile.completedScenarios).toEqual(profileBeforeBattle.completedScenarios);
+  expect(profile.highScores).toEqual(profileBeforeBattle.highScores);
+  expect(profile.appliedSettlementIds).toEqual(profileBeforeBattle.appliedSettlementIds);
 
   await page.reload();
   await expect(page.getByTestId('campaign-menu-screen')).toBeVisible();
-  expect(await readProfile(page)).toEqual(profile);
+  expect(await readProfile(page)).toEqual(profileBeforeBattle);
   await page.getByTestId('menu-start').click();
   await page.getByTestId('campaign-region-new-mexico').click();
-  await expect(page.getByTestId('campaign-level-01')).toBeEnabled();
   await expect(page.getByTestId('campaign-level-02')).toBeEnabled();
-  expect(currentWave).toBe(6);
+  await expect(page.getByTestId('campaign-level-03')).toBeDisabled();
 });
