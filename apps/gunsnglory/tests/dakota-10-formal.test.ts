@@ -12,7 +12,7 @@ import { createMemoryProfileRepository } from '../src/progress/memory-profile-re
 
 test('Sioux Falls is formal Level 40 after Snow Town and uses the registered map43 content', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota10CampaignId);
-  assert.equal(officialCampaignStages.length, 41);
+  assert.equal(officialCampaignStages.length, 42);
   assert.deepEqual(stage, {
     scenarioId: dakota10CampaignId,
     contentVersion: dakota10LevelFortyCampaignContent.contentVersion,
