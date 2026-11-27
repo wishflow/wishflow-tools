@@ -901,3 +901,9 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **修复与验证：**把 raw118 加入 `PLAYER_STATIC_COLLISION_BOUNDS_BY_TDM_CODE`，并从非静态 marker 集合移除；地图 builder 按 TDM 派生树桩、建筑与其他静态装饰，spawn-location builder 保留 Saloon/Fort/Tipi 类型，招募单位 builder 根据记录的全局解锁快照生成 activity 4 单位。`bombington-map-objects.test.ts` 4/4、`player-collision.test.ts` 11/11、`pnpm run typecheck` 通过；短 `GameSession` 确认树桩和睡眠 Gunslinger 均挡住直线路径。Level 42 尚未进入正式关卡目录，builder 会在 M6-D3 接线。
 - **探针选点教训：**第一版树桩探针把角色放在相邻下方一行，脚底碰撞框没有与树桩框重叠；改到树桩所在行后，若目标 y 直接写整数格坐标，角色会沿斜线移动并在横穿前离开障碍框。固定水平碰撞验证应使用角色实际初始锚点 `cell.y + 0.75`，并确认其碰撞框与 APK 障碍框在另一个轴上重叠。睡眠单位探针若从 raw32 阻挡格起步，则角色无法移动到目标；需选可通行起点，再核实起点、路径和目标单位坐标。
 - **防回归与边界：**新增关卡标记映射要同时核对 Smali 构造分支、资源 id、碰撞构造器及运动消费者；自动化移动探针需证明实际路径经过障碍框，不能只断言地图里存在碰撞盒。当前验证是 APK 静态证据与网页 `GameSession` 几何测试，不代表 Android 运行截图或全关卡视觉等同。
+
+## Bombington 铁路组与炸药要分别核对 TDM 顺序和对象配对
+
+- **修复与依据：**row 7 的 raw83 `(12,7)/(13,7)` 与 raw84 `(14,7)/(15,7)` 按 APK 形成一个水平组：两段机车为 type 10/11、activity 5，两节车厢为 type 12、activity 4。网页 builder 复用既有列车 TDM 译码器和统一单位参数，不复制移动规则。raw102/110 由现有最近未用箱配对器处理，九组配对逐项对照 [Bombington 内容审计](bombington-content-audit.md)；Profile 使用全局关卡20/30解锁状态，replay builder 使用已记录的 bool 快照。`bombington-transport.test.ts` 3/3 通过，覆盖 TDM 数量与坐标、实体资源、生产 renderer 贴图/矩形、真实水平组移动、间距、raw87 右端缓冲器、九组配对及锁定/解锁碰撞；TypeScript 检查通过。
+- **测试夹具教训：**列车移动用例第一次在提交 move intent 后直接检查 `view.units.some(moving)` 决定是否推进循环。命令尚未经过 `advance()` 消费，因此 `moving` 仍是 false，循环一次也没执行。修正为先推进一次，再按活动状态迭代；不要用命令提交前的 GameView 判定命令执行后的运动状态。raw110 的 marker 清单是 TDM 行优先顺序，和 trigger→box 配对顺序不是同一数组，测试应分别断言原始对象清单和配对结果，不能要求两者顺序巧合一致。
+- **防回归与边界：**列车测试既要核对静态 group/素材，也要从实际 GameSession 的用户输入开始，推进模拟后验证位移与缓冲器；单看 `ScenarioUnit` 初始数组不能证明能动。生产绘制检查用当前 `GameView` 调用 `drawGame()` 并比较素材键和坐标，不能只检查资产文件存在。M6-C2 只提供 Bombington 的内容 builder；正式关卡、Free Play 与 replay 工厂仍由 M6-D3 接入。没有进行完整战役、Android 动态观察或逐帧像素比较。
