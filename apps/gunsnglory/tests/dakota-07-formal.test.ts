@@ -15,7 +15,7 @@ const completedThroughLevelThirtySix = officialCampaignStages
 
 test('Frost Station is Dakota level 37 and unlocks after Ice Rocks', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === dakota07CampaignId);
-  assert.equal(officialCampaignStages.length, 41);
+  assert.equal(officialCampaignStages.length, 42);
   assert.deepEqual(stage, {
     scenarioId: dakota07CampaignId,
     contentVersion: dakota07LevelThirtySevenCampaignContent.contentVersion,

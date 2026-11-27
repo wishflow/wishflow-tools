@@ -164,7 +164,8 @@ function findOfficialRouteIntersections(): readonly IntersectionGroup[] {
 }
 
 test('official same-wave perpendicular transport route intersections are inventoried', () => {
-  assert.deepEqual(findOfficialRouteIntersections(), [
+  const intersections = findOfficialRouteIntersections();
+  assert.deepEqual(intersections.filter(({ level }) => level !== 42), [
     {
       level: 11,
       scenarioId: 'campaign-mississippi-11',
@@ -230,4 +231,25 @@ test('official same-wave perpendicular transport route intersections are invento
       ],
     },
   ]);
+
+  const bombingtonIntersections = intersections.filter(({ level }) => level === 42);
+  assert.deepEqual(bombingtonIntersections.map(({ spawns, overlappingVehicleWaves }) => [
+    spawns,
+    overlappingVehicleWaves.map(({ number }) => number),
+  ]), [
+    [[0, 1], [3, 4, 5, 6, 7, 8, 9]],
+    [[0, 2], [3, 4, 5, 6, 7, 8, 9]],
+    [[0, 3], [6, 7, 8, 9]],
+    [[0, 4], [6, 7, 8, 9]],
+    [[1, 2], [2, 3, 4, 5, 6, 7, 8, 9]],
+    [[1, 3], [6, 7, 8, 9]],
+    [[1, 4], [6, 7, 8, 9]],
+    [[2, 3], [6, 7, 8, 9]],
+    [[2, 4], [6, 7, 8, 9]],
+    [[3, 4], [6, 7, 8, 9]],
+  ]);
+  assert.ok(bombingtonIntersections.every(({ cells, overlappingVehicleWaves }) => (
+    JSON.stringify(cells) === JSON.stringify([{ x: 3, y: 19 }, { x: 4, y: 19 }, { x: 3, y: 20 }])
+    && overlappingVehicleWaves.every(({ coveredWagon }) => coveredWagon)
+  )), 'all Bombington transport pairs overlap on the shared southwest exit with covered wagons');
 });

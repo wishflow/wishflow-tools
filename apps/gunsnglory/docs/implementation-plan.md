@@ -1,108 +1,62 @@
 # 实施计划
 
-本文只维护当前代码基线、未闭合问题和接下来可执行的切片。每轮开工前对照代码与 APK 证据；每完成一个切片，立即更新状态并移除已完成项。
+本文只记录当前基线、未闭合事项和近期可执行步骤。逐图证据与已关闭问题分别保存在地图矩阵、交通清单和经验记录中；本计划不重复归档已完成切片。
 
 ## 当前实现与发布状态
 
-- 正式战役 Level 1–41 已接入；Level 42–60 尚未接入。当前碰撞与交通绘制批次在独立分支 `codex/gng-source-collision-review` 上工作；公开 `master/origin/master` 为 `f8dbfee`，远端集成分支为 `05574e5`。该开发分支包含远端集成分支及本地 M3/M4 批次，完整本地验证已通过；发布仍待 M5。
-- 刷新远端后发现旧集成工作树 `/private/tmp/gng-clean-integration` 位于 `e06a674`，比 `origin/gunsnglory` 落后 51 个提交，并保留 5 个未提交文件。该现场不得切分支、覆盖或并入当前候选；以已通过检查且基于最新 `origin/gunsnglory` 的独立开发分支作为干净晋升候选，发布后再通过该候选同步远端集成分支。干净发布工作树 `/private/tmp/gng-clean-publish` 位于 `f8dbfee`，与 `origin/master` 一致。
-- 最新公开发布为 `f8dbfee04072d01e6a5ead7a704823cbe36ffe1d`。GitHub Actions run `45390291790` 的 Guns’n’Glory 完整测试、Pages 构建、GitHub Pages 部署与 Cloudflare Pages 部署均成功；两处公开根 `build-info.json` 的 `sourceSha` 均与该提交一致。
-- 该版本已在内置浏览器以窗口模式、静音检查主菜单 Options、Cow Gulch Level 1 介绍页、Easy 开局对白及低余额 Bandito 雇佣弹窗。当前桌面截图中 Options 不再拥挤；关卡介绍标题、地图、说明、记录面板与 Play 按钮处于对应槽位；雇佣弹窗显示角色图、名称、对白、价格与确认槽。结论只覆盖这些桌面代表状态，不等于与 APK 运行画面逐像素一致，也未覆盖本轮窄屏目视检查。
-- 车马跟随逻辑已改为复刻 APK 的 x/y 前车坐标差；Fort Kaboom Wave 3 落后马车状态及 seed 6 的分叉时序均有 `GameSession` 回归测试，完整波次代表帧通过生产 `drawGame()` 检查。测试不是 APK 实机并排画面对照，不能据此宣称所有车辆场景已达到视觉等同。Cannon 弹丸已映射到 APK 独立资源并有定向测试，见[经验记录](experience-log.md)。
-- REA 已确认 Sioux Falls 的 `GameDesignWaves.setWaves(i == 40)` 有 10 个波次和 **28 条** `addToWave` 请求；`GameDesignData.<clinit>` 的第 40 关数据对应数组下标 39。详见[动态内容核对](sioux-falls-content-audit.md)与[空间静态审计](sioux-falls-static-audit.md)。
+- 正式战役 Level 1–42 已接入；Level 43–60 尚未接入。M5 地图批次已完成，路线、我方碰撞、交通实体和生产渲染证据范围见[地图覆盖矩阵](map-coverage-matrix.md)、[交通实体清单](map-transport-inventory.md)、[玩家碰撞审计](player-collision-audit.md)及[经验记录](experience-log.md)。
+- 最新公开发布为 `a5795522987fbebd45dab0752937862a8b9e9801`。GitHub Actions run `45784784585` 的应用测试、共享测试、GitHub Pages 与 Cloudflare Pages 发布均成功；两处根 `build-info.json` 的 `sourceSha` 均与发布提交一致。
+- 已在内置浏览器打开带发布 SHA 的页面，以窗口模式、静音检查 Nevada Level 41 Free Play 的开局对白、暂停板、未完成战斗退出确认及返回菜单；另查看 Fort Kaboom Level 3 的战斗地图、HUD、地图缩放和页面外实验室。检查范围是代表性部署 smoke，不表示所有地图、每种弹窗或移动端画面均已逐项目视核对。
+- 发布提交已合并回本地晋升候选并推送至 `origin/gunsnglory`；推送输出确认远端由 `05574e5` 前进至 `6897cc7`。旧工作树 `/private/tmp/gng-clean-integration` 仍保留 5 个未提交文件，不作为当前开发基线，也不覆盖或清理。
+- Fort Kaboom 车马跟随、碰撞和 Cannon 弹丸映射均有 APK 静态证据及网页测试；它们不等于 Android 同种子运行画面对照。未逐关逐帧检查全部精灵，不能宣称全游戏已达到像素级一致。
 
 ## 发布计数
 
 | 统计点 | 公开发布次数 | 已验收实现切片 | 比例 |
 | --- | ---: | ---: | ---: |
 | 上次留存基线（`0bed82f`） | 31 | 173 | 17.9% |
-| 当前发布后 | 45 | 236 | 19.1% |
+| M5 发布后 | 46 | 308 | 14.9% |
 
-沿用原统计口径：基线后增加 58 个代码实现提交、4 个内容切片和本轮 Pages 阻塞修复 1 个切片；公开发布为原有 12 次加 Sioux Falls 与 Pages 修复两次。累计为 `(31 + 12 + 2) / (173 + 58 + 4 + 1) = 45/236`，低于 20% 目标。
+沿用上一版统计口径：之前为 `45/236`；本批新增 72 个非合并提交，均改动应用 `src/` 或 `public/` 实现内容，另增加 1 次公开发布，因此为 `(45 + 1)/(236 + 72) = 46/308`。统计低于 20% 目标；不将文档提交计为实现切片。
 
-## 当前工作顺序
+## 下一批：Level 42 Bombington
 
-### 已接入地图的路线与步行范围审计
+### 范围
 
-范围固定为正式关卡 Level 1–41 的 41 个场景/TDM，不把 60 关目录或 Free Play 样例数当作已接入地图数。当前每图已有若干 TDM、路线、地形或碰撞检查，但分散在场景测试、静态审计和共享碰撞审计中；这些测试存在不代表生产画面已逐图目视核对。已关闭的 Cow Gulch raw36、桥面锚点、睡眠单位/建筑碰撞、已知马车双轴跟随和大炮弹丸资源不重复修复。
+接入 APK 正式战役中的 Nevada Level 42「Bombington」。M6-A 静态内容审计已通过；完整基线见 [Bombington 内容审计](bombington-content-audit.md)。当前目录条目指向地图文件 45 / 标题资源 45，但只有该审计明确了可实现内容。
 
-#### 步骤与依赖
+只实现这一关及其必要的目录/存档集成。Level 43–60、全局规则重构、无证据的平衡调整、完整战役通关和 Android 实战不在本批范围。
 
-1. **M0：建立 41 图证据矩阵（已完成）。**`docs/map-coverage-matrix.md` 收录 41 个正式场景，逐项由 `officialCampaignStages`、`campaignCatalog` 和地图 JSON 的 `source.resource` 确认 TDM 与尺寸；校验为 41 个场景映射到 41 个不同 TDM。矩阵链接了现有地图测试和静态审计，并把路线/地形、玩家碰撞、交通实体及生产画面对照留为待审。现有 36 份专属静态审计未覆盖 Level 1–4、41；共享碰撞审计自述当时覆盖27图，不能当成41图验收。M0 只完成入口盘点，不代表问题已解决。
-2. **M1：敌方路线与地图图层（已完成，结论限于路线中心和静态地图层）。**41 张地图均从正式 `GameView` 读取 `route`/`routes`，与 TDM 派生路径和实际 `map.background`、`map.streets` 的 `RenderTile` 图块命令交叉核对。逐图联系表使用生产图集资源和裁剪矩形，叠加路线中心、出生/出口及转向点；41 张均目视检查，未发现路线中心与可见道路/桥层存在整体平移、直线回退或明显错配。通用 TDM 路径展开器与运行时路线在 40/41 张一致；Cactusville 的角落出生点被通用边界优先级误判方向，已由该关独立 `cactusville-map.test.ts` 对三条正式路线、出口、路线格和分支码复核，不是产品差异。Tech Town 的 route code 66 铁轨交叉格由专属测试确认是有效路线交叉。联系表不是完整 `drawGame()` 战斗画面：不包含动态敌人脚底、单位碰撞、装饰物排序、相机裁切或实时动画；这些仍由 M2/M3 和生产画面对照处理。发现矛盾时先独立验证 TDM 方向参考，不移动路线以适应截图。
-3. **M2：我方移动范围和碰撞（已完成，覆盖边界见矩阵）。**共享测试逐关检查41张地图的 TDM 静态对象框映射、单位脚底/唤醒框锚点与 raw36 墙边探针；已将早期27图修复批次与当前41图共享断言范围分开记录。几何断言与真实移动覆盖分别统计。
-   - **M2-A：核准覆盖基线（已完成）。**复核 `player-collision.test.ts`、`player-unit-anchor.test.ts` 与各地图碰撞用例的循环范围和断言；矩阵分别注明逐图自动检查和代表地图真实 `GameSession` 移动，修正文档中过期的27/41范围，不重写已通过 APK 参数。
-   - **M2-B：覆盖全部 TDM 桥段（已完成自动会话核对）。**`all-maps-player-bridge.test.ts` 从41张正式地图的实际桥面 `RenderTile` 反查 TDM raw80、raw81 与 raw88，只选择桥面代码两侧均为 raw32/36 阻挡格且不与静态物件框重叠的可走单元；每个连通桥段至少建立一个真实地图派生的短 `GameSession`，检查沿桥移动、两侧越界阻挡与停靠坐标。raw81 只在 Railroad Ranch 的实际桥面贴图处计作桥，不能把同码其他用法误当桥。测试通过；这证明实现按 APK 四角可达规则处理了每个已渲染可走桥段，不替代原版运行画面对照。
-   - **M2-C：真实对象移动闭环（已完成，类别级覆盖）。**全41图静态 TDM marker 均有独立 APK 框断言；真实地图 `GameSession` 覆盖睡眠/活动单位、Saloon/Fort/Shack、树石/骨骸/水塔、铁路挡车器、水面石块、Casino 解锁、炸药及可拾取奖励。`player-collision.test.ts` 新增 Tech Town raw77 高骨骸和解锁 raw150 Casino 的移动探针，分别核对其独有/条件化 APK 碰撞框。已验证对象类别和关键机制，不表示41张地图每个对象实例都人工逐一移动。
-   - **M2-D：锚点与生产画面复核（已完成，三处代表观察）。**目的不是重测碰撞规则，而是将用户看到的精灵脚底与逻辑 fine 坐标、实际 Canvas 变换关联起来，判断贴图视觉边缘是否被误当成行走边界。
-     1. **M2-D1 开发态脚底标记（已完成）。**`showInspectionOverlay` 仅为当前选中单位在 `positionFine` 画十字及单位 ID、fine/格坐标；沿用地图视口坐标映射，不改变生产战斗渲染。`canvas-renderer.test.ts` 在缩放 `1.75` 和相机偏移 `{x:18,y:-12}` 下断言十字中心映射到脚底坐标，并核对标签。`pnpm --dir apps/gunsnglory exec node --import tsx --test tests/canvas-renderer.test.ts` 13/13 通过，`player-unit-anchor.test.ts` 与 `all-maps-player-bridge.test.ts` 合计 5/5 通过，`pnpm --dir apps/gunsnglory run typecheck` 通过。内置浏览器开发战斗画面曾显示 `gunslinger-1` 的十字和 `fine=(65280.0,67200.0)`、`cell=(8.5000,8.7500)`；这只确认网页调试标记与网页逻辑坐标相连，不证明原版锚点或桥缘正确。
-     2. **M2-D2 三种定点画面观察（已完成；只代表三处观察，不外推至41张地图）。**窗口模式、静音、1×速度，不清波次、不通关。永久定向 E2E `tests/e2e/t43-player-bridge-anchor.spec.ts` 的 Cow Gulch raw80、Cow Gulch raw36 和 Steam Valley raw88 三项均通过。Cow Gulch Level 1 的 raw80 横桥 `(12,9)` 通过 Canvas 输入到达，脚底约 `(12.2001,9.7350)`、fine 约 `(93697,74765)`；Steam Valley Level 12 的 raw88 竖桥在 x=11、TDM 行8–9，脚底截图读数 `fine=(88320,67995)`、`cell=(11.5000,8.8535)`，落在 row8 的 raw88 及桥图纵向绘制范围 `y=7.75–10.25`。Cow Gulch raw36 墙 `(8,12)` 的定点会话停止于 `fine=(65280,92700)`、`cell=(8.5000,12.0703)`；APK 碰撞框底边为脚底锚点上方约 `0.10` 格，即 `y=11.9703`，仍在 raw16 可走侧，故脚底锚点允许略过 TDM 行界，不能用 `floor(positionFine.y)` 单独判碰撞越界。对应生产 Canvas 截图保存在 `/tmp/gng-m2-d2-cow-gulch-bridge.png`、`/tmp/gng-m2-d2-cow-gulch-wall.png` 和 `/tmp/gng-m2-d2-steam-valley-raw88.png`。
+### 当前切片状态
 
-        测试坐标助手必须复用运行时 `fitAspectViewport()` 的内层 16:9 视口、显示像素缩放与地图视口；只按 canvas 外框宽高线性映射会在外框存在 letterbox 时偏移输入。游戏移动到目标时有约 `0.31` 格停止容差，测试目标应落在桥格内部，不能紧贴 raw 格边后要求脚底锚点必须越过边界。Cow Gulch raw80 首次目标 `(12.5,9.5)` 停在 `x=11.65`，原因是玩家碰撞框仍覆盖桥上方阻挡 raw32；目标下移至 `(12.5,9.75)` 后到达。raw36 墙边的可走参照是 raw16 `(8,11)`，不是同为阻挡的 raw32 `(8,13)`。D2 截图证明网页生产绘制、位置标记与这些 TDM 格的对应关系，不证明 APK 同帧画面完全一致。
-     3. **M2-D3 独立判定（已完成；范围为已测代表点）。**APK 的 `GameObjectUnit.draw()` 将精灵底边放在 `fineY`，而 `createCollisionObject()` 的碰撞框底边是 `fineY−768`，即锚点上方 `0.10` 格。Cow Gulch raw36 `(8,12)` 定点读数的脚底锚点为 `y=12.0703`，碰撞框底边为 `11.9703`，仍在 raw16 通行侧；该约 `0.07` 格锚点越界是 APK 碰撞框与贴图脚底的既有关系，不是网页碰撞错位。网页生产渲染也将贴图底边绑定 `positionFine`。不改碰撞框或桥图；截图证明当前网页重叠幅度，不能证明原版同帧像素一致。若其他地图仍有超过此几何关系的偏差，需以该图 TDM、脚底和 APK 碰撞框新增独立探针，不外推本例。
-     4. **M2-D4 交付证据（已完成）。**覆盖矩阵将41张地图的我方脚底/碰撞状态更新为 `M2 全图自动覆盖`，并仅将 Cow Gulch 与 Steam Valley 的生产画面标为代表观察；表头说明真实对象移动属于类别级覆盖。矩阵和经验记录给出测试入口、三个细分位置、截图路径与 APK 同帧对照缺失边界。
-   - **M2 关闭条件（已达到）。**41张地图均有唯一 TDM、静态对象 marker APK 框映射、单位锚点/raw36 边界自动断言和实际渲染桥段移动覆盖；特殊对象类别有真实地图会话。生产画面按计划保留三处代表性窗口/静音观察，不声称41图逐帧视觉相同。没有 APK 原版同帧运行截图，不能做逐像素比较。M2 已关闭，交通实体工作进入 M3。
-4. **M3：动态交通实体（本地已完成，待 M5 批次检查与集成）。**按地图和运输组逐项对照，不因某类资源存在就推断该关实际生成了车辆。逐关清单见[正式关卡交通实体清单](map-transport-inventory.md)。
-   1. **M3-A 清点适用范围（已完成）。**正式 41 关均从正式 `GameSession` 初始单位与该关 campaign wave 定义分类；27/41 关存在地图摆放运输单位，共48组、238个部件；其余14关仅能确认无静态 `train-*`/`steamer-*` 初始组，不能据此说敌方波次无运输车。41/41 关均含至少一种敌方运输组请求。清单记录组部件、TDM 初始格和各类波次原始组请求数，并区分对象存在性、请求数量与实际单局生成数量。
-   2. **M3-B 复核已有行为测试覆盖（已完成）。**审计建立时，48 个静态地图运输组中有 18/48 个直接移动检查（火车 9/31、蒸汽船 9/17）。M3-C1 与 C2 已分别为 22 个火车组和 8 个蒸汽船组增加正式 `GameSession` 短会话；当前为 48/48（火车 31/31、蒸汽船 17/17）。正式敌方车马岔路覆盖 Billy Hills、Cactusville、Lucky Lake、Lost City、Railroad Ranch、Fort Kaboom 六个关卡组合；通用 Post Coach/Gold Transport 用例不增加正式地图覆盖。运输清单记录每组测试入口、端点与绘制覆盖及证据边界。
-   3. **M3-C 补足地图组移动与正式敌方岔路（已完成），按以下独立切片推进。**
-      1. **M3-C1：补足静态火车移动（已完成）。**新增 `tests/official-static-train-movement.test.ts`，覆盖原先缺少直接移动断言的 22 个火车组。每例使用正式战役内容和固定种子的正式地图 `GameSession`，检查实际组 ID/部件数/TDM 轴、沿轴移动、组内相同位移与组距保持，并确认其他运输组不连带移动。定向测试 22/22 通过；火车当前覆盖 31/31。此证据不表示所有端点均已验证。
-      2. **M3-C2：补足蒸汽船水路移动（已完成）。**新增 `tests/official-static-steamer-movement.test.ts`，覆盖原先缺少直接移动断言的 8 个蒸汽船组。每例使用正式战役内容与固定种子的正式地图 `GameSession`，检查实际组 ID/部件数、water surface 与横向 lane、同组位移、原始间距及其他船组保持静止；定向测试 8/8 通过。当前全部 48/48 静态运输组都有至少一个可行方向的直接移动断言，不表示所有端点或等待几何都已覆盖。
-      3. **M3-C3：补足正式敌方车辆分叉（已完成，182/182 组）。**
-         - **C3-A：固化正式路线请求覆盖矩阵（已完成）。**`tests/helpers/official-wagon-route-coverage.ts` 从正式 41 关及其波次数据派生“关卡/出生点/车辆类型”组合和路线上的 TDM 多向字段；`tests/official-wagon-route-coverage.test.ts` 断言 750 个波次/出生点请求项折叠为 294 个组合、182 个有分叉组合，且每个请求都能匹配该出生点的正式路线。定向测试 1/1 与应用类型检查通过。
-         - **C3-B：New Mexico Levels 1–10（已完成，24/24 组）。**`tests/official-wagon-route-matrix.test.ts` 按 C3-A 动态生成该地区所有正式分叉组合，保留正式地图、TDM、路线、出生点、目标波次和车辆请求；隔离其他波次/出生池及我方防御单位/招募池，避免测试对象在抵达分岔前被击毁。初次 20/24 通过、Lost City 4 例被击毁；夹具校准后 24/24 通过。类型检查和 C3-A 覆盖审计均通过。此测试只核对车马分岔跟随，不评价完整战役生存结果。
-         - **C3-C：Mississippi Levels 11–20（已完成，68/68 组）。**复用 C3-B 的隔离与同组跟随断言；`--test-name-pattern` 仅运行 Levels 11–20，68/68 通过。
-         - **C3-D：Oregon Levels 21–31（已完成，48/48 组）。**复用相同隔离与同组跟随断言；`--test-name-pattern` 仅运行 Levels 21–31，48/48 通过。
-         - **C3-E：Dakota/Nevada Levels 32–41（已完成，42/42 组）。**复用相同隔离与同组跟随断言；`--test-name-pattern` 仅运行 Levels 32–41，42/42 通过。至此正式分叉矩阵达到 182/182；端点与阻挡等待由下方 C4 独立覆盖。
-         每个地区只隔离无关波次/请求以缩短会话，不改变目标正式请求和路线；全部 TDM 分支仍以静态来源校验。短会话不代表穷举每一种随机分支排列，也不推进完整战役。
-      4. **M3-C4：补足端点与敌方交会观察（已完成，范围限于文中固定样本与 APK 静态语义）。**分开处理静态地图运输组的可控移动与敌方运输组之间的动态阻挡，不把两者的“停止/等待”混作同一规则。
-         - **C4-A：固化端点和官方路线交叉清单（已完成）。**[`official-static-transport-endpoint-audit.test.ts`](../tests/official-static-transport-endpoint-audit.test.ts) 从41关正式 `GameView` 的 TDM、已派生背景碰撞码及 `PLAYER_STATIC_COLLISION_BOUNDS_BY_TDM_CODE` 审计48组/96端方向。静态源格分类为：raw86 22端、raw87 22端、纵向端部对象 raw94/raw95 各9端、水岸码107/109/110/119/127共10端、到地图边界24端；没有运输组以普通地形碰撞码作为第一个端点标记。该测试核对端点来源和碰撞框登记，不证明单位实际移动时停在何处。首次临时扫描把 raw68 错当作地形阻挡并漏掉 raw94/95；原因是把简化的碰撞码范围直接套在原始 TDM 上。之后按运行时 `backgroundCollisionCode()` 的原始码转换顺序，并查 `PLAYER_STATIC_COLLISION_BOUNDS_BY_TDM_CODE` 复核，结果已由测试固化。另由[`official-transport-route-intersections.test.ts`](../tests/official-transport-route-intersections.test.ts)展开正式路线并与同波次车辆请求交叉，固化6组垂直转向交会候选：Level 11（1组）、Level 14（2组）、Level 17（2组）、Level 31（1组）。这证明存在静态路径交会及同波次车辆请求，不证明运行时车辆同时抵达或发生碰撞。
-         - **C4-B：验证剩余静态端点行为（已完成，9/9 定点会话）。**[`official-static-transport-endpoint-movement.test.ts`](../tests/official-static-transport-endpoint-movement.test.ts) 使用正式地图与真实 `GameSession`，验证 Lucky Lake 纵向 raw94/raw95 碰撞框、Mississippi/Oregon 五种水岸背景码107/109/110/119/127的船道阻挡，以及 Ghost Town 蒸汽船向西、向东两个地图边界方向。每例检查完整运输组同位移、原始间距、确实未到远端目标、全组停稳、实际碰撞框或水面碰撞角没有越界，并在障碍后发出反向指令验证整组继续移动。旧 Ghost Town 测试的目标是 x=30，并未抵达右边界；这次单独覆盖地图边界，不把旧测试误作边缘证据。raw36 玩家地形碰撞已在 M2 有独立覆盖；raw68 是 TDM 静态对象，不是本次运输端点扫描中的地形终点，不在此重复。
-         - **C4-C：验证官方路线交会区域（已完成，限隔离波次 seed 样本）。**[`official-transport-crossing-behavior.test.ts`](../tests/official-transport-crossing-behavior.test.ts) 覆盖 C4-A 的6组正式候选，保留原地图、目标波次原始车辆请求数量/间隔和路线，关闭其他波次、我方单位及奖励箱，并用固定 seed 推进最多1,500个200ms帧。5组样本中两个出生池的车辆同帧进入交会区域；Level 17 spawn 3/5 的 seed 40 中，两边车辆各自经过该区域但未同帧进入。6组样本均未发现交会区域附近跨出生池车辆碰撞框重叠。对 Level 17 spawn 3/5 的 seed 1–40 另作隔离会话扫描，也未观察到同帧进入；这只是有界样本，不证明所有随机序列都不相遇。由于此前波次已清空，随机序列不是完整战役的同 seed 回放。测试不把“同帧靠近”解释成碰撞停驻，也不从位置未变推断停住原因。
-         - **C4-D1：APK 碰撞与路口占位语义（静态证据已闭合）。**REA/JADX 对 APK 1.8.6 的 `EnemyDirector.moveEnemys()`、`EnemyDirectorField.block()`、`GameObjectEnemy.move()/undoMove()/startDying()` 与 `CollisionManager.testCollisionEnemy()` 的逐方法检查确认：实体发生碰撞时，原版撤销本帧坐标并恢复移动前方向；若下一列表成员属于同一 `unitGroup`，下一成员额外停一帧。碰撞发生后没有独立的改道或重新寻路调用；每个更新继续按原方向尝试，阻挡持续就继续停，阻挡解除后恢复。APK 将敌人类型 3–8 登记为物理碰撞对象（类型 3 horseman、4 covered wagon、5 stagecoach、6 gold transport、7 boss、8 horse）。另有一层独立的路口占位：类型 8、3、7 会预占前方 action-2 转向格；该格已由其他对象占用时撤销本帧移动，并同样短暂停住组内下一成员。越过当前转向格中心后释放占位；对象死亡时清理自己持有的占位。死亡对象的碰撞框不会在 `startDying()` 时移除：它在死亡动画期间仍留在 `CollisionManager`，由 `EnemyDirector.moveEnemys()` 在死亡计时结束时移除。依据：目标 APK 的 `EnemyDirector.moveEnemys()`、`EnemyDirectorField.block()`、`GameObjectEnemy.move()/undoMove()/startDying()/setImageForUnit()`、`CollisionManager.testCollisionEnemy()`；均为静态反编译观察，不声称原版运行时画面对照。
-         - **C4-D2：出生区同向重叠与 APK 碰撞语义（来源级模型提示原版也会停滞，网页规则不擅改）。**Apache Valley/Fort Kaboom 正式战役曾停在地图外出生区。Fort Kaboom 样本中 type 5 与 type 3 的位置分别为 x=-6,200/-11,520、y=72,960；碰撞框均为 7,678×7,678 fine，水平重叠 2,358 fine。REA 已核对 EnemyDirector.moveEnemys() 先移动对象，再以 xDir/yDir 调用 testAdvancedCollisionEnemy()；后者转发至 testCollisionEnemy()/boxCheck()，预测框以角点包含规则判定。按源方法编写的本地纯代码模型在该坐标和 xDir=1 下拒绝双方候选移动，说明卡住与 APK 碰撞语义一致；不是 Android 运行观察。严格复刻分支保留原规则；不使用“重叠不增大就放行”的网页专属缓解。
-         - **C4-D3：官方路线回归与关闭判定（已完成，正式结算用例按来源行为校准）。**正式数据已确认 C4-C 的六个交会候选波次在两处相关出生池都请求 horseman（type 3）：Level 11 Wave 3 为 2/3 组，Level 14 Wave 3 为 2/3、Wave 7 为 3/3，Level 17 Wave 6 的两组候选均为 3/3，Level 31 Wave 3 为 4/4；这六个波次的 boss（type 7）请求数均为 0。六个交会格也均为运行时 action-2 转向格。保留 C4-C 现有六组车辆请求与 seed 测试，并增加仅保留原始 horseman 请求数、间隔、路线、关卡、出生点与对应 seed 的六组短会话；车辆和 horseman 共12项定向测试全部通过，按 APK 7678×7678 碰撞框检查未发现交会区域跨组重叠。Level 31 seed 1 两边车辆均经过交会区，但 action-2 占位会错开它们进入附近区域的帧，因此不要求同帧靠近。Level 17 spawn 3/5 的 horseman 固定 seed 1 中，spawn 5 经过 `(14,21)`；spawn 3 在原图 action-2 格 `(6,21)` 选择北向分支，按正式路径从 y=16 出口离开，没有经过 `(14,21)`。这是原图中存在的合法随机分支，不能把“两个出生点都经过同一个交会格”当作必需条件，也不能误判为路线漏标。Boss 在本批正式数据中的适用性为不适用，不伪造 boss 波次。182项正式分岔矩阵及路线交会回归通过，未发现占位逻辑改写同组车辆的正式分支或移动分量。路口占位、等待/释放/死亡和官方固定 seed 样本已按来源验证；结论不穷举所有随机分支，也不声称完整战役同 seed 回放。Fort 与 Apache 的正式 seed 42 碰撞停滞已由独立 APK 参考模型、正式 GameSession 与定向 E2E 互相核对；测试保留来源行为并明确不要求该随机局胜利，Cow Gulch 用例单独覆盖正式胜利和存档写入。
-      5. **M3-C 关闭条件（已达到）：**火车 31/31、蒸汽船 17/17 静态组均有直接移动断言；182/182 个经官方路线多向字段的关卡/出生点/车辆类型组合都有短会话车马跟随断言；端点、分支阻挡、物理碰撞与路口占位等待的每一种已识别几何形态均有行为证据，或以来源证明不适用。M3-D 另行核对代表生产绘制，不把测试覆盖提升误记为逐帧视觉验收。
-   4. **M3-D 核对生产绘制。**
-      - **D1：固定马车分叉画面的生产渲染回归（已完成，未发现渲染差异）。**扩展 `fort-kaboom-wagon-route.test.ts`，沿用正式 Fort Kaboom Wave 1、medium、seed 6、无玩家输入和仅提高失败阈值的测试副本；不清空波次、不改路线或敌人位置。对逻辑轨迹 frame 643、651、658 的正式 `GameView` 调用生产 `drawGame()`，逐帧断言同组 horse（type 8）与 wagon（type 4）仍存在、分别选择 APK 对应的图片/转向图、Canvas 都实际绘制，并根据正式 view 的 fine 坐标与 camera/viewport 检查脚底锚点和绘制层次。frame 643 的可见边缘间隙和 frame 651 的贴图透明边界重叠按已有浏览器测量记录，不把“视觉分开”设成两者必须贴合的行为要求。定向 `fort-kaboom-wagon-route.test.ts` + `canvas-renderer.test.ts` 为 14/14，`pnpm run typecheck` 通过。此次检查未改渲染代码；它验证正式会话进入生产 renderer 后马与 wagon 都有正确绘制调用和位置，不能替代 Android 同 seed 运行或 APK 像素并排比较。
-      - **D2-A：核对正式战斗中的 stagecoach 与 gold transport（已完成，正式单位绘制通过）。**现有 `canvas-renderer.test.ts` 已断言 type 4/5/6/8 的图集裁帧、目的尺寸、转向资源、脚底和死亡可见时间，但 `EnemyView` 是合成对象；`enemy-animation.test.ts` 的正式 Billy Hills 第 5 关 Wave 1 核对了正式车辆请求与路线分支，却没有调用 renderer。新增 `official-transport-renderer.test.ts`，原样打开正式 Billy Hills、seed 1、Easy，不清空波次/路线/单位且不发玩家指令；正式 Wave 1 frame 732 有一辆 type 4、一辆 type 6 和两辆 type 5。测试检查它们分别选用 `wagon`、`goldtransport`、`stagecoach`，生产 `drawGame()` 对每个实际单位恰有一个与其 fine 坐标/绘制偏移/viewport 匹配的调用，并按 `GameView.drawOrder` 排序。连同 Fort seed 6 回归与 `canvas-renderer.test.ts` 共 15/15 定向通过，类型检查通过。此检查核实 renderer 接收到的正式单位和绘制调用，不替代内置浏览器截图或 APK 像素并排比较。
-      - **D2-B：核对正式静态火车与蒸汽船图层（已完成，代表场景覆盖通过）。**新增 `official-static-transport-renderer.test.ts` 两个正式场景检查：Railroad Ranch Level 9 的六组横/纵向 train，以及 Mississippi Level 11 的完整 steamer 组。直接从正式 `GameSession.observe()` 取得初始 `GameView`，不移动、雇佣或改变单位；调用生产 `drawGame()`，对每个车体部件按最终 `unit.asset` 与 `unit.render` 目标框唯一配对，并核对 `GameView.drawOrder`。同时运行 `lucky-lake-vertical-train.test.ts` 与 `tech-town-steam-renderer.test.ts`，共 10/10 通过，类型检查通过；不重复检查已通过的移动/碰撞矩阵。覆盖是正式场景数据与生产 renderer 函数的调用/几何断言，不是像素截图。
-      - **D3：有限浏览器画面核对（已完成，固定帧对照受限）。**本地内置浏览器保持窗口模式、静音，分别从 Free Play 查看 Fort Kaboom Level 3 的活动战场和 Railroad Ranch Level 9 的六组静态列车画面；未完整游玩。普通页面开局种子由 `crypto.getRandomValues()` 产生，UI 没有把 Fort seed 6 设为固定值的入口，因此这次 Fort 浏览器画面不能映射到 frame 643/651/658；不将它当作同 seed 对照。Railroad Ranch 截图是初始地图的视觉 smoke，不是 APK 像素比较。D1 固定 `GameView`/`drawGame()` 回归及其已有脚底、透明边界测量作为 Fort 的可追溯证据；D2-B 对静态运输使用正式 `GameView` 和生产 renderer 检查。当前没有把新随机截图作为持久化证据附件。
-      - **D4：运输绘制矩阵与 M3 关闭（已完成，本地）。**在 `map-coverage-matrix.md` 和 `map-transport-inventory.md` 按敌方马车/马、stagecoach、gold transport、地图静态 train、steamer 分类列明正式场景、生产 renderer 测试和限制。D1、D2-A、D2-B 覆盖所有已接入的动态运输 sprite 类及两类静态运输组；D3 提供 Fort 与 Railroad Ranch 的本地页面观察。矩阵中的“生产画面”仍只表示实际保存/记录的逐图视觉观察，不因 `drawGame()` 调用断言而把41关标成已目视。完整战役通关、逐关人工追车和重复启动 Android 不作为门槛。
-   5. **M3 关闭条件（已达到，本地待 M5）。**41张图均有存在性依据；48个静态运输组有直接移动覆盖；182个正式车马分叉组合有跟随短会话；端点、交会等待、碰撞来源及生产绘制对各运输类别均有有界证据。自动生产绘制断言、浏览器画面观察、APK 静态来源与 Android 同 seed 像素对照是不同证据层级；最后一项目前没有，相关边界已记录，不阻塞代码结论，也不宣称逐像素复原。
-5. **M4：按 APK 行为闭合出生区碰撞与验收（已完成本地批次，尚未集成发布）。**
-   1. **M4-0：移除偶然坐标断言（已完成）。**删除 `fort-kaboom-wagon-route.test.ts` 中隔离 Wave 1–2、改变随机消耗后，再要求 Wave 3 必须出现 wagon `(9,3)` / horse `(13,4)` 的测试与专用夹具。它不代表完整 seed 6 行为。保留完整战役 seed 6 的马车跟随者转向时序测试，以及通用 `enemy-route.test.ts` 和正式马车路线矩阵。定向命令 `pnpm exec node --import tsx --test tests/fort-kaboom-wagon-route.test.ts tests/enemy-route.test.ts tests/official-wagon-route-matrix.test.ts` 通过 188/188；没有更改生产规则或正式波次数据。
-   2. **M4-A：建立独立 APK 碰撞参考回归（已完成，限静态模型和合成会话）。**REA 复查 APK 1.8.6 的 `EnemyDirector.moveEnemys()`、`GameObjectEnemy.move()/undoMove()`、`CollisionManager.testAdvancedCollisionEnemy()/testCollisionEnemy()/boxCheck()` 和 `createCollisionObject()`；apktool 3.0.3 的 smali 确认碰撞起点筛选常量为 `0x5a00/0x3c00`（23,040/15,360 fine）。测试[`apk-enemy-collision-reference.test.ts`](../tests/apk-enemy-collision-reference.test.ts) 独立实现“先反向预测其他框，再正向预测当前框”的角点检查：Apache/Fort 样本的两框水平相差5,320、宽7,678，重叠2,358 fine，测试到两边各自尝试 `xDir=±1` 都被模型阻挡；单轴不相交及同组排除用例不阻挡。另用相同出生点、同向移动的两组运输实体建立合成 `GameSession` fixture，模型预测与五帧实际静止状态一致。`apk-enemy-collision-reference.test.ts` 与 `p1f-enemy-collision.test.ts` 通过10/10；`pnpm run typecheck` 通过；没有改生产规则。静态证据能说明这些重叠坐标下 APK 算法会拒绝候选移动，但还不能证明旧正式 E2E 失败就是由同一坐标/速度组合造成，也不是 Android 运行观察。
-   3. **M4-B：核对出生区碰撞与正式 E2E 的因果关系（网页端因果已证实，APK 运行仍未观察）。**早期无输入短测没有复刻 Playwright 调度，推进 Apache 2,400 个 100ms 帧、Fort 2,304 帧都未观察重叠；这些只作为简化基线。准确调度使用 `SimulationTimeAccumulator`：4×速度、每个 10,000ms 测试时钟拆成最多 100ms 步；波次变化时暂停并丢弃本批余步，UI 在同一测试循环确认对白并恢复，自动雇佣发生在普通帧推进后。
-      - **M4-B1：有界复刻 E2E 调度（已完成）。**固定 seed42/easy，以 `GameSession` 重用 t28/t33 的初始操作、购买次序、时间累加器及波次暂停/恢复；没有启动 Android、全屏或声音。最多 120 个外层测试循环中，Fort 在 Wave 3 step 2530（elapsed 253,000ms）出现 stagecoach type5 `campaign-3-enemy-147` / group `campaign-3-group-133`（`(-6200,72960)`、向东、speed500）与 horseman type3 `campaign-3-enemy-151` / group `campaign-3-group-137`（`(-11520,72960)`、向东、speed460）的跨组碰撞。APK 参考模型预测双方移动受阻；两者随后 44,690 个 100ms 帧一直停在原位。120 循环末 Wave 3 仍 active、lives50、cash37、activeEnemies2、pendingSpawnRequests0。Apache 的 Wave1 type4/type3 重叠没有形成持续停帧。
-      - **M4-B2：核对 Fort 正式 E2E（已完成，未结算）。**单 worker 执行 `CI=1 PLAYWRIGHT_PORT=4174 pnpm exec playwright test tests/e2e/t33-fort-kaboom-formal.spec.ts --workers=1` 连续两次未到 Wave4–10。诊断显示只见 Wave1/2/3，最终状态 `Wave 3/10 · Lives 50 · Enemies 2 · Cash $33`，无结算；120 循环后 frame 46750 / elapsed 4,673,530ms。已处理雇佣为两个 Cannon、两个 Mexican 和 Gunslinger 05。剩余敌人的检查器坐标 `(-0.81,9.50)` 与 GameSession 的 `(-6200,72960)` / `(-11520,72960)` 一致。结合对象类型/组、APK 碰撞模型、零 pending requests 和长时间不移动，证实当前网页正式测试因该来源碰撞语义停在 Wave3。此结论来自 APK 静态方法与网页复现，不是 APK 实机运行观察。
-      - **M4-C1：正式 Fort 源码行为回归（已完成）。**新增 `tests/fort-kaboom-source-collision.test.ts`，使用正式 Fort 内容、seed42/easy、初始两个 Cannon、原 E2E 的首次移动与自动购买优先级，并按4×速度、10,000ms真实时钟、最多100ms步进及波次对白暂停/恢复推进。独立 APK 碰撞模型核对不同 group 的 stagecoach type5 与 horseman type3，坐标为 `(-6200,72960)` / `(-11520,72960)`、速度分别为500/460、碰撞框重叠2,358 fine；双方候选移动均被模型阻挡。回归继续到该波请求清空且仅剩这对敌人，断言 Wave3 仍 active、两敌连续停留、无 settlement/terminal record。定向测试1/1、类型检查通过；未改生产碰撞规则。
-      - **M4-C2：校准 Fort UI E2E 预期（已完成）。**`tests/e2e/t33-fort-kaboom-formal.spec.ts` 不再要求 seed42 完成10波；它验证菜单、雇佣、移动和 Wave1–3对白流程，检测检查器中的源级碰撞坐标后以5个25ms浏览器帧（4×下各推进100ms）核对位置稳定、处于Wave3且无 settlement。存档的完成关卡、高分和结算去重记录与战斗前快照一致；重载后 Level 4 仍锁定。测试默认静音，移除了非本问题所需的音频播放断言。单 worker E2E 1/1、类型检查通过。
-      - **M4-C3：核实 Apache 与正式结算覆盖（已完成，来源级网页停滞复现）。**新增 `tests/apache-valley-source-collision.test.ts`，以正式 Apache Valley 内容、seed 42/easy、4×速度、10,000ms时钟、最多100ms步进、波次对白暂停/恢复和地图雇佣优先级重放 UI 调度。Wave 6 剩余 Wagon type4 位于 `(34560,-6075)`，两名 Horseman type3 位于 `(34560,-11520)`；三者方向均向南、分属不同 group。APK 7,678×7,678 碰撞框中 wagon 与 horseman 的纵向重叠为2,233 fine，独立 APK 模型预测双方候选移动均被阻挡；请求仍有4项待生成时，三者连续停住且不结算。Apache 正式 E2E `t28-apache-valley-formal.spec.ts` 现验证同一 Wave 6 停滞、不写入完成进度/高分/结算记录，重载后后续关仍锁定。正式 Victory/存档覆盖改由既有 Cow Gulch `t25-official-campaign-touch.spec.ts` 用例承担：Level 1 正式8波胜利并持久化结算；该定向用例通过。Apache 参考模型1/1、Fort 与 Apache UI E2E 2/2、Cow Gulch Victory/存档 E2E 1/1、类型检查均通过。Apache 与 Fort 的 APK 同种子运行状态仍未在 Android 上观察，不写成原版实机已复现。
-   4. **M4-D：批次验证与交付（已完成）。**`CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 通过 TypeScript 检查、1,460 项单测、生产构建和216项 E2E；定向碰撞回归和 Fort/Apache/Cow Gulch 三项正式 UI 用例也单独通过。构建保留主 JS 包大于500KB的既有提示。本批未改生产碰撞规则；没有修改共享包，故无额外共享包检查。本地 Markdown 已按相对路径复制，变更复核后提交到独立开发分支；未 squash、push 或发布。
-   5. **M4 关闭条件（已达到）。**独立 APK 碰撞模型、Fort 与 Apache 正式 `GameSession`、对应 bounded UI E2E 对持续停滞的证据相互一致；Fort/Apache 测试不再要求与来源行为冲突的 Victory；Cow Gulch 提供正式胜利/存档覆盖；M4 定向测试与完整 CI 通过。APK 原版是否在相同种子、输入下冻结仍标为未观察，不用静态反编译声称运行核实。
-6. **M5：地图批次收尾（完整本地验证已完成，集成/发布待处理）。**对照41图矩阵核对路线、玩家碰撞、交通实体和生产画面证据边界；M3/M4 不改 APK 可证的产品规则。`CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:ci` 的类型检查、1,463 项单测、生产构建均通过，构建保留既有 500KB chunk 提示；沙箱最初拒绝 Playwright 本地监听，获准后 `CI=1 PLAYWRIGHT_PORT=4174 pnpm run test:e2e` 通过216/216。`site-shell` 未修改，无共享包测试。全套检查基于 `codex/gng-source-collision-review`；它以 `origin/gunsnglory` 的 `05574e5` 为祖先，批次代码树未包含旧集成工作树中的 5 个未提交改动。待在干净发布工作树 squash 集成到 `master`、推送、核对部署来源 SHA 并用内置浏览器完成整批验收；随后将发布提交合并回开发候选并更新远端集成分支。旧 `gunsnglory` 工作树继续原样保留；这些动作完成前不报告发布完成。
+- **M6-A–M6-B3 地图基线已通过：**APK 内容审计、TDM/地形、624 条完整路线和生产 Renderer 坐标/裁切核对已闭环。`bombington-map.test.ts`、`bombington-routes.test.ts`、`bombington-map-render.test.ts` 共6项定向测试及 TypeScript 检查通过；B3 还核对了路经桥面/铁路覆盖和 1024×576 视口对 32×24 地图的裁切。证据和当前实现分别见内容审计与对应源码、测试。
+- **M6-C1、M6-C2、M6-D1-A–D1-C、M6-D2 与 M6-D3-A–D3-C 已关闭。**静态对象、休眠招募单位、铁路组、炸药配对、关卡参数、十波敌方请求、玩家单位池、十段双语对白、头像、Nevada 音乐映射、正式关卡登记、Free Play、结算边界和回放导入均有对应实现与定向验证。
 
-#### 统一判定与验收
+### 后续步骤与验收
 
-- **结论标签：**APK/REA 或 TDM 源码证据、网页自动断言、生产渲染观察分别记录，互不替代。矩阵每项须链接到方法/数据/测试入口；“无测试失败”不等于正确。
-- **路线：**每个出生点的所有有效方向场分支均到达其 APK 指定出口；展开路径不越界、不经过最终阻挡地形；路径格和视觉道路/桥层逐项对应。仅有 straight route/sample route 不算闭环。
-- **我方移动：**逻辑位置、APK 碰撞框、最终地形/街道许可和绘制脚底分开核对；地图对象与睡眠单位按实际 APK 对象类别阻挡，例外按 APK 明确记录。
-- **动态实体：**只有存在时才验收；部件/组、锚点、轨迹与路线分支符合对应 TDM/车辆组代码。
-- **总门槛：**41/41 场景均列入矩阵；六类均为已核对、自动化闭合或带依据的不适用，所有“待补”均转成有边界的任务或明确阻塞。生产截图/叠图必须可追溯到对应场景及渲染入口。Level 42–60 不在本批范围。
+1. **M6-D3-A：组装 Level 42 场景与解锁快照版本。**新增 Bombington 正式场景构造器，组合地图场景、APK 静态单位、列车、关卡参数、十波请求、玩家单位池、补给箱和炸药。地图中的 Grandpa、Sniper、Pyromaniac、Salesman 及炸药可用性依赖全局进度；内容版本必须编码 Mississippi 四类单位解锁状态和独立的炸药解锁位，不能只用固定版本字符串。Grandpa 已解锁时炸药必然已解锁，因此共有 24 种有效快照组合；验收覆盖场景字段与既有模块一致、24 种版本唯一且可往返解析，并验证非规范组合被拒绝。锁定单位和炸药状态均来自传入快照。运行 Bombington 内容/版本定向测试和 pnpm run typecheck。
+2. **M6-D3-B：登记正式关卡并接通菜单入口。**Level 42 正式 stage 依赖 Level 41；复用既有目录项显示 Bombington 中英文标题、简介和对应地图预览。Free Play 可选三种难度，不要求 Level 41 完成，也不写完成进度、最高分、解锁或正式难度设置。正式通关只完成 Level 42，Level 43 仍保持未实现并禁用。验收覆盖无进度、完成 Level 41、Free Play 三档难度和正式结算状态；运行正式关卡、进度及菜单定向测试和 pnpm run typecheck。
+3. **M6-D3-C（已完成）：接入回放导入与解锁快照恢复。**`createBrowserGameForNevada02Replay` 按回放版本恢复 24 种有效的单位与炸药快照；缺失、未知和非规范版本拒绝导入，不回退当前档案。8 项 Bombington 内容/正式关卡单测、类型检查和浏览器文件导入测试通过；浏览器测试分别走 formal 与 Free Play 路由、核对起始状态摘要，并以故意不匹配的第 1 帧确认导入进入回放校验，而非内容缺失；同时验证 Free Play 导入没有改动档案。该测试不完整推进十波，也不伪称完成终局回放往返；关卡专属的真实终局导出/回放仍需在后续对照中验证，共享序列化与回放机制由既有通用测试覆盖。
+4. **M6-E：本地整批验收已通过，发布待完成。**D3-C 后的完整检查发现旧关卡断言固定 41 关，已更新为 42，并将 Apache Valley/Fort Kaboom 依赖链及马车覆盖计数纳入新关。第二轮完整单测又发现四处旧审计快照未包含 Level 42，已更新完整关卡目录、存档进度、火车端点清单与路线交汇清单；相关定向测试通过。当前路线覆盖为 783 个 wave/spawn 请求行、304 个唯一单位/路线用例、192 个分支用例、零缺路由；静态火车审计覆盖 49 组/98 个端点，Bombington 的 10 组路线相交记录均在西南出口处。
+   - 最终应用检查：`pnpm run typecheck`、1504 项单元测试及生产构建通过。沙箱中的 `pnpm run test:ci` 在启动 Playwright 本地服务器时遇到 `listen EPERM`；在允许本地测试端口的环境单独重跑全套 E2E，219 项通过（2 workers）。
+   - 共享检查：`pnpm run test:catalog` 20/20 通过；`pnpm run build:site` 成功构建全部登记应用。
+   - Codex 内置浏览器在窗口模式、静音下检查了 Free Play Nevada → Level 42、地图预览、困难选择、第一波对白及战斗 HUD。没有推进完整关卡、进入全屏或开启音效。
+   - 发布仍待执行：把已验收候选推入 `origin/gunsnglory`，从其内容对 `master` 做一个 squash 集成提交，推送 `master`；等待 Pages workflow 成功，核对公开 `sourceSha`，再检查线上 Bombington 入口和开局。旧本地 `gunsnglory` 工作树有 5 个未提交文件且落后远端 22 个提交，必须保留原状；不把它作为集成基线。
 
-Level 41 集成验收已关闭。最近批次的类型检查、1,219 项单测、生产构建、213 项单 worker E2E 和共享目录 20 项测试均通过；E2E 因沙箱端口限制使用 `PLAYWRIGHT_PORT=4174` 单独启动。五 worker 的首次 E2E 有两项超时/时间阈值失败，单 worker 复跑均通过，当前证据只能说明未复现，不能确认首次失败的唯一根因。Free Play 关卡预览提示已独立排版，`t29-campaign-menu.spec.ts` 8/8 与类型检查通过。全战役细节和仍未验证的视觉边界见[经验记录](experience-log.md)。本计划不要求手动完成整场战役，也不把单个浏览器/文档切片作为公开发布。
+### 当前切片
 
-### 未闭环反馈与复核边界
+M6-C1、M6-C2、M6-D1-A–D1-C、M6-D2、M6-D3-A–D3-C 及 M6-E 本地验收均已关闭。全套 E2E 219 项、1504 项单元测试、类型检查、应用构建、catalog 20 项检查和共享站点构建通过；Bombington 的内置浏览器 smoke 也已通过。当前只剩发布链：推送应用集成分支、squash 到 `master`、等待 Pages workflow、验证部署 `sourceSha`，并完成线上浏览器 smoke。旧集成工作树包含未提交改动，按要求保留并隔离；当前候选工作树不依赖它。
 
-- **车马画面：**已知 Fort Kaboom seed 6 代表轨迹的马与 wagon 在固定帧都进入生产 renderer，资源、锚点和层级断言通过；frame 643/651 的透明边缘表现及短时不同步已记录。普通 UI 使用密码学随机 seed，本地浏览器不能复现同 seed 帧；当前没有 APK 同 seed 运行画面对照，也未逐图目视全部关卡。若出现新的“马车分离”实例，记录关卡、波次、实际 seed/回放及对应帧坐标再定点调查，不凭单张不同时间截图推断资源缺失或永久分路。
-- **地图与碰撞：**路线、脚底锚点和对象碰撞已有多关静态/`GameSession` 覆盖，但不是对所有已接入地图逐关实走或逐帧并排检查。用户提供的特定关卡/坐标优先用于定点复核；不能把 27/38 张图的样本覆盖表述为全 60 关视觉验收。
-- **界面与炮弹资源：**雇佣窗口头像/介绍/价格布局、关卡 Play 页排版和 Options 拥挤已在先前 UI 修复批次修正；发布记录中的桌面流程检查通过，雇佣窗口另有桌面与 390×844 中英文布局测试。炮弹贴图已映射到 APK 派生的独立 `sfx_cannon_ball` 资源，`mississippi-11-cannon.test.ts` 检查 12×12 资源存在且生产绘制使用该图。以上问题不再作为当前实现待办；本轮运输测试未重新回归这些界面，桌面发布 smoke 不等于手机逐像素目视或 APK 同帧对照。相关证据见[经验记录](experience-log.md)。
+### 本批边界与停止条件
+
+- APK 静态分析优先。只有静态代码和资源无法回答一个明确行为问题时，才考虑 Android 定点观察；不为收集通关记录启动整场战役。
+- 贴图边缘、动画逐帧和 APK 同种子动态画面对照不由静态反编译证明。发现用户可见偏差时记录关卡、视口、对象和时间/回放证据，再单独判断是否阻塞。
+- 不新增游戏引擎或依赖。只有现有内容接口明确无法表达 APK 行为时，才提出最小接口扩展，并先说明消费者、存储兼容和测试影响。
 
 ## 稳定交付门槛
 
-- 每个切片先跑针对性测试并本地提交；不在每个切片提交后重复跑全套。整批结束后再运行应用完整检查与共享检查。
-- 浏览器验收默认窗口模式、静音；仅验收对应功能时才启用全屏或声音。优先用 APK、REA 与静态代码证据；仅在静态证据无法回答具体问题时做一次短时 Android 定点观察。
-- 普通公开发布次数占已验收实现切片数的目标不高于 20%；每次发布前根据最新提交记录复核比例，不通过拆分或延后已验收切片调整统计。
-- 每个关闭的已复现问题更新[经验记录](experience-log.md)；本计划移除已完成项，并明确仍未验证的结论与边界。
-- 涉及 Markdown 的切片运行 `git diff --check`，再按仓库规则复制成品到 `/tmp/var/wishflow-tools/`。本计划修改本身不触发产品发布。
+- 每个切片先跑针对性测试并本地提交；批次完成后再跑完整应用与相关共享检查，不在每个提交后重复整套测试。
+- 浏览器默认窗口模式、静音；仅对应验收时使用全屏或声音。无需手动完成整场战役。
+- 发布前按最新已验收实现切片和公开发布次数复核比例，目标不高于 20%；不拆分或延后已验收工作美化比例。
+- 每个已复现并关闭的问题更新[经验记录](experience-log.md)；结论写明证据与边界。
+- 修改 Markdown 后检查链接和 `git diff --check`，并按相对路径复制成品到 `/tmp/var/wishflow-tools/`。文档更新本身不触发公开发布。

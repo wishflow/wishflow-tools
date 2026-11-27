@@ -618,6 +618,18 @@ M39 又重现了同一测试基线遗漏：Level 38 接入目录后，首轮完�
 - **修复与防回归：**产品逻辑未改。完整本地验收设置 `CI=1 pnpm run test:ci`，Playwright 配置会与 CI 一样使用一个 worker；若单 worker仍失败，再按具体页面状态调查，不把并行超时直接归因于游戏代码。
 - **定向 spec 命令：**尝试 `pnpm run test:e2e -- tests/e2e/t73-dakota-04-integration.spec.ts` 时，命令实际启动了全量192项 E2E；未等批次收尾就停止了该进程。它不是测试失败或产品回归。定向执行使用 `pnpm exec playwright test tests/e2e/t73-dakota-04-integration.spec.ts`，实测只运行该文件的2项并通过。以后需要传单个 spec 时先确认 Playwright 报告的 `Running N tests` 与预期一致；全量批次仍用 `CI=1 pnpm run test:ci`。
 
+## 指定 Node 版本时不要依赖 shell 自动加载 nvm
+
+- **表现与复现：**当前 zsh 能运行 Node 25.7.0，但 `nvm exec 22.23.3 ...` 返回 `command not found: nvm`；Node 22.23.3 已安装。
+- **根因与修复：**该登录 shell 没有加载 nvm 函数。直接调用已安装版本的 `bin/node`，并仅在运行 pnpm 的命令环境中将对应 `bin` 加到 `PATH`，可以使用 Node 22.23.3 而不更改默认版本；运行前后用 `node --version` 核实。
+- **避免重复：**需要项目指定 Node 版本时，先确认版本专属二进制，再按命令显式调用；不要因 `nvm` 函数缺失而升级/切换默认版本，也不要将当前 shell 的默认 `node` 版本当作已验证版本。
+
+## 跨区域复用敌人表不能按模块名推断作用范围
+
+- **表现与复现：**Bombington（Nevada Level 42）需要敌人基础值；网页 Nevada Level 41 的规则模块引用 `mississippi-enemy-designs.ts`，旧注释带有“Mississippi-region”，容易被误读成仅适用于 Mississippi。
+- **证据与根因：**APK 的 `GameDesignData.enemyDesignData` 是全局敌人表，类型值见 [Billy Hills 静态审计](map05-static-audit.md)；Level 41 已从该网页模块复用相同敌人值。文件名记录代码所在模块，不定义游戏规则的地区范围。
+- **修复与防回归：**将模块注释明确为跨地区共享的全局定义；Bombington 规则测试逐项断言运行时支持的敌人类型 1–8。APK 的 Doc 类型 9 在 Bombington 所有请求中为零，网页接口暂不扩展；之后复用数据时继续从 APK 表和调用消费者确认范围，不以模块名作结论。
+
 ## 波次语音重试 E2E 不应依赖旧角色名
 
 - **表现与复现：**map10 批次完整 E2E 中，132 项通过，波次对白语音重试一项因找不到 `Retry Pedro’s voice` 失败；产品按钮已使用统一的“Retry this voice”文案。
@@ -894,3 +906,16 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **表现与复核：**本地内置浏览器以窗口模式、静音从 Free Play 打开 Fort Kaboom Level 3 Easy，观察活动战场；另打开 Railroad Ranch Level 9 Easy，首波地图截图能看到六组静态列车位于铁轨上。没有完整游玩，测试后将实验室速度恢复至1×。
 - **固定帧限制：**普通 UI 的开局种子由 `crypto.getRandomValues()` 生成，菜单没有固定 seed 或逻辑帧入口。因此 Fort 浏览器画面不能对应 seed 6 的 frame 643/651/658；本轮看到的随机画面也没有保存为固定帧附件。D1 通过正式 `GameSession.observe()` 的固定帧 `GameView` 调用生产 `drawGame()` 检查马与 wagon 的资源、位置和排序；D2-B 同样用正式 Railroad Ranch/Mississippi `GameView` 检查静态运输。浏览器目视、生产绘制调用断言和 APK 同帧对照属于三种不同证据。
 - **当前结论：**代表性动态与静态运输类别都已进入生产 renderer 并通过资源键、render 矩形和 draw order 检查；本地浏览器对 Fort 战斗与 Railroad Ranch 列车提供有限视觉确认。没有证据证明41张图逐关逐帧一致，也没有 APK 原版同 seed 像素比较。后续不得用 D1/D2 自动绘制调用替代对新的视觉差异做目视检查；若需要精确复现，先增加受控且仅开发态可用的 seed/frame 入口，并将其纳入单独测试和范围评估。
+
+## Bombington 的 raw118 树桩必须按 Smali 建立碰撞
+
+- **根因与证据：**map45 的 raw118 在 APK `GameObjectManager` packed-switch 中创建 decoration id 51（树桩）；`CollisionManager.createCollisionObject` 对该装饰使用通用碰撞框。JADX Java 伪代码把此分支显示为 no-op，网页碰撞表因此曾将 raw118 归到非静态 marker。以 smali 分支和碰撞消费者为准，不能把反编译伪代码中的空分支直接当成 APK 行为。详细资源与代码证据见 [Bombington 内容审计](bombington-content-audit.md)。
+- **修复与验证：**把 raw118 加入 `PLAYER_STATIC_COLLISION_BOUNDS_BY_TDM_CODE`，并从非静态 marker 集合移除；地图 builder 按 TDM 派生树桩、建筑与其他静态装饰，spawn-location builder 保留 Saloon/Fort/Tipi 类型，招募单位 builder 根据记录的全局解锁快照生成 activity 4 单位。`bombington-map-objects.test.ts` 4/4、`player-collision.test.ts` 11/11、`pnpm run typecheck` 通过；短 `GameSession` 确认树桩和睡眠 Gunslinger 均挡住直线路径。Level 42 尚未进入正式关卡目录，builder 会在 M6-D3 接线。
+- **探针选点教训：**第一版树桩探针把角色放在相邻下方一行，脚底碰撞框没有与树桩框重叠；改到树桩所在行后，若目标 y 直接写整数格坐标，角色会沿斜线移动并在横穿前离开障碍框。固定水平碰撞验证应使用角色实际初始锚点 `cell.y + 0.75`，并确认其碰撞框与 APK 障碍框在另一个轴上重叠。睡眠单位探针若从 raw32 阻挡格起步，则角色无法移动到目标；需选可通行起点，再核实起点、路径和目标单位坐标。
+- **防回归与边界：**新增关卡标记映射要同时核对 Smali 构造分支、资源 id、碰撞构造器及运动消费者；自动化移动探针需证明实际路径经过障碍框，不能只断言地图里存在碰撞盒。当前验证是 APK 静态证据与网页 `GameSession` 几何测试，不代表 Android 运行截图或全关卡视觉等同。
+
+## Bombington 铁路组与炸药要分别核对 TDM 顺序和对象配对
+
+- **修复与依据：**row 7 的 raw83 `(12,7)/(13,7)` 与 raw84 `(14,7)/(15,7)` 按 APK 形成一个水平组：两段机车为 type 10/11、activity 5，两节车厢为 type 12、activity 4。网页 builder 复用既有列车 TDM 译码器和统一单位参数，不复制移动规则。raw102/110 由现有最近未用箱配对器处理，九组配对逐项对照 [Bombington 内容审计](bombington-content-audit.md)；Profile 使用全局关卡20/30解锁状态，replay builder 使用已记录的 bool 快照。`bombington-transport.test.ts` 3/3 通过，覆盖 TDM 数量与坐标、实体资源、生产 renderer 贴图/矩形、真实水平组移动、间距、raw87 右端缓冲器、九组配对及锁定/解锁碰撞；TypeScript 检查通过。
+- **测试夹具教训：**列车移动用例第一次在提交 move intent 后直接检查 `view.units.some(moving)` 决定是否推进循环。命令尚未经过 `advance()` 消费，因此 `moving` 仍是 false，循环一次也没执行。修正为先推进一次，再按活动状态迭代；不要用命令提交前的 GameView 判定命令执行后的运动状态。raw110 的 marker 清单是 TDM 行优先顺序，和 trigger→box 配对顺序不是同一数组，测试应分别断言原始对象清单和配对结果，不能要求两者顺序巧合一致。
+- **防回归与边界：**列车测试既要核对静态 group/素材，也要从实际 GameSession 的用户输入开始，推进模拟后验证位移与缓冲器；单看 `ScenarioUnit` 初始数组不能证明能动。生产绘制检查用当前 `GameView` 调用 `drawGame()` 并比较素材键和坐标，不能只检查资产文件存在。M6-C2 只提供 Bombington 的内容 builder；正式关卡、Free Play 与 replay 工厂仍由 M6-D3 接入。没有进行完整战役、Android 动态观察或逐帧像素比较。

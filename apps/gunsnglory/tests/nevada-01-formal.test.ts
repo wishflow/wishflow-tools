@@ -15,7 +15,9 @@ import { createMemoryProfileRepository } from '../src/progress/memory-profile-re
 
 test('Labyrinth Gulch is formal Level 41 after Sioux Falls and uses map44', async () => {
   const stage = officialCampaignStages.find(({ scenarioId }) => scenarioId === nevada01CampaignId);
-  assert.equal(officialCampaignStages.length, 41);
+  assert.equal(officialCampaignStages.length, 42);
+  assert.equal(officialCampaignStages.at(-2)?.globalLevel, 41);
+  assert.equal(officialCampaignStages.at(-1)?.globalLevel, 42);
   assert.deepEqual(stage, {
     scenarioId: nevada01CampaignId,
     contentVersion: nevada01CampaignContentVersion,

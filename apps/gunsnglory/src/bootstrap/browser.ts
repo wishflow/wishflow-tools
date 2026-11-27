@@ -231,6 +231,12 @@ import {
 } from '../content/dakota-10-content-version';
 import { dakota10CampaignId } from '../content/dakota-10-identity';
 import { createNevada01CampaignContent } from '../content/nevada-01-campaign';
+import { createBombingtonCampaignContent, createBombingtonCampaignContentFromSnapshot } from '../content/bombington-campaign';
+import {
+  bombingtonCampaignContentVersionForCompletedScenarioIds,
+  bombingtonUnlockSnapshotFromContentVersion,
+} from '../content/bombington-content-version';
+import { nevada02CampaignId } from '../content/nevada-02-identity';
 import { nevada01CampaignContentVersion, nevada01CampaignId } from '../content/nevada-01-identity';
 import {
   newMexicoCampaignContentVersionFor,
@@ -288,6 +294,7 @@ const browserScenarios: Readonly<Record<string, ScenarioContent>> = {
   [mississippi19CampaignId]: createMississippi19CampaignContent(),
   [mississippi20CampaignId]: createMississippi20CampaignContent(),
   [nevada01CampaignId]: createNevada01CampaignContent(),
+  [nevada02CampaignId]: createBombingtonCampaignContent(),
   [cowGulchDefeatContent.id]: cowGulchDefeatContent,
   [cowGulchUpgradeSampleContent.id]: cowGulchUpgradeSampleContent,
   [gamblerUiSampleContent.id]: gamblerUiSampleContent,
@@ -419,6 +426,9 @@ export function getBrowserScenarioContentVersion(
   if (scenarioId === dakota10CampaignId) {
     return dakota10CampaignContentVersionFor(completedScenarioIds);
   }
+  if (scenarioId === nevada02CampaignId) {
+    return bombingtonCampaignContentVersionForCompletedScenarioIds(completedScenarioIds);
+  }
   const scenario = browserScenarios[scenarioId];
   return scenario ? scenario.contentVersion ?? 'unversioned' : undefined;
 }
@@ -468,6 +478,7 @@ export function createBrowserGame(
     [dakota08CampaignId]: createDakota08CampaignContent(completedScenarioIds),
     [dakota09CampaignId]: createDakota09CampaignContent(completedScenarioIds),
     [dakota10CampaignId]: createDakota10CampaignContent(completedScenarioIds),
+    [nevada02CampaignId]: createBombingtonCampaignContent(completedScenarioIds),
     ...scenarioContentOverrides,
   };
   if (legacyReplayContentOverride) {
@@ -834,6 +845,15 @@ export function createBrowserGameForNevada01Replay(contentVersion: string | unde
   }
   return createBrowserGame([], undefined, undefined, {
     [nevada01CampaignId]: createNevada01CampaignContent(),
+  });
+}
+
+/** Replay import rebuilds Bombington from its recorded unit and Dynamite unlock snapshot. */
+export function createBrowserGameForNevada02Replay(contentVersion: string | undefined) {
+  const snapshot = bombingtonUnlockSnapshotFromContentVersion(contentVersion);
+  if (!snapshot) return createBrowserGame([], undefined, nevada02CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [nevada02CampaignId]: createBombingtonCampaignContentFromSnapshot(snapshot),
   });
 }
 

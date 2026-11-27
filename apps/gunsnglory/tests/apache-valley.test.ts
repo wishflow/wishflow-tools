@@ -244,6 +244,7 @@ test('official Apache Valley content exposes its six source wave schedules and u
     ['campaign-dakota-09', ['campaign-dakota-08']],
     ['campaign-dakota-10', ['campaign-dakota-09']],
     ['campaign-nevada-01', ['campaign-dakota-10']],
+    ['campaign-nevada-02', ['campaign-nevada-01']],
   ]);
 });
 

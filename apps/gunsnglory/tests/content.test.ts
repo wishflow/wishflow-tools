@@ -14,6 +14,7 @@ import { cowGulchPreviewWave } from '../src/content/cow-gulch-preview-wave';
 import {
   apacheValleyLevelTwoContent,
   billyHillsLevelFiveCampaignContent,
+  bombingtonLevelFortyTwoCampaignContent,
   cactusvilleLevelEightCampaignContent,
   cowGulchLevelOneContent,
   dakota02LevelThirtyTwoCampaignContent,
@@ -402,6 +403,12 @@ test('binds the full Cow Gulch battle to a distinct official level-one identity'
     title: { en: 'Labyrinth Gulch · Level 41', zh: '迷宫峡谷 · 第 41 关' },
     globalLevel: 41,
     requiresCompletedScenarioIds: ['campaign-dakota-10'],
+  }, {
+    scenarioId: bombingtonLevelFortyTwoCampaignContent.id,
+    contentVersion: bombingtonLevelFortyTwoCampaignContent.contentVersion,
+    title: { en: 'Bombington · Level 42', zh: '炸弹镇 · 第 42 关' },
+    globalLevel: 42,
+    requiresCompletedScenarioIds: ['campaign-nevada-01'],
   }]);
 });
 

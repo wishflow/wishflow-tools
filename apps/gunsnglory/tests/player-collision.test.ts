@@ -200,6 +200,7 @@ test('static object bounds match APK constructors and ignore misleading content 
     114: { x: -5_184, y: -2_304, width: 10_368, height: 4_224 },
     116: { x: -7_680, y: 2_612, width: 15_360, height: 3_840 },
     117: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 },
+    118: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 },
     126: { x: 1_920, y: 2_612, width: 3_840, height: 2_534 },
   };
 
@@ -288,7 +289,7 @@ test('each official map creates collision boxes for every APK static TDM object 
         }
       }
     }
-    for (const omittedCode of [78, 115, 118, 119, 80, 88, 89]) {
+    for (const omittedCode of [78, 115, 119, 80, 88, 89]) {
       assert.equal(boxes.some((box) => box.sourceTdmCode === omittedCode), false,
         `level ${stage.globalLevel} raw TDM ${omittedCode} is not misclassified as static scenery`);
     }

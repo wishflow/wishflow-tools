@@ -70,6 +70,7 @@ export const PLAYER_STATIC_COLLISION_BOUNDS_BY_TDM_CODE: Readonly<Record<number,
   114: { x: -5_184, y: -2_304, width: 10_368, height: 4_224 },
   116: { x: -7_680, y: 2_612, width: 15_360, height: 3_840 },
   117: defaultDecorationBounds,
+  118: defaultDecorationBounds,
   126: defaultDecorationBounds,
 });
 
@@ -77,7 +78,7 @@ const nonStaticObjectMarkerCodes = new Set([
   78,
   80, 81, 82, 83, 84, 85, 88, 89, 90, 91, 92, 93,
   96, 97, 98, 99, 100, 101, 102, 104, 105, 106, 107, 108, 109, 110,
-  115, 118, 119, 120, 121, 122, 123,
+  115, 119, 120, 121, 122, 123,
   130, 131, 132, 138, 139, 150,
 ]);
 

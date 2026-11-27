@@ -157,12 +157,12 @@ test('official static transport endpoint audit accounts for all 48 groups and 96
     }
   }
 
-  assert.equal(groupsSeen.size, 48, 'all formal static train and steamer groups are inventoried');
-  assert.equal(endpointCount, 96, 'both endpoint directions are classified for every group');
+  assert.equal(groupsSeen.size, 49, 'all formal static train and steamer groups are inventoried');
+  assert.equal(endpointCount, 98, 'both endpoint directions are classified for every group');
   assert.deepEqual(Object.fromEntries([...counts].sort(([left], [right]) => left.localeCompare(right))), {
     'map-edge': 24,
-    'rail-buffer-86': 22,
-    'rail-buffer-87': 22,
+    'rail-buffer-86': 23,
+    'rail-buffer-87': 23,
     'vertical-buffer-94': 9,
     'vertical-buffer-95': 9,
     'water-bank-107': 1,
