@@ -6246,7 +6246,7 @@ retryAssetsControl.addEventListener('click', () => {
   void loadGameAssets().then(async (failedAssets) => {
     assetLoadFailureNames = failedAssets;
     redraw(true);
-    if (failedAssets.length === 0 && campaignProgressView) {
+    if (failedAssets.length === 0 && testBattleStart && campaignProgressView) {
       await openCampaignStage(cowGulchLevelOneContent.id);
     }
   }).finally(() => {

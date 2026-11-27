@@ -165,6 +165,41 @@ async function installEscapeEventDiagnostics(page: import('@playwright/test').Pa
   });
 }
 
+test('asset retry from normal startup leaves the campaign menu in control', async ({ page }) => {
+  let blockAsset = true;
+  await page.route('**/assets/pioneer_male.png', (route) =>
+    blockAsset ? route.abort() : route.continue());
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/');
+
+  const menu = page.getByTestId('campaign-menu-screen');
+  const sceneHeading = page.locator('.scene-heading');
+  const waveIntro = page.getByTestId('campaign-wave-intro');
+  await expect(page.getByTestId('asset-load-error')).toBeVisible();
+  await expect(menu).toBeVisible();
+  await expect(page.getByTestId('menu-start')).toBeVisible();
+  await expect(sceneHeading).toBeHidden();
+  await expect(waveIntro).toBeHidden();
+  expect(await readSavedProfileCount(page)).toBe(0);
+
+  blockAsset = false;
+  await page.getByTestId('retry-assets').click();
+  await expect(page.getByTestId('asset-load-error')).toBeHidden();
+  await expect(menu).toBeVisible();
+  await expect(page.getByTestId('menu-start')).toBeVisible();
+  await expect(sceneHeading).toBeHidden();
+  await expect(waveIntro).toBeHidden();
+  expect(await readSavedProfileCount(page)).toBe(0);
+
+  await page.getByTestId('menu-start').click();
+  await page.getByTestId('campaign-region-new-mexico').click();
+  await page.getByTestId('campaign-level-01').click();
+  await page.getByTestId('campaign-stage-play').click();
+  await page.getByTestId('campaign-difficulty-easy').click();
+  await expect(page.locator('#scene-title')).toHaveText('Cow Gulch · Level 1');
+  await expect(page.getByTestId('wave-status')).toContainText('Wave 1/8');
+});
+
 test('starts in the in-game menu and opens an implemented campaign level through the original navigation flow', async ({ page }) => {
   const pageErrors: string[] = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
