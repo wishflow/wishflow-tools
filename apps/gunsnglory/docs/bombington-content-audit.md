@@ -17,6 +17,7 @@ Bombington 是全局第 42 关，Nevada 区域第 2 关，对应 APK 的 TDM 文
 | OBJECT42 | GameObjectManager.createGameObjectsFromBasicMap、createTrainFromMap；GameObjectUnit.create/isUnlocked；GameObjectDecoration 构造；DynamiteTrigger.selectDynamiteBox | marker 到初始对象、睡眠单位、建筑、炸药和列车组的对应。对象边界以 APK 碰撞逻辑为准，不能从图片矩形猜测。 |
 | LEVEL42 | GameDesignData.<clinit> 中 global level 42 对应的第 42 行（零起始索引 41）及各字段读取者 | 12 个原始参数和经消费者验证的语义；单独的地图奖励未写在此行。 |
 | WAVES42 | GameDesignWaves.setWaves 的 level == 42 分支；WaveManager.addToWave、Wave.setContentForSpawnPoint、WaveManager.updateWave；SpawnPoolManager.performActionsForWave | 10 个 wave、39 条敌方请求及两条单位池动作。向量是请求计数，不是确定的敌人出场顺序。 |
+| CRATE42 | SpawnPoolManager.update() 中 LevelPack.getLevel(false) >= 41 ? 7 : 4 分支 | 第 42 关奖励箱可抽取类型 1–7；该数字不是 GameDesignData 参数行中的字段。证据来自 JADX 反编译视图，不是 APK 原始 Java 源码。 |
 | COPY42 | APK strings：T_LEVEL_NAME_45、T_LEVEL_INFO_45、T_CAMPAIGN_42_1 至 T_CAMPAIGN_42_10；对应头像 drawable | 英文关名、介绍、逐波对白与头像。APK 不含中文本地化。 |
 | AUDIO42 | Nevada.<clinit>、setBackgroundLoop、getNextLoop；APK raw 资源表 | Nevada 环境音乐和战斗循环选择。只证明资源与调用关系，不证明设备上的实际混音效果。 |
 | WEB42 | 当前 campaign-catalog.ts、official-campaign.ts、Nevada 01 内容模块与 public/assets | 说明目录已有记录、Level 42 正式内容尚缺、通用代码可复用的边界。资源文件存在不等于关卡已引用它们。 |
@@ -245,6 +246,8 @@ GameDesignData 的 Level 42 原始行（零起始索引 41）为：
 | 11 | LEVEL_DATA_GAMBLER_TIME | 119000 | Gambler 计时字段；没有相应地图 marker，不足以创建 Gambler |
 
 原始数组为 [300, 25, 999, 25000, 3, 30000, 5, 15, 75, 110, 155, 119000]。此行没有“通关奖励”字段；战斗中的现金来自敌人奖励/场景收集等通用规则。M6-D 需复用并测试通用结算，不得臆造 Bombington 专属奖金。
+
+奖励箱奖励类型范围由 SpawnPoolManager.update() 的关卡门槛控制，不在该 12 项参数行中：APK 反编译视图显示 global level 41 及之后使用 7 类，之前使用 4 类。因此 Bombington（global level 42）使用 1–7；网页 rewardTypeCount 应为 7。
 
 Wave 1 有两条单位池动作，位序为玩家单位 type 1–4（Gunslinger、Mexican、Cannon、Indian）：
 

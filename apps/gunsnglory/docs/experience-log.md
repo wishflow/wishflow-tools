@@ -618,6 +618,18 @@ M39 又重现了同一测试基线遗漏：Level 38 接入目录后，首轮完�
 - **修复与防回归：**产品逻辑未改。完整本地验收设置 `CI=1 pnpm run test:ci`，Playwright 配置会与 CI 一样使用一个 worker；若单 worker仍失败，再按具体页面状态调查，不把并行超时直接归因于游戏代码。
 - **定向 spec 命令：**尝试 `pnpm run test:e2e -- tests/e2e/t73-dakota-04-integration.spec.ts` 时，命令实际启动了全量192项 E2E；未等批次收尾就停止了该进程。它不是测试失败或产品回归。定向执行使用 `pnpm exec playwright test tests/e2e/t73-dakota-04-integration.spec.ts`，实测只运行该文件的2项并通过。以后需要传单个 spec 时先确认 Playwright 报告的 `Running N tests` 与预期一致；全量批次仍用 `CI=1 pnpm run test:ci`。
 
+## 指定 Node 版本时不要依赖 shell 自动加载 nvm
+
+- **表现与复现：**当前 zsh 能运行 Node 25.7.0，但 `nvm exec 22.23.3 ...` 返回 `command not found: nvm`；Node 22.23.3 已安装。
+- **根因与修复：**该登录 shell 没有加载 nvm 函数。直接调用已安装版本的 `bin/node`，并仅在运行 pnpm 的命令环境中将对应 `bin` 加到 `PATH`，可以使用 Node 22.23.3 而不更改默认版本；运行前后用 `node --version` 核实。
+- **避免重复：**需要项目指定 Node 版本时，先确认版本专属二进制，再按命令显式调用；不要因 `nvm` 函数缺失而升级/切换默认版本，也不要将当前 shell 的默认 `node` 版本当作已验证版本。
+
+## 跨区域复用敌人表不能按模块名推断作用范围
+
+- **表现与复现：**Bombington（Nevada Level 42）需要敌人基础值；网页 Nevada Level 41 的规则模块引用 `mississippi-enemy-designs.ts`，旧注释带有“Mississippi-region”，容易被误读成仅适用于 Mississippi。
+- **证据与根因：**APK 的 `GameDesignData.enemyDesignData` 是全局敌人表，类型值见 [Billy Hills 静态审计](map05-static-audit.md)；Level 41 已从该网页模块复用相同敌人值。文件名记录代码所在模块，不定义游戏规则的地区范围。
+- **修复与防回归：**将模块注释明确为跨地区共享的全局定义；Bombington 规则测试逐项断言运行时支持的敌人类型 1–8。APK 的 Doc 类型 9 在 Bombington 所有请求中为零，网页接口暂不扩展；之后复用数据时继续从 APK 表和调用消费者确认范围，不以模块名作结论。
+
 ## 波次语音重试 E2E 不应依赖旧角色名
 
 - **表现与复现：**map10 批次完整 E2E 中，132 项通过，波次对白语音重试一项因找不到 `Retry Pedro’s voice` 失败；产品按钮已使用统一的“Retry this voice”文案。

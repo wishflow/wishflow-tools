@@ -1,6 +1,6 @@
 import type { CampaignEnemyType, PreviewEnemyDefinition } from '../game';
 
-/** Global Mississippi-region enemy rows recovered from APK GameDesignData. */
+/** Shared global GameDesignData.enemyDesignData values used across campaign regions. */
 export const mississippiBaseEnemy: PreviewEnemyDefinition = Object.freeze({
   hitPoints: 18,
   cashReward: 1,
