@@ -4,7 +4,7 @@
 
 ## 当前实现与发布状态
 
-- 正式战役 Level 1–41 已接入；Level 42–60 尚未接入。M5 地图批次已完成，路线、我方碰撞、交通实体和生产渲染证据范围见[地图覆盖矩阵](map-coverage-matrix.md)、[交通实体清单](map-transport-inventory.md)、[玩家碰撞审计](player-collision-audit.md)及[经验记录](experience-log.md)。
+- 正式战役 Level 1–42 已接入；Level 43–60 尚未接入。M5 地图批次已完成，路线、我方碰撞、交通实体和生产渲染证据范围见[地图覆盖矩阵](map-coverage-matrix.md)、[交通实体清单](map-transport-inventory.md)、[玩家碰撞审计](player-collision-audit.md)及[经验记录](experience-log.md)。
 - 最新公开发布为 `a5795522987fbebd45dab0752937862a8b9e9801`。GitHub Actions run `45784784585` 的应用测试、共享测试、GitHub Pages 与 Cloudflare Pages 发布均成功；两处根 `build-info.json` 的 `sourceSha` 均与发布提交一致。
 - 已在内置浏览器打开带发布 SHA 的页面，以窗口模式、静音检查 Nevada Level 41 Free Play 的开局对白、暂停板、未完成战斗退出确认及返回菜单；另查看 Fort Kaboom Level 3 的战斗地图、HUD、地图缩放和页面外实验室。检查范围是代表性部署 smoke，不表示所有地图、每种弹窗或移动端画面均已逐项目视核对。
 - 发布提交已合并回本地晋升候选并推送至 `origin/gunsnglory`；推送输出确认远端由 `05574e5` 前进至 `6897cc7`。旧工作树 `/private/tmp/gng-clean-integration` 仍保留 5 个未提交文件，不作为当前开发基线，也不覆盖或清理。
@@ -41,7 +41,7 @@
 
 ### 当前切片
 
-M6-C1、M6-C2、M6-D1-A–D1-C、M6-D2 与 M6-D3-A 均已关闭，当前实施 **M6-D3-B：登记正式关卡并接通菜单入口**。D3-A 已将地图、初始单位、列车、关卡规则、波次、单位池、补给箱和炸药组装为正式 ScenarioContent；内容版本编码四类全局单位解锁位和独立炸药位，并通过 24 种规范状态测试。当前尚未接通正式进度 stage、Free Play 菜单入口和回放工厂，分别由 D3-B、D3-C 处理。
+M6-C1、M6-C2、M6-D1-A–D1-C、M6-D2、M6-D3-A 与 M6-D3-B 均已关闭，当前实施 **M6-D3-C：接入回放导入与导出工厂**。D3-B 已登记 Level 42 正式 stage，接通 Free Play 与正式菜单，核对中英文关卡预览、Level 41 前置解锁、三档自由难度、正式结算和 Level 43 未实现边界；对应单测 20 项、两条 Playwright 流程和类型检查通过。现只剩回放版本恢复与导入链路，见 D3-C。
 
 ### 本批边界与停止条件
 
