@@ -27,22 +27,26 @@
 
 只实现这一关及其必要的目录/存档集成。Level 43–60、全局规则重构、无证据的平衡调整、完整战役通关和 Android 实战不在本批范围。
 
-### 步骤与验收
+### 当前切片状态
 
-1. **M6-A：APK 内容审计。已完成。**完整事实和边界见 [Bombington 内容审计](bombington-content-audit.md)。
-2. **M6-B1：固化原始地图与地形绘制数据。**增加 res/raw/td_map_45.tdm 的网页资源副本、测试 fixture 和 Nevada Level 42 地图 JSON；从 APK 派生 32×24 原始格网、背景与 street-layer 绘制命令，沿用现有 Nevada 转换和固定 Java Random 变体策略。新增 bombington-map.test.ts，逐字节比较地图资源与 fixture、逐格比较 JSON 与 TDM、断言完整频次，并将背景/道路绘制命令与 APK 转换参考逐项比较；验证引用图集存在、裁片和绘制边界有效。测试命令：pnpm exec tsx --test tests/bombington-map.test.ts。
-3. **M6-B2：接入 APK 全路线图。**复用 createMississippiRouteDefinitions 和 APK 方向表，新增 Bombington route definitions 与 spawn action → row-major spawn point 映射。新增 bombington-routes.test.ts，独立断言 5 个出生、4 个出口、全部 60 个转向 marker、82 条唯一有向边、spawn-to-exit 分支矩阵、无回路/越界/孤立节点；再用短 GameSession 核对各出生 action 的首个实际方向。测试命令：pnpm exec tsx --test tests/bombington-routes.test.ts。
-4. **M6-B3：核对生产地图视图与路线/地形贴合。**把 Level 42 map JSON 和路线图接进仅含地形的 map scene；用生产 drawGame() / Renderer 路径检查裁片、桥/铁路覆盖、地图坐标、路线节点及视口裁切关系。测试必须从 APK TDM 和 draw-command 参考各自构造预期，禁止仅比较 JSON 与自身复制数据；对路线中间格逐条检查最终背景/街道码和地图边界。若发现偏差，修复当前地图转换并加定位明确的回归断言。测试命令：pnpm exec tsx --test tests/bombington-map-render.test.ts。
-5. **M6-C1：接入静态对象、建筑和睡眠招募单位。**依据 M6-A marker 类别及坐标创建 decoration、spawn location、单位 activity/解锁状态；验证 96–101、130/131 的新局语义和最终 ScenarioContent。短 GameSession 检查对象碰撞框与单位脚底锚点；资源核对对应公开素材。通过条件：每个静态 marker 只有一个对应对象，碰撞框来自 APK 构造器；所有 activity 4 单位依旧注册碰撞，锁定单位不误开放。
-6. **M6-C2：接入铁路组和炸药。**把 83/84 列车部件登记为同组运输实体，核对水平移动、组距、缓冲器停止与生产绘制；按 APK nearest-unused 规则配好 9 组炸药触发器/箱子。通过条件：所有部件坐标和类型逐项符合 TDM/Smali；短会话覆盖列车推进与端点；每个触发器唯一映射到最近未用箱子，炸药未解锁时行为正确。
-7. **M6-D1：接入数值、敌人和十波请求。**使用 Level 42 的 12 个原始参数、难度 HP 百分比、敌人定义和全部 39 条请求；实现 wave delay、speed/HP、出生 action、十槽映射与逐波玩家池动作。通过条件：所有原始值逐项断言；短会话覆盖请求向量、随机抽取语义、波次边界和 Boss 槽，不要求完整通关。
-8. **M6-D2：接入关卡表现与音频。**加入十段 APK 英文对白、对应头像和站点中文翻译；沿用 Nevada 环境曲与三曲战斗循环。通过条件：逐波文本/头像顺序与 APK 相符，所需图像与 OGG 文件均能加载；测试保持静音，音轨路由单测验证波次索引循环。
-9. **M6-D3：登记正式关卡、Free Play 和 replay。**将 Level 42 加入正式战役，要求完成 Level 41；接通 Nevada 关卡选择、地图说明、档案快照、难度、正式结算、Free Play 与 replay factory。通过条件：正式开局使用记录的内容版本，Free Play 三种难度可开且不写战役进度，replay 使用录制版本，Level 43 仍按目录规则锁定。
-10. **M6-E：整批验收与发布。**先逐切片定向验证和本地提交；随后运行应用 pnpm run test:ci、catalog 检查及共享站点构建。内置浏览器窗口模式、静音检查 Bombington 正式入口、实际全图、代表性路线/对白/战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
+- **M6-A 审计已通过：**详见 [Bombington 内容审计](bombington-content-audit.md)。
+- **M6-B1 地图基线已完成：**APK 中的 td_map_45.tdm、网页资源副本与测试 fixture 逐字节一致；nevada-02.json 保存 32×24 / 768 格 TDM 及 768 条背景、151 条 street-layer 绘制命令。bombington-map.test.ts 的2项测试及 TypeScript 检查通过；资源裁片与绘制边界均有效。当前仅交付原始地图和静态地形层，不含对象、路线、规则或正式关卡入口。
+- **下一步：M6-B2 全路线图。**基于已固定的原始 TDM 接入完整 APK 路线图。
+
+### 后续步骤与验收
+
+1. **M6-B2：接入 APK 全路线图。**复用 createMississippiRouteDefinitions 和 APK 方向表，新增 Bombington route definitions 与 spawn action → row-major spawn point 映射。新增 bombington-routes.test.ts，独立断言 5 个出生、4 个出口、全部 60 个转向 marker、82 条唯一有向边、spawn-to-exit 分支矩阵、无回路/越界/孤立节点；再用短 GameSession 核对各出生 action 的首个实际方向。定向命令：node --import tsx --test tests/bombington-routes.test.ts。
+2. **M6-B3：核对生产地图视图与路线/地形贴合。**把 Level 42 map JSON 和路线图接进仅含地形的 map scene；用生产 drawGame() / Renderer 路径检查裁片、桥/铁路覆盖、地图坐标、路线节点及视口裁切关系。测试必须从 APK TDM 和 draw-command 参考各自构造预期，禁止仅比较 JSON 与自身复制数据；对路线中间格逐条检查最终背景/街道码和地图边界。若发现偏差，修复当前地图转换并加定位明确的回归断言。定向命令：node --import tsx --test tests/bombington-map-render.test.ts。
+3. **M6-C1：接入静态对象、建筑和睡眠招募单位。**依据 M6-A marker 类别及坐标创建 decoration、spawn location、单位 activity/解锁状态；验证 96–101、130/131 的新局语义和最终 ScenarioContent。短 GameSession 检查对象碰撞框与单位脚底锚点；资源核对对应公开素材。通过条件：每个静态 marker 只有一个对应对象，碰撞框来自 APK 构造器；所有 activity 4 单位依旧注册碰撞，锁定单位不误开放。
+4. **M6-C2：接入铁路组和炸药。**把 83/84 列车部件登记为同组运输实体，核对水平移动、组距、缓冲器停止与生产绘制；按 APK nearest-unused 规则配好 9 组炸药触发器/箱子。通过条件：所有部件坐标和类型逐项符合 TDM/Smali；短会话覆盖列车推进与端点；每个触发器唯一映射到最近未用箱子，炸药未解锁时行为正确。
+5. **M6-D1：接入数值、敌人和十波请求。**使用 Level 42 的 12 个原始参数、难度 HP 百分比、敌人定义和全部 39 条请求；实现 wave delay、speed/HP、出生 action、十槽映射与逐波玩家池动作。通过条件：所有原始值逐项断言；短会话覆盖请求向量、随机抽取语义、波次边界和 Boss 槽，不要求完整通关。
+6. **M6-D2：接入关卡表现与音频。**加入十段 APK 英文对白、对应头像和站点中文翻译；沿用 Nevada 环境曲与三曲战斗循环。通过条件：逐波文本/头像顺序与 APK 相符，所需图像与 OGG 文件均能加载；测试保持静音，音轨路由单测验证波次索引循环。
+7. **M6-D3：登记正式关卡、Free Play 和 replay。**将 Level 42 加入正式战役，要求完成 Level 41；接通 Nevada 关卡选择、地图说明、档案快照、难度、正式结算、Free Play 与 replay factory。通过条件：正式开局使用记录的内容版本，Free Play 三种难度可开且不写战役进度，replay 使用录制版本，Level 43 仍按目录规则锁定。
+8. **M6-E：整批验收与发布。**先逐切片定向验证和本地提交；随后运行应用 pnpm run test:ci、catalog 检查及共享站点构建。内置浏览器窗口模式、静音检查 Bombington 正式入口、实际全图、代表性路线/对白/战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
 
 ### M6-B 当前切片
 
-当前只实施 M6-B1。M6-B2/B3 依赖 B1 的地图基线，先完成 B1 定向测试并提交；随后复核本计划是否需调整，再进入 B2。B1 不创建单位/建筑、不加波次/目录入口，不修改共享地图算法或公共接口。
+当前实施 M6-B2。B1 已提供字节级验证的地图基线；B2 通过后复核 M6-B3 的生产地图/视口验收设计，再继续。M6-B2 只接入路线解析和出生 action 映射，不加对象/单位/波次或关卡入口。
 
 ### 本批边界与停止条件
 
