@@ -4,7 +4,7 @@
 
 Bombington 是全局第 42 关，Nevada 区域第 2 关，对应 APK 的 TDM 文件 45。APK 中地图、路线、对象、单位池、十波请求、关卡参数、对白、头像和音乐均已静态交叉核对。**M6-A 通过：可进入地图、场景、规则和正式关卡接入；没有需要 Android 运行观察才能回答的阻塞项。**
 
-当前网页的 [campaign-catalog.ts](../src/content/campaign-catalog.ts) 已列出 Bombington，但 [official-campaign.ts](../src/content/official-campaign.ts) 尚无 Level 42 正式 stage；目录条目不代表关卡已可玩。报告只覆盖 APK 静态数据和当前网页代码结构，没有运行 Android、完整推进战役、播放声音或逐帧比较 Android 画面。反编译伪代码仅作导航；涉及有歧义的分支时以 DEX Smali 条件跳转、字段写入和调用消费者为准。
+网页目录 [campaign-catalog.ts](../src/content/campaign-catalog.ts) 已列出 Bombington；M6-D3-A 已将关卡模块组装成 [bombington-campaign.ts](../src/content/bombington-campaign.ts) 的正式场景内容，但 [official-campaign.ts](../src/content/official-campaign.ts) 尚无 Level 42 stage，目录条目和场景构造器都不代表关卡已可从菜单进入。报告只覆盖 APK 静态数据和当前网页代码结构，没有运行 Android、完整推进战役、播放声音或逐帧比较 Android 画面。反编译伪代码仅作导航；涉及有歧义的分支时以 DEX Smali 条件跳转、字段写入和调用消费者为准。
 
 ## 证据入口
 
@@ -20,7 +20,7 @@ Bombington 是全局第 42 关，Nevada 区域第 2 关，对应 APK 的 TDM 文
 | CRATE42 | SpawnPoolManager.update() 中 LevelPack.getLevel(false) >= 41 ? 7 : 4 分支 | 第 42 关奖励箱可抽取类型 1–7；该数字不是 GameDesignData 参数行中的字段。证据来自 JADX 反编译视图，不是 APK 原始 Java 源码。 |
 | COPY42 | APK strings：T_LEVEL_NAME_45、T_LEVEL_INFO_45、T_CAMPAIGN_42_1 至 T_CAMPAIGN_42_10；对应头像 drawable | 英文关名、介绍、逐波对白与头像。APK 不含中文本地化。 |
 | AUDIO42 | Nevada.<clinit>、setBackgroundLoop、getNextLoop；APK raw 资源表 | Nevada 环境音乐和战斗循环选择。只证明资源与调用关系，不证明设备上的实际混音效果。 |
-| WEB42 | 当前 campaign-catalog.ts、official-campaign.ts、Bombington/Nevada 内容模块与 public/assets | 说明目录已有记录；M6-B/C、D1、D2 已接入地图规则、单位池、波次、对白、头像和音乐数据；Level 42 正式 stage 与 replay 工厂仍待 M6-D3。资源文件存在不等于关卡已引用它们。 |
+| WEB42 | 当前 campaign-catalog.ts、official-campaign.ts、Bombington/Nevada 内容模块与 public/assets | 说明目录已有记录；M6-B/C、D1、D2、D3-A 已接入地图规则、单位池、波次、对白、头像、音乐和完整 ScenarioContent；Level 42 正式 stage、菜单入口与 replay 工厂仍待 M6-D3-B/C。资源文件存在不等于关卡已引用它们。 |
 
 ## 关卡编号链
 
@@ -304,15 +304,15 @@ APK 通用单位池规则将 pool type 1 Gunslinger 与 type 2 Mexican 分配到
 | 战斗循环序列 | music_nevada、music_loop3、music_loop4 | music_nevada.ogg、music_loop3.ogg、music_loop4.ogg 均存在；nevada-01-music.ts 已登记同一循环序列 |
 | 选择方式 | Nevada battleLoops 初始化为上述三条；getNextLoop 按波次索引对 3 取模 | `bombington-music.ts` 复用 Nevada 循环；`bombington-presentation.test.ts` 静态核对波次循环和 OGG 资源，不播放声音 |
 
-地图相关仓库素材已存在：根目录有 tiles_canyon.png、tiles_canyon_wall_var.png、tiles_desert.png、tiles_desert_var.png、tiles_path.png、tiles_path_var.png、tiles_waterside.png、tiles_waterside_var.png；tiles_canyon_floor.png 与 tiles_canyon_floor_var.png 位于 hdpi/。railway horizontal/vertical 图块和左右/上下 buffer 也位于 hdpi/。rocks、tree、cactus、windmill、bush 等装饰图已存在；water tower、Saloon、Fort、Tipi、tree stump 等对象素材位于 hdpi/。部分贴图只有 hdpi 版本。M6-B/C 已由 Bombington 地图、对象和交通模块引用相关资源；Level 42 正式场景 factory 尚未接入。
+地图相关仓库素材已存在：根目录有 tiles_canyon.png、tiles_canyon_wall_var.png、tiles_desert.png、tiles_desert_var.png、tiles_path.png、tiles_path_var.png、tiles_waterside.png、tiles_waterside_var.png；tiles_canyon_floor.png 与 tiles_canyon_floor_var.png 位于 hdpi/。railway horizontal/vertical 图块和左右/上下 buffer 也位于 hdpi/。rocks、tree、cactus、windmill、bush 等装饰图已存在；water tower、Saloon、Fort、Tipi、tree stump 等对象素材位于 hdpi/。部分贴图只有 hdpi 版本。M6-B/C 已由 Bombington 地图、对象和交通模块引用相关资源；Level 42 正式场景已由 M6-D3-A 组装；campaign stage 与菜单入口仍待登记。
 
 ## 正式解锁、结算与网页差异
 
 - **APK 关卡身份与解锁：**Level 42 是 Nevada pack 的第二关，位于 Level 41 之后。关卡数据、波次和地图读取使用各自的编号链，不能用标题资源号直接作为 GameDesignData 行索引。特殊单位 Pyromaniac/Salesman 另受 global level 50/60 解锁门槛控制；普通 96–101 marker 仍按全局已解锁类型初始化为可招募对象。
 - **结算边界：**Level 42 参数行没有专属通关奖励字段。Enemy 的 cashReward 与场景收集属于共享战斗规则；正式关卡完成/进度写入走共享 campaign 结算。M6-D3 应复用当前网页的标准结算契约，不新增 Bombington 专属奖金；需针对正式 Level 42、Free Play 与 replay 验证进度写入差异。
-- **目录及内容注册：**campaign-catalog 已有 Nevada / Bombington / map 45 / title resource 45 一行。officialCampaignStages 目前只登记到 Level 41；正式 stage、Free Play 可进入内容和 replay 路由仍待 M6-D3。
-- **网页关卡专属文件：**已建立 `nevada-02.json`、Bombington 场景/路线/对象/单位/炸药/铁路、Level 42 规则与十波、玩家池、对白和音乐模块；M6-B/C 与 D1/D2 的定向测试覆盖这些内容。尚缺将模块组装成正式 `ScenarioContent`、campaign stage/Free Play/replay factory 并验证结算进度的 M6-D3。
-- **画面与碰撞：**APK 的对象类型和背景/街道转换已经有静态证据；实际网页是否贴合峡谷壁、桥面和铁路，仍需 M6-B/C 用生产转换、GameSession 和目标测试验证。静态审计没有建立 Android 同 seed 截图。
+- **目录及内容注册：**campaign-catalog 已有 Nevada / Bombington / map 45 / title resource 45 一行；M6-D3-A 已建立正式 ScenarioContent。officialCampaignStages 目前只登记到 Level 41；正式 stage、Free Play 菜单入口和 replay 路由仍待 M6-D3-B/C。
+- **网页关卡专属文件：**已建立 nevada-02.json、Bombington 地图/路线/对象/单位/炸药/铁路、Level 42 规则与十波、玩家池、对白和音乐模块；M6-D3-A 的 bombington-campaign.ts 将这些内容组装成正式 ScenarioContent，并把四类单位解锁状态及独立炸药解锁状态写入内容版本。M6-D3-B/C 仍需接入正式 stage、Free Play 菜单入口和 replay factory，并验证结算进度。
+- **画面与碰撞：**M6-B/C 已用网页地图转换、GameSession 和生产 Renderer 完成目标检查，范围和限制见地图覆盖矩阵、玩家碰撞审计及实现计划；没有 Android 同 seed 运行截图，也不据此宣称逐帧画面一致。
 
 ## 未知项与后续边界
 
@@ -340,4 +340,4 @@ APK 通用单位池规则将 pool type 1 Gunslinger 与 type 2 Mexican 分配到
 2. 从 ROUTE42 邻接表独立生成路线定义，测试五个出生 action 到四个出口的全部可达性和 82 条唯一有向边；不要以线性路线替代分支。
 3. 比较 APK 派生背景转换、street layer、邻格塑形、道路覆盖与网页生产绘制命令；路线经过 raw32/80/81/88 不等于贴图已对齐。
 4. 对每条路线检查地图边界和最终地形；分开验证路线中心、敌人脚底锚点、铁路/桥覆盖和玩家碰撞，不根据 raw36 或 sprite 矩形直接推断。
-5. M6-C 已接入本报告列出的对象、睡眠招募单位、炮池、铁路组和炸药；M6-D1/D2 已接入参数、十波、玩家池、双语对白、头像和音乐。M6-D3 尚需完成正式解锁/结算、Free Play 与 replay；当前剩余步骤见[实施计划](implementation-plan.md)。
+5. M6-C 已接入本报告列出的对象、睡眠招募单位、炮池、铁路组和炸药；M6-D1/D2 已接入参数、十波、玩家池、双语对白、头像和音乐，M6-D3-A 已组装正式场景并编码解锁快照。M6-D3-B/C 尚需完成正式解锁/结算、Free Play 菜单入口与 replay；当前剩余步骤见[实施计划](implementation-plan.md)。
