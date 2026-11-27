@@ -14,9 +14,9 @@ Bombington 是全局第 42 关，Nevada 区域第 2 关，对应 APK 的 TDM 文
 | TDM45 | APK 内 res/raw/td_map_45.tdm；770 字节，开头尺寸为 32×24 | 原始 768 格数据、频次和坐标。审计时将 ZIP 内字节与提取文件逐字节比较，结果一致。 |
 | ROUTE42 | EnemyDirector.createEnemyDirectorFieldsFromBasicMap、setSpawningDirection、EnemyDirectorField 方向表；TDM 的 40–44、48、52–66 marker | 出生 action、离开方向、完整有向图与分支。路线图是静态算法推导，不是运行画面。 |
 | TERRAIN42 | BackgroundMap.createBackgroundMap、createStreetLayerMap、createVariationMap、shapenBackgroundMap、shapenStreetLayerMap、isFreeToWalk、isReachable；Nevada.drawBackgroundLayer | 原始 TDM 如何变成背景、街道覆盖和最终可达性判断。贴图与碰撞需分层实现；不能仅用 raw code 直接断言可走。 |
-| OBJECT42 | GameObjectManager.createGameObjectsFromBasicMap、createTrainFromMap；GameObjectUnit.create/isUnlocked；GameObjectDecoration 构造；DynamiteTrigger.selectDynamiteBox | marker 到初始对象、睡眠单位、建筑、炸药和列车组的对应。对象边界以 APK 碰撞逻辑为准，不能从图片矩形猜测。 |
+| OBJECT42 | GameObjectManager.createGameObjectsFromBasicMap、createTrainFromMap；GameObjectSpawnLocation 构造；GameObjectUnit.create/isUnlocked；GameObjectDecoration 构造；DynamiteTrigger.selectDynamiteBox | marker 到初始对象、睡眠单位、建筑、玩家生成位置、炸药和列车组的对应。对象边界以 APK 碰撞逻辑为准，不能从图片矩形猜测。 |
 | LEVEL42 | GameDesignData.<clinit> 中 global level 42 对应的第 42 行（零起始索引 41）及各字段读取者 | 12 个原始参数和经消费者验证的语义；单独的地图奖励未写在此行。 |
-| WAVES42 | GameDesignWaves.setWaves 的 level == 42 分支；WaveManager.addToWave、Wave.setContentForSpawnPoint、WaveManager.updateWave；SpawnPoolManager.performActionsForWave | 10 个 wave、39 条敌方请求及两条单位池动作。向量是请求计数，不是确定的敌人出场顺序。 |
+| WAVES42 | GameDesignWaves.setWaves 的 level == 42 分支；WaveManager.addToWave、Wave.setContentForSpawnPoint、WaveManager.updateWave；SpawnPoolManager 构造、performActionsForWave 和 update | 10 个 wave、39 条敌方请求及两条玩家单位池动作；玩家池类型与建筑类型的通用映射见单位池小节。向量是请求计数，不是确定的敌人出场顺序。 |
 | CRATE42 | SpawnPoolManager.update() 中 LevelPack.getLevel(false) >= 41 ? 7 : 4 分支 | 第 42 关奖励箱可抽取类型 1–7；该数字不是 GameDesignData 参数行中的字段。证据来自 JADX 反编译视图，不是 APK 原始 Java 源码。 |
 | COPY42 | APK strings：T_LEVEL_NAME_45、T_LEVEL_INFO_45、T_CAMPAIGN_42_1 至 T_CAMPAIGN_42_10；对应头像 drawable | 英文关名、介绍、逐波对白与头像。APK 不含中文本地化。 |
 | AUDIO42 | Nevada.<clinit>、setBackgroundLoop、getNextLoop；APK raw 资源表 | Nevada 环境音乐和战斗循环选择。只证明资源与调用关系，不证明设备上的实际混音效果。 |
@@ -257,6 +257,8 @@ Wave 1 有两条单位池动作，位序为玩家单位 type 1–4（Gunslinger�
 | 1 | 3 | SET_MAX，替换各类库存上限 | [4, 4, 4, 4] |
 
 动作值由 SpawnPoolManager 的 ACTION_SET、ACTION_SET_MAX 和数组写入位置确认。它们不是四种单位的初始数量；睡眠招募对象仍以 TDM marker 为准。此关没有另行写入 type 5/6 的池上限动作。
+
+APK 通用单位池规则将 pool type 1 Gunslinger 与 type 2 Mexican 分配到 type 1 Saloon，type 3 Cannon 分配到 type 2 Fort，type 4 Indian 分配到 type 3 Tipi；规则和建筑类型由 `GameObjectSpawnLocation` 与 `SpawnPoolManager.update()` 确认，详见 [Map 30 静态审计](map30-static-audit.md)。Bombington 的 TDM 在 `(29,21)`、`(2,14)`、`(29,9)` 分别放置 raw112 Saloon、raw113 Fort、raw114 Tipi；坐标见上方对象表。生成模板只描述招募后的单位，不会额外加入初始单位列表。玩家单位池使用 `SpawnPoolManager` 的共享 15 秒间隔，不是 Level 42 参数行中的独立数值。
 
 ## 十波、三十九条敌方请求
 
