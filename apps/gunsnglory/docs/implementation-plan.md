@@ -34,12 +34,14 @@
 
 ### 后续步骤与验收
 
-1. **M6-D3：正式关卡、Free Play 和 replay。**复用已有目录行，将 Level 42 注册为 Nevada 第二关；正式战役需完成 Level 41，Free Play 可选三档难度但不写战役进度，replay 使用录制的关卡内容版本。接通地图说明、档案快照、正式结算与 replay factory。验收覆盖锁定/解锁边界、正式与自由模式进度差异、回放录制版本及 Level 43 仍锁定。验证正式关卡/存档/replay 定向测试及 `pnpm run typecheck`。
-2. **M6-E：整批验收与发布。**逐切片定向验证并本地提交后，运行应用 `pnpm run test:ci`、catalog 检查及共享站点构建。内置浏览器窗口模式、静音检查 Bombington 正式入口、全图和代表性路线/对白/战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
+1. **M6-D3-A：组装 Level 42 场景与解锁快照版本。**新增 Bombington 正式场景构造器，组合地图场景、APK 静态单位、列车、关卡参数、十波请求、玩家单位池、补给箱和炸药。地图中的 Grandpa、Sniper、Pyromaniac、Salesman 及炸药可用性依赖全局进度；内容版本必须编码 mississippiUnitUnlockSnapshot，不能只用固定版本字符串。验收覆盖场景字段与既有各模块一致、四类解锁状态的 16 种版本唯一且可往返解析，锁定单位和炸药状态来自传入快照。运行 Bombington 内容/版本定向测试和 pnpm run typecheck。
+2. **M6-D3-B：登记正式关卡并接通菜单入口。**Level 42 正式 stage 依赖 Level 41；复用既有目录项显示 Bombington 中英文标题、简介和对应地图预览。Free Play 可选三种难度，不要求 Level 41 完成，也不写完成进度、最高分、解锁或正式难度设置。正式通关只完成 Level 42，Level 43 仍保持未实现并禁用。验收覆盖无进度、完成 Level 41、Free Play 三档难度和正式结算状态；运行正式关卡、进度及菜单定向测试和 pnpm run typecheck。
+3. **M6-D3-C：接入回放导入与导出工厂。**按回放中的规范内容版本重建 Bombington 场景及解锁快照；未知、缺失或非规范版本必须拒绝，不能回退使用当前档案。验证正式和自由模式录制均能导入并通过已有回放校验，重建内容版本与原记录一致，Free Play 回放不写正式进度。运行 Bombington 回放和回归测试、pnpm run typecheck。
+4. **M6-E：整批验收与发布。**逐切片定向验证并本地提交后，运行应用 pnpm run test:ci、catalog 检查及共享站点构建。内置浏览器以窗口模式、静音检查 Bombington 正式入口、地图预览、对白与战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
 
 ### 当前切片
 
-M6-C1、M6-C2、M6-D1-A–D1-C 与 M6-D2 均已关闭，当前实施 **M6-D3：正式关卡、Free Play 和 replay**。D1 接入 Level 42 参数、敌人波次请求、玩家池与 Wave 1 库存动作；D2 接入十段 APK 英文对白及中文译文、头像和 Nevada 音乐循环。对应代码与测试见 `bombington-*` 内容模块、`nevada-02-identity.ts` 及 D1/D2 切片提交。正式 stage 和 replay 工厂尚未接入；不重查已通过的静态地图、raw118 树桩碰撞、铁路组、炸药配对或单位解锁门槛。
+M6-C1、M6-C2、M6-D1-A–D1-C 与 M6-D2 均已关闭，当前实施 **M6-D3-A：组装 Level 42 场景与解锁快照版本**。D1 接入 Level 42 参数、敌人波次请求、玩家池与 Wave 1 库存动作；D2 接入十段 APK 英文对白及中文译文、头像和 Nevada 音乐循环。D3-A 需将已拆分模块组装成单一正式场景，并确保全局单位与炸药解锁状态进入内容版本；正式 stage、Free Play 菜单入口和回放工厂分别留给 D3-B、D3-C。对应实现与证据见 Bombington 内容模块、内容审计和切片测试；不重查已通过的静态地图、raw118 树桩碰撞、铁路组、炸药配对或单位解锁门槛。
 
 ### 本批边界与停止条件
 
