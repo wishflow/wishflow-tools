@@ -1,0 +1,1274 @@
+{
+  "source": "Transcribed from the Bombington ROUTE42 control-edge table in the content audit; the table is cross-checked against APK TDM markers and EnemyDirectorField direction rules.",
+  "resource": "res/raw/td_map_45.tdm",
+  "dimensions": [
+    32,
+    24
+  ],
+  "nodeEncoding": "[rawTdmCode,x,y], zero-based; spawn actionId is raw marker code minus 40.",
+  "summary": {
+    "spawnCount": 5,
+    "redirectCount": 60,
+    "exitCount": 4,
+    "uniqueDirectedEdgeCount": 82,
+    "completeSpawnToExitPathCount": 624,
+    "intermediateVisitsByRawTile": {
+      "32": 84,
+      "80": 1,
+      "81": 2,
+      "88": 9
+    }
+  },
+  "spawns": [
+    {
+      "actionId": 0,
+      "tile": 40,
+      "cell": [
+        3,
+        0
+      ],
+      "direction": "south"
+    },
+    {
+      "actionId": 1,
+      "tile": 41,
+      "cell": [
+        15,
+        0
+      ],
+      "direction": "south"
+    },
+    {
+      "actionId": 2,
+      "tile": 42,
+      "cell": [
+        31,
+        4
+      ],
+      "direction": "west"
+    },
+    {
+      "actionId": 3,
+      "tile": 43,
+      "cell": [
+        31,
+        17
+      ],
+      "direction": "west"
+    },
+    {
+      "actionId": 4,
+      "tile": 44,
+      "cell": [
+        21,
+        23
+      ],
+      "direction": "north"
+    }
+  ],
+  "exits": [
+    [
+      0,
+      19
+    ],
+    [
+      0,
+      20
+    ],
+    [
+      3,
+      23
+    ],
+    [
+      4,
+      23
+    ]
+  ],
+  "routesPerSpawnToExits": [
+    [
+      0,
+      32,
+      40,
+      40,
+      16
+    ],
+    [
+      1,
+      12,
+      15,
+      15,
+      6
+    ],
+    [
+      2,
+      72,
+      90,
+      90,
+      36
+    ],
+    [
+      3,
+      36,
+      45,
+      45,
+      18
+    ],
+    [
+      4,
+      4,
+      5,
+      5,
+      2
+    ]
+  ],
+  "edges": [
+    {
+      "from": {
+        "tile": 40,
+        "x": 3,
+        "y": 0
+      },
+      "direction": "south",
+      "to": {
+        "tile": 61,
+        "x": 3,
+        "y": 2
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 41,
+        "x": 15,
+        "y": 0
+      },
+      "direction": "south",
+      "to": {
+        "tile": 53,
+        "x": 15,
+        "y": 2
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 61,
+        "x": 3,
+        "y": 2
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 5,
+        "y": 2
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 61,
+        "x": 3,
+        "y": 2
+      },
+      "direction": "south",
+      "to": {
+        "tile": 61,
+        "x": 3,
+        "y": 4
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 5,
+        "y": 2
+      },
+      "direction": "south",
+      "to": {
+        "tile": 55,
+        "x": 5,
+        "y": 4
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 15,
+        "y": 2
+      },
+      "direction": "south",
+      "to": {
+        "tile": 53,
+        "x": 15,
+        "y": 4
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 17,
+        "y": 2
+      },
+      "direction": "west",
+      "to": {
+        "tile": 53,
+        "x": 15,
+        "y": 2
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 58,
+        "x": 17,
+        "y": 3
+      },
+      "direction": "north",
+      "to": {
+        "tile": 54,
+        "x": 17,
+        "y": 2
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 58,
+        "x": 17,
+        "y": 3
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 17,
+        "y": 4
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 18,
+        "y": 3
+      },
+      "direction": "west",
+      "to": {
+        "tile": 58,
+        "x": 17,
+        "y": 3
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 22,
+        "y": 3
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 18,
+        "y": 3
+      },
+      "steps": 4
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 22,
+        "y": 3
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 22,
+        "y": 11
+      },
+      "steps": 8
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 26,
+        "y": 3
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 22,
+        "y": 3
+      },
+      "steps": 4
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 28,
+        "y": 3
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 26,
+        "y": 3
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 61,
+        "x": 3,
+        "y": 4
+      },
+      "direction": "east",
+      "to": {
+        "tile": 55,
+        "x": 5,
+        "y": 4
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 61,
+        "x": 3,
+        "y": 4
+      },
+      "direction": "south",
+      "to": {
+        "tile": 55,
+        "x": 3,
+        "y": 5
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 55,
+        "x": 5,
+        "y": 4
+      },
+      "direction": "east",
+      "to": {
+        "tile": 55,
+        "x": 6,
+        "y": 4
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 55,
+        "x": 6,
+        "y": 4
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 15,
+        "y": 4
+      },
+      "steps": 9
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 15,
+        "y": 4
+      },
+      "direction": "south",
+      "to": {
+        "tile": 55,
+        "x": 15,
+        "y": 5
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 16,
+        "y": 4
+      },
+      "direction": "south",
+      "to": {
+        "tile": 53,
+        "x": 16,
+        "y": 5
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 17,
+        "y": 4
+      },
+      "direction": "west",
+      "to": {
+        "tile": 53,
+        "x": 16,
+        "y": 4
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 58,
+        "x": 28,
+        "y": 4
+      },
+      "direction": "north",
+      "to": {
+        "tile": 54,
+        "x": 28,
+        "y": 3
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 58,
+        "x": 28,
+        "y": 4
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 28,
+        "y": 5
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 42,
+        "x": 31,
+        "y": 4
+      },
+      "direction": "west",
+      "to": {
+        "tile": 58,
+        "x": 28,
+        "y": 4
+      },
+      "steps": 3
+    },
+    {
+      "from": {
+        "tile": 55,
+        "x": 3,
+        "y": 5
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 4,
+        "y": 5
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 4,
+        "y": 5
+      },
+      "direction": "south",
+      "to": {
+        "tile": 55,
+        "x": 4,
+        "y": 9
+      },
+      "steps": 4
+    },
+    {
+      "from": {
+        "tile": 55,
+        "x": 15,
+        "y": 5
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 16,
+        "y": 5
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 16,
+        "y": 5
+      },
+      "direction": "south",
+      "to": {
+        "tile": 55,
+        "x": 16,
+        "y": 10
+      },
+      "steps": 5
+    },
+    {
+      "from": {
+        "tile": 52,
+        "x": 26,
+        "y": 5
+      },
+      "direction": "north",
+      "to": {
+        "tile": 54,
+        "x": 26,
+        "y": 3
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 28,
+        "y": 5
+      },
+      "direction": "west",
+      "to": {
+        "tile": 52,
+        "x": 26,
+        "y": 5
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 55,
+        "x": 4,
+        "y": 9
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 9,
+        "y": 9
+      },
+      "steps": 5
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 9,
+        "y": 9
+      },
+      "direction": "south",
+      "to": {
+        "tile": 53,
+        "x": 9,
+        "y": 11
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 55,
+        "x": 16,
+        "y": 10
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 17,
+        "y": 10
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 17,
+        "y": 10
+      },
+      "direction": "south",
+      "to": {
+        "tile": 53,
+        "x": 17,
+        "y": 11
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 9,
+        "y": 11
+      },
+      "direction": "south",
+      "to": {
+        "tile": 61,
+        "x": 9,
+        "y": 13
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 11,
+        "y": 11
+      },
+      "direction": "west",
+      "to": {
+        "tile": 53,
+        "x": 9,
+        "y": 11
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 11,
+        "y": 11
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 11,
+        "y": 13
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 15,
+        "y": 11
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 11,
+        "y": 11
+      },
+      "steps": 4
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 17,
+        "y": 11
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 17,
+        "y": 12
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 22,
+        "y": 11
+      },
+      "direction": "west",
+      "to": {
+        "tile": 53,
+        "x": 17,
+        "y": 11
+      },
+      "steps": 5
+    },
+    {
+      "from": {
+        "tile": 52,
+        "x": 15,
+        "y": 12
+      },
+      "direction": "north",
+      "to": {
+        "tile": 54,
+        "x": 15,
+        "y": 11
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 17,
+        "y": 12
+      },
+      "direction": "west",
+      "to": {
+        "tile": 52,
+        "x": 15,
+        "y": 12
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 61,
+        "x": 9,
+        "y": 13
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 10,
+        "y": 13
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 61,
+        "x": 9,
+        "y": 13
+      },
+      "direction": "south",
+      "to": {
+        "tile": 55,
+        "x": 9,
+        "y": 14
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 10,
+        "y": 13
+      },
+      "direction": "south",
+      "to": {
+        "tile": 53,
+        "x": 10,
+        "y": 14
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 11,
+        "y": 13
+      },
+      "direction": "west",
+      "to": {
+        "tile": 53,
+        "x": 10,
+        "y": 13
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 55,
+        "x": 9,
+        "y": 14
+      },
+      "direction": "east",
+      "to": {
+        "tile": 53,
+        "x": 10,
+        "y": 14
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 10,
+        "y": 14
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 10,
+        "y": 19
+      },
+      "steps": 5
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 20,
+        "y": 17
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 20,
+        "y": 19
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 56,
+        "x": 22,
+        "y": 17
+      },
+      "direction": "north",
+      "to": {
+        "tile": 54,
+        "x": 22,
+        "y": 11
+      },
+      "steps": 6
+    },
+    {
+      "from": {
+        "tile": 56,
+        "x": 22,
+        "y": 17
+      },
+      "direction": "west",
+      "to": {
+        "tile": 53,
+        "x": 20,
+        "y": 17
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 23,
+        "y": 17
+      },
+      "direction": "west",
+      "to": {
+        "tile": 56,
+        "x": 22,
+        "y": 17
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 23,
+        "y": 17
+      },
+      "direction": "south",
+      "to": {
+        "tile": 60,
+        "x": 23,
+        "y": 18
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 26,
+        "y": 17
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 23,
+        "y": 17
+      },
+      "steps": 3
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 28,
+        "y": 17
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 26,
+        "y": 17
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 43,
+        "x": 31,
+        "y": 17
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 28,
+        "y": 17
+      },
+      "steps": 3
+    },
+    {
+      "from": {
+        "tile": 53,
+        "x": 2,
+        "y": 18
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 2,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 3,
+        "y": 18
+      },
+      "direction": "west",
+      "to": {
+        "tile": 53,
+        "x": 2,
+        "y": 18
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 3,
+        "y": 18
+      },
+      "direction": "south",
+      "to": {
+        "tile": 60,
+        "x": 3,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 4,
+        "y": 18
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 3,
+        "y": 18
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 4,
+        "y": 18
+      },
+      "direction": "south",
+      "to": {
+        "tile": 60,
+        "x": 4,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 5,
+        "y": 18
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 4,
+        "y": 18
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 52,
+        "x": 22,
+        "y": 18
+      },
+      "direction": "north",
+      "to": {
+        "tile": 56,
+        "x": 22,
+        "y": 17
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 23,
+        "y": 18
+      },
+      "direction": "west",
+      "to": {
+        "tile": 52,
+        "x": 22,
+        "y": 18
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 23,
+        "y": 18
+      },
+      "direction": "south",
+      "to": {
+        "tile": 54,
+        "x": 23,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 2,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 48,
+        "x": 0,
+        "y": 19
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 3,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 2,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 3,
+        "y": 19
+      },
+      "direction": "south",
+      "to": {
+        "tile": 60,
+        "x": 3,
+        "y": 20
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 4,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 3,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 4,
+        "y": 19
+      },
+      "direction": "south",
+      "to": {
+        "tile": 60,
+        "x": 4,
+        "y": 20
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 56,
+        "x": 5,
+        "y": 19
+      },
+      "direction": "north",
+      "to": {
+        "tile": 54,
+        "x": 5,
+        "y": 18
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 56,
+        "x": 5,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 4,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 10,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 56,
+        "x": 5,
+        "y": 19
+      },
+      "steps": 5
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 20,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 10,
+        "y": 19
+      },
+      "steps": 10
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 21,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 20,
+        "y": 19
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 54,
+        "x": 23,
+        "y": 19
+      },
+      "direction": "west",
+      "to": {
+        "tile": 54,
+        "x": 21,
+        "y": 19
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 3,
+        "y": 20
+      },
+      "direction": "west",
+      "to": {
+        "tile": 48,
+        "x": 0,
+        "y": 20
+      },
+      "steps": 3
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 3,
+        "y": 20
+      },
+      "direction": "south",
+      "to": {
+        "tile": 48,
+        "x": 3,
+        "y": 23
+      },
+      "steps": 3
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 4,
+        "y": 20
+      },
+      "direction": "west",
+      "to": {
+        "tile": 60,
+        "x": 3,
+        "y": 20
+      },
+      "steps": 1
+    },
+    {
+      "from": {
+        "tile": 60,
+        "x": 4,
+        "y": 20
+      },
+      "direction": "south",
+      "to": {
+        "tile": 48,
+        "x": 4,
+        "y": 23
+      },
+      "steps": 3
+    },
+    {
+      "from": {
+        "tile": 52,
+        "x": 21,
+        "y": 21
+      },
+      "direction": "north",
+      "to": {
+        "tile": 54,
+        "x": 21,
+        "y": 19
+      },
+      "steps": 2
+    },
+    {
+      "from": {
+        "tile": 44,
+        "x": 21,
+        "y": 23
+      },
+      "direction": "north",
+      "to": {
+        "tile": 52,
+        "x": 21,
+        "y": 21
+      },
+      "steps": 2
+    }
+  ]
+}
