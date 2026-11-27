@@ -231,8 +231,11 @@ import {
 } from '../content/dakota-10-content-version';
 import { dakota10CampaignId } from '../content/dakota-10-identity';
 import { createNevada01CampaignContent } from '../content/nevada-01-campaign';
-import { createBombingtonCampaignContent } from '../content/bombington-campaign';
-import { bombingtonCampaignContentVersionForCompletedScenarioIds } from '../content/bombington-content-version';
+import { createBombingtonCampaignContent, createBombingtonCampaignContentFromSnapshot } from '../content/bombington-campaign';
+import {
+  bombingtonCampaignContentVersionForCompletedScenarioIds,
+  bombingtonUnlockSnapshotFromContentVersion,
+} from '../content/bombington-content-version';
 import { nevada02CampaignId } from '../content/nevada-02-identity';
 import { nevada01CampaignContentVersion, nevada01CampaignId } from '../content/nevada-01-identity';
 import {
@@ -842,6 +845,15 @@ export function createBrowserGameForNevada01Replay(contentVersion: string | unde
   }
   return createBrowserGame([], undefined, undefined, {
     [nevada01CampaignId]: createNevada01CampaignContent(),
+  });
+}
+
+/** Replay import rebuilds Bombington from its recorded unit and Dynamite unlock snapshot. */
+export function createBrowserGameForNevada02Replay(contentVersion: string | undefined) {
+  const snapshot = bombingtonUnlockSnapshotFromContentVersion(contentVersion);
+  if (!snapshot) return createBrowserGame([], undefined, nevada02CampaignId);
+  return createBrowserGame([], undefined, undefined, {
+    [nevada02CampaignId]: createBombingtonCampaignContentFromSnapshot(snapshot),
   });
 }
 
