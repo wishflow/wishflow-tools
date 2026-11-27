@@ -894,3 +894,10 @@ M32-D1 再次证明，marker 表完成后还要核对仓库内实际资源名：
 - **表现与复核：**本地内置浏览器以窗口模式、静音从 Free Play 打开 Fort Kaboom Level 3 Easy，观察活动战场；另打开 Railroad Ranch Level 9 Easy，首波地图截图能看到六组静态列车位于铁轨上。没有完整游玩，测试后将实验室速度恢复至1×。
 - **固定帧限制：**普通 UI 的开局种子由 `crypto.getRandomValues()` 生成，菜单没有固定 seed 或逻辑帧入口。因此 Fort 浏览器画面不能对应 seed 6 的 frame 643/651/658；本轮看到的随机画面也没有保存为固定帧附件。D1 通过正式 `GameSession.observe()` 的固定帧 `GameView` 调用生产 `drawGame()` 检查马与 wagon 的资源、位置和排序；D2-B 同样用正式 Railroad Ranch/Mississippi `GameView` 检查静态运输。浏览器目视、生产绘制调用断言和 APK 同帧对照属于三种不同证据。
 - **当前结论：**代表性动态与静态运输类别都已进入生产 renderer 并通过资源键、render 矩形和 draw order 检查；本地浏览器对 Fort 战斗与 Railroad Ranch 列车提供有限视觉确认。没有证据证明41张图逐关逐帧一致，也没有 APK 原版同 seed 像素比较。后续不得用 D1/D2 自动绘制调用替代对新的视觉差异做目视检查；若需要精确复现，先增加受控且仅开发态可用的 seed/frame 入口，并将其纳入单独测试和范围评估。
+
+## Bombington 的 raw118 树桩必须按 Smali 建立碰撞
+
+- **根因与证据：**map45 的 raw118 在 APK `GameObjectManager` packed-switch 中创建 decoration id 51（树桩）；`CollisionManager.createCollisionObject` 对该装饰使用通用碰撞框。JADX Java 伪代码把此分支显示为 no-op，网页碰撞表因此曾将 raw118 归到非静态 marker。以 smali 分支和碰撞消费者为准，不能把反编译伪代码中的空分支直接当成 APK 行为。详细资源与代码证据见 [Bombington 内容审计](bombington-content-audit.md)。
+- **修复与验证：**把 raw118 加入 `PLAYER_STATIC_COLLISION_BOUNDS_BY_TDM_CODE`，并从非静态 marker 集合移除；地图 builder 按 TDM 派生树桩、建筑与其他静态装饰，spawn-location builder 保留 Saloon/Fort/Tipi 类型，招募单位 builder 根据记录的全局解锁快照生成 activity 4 单位。`bombington-map-objects.test.ts` 4/4、`player-collision.test.ts` 11/11、`pnpm run typecheck` 通过；短 `GameSession` 确认树桩和睡眠 Gunslinger 均挡住直线路径。Level 42 尚未进入正式关卡目录，builder 会在 M6-D3 接线。
+- **探针选点教训：**第一版树桩探针把角色放在相邻下方一行，脚底碰撞框没有与树桩框重叠；改到树桩所在行后，若目标 y 直接写整数格坐标，角色会沿斜线移动并在横穿前离开障碍框。固定水平碰撞验证应使用角色实际初始锚点 `cell.y + 0.75`，并确认其碰撞框与 APK 障碍框在另一个轴上重叠。睡眠单位探针若从 raw32 阻挡格起步，则角色无法移动到目标；需选可通行起点，再核实起点、路径和目标单位坐标。
+- **防回归与边界：**新增关卡标记映射要同时核对 Smali 构造分支、资源 id、碰撞构造器及运动消费者；自动化移动探针需证明实际路径经过障碍框，不能只断言地图里存在碰撞盒。当前验证是 APK 静态证据与网页 `GameSession` 几何测试，不代表 Android 运行截图或全关卡视觉等同。
