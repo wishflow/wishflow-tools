@@ -30,19 +30,18 @@
 ### 当前切片状态
 
 - **M6-A–M6-B3 地图基线已通过：**APK 内容审计、TDM/地形、624 条完整路线和生产 Renderer 坐标/裁切核对已闭环。`bombington-map.test.ts`、`bombington-routes.test.ts`、`bombington-map-render.test.ts` 共6项定向测试及 TypeScript 检查通过；B3 还核对了路经桥面/铁路覆盖和 1024×576 视口对 32×24 地图的裁切。证据和当前实现分别见内容审计与对应源码、测试。
-- **M6-C1、M6-C2 已关闭，当前步骤为 M6-D1。**静态对象、休眠招募单位、铁路组和炸药配对已通过定向验证；Bombington 尚未登记为正式关卡，等 M6-D3 接入。
+- **M6-C1、M6-C2、M6-D1-A、M6-D1-B 已关闭，当前步骤为 M6-D1-C。**静态对象、休眠招募单位、铁路组、炸药配对、关卡参数、十波敌方请求和末波 Boss 槽均已通过定向验证；Bombington 尚未登记为正式关卡，等 M6-D3 接入。
 
 ### 后续步骤与验收
 
-1. **M6-D1-B：十波敌方请求。**新增 Bombington 波次定义，逐项录入十波的 delay、波次 HP/speed、39 个出生池请求行、十槽向量和 action→route spawn 映射。验收使用独立字面预期表核对全部数值、行数和 Boss/Doc 槽；短 `GameSession` 检查首波生成及末波 Boss 请求，不把请求向量误当固定出场顺序，也不跑完整战役。验证：`node --import tsx --test tests/bombington-campaign-waves.test.ts`、`pnpm run typecheck`。
-2. **M6-D1-C：己方生成池及规则会话核对。**按 TDM 建立 Saloon/Fort/Tipi 出生位置，配置 Gunslinger、Mexican、Cannon、Indian 四个池模板和 Wave 1 的 `SET`/`SET_MAX` 动作。池模板是可生成设计，不能重复加入地图上现有的睡眠单位。验收核对四类模板和建筑绑定、库存重置与上限；用 Bombington 组合内容的短会话验证首波规则与末波 Boss 请求可被实际 `GameSession` 消费。验证 D1 三组定向测试及 `pnpm run typecheck`；D1 通过后关闭该步骤。
-3. **M6-D2：关卡表现与音频。**新增十段 APK 英文对白、对应头像键和站点中文译文；沿用 Nevada 环境曲及三曲战斗循环。验收逐波核对对白/头像顺序、检查所需图像和 OGG 文件可加载，并用静音单测验证波次索引的音轨循环，不播放声音。验证：新增的 Bombington copy/music 定向测试及 `pnpm run typecheck`。
-4. **M6-D3：正式关卡、Free Play 和 replay。**复用已有目录行，将 Level 42 注册为 Nevada 第二关；正式战役需完成 Level 41，Free Play 可选三档难度但不写战役进度，replay 使用录制的关卡内容版本。接通地图说明、档案快照、正式结算与 replay factory。验收覆盖锁定/解锁边界、正式与自由模式进度差异、回放录制版本及 Level 43 仍锁定。验证正式关卡/存档/replay 定向测试及 `pnpm run typecheck`。
-5. **M6-E：整批验收与发布。**逐切片定向验证并本地提交后，运行应用 `pnpm run test:ci`、catalog 检查及共享站点构建。内置浏览器窗口模式、静音检查 Bombington 正式入口、全图和代表性路线/对白/战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
+1. **M6-D1-C：己方生成池及规则会话核对。**按 TDM 建立 Saloon/Fort/Tipi 出生位置，配置 Gunslinger、Mexican、Cannon、Indian 四个池模板和 Wave 1 的 `SET`/`SET_MAX` 动作。池模板是可生成设计，不能重复加入地图上现有的睡眠单位。验收核对四类模板和建筑绑定、库存重置与上限；用 Bombington 组合内容的短会话验证首波规则与末波 Boss 请求可被实际 `GameSession` 消费。验证 D1 三组定向测试及 `pnpm run typecheck`；D1 通过后关闭该步骤。
+2. **M6-D2：关卡表现与音频。**新增十段 APK 英文对白、对应头像键和站点中文译文；沿用 Nevada 环境曲及三曲战斗循环。验收逐波核对对白/头像顺序、检查所需图像和 OGG 文件可加载，并用静音单测验证波次索引的音轨循环，不播放声音。验证：新增的 Bombington copy/music 定向测试及 `pnpm run typecheck`。
+3. **M6-D3：正式关卡、Free Play 和 replay。**复用已有目录行，将 Level 42 注册为 Nevada 第二关；正式战役需完成 Level 41，Free Play 可选三档难度但不写战役进度，replay 使用录制的关卡内容版本。接通地图说明、档案快照、正式结算与 replay factory。验收覆盖锁定/解锁边界、正式与自由模式进度差异、回放录制版本及 Level 43 仍锁定。验证正式关卡/存档/replay 定向测试及 `pnpm run typecheck`。
+4. **M6-E：整批验收与发布。**逐切片定向验证并本地提交后，运行应用 `pnpm run test:ci`、catalog 检查及共享站点构建。内置浏览器窗口模式、静音检查 Bombington 正式入口、全图和代表性路线/对白/战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
 
 ### 当前切片
 
-M6-C1、M6-C2 与 M6-D1-A 均已关闭，当前实施 **M6-D1-B：十波敌方请求**。D1-A 将 Level42 参数行、共享敌人基础值、奖励箱 1–7 类型范围及实际开局难度倍率接入 Bombington 规则模块，并以短 `GameSession` 验证开局值；结论依据与测试留在该切片提交及 [Bombington 内容审计](bombington-content-audit.md)。不重查已通过的静态对象、raw118 树桩碰撞、铁路组、炸药配对或单位解锁门槛。
+M6-C1、M6-C2、M6-D1-A 与 M6-D1-B 均已关闭，当前实施 **M6-D1-C：己方生成池及规则会话核对**。D1-A 将 Level42 参数行、共享敌人基础值、奖励箱 1–7 类型范围及实际开局难度倍率接入 Bombington 规则模块；D1-B 接入 APK 十波及 39 条出生池请求，并用短 `GameSession` 核对首波和末波 Boss 槽。结论依据与测试留在对应切片提交及 [Bombington 内容审计](bombington-content-audit.md)。不重查已通过的静态对象、raw118 树桩碰撞、铁路组、炸药配对或单位解锁门槛。
 
 ### 本批边界与停止条件
 
