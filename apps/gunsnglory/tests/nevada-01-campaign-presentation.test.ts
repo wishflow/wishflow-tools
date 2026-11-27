@@ -55,6 +55,6 @@ test('Labyrinth Gulch dialogue portraits and Nevada music are bundled for offlin
   const mainSource = readFileSync(path.join(appRoot, 'src/main.ts'), 'utf8');
   assert.match(mainSource, /\.\.\.nevada01CampaignPortraitAssets,/);
   assert.match(mainSource, /if \(scenarioId === nevada01CampaignId\) return nevada01WaveIntros;/);
-  assert.match(mainSource, /nevada01BattleMusicForWave\(eventWaveNumber - 1\)/);
-  assert.match(mainSource, /setCampaignBackgroundMusic\(nevada01AmbientMusic\)/);
+  assert.match(mainSource, /nevadaBattleMusicForCurrentSession\(eventWaveNumber - 1\)/);
+  assert.match(mainSource, /setCampaignBackgroundMusic\(nevadaAmbientMusicForCurrentSession\(\)\)/);
 });

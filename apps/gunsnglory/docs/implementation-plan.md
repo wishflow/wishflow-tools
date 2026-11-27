@@ -30,17 +30,16 @@
 ### 当前切片状态
 
 - **M6-A–M6-B3 地图基线已通过：**APK 内容审计、TDM/地形、624 条完整路线和生产 Renderer 坐标/裁切核对已闭环。`bombington-map.test.ts`、`bombington-routes.test.ts`、`bombington-map-render.test.ts` 共6项定向测试及 TypeScript 检查通过；B3 还核对了路经桥面/铁路覆盖和 1024×576 视口对 32×24 地图的裁切。证据和当前实现分别见内容审计与对应源码、测试。
-- **M6-C1、M6-C2 与 M6-D1-A–D1-C 已关闭，当前步骤为 M6-D2。**静态对象、休眠招募单位、铁路组、炸药配对、关卡参数、十波敌方请求、末波 Boss 槽、玩家单位池和真实 Saloon 生成均已通过定向验证；Bombington 尚未登记为正式关卡，等 M6-D3 接入。
+- **M6-C1、M6-C2、M6-D1-A–D1-C 与 M6-D2 已关闭，当前步骤为 M6-D3。**静态对象、休眠招募单位、铁路组、炸药配对、关卡参数、十波敌方请求、玩家单位池、十段双语对白、头像与 Nevada 音乐映射均有对应代码和定向测试；Bombington 尚未登记为正式关卡。
 
 ### 后续步骤与验收
 
-1. **M6-D2：关卡表现与音频。**新增十段 APK 英文对白、对应头像键和站点中文译文；沿用 Nevada 环境曲及三曲战斗循环。验收逐波核对对白/头像顺序、检查所需图像和 OGG 文件可加载，并用静音单测验证波次索引的音轨循环，不播放声音。验证：新增的 Bombington copy/music 定向测试及 `pnpm run typecheck`。
-2. **M6-D3：正式关卡、Free Play 和 replay。**复用已有目录行，将 Level 42 注册为 Nevada 第二关；正式战役需完成 Level 41，Free Play 可选三档难度但不写战役进度，replay 使用录制的关卡内容版本。接通地图说明、档案快照、正式结算与 replay factory。验收覆盖锁定/解锁边界、正式与自由模式进度差异、回放录制版本及 Level 43 仍锁定。验证正式关卡/存档/replay 定向测试及 `pnpm run typecheck`。
-3. **M6-E：整批验收与发布。**逐切片定向验证并本地提交后，运行应用 `pnpm run test:ci`、catalog 检查及共享站点构建。内置浏览器窗口模式、静音检查 Bombington 正式入口、全图和代表性路线/对白/战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
+1. **M6-D3：正式关卡、Free Play 和 replay。**复用已有目录行，将 Level 42 注册为 Nevada 第二关；正式战役需完成 Level 41，Free Play 可选三档难度但不写战役进度，replay 使用录制的关卡内容版本。接通地图说明、档案快照、正式结算与 replay factory。验收覆盖锁定/解锁边界、正式与自由模式进度差异、回放录制版本及 Level 43 仍锁定。验证正式关卡/存档/replay 定向测试及 `pnpm run typecheck`。
+2. **M6-E：整批验收与发布。**逐切片定向验证并本地提交后，运行应用 `pnpm run test:ci`、catalog 检查及共享站点构建。内置浏览器窗口模式、静音检查 Bombington 正式入口、全图和代表性路线/对白/战斗 HUD；不完整通关、不进入全屏、不播放声音。通过后核算发布比例，以单一 squash 提交集成并发布；核对 Pages 来源 SHA 一致后完成线上验收。
 
 ### 当前切片
 
-M6-C1、M6-C2 与 M6-D1-A–D1-C 均已关闭，当前实施 **M6-D2：关卡表现与音频**。D1-A 接入 Level42 参数、敌人值与开局难度；D1-B 接入十波和 39 条敌方请求；D1-C 接入三处 APK 建筑、四类可生成模板及 Wave 1 库存动作，并以短会话核对实际招募生成。结论依据与测试留在对应切片提交及 [Bombington 内容审计](bombington-content-audit.md)。不重查已通过的静态对象、raw118 树桩碰撞、铁路组、炸药配对或单位解锁门槛。
+M6-C1、M6-C2、M6-D1-A–D1-C 与 M6-D2 均已关闭，当前实施 **M6-D3：正式关卡、Free Play 和 replay**。D1 接入 Level 42 参数、敌人波次请求、玩家池与 Wave 1 库存动作；D2 接入十段 APK 英文对白及中文译文、头像和 Nevada 音乐循环。对应代码与测试见 `bombington-*` 内容模块、`nevada-02-identity.ts` 及 D1/D2 切片提交。正式 stage 和 replay 工厂尚未接入；不重查已通过的静态地图、raw118 树桩碰撞、铁路组、炸药配对或单位解锁门槛。
 
 ### 本批边界与停止条件
 
